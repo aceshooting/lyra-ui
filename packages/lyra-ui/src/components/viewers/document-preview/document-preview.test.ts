@@ -1,8 +1,8 @@
-import { fixture, expect, html, oneEvent, aTimeout } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
 import "./document-preview.js";
 import type { LyraDocumentPreview } from "./document-preview.js";
-import { styles } from "./document-preview.styles.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
 const IMAGE_DATA_URI =
@@ -30,6 +30,20 @@ function textResponse(body: string, ok = true, status = 200): Response {
     statusText: ok ? "OK" : "Not Found",
     text: () => Promise.resolve(body),
   } as Response;
+}
+
+function cssColorAlpha(color: string): number {
+  const slash = color.match(/\/\s*([\d.]+)(%)?\s*\)$/);
+  if (slash) {
+    const value = Number(slash[1]);
+    return slash[2] === '%' ? value / 100 : value;
+  }
+  const rgba = color.match(/^rgba?\((.*)\)$/);
+  if (!rgba) return 1;
+  const values = rgba[1]!.split(',');
+  if (values.length !== 4) return 1;
+  const alpha = values[3]!.trim();
+  return alpha.endsWith('%') ? Number(alpha.slice(0, -1)) / 100 : Number(alpha);
 }
 
 describe("defaults", () => {
@@ -118,6 +132,54 @@ it("filters invalid public region rectangles before rendering highlight geometry
     el as unknown as { regionHighlights(): Array<{ id: string }> }
   ).regionHighlights();
   expect(highlights.map((highlight) => highlight.id)).to.deep.equal(["safe"]);
+});
+
+it('contains accessor-backed region geometry while retaining a later rendered highlight', async () => {
+  let rectGetterCalls = 0;
+  const hostileAnchor = Object.defineProperties(
+    { kind: 'region' },
+    {
+      rect: {
+        enumerable: true,
+        get() {
+          rectGetterCalls += 1;
+          throw new Error('region geometry accessor must not run');
+        },
+      },
+    },
+  );
+  const el = await fixture<LyraDocumentPreview>(html`
+    <lr-document-preview mime-type="image/png" src=${IMAGE_DATA_URI}></lr-document-preview>
+  `);
+  el.highlights = [
+    { id: 'unsafe', anchor: hostileAnchor as never },
+    { id: 'safe', anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } } },
+  ];
+  await el.updateComplete;
+
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="region-highlight"]')].map((region) =>
+      region.getAttribute('data-id'),
+    ),
+  ).to.deep.equal(['safe']);
+  expect(rectGetterCalls).to.equal(0);
+});
+
+it('retains the public anchor identity but copies rendered region geometry once', async () => {
+  const anchor = { kind: 'region' as const, rect: { x: 10, y: 20, width: 30, height: 40 } };
+  const el = await fixture<LyraDocumentPreview>(html`
+    <lr-document-preview mime-type="image/png" src=${IMAGE_DATA_URI}></lr-document-preview>
+  `);
+  el.highlights = [{ id: 'stable-region', anchor }];
+  await el.updateComplete;
+  expect(el.highlights[0]!.anchor === anchor).to.equal(true);
+
+  anchor.rect.x = 80;
+  el.activeHighlightId = 'stable-region';
+  await el.updateComplete;
+
+  const region = el.shadowRoot!.querySelector<HTMLElement>('[part="region-highlight"]')!;
+  expect(region.style.left).to.equal('10%');
 });
 
 describe("text/* and application/json dispatch", () => {
@@ -730,6 +792,82 @@ describe("generic-download fallback", () => {
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
   });
+
+  it('paints independently inherited and direct hover/active download hooks after settled pointer input', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        style="--lr-transition-fast: 0s; --lr-document-preview-download-link-hover-bg: rgb(1, 2, 3); --lr-document-preview-download-link-active-bg: rgb(4, 5, 6)"
+      >
+        <lr-document-preview
+          style="--lr-document-preview-download-link-hover-bg: rgb(7, 8, 9)"
+          src="https://example.test/report.pdf"
+          mime-type="application/pdf"
+          filename="report.pdf"
+        ></lr-document-preview>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-document-preview') as LyraDocumentPreview;
+    const link = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="download-link"]')!;
+    link.addEventListener('click', (event) => event.preventDefault());
+
+    try {
+      await hoverUntilMatched(link, 'preview download link never registered :hover');
+      await waitUntil(
+        () => getComputedStyle(link).backgroundColor === 'rgb(7, 8, 9)',
+        'the direct hover hook never painted',
+      );
+
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(link).backgroundColor === 'rgb(4, 5, 6)',
+        'the inherited active hook never painted',
+      );
+
+      el.style.setProperty('--lr-document-preview-download-link-active-bg', 'rgb(10, 11, 12)');
+      await waitUntil(
+        () => getComputedStyle(link).backgroundColor === 'rgb(10, 11, 12)',
+        'the direct active hook never superseded the inherited value',
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('keeps default download hover and active paint opaque when --lr-color-shadow is hostile in light and dark scopes', async () => {
+    for (const themeClass of ['lr-light', 'lr-dark']) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div
+          class=${themeClass}
+          style="--lr-transition-fast: 0s; --lr-color-shadow: rgb(0 0 0 / 0)"
+        >
+          <lr-document-preview
+            src="https://example.test/report.pdf"
+            mime-type="application/pdf"
+            filename="report.pdf"
+          ></lr-document-preview>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-document-preview') as LyraDocumentPreview;
+      const link = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="download-link"]')!;
+      link.addEventListener('click', (event) => event.preventDefault());
+      try {
+        await hoverUntilMatched(link, `${themeClass} preview download link never registered :hover`);
+        await waitUntil(
+          () => cssColorAlpha(getComputedStyle(link).backgroundColor) >= 0.999,
+          `${themeClass} hover paint inherited translucent shadow alpha`,
+        );
+        await sendMouse({ type: 'down' });
+        await waitUntil(
+          () => cssColorAlpha(getComputedStyle(link).backgroundColor) >= 0.999,
+          `${themeClass} active paint inherited translucent shadow alpha`,
+        );
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    }
+  });
 });
 
 describe("unsupported slot escape hatch", () => {
@@ -980,66 +1118,34 @@ describe("max-height", () => {
 });
 
 describe("motion", () => {
-  it("declares the spinner timing fallback and reduced-motion kill switch", () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include(
-      "--_lr-document-preview-spin-duration: var(--lr-transition-ambient);"
-    );
-    expect(css).to.match(
-      /animation:\s*lr-document-preview-spin\s+var\(\s*--lr-document-preview-spin-duration,\s*var\(--_lr-document-preview-spin-duration\)\s*\)\s+infinite;/
-    );
-    expect(css).to.include("@media (prefers-reduced-motion: reduce)");
-    expect(css).to.include(".ring { animation: none !important; }");
-  });
-
   it("spins from an inherited public duration, lets the host win, and stops under reduced motion", async () => {
-    const wrapper = await fixture<HTMLElement>(html`
-      <div style="--lr-document-preview-spin-duration: 3s linear">
-        <lr-document-preview status="converting"></lr-document-preview>
-      </div>
-    `);
-    const el = wrapper.querySelector(
-      "lr-document-preview"
-    ) as LyraDocumentPreview;
-    const ring = el.shadowRoot!.querySelector(".ring") as HTMLElement;
-    let computed = getComputedStyle(ring);
-    expect(computed.animationName).to.equal("lr-document-preview-spin");
-    expect(computed.animationDuration).to.equal("3s");
-    expect(computed.animationTimingFunction).to.equal("linear");
-
-    el.style.setProperty("--lr-document-preview-spin-duration", "2s ease-in");
-    computed = getComputedStyle(ring);
-    expect(computed.animationDuration).to.equal("2s");
-    expect(computed.animationTimingFunction).to.equal("ease-in");
-
-    // Same technique as <lr-spinner>'s reduced-motion test: forcing
-    // window.matchMedia has no effect on a real @media (prefers-reduced-motion)
-    // rule already adopted by the shadow root, so the CSSOM media condition
-    // itself is flipped to force the rule active, then restored.
-    const reducedRule = el
-      .shadowRoot!.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules])
-      .find(
-        (rule): rule is CSSMediaRule =>
-          rule instanceof CSSMediaRule &&
-          rule.conditionText === "(prefers-reduced-motion: reduce)" &&
-          [...rule.cssRules].some(
-            (nested) =>
-              nested instanceof CSSStyleRule &&
-              nested.selectorText.includes("ring")
-          )
-      );
-    expect(reducedRule?.conditionText).to.equal(
-      "(prefers-reduced-motion: reduce)"
-    );
-    const originalCondition = reducedRule!.media.mediaText;
+    await setReducedMotion('no-preference');
     try {
-      reducedRule!.media.mediaText = "all";
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => resolve())
-      );
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style="--lr-document-preview-spin-duration: 3s linear">
+          <lr-document-preview status="converting"></lr-document-preview>
+        </div>
+      `);
+      const el = wrapper.querySelector(
+        "lr-document-preview"
+      ) as LyraDocumentPreview;
+      const ring = el.shadowRoot!.querySelector(".ring") as HTMLElement;
+      let computed = getComputedStyle(ring);
+      expect(computed.animationName).to.equal("lr-document-preview-spin");
+      expect(computed.animationDuration).to.equal("3s");
+      expect(computed.animationTimingFunction).to.equal("linear");
+
+      el.style.setProperty("--lr-document-preview-spin-duration", "2s ease-in");
+      computed = getComputedStyle(ring);
+      expect(computed.animationDuration).to.equal("2s");
+      expect(computed.animationTimingFunction).to.equal("ease-in");
+
+      await setReducedMotion('reduce');
+      expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       expect(getComputedStyle(ring).animationName).to.equal("none");
     } finally {
-      reducedRule!.media.mediaText = originalCondition;
+      await setReducedMotion('no-preference');
     }
   });
 });

@@ -47,6 +47,18 @@ it('renders a standalone role="button" and a tabindex of 0', async () => {
   expect(b.getAttribute("tabindex")).to.equal("0");
 });
 
+it('inherits a 20px consumer font into the rename control and its glyph', async () => {
+  const el = (await fixture(
+    html`<lr-conversation-item label="Draft" style="font-size:20px"></lr-conversation-item>`,
+  )) as LyraConversationItem;
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="rename-button"]')!;
+  const glyph = button.querySelector<SVGElement>('svg')!;
+
+  expect(getComputedStyle(button).fontSize).to.equal('20px');
+  expect(getComputedStyle(glyph).width).to.equal('20px');
+  expect(getComputedStyle(glyph).height).to.equal('20px');
+});
+
 it('falls back to "Untitled conversation" when label is empty', async () => {
   const el = (await fixture(
     html`<lr-conversation-item></lr-conversation-item>`

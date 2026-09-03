@@ -1,4 +1,5 @@
 import { html } from 'lit';
+import { createRef, ref } from 'lit/directives/ref.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './transcript-feed.js';
 import type { LyraTranscriptEntry, LyraTranscriptFeed } from './transcript-feed.class.js';
@@ -63,50 +64,53 @@ export const WithInterimCaption: Story = {
 export const LiveInterimTranscription: Story = {
   render: () => {
     const words = ['Tomorrow', 'will', 'also', 'bring', 'a', 'light', 'breeze', 'from', 'the', 'northwest.'];
-
-    function wire(root: HTMLElement): void {
-      const feed = root.querySelector<LyraTranscriptFeed>('lr-transcript-feed')!;
-      if (feed.hasAttribute('data-wired')) return;
-      feed.setAttribute('data-wired', '');
-      const maxTurns = 3;
-      let wordIndex = 0;
-      let turn = 0;
-      const tick = (): void => {
-        wordIndex++;
-        const finished = wordIndex >= words.length;
-        const live: LyraTranscriptEntry = {
-          id: `live-${turn}`,
-          speaker: 'Agent',
-          text: words.slice(0, wordIndex).join(' '),
-          interim: !finished,
-        };
-        feed.entries = [...entries, live];
-        if (finished) {
-          wordIndex = 0;
-          turn++;
-        }
-        // Bounded rather than infinite, so a story left open in the background doesn't keep a
-        // setTimeout chain alive indefinitely.
-        if (turn < maxTurns) setTimeout(tick, 400);
+    const feedRef = createRef<LyraTranscriptFeed>();
+    const maxTurns = 3;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let wordIndex = 0;
+    let turn = 0;
+    const tick = (): void => {
+      const feed = feedRef.value;
+      if (!feed) {
+        timer = undefined;
+        return;
+      }
+      wordIndex++;
+      const finished = wordIndex >= words.length;
+      const live: LyraTranscriptEntry = {
+        id: `live-${turn}`,
+        speaker: 'Agent',
+        text: words.slice(0, wordIndex).join(' '),
+        interim: !finished,
       };
-      root.querySelector('[data-start]')!.addEventListener('click', () => {
-        feed.entries = [...entries];
+      feed.entries = [...entries, live];
+      if (finished) {
         wordIndex = 0;
-        turn = 0;
-        setTimeout(tick, 400);
-      });
-    }
+        turn++;
+      }
+      // Bounded rather than infinite, so a story left open in the background doesn't keep a
+      // setTimeout chain alive indefinitely.
+      if (turn < maxTurns) timer = setTimeout(tick, 400);
+      else timer = undefined;
+    };
+    const startCaptions = (): void => {
+      const feed = feedRef.value;
+      if (!feed) return;
+      if (timer !== undefined) clearTimeout(timer);
+      feed.entries = [...entries];
+      wordIndex = 0;
+      turn = 0;
+      timer = setTimeout(tick, 400);
+    };
 
     return html`
-      <div
-        style="display:flex; flex-direction:column; gap:0.75rem;"
-        @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
-      >
+      <div style="display:flex; flex-direction:column; gap:0.75rem;">
         <div style="block-size: 240px;">
-          <lr-transcript-feed .entries=${entries}></lr-transcript-feed>
+          <lr-transcript-feed ${ref(feedRef)} .entries=${entries}></lr-transcript-feed>
         </div>
         <button
           data-start
+          @click=${startCaptions}
           style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface); cursor:pointer; align-self:flex-start;"
         >
           Start live captions

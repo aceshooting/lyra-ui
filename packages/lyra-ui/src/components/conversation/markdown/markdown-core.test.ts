@@ -7,6 +7,7 @@ import {
   fixtureSync,
   aTimeout,
 } from "@open-wc/testing";
+import { sendKeys } from "@web/test-runner-commands";
 import "./markdown-core.js";
 import "./markdown.js";
 import { preloadMarkdown as preloadMarkdownCore } from "./markdown-core.js";
@@ -57,6 +58,27 @@ function withNavigationBlocked<T>(run: () => T): T {
   } finally {
     document.removeEventListener("click", blockNav, { capture: true });
   }
+}
+
+async function observeLinkDefault(
+  anchor: Element,
+  activate: () => void | Promise<void>
+): Promise<{ seen: boolean; defaultPrevented: boolean }> {
+  let seen = false;
+  let defaultPrevented = false;
+  const observe = (event: Event): void => {
+    if (!event.composedPath().includes(anchor)) return;
+    seen = true;
+    defaultPrevented = event.defaultPrevented;
+    event.preventDefault();
+  };
+  document.addEventListener("click", observe);
+  try {
+    await activate();
+  } finally {
+    document.removeEventListener("click", observe);
+  }
+  return { seen, defaultPrevented };
 }
 
 it("explains how to preload the optional parser when core getMarked() is called cold", () => {
@@ -119,6 +141,38 @@ Some **bold** text with a [link](https://example.com/docs).
     expect(root.querySelector('[part="blockquote"]')).to.exist;
     expect(root.querySelector('[part="table"]')).to.exist;
   });
+
+  for (const htmlMode of ["sanitize", "escape", "trusted"] as const) {
+    it(`gives each disabled GFM task checkbox its own primary inline-text label in ${htmlMode} mode`, async () => {
+      const el = (await fixture(
+        html`<lr-markdown-core
+          .htmlMode=${htmlMode}
+          .content=${`- [x] **Own "primary"** [linked text](/docs/link) and \`code\`
+  - [ ] Nested task text`}
+        ></lr-markdown-core>`
+      )) as LyraMarkdownCore;
+      await waitUntil(
+        () =>
+          el.shadowRoot!.querySelectorAll('input[type="checkbox"]').length === 2
+      );
+
+      const checkboxes = el.shadowRoot!.querySelectorAll<HTMLInputElement>(
+        'input[type="checkbox"]'
+      );
+      const outer = checkboxes[0]!;
+      const nested = checkboxes[1]!;
+      expect(outer.disabled).to.be.true;
+      expect(outer.checked).to.be.true;
+      expect(outer.getAttribute("aria-label")).to.equal(
+        'Own "primary" linked text and code'
+      );
+      expect(outer.hasAttribute("primary")).to.be.false;
+      expect(outer.getAttribute("aria-label")).to.not.contain("Nested task text");
+      expect(nested.disabled).to.be.true;
+      expect(nested.checked).to.be.false;
+      expect(nested.getAttribute("aria-label")).to.equal("Nested task text");
+    });
+  }
 
   it("matches lr-markdown leading-tab parsing and reparses when tab-size changes", async () => {
     const el = (await fixture(
@@ -1156,7 +1210,7 @@ describe("fallback matrix", () => {
     expect(el.shadowRoot!.textContent).to.contain("# hi");
   });
 
-  it("falls back and fires lr-render-error in sanitize mode when dompurify is unavailable", async () => {
+  it("uses one fixed sanitizer diagnostic in development, stays silent in production, and preserves the sanitize fallback", async () => {
     const el = (await fixture(
       html`<lr-markdown-core content="**bold**"></lr-markdown-core>`
     )) as LyraMarkdownCore;
@@ -1171,21 +1225,98 @@ describe("fallback matrix", () => {
       "precondition: marked must have actually loaded"
     ).to.exist;
 
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
     const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
+    const messages: string[] = [];
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(" "));
     try {
-      const listener = oneEvent(el, "lr-render-error");
-      internals.deps = { marked: internals.deps!.marked, DOMPurify: undefined };
-      internals.renderMarkdown();
-      const { detail } = await listener;
-      expect(detail.error).to.exist;
-      expect(calls).to.have.length(1);
-      expect(calls[0]![0]).to.contain("dompurify");
+      const renderFallback = async (): Promise<void> => {
+        const listener = oneEvent(el, "lr-render-error");
+        internals.deps = { marked: internals.deps!.marked, DOMPurify: undefined };
+        internals.renderMarkdown();
+        const { detail } = await listener;
+        expect(detail.error).to.exist;
+      };
+      await renderFallback();
+      await renderFallback();
+      expect(messages).to.deep.equal([
+        "<lr-markdown>/<lr-markdown-core>: HTML sanitization is unavailable because the optional DOMPurify peer could not load. Content is rendered as plain text unless trusted HTML is explicitly selected.",
+      ]);
+
+      messages.length = 0;
+      delete runtime.litIssuedWarnings;
+      await renderFallback();
+      expect(messages).to.deep.equal([]);
     } finally {
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
       console.warn = originalWarn;
     }
 
+    await el.updateComplete;
+    expect(
+      el
+        .shadowRoot!.querySelector('[part="content"]')!
+        .hasAttribute("data-fallback")
+    ).to.be.true;
+  });
+
+  it("fails closed with the bounded sanitizer diagnostic when a capability-valid sanitizer throws", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core content="**bold**"></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    type Internals = {
+      deps?: { marked: unknown; DOMPurify: unknown };
+      renderMarkdown(): void;
+    };
+    await waitUntil(() => (el as unknown as Internals).deps !== undefined);
+    const internals = el as unknown as Internals;
+    const failure = new Error("private sanitizer failure");
+    const errors: unknown[] = [];
+    const onRenderError = (event: Event): void => {
+      errors.push((event as CustomEvent<{ error: unknown }>).detail.error);
+    };
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const originalWarn = console.warn;
+    const messages: string[] = [];
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(" "));
+    el.addEventListener("lr-render-error", onRenderError);
+    try {
+      const renderFallback = (): void => {
+        internals.deps = {
+          marked: internals.deps!.marked,
+          DOMPurify: {
+            sanitize(): never {
+              throw failure;
+            },
+          },
+        };
+        expect(() => internals.renderMarkdown()).to.not.throw();
+      };
+      renderFallback();
+      renderFallback();
+      expect(messages).to.deep.equal([
+        "<lr-markdown>/<lr-markdown-core>: HTML sanitization is unavailable because the optional DOMPurify peer could not load. Content is rendered as plain text unless trusted HTML is explicitly selected.",
+      ]);
+      expect(messages.join(" ")).to.not.contain(failure.message);
+
+      messages.length = 0;
+      delete runtime.litIssuedWarnings;
+      renderFallback();
+      expect(messages).to.deep.equal([]);
+    } finally {
+      el.removeEventListener("lr-render-error", onRenderError);
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+      console.warn = originalWarn;
+    }
+
+    expect(errors).to.have.lengthOf(3);
+    expect(errors.every((error) => error === failure)).to.equal(true);
     await el.updateComplete;
     expect(
       el
@@ -1735,6 +1866,145 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     const { detail } = await listener;
     expect(detail).to.deep.equal({ href: "/docs/world" });
     expect(highlightFired).to.be.false;
+  });
+
+  it("activates an overlapping internal link highlight before its link event and prevents navigation for native, pointer, and keyboard clicks", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core
+        internal-link-prefix="/docs/"
+        content=${"[linked text](/docs/link)"}
+      ></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    el.highlights = [
+      { id: "linked-highlight", anchor: { kind: "text-quote", quote: "linked text" } },
+    ];
+    await waitUntil(() => el.shadowRoot!.querySelector("a") !== null);
+    await waitUntil(() => highlightPainted(el));
+    const anchor = el.shadowRoot!.querySelector("a")!;
+    const range = document.createRange();
+    range.selectNodeContents(anchor);
+    const rect = range.getClientRects()[0]!;
+    const order: string[] = [];
+    const details: unknown[] = [];
+    el.addEventListener("lr-highlight-activate", (event) => {
+      order.push("highlight");
+      details.push((event as CustomEvent).detail);
+    });
+    el.addEventListener("lr-link-click", (event) => {
+      order.push("link");
+      details.push((event as CustomEvent).detail);
+    });
+
+    const assertInternalActivation = async (
+      activate: () => void | Promise<void>
+    ): Promise<void> => {
+      const observed = await observeLinkDefault(anchor, activate);
+      expect(observed.seen).to.be.true;
+      expect(observed.defaultPrevented).to.be.true;
+      expect(order).to.deep.equal(["highlight", "link"]);
+      expect(details).to.deep.equal([
+        { highlightId: "linked-highlight" },
+        { href: "/docs/link" },
+      ]);
+      order.length = 0;
+      details.length = 0;
+    };
+
+    await assertInternalActivation(() => anchor.click());
+    await assertInternalActivation(() => {
+      anchor.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          detail: 1,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+        })
+      );
+    });
+    anchor.focus();
+    await assertInternalActivation(() => sendKeys({ press: "Enter" }));
+  });
+
+  it('keeps keyboard highlight activation on a later native anchor after hostile and forged composed-path entries', async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core content=${'[linked text](/docs/link)'}></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    el.highlights = [
+      { id: 'linked-highlight', anchor: { kind: 'text-quote', quote: 'linked text' } },
+    ];
+    await waitUntil(() => el.shadowRoot!.querySelector('a') !== null);
+    await waitUntil(() => highlightPainted(el));
+    const anchor = el.shadowRoot!.querySelector('a')!;
+    const forgedElementConstructor = function (): void {};
+    Object.defineProperties(forgedElementConstructor.prototype, {
+      getAttribute: { value: () => '/docs/forged' },
+      localName: { get: () => 'a' },
+    });
+    const forged = {
+      nodeType: 1,
+      namespaceURI: 'http://www.w3.org/1999/xhtml',
+      ownerDocument: { defaultView: { Element: forgedElementConstructor } },
+    };
+    const hostile = new Proxy({}, {
+      has() {
+        throw new Error('hostile composed-path probe');
+      },
+    });
+    const event = new MouseEvent('click', { detail: 0 });
+    Object.defineProperty(event, 'composedPath', {
+      value: () => [hostile, forged, anchor],
+    });
+    const activations: unknown[] = [];
+    el.addEventListener('lr-highlight-activate', (activation) =>
+      activations.push((activation as CustomEvent).detail)
+    );
+
+    (el as unknown as { onContentClick(event: MouseEvent): void }).onContentClick(event);
+
+    expect(activations).to.deep.equal([{ highlightId: 'linked-highlight' }]);
+  });
+
+  it("activates an overlapping external link highlight without suppressing native navigation", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core
+        internal-link-prefix="/docs/"
+        content=${"[linked text](https://example.com)"}
+      ></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    el.highlights = [
+      { id: "external-highlight", anchor: { kind: "text-quote", quote: "linked text" } },
+    ];
+    await waitUntil(() => el.shadowRoot!.querySelector("a") !== null);
+    await waitUntil(() => highlightPainted(el));
+    const anchor = el.shadowRoot!.querySelector("a")!;
+    const range = document.createRange();
+    range.selectNodeContents(anchor);
+    const rect = range.getClientRects()[0]!;
+    const events: unknown[] = [];
+    el.addEventListener("lr-highlight-activate", (event) =>
+      events.push((event as CustomEvent).detail)
+    );
+    el.addEventListener("lr-link-click", (event) =>
+      events.push((event as CustomEvent).detail)
+    );
+
+    const observed = await observeLinkDefault(anchor, () => {
+      anchor.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          detail: 1,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+        })
+      );
+    });
+    expect(observed.seen).to.be.true;
+    expect(observed.defaultPrevented).to.be.false;
+    expect(events).to.deep.equal([{ highlightId: "external-highlight" }]);
   });
 
   it("does not intercept any link when internal-link-prefix is unset", async () => {

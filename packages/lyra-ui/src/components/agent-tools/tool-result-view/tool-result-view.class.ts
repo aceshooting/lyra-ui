@@ -152,6 +152,11 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   // no longer current and skip writing its result over a more recent one.
   private generation = 0;
 
+  // A synchronous renderer may retain its context and report a status later.
+  // This token keeps that callback scoped to the render invocation that
+  // returned successfully, rather than a fallback or later render.
+  private renderAttempt?: symbol;
+
   // The last `def` findToolRenderer() returned that went through a successful
   // load(), paired with its resolved (post-load) definition. Keyed by `def`
   // object identity so an unrelated property change (result/args/registry
@@ -175,6 +180,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
 
   private async resolve(): Promise<void> {
     const generation = ++this.generation;
+    this.renderAttempt = undefined;
     const registry = this.registry ?? getDefaultToolRendererRegistry();
 
     let def: ToolRendererDefinition | undefined;
@@ -220,16 +226,22 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
     // detect it's stale and skip writing over a more recent status -- mirrors the same
     // generation-guard pattern resolve()/loadToolRenderer() already use for stale results.
     const generation = this.generation;
+    const attempt = Symbol();
+    this.renderAttempt = attempt;
     this.status = 'success';
     const context: ToolRenderContext = {
       reportStatus: (status) => {
-        if (generation !== this.generation) return;
+        if (generation !== this.generation || this.renderAttempt !== attempt) return;
         this.status = status;
       },
     };
     try {
-      this.renderState = { kind: 'rendered', template: def.render(this.result, this.args, context) };
+      const template = def.render(this.result, this.args, context);
+      if (generation !== this.generation || this.renderAttempt !== attempt) return;
+      this.renderState = { kind: 'rendered', template };
     } catch (error) {
+      if (generation !== this.generation || this.renderAttempt !== attempt) return;
+      this.renderAttempt = undefined;
       this.fail(error);
     }
   }

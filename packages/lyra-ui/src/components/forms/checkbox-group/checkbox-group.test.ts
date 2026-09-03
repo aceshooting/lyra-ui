@@ -6,6 +6,24 @@ import type { LyraCheckbox } from '../checkbox/checkbox.js';
 import { styles } from './checkbox-group.styles.js';
 import { resolveValidityAnchor } from '../../../internal/anchored-validity.js';
 
+type DescribedFieldset = HTMLFieldSetElement & {
+  ariaDescribedByElements?: readonly Element[] | null;
+};
+
+function hasDescribedByElementReflection(
+  fieldset: HTMLFieldSetElement,
+): boolean {
+  return Reflect.has(fieldset, 'ariaDescribedByElements');
+}
+
+function describedByIds(fieldset: HTMLFieldSetElement): string[] {
+  if (hasDescribedByElementReflection(fieldset)) {
+    return Array.from((fieldset as DescribedFieldset).ariaDescribedByElements ?? [])
+      .map((element) => element.id);
+  }
+  return fieldset.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
+}
+
 it('lets a consumer retint the invalid options border independently', async () => {
   const el = (await fixture(html`
     <lr-checkbox-group style="--lr-checkbox-group-invalid-border: rgb(1, 2, 3)">
@@ -183,32 +201,228 @@ it('reports required validity when no box is checked', async () => {
   expect(el.checkValidity()).to.be.false;
 });
 
-it('adds a localized aggregate required description without replacing hint or error relationships', async () => {
-  const el = await fixture<LyraCheckboxGroup>(html`
-    <lr-checkbox-group
-      required
-      hint="Choose any topic"
-      error-text="Selection missing"
-      .strings=${{ checkboxGroupRequired: 'Choisissez au moins une option.' }}
-    >
-      <lr-checkbox value="a">A</lr-checkbox>
-    </lr-checkbox-group>
+it('adds a localized aggregate required description after resolved host, hint, and error descriptions', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <span id="checkbox-group-external">External group guidance</span>
+      <span id="checkbox-group-host-label">Host-only label</span>
+      <lr-checkbox-group
+        required
+        aria-describedby="checkbox-group-external checkbox-group-unresolved checkbox-group-external"
+        aria-labelledby="checkbox-group-host-label"
+        hint="Choose any topic"
+        error-text="Selection missing"
+        .strings=${{ checkboxGroupRequired: 'Choisissez au moins une option.' }}
+      >
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    </div>
   `);
-  const fieldset = el.shadowRoot!.querySelector('fieldset')!;
+  const el = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
   const description = el.shadowRoot!.querySelector<HTMLElement>('[data-required-description]')!;
-  const ids = fieldset.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
+  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+  const error = el.shadowRoot!.querySelector<HTMLElement>('[part="error"]')!;
+  const ids = describedByIds(fieldset);
+  const expected = hasDescribedByElementReflection(fieldset)
+    ? ['checkbox-group-external', hint.id, error.id, description.id]
+    : [hint.id, error.id, description.id];
 
   expect(description.textContent?.trim()).to.equal('Choisissez au moins une option.');
-  expect(ids).to.include(description.id);
-  expect(ids).to.include(el.shadowRoot!.querySelector('[part="hint"]')!.id);
-  expect(ids).to.include(el.shadowRoot!.querySelector('[part="error"]')!.id);
+  expect(ids).to.deep.equal(expected);
+  expect(fieldset.getAttribute('aria-labelledby')).to.equal(null);
 
   el.required = false;
   await el.updateComplete;
-  const optionalIds = fieldset.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
-  expect(optionalIds).not.to.include(description.id);
-  expect(optionalIds).to.include(el.shadowRoot!.querySelector('[part="hint"]')!.id);
-  expect(optionalIds).to.include(el.shadowRoot!.querySelector('[part="error"]')!.id);
+  const optionalIds = describedByIds(fieldset);
+  const optionalExpected = hasDescribedByElementReflection(fieldset)
+    ? ['checkbox-group-external', hint.id, error.id]
+    : [hint.id, error.id];
+  expect(optionalIds).to.deep.equal(optionalExpected);
+});
+
+it('keeps checkbox-group host descriptions live across late resolution and reconnect', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-checkbox-group aria-describedby="checkbox-group-late" hint="Choose any topic">
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
+  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+
+  if (!hasDescribedByElementReflection(fieldset)) {
+    expect(describedByIds(fieldset)).to.deep.equal([hint.id]);
+    return;
+  }
+
+  const source = document.createElement('span');
+  source.id = 'checkbox-group-late';
+  source.textContent = 'Late group guidance';
+  wrapper.prepend(source);
+  await waitUntil(
+    () => fieldset.ariaDescribedByElements?.[0] === source,
+    'the late group description was not projected',
+  );
+
+  el.remove();
+  wrapper.append(el);
+  await waitUntil(
+    () => fieldset.ariaDescribedByElements?.[0] === source,
+    'the group description was not restored after reconnect',
+  );
+
+  const replacement = document.createElement('span');
+  replacement.id = source.id;
+  replacement.textContent = 'Replacement group guidance';
+  source.replaceWith(replacement);
+  await waitUntil(
+    () => fieldset.ariaDescribedByElements?.[0] === replacement,
+    'the replacement group description was not projected',
+  );
+});
+
+it('releases and reacquires host descriptions through the adopted owner realm', async () => {
+  const originalSourceMutationObserver = window.MutationObserver;
+  let sourceRelationshipObserver: SourceMutationObserver | undefined;
+  const disconnectedSourceRelationshipObservers = new Set<MutationObserver>();
+  class SourceMutationObserver extends originalSourceMutationObserver {
+    private observesHostRelationship = false;
+    private observesSourceRoot = false;
+
+    override observe(target: Node, options: MutationObserverInit): void {
+      super.observe(target, options);
+      if (
+        target instanceof HTMLElement &&
+        target.localName === 'lr-checkbox-group' &&
+        options.attributeFilter?.includes('aria-describedby')
+      ) {
+        this.observesHostRelationship = true;
+      }
+      if (
+        target === document &&
+        options.childList &&
+        options.subtree &&
+        options.attributeFilter?.includes('id')
+      ) {
+        this.observesSourceRoot = true;
+      }
+      if (this.observesHostRelationship && this.observesSourceRoot) {
+        sourceRelationshipObserver = this;
+      }
+    }
+
+    override disconnect(): void {
+      if (this.observesHostRelationship && this.observesSourceRoot) {
+        disconnectedSourceRelationshipObservers.add(this);
+      }
+      super.disconnect();
+    }
+  }
+  window.MutationObserver = SourceMutationObserver;
+  let wrapper: HTMLDivElement | undefined;
+  let el: LyraCheckboxGroup | undefined;
+  let frame: HTMLIFrameElement | undefined;
+  let frameWindow: Window | null | undefined;
+  let originalDestinationMutationObserver: typeof MutationObserver | undefined;
+  let relationshipObservations = 0;
+  let destinationRootObservations = 0;
+
+  try {
+    wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <span id="checkbox-group-adopted-description">Original group guidance</span>
+        <lr-checkbox-group aria-describedby="checkbox-group-adopted-description" hint="Choose any topic">
+          <lr-checkbox value="a">A</lr-checkbox>
+        </lr-checkbox-group>
+      </div>
+    `);
+    el = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    const source = wrapper.querySelector('#checkbox-group-adopted-description')!;
+    const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
+    const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+
+    if (!hasDescribedByElementReflection(fieldset)) {
+      expect(describedByIds(fieldset)).to.deep.equal([hint.id]);
+      return;
+    }
+
+    expect(fieldset.ariaDescribedByElements?.[0] === source).to.equal(true);
+    const activeSourceRelationshipObserver = sourceRelationshipObserver;
+    expect(activeSourceRelationshipObserver !== undefined).to.equal(true);
+    if (!activeSourceRelationshipObserver) {
+      throw new Error('The source resolved-description observer was not identified.');
+    }
+    expect(
+      disconnectedSourceRelationshipObservers.has(activeSourceRelationshipObserver),
+    ).to.equal(false);
+
+    frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument;
+    frameWindow = frame.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      throw new Error('The iframe realm was unavailable.');
+    }
+    const destinationSource = frameDocument.createElement('span');
+    destinationSource.id = source.id;
+    destinationSource.textContent = 'Adopted group guidance';
+    frameDocument.body.append(destinationSource);
+    originalDestinationMutationObserver = frameWindow.MutationObserver;
+    class OwnerMutationObserver extends originalDestinationMutationObserver {
+      override observe(target: Node, options: MutationObserverInit): void {
+        if (target === el && options.attributeFilter?.includes('aria-describedby')) {
+          relationshipObservations += 1;
+        }
+        if (
+          target === frameDocument &&
+          options.childList &&
+          options.subtree &&
+          options.attributeFilter?.includes('id')
+        ) {
+          destinationRootObservations += 1;
+        }
+        super.observe(target, options);
+      }
+    }
+    frameWindow.MutationObserver = OwnerMutationObserver;
+
+    frameDocument.adoptNode(el);
+    expect(
+      disconnectedSourceRelationshipObservers.has(activeSourceRelationshipObserver),
+    ).to.equal(true);
+    expect(describedByIds(fieldset)).to.deep.equal([hint.id]);
+
+    frameDocument.body.append(el);
+    await waitUntil(
+      () => fieldset.ariaDescribedByElements?.[0] === destinationSource,
+      'the adopted description was not reacquired from the destination document',
+    );
+    expect(relationshipObservations).to.be.greaterThan(0);
+    expect(destinationRootObservations).to.be.greaterThan(0);
+
+    const replacement = frameDocument.createElement('span');
+    replacement.id = destinationSource.id;
+    replacement.textContent = 'Replacement group guidance';
+    const authoredDescription = el.getAttribute('aria-describedby');
+    destinationSource.replaceWith(replacement);
+    expect(el.getAttribute('aria-describedby')).to.equal(authoredDescription);
+    await waitUntil(
+      () => fieldset.ariaDescribedByElements?.[0] === replacement,
+      'the destination relationship observer did not refresh the replaced source',
+    );
+  } finally {
+    window.MutationObserver = originalSourceMutationObserver;
+    if (frameWindow && originalDestinationMutationObserver) {
+      frameWindow.MutationObserver = originalDestinationMutationObserver;
+    }
+    if (el && el.ownerDocument !== document) document.adoptNode(el);
+    el?.remove();
+    wrapper?.remove();
+    frame?.remove();
+  }
 });
 
 it('projects visible property and slotted errors onto the fieldset without rewriting validity', async () => {
@@ -570,21 +784,66 @@ it('exposes value as a defensive readonly snapshot of child state', async () => 
   expect(el.value).to.deep.equal(['a']);
 });
 
-it('warns when two children share a value, because their FormData entries are indistinguishable', async () => {
-  const calls: unknown[][] = [];
+it('uses one fixed dev-only duplicate-value warning without leaking caller data', async () => {
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
   const originalWarn = console.warn;
-  console.warn = (...args: unknown[]) => calls.push(args);
-  let el: LyraCheckboxGroup;
+  const messages: string[] = [];
+  runtime.litIssuedWarnings = new Set();
+  console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
   try {
-    el = (await fixture(html`<lr-checkbox-group name="topics"><lr-checkbox>A</lr-checkbox><lr-checkbox>B</lr-checkbox><lr-checkbox>C</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
-    await el.updateComplete;
+    const first = (await fixture(html`
+      <lr-checkbox-group name="private-topic-18">
+        <lr-checkbox value="session-secret-18">A</lr-checkbox>
+        <lr-checkbox value="session-secret-18">B</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    const second = (await fixture(html`
+      <lr-checkbox-group name="private-topic-99">
+        <lr-checkbox value="session-secret-99">A</lr-checkbox>
+        <lr-checkbox value="session-secret-99">B</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await Promise.all([first.updateComplete, second.updateComplete]);
     await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(messages.length).to.equal(1);
+    const diagnostic = messages.join('\n');
+    expect(diagnostic).to.contain('lr-checkbox-group');
+    expect(diagnostic).to.contain('duplicate');
+    expect(diagnostic).to.not.contain('private-topic-18');
+    expect(diagnostic).to.not.contain('private-topic-99');
+    expect(diagnostic).to.not.contain('session-secret-18');
+    expect(diagnostic).to.not.contain('session-secret-99');
   } finally {
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
     console.warn = originalWarn;
   }
-  expect(calls.some((args) => String(args[0]).includes('"on"'))).to.be.true;
-  // Warned once per duplicated value, not once per sync().
-  expect(calls.filter((args) => String(args[0]).includes('"on"')).length).to.equal(1);
+});
+
+it('stays silent for duplicate child values when Lit development diagnostics are disabled', async () => {
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
+  const originalWarn = console.warn;
+  const messages: string[] = [];
+  delete runtime.litIssuedWarnings;
+  console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+  try {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="private-topic">
+        <lr-checkbox value="session-secret">A</lr-checkbox>
+        <lr-checkbox value="session-secret">B</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(messages).to.deep.equal([]);
+  } finally {
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
+    console.warn = originalWarn;
+  }
 });
 
 it('does not warn for the normal children-drive-value flow', async () => {

@@ -18,7 +18,12 @@
 
 A collapsible, copyable tree view for an arbitrary JSON-serializable value (object, array, string,
 number, boolean, null, or `undefined`). Serves as a fallback renderer wherever a raw payload needs
-inspecting without a bespoke view. Expand/collapse state is keyed by structural path (not object
+inspecting without a bespoke view. Assignment creates one bounded, frozen graph from own enumerable
+data descriptors. It never invokes getters or object-conversion hooks; accessor/reflection-failed
+branches and function or symbol leaves are omitted, while bigint is retained as decimal text.
+Rendering, searching, toolbar copy, and per-node copy all use that same owned graph, so later
+mutation or revocation of the supplied object cannot change a displayed or copied value. Ordinary
+aliases, cycles, and sparse-array holes are retained. Expand/collapse state is keyed by structural path (not object
 identity), so it survives a `data` reassignment that keeps the same shape — e.g. a streaming result
 being patched in place. A container value that self-references (directly or through a longer cycle)
 renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no

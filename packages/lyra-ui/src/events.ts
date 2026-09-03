@@ -512,6 +512,13 @@ export type LyraBeforeQueryRunEvent = LyraGraphQueryBuilderEventMap['lr-before-q
 export type LyraBeforeQuerySaveEvent = LyraGraphQueryBuilderEventMap['lr-before-query-save'];
 
 /**
+ * `lr-before-visibility-change` — dispatched by `<lr-graph-legend>`.
+ *
+ * Detail type: `LyraGraphLegendEventMap['lr-before-visibility-change']`.
+ */
+export type LyraBeforeVisibilityChangeEvent = LyraGraphLegendEventMap['lr-before-visibility-change'];
+
+/**
  * `lr-branch-change` — dispatched by `<lr-branch-picker>`.
  *
  * Detail type: `LyraBranchPickerEventMap['lr-branch-change']`.
@@ -3163,12 +3170,13 @@ export type LyraTimeChangeEvent = LyraAvPlayerEventMap['lr-time-change'];
 export type LyraToastOverflowEvent = LyraToastEventMap['lr-toast-overflow'];
 
 /**
- * `lr-toggle` — dispatched by 14 components: `<lr-activity-feed>`, `<lr-app-rail>`,
+ * `lr-toggle` — dispatched by 15 components: `<lr-activity-feed>`, `<lr-app-rail>`,
  * `<lr-chat-message>`, `<lr-code-block-core>`, `<lr-code-block>`, `<lr-commit-card>`,
- * `<lr-details>`, `<lr-entity-dossier>`, `<lr-message-parts>`, `<lr-provenance-panel>`,
- * `<lr-source-list>`, `<lr-task-list>`, `<lr-test-results>`, `<lr-thinking-panel>`.
+ * `<lr-details>`, `<lr-entity-dossier>`, `<lr-message-parts>`, `<lr-multi-split>`,
+ * `<lr-provenance-panel>`, `<lr-source-list>`, `<lr-task-list>`, `<lr-test-results>`,
+ * `<lr-thinking-panel>`.
  *
- * A union of 12 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 13 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraActivityFeedEventMap['lr-toggle']`.
  */
 export type LyraToggleEvent =
@@ -3179,6 +3187,7 @@ export type LyraToggleEvent =
   | LyraCodeBlockEventMap['lr-toggle']
   | LyraCommitCardEventMap['lr-toggle']
   | LyraDetailsEventMap['lr-toggle']
+  | LyraMultiSplitEventMap['lr-toggle']
   | LyraProvenancePanelEventMap['lr-toggle']
   | LyraSourceListEventMap['lr-toggle']
   | LyraTaskListEventMap['lr-toggle']
@@ -3510,6 +3519,7 @@ export interface LyraGlobalEventMap {
   'lr-before-query-load': LyraBeforeQueryLoadEvent;
   'lr-before-query-run': LyraBeforeQueryRunEvent;
   'lr-before-query-save': LyraBeforeQuerySaveEvent;
+  'lr-before-visibility-change': LyraBeforeVisibilityChangeEvent;
   'lr-branch-change': LyraBranchChangeEvent;
   'lr-camera-request': LyraCameraRequestEvent;
   'lr-cancel': LyraCancelEvent;

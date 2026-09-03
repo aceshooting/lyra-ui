@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -75,6 +75,8 @@ pending duration/toggle accent without changing the shared brand token;
 `--lr-thinking-panel-compact-header-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`) —
 `[part="header"]` padding while `compact`; `--lr-thinking-panel-compact-header-gap` (default
 `var(--lr-space-2xs)`) — gap between the toggle, label, and duration while `compact`; and
+`--lr-thinking-panel-compact-header-font-size` (default `var(--lr-font-size-sm)`) — font size of
+`[part="header"]` while `compact`; and
 `--lr-thinking-panel-compact-body-padding` (default `var(--lr-space-s)`) — `[part="body"]`
 padding while `compact`. Plus shared
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,

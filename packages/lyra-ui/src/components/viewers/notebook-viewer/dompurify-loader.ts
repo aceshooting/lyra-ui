@@ -3,6 +3,10 @@ import {
   resolveOptionalPeerCapability,
   type HtmlSanitizer,
 } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const NOTEBOOK_SANITIZER_WARNING_KEY = 'lyra-notebook-viewer-sanitizer-unavailable';
+const NOTEBOOK_SANITIZER_WARNING = '<lr-notebook-viewer> could not load its optional dompurify peer.';
 
 let sanitizer: Promise<HtmlSanitizer | null> | undefined;
 
@@ -16,11 +20,8 @@ export async function loadNotebookSanitizerDeps(
     // dual-shape tolerance spreadsheet-loader.ts/qr-code-loader.ts already apply.
     const module = await importDompurify();
     return resolveOptionalPeerCapability(module, isHtmlSanitizer);
-  } catch (error) {
-    console.warn(
-      '<lr-notebook-viewer> needs the optional peer dependency `dompurify` to render raw HTML/SVG cell outputs — install it with `pnpm add dompurify`:',
-      error,
-    );
+  } catch {
+    devWarnOnce(NOTEBOOK_SANITIZER_WARNING_KEY, NOTEBOOK_SANITIZER_WARNING);
     return null;
   }
 }

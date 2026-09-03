@@ -73,7 +73,7 @@ announcement itself goes to the library's shared **light-DOM** assertive region,
 consumer's `<body>` and marked `data-lr-live-region="assertive"`, because a live region inside a
 shadow root is not reliably announced (JAWS with Firefox ignores one outright). What is announced
 is unchanged: only failures added or transitioned _after_ mount, so historical failed rows stay
-visible without being re-announced. Assert against that document-level region rather than
+visible without being re-announced. Read that document-level region rather than
 `::part(failure-live)`.
 
 In virtualized mode (above `virtualizeAt`) the rows live in the internal

@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The per-message action toolbar for lr-chat-message\'s actions slot: opt-in built-ins (copy / regenerate / edit / feedback) plus a slot for custom controls. Duplicate built-in names normalize first-wins; provider actions require nonblank IDs and omit later duplicates.',
+          'The per-message action toolbar for lr-chat-message\'s actions slot: opt-in built-ins (copy / regenerate / edit / feedback) plus a slot for custom controls. Duplicate built-in names normalize first-wins; provider actions require nonblank IDs and omit later duplicates. Departing managed controls restore untouched authored tab stops through their optional toolbar release hook.',
       },
     },
   },
@@ -33,6 +33,35 @@ export const WithSlottedBranchPicker: Story = {
       <lr-branch-picker index="1" count="3"></lr-branch-picker>
     </lr-message-actions>
   `,
+};
+
+export const FeedbackPersistenceById: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The wrapper receives the built-in feedback event once. Prevent it, then settle its current transaction through the wrapper with the exact submission ID.',
+      },
+    },
+  },
+  render: () => {
+    const settle = (event: Event): void => {
+      event.preventDefault();
+      const host = event.currentTarget as HTMLElement & {
+        finalizePendingSubmit(submissionId: string): boolean;
+      };
+      const submissionId = (
+        event as CustomEvent<{ readonly submissionId: string }>
+      ).detail.submissionId;
+      window.setTimeout(() => host.finalizePendingSubmit(submissionId), 750);
+    };
+    return html`
+      <lr-message-actions
+        .controls=${['feedback']}
+        @lr-feedback-submit=${settle}
+      ></lr-message-actions>
+    `;
+  },
 };
 
 export const UnavailableSlottedControl: Story = {

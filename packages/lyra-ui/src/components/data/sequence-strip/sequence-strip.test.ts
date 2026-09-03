@@ -39,6 +39,33 @@ it('rejects declaration-breaking and url category paint values', async () => {
   );
 });
 
+it('contains a throwing shadow-root activeElement getter during item reconciliation', async () => {
+  const el = (await fixture(html`
+    <lr-sequence-strip .items=${[{ id: 'first', categoryId: 'a' }]}></lr-sequence-strip>
+  `)) as LyraSequenceStrip;
+  const root = el.shadowRoot!;
+  const prior = Object.getOwnPropertyDescriptor(root, 'activeElement');
+  let unavailable = true;
+  Object.defineProperty(root, 'activeElement', {
+    configurable: true,
+    get(): Element {
+      if (unavailable) throw new TypeError('active element unavailable');
+      return {} as Element;
+    },
+  });
+  try {
+    el.items = [{ id: 'second', categoryId: 'a' }];
+    await el.updateComplete;
+    unavailable = false;
+    el.items = [{ id: 'third', categoryId: 'a' }];
+    await el.updateComplete;
+    expect(el.items[0]!.id).to.equal('third');
+  } finally {
+    if (prior) Object.defineProperty(root, 'activeElement', prior);
+    else delete (root as unknown as { activeElement?: unknown }).activeElement;
+  }
+});
+
 it('defaults to empty items/categories', async () => {
   const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   expect(el.items).to.deep.equal([]);

@@ -41,6 +41,12 @@ generation-guarded, including across disconnect/reconnect.
 `LyraQrCode.preload(): Promise<boolean>` is a static optional-peer warm-up that starts the shared
 `qrcode` import without encoding a value; it resolves to `false` when the peer is unavailable.
 
+When `IntersectionObserver` is available, painting waits for a valid intersecting entry and resumes
+whenever the code re-enters view. If the API is unavailable, its constructor fails, or `observe()`
+throws, rendering proceeds immediately. Invalid resolved paint colors fall back to the documented
+safe fill/background without changing the QR's loading or error state: foreground becomes black,
+background becomes transparent, and `imageBackground` becomes the resolved QR background.
+
 At ordinary sizes the backing store is a fixed `2×` the CSS size, independent of device pixel
 ratio. It degrades uniformly only to stay within 4,096 pixels per dimension and 8,388,608 total
 pixels. Modules span the full canvas with no injected quiet zone; add host padding when a scanner

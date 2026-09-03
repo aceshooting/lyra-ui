@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -82,7 +82,11 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
   over the image-format preview; ignored for the `text`/`generic` formats. IDs are trimmed and
   required to be nonempty, with the first record retained when IDs repeat. A rectangle renders only
-  when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
+  when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative. Image-region
+  geometry is captured when `highlights` is assigned: an invalid or accessor-backed `region` anchor
+  is ignored, and mutating an accepted anchor later does not move its painted region. Reassign
+  `highlights` to update it; the original public anchor identity remains available for
+  reference-based `scrollToAnchor()`.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
 - `anchorKinds: readonly LyraAnchor['kind'][] = ['region']` (this viewer's supported
@@ -144,7 +148,11 @@ every other element that read them. The tone-specific resting border and hover t
 `--lr-document-preview-highlight-accent-color`, `--lr-document-preview-highlight-success-color`,
 `--lr-document-preview-highlight-warning-color`, `--lr-document-preview-highlight-danger-color`,
 and `--lr-document-preview-highlight-neutral-color` (defaulting respectively to the matching
-brand/success/warning/danger/neutral color tokens). Plus shared tokens
+brand/success/warning/danger/neutral color tokens). `--lr-document-preview-download-link-hover-bg`
+defaults to `color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner)
+var(--lr-color-mix-hover))`; `--lr-document-preview-download-link-active-bg` uses the same mix with
+`var(--lr-color-mix-active)`, styling the native download action's hover and pressed backgrounds.
+Plus shared tokens
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.

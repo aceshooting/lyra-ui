@@ -323,3 +323,207 @@ describe('<lr-mutation-observer>', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('contains a hostile attributeFilter option and keeps a valid observation alive', async () => {
+  const OriginalMutationObserver = window.MutationObserver;
+  let observed = 0;
+  class TestMutationObserver {
+    constructor(_callback: MutationCallback) {}
+    observe(): void { observed += 1; }
+    disconnect(): void {}
+    takeRecords(): MutationRecord[] { return []; }
+  }
+  window.MutationObserver = TestMutationObserver as unknown as typeof MutationObserver;
+  const hostileFilter = new Proxy([], {
+    get() {
+      throw new Error('filter trap must not run');
+    },
+  });
+  let el: LyraMutationObserver | undefined;
+  try {
+    el = await fixture<LyraMutationObserver>(html`
+      <lr-mutation-observer child-list><div>Observed</div></lr-mutation-observer>
+    `);
+    (el as unknown as { attributeFilter: unknown }).attributeFilter = hostileFilter;
+    let rejected = false;
+    try {
+      await el.updateComplete;
+      await aTimeout(0);
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).to.equal(false);
+    expect(observed).to.be.greaterThan(0);
+  } finally {
+    el?.remove();
+    window.MutationObserver = OriginalMutationObserver;
+  }
+});
+
+it('contains failed MutationObserver construction and one failed target while admitting a later target', async () => {
+  const OriginalMutationObserver = window.MutationObserver;
+  const observed: Element[] = [];
+  let failConstruction = false;
+  class TestMutationObserver {
+    constructor(_callback: MutationCallback) {
+      if (failConstruction) throw new Error('constructor failure');
+    }
+    observe(target: Node): void {
+      if ((target as HTMLElement).id === 'bad') throw new Error('target failure');
+      observed.push(target as Element);
+    }
+    disconnect(): void {}
+    takeRecords(): MutationRecord[] { return []; }
+  }
+  window.MutationObserver = TestMutationObserver as unknown as typeof MutationObserver;
+  let el: LyraMutationObserver | undefined;
+  try {
+    el = document.createElement('lr-mutation-observer') as LyraMutationObserver;
+    el.childList = true;
+    const bad = document.createElement('div');
+    bad.id = 'bad';
+    const good = document.createElement('div');
+    good.id = 'good';
+    el.append(bad, good);
+    document.body.append(el);
+    let rejected = false;
+    try {
+      await el.updateComplete;
+      await aTimeout(0);
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).to.equal(false);
+    expect(observed.includes(good)).to.equal(true);
+
+    failConstruction = true;
+    el.attr = 'data-state';
+    rejected = false;
+    try {
+      await el.updateComplete;
+      await aTimeout(0);
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).to.equal(false);
+    expect((el as unknown as { observer?: MutationObserver }).observer).to.equal(undefined);
+  } finally {
+    el?.remove();
+    window.MutationObserver = OriginalMutationObserver;
+  }
+});
+
+it('contains a throwing owner capability lookup and resumes after it is restored', async () => {
+  const originalCapability = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+  const observed: Node[] = [];
+  class TestMutationObserver {
+    constructor(_callback: MutationCallback) {}
+    observe(target: Node): void { observed.push(target); }
+    disconnect(): void {}
+    takeRecords(): MutationRecord[] { return []; }
+  }
+  Object.defineProperty(window, 'MutationObserver', {
+    configurable: true,
+    writable: true,
+    value: TestMutationObserver,
+  });
+  let el: LyraMutationObserver | undefined;
+  try {
+    el = await fixture<LyraMutationObserver>(html`
+      <lr-mutation-observer child-list><div>Observed</div></lr-mutation-observer>
+    `);
+    await aTimeout(0);
+    const target = el.querySelector('div')!;
+    expect(observed.includes(target)).to.equal(true);
+
+    Object.defineProperty(window, 'MutationObserver', {
+      configurable: true,
+      get() {
+        throw new Error('capability lookup must stay contained');
+      },
+    });
+    let threw = false;
+    try {
+      (el as unknown as { observeTargets(): void }).observeTargets();
+    } catch {
+      threw = true;
+    }
+    expect(threw).to.equal(false);
+    expect((el as unknown as { observer?: MutationObserver }).observer).to.equal(undefined);
+
+    Object.defineProperty(window, 'MutationObserver', {
+      configurable: true,
+      writable: true,
+      value: TestMutationObserver,
+    });
+    (el as unknown as { observeTargets(): void }).observeTargets();
+    expect(observed.filter((entry) => entry === target).length).to.be.greaterThan(1);
+  } finally {
+    el?.remove();
+    if (originalCapability) Object.defineProperty(window, 'MutationObserver', originalCapability);
+    else Reflect.deleteProperty(window, 'MutationObserver');
+  }
+});
+
+it('contains a throwing disconnect hook across rebuild and reconnect', async () => {
+  const originalCapability = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+  const observed: Node[] = [];
+  let throwDisconnect = false;
+  class TestMutationObserver {
+    constructor(_callback: MutationCallback) {
+      return new Proxy(
+        {
+          observe(target: Node): void { observed.push(target); },
+          disconnect(): void {},
+          takeRecords(): MutationRecord[] { return []; },
+        },
+        {
+          get(target, key, receiver) {
+            if (throwDisconnect && key === 'disconnect') {
+              throw new Error('disconnect hook must stay contained');
+            }
+            return Reflect.get(target, key, receiver);
+          },
+        },
+      ) as unknown as TestMutationObserver;
+    }
+  }
+  Object.defineProperty(window, 'MutationObserver', {
+    configurable: true,
+    writable: true,
+    value: TestMutationObserver,
+  });
+  let el: LyraMutationObserver | undefined;
+  try {
+    el = await fixture<LyraMutationObserver>(html`
+      <lr-mutation-observer child-list><div>Observed</div></lr-mutation-observer>
+    `);
+    await aTimeout(0);
+    const target = el.querySelector('div')!;
+    const initialObservations = observed.filter((entry) => entry === target).length;
+    expect(initialObservations).to.be.greaterThan(0);
+
+    throwDisconnect = true;
+    let threw = false;
+    try {
+      (el as unknown as { observeTargets(): void }).observeTargets();
+    } catch {
+      threw = true;
+    }
+    expect(threw).to.equal(false);
+    const rebuiltObservations = observed.filter((entry) => entry === target).length;
+    expect(rebuiltObservations).to.be.greaterThan(initialObservations);
+
+    throwDisconnect = false;
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await aTimeout(0);
+    expect(observed.filter((entry) => entry === target).length).to.be.greaterThan(rebuiltObservations);
+  } finally {
+    throwDisconnect = false;
+    el?.remove();
+    if (originalCapability) Object.defineProperty(window, 'MutationObserver', originalCapability);
+    else Reflect.deleteProperty(window, 'MutationObserver');
+  }
+});

@@ -20,6 +20,14 @@ async function waitForOpenMenu(el: LyraExportButton): Promise<HTMLElement> {
   return menu;
 }
 
+function menuOverlay(el: LyraExportButton):
+  | { isActive(): boolean; isTopmost(): boolean }
+  | undefined {
+  return (el as unknown as {
+    overlay?: { isActive(): boolean; isTopmost(): boolean };
+  }).overlay;
+}
+
 it('fails closed to frozen empty choices when formats is assigned a non-array value', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   (el as unknown as { formats: unknown }).formats = { formatId: 'csv' };
@@ -352,6 +360,48 @@ it('binds outside-pointer dismissal to the adopted owner document', async () => 
     await el.updateComplete;
     el.open = true;
     await el.updateComplete;
+    frameDocument.body.dispatchEvent(
+      new frameWindow.PointerEvent('pointerdown', { bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('keeps a live adopted menu open until an outside pointer in its new owner document dismisses it', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = document.createElement('lr-export-button') as LyraExportButton;
+  el.formats = ['csv', 'json'];
+
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    await waitUntil(
+      () => menuOverlay(el)?.isActive() === true,
+      'source-document menu overlay did not activate',
+    );
+
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await waitUntil(
+      () =>
+        el.ownerDocument === frameDocument &&
+        el.open &&
+        menuOverlay(el)?.isActive() === true,
+      'live menu did not rehome after adoption',
+    );
+
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
     frameDocument.body.dispatchEvent(
       new frameWindow.PointerEvent('pointerdown', { bubbles: true, composed: true }),
     );
@@ -742,6 +792,8 @@ it('removes the document pointerdown listener on disconnect', async () => {
   }
 
   expect(removedPointerdown).to.be.true;
+  await Promise.resolve();
+  await el.updateComplete;
   expect(el.open).to.be.false;
 });
 
@@ -927,15 +979,18 @@ it('returns focus to the trigger when an open menu collapses to a single format'
   expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="trigger"]'))).to.equal(true);
 });
 
-it('resets to closed on disconnect and re-binds the outside-click listener when reopened after reconnect', async () => {
+it('resets a live menu on a same-document disconnect/reconnect and re-binds outside dismissal when reopened', async () => {
   const el = (await fixture(
     html`<lr-export-button open .formats=${['csv', 'json']}></lr-export-button>`,
   )) as LyraExportButton;
   await el.updateComplete;
+  const initialOverlay = menuOverlay(el);
+  expect(initialOverlay?.isActive()).to.equal(true);
   const parent = el.parentElement!;
   el.remove();
   parent.appendChild(el);
   await el.updateComplete;
+  expect(initialOverlay?.isActive()).to.equal(false);
   // The real, discriminating check: a leftover inline `position` style is set
   // once on first open and never cleared either way, so it can't tell a fixed
   // reconnect apart from the pre-fix bug (which left `open` stuck `true`
@@ -946,6 +1001,9 @@ it('resets to closed on disconnect and re-binds the outside-click listener when 
   trigger.click();
   await el.updateComplete;
   expect(el.open).to.be.true;
+  const reopenedOverlay = menuOverlay(el);
+  expect(reopenedOverlay?.isActive()).to.equal(true);
+  expect(reopenedOverlay === initialOverlay).to.equal(false);
   // Confirms the outside-click listener was genuinely re-armed by this fresh
   // open, not left stale/leaked from before the reconnect.
   document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
@@ -1184,4 +1242,187 @@ it('makes the menu lifecycle events cancelable', async () => {
   await el.updateComplete;
   expect(seen.map((event) => event.type)).to.deep.equal(['lr-show', 'lr-hide']);
   expect(seen.every((event) => event.cancelable)).to.be.true;
+});
+
+it('projects format descriptors through own data properties and retains a valid later choice', async () => {
+  let getterReads = 0;
+  const hostile = {};
+  Object.defineProperty(hostile, 'formatId', {
+    enumerable: true,
+    get() {
+      getterReads += 1;
+      throw new Error('format getter must not run');
+    },
+  });
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  let assignmentThrew = false;
+  try {
+    (el as unknown as { formats: unknown }).formats = [
+      hostile,
+      { formatId: 'safe', label: 'Safe format' },
+    ];
+  } catch {
+    assignmentThrew = true;
+  }
+  await el.updateComplete;
+
+  expect(assignmentThrew).to.equal(false);
+  expect(getterReads).to.equal(0);
+  expect(el.formats).to.deep.equal([{ formatId: 'safe', label: 'Safe format' }]);
+});
+
+it('fails closed for a revoked formats array instead of invoking its traps', async () => {
+  const { proxy, revoke } = Proxy.revocable(['csv'], {});
+  revoke();
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  let assignmentThrew = false;
+  try {
+    (el as unknown as { formats: unknown }).formats = proxy;
+  } catch {
+    assignmentThrew = true;
+  }
+  await el.updateComplete;
+
+  expect(assignmentThrew).to.equal(false);
+  expect(el.formats).to.deep.equal([]);
+});
+
+it('centers a short menu label inside its live minimum hit target', async () => {
+  const el = (await fixture(html`
+    <lr-export-button open style="--lr-transition-fast: 0s" .formats=${['csv', 'json']}></lr-export-button>
+  `)) as LyraExportButton;
+  const menu = await waitForOpenMenu(el);
+  const item = menu.querySelector<HTMLButtonElement>('[part="menu-item"]')!;
+  const label = item.querySelector<HTMLElement>('[part="format-label"]')!;
+  const itemRect = item.getBoundingClientRect();
+  const labelRect = label.getBoundingClientRect();
+
+  expect(Math.abs((labelRect.left + labelRect.width / 2) - (itemRect.left + itemRect.width / 2))).to.be.at.most(1);
+  expect(Math.abs((labelRect.top + labelRect.height / 2) - (itemRect.top + itemRect.height / 2))).to.be.at.most(1);
+});
+
+it('routes Escape and outside dismissal only to the topmost open export menu', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="outside" type="button">Outside</button>
+      <lr-export-button id="first" .formats=${['csv', 'json']}></lr-export-button>
+      <lr-export-button id="second" .formats=${['csv', 'json']}></lr-export-button>
+    </div>
+  `);
+  const first = wrapper.querySelector('#first') as LyraExportButton;
+  const second = wrapper.querySelector('#second') as LyraExportButton;
+  const outside = wrapper.querySelector('#outside') as HTMLButtonElement;
+  first.open = true;
+  second.open = true;
+  await Promise.all([first.updateComplete, second.updateComplete]);
+  const firstOverlay = menuOverlay(first);
+  const secondOverlay = menuOverlay(second);
+  expect(firstOverlay?.isActive()).to.equal(true);
+  expect(secondOverlay?.isTopmost()).to.equal(true);
+  expect(firstOverlay?.isTopmost()).to.equal(false);
+
+  document.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'Escape',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  }));
+  await Promise.all([first.updateComplete, second.updateComplete]);
+  expect(first.open).to.equal(true);
+  expect(second.open).to.equal(false);
+  expect(firstOverlay?.isActive()).to.equal(true);
+  expect(secondOverlay?.isActive()).to.equal(false);
+  expect(second.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+
+  second.open = true;
+  await second.updateComplete;
+  outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await Promise.all([first.updateComplete, second.updateComplete]);
+  expect(first.open).to.equal(true);
+  expect(second.open).to.equal(false);
+});
+
+it('uses the adopted owner document for manager-owned Escape dismissal', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = document.createElement('lr-export-button') as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  const lifecycle = el as unknown as {
+    renderRoot: HTMLElement | DocumentFragment;
+    createRenderRoot(): ShadowRoot;
+  };
+  // Construct styles in the source document before adoption; adoptedStyleSheets cannot be shared
+  // across documents, while the component must still attach its actual render root in the frame.
+  lifecycle.renderRoot = lifecycle.createRenderRoot();
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    frameDocument.dispatchEvent(new frameWindow.KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    }));
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('keeps a live adopted menu open until Escape in its new owner document dismisses it', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  const el = document.createElement('lr-export-button') as LyraExportButton;
+  el.formats = ['csv', 'json'];
+
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    await waitUntil(
+      () => menuOverlay(el)?.isActive() === true,
+      'source-document menu overlay did not activate',
+    );
+
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await waitUntil(
+      () =>
+        el.ownerDocument === frameDocument &&
+        el.open &&
+        menuOverlay(el)?.isActive() === true,
+      'live menu did not rehome after adoption',
+    );
+
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    }));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    frameDocument.dispatchEvent(new frameWindow.KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    }));
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+  } finally {
+    el.remove();
+    frame.remove();
+  }
 });

@@ -193,7 +193,7 @@ export const styles = css`
      size="xs"/"s") -- a small inline pill grown to 40px would balloon the tags row. The negative
      margin pulls the enlarged hit area back into the tag's own padding, leaving the visible
      footprint and the row's layout box unchanged. */
-  [part="tag__remove-button"] {
+  [part~="tag__remove-button"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -205,6 +205,7 @@ export const styles = css`
     cursor: pointer;
     color: inherit;
     padding: 0;
+    font: inherit;
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-font-size-m);
   }
@@ -264,8 +265,10 @@ export const styles = css`
      (combobox.class.ts's @click), so it takes the full shared icon-button hit-area floor instead of
      the capped box above. */
   [part="clear-button"] {
+    font: inherit;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
+    line-height: var(--lr-line-height-none);
   }
   [part="expand-icon"] svg {
     transform: rotate(90deg);

@@ -6,6 +6,10 @@ import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const NATIVE_SCROLLBAR_TEST_SUFFIX = '.native-scrollbar.test.ts';
+export const NATIVE_SCROLLBAR_TEST_FILE =
+  'src/components/data/data-grid/data-grid.native-scrollbar.test.ts';
+const NATIVE_SCROLLBAR_OWNER_FILE = 'src/components/data/data-grid/data-grid.test.ts';
 
 // The package-entrypoint contract imports the complete unbundled package graph in a fresh iframe
 // realm. On CI it costs roughly as much wall time as 50 ordinary test files, so plain file-count
@@ -30,7 +34,11 @@ async function collectTestFiles(directory, root, files) {
     const absolutePath = resolve(directory, entry.name);
     if (entry.isDirectory()) {
       await collectTestFiles(absolutePath, root, files);
-    } else if (entry.isFile() && entry.name.endsWith('.test.ts')) {
+    } else if (
+      entry.isFile() &&
+      entry.name.endsWith('.test.ts') &&
+      !entry.name.endsWith(NATIVE_SCROLLBAR_TEST_SUFFIX)
+    ) {
       files.push(toPosixPath(relative(root, absolutePath)));
     }
   }
@@ -138,7 +146,82 @@ export function shardTestFiles(testFiles, shardIndex, shardTotal) {
   return shards[index - 1].sort(comparePaths);
 }
 
-export function runShard(testFiles, { shardIndex, shardTotal }, environment = process.env) {
+export function shouldRunNativeScrollbarVerification(testFiles) {
+  return testFiles.includes(NATIVE_SCROLLBAR_OWNER_FILE);
+}
+
+export function nativeScrollbarVerificationCommand(
+  browser,
+  { executable = process.platform === 'win32' ? 'wtr.cmd' : 'wtr' } = {},
+) {
+  const product = String(browser ?? 'chromium').toLowerCase();
+  if (product === 'webkit' || product === 'safari') {
+    return {
+      command: 'xvfb-run',
+      args: ['-a', 'dbus-run-session', '--', executable, NATIVE_SCROLLBAR_TEST_FILE],
+    };
+  }
+  if (product === 'firefox') {
+    return {
+      command: 'xvfb-run',
+      args: ['-a', executable, NATIVE_SCROLLBAR_TEST_FILE],
+    };
+  }
+  return { command: executable, args: [NATIVE_SCROLLBAR_TEST_FILE] };
+}
+
+export function runNativeScrollbarVerification(
+  testFiles,
+  {
+    browser = process.env.WTR_BROWSER ?? 'chromium',
+    environment = process.env,
+    packageDirectory: directory = packageDirectory,
+    spawn = spawnSync,
+  } = {},
+) {
+  if (!shouldRunNativeScrollbarVerification(testFiles)) return 0;
+
+  const executable = resolve(
+    directory,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'wtr.cmd' : 'wtr',
+  );
+  const { command, args } = nativeScrollbarVerificationCommand(browser, { executable });
+  const nativeEnvironment = {
+    ...environment,
+    WTR_NATIVE_SCROLLBAR: '1',
+  };
+  delete nativeEnvironment.WTR_COVERAGE;
+  delete nativeEnvironment.WTR_COVERAGE_REPORT_DIR;
+
+  console.log(`Native scrollbar verification: ${NATIVE_SCROLLBAR_TEST_FILE}`);
+  const result = spawn(command, args, {
+    cwd: directory,
+    env: nativeEnvironment,
+    stdio: 'inherit',
+  });
+  if (result.error) {
+    if (command === 'xvfb-run' && result.error.code === 'ENOENT') {
+      throw new Error(`Native ${String(browser).toLowerCase()} scrollbar verification requires xvfb-run.`);
+    }
+    throw result.error;
+  }
+  if (result.signal) {
+    throw new Error(`Native scrollbar verification was terminated by signal ${result.signal}.`);
+  }
+  return result.status ?? 1;
+}
+
+export function runShard(
+  testFiles,
+  { shardIndex, shardTotal },
+  environment = process.env,
+  {
+    spawn = spawnSync,
+    runNativeScrollbarVerification: runNative = runNativeScrollbarVerification,
+  } = {},
+) {
   const selectedFiles = shardTestFiles(testFiles, shardIndex, shardTotal);
   if (testFiles.length === 0) {
     throw new Error('No test files were discovered.');
@@ -156,7 +239,7 @@ export function runShard(testFiles, { shardIndex, shardTotal }, environment = pr
   for (const file of selectedFiles) console.log(`  ${file}`);
 
   const executable = process.platform === 'win32' ? 'wtr.cmd' : 'wtr';
-  const result = spawnSync(executable, selectedFiles, {
+  const result = spawn(executable, selectedFiles, {
     cwd: packageDirectory,
     env: environment,
     stdio: 'inherit',
@@ -165,7 +248,14 @@ export function runShard(testFiles, { shardIndex, shardTotal }, environment = pr
   if (result.signal) {
     throw new Error(`Web Test Runner was terminated by signal ${result.signal}.`);
   }
-  return result.status ?? 1;
+  const status = result.status ?? 1;
+  if (status !== 0) return status;
+  return runNative(selectedFiles, {
+    browser: environment.WTR_BROWSER,
+    environment,
+    packageDirectory,
+    spawn,
+  });
 }
 
 async function main() {

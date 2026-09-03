@@ -34,6 +34,55 @@ async function basic(): Promise<LyraPopover> {
   `) as Promise<LyraPopover>;
 }
 
+it('keeps popover rendering and lifecycle available behind a throwing internals accessor', async () => {
+  const prototype = LyraPopover.prototype as unknown as object;
+  const original = Object.getOwnPropertyDescriptor(prototype, 'attachInternals');
+  let accessorReads = 0;
+  Object.defineProperty(prototype, 'attachInternals', {
+    configurable: true,
+    get(): never {
+      accessorReads += 1;
+      throw new Error('partial DOM attachInternals accessor');
+    },
+  });
+  let el!: LyraPopover;
+  try {
+    el = new LyraPopover();
+  } finally {
+    if (original) Object.defineProperty(prototype, 'attachInternals', original);
+    else delete (prototype as { attachInternals?: unknown }).attachInternals;
+  }
+
+  expect(accessorReads).to.equal(0);
+  el.style.setProperty('--show-duration', '0ms');
+  el.style.setProperty('--hide-duration', '0ms');
+  const button = document.createElement('button');
+  button.slot = 'trigger';
+  button.textContent = 'Open';
+  const content = document.createElement('p');
+  content.textContent = 'Details';
+  el.append(button, content);
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(popup(el).hasAttribute('data-hidden')).to.equal(true);
+
+    await el.show();
+    expect(el.open).to.equal(true);
+    expect(el.hasAttribute('open')).to.equal(true);
+    expect(popup(el).hasAttribute('data-hidden')).to.equal(false);
+    const internals = (el as unknown as { popoverInternals: ElementInternals }).popoverInternals;
+    expect(internals.states.has('open')).to.equal(true);
+
+    await el.hide({ focusTrigger: false });
+    expect(el.open).to.equal(false);
+    expect(el.hasAttribute('open')).to.equal(false);
+    expect(internals.states.has('open')).to.equal(false);
+  } finally {
+    el.remove();
+  }
+});
+
 // This file is the colocated `popover.class.ts` test once it exists (scripts/check-source-policy.mjs's
 // `colocatedTestSource()` prefers an exact `popover.test.ts` over scanning the whole directory), so it
 // carries the class's own keydown-wiring and this.localize() coverage directly rather than relying on

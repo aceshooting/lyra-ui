@@ -101,4 +101,33 @@ describe('sanitizePercentRect', () => {
       expect(sanitizePercentRect(rect), JSON.stringify(rect)).to.be.undefined;
     }
   });
+
+  it('reads geometry only through own data descriptors and fails closed on hostile records', () => {
+    let getterCalls = 0;
+    const accessorBacked = Object.defineProperties(
+      { y: 0, width: 10, height: 10 },
+      {
+        x: {
+          enumerable: true,
+          get() {
+            getterCalls += 1;
+            throw new Error('geometry accessor must not run');
+          },
+        },
+      },
+    );
+    const reflectionFailure = new Proxy(
+      { x: 0, y: 0, width: 10, height: 10 },
+      {
+        getOwnPropertyDescriptor() {
+          throw new Error('descriptor reflection failed');
+        },
+      },
+    );
+
+    expect(() => sanitizePercentRect(accessorBacked)).not.to.throw();
+    expect(sanitizePercentRect(accessorBacked)).to.equal(undefined);
+    expect(sanitizePercentRect(reflectionFailure)).to.equal(undefined);
+    expect(getterCalls).to.equal(0);
+  });
 });

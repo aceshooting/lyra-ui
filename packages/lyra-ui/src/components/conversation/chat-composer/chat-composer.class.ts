@@ -38,6 +38,19 @@ import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_se
  *  property name mean two unrelated things. */
 export type ChatComposerFrame = LyraFrame;
 export type ChatComposerStatus = 'idle' | 'sending' | 'streaming';
+export const CHAT_COMPOSER_STATUSES = Object.freeze([
+  'idle',
+  'sending',
+  'streaming',
+] as const);
+
+/** Resolves untrusted status input to the public literal set. */
+export function normalizeChatComposerStatus(value: unknown): ChatComposerStatus {
+  return typeof value === 'string' &&
+    CHAT_COMPOSER_STATUSES.includes(value as ChatComposerStatus)
+    ? (value as ChatComposerStatus)
+    : 'idle';
+}
 /** Retained name for the shared native `<textarea wrap>` vocabulary. */
 export type ChatComposerWrap = LyraTextWrap;
 /** Retained name for the shared native `selectionDirection` vocabulary. */
@@ -188,7 +201,34 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @property() placeholder = '';
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 8;
-  @property({ reflect: true }) status: ChatComposerStatus = 'idle';
+  private statusValue: ChatComposerStatus = 'idle';
+  /** Sending state. Invalid direct or attribute writes normalize and reflect as `idle`. */
+  @property({ reflect: true })
+  get status(): ChatComposerStatus {
+    return this.statusValue;
+  }
+  set status(value: ChatComposerStatus) {
+    const previous = this.statusValue;
+    const normalized = normalizeChatComposerStatus(value);
+    this.statusValue = normalized;
+    // Lit correctly suppresses reflection while it is handling an attribute callback. Canonicalize
+    // an unsupported attribute synchronously in that path so `status="busy"` cannot survive when
+    // the normalized state happens to equal the previous idle value.
+    if (
+      typeof value === 'string' &&
+      value !== normalized &&
+      this.getAttribute('status') !== normalized
+    ) {
+      this.setAttribute('status', normalized);
+    }
+    // A hostile `status` attribute can arrive while the normalized property is already idle.
+    // Force the reflected canonical value in that equal-value case so the attribute cannot remain
+    // an unsupported state token.
+    this.requestUpdate('status', previous, {
+      reflect: true,
+      hasChanged: () => true,
+    });
+  }
   /** Visual chrome, on the library-wide `frame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
    *  radius, so a composer docked inside a chat panel, dialog footer or toolbar that already draws
@@ -654,6 +694,10 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   };
 
   private onTextareaKeyDown = (e: KeyboardEvent): void => {
+    // Composite controls such as lr-prompt-input can consume a suggestion key during capture
+    // before this native textarea handler sees it. Respect that ownership rather than submitting
+    // a mention selection as an ordinary message.
+    if (e.defaultPrevented) return;
     if (e.key !== 'Enter') return;
     // Shift+Enter always inserts a newline, regardless of submit-on-enter --
     // leave the browser's own default action alone.

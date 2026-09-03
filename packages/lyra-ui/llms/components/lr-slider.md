@@ -104,7 +104,9 @@ single numeric string entry.
   a range readout joins both values with an en dash. The explicit HTML spelling
   `show-value="false"` stays false.
 - `value: number = 0`, `defaultValue: number = 0` (attribute `value`), `valueAsNumber: number`, and
-  `valueAsString: string` are synchronized, finite, clamped, and step-snapped.
+  `valueAsString: string` are synchronized and finite. Values normalize the low/high domain, snap
+  to the grid anchored at the low endpoint, then clamp so a non-grid endpoint remains reachable;
+  invalid, nonpositive, or below-resolution steps are unstepped.
 - `isRange: boolean` is the read-only normalized range-mode state.
 - `name: string | null = null`, `disabled = false`, `required = false`, reflected `customError`,
   plus read-only `form`, `labels`, `validity`, `validationMessage`, and `willValidate` make up the

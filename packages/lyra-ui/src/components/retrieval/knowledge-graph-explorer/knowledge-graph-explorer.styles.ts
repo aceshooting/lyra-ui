@@ -4,6 +4,10 @@ export const styles = css`
   :host {
     display: block;
     block-size: var(--lr-canvas-reserved-height, var(--lr-size-24rem));
+    /* Capture the shared host setting before composed Lyra hosts establish their own fallback. */
+    --_lr-knowledge-graph-explorer-detail-clamp: var(
+      --lr-popover-viewport-clamp
+    );
   }
   /* Makes an explicit host height actually bound the explorer. Without this chain the column sized
      itself from content alone -- chiefly the composed graph's intrinsic svg/canvas aspect ratio --
@@ -102,6 +106,9 @@ export const styles = css`
     min-block-size: 0;
   }
   [part='detail-card'] {
-    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-24rem));
+    max-inline-size: min(
+      var(--_lr-knowledge-graph-explorer-detail-clamp),
+      var(--lr-size-24rem)
+    );
   }
 `;

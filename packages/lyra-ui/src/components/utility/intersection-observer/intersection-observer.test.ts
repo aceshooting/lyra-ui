@@ -361,3 +361,212 @@ describe('<lr-intersection-observer>', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('contains a hostile threshold option and falls back to a live observer', async () => {
+  const OriginalIntersectionObserver = window.IntersectionObserver;
+  let receivedThreshold: IntersectionObserverInit['threshold'];
+  class TestIntersectionObserver {
+    constructor(_callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+      receivedThreshold = options?.threshold;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+  }
+  window.IntersectionObserver = TestIntersectionObserver as unknown as typeof IntersectionObserver;
+  const hostileThreshold = new Proxy([], {
+    get() {
+      throw new Error('threshold trap must not run');
+    },
+  });
+  let el: LyraIntersectionObserver | undefined;
+  try {
+    el = await fixture<LyraIntersectionObserver>(html`
+      <lr-intersection-observer><div>Observed</div></lr-intersection-observer>
+    `);
+    (el as unknown as { threshold: unknown }).threshold = hostileThreshold;
+    let rejected = false;
+    try {
+      await el.updateComplete;
+      await aTimeout(0);
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).to.equal(false);
+    expect(receivedThreshold).to.equal(0);
+  } finally {
+    el?.remove();
+    window.IntersectionObserver = OriginalIntersectionObserver;
+  }
+});
+
+it('contains failed IntersectionObserver construction and one failed target while admitting a later target', async () => {
+  const OriginalIntersectionObserver = window.IntersectionObserver;
+  const observed: Element[] = [];
+  let failConstruction = false;
+  class TestIntersectionObserver {
+    constructor(_callback: IntersectionObserverCallback) {
+      if (failConstruction) throw new Error('constructor failure');
+    }
+    observe(target: Element): void {
+      if (target.id === 'bad') throw new Error('target failure');
+      observed.push(target);
+    }
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+  }
+  window.IntersectionObserver = TestIntersectionObserver as unknown as typeof IntersectionObserver;
+  let el: LyraIntersectionObserver | undefined;
+  try {
+    el = document.createElement('lr-intersection-observer') as LyraIntersectionObserver;
+    const bad = document.createElement('div');
+    bad.id = 'bad';
+    const good = document.createElement('div');
+    good.id = 'good';
+    el.append(bad, good);
+    document.body.append(el);
+    let rejected = false;
+    try {
+      await el.updateComplete;
+      await aTimeout(0);
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).to.equal(false);
+    expect(observed.includes(good)).to.equal(true);
+
+    failConstruction = true;
+    el.rootMargin = '1px';
+    rejected = false;
+    try {
+      await el.updateComplete;
+      await aTimeout(0);
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).to.equal(false);
+    expect((el as unknown as { observer?: IntersectionObserver }).observer).to.equal(undefined);
+  } finally {
+    el?.remove();
+    window.IntersectionObserver = OriginalIntersectionObserver;
+  }
+});
+
+it('contains a throwing owner capability lookup and resumes after it is restored', async () => {
+  const originalCapability = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+  const observed: Element[] = [];
+  class TestIntersectionObserver {
+    constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
+    observe(target: Element): void { observed.push(target); }
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+  }
+  Object.defineProperty(window, 'IntersectionObserver', {
+    configurable: true,
+    writable: true,
+    value: TestIntersectionObserver,
+  });
+  let el: LyraIntersectionObserver | undefined;
+  try {
+    el = await fixture<LyraIntersectionObserver>(html`
+      <lr-intersection-observer><div>Observed</div></lr-intersection-observer>
+    `);
+    await aTimeout(0);
+    const target = el.querySelector('div')!;
+    expect(observed.includes(target)).to.equal(true);
+
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      get() {
+        throw new Error('capability lookup must stay contained');
+      },
+    });
+    let threw = false;
+    try {
+      (el as unknown as { observeTargets(): void }).observeTargets();
+    } catch {
+      threw = true;
+    }
+    expect(threw).to.equal(false);
+    expect((el as unknown as { observer?: IntersectionObserver }).observer).to.equal(undefined);
+
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      writable: true,
+      value: TestIntersectionObserver,
+    });
+    (el as unknown as { observeTargets(): void }).observeTargets();
+    expect(observed.filter((entry) => entry === target).length).to.be.greaterThan(1);
+  } finally {
+    el?.remove();
+    if (originalCapability) Object.defineProperty(window, 'IntersectionObserver', originalCapability);
+    else Reflect.deleteProperty(window, 'IntersectionObserver');
+  }
+});
+
+it('contains a throwing disconnect hook across rebuild and reconnect', async () => {
+  const originalCapability = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+  const observed: Element[] = [];
+  let throwDisconnect = false;
+  class TestIntersectionObserver {
+    constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {
+      return new Proxy(
+        {
+          observe(target: Element): void { observed.push(target); },
+          unobserve(): void {},
+          disconnect(): void {},
+          takeRecords(): IntersectionObserverEntry[] { return []; },
+        },
+        {
+          get(target, key, receiver) {
+            if (throwDisconnect && key === 'disconnect') {
+              throw new Error('disconnect hook must stay contained');
+            }
+            return Reflect.get(target, key, receiver);
+          },
+        },
+      ) as unknown as TestIntersectionObserver;
+    }
+  }
+  Object.defineProperty(window, 'IntersectionObserver', {
+    configurable: true,
+    writable: true,
+    value: TestIntersectionObserver,
+  });
+  let el: LyraIntersectionObserver | undefined;
+  try {
+    el = await fixture<LyraIntersectionObserver>(html`
+      <lr-intersection-observer><div>Observed</div></lr-intersection-observer>
+    `);
+    await aTimeout(0);
+    const target = el.querySelector('div')!;
+    const initialObservations = observed.filter((entry) => entry === target).length;
+    expect(initialObservations).to.be.greaterThan(0);
+
+    throwDisconnect = true;
+    let threw = false;
+    try {
+      (el as unknown as { observeTargets(): void }).observeTargets();
+    } catch {
+      threw = true;
+    }
+    expect(threw).to.equal(false);
+    const rebuiltObservations = observed.filter((entry) => entry === target).length;
+    expect(rebuiltObservations).to.be.greaterThan(initialObservations);
+
+    throwDisconnect = false;
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await aTimeout(0);
+    expect(observed.filter((entry) => entry === target).length).to.be.greaterThan(rebuiltObservations);
+  } finally {
+    throwDisconnect = false;
+    el?.remove();
+    if (originalCapability) Object.defineProperty(window, 'IntersectionObserver', originalCapability);
+    else Reflect.deleteProperty(window, 'IntersectionObserver');
+  }
+});

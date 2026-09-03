@@ -1438,6 +1438,22 @@ describe("toggle button i18n", () => {
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]')!;
     expect(toggle.getAttribute("aria-label")).to.equal("Ouvrir la navigation");
   });
+
+  it('inherits live host typography into the mobile toggle and its 1em glyph', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail style="font: 20px/1 monospace"></lr-app-rail>`
+    )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    await el.updateComplete;
+
+    const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+    const glyph = toggle.querySelector<SVGElement>('svg')!;
+    expect(getComputedStyle(toggle).fontSize).to.equal('20px');
+    expect(getComputedStyle(toggle).fontFamily).to.equal(getComputedStyle(el).fontFamily);
+    expect(getComputedStyle(glyph).width).to.equal('20px');
+    expect(getComputedStyle(glyph).height).to.equal('20px');
+  });
 });
 
 // -- preferredMode --------------------------------------------------------
@@ -1496,6 +1512,26 @@ describe("resizable", () => {
     expect(resizer.getAttribute("aria-valuemin")).to.equal("190");
     expect(resizer.getAttribute("aria-valuemax")).to.equal("440");
     expect(resizer.getAttribute("aria-label")).to.equal("Resize navigation");
+  });
+
+  it('localizes the resizer pixel value while retaining its numeric ARIA value', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail
+        lang="ar-EG"
+        resizable
+        rail-width-px="240"
+        min-rail-width-px="190"
+        max-rail-width-px="440"
+        .strings=${{ resizeValuePixels: 'العرض {value} بكسل' }}
+      ></lr-app-rail>`
+    )) as LyraAppRail;
+    await el.updateComplete;
+
+    const resizer = el.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!;
+    expect(resizer.getAttribute('aria-valuenow')).to.equal('240');
+    expect(resizer.getAttribute('aria-valuetext')).to.equal(
+      `العرض ${new Intl.NumberFormat('ar-EG').format(240)} بكسل`
+    );
   });
 
   it("gives the resizer hit target the shared minimum tappable size without inflating the visible drag line", async () => {

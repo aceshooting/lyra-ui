@@ -1,5 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import { render } from 'lit';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './activity-feed.js';
 import type { LyraActivityFeed, ActivityEntry } from './activity-feed.js';
 
@@ -8,7 +7,45 @@ async function twoFrames(): Promise<void> {
 }
 
 function makeEntries(count: number): ActivityEntry[] {
-  return Array.from({ length: count }, (_, i) => ({ id: `e${i}`, text: `Entry ${i}` }));
+  return Array.from({ length: count }, (_, i) => ({
+    id: `e${i}`,
+    text: `Entry ${i}`,
+  }));
+}
+
+type RelationshipName = 'aria-describedby' | 'aria-labelledby';
+
+function relationshipElements(owner: HTMLElement, relationship: RelationshipName): readonly Element[] | null {
+  const property = relationship === 'aria-describedby' ? 'ariaDescribedByElements' : 'ariaLabelledByElements';
+  if (!Reflect.has(owner, property)) return null;
+  const reflected = Reflect.get(owner, property) as Iterable<Element> | null;
+  return reflected === null ? [] : [...reflected];
+}
+
+function relationshipIds(owner: HTMLElement, relationship: RelationshipName): string[] {
+  const reflected = relationshipElements(owner, relationship);
+  if (reflected !== null) return reflected.map((element) => element.id);
+  return owner.getAttribute(relationship)?.match(/\S+/g) ?? [];
+}
+
+async function semanticListOwner(el: LyraActivityFeed): Promise<HTMLElement> {
+  await el.updateComplete;
+  const virtualList = el.shadowRoot!.querySelector('lr-virtual-list') as
+    | (HTMLElement & {
+        scrollContainer?: HTMLElement;
+        updateComplete: Promise<unknown>;
+      })
+    | null;
+  if (virtualList) {
+    await virtualList.updateComplete;
+    await twoFrames();
+    const owner = virtualList.scrollContainer;
+    if (!owner) throw new Error('The virtual list did not create its semantic list owner.');
+    return owner;
+  }
+  const owner = el.shadowRoot!.querySelector<HTMLElement>('[part="body"][role="list"]');
+  if (!owner) throw new Error('The plain activity feed did not create its semantic list owner.');
+  return owner;
 }
 
 it('defaults to entries=[], mode="live", follow=true, expanded=false, and a localized Activity label', async () => {
@@ -26,10 +63,13 @@ it('defaults to entries=[], mode="live", follow=true, expanded=false, and a loca
 
 it('renders one [part="entry"] row per entry, carrying data-variant', async () => {
   const el = (await fixture(
-    html`<lr-activity-feed expanded .entries=${[
-      { id: '1', text: 'Searching the web…', variant: 'brand' },
-      { id: '2', text: 'Read src/index.ts' },
-    ]}></lr-activity-feed>`,
+    html`<lr-activity-feed
+      expanded
+      .entries=${[
+        { id: '1', text: 'Searching the web…', variant: 'brand' },
+        { id: '2', text: 'Read src/index.ts' },
+      ]}
+    ></lr-activity-feed>`,
   )) as LyraActivityFeed;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="entry"]')] as HTMLElement[];
   expect(rows.length).to.equal(2);
@@ -71,10 +111,13 @@ it('keeps a long public label contained without collapsing the live summary at 3
 
 it('renders a literal icon hint when set, a variant dot otherwise', async () => {
   const el = (await fixture(
-    html`<lr-activity-feed expanded .entries=${[
-      { id: '1', text: 'With icon', icon: '🔍' },
-      { id: '2', text: 'No icon' },
-    ]}></lr-activity-feed>`,
+    html`<lr-activity-feed
+      expanded
+      .entries=${[
+        { id: '1', text: 'With icon', icon: '🔍' },
+        { id: '2', text: 'No icon' },
+      ]}
+    ></lr-activity-feed>`,
   )) as LyraActivityFeed;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="entry"]')] as HTMLElement[];
   expect(rows[0]!.querySelector('[part="entry-icon"]')!.textContent!.trim()).to.equal('🔍');
@@ -91,10 +134,7 @@ it('shows the latest entry as a one-line ticker in the header while mode="live"'
 it('lets a live feed retheme only its own status dot', async () => {
   const wrapper = await fixture(html`
     <div style="--lr-theme-color-brand-fill-loud: rgb(4, 5, 6);">
-      <lr-activity-feed
-        mode="live"
-        style="--lr-activity-feed-live-status-color: rgb(1, 2, 3);"
-      ></lr-activity-feed>
+      <lr-activity-feed mode="live" style="--lr-activity-feed-live-status-color: rgb(1, 2, 3);"></lr-activity-feed>
       <lr-activity-feed mode="live"></lr-activity-feed>
     </div>
   `);
@@ -135,7 +175,10 @@ it('uses string overrides for the header label and completed-steps summary', asy
   const el = (await fixture(
     html`<lr-activity-feed mode="post-hoc" .entries=${makeEntries(3)}></lr-activity-feed>`,
   )) as LyraActivityFeed;
-  el.strings = { activityFeedLabel: 'Activité', activityFeedCompletedSteps: '{count} étapes terminées' };
+  el.strings = {
+    activityFeedLabel: 'Activité',
+    activityFeedCompletedSteps: '{count} étapes terminées',
+  };
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Activité');
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('3 étapes terminées');
@@ -154,6 +197,319 @@ it('distinguishes an omitted label from explicit English and empty overrides', a
   expect(labels).to.deep.equal(['Activité', 'Activity', '']);
 });
 
+describe('accessible list and header naming', () => {
+  for (const [path, virtualizeAt] of [
+    ['plain', 99],
+    ['virtualized', 0],
+  ] as const) {
+    it(`keeps a blank visible label while localizing blank header and list names in the ${path} path`, async () => {
+      const el = (await fixture(html`
+        <lr-activity-feed
+          expanded
+          label=""
+          virtualize-at=${virtualizeAt}
+          .strings=${{ activityFeedLabel: 'Activité' }}
+          .entries=${makeEntries(1)}
+        ></lr-activity-feed>
+      `)) as LyraActivityFeed;
+      const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+      const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+      const owner = await semanticListOwner(el);
+
+      expect(label.textContent).to.equal('');
+      expect(owner.getAttribute('aria-label')).to.equal('Activité');
+      // The live summary supplies the header name while present, without duplicating it in an
+      // aria-label. Once it becomes blank too, the localized fallback names the button.
+      expect(header.getAttribute('aria-label')).to.equal(null);
+      el.entries = [];
+      await el.updateComplete;
+      expect(header.getAttribute('aria-label')).to.equal('Activité');
+
+      el.label = 'Run activity';
+      await el.updateComplete;
+      expect(label.textContent).to.equal('Run activity');
+      expect(header.getAttribute('aria-label')).to.equal(null);
+      expect((await semanticListOwner(el)).getAttribute('aria-label')).to.equal('Activité');
+
+      el.label = '  ';
+      await el.updateComplete;
+      expect(label.textContent).to.equal('  ');
+      expect(header.getAttribute('aria-label')).to.equal('Activité');
+    });
+
+    it(`keeps an authored host aria-label, including empty and removed values, on the ${path} list owner`, async () => {
+      const el = (await fixture(html`
+        <lr-activity-feed
+          expanded
+          label=""
+          aria-label="Author activity"
+          virtualize-at=${virtualizeAt}
+          .strings=${{ activityFeedLabel: 'Activité' }}
+          .entries=${makeEntries(1)}
+        ></lr-activity-feed>
+      `)) as LyraActivityFeed;
+
+      expect(el.getAttribute('aria-label')).to.equal('Author activity');
+      expect((await semanticListOwner(el)).getAttribute('aria-label')).to.equal('Author activity');
+      el.setAttribute('aria-label', '');
+      await el.updateComplete;
+      expect(el.getAttribute('aria-label')).to.equal('');
+      expect((await semanticListOwner(el)).getAttribute('aria-label')).to.equal('');
+      el.removeAttribute('aria-label');
+      await el.updateComplete;
+      expect(el.hasAttribute('aria-label')).to.equal(false);
+      expect((await semanticListOwner(el)).getAttribute('aria-label')).to.equal('Activité');
+    });
+  }
+});
+
+describe('external list relationships', () => {
+  for (const [path, virtualizeAt] of [
+    ['plain', 99],
+    ['virtualized', 0],
+  ] as const) {
+    it(`projects live labelledby and describedby sources onto the ${path} list owner`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <span id="feed-name">Original activity name</span>
+          <span id="feed-second-name">Second name</span>
+          <span id="feed-description">Original activity description</span>
+          <lr-activity-feed
+            expanded
+            virtualize-at=${virtualizeAt}
+            aria-labelledby="feed-name feed-second-name feed-name"
+            aria-describedby="feed-description feed-second-name feed-description"
+            .entries=${makeEntries(1)}
+          ></lr-activity-feed>
+        </div>
+      `);
+      const el = wrapper.querySelector<LyraActivityFeed>('lr-activity-feed')!;
+      const owner = await semanticListOwner(el);
+      const name = wrapper.querySelector<HTMLElement>('#feed-name')!;
+      const secondName = wrapper.querySelector<HTMLElement>('#feed-second-name')!;
+      const description = wrapper.querySelector<HTMLElement>('#feed-description')!;
+
+      expect(el.getAttribute('aria-labelledby')).to.equal('feed-name feed-second-name feed-name');
+      expect(el.getAttribute('aria-describedby')).to.equal('feed-description feed-second-name feed-description');
+      if (
+        relationshipElements(owner, 'aria-labelledby') === null ||
+        relationshipElements(owner, 'aria-describedby') === null
+      ) {
+        // Engines without cross-shadow element-reference reflection cannot serialize these IDs into
+        // the target shadow root; the host source remains intact and the bridge fails closed.
+        expect(relationshipIds(owner, 'aria-labelledby')).to.deep.equal([]);
+        expect(relationshipIds(owner, 'aria-describedby')).to.deep.equal([]);
+        return;
+      }
+
+      expect(relationshipIds(owner, 'aria-labelledby')).to.deep.equal(['feed-name', 'feed-second-name']);
+      expect(relationshipIds(owner, 'aria-describedby')).to.deep.equal(['feed-description', 'feed-second-name']);
+      expect(relationshipElements(owner, 'aria-labelledby')?.[0] === name).to.equal(true);
+      expect(relationshipElements(owner, 'aria-describedby')?.[0] === description).to.equal(true);
+      expect(relationshipElements(owner, 'aria-labelledby')?.[1] === secondName).to.equal(true);
+
+      name.textContent = 'Updated activity name';
+      await Promise.resolve();
+      expect(relationshipElements(owner, 'aria-labelledby')?.[0]?.textContent).to.equal('Updated activity name');
+
+      const replacement = document.createElement('span');
+      replacement.id = name.id;
+      replacement.textContent = 'Replacement activity name';
+      name.replaceWith(replacement);
+      await waitUntil(
+        () => relationshipElements(owner, 'aria-labelledby')?.[0] === replacement,
+        'the same-id label replacement was not projected onto the list owner',
+      );
+
+      replacement.remove();
+      await waitUntil(
+        () => relationshipIds(owner, 'aria-labelledby').join(' ') === 'feed-second-name',
+        'the removed label source was retained by the list owner',
+      );
+      wrapper.prepend(replacement);
+      await waitUntil(
+        () => relationshipElements(owner, 'aria-labelledby')?.[0] === replacement,
+        'the reinserted label source was not projected onto the list owner',
+      );
+
+      const replacementDescription = document.createElement('span');
+      replacementDescription.id = description.id;
+      replacementDescription.textContent = 'Replacement activity description';
+      description.replaceWith(replacementDescription);
+      await waitUntil(
+        () => relationshipElements(owner, 'aria-describedby')?.[0] === replacementDescription,
+        'the same-id description replacement was not projected onto the list owner',
+      );
+
+      replacementDescription.remove();
+      await waitUntil(
+        () => relationshipIds(owner, 'aria-describedby').join(' ') === 'feed-second-name',
+        'the removed description source was retained by the list owner',
+      );
+      wrapper.prepend(replacementDescription);
+      await waitUntil(
+        () => relationshipElements(owner, 'aria-describedby')?.[0] === replacementDescription,
+        'the reinserted description source was not projected onto the list owner',
+      );
+
+      el.setAttribute('aria-labelledby', 'feed-late-name feed-second-name');
+      await waitUntil(
+        () => relationshipIds(owner, 'aria-labelledby').join(' ') === 'feed-second-name',
+        'the unresolved label ID was serialized into the target shadow root',
+      );
+      const late = document.createElement('span');
+      late.id = 'feed-late-name';
+      late.textContent = 'Late activity name';
+      wrapper.prepend(late);
+      await waitUntil(
+        () => relationshipElements(owner, 'aria-labelledby')?.[0] === late,
+        'the late label source was not projected onto the list owner',
+      );
+    });
+
+    it(`retargets host relationships across the ${path} and alternate rendering paths`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <span id="feed-path-name">Path name</span>
+          <span id="feed-path-description">Path description</span>
+          <lr-activity-feed
+            expanded
+            virtualize-at=${virtualizeAt}
+            aria-labelledby="feed-path-name"
+            aria-describedby="feed-path-description"
+            .entries=${makeEntries(2)}
+          ></lr-activity-feed>
+        </div>
+      `);
+      const el = wrapper.querySelector<LyraActivityFeed>('lr-activity-feed')!;
+      let owner = await semanticListOwner(el);
+      const name = wrapper.querySelector<HTMLElement>('#feed-path-name')!;
+      const description = wrapper.querySelector<HTMLElement>('#feed-path-description')!;
+
+      if (
+        relationshipElements(owner, 'aria-labelledby') === null ||
+        relationshipElements(owner, 'aria-describedby') === null
+      ) {
+        expect(relationshipIds(owner, 'aria-labelledby')).to.deep.equal([]);
+        expect(relationshipIds(owner, 'aria-describedby')).to.deep.equal([]);
+        return;
+      }
+
+      expect(relationshipElements(owner, 'aria-labelledby')?.[0] === name).to.equal(true);
+      expect(relationshipElements(owner, 'aria-describedby')?.[0] === description).to.equal(true);
+      el.virtualizeAt = virtualizeAt === 0 ? 99 : 0;
+      owner = await semanticListOwner(el);
+      await waitUntil(
+        () =>
+          relationshipElements(owner, 'aria-labelledby')?.[0] === name &&
+          relationshipElements(owner, 'aria-describedby')?.[0] === description,
+        'the replacement list owner did not receive the external relationships',
+      );
+    });
+
+    it(`is accessible while populated with external relationships in the ${path} path`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <span id="feed-axe-name">Recent activity</span>
+          <span id="feed-axe-description">Agent run details</span>
+          <lr-activity-feed
+            expanded
+            virtualize-at=${virtualizeAt}
+            aria-labelledby="feed-axe-name"
+            aria-describedby="feed-axe-description"
+            .entries=${[
+              {
+                id: 'search',
+                text: 'Searching the repository',
+                icon: '🔍',
+                variant: 'brand',
+              },
+              { id: 'read', text: 'Read package.json', variant: 'success' },
+            ]}
+          ></lr-activity-feed>
+        </div>
+      `);
+      const el = wrapper.querySelector<LyraActivityFeed>('lr-activity-feed')!;
+      const owner = await semanticListOwner(el);
+      if (relationshipElements(owner, 'aria-labelledby') !== null) {
+        expect(relationshipIds(owner, 'aria-labelledby')).to.deep.equal(['feed-axe-name']);
+        expect(relationshipIds(owner, 'aria-describedby')).to.deep.equal(['feed-axe-description']);
+      }
+      await expect(el).to.be.accessible();
+    });
+
+    it(`restores projected relationships after reconnect and adoption in the ${path} path`, async () => {
+      let wrapper: HTMLDivElement | undefined;
+      let frame: HTMLIFrameElement | undefined;
+      try {
+        wrapper = await fixture<HTMLDivElement>(html`
+          <div>
+            <span id="feed-adopted-name">Original adopted name</span>
+            <span id="feed-adopted-description">Original adopted description</span>
+            <lr-activity-feed
+              expanded
+              virtualize-at=${virtualizeAt}
+              aria-labelledby="feed-adopted-name"
+              aria-describedby="feed-adopted-description"
+              .entries=${makeEntries(1)}
+            ></lr-activity-feed>
+          </div>
+        `);
+        const el = wrapper.querySelector<LyraActivityFeed>('lr-activity-feed')!;
+        let owner = await semanticListOwner(el);
+        const name = wrapper.querySelector<HTMLElement>('#feed-adopted-name')!;
+        const description = wrapper.querySelector<HTMLElement>('#feed-adopted-description')!;
+
+        if (
+          relationshipElements(owner, 'aria-labelledby') === null ||
+          relationshipElements(owner, 'aria-describedby') === null
+        ) {
+          expect(relationshipIds(owner, 'aria-labelledby')).to.deep.equal([]);
+          expect(relationshipIds(owner, 'aria-describedby')).to.deep.equal([]);
+          return;
+        }
+
+        el.remove();
+        wrapper.append(el);
+        owner = await semanticListOwner(el);
+        await waitUntil(
+          () =>
+            relationshipElements(owner, 'aria-labelledby')?.[0] === name &&
+            relationshipElements(owner, 'aria-describedby')?.[0] === description,
+          'the reconnected activity feed did not restore its external relationships',
+        );
+
+        frame = document.createElement('iframe');
+        document.body.append(frame);
+        const foreignDocument = frame.contentDocument;
+        if (!foreignDocument) throw new Error('The iframe document was unavailable.');
+        foreignDocument.adoptNode(wrapper);
+        foreignDocument.body.append(wrapper);
+        owner = await semanticListOwner(el);
+        await waitUntil(
+          () =>
+            relationshipElements(owner, 'aria-labelledby')?.[0] === name &&
+            relationshipElements(owner, 'aria-describedby')?.[0] === description,
+          'the adopted activity feed did not restore its external relationships',
+        );
+
+        const replacement = foreignDocument.createElement('span');
+        replacement.id = name.id;
+        replacement.textContent = 'Replacement adopted name';
+        name.replaceWith(replacement);
+        await waitUntil(
+          () => relationshipElements(owner, 'aria-labelledby')?.[0] === replacement,
+          'the adopted document did not refresh a replacement label source',
+        );
+      } finally {
+        if (wrapper && wrapper.ownerDocument !== document) document.adoptNode(wrapper);
+        wrapper?.remove();
+        frame?.remove();
+      }
+    });
+  }
+});
+
 it('toggles expanded and fires lr-toggle on header click', async () => {
   const el = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement;
@@ -163,6 +519,48 @@ it('toggles expanded and fires lr-toggle on header click', async () => {
   await el.updateComplete;
   expect(el.expanded).to.be.true;
   expect((event as CustomEvent).detail).to.deep.equal({ expanded: true });
+});
+
+it('wires the LiveStreamingDemo story before its first Start run bubbling click', async () => {
+  const { LiveStreamingDemo } = await import('./activity-feed.stories.js');
+  const root = (await fixture(LiveStreamingDemo.render!({}, null as never))) as HTMLElement;
+  const feed = root.querySelector<LyraActivityFeed>('lr-activity-feed')!;
+  const start = root.querySelector<HTMLButtonElement>('[data-start]')!;
+
+  start.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  await feed.updateComplete;
+  expect(feed.expanded).to.be.true;
+  expect(feed.mode).to.equal('live');
+});
+
+it('ships activity-feed stories for blank semantics and rich virtual entry-text styling', async () => {
+  type ActivityFeedStory = {
+    render?: (args: Record<string, never>, context: unknown) => ReturnType<typeof html>;
+  };
+  const stories = (await import('./activity-feed.stories.js')) as unknown as Record<string, ActivityFeedStory>;
+
+  const blankStory = stories['BlankVisibleLabel'];
+  expect(blankStory?.render !== undefined).to.equal(true);
+  if (!blankStory?.render) return;
+  const blank = (await fixture(blankStory.render({}, null))) as LyraActivityFeed;
+  const blankHeader = blank.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+  const blankLabel = blank.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+  expect(blank.label).to.equal('');
+  expect(blankLabel.textContent).to.equal('');
+  expect(blankHeader.getAttribute('aria-label')).to.equal('Activity feed');
+  expect((await semanticListOwner(blank)).getAttribute('aria-label')).to.equal('Activity feed');
+
+  const richStory = stories['RichEntryTextWithConsumerPartStyling'];
+  expect(richStory?.render !== undefined).to.equal(true);
+  if (!richStory?.render) return;
+  const richRoot = (await fixture(richStory.render({}, null))) as HTMLElement;
+  const rich = richRoot.querySelector<LyraActivityFeed>('lr-activity-feed')!;
+  const virtualList = rich.shadowRoot!.querySelector('lr-virtual-list')!;
+  const text = (await semanticListOwner(rich)).querySelector<HTMLElement>('[part="entry-text"]')!;
+
+  expect(virtualList.getAttribute('exportparts')).to.contain('entry-text:entry-text');
+  expect(text.querySelector('strong')?.textContent).to.equal('Searching the web for recent changes');
+  expect(getComputedStyle(text).fontStyle).to.equal('italic');
 });
 
 it('renders a visible focus ring on [part="body"] when it is the tabbable scroll region', async () => {
@@ -186,7 +584,7 @@ describe('showTimestamps', () => {
     const withoutFlag = (await fixture(
       html`<lr-activity-feed expanded .entries=${[{ id: '1', text: 'x', timestamp: ts }]}></lr-activity-feed>`,
     )) as LyraActivityFeed;
-    expect((withoutFlag.shadowRoot!.querySelector('[part="entry-timestamp"]')) == null).to.be.true;
+    expect(withoutFlag.shadowRoot!.querySelector('[part="entry-timestamp"]') == null).to.be.true;
 
     const withFlag = (await fixture(
       html`<lr-activity-feed
@@ -196,13 +594,15 @@ describe('showTimestamps', () => {
       ></lr-activity-feed>`,
     )) as LyraActivityFeed;
     const time = withFlag.shadowRoot!.querySelector('[part="entry-timestamp"]') as HTMLTimeElement;
-    expect((time) != null).to.equal(true);
+    expect(time != null).to.equal(true);
     expect(time.getAttribute('datetime')).to.equal(ts.toISOString());
   });
 
   it('overrides the default hour:minute rendering via formatTimestamp', async () => {
     const ts = new Date('2024-01-01T10:30:00Z');
-    const el = (await fixture(html`<lr-activity-feed expanded show-timestamps></lr-activity-feed>`)) as LyraActivityFeed;
+    const el = (await fixture(
+      html`<lr-activity-feed expanded show-timestamps></lr-activity-feed>`,
+    )) as LyraActivityFeed;
     el.formatTimestamp = () => 'CUSTOM';
     el.entries = [{ id: '1', text: 'x', timestamp: ts }];
     await el.updateComplete;
@@ -217,7 +617,7 @@ describe('showTimestamps', () => {
         .entries=${[{ id: '1', text: 'x', timestamp: 'not-a-date' }]}
       ></lr-activity-feed>`,
     )) as LyraActivityFeed;
-    expect((el.shadowRoot!.querySelector('[part="entry-timestamp"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="entry-timestamp"]') == null).to.be.true;
   });
 });
 
@@ -229,41 +629,53 @@ describe('renderText', () => {
     expect(el.shadowRoot!.querySelector('[part="entry-text"]')!.textContent!.trim()).to.equal('plain narration');
   });
 
-  it('lets renderText replace the entry content with an arbitrary TemplateResult, non-virtualized', async () => {
+  it('keeps the stable entry-text part around rich renderText content, non-virtualized', async () => {
     const el = (await fixture(html`<lr-activity-feed expanded></lr-activity-feed>`)) as LyraActivityFeed;
-    el.renderText = (entry) => html`<strong class="rich">${entry.text.toUpperCase()}</strong><em class="chip">tool: read</em>`;
+    el.renderText = (entry) =>
+      html`<strong class="rich">${entry.text.toUpperCase()}</strong><em class="chip">tool: read</em>`;
     el.entries = [{ id: '1', text: 'narration' }];
     await el.updateComplete;
     const row = el.shadowRoot!.querySelector('[part="entry"]') as HTMLElement;
-    // The default plain-text part is gone -- renderText fully owns this entry's content area, the
-    // same way formatTimestamp fully replaces the default timestamp formatting rather than
-    // augmenting it. Compared as a boolean, never a raw element, per this repo's own documented
-    // chai/loupe DOM-node-serialization hang pitfall (AGENTS.md's testing conventions).
-    expect(row.querySelector('[part="entry-text"]') === null).to.be.true;
+    const text = row.querySelector<HTMLElement>('[part="entry-text"]');
+    expect(text !== null).to.be.true;
+    expect(text?.querySelector('strong.rich')?.textContent).to.equal('NARRATION');
+    expect(text?.querySelector('em.chip')?.textContent).to.equal('tool: read');
     expect(row.querySelector('strong.rich')!.textContent).to.equal('NARRATION');
     expect(row.querySelector('em.chip')!.textContent).to.equal('tool: read');
   });
 
-  it('also applies through the internal lr-virtual-list above virtualizeAt', async () => {
-    // Both the non-virtualized repeat() path and the virtualized lr-virtual-list path render
-    // every entry through the exact same entryTemplate() method, so there's no separate code path
-    // for renderText to miss in virtualized mode -- proven here by invoking the internal
-    // lr-virtual-list's own .renderItem callback directly (real virtualized row content isn't
-    // reliably assertable without real browser layout, which none of this file's other
-    // virtualized-mode tests attempt either -- they only assert on the lr-virtual-list element's
-    // existence/attributes, not its rendered row content).
-    const el = (await fixture(html`<lr-activity-feed expanded virtualize-at="0"></lr-activity-feed>`)) as LyraActivityFeed;
+  it('keeps the stable entry-text part around rich renderText content, virtualized', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed expanded virtualize-at="0"></lr-activity-feed>`,
+    )) as LyraActivityFeed;
     el.renderText = (entry) => html`<strong class="rich">${entry.text}</strong>`;
-    el.entries = [{ id: '1', text: 'virtualized narration' }, { id: '2', text: 'second' }];
-    await el.updateComplete;
-    const virtualList = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as {
-      renderItem: (item: unknown, index: number) => unknown;
-    } | null;
-    expect(virtualList !== null).to.be.true;
-    const container = document.createElement('div');
-    render(virtualList!.renderItem(el.entries[0], 0) as ReturnType<typeof html>, container);
-    expect(container.querySelector('strong.rich')!.textContent).to.equal('virtualized narration');
+    el.entries = [
+      { id: '1', text: 'virtualized narration' },
+      { id: '2', text: 'second' },
+    ];
+    const owner = await semanticListOwner(el);
+    const text = owner.querySelector<HTMLElement>('[part="entry-text"]');
+    expect(text !== null).to.be.true;
+    expect(text?.querySelector('strong.rich')?.textContent).to.equal('virtualized narration');
   });
+
+  for (const [label, virtualizeAt] of [
+    ['plain', 99],
+    ['virtualized', 0],
+  ] as const) {
+    it(`keeps direct entry-text computed styles on rich content in the ${label} path`, async () => {
+      const el = (await fixture(html`
+        <lr-activity-feed expanded virtualize-at=${virtualizeAt}></lr-activity-feed>
+      `)) as LyraActivityFeed;
+      el.renderText = (entry) => html`<strong class="rich">${entry.text}</strong>`;
+      el.entries = [{ id: '1', text: `${label} rich narration` }];
+      const owner = await semanticListOwner(el);
+      const text = owner.querySelector<HTMLElement>('[part="entry-text"]');
+      expect(text?.querySelector('strong.rich')?.textContent).to.equal(`${label} rich narration`);
+      expect(getComputedStyle(text!).flexGrow).to.equal('1');
+      expect(getComputedStyle(text!).fontSize).to.equal('13px');
+    });
+  }
 });
 
 describe('follow contract (non-virtualized)', () => {
@@ -330,7 +742,10 @@ describe('follow contract (non-virtualized)', () => {
 
       const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
       let scrollTop = 0;
-      Object.defineProperty(body, 'scrollHeight', { configurable: true, value: 240 });
+      Object.defineProperty(body, 'scrollHeight', {
+        configurable: true,
+        value: 240,
+      });
       Object.defineProperty(body, 'scrollTop', {
         configurable: true,
         get: () => scrollTop,
@@ -451,7 +866,7 @@ describe('follow contract (virtualized)', () => {
       html`<lr-activity-feed expanded virtualize-at="4" .entries=${makeEntries(5)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
-    expect((el.shadowRoot!.querySelector('[part="body"][role="list"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="body"][role="list"]') == null).to.be.true;
   });
 
   it('normalizes a NaN virtualizeAt to the default (199) instead of silently disabling virtualization', async () => {
@@ -459,7 +874,7 @@ describe('follow contract (virtualized)', () => {
       html`<lr-activity-feed expanded virtualize-at="not-a-number" .entries=${makeEntries(5)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     expect(Number.isNaN(el.virtualizeAt)).to.be.true;
-    expect((el.shadowRoot!.querySelector('lr-virtual-list')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('lr-virtual-list') == null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="entry"]').length).to.equal(5);
 
     const nativeResizeObserver = window.ResizeObserver;
@@ -478,16 +893,11 @@ describe('follow contract (virtualized)', () => {
     }
   });
 
-  it('forwards the header label as aria-label onto the internal virtual-list', async () => {
+  it('uses the localized fallback as the internal virtual-list name when no host aria-label is authored', async () => {
     const el = (await fixture(
-      html`<lr-activity-feed
-        expanded
-        label="Steps"
-        virtualize-at="4"
-        .entries=${makeEntries(5)}
-      ></lr-activity-feed>`,
+      html`<lr-activity-feed expanded label="Steps" virtualize-at="4" .entries=${makeEntries(5)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
-    expect(el.shadowRoot!.querySelector('lr-virtual-list')!.getAttribute('aria-label')).to.equal('Steps');
+    expect(el.shadowRoot!.querySelector('lr-virtual-list')!.getAttribute('aria-label')).to.equal('Activity');
   });
 
   it('uses the host aria-label for the internal list in both render paths', async () => {
@@ -535,11 +945,13 @@ describe('follow contract (virtualized)', () => {
     `);
     let count = 0;
     el.addEventListener('lr-virtual-scroll', () => count++);
-    el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent('lr-virtual-scroll', {
-      bubbles: true,
-      composed: true,
-      detail: { start: 0, end: 1 },
-    }));
+    el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(
+      new CustomEvent('lr-virtual-scroll', {
+        bubbles: true,
+        composed: true,
+        detail: { start: 0, end: 1 },
+      }),
+    );
     expect(count).to.equal(0);
   });
 
@@ -559,7 +971,11 @@ describe('follow contract (virtualized)', () => {
     el.addEventListener('lr-follow-change', () => followChangeCount++);
     const detail = { start: 0, end: 1 };
     list.dispatchEvent(
-      new CustomEvent('lr-visible-range-change', { detail, bubbles: true, composed: true }),
+      new CustomEvent('lr-visible-range-change', {
+        detail,
+        bubbles: true,
+        composed: true,
+      }),
     );
     await el.updateComplete;
 
@@ -572,7 +988,7 @@ describe('follow contract (virtualized)', () => {
     const el = (await fixture(
       html`<lr-activity-feed expanded virtualize-at="4" .entries=${makeEntries(4)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
-    expect((el.shadowRoot!.querySelector('lr-virtual-list')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('lr-virtual-list') == null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="entry"]').length).to.equal(4);
   });
 
@@ -586,9 +1002,7 @@ describe('follow contract (virtualized)', () => {
       | undefined;
     expect(VirtualList).to.exist;
     const originalScrollToIndex = VirtualList!.prototype.scrollToIndex;
-    const calls: Array<
-      [number, { align?: 'start' | 'end'; behavior?: 'auto' | 'smooth' } | undefined]
-    > = [];
+    const calls: Array<[number, { align?: 'start' | 'end'; behavior?: 'auto' | 'smooth' } | undefined]> = [];
     VirtualList!.prototype.scrollToIndex = function (index, options): void {
       calls.push([index, options]);
       originalScrollToIndex.call(this, index, options);
@@ -648,9 +1062,7 @@ describe('follow contract (virtualized)', () => {
       const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
         scrollToIndex: (index: number, options?: { align?: 'start' | 'end' }) => void;
       };
-      let called:
-        | [number, { align?: 'start' | 'end'; behavior?: 'auto' | 'smooth' } | undefined]
-        | undefined;
+      let called: [number, { align?: 'start' | 'end'; behavior?: 'auto' | 'smooth' } | undefined] | undefined;
       list.scrollToIndex = (index, options) => (called = [index, options]);
       el.entries = [...el.entries, { id: 'new', text: 'Newest entry' }];
       await el.updateComplete;
@@ -665,8 +1077,7 @@ describe('follow contract (virtualized)', () => {
 describe('mode transition announcement', () => {
   async function getLiveRegionText(el: LyraActivityFeed): Promise<string> {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    return el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!
-      .textContent!;
+    return el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!.textContent!;
   }
 
   it('announces the completed-steps summary once mode flips from live to post-hoc', async () => {
@@ -690,7 +1101,12 @@ describe('entry part styling reaches both rendering paths', () => {
   const variantEntries: ActivityEntry[] = [
     { id: 'a', text: 'Neutral step' },
     { id: 'b', text: 'Finished step', variant: 'success' },
-    { id: 'c', text: 'Timestamped step', variant: 'danger', timestamp: new Date('2024-01-01T10:30:00Z') },
+    {
+      id: 'c',
+      text: 'Timestamped step',
+      variant: 'danger',
+      timestamp: new Date('2024-01-01T10:30:00Z'),
+    },
   ];
 
   /** The shadow tree the entry rows actually live in: this component's own below
@@ -799,6 +1215,35 @@ describe('entry part styling reaches both rendering paths', () => {
     // A consumer can retint exactly one variant -- the whole reason the variant is a part name.
     expect(getComputedStyle(successDot).backgroundColor).to.equal('rgb(33, 55, 77)');
   });
+
+  for (const [path, virtualizeAt, rich] of [
+    ['plain text / plain path', 99, false],
+    ['rich text / plain path', 99, true],
+    ['plain text / virtualized path', 0, false],
+    ['rich text / virtualized path', 0, true],
+  ] as const) {
+    it(`lets consumer ::part(entry-text) styling reach ${path}`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <style>
+            lr-activity-feed::part(entry-text) {
+              color: rgb(12, 34, 56);
+            }
+          </style>
+          <lr-activity-feed expanded virtualize-at=${virtualizeAt}></lr-activity-feed>
+        </div>
+      `);
+      const el = wrapper.querySelector<LyraActivityFeed>('lr-activity-feed')!;
+      if (rich) el.renderText = (entry) => html`<strong class="rich">${entry.text}</strong>`;
+      el.entries = [{ id: 'entry', text: `${path} narration` }];
+      const owner = await semanticListOwner(el);
+      const text = owner.querySelector<HTMLElement>('[part="entry-text"]')!;
+
+      expect(text.textContent).to.equal(`${path} narration`);
+      expect(text.querySelector('strong.rich') !== null).to.equal(rich);
+      expect(getComputedStyle(text).color).to.equal('rgb(12, 34, 56)');
+    });
+  }
 });
 
 it('is accessible collapsed, with no entries', async () => {
@@ -812,7 +1257,13 @@ it('is accessible expanded, with entries, icons, variants, and timestamps', asyn
       expanded
       show-timestamps
       .entries=${[
-        { id: '1', text: 'Searching the web…', icon: '🔍', variant: 'brand', timestamp: new Date() },
+        {
+          id: '1',
+          text: 'Searching the web…',
+          icon: '🔍',
+          variant: 'brand',
+          timestamp: new Date(),
+        },
         { id: '2', text: 'Read src/index.ts', variant: 'success' },
       ]}
     ></lr-activity-feed>`,
@@ -822,10 +1273,13 @@ it('is accessible expanded, with entries, icons, variants, and timestamps', asyn
 
 it('normalizes duplicate entry ids first-wins before rendering', async () => {
   const el = await fixture<LyraActivityFeed>(html`
-    <lr-activity-feed expanded .entries=${[
-      { id: 'same', text: 'First entry' },
-      { id: 'same', text: 'Later duplicate' },
-    ]}></lr-activity-feed>
+    <lr-activity-feed
+      expanded
+      .entries=${[
+        { id: 'same', text: 'First entry' },
+        { id: 'same', text: 'Later duplicate' },
+      ]}
+    ></lr-activity-feed>
   `);
   const rows = el.shadowRoot!.querySelectorAll('[part~="entry"]');
   expect(rows).to.have.length(1);

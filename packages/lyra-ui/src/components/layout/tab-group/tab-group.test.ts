@@ -2320,6 +2320,28 @@ it("each scroll control meets the shared 40px minimum hit area", async () => {
   }
 });
 
+it('inherits a 20px host font into both directional scroll controls and their 1em glyphs', async () => {
+  const el = (await fixture(html`
+    <lr-tab-group style="display: block; max-inline-size: 220px; font-size: 20px">
+      ${crowdedTabs()}
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await nextFrames();
+  el.fixedScrollControls = true;
+  await el.updateComplete;
+
+  for (const edge of ['start', 'end'] as const) {
+    const control = scrollControl(el, edge);
+    const glyph = control.querySelector<SVGElement>('svg')!;
+
+    expect(getComputedStyle(control).fontSize, `${edge} control font size`).to.equal('20px');
+    expect(glyph.getAttribute('width'), `${edge} glyph width attribute`).to.equal('1em');
+    expect(glyph.getAttribute('height'), `${edge} glyph height attribute`).to.equal('1em');
+    expect(getComputedStyle(glyph).width, `${edge} glyph width`).to.equal('20px');
+    expect(getComputedStyle(glyph).height, `${edge} glyph height`).to.equal('20px');
+  }
+});
+
 it("without-scroll-controls removes them entirely, leaving native scrolling and the edge fade", async () => {
   const el = (await fixture(html`
     <lr-tab-group

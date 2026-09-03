@@ -18,7 +18,9 @@
 
 Renders EPUB ebooks through the optional `epubjs` peer. `src` is fetched as an `ArrayBuffer`, and
 epub.js renders the reading area into its stable `mount` element, using an internal iframe for
-chapter content.
+chapter content. A usable book exposes `ready`, `renderTo()`, and `destroy()`, and its rendition
+exposes `display()`, `prev()`, `next()`, `on()`, and `annotations.highlight()`/`remove()`; an absent
+required capability is terminal. Navigation and spine data are optional.
 
 **Properties:** `src: string = ''` and `name: string = ''`. A plain `aria-label` attribute on the
 host overrides the reading region's accessible name — by attribute presence, so an explicitly empty
@@ -39,14 +41,17 @@ viewer's supported `LyraAnchor.kind` values for the shared anchor-target contrac
 **Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,
 populated once `book.ready` resolves) flattened into document-ordered `EbookTocItem[]` (`{ id,
 label, href, level }`, `level` starting at 1 for a top-level entry, `id` falling back to `href`
-when a navigation entry has none), `[]` before a book has loaded. `search(query)` resolves the
+when a navigation entry has none), `[]` before a book has loaded or when navigation is absent. TOC
+projection examines at most 10,000 positions, nodes, and depth 100; malformed entries are skipped
+without preventing later valid entries. `search(query)` resolves the
 match count across every spine section, in document order, via epub.js's own `item.load()`/
 `item.find()`/`item.unload()` (empty/whitespace query behaves like `clearSearch()`; a newer
 `search()` call or a `src` change aborts an in-flight scan; peer output is capped at 10,000
 matches after at most 1,000 spine items and 4,000,000 result code units; queries are capped at 4,096
 code units); `searchNext()`/`searchPrevious()`
 advance/step back through matches (wrapping, resolving `false` when there are none); `clearSearch()`
-clears the query, matches, and painted search annotation.
+clears the query, matches, and painted search annotation. `matchCountExact: false` also reports
+malformed or holey spine/find data and failed section load/unload work, not only a search ceiling.
 
 **Events:** `lr-render-error` with `detail.error` when fetching, opening, or rendering fails;
 `lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;

@@ -23,11 +23,13 @@ parse/highlight work; replacing that same-id part with `state: 'complete'` flush
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
-**Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: 'plain' | 'markdown' =
+**Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
 `renderPart?: MessagePartRenderer` (attribute: false), where returning `undefined` delegates that
 part to the built-in renderer; `accessibleLabel: string | null = null` (attribute `aria-label`).
+
+Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`.
 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
 discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath. Tool results are a strict

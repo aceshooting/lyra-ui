@@ -12,6 +12,16 @@ export const styles = css`
        a host page can retheme it. */
     --_lr-document-preview-font: var(--lr-font-mono);
     --_lr-document-preview-spin-duration: var(--lr-transition-ambient);
+    --_lr-document-preview-download-link-hover-bg: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
+    --_lr-document-preview-download-link-active-bg: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
 
   [part="base"] {
@@ -246,22 +256,15 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part="download-link"]:hover {
-    background: color-mix(
-      in srgb,
-      var(--lr-color-brand) 85%,
-      var(--lr-color-shadow)
+    background: var(
+      --lr-document-preview-download-link-hover-bg,
+      var(--_lr-document-preview-download-link-hover-bg)
     );
   }
-  /* Pressed continues the hover's own axis (further toward --lr-color-shadow) rather than
-     --lr-color-mix-partner: this button is brand-filled with an --lr-color-on-brand label, not the
-     page text colour, so mixing toward page text would lighten it under a dark theme and eat the
-     label's contrast. --lr-color-mix-active still sets the amount, keeping the pressed step
-     themeable alongside every other in the library. */
   [part="download-link"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-shadow) var(--lr-color-mix-active)
+    background: var(
+      --lr-document-preview-download-link-active-bg,
+      var(--_lr-document-preview-download-link-active-bg)
     );
   }
   [part="download-link"]:focus-visible {

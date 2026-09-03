@@ -78,37 +78,99 @@ const MAX_SCHEMA_FIELDS = 100;
 const MAX_ENUM_OPTIONS = 500;
 const MAX_VALUE_ENTRIES = 10_000;
 const MAX_VALUE_NODES = 50_000;
+const MAX_VALUE_INSPECTIONS = MAX_VALUE_NODES * 2;
 const MAX_VALUE_DEPTH = 16;
 const OMIT_VALUE = Symbol('omit-tool-param-value');
+const LIMIT_VALUE = Symbol('limit-tool-param-value');
+const FUNCTION_TO_STRING = Function.prototype.toString;
+const OBJECT_CONSTRUCTOR_SOURCE = FUNCTION_TO_STRING.call(Object);
 
 export type ToolParamFormValue = Readonly<Record<string, unknown>>;
 
 interface SnapshotBudget {
   remaining: number;
+  /** Source positions stay spent when an invalid branch restores retained-node state. */
+  remainingInspections: number;
   readonly seen: WeakMap<object, unknown>;
+  readonly seenEntries: object[];
   invalid: boolean;
   truncated: boolean;
+}
+
+interface SnapshotCheckpoint {
+  readonly remaining: number;
+  readonly seenEntries: number;
+  readonly truncated: boolean;
 }
 
 function isPlainRecord(value: object): boolean {
   try {
     const prototype = Object.getPrototypeOf(value);
-    return prototype === null || Object.getPrototypeOf(prototype) === null;
+    if (prototype === null) return true;
+    if (Object.getPrototypeOf(prototype) !== null) return false;
+    const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+    if (
+      !constructorDescriptor ||
+      !('value' in constructorDescriptor) ||
+      typeof constructorDescriptor.value !== 'function'
+    ) {
+      return false;
+    }
+    const constructor = constructorDescriptor.value;
+    const constructorPrototype = Object.getOwnPropertyDescriptor(constructor, 'prototype');
+    return Boolean(
+      constructorPrototype &&
+      'value' in constructorPrototype &&
+      constructorPrototype.value === prototype &&
+      FUNCTION_TO_STRING.call(constructor) === OBJECT_CONSTRUCTOR_SOURCE,
+    );
   } catch {
     return false;
   }
+}
+
+function checkpointSnapshot(budget: SnapshotBudget): SnapshotCheckpoint {
+  return {
+    remaining: budget.remaining,
+    seenEntries: budget.seenEntries.length,
+    truncated: budget.truncated,
+  };
+}
+
+function restoreSnapshotCheckpoint(budget: SnapshotBudget, checkpoint: SnapshotCheckpoint): void {
+  budget.remaining = checkpoint.remaining;
+  budget.truncated = checkpoint.truncated;
+  while (budget.seenEntries.length > checkpoint.seenEntries) {
+    const source = budget.seenEntries.pop();
+    if (source) budget.seen.delete(source);
+  }
+}
+
+function rememberSnapshot(budget: SnapshotBudget, source: object, output: unknown): void {
+  budget.seen.set(source, output);
+  budget.seenEntries.push(source);
+}
+
+function omitInvalidValue(
+  budget: SnapshotBudget,
+  checkpoint: SnapshotCheckpoint,
+): typeof OMIT_VALUE {
+  restoreSnapshotCheckpoint(budget, checkpoint);
+  budget.invalid = true;
+  return OMIT_VALUE;
 }
 
 function snapshotValueEntry(
   value: unknown,
   budget: SnapshotBudget,
   depth: number,
-): unknown | typeof OMIT_VALUE {
+): unknown | typeof OMIT_VALUE | typeof LIMIT_VALUE {
   if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
-  if (typeof value === 'function') return value;
+  const checkpoint = checkpointSnapshot(budget);
+  if (typeof value === 'function') return omitInvalidValue(budget, checkpoint);
   if (depth > MAX_VALUE_DEPTH || budget.remaining <= 0) {
     budget.truncated = true;
-    return OMIT_VALUE;
+    return LIMIT_VALUE;
   }
   const existing = budget.seen.get(value);
   if (existing !== undefined) return existing;
@@ -117,13 +179,17 @@ function snapshotValueEntry(
   try {
     isArray = Array.isArray(value);
   } catch {
-    budget.invalid = true;
-    return OMIT_VALUE;
+    return omitInvalidValue(budget, checkpoint);
   }
   if (isArray) {
+    if (budget.remainingInspections <= 0) {
+      budget.truncated = true;
+      return LIMIT_VALUE;
+    }
+    budget.remainingInspections -= 1;
     const output: unknown[] = [];
-    budget.seen.set(value, output);
-    let length = 0;
+    rememberSnapshot(budget, value, output);
+    let sourceLength = 0;
     try {
       const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
       if (
@@ -133,13 +199,21 @@ function snapshotValueEntry(
         Number.isSafeInteger(descriptor.value) &&
         descriptor.value >= 0
       ) {
-        if (descriptor.value > MAX_VALUE_ENTRIES) budget.truncated = true;
-        length = Math.min(descriptor.value, MAX_VALUE_ENTRIES);
-      }
+        sourceLength = descriptor.value;
+      } else return omitInvalidValue(budget, checkpoint);
     } catch {
-      budget.invalid = true;
+      return omitInvalidValue(budget, checkpoint);
     }
-    for (let index = 0; index < length && budget.remaining > 0; index += 1) {
+    if (sourceLength > MAX_VALUE_ENTRIES) budget.truncated = true;
+    const length = Math.min(sourceLength, MAX_VALUE_ENTRIES);
+    let outputLength = length;
+    for (let index = 0; index < length; index += 1) {
+      if (budget.remaining <= 0 || budget.remainingInspections <= 0) {
+        budget.truncated = true;
+        outputLength = index;
+        break;
+      }
+      budget.remainingInspections -= 1;
       let descriptor: PropertyDescriptor | undefined;
       try {
         descriptor = Object.getOwnPropertyDescriptor(value, String(index));
@@ -152,40 +226,58 @@ function snapshotValueEntry(
         budget.invalid = true;
         continue;
       }
+      const entryCheckpoint = checkpointSnapshot(budget);
       budget.remaining -= 1;
       const entry = snapshotValueEntry(descriptor.value, budget, depth + 1);
-      if (entry !== OMIT_VALUE) output.push(entry);
+      if (entry === OMIT_VALUE) {
+        restoreSnapshotCheckpoint(budget, entryCheckpoint);
+        continue;
+      }
+      if (entry === LIMIT_VALUE) {
+        outputLength = index;
+        break;
+      }
+      Object.defineProperty(output, String(index), {
+        value: entry,
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      });
     }
-    if (budget.remaining <= 0 && length > output.length) budget.truncated = true;
+    output.length = outputLength;
     return Object.freeze(output);
   }
 
-  if (!isPlainRecord(value)) return value;
+  if (!isPlainRecord(value)) return omitInvalidValue(budget, checkpoint);
   const output: Record<PropertyKey, unknown> = {};
-  budget.seen.set(value, output);
-  let descriptors: PropertyDescriptorMap;
-  try {
-    descriptors = Object.getOwnPropertyDescriptors(value);
-  } catch {
-    budget.invalid = true;
-    return OMIT_VALUE;
-  }
+  rememberSnapshot(budget, value, output);
   let retained = 0;
-  for (const key of Reflect.ownKeys(descriptors)) {
-    const descriptor = descriptors[key as keyof PropertyDescriptorMap];
-    if (!descriptor?.enumerable) continue;
-    if (retained >= MAX_VALUE_ENTRIES || budget.remaining <= 0) {
-      budget.truncated = true;
-      break;
-    }
-    if (!('value' in descriptor)) {
-      budget.invalid = true;
-      continue;
-    }
-    retained += 1;
-    budget.remaining -= 1;
-    const entry = snapshotValueEntry(descriptor.value, budget, depth + 1);
-    if (entry !== OMIT_VALUE) {
+  try {
+    for (const key in value) {
+      if (
+        retained >= MAX_VALUE_ENTRIES ||
+        budget.remaining <= 0 ||
+        budget.remainingInspections <= 0
+      ) {
+        budget.truncated = true;
+        break;
+      }
+      budget.remainingInspections -= 1;
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable) continue;
+      if (!('value' in descriptor)) {
+        budget.invalid = true;
+        continue;
+      }
+      const entryCheckpoint = checkpointSnapshot(budget);
+      budget.remaining -= 1;
+      const entry = snapshotValueEntry(descriptor.value, budget, depth + 1);
+      if (entry === OMIT_VALUE) {
+        restoreSnapshotCheckpoint(budget, entryCheckpoint);
+        continue;
+      }
+      if (entry === LIMIT_VALUE) break;
+      retained += 1;
       Object.defineProperty(output, key, {
         value: entry,
         enumerable: true,
@@ -193,6 +285,8 @@ function snapshotValueEntry(
         writable: false,
       });
     }
+  } catch {
+    return omitInvalidValue(budget, checkpoint);
   }
   return Object.freeze(output);
 }
@@ -214,15 +308,17 @@ function snapshotFormValue(value: unknown): {
   }
   const budget: SnapshotBudget = {
     remaining: MAX_VALUE_NODES,
+    remainingInspections: MAX_VALUE_INSPECTIONS,
     seen: new WeakMap(),
+    seenEntries: [],
     invalid: false,
     truncated: false,
   };
   const snapshot = snapshotValueEntry(value, budget, 0);
   return {
-    value: snapshot === OMIT_VALUE ? Object.freeze({}) : snapshot as ToolParamFormValue,
+    value: snapshot === OMIT_VALUE || snapshot === LIMIT_VALUE ? Object.freeze({}) : snapshot as ToolParamFormValue,
     invalid: budget.invalid || snapshot === OMIT_VALUE,
-    truncated: budget.truncated,
+    truncated: budget.truncated || snapshot === LIMIT_VALUE,
   };
 }
 
@@ -282,6 +378,136 @@ function snapshotSchemaStringArray(value: unknown): {
     isArray: true,
     value: Object.freeze(output),
     exceededLimit: sourceLength > MAX_SCHEMA_FIELDS,
+  };
+}
+
+interface SchemaEnumSnapshot {
+  readonly value?: readonly string[];
+  readonly malformed: boolean;
+  readonly exceededLimit: boolean;
+}
+
+function snapshotSchemaEnum(value: unknown): SchemaEnumSnapshot {
+  let isArray = false;
+  try {
+    isArray = Array.isArray(value);
+  } catch {
+    return { malformed: true, exceededLimit: false };
+  }
+  if (!isArray) return { malformed: true, exceededLimit: false };
+
+  let sourceLength = 0;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
+    if (
+      !descriptor
+      || !('value' in descriptor)
+      || typeof descriptor.value !== 'number'
+      || !Number.isSafeInteger(descriptor.value)
+      || descriptor.value < 0
+    ) {
+      return { malformed: true, exceededLimit: false };
+    }
+    sourceLength = descriptor.value;
+  } catch {
+    return { malformed: true, exceededLimit: false };
+  }
+
+  const output: string[] = [];
+  for (let index = 0; index < Math.min(sourceLength, MAX_ENUM_OPTIONS); index += 1) {
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    } catch {
+      return { malformed: true, exceededLimit: sourceLength > MAX_ENUM_OPTIONS };
+    }
+    if (!descriptor) continue;
+    if (!('value' in descriptor) || typeof descriptor.value !== 'string') {
+      return { malformed: true, exceededLimit: sourceLength > MAX_ENUM_OPTIONS };
+    }
+    output.push(descriptor.value);
+  }
+  return {
+    value: Object.freeze(output),
+    malformed: false,
+    exceededLimit: sourceLength > MAX_ENUM_OPTIONS,
+  };
+}
+
+function snapshotSchemaProperty(value: object): {
+  readonly value?: ToolParamFormProperty;
+  readonly malformed: boolean;
+  readonly exceededLimit: boolean;
+} {
+  let descriptors: PropertyDescriptorMap;
+  try {
+    descriptors = Object.getOwnPropertyDescriptors(value);
+  } catch {
+    return { malformed: true, exceededLimit: false };
+  }
+
+  const withoutEnum: Record<PropertyKey, unknown> = {};
+  let enumDescriptor: PropertyDescriptor | undefined;
+  for (const key of Reflect.ownKeys(descriptors)) {
+    const descriptor = descriptors[key as keyof PropertyDescriptorMap];
+    if (!descriptor?.enumerable) continue;
+    if (key === 'enum') {
+      enumDescriptor = descriptor;
+      continue;
+    }
+    if (!('value' in descriptor)) return { malformed: true, exceededLimit: false };
+    Object.defineProperty(withoutEnum, key, {
+      value: descriptor.value,
+      enumerable: true,
+      configurable: false,
+      writable: false,
+    });
+  }
+
+  const propertySnapshot = snapshotFormValue(withoutEnum);
+  if (propertySnapshot.invalid || propertySnapshot.truncated) {
+    return { malformed: true, exceededLimit: false };
+  }
+
+  let choices: readonly string[] | undefined;
+  let exceededLimit = false;
+  let hasEnum = false;
+  if (enumDescriptor) {
+    if (!('value' in enumDescriptor)) return { malformed: true, exceededLimit: false };
+    hasEnum = true;
+    if (enumDescriptor.value !== undefined) {
+      const enumSnapshot = snapshotSchemaEnum(enumDescriptor.value);
+      if (enumSnapshot.malformed) {
+        return { malformed: true, exceededLimit: enumSnapshot.exceededLimit };
+      }
+      choices = enumSnapshot.value;
+      exceededLimit = enumSnapshot.exceededLimit;
+    }
+  }
+
+  const output: Record<PropertyKey, unknown> = {};
+  for (const key of Reflect.ownKeys(propertySnapshot.value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(propertySnapshot.value, key);
+    if (!descriptor?.enumerable || !('value' in descriptor)) continue;
+    Object.defineProperty(output, key, {
+      value: descriptor.value,
+      enumerable: true,
+      configurable: false,
+      writable: false,
+    });
+  }
+  if (hasEnum) {
+    Object.defineProperty(output, 'enum', {
+      value: choices,
+      enumerable: true,
+      configurable: false,
+      writable: false,
+    });
+  }
+  return {
+    value: Object.freeze(output) as unknown as ToolParamFormProperty,
+    malformed: false,
+    exceededLimit,
   };
 }
 
@@ -345,21 +571,14 @@ function snapshotSchema(value: unknown): SchemaSnapshot {
       shapeError = 'properties';
       continue;
     }
-    const propertySnapshot = snapshotFormValue(descriptor.value);
-    if (propertySnapshot.invalid || propertySnapshot.truncated) {
+    const propertySnapshot = snapshotSchemaProperty(descriptor.value);
+    if (propertySnapshot.malformed || !propertySnapshot.value) {
       shapeError = 'properties';
+      if (propertySnapshot.exceededLimit) exceededLimits = true;
       continue;
     }
-    const property = propertySnapshot.value as unknown as ToolParamFormProperty;
-    let choices = property.enum;
-    if (Array.isArray(choices) && choices.length > MAX_ENUM_OPTIONS) {
-      exceededLimits = true;
-      choices = Object.freeze(choices.slice(0, MAX_ENUM_OPTIONS));
-    }
-    properties[key] = Object.freeze({
-      ...property,
-      ...(choices === undefined ? {} : { enum: choices }),
-    });
+    if (propertySnapshot.exceededLimit) exceededLimits = true;
+    properties[key] = propertySnapshot.value;
   }
 
   const requiredDescriptor = rootDescriptors['required'];
@@ -988,6 +1207,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
     }
     if (this._formError) this.showFormError = true;
+    this.requestUpdate();
     const valid = this.internals.reportValidity();
     if (!valid && !this.firstInvalidField() && this.missingRequiredKeys.length > 0) {
       void this.updateComplete.then(() => {
@@ -1019,6 +1239,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     this.validityController.setCustomValidity(message ?? '');
     this.syncValidityCustomStates();
     this.publishValiditySnapshot();
+    this.requestUpdate();
   }
 
   formResetCallback(): void {
@@ -1399,10 +1620,14 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const entries = Object.entries(props);
     const missingRequiredKeys = this.missingRequiredKeys.filter((key) => this.touchedFields.has(key));
     const hostLabel = this.getAttribute('aria-label');
+    const groupInvalid = this.hasInteracted
+      && !this.barredFromValidation
+      && !this.internals.validity.valid;
     return html`<div
       part="base"
       role="group"
       aria-label=${hostLabel ?? nothing}
+      aria-invalid=${groupInvalid ? 'true' : 'false'}
     >
       ${entries.length === 0
         ? html`<p part="empty">${this.localize('noData')}</p>`

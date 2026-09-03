@@ -9,6 +9,11 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { styles } from './json-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
@@ -48,6 +53,21 @@ interface RenderBudget {
 
 const MAX_JSON_NODES = 5000;
 const MAX_JSON_DEPTH = 100;
+// Reflection is independently bounded, but has headroom for opaque/non-enumerable own names so
+// they cannot consume the smaller admitted JSON-node budget.
+const MAX_JSON_SNAPSHOT_INSPECTIONS = MAX_JSON_NODES * 2;
+const OMIT_JSON_SNAPSHOT = Symbol('omit-json-viewer-snapshot');
+
+interface JsonSnapshotBudget {
+  remainingNodes: number;
+  remainingInspections: number;
+  truncated: boolean;
+}
+
+interface JsonSnapshot {
+  readonly value: unknown;
+  readonly truncated: boolean;
+}
 
 const EMPTY_SEARCH: SearchState = {
   keyMatches: new Set(),
@@ -58,8 +78,185 @@ const EMPTY_SEARCH: SearchState = {
   truncated: false,
 };
 
+function isArrayContainer(value: unknown): value is readonly unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
 function isPlainContainer(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !isArrayContainer(value);
+}
+
+/**
+ * Projects the caller-owned value once through own data descriptors. Every downstream path uses
+ * this frozen graph, so rendering, search, and clipboard serialization cannot invoke an accessor
+ * or reread a proxy after admission. The projection preserves ordinary holes, aliases, and cycles;
+ * unsafe branches and unsupported opaque leaves are omitted instead of coercing them.
+ */
+function snapshotJsonData(value: unknown): JsonSnapshot {
+  const budget: JsonSnapshotBudget = {
+    remainingNodes: MAX_JSON_NODES,
+    remainingInspections: MAX_JSON_SNAPSHOT_INSPECTIONS,
+    truncated: false,
+  };
+  const copies = new WeakMap<object, object>();
+  const projected = snapshotJsonValue(value, budget, copies, 0);
+  return Object.freeze({
+    value: projected === OMIT_JSON_SNAPSHOT ? undefined : projected,
+    truncated: budget.truncated || projected === OMIT_JSON_SNAPSHOT,
+  });
+}
+
+function snapshotJsonValue(
+  value: unknown,
+  budget: JsonSnapshotBudget,
+  copies: WeakMap<object, object>,
+  depth: number,
+): unknown | typeof OMIT_JSON_SNAPSHOT {
+  if (budget.remainingNodes <= 0) {
+    budget.truncated = true;
+    return OMIT_JSON_SNAPSHOT;
+  }
+  budget.remainingNodes -= 1;
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    return value;
+  }
+  if (typeof value !== 'object') {
+    budget.truncated = true;
+    return OMIT_JSON_SNAPSHOT;
+  }
+  const source = value;
+  const existing = copies.get(source);
+  if (existing) return existing;
+  const array = isArrayContainer(source);
+  if (depth >= MAX_JSON_DEPTH) {
+    budget.truncated = true;
+    const shell: object = array ? [] : Object.create(null);
+    copies.set(source, shell);
+    return Object.freeze(shell);
+  }
+  return array
+    ? snapshotJsonArray(source, budget, copies, depth)
+    : snapshotJsonObject(source, budget, copies, depth);
+}
+
+function snapshotJsonArray(
+  source: readonly unknown[],
+  budget: JsonSnapshotBudget,
+  copies: WeakMap<object, object>,
+  depth: number,
+): unknown | typeof OMIT_JSON_SNAPSHOT {
+  const length = getOwnDataDescriptor(source, 'length');
+  if (
+    length === MISSING_OWN_DATA_DESCRIPTOR ||
+    length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof length.value !== 'number' ||
+    !Number.isSafeInteger(length.value) ||
+    length.value < 0
+  ) {
+    budget.truncated = true;
+    return OMIT_JSON_SNAPSHOT;
+  }
+  const projected: unknown[] = [];
+  copies.set(source, projected);
+  let retainedLength = 0;
+  const count = Math.min(length.value, budget.remainingInspections);
+  if (count < length.value) budget.truncated = true;
+  for (let index = 0; index < count; index += 1) {
+    if (budget.remainingNodes <= 0 || budget.remainingInspections <= 0) {
+      budget.truncated = true;
+      break;
+    }
+    budget.remainingInspections -= 1;
+    retainedLength = index + 1;
+    const descriptor = getOwnDataDescriptor(source, String(index));
+    if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) continue;
+    if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
+      budget.truncated = true;
+      continue;
+    }
+    const child = snapshotJsonValue(descriptor.value, budget, copies, depth + 1);
+    if (child === OMIT_JSON_SNAPSHOT) {
+      budget.truncated = true;
+      continue;
+    }
+    projected[index] = child;
+  }
+  projected.length = retainedLength;
+  try {
+    return Object.freeze(projected);
+  } catch {
+    copies.delete(source);
+    budget.truncated = true;
+    return OMIT_JSON_SNAPSHOT;
+  }
+}
+
+function snapshotJsonObject(
+  source: object,
+  budget: JsonSnapshotBudget,
+  copies: WeakMap<object, object>,
+  depth: number,
+): unknown | typeof OMIT_JSON_SNAPSHOT {
+  const projected = Object.create(null) as Record<string, unknown>;
+  copies.set(source, projected);
+  let keys: string[];
+  try {
+    // Object.keys()/for-in resolve every key's enumerability first, which lets one hostile Proxy
+    // descriptor trap abort its later valid siblings before getOwnDataDescriptor() can contain it.
+    // The own-key list crosses only [[OwnPropertyKeys]]; individual descriptor reads below stay
+    // bounded and independently fail closed.
+    keys = Object.getOwnPropertyNames(source);
+  } catch {
+    copies.delete(source);
+    budget.truncated = true;
+    return OMIT_JSON_SNAPSHOT;
+  }
+  try {
+    for (const key of keys) {
+      if (budget.remainingInspections <= 0) {
+        budget.truncated = true;
+        break;
+      }
+      budget.remainingInspections -= 1;
+      const descriptor = getOwnDataDescriptor(source, key);
+      if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) continue;
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR || !descriptor.enumerable) {
+        if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) budget.truncated = true;
+        continue;
+      }
+      if (budget.remainingNodes <= 0) {
+        budget.truncated = true;
+        break;
+      }
+      const child = snapshotJsonValue(descriptor.value, budget, copies, depth + 1);
+      if (child === OMIT_JSON_SNAPSHOT) {
+        budget.truncated = true;
+        continue;
+      }
+      Object.defineProperty(projected, key, {
+        value: child,
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      });
+    }
+    return Object.freeze(projected);
+  } catch {
+    copies.delete(source);
+    budget.truncated = true;
+    return OMIT_JSON_SNAPSHOT;
+  }
 }
 
 /** A bounded prefix of an object's own enumerable properties or an array's indices. */
@@ -73,32 +270,69 @@ function entriesOf(
   exact: boolean;
 } {
   const entries: [JsonPathSegment, unknown][] = [];
-  if (Array.isArray(value)) {
-    const count = Math.min(value.length, limit);
-    for (let index = 0; index < count; index += 1) entries.push([index, value[index]]);
+  if (isArrayContainer(value)) {
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    ) {
+      return { entries, truncated: true, total: 0, exact: false };
+    }
+    const total = length.value;
+    const count = Math.min(total, limit);
+    let truncated = total > count;
+    let exact = true;
+    for (let index = 0; index < count; index += 1) {
+      const descriptor = getOwnDataDescriptor(value, String(index));
+      if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) {
+        // Preserve an ordinary source-index hole as the viewer's historical undefined row.
+        entries.push([index, undefined]);
+        continue;
+      }
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
+        truncated = true;
+        exact = false;
+        continue;
+      }
+      entries.push([index, descriptor.value]);
+    }
     return {
       entries,
-      truncated: value.length > count,
-      total: value.length,
-      exact: true,
+      truncated,
+      total,
+      exact,
     };
   }
   if (isPlainContainer(value)) {
     let truncated = false;
     let total = 0;
     let exact = true;
-    for (const key in value) {
-      if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
-      total += 1;
-      if (entries.length < limit) entries.push([key, value[key]]);
-      else truncated = true;
-      // Counting the complete object must remain bounded too. One more than the traversal budget
-      // proves the displayed count is a lower bound without enumerating an arbitrary object.
-      if (total > MAX_JSON_NODES) {
-        exact = false;
-        truncated = true;
-        break;
+    let inspected = 0;
+    try {
+      for (const key in value) {
+        inspected += 1;
+        if (inspected > MAX_JSON_NODES) {
+          exact = false;
+          truncated = true;
+          break;
+        }
+        const descriptor = getOwnDataDescriptor(value, key);
+        if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) continue;
+        if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR || !descriptor.enumerable) {
+          exact = false;
+          truncated = true;
+          continue;
+        }
+        total += 1;
+        if (entries.length < limit) entries.push([key, descriptor.value]);
+        else truncated = true;
       }
+    } catch {
+      exact = false;
+      truncated = true;
     }
     return { entries, truncated, total, exact };
   }
@@ -108,7 +342,7 @@ function entriesOf(
 function valueType(value: unknown): JsonValueType {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
-  if (Array.isArray(value)) return 'array';
+  if (isArrayContainer(value)) return 'array';
   const t = typeof value;
   if (t === 'string' || t === 'number' || t === 'boolean') return t;
   if (t === 'object') return 'object';
@@ -125,13 +359,22 @@ function formatPrimitive(value: unknown, type: JsonValueType): string {
       // TypeError for a BigInt, so only an actual string gets the
       // quoted/escaped treatment; everything else falls back to a plain
       // String() coercion, which renders "sensibly" without throwing.
-      return typeof value === 'string' ? JSON.stringify(value) : String(value);
+      if (typeof value === 'string') return JSON.stringify(value);
+      try {
+        return String(value);
+      } catch {
+        return '';
+      }
     case 'null':
       return 'null';
     case 'undefined':
       return 'undefined';
     default:
-      return String(value);
+      try {
+        return String(value);
+      } catch {
+        return '';
+      }
   }
 }
 
@@ -251,6 +494,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** Memoized result of the last `computeSearch()` walk -- see `willUpdate()`. */
   private searchState: SearchState = EMPTY_SEARCH;
   private searchLocale = '';
+  /** Descriptor-safe, frozen data graph admitted on the most recent `data` write. */
+  private dataSnapshot: unknown = undefined;
+  private dataSnapshotTruncated = false;
   private searchAnnouncementSink?: AnnouncementSink;
   private searchAnnouncementsArmed = false;
   private searchAnnouncementGeneration = 0;
@@ -399,7 +645,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const paths = new Set<string>();
     const orderedMatches: { pathKey: string; kind: 'key' | 'value' }[] = [];
     const ancestors = new WeakSet<object>();
-    let truncated = false;
+    let truncated = this.dataSnapshotTruncated;
 
     const markAncestors = (path: JsonPathSegment[]): void => {
       for (let i = path.length - 1; i >= 0; i--) forceExpand.add(JSON.stringify(path.slice(0, i)));
@@ -413,7 +659,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
           keyLabel?: string;
         }
       | { kind: 'leave'; value: object };
-    const stack: WalkFrame[] = [{ kind: 'visit', value: this.data, path: [] }];
+    const stack: WalkFrame[] = [{ kind: 'visit', value: this.dataSnapshot, path: [] }];
     let visited = 0;
 
     while (stack.length > 0) {
@@ -529,6 +775,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       : { entries: [], truncated: false, total: 0, exact: true };
     const entries = entrySlice.entries;
     if (entrySlice.truncated) budget.truncated = true;
+    const entryCountExact = entrySlice.exact && !this.dataSnapshotTruncated;
     const hasEntries = entries.length > 0;
     const withinDepthBudget = depth < MAX_JSON_DEPTH;
     if (hasEntries && !withinDepthBudget) budget.truncated = true;
@@ -607,7 +854,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
           ? html`
               <span part="bracket">${openBracket}</span>
               ${hasEntries && !expanded
-                ? html`<span class="preview">${this.previewText(type, entrySlice.total, entrySlice.exact)}</span>`
+                ? html`<span class="preview">${this.previewText(type, entrySlice.total, entryCountExact)}</span>`
                 : nothing}
               ${!expanded ? html`<span part="bracket">${closeBracket}</span>` : nothing}
             `
@@ -656,6 +903,11 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (!this.hasUpdated || changed.has('data')) {
+      const snapshot = snapshotJsonData(this.data);
+      this.dataSnapshot = snapshot.value;
+      this.dataSnapshotTruncated = snapshot.truncated;
+    }
     const locale = this.effectiveLocale;
     if (!this.hasUpdated || changed.has('data') || changed.has('search') || locale !== this.searchLocale) {
       this.searchLocale = locale;
@@ -790,8 +1042,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       remaining: MAX_JSON_NODES,
       truncated: false,
     };
-    const tree = this.renderNode(this.data, [], undefined, 0, this.searchState, new WeakSet(), budget);
-    const limited = budget.truncated || this.searchState.truncated;
+    const tree = this.renderNode(this.dataSnapshot, [], undefined, 0, this.searchState, new WeakSet(), budget);
+    const limited = budget.truncated || this.searchState.truncated || this.dataSnapshotTruncated;
     return html`
       <div
         part="base"
@@ -807,7 +1059,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
                 part="copy-button"
                 type="button"
                 aria-label=${this.localize('copyJson')}
-                @click=${() => void this.copy(this.data)}
+                @click=${() => void this.copy(this.dataSnapshot)}
               >
                 ${this.localize('copy')}
               </button>

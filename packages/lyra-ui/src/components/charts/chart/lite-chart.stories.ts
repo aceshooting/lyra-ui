@@ -339,3 +339,29 @@ export const LabelDecimation: Story = {
     `;
   },
 };
+
+const logarithmicScaleCanarySeries: LyraLiteChartSeries[] = [
+  { label: 'End-to-end latency (ms)', data: [1, 10, 100, 1000] },
+];
+
+/** Positive decade-spaced values make the logarithmic spacing and the visible table deterministic. */
+export const LogarithmicScaleCanary: Story = {
+  name: 'Logarithmic scale canary',
+  render: () => html`
+    <div style="inline-size: 22rem; max-inline-size: 100%;">
+      <lr-lite-chart
+        aria-label="Logarithmic end-to-end latency"
+        type="bar"
+        scale="logarithmic"
+        height="16rem"
+        legend
+        show-data-table
+        x-label="Scenario"
+        y-label="Latency in milliseconds, logarithmic scale"
+        .labels=${['1 ms', '10 ms', '100 ms', '1,000 ms']}
+        .datasets=${logarithmicScaleCanarySeries}
+      ></lr-lite-chart>
+      <p>Expected: each bar represents one tenfold latency increase.</p>
+    </div>
+  `,
+};

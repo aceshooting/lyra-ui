@@ -505,6 +505,108 @@ describe("lr-email-viewer", () => {
     }
   });
 
+  it('retains valid peer fields while omitting malformed descriptor-backed recipients and attachments', async () => {
+    const sourceBytes = new Uint8Array([1, 2, 3]);
+    const validAttachment = Object.create(null) as Record<string, unknown>;
+    Object.defineProperties(validAttachment, {
+      filename: { configurable: true, enumerable: true, value: 'safe.bin', writable: true },
+      mimeType: { configurable: true, enumerable: true, value: 'application/octet-stream', writable: true },
+      content: { configurable: true, enumerable: true, value: sourceBytes, writable: true },
+    });
+    const laterAttachment = Object.create(null) as Record<string, unknown>;
+    Object.defineProperties(laterAttachment, {
+      filename: { configurable: true, enumerable: true, value: 'later.txt', writable: true },
+      mimeType: { configurable: true, enumerable: true, value: 'text/plain', writable: true },
+      content: { configurable: true, enumerable: true, value: 'later valid sibling', writable: true },
+    });
+    const attachmentTarget: unknown[] = new Array(10_001);
+    Object.defineProperty(attachmentTarget, '0', {
+      configurable: true,
+      enumerable: true,
+      value: validAttachment,
+      writable: true,
+    });
+    Object.defineProperty(attachmentTarget, '1', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        throw new Error('accessor-backed attachment entries are malformed');
+      },
+    });
+    Object.defineProperty(attachmentTarget, '2', {
+      configurable: true,
+      enumerable: true,
+      value: laterAttachment,
+      writable: true,
+    });
+    let attachmentTailReads = 0;
+    const attachments = new Proxy(attachmentTarget, {
+      get() {
+        throw new Error('attachments must not be value-read or materialized');
+      },
+      getOwnPropertyDescriptor(target, key) {
+        if (key === '10000') {
+          attachmentTailReads += 1;
+          throw new Error('attachment projection must stop before position 10000');
+        }
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const cyclicGroup = Object.create(null) as Record<string, unknown>;
+    Object.defineProperties(cyclicGroup, {
+      name: { configurable: true, enumerable: true, value: 'Bad cycle', writable: true },
+      group: { configurable: true, enumerable: true, value: [cyclicGroup], writable: true },
+    });
+    const validRecipient = Object.create(null) as Record<string, unknown>;
+    Object.defineProperties(validRecipient, {
+      name: { configurable: true, enumerable: true, value: 'Grace Hopper', writable: true },
+      address: { configurable: true, enumerable: true, value: 'grace@example.test', writable: true },
+    });
+    const parsed = Object.create(null) as Record<string, unknown>;
+    Object.defineProperties(parsed, {
+      html: {
+        configurable: true,
+        enumerable: true,
+        get() {
+          throw new Error('malformed optional HTML must be treated as absent');
+        },
+      },
+      text: { configurable: true, enumerable: true, value: 'Safe plain-text body.', writable: true },
+      to: { configurable: true, enumerable: true, value: [cyclicGroup, validRecipient], writable: true },
+      attachments: { configurable: true, enumerable: true, value: attachments, writable: true },
+    });
+    __setEmailDepsForTesting({
+      PostalMime: { parse: () => Promise.resolve(parsed as never) },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const restore = stubFetch(SAMPLE_EML);
+    try {
+      const el = await fixture<LyraEmailViewer>(
+        html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`,
+      );
+      let renderErrors = 0;
+      el.addEventListener('lr-render-error', () => { renderErrors += 1; });
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body-text"]') !== null);
+
+      expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent)
+        .to.contain('Safe plain-text body.');
+      expect(el.shadowRoot!.querySelector('[part="to"]')!.textContent)
+        .to.contain('Grace Hopper');
+      const buttons = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="attachment-button"]');
+      expect(buttons.length).to.equal(2);
+      expect(attachmentTailReads).to.equal(0);
+      sourceBytes[0] = 9;
+      const opened = oneEvent(el, 'lr-attachment-open');
+      buttons[0]!.click();
+      const event = (await opened) as CustomEvent<{ attachment: { content?: Blob } }>;
+      expect(Array.from(new Uint8Array(await event.detail.attachment.content!.arrayBuffer())))
+        .to.deep.equal([1, 2, 3]);
+      expect(renderErrors).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
   it("rejects unsafe URLs before fetch and emits exactly one render error", async () => {
     let called = false;
     const original = window.fetch;

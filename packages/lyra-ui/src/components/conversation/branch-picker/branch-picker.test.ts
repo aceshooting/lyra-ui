@@ -157,6 +157,52 @@ it('keeps both chevron actions at the shared icon-button hit-area floor', async 
   }
 });
 
+it('inherits a 20px host font for both chevrons and their one-em glyphs', async () => {
+  const el = (await fixture(
+    html`<lr-branch-picker style="font-size: 20px" index="1" count="3"></lr-branch-picker>`,
+  )) as LyraBranchPicker;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button')];
+
+  for (const button of buttons) {
+    expect(getComputedStyle(button).fontSize).to.equal('20px');
+    expect(getComputedStyle(button.querySelector('svg')!).width).to.equal('20px');
+  }
+});
+
+it('compare-restores branch action tab stops on consumer takeover, disappearance, and disconnect', async () => {
+  const el = (await fixture(
+    html`<lr-branch-picker index="1" count="3"></lr-branch-picker>`,
+  )) as LyraBranchPicker;
+  const previous = el.shadowRoot!.querySelector(
+    '[part="previous-button"]',
+  ) as HTMLButtonElement;
+  const action = el.getToolbarActions()[0]!;
+  previous.setAttribute('tabindex', '7');
+  action.setTabIndex(-1);
+  action.releaseTabIndex?.();
+  expect(previous.getAttribute('tabindex')).to.equal('7');
+
+  action.setTabIndex(-1);
+  previous.setAttribute('tabindex', '5');
+  action.releaseTabIndex?.();
+  expect(previous.getAttribute('tabindex')).to.equal('5');
+
+  action.setTabIndex(-1);
+  el.count = 1;
+  await el.updateComplete;
+  expect(previous.getAttribute('tabindex')).to.equal('5');
+
+  el.count = 3;
+  await el.updateComplete;
+  const readded = el.shadowRoot!.querySelector(
+    '[part="previous-button"]',
+  ) as HTMLButtonElement;
+  const readdedAction = el.getToolbarActions()[0]!;
+  readdedAction.setTabIndex(-1);
+  el.remove();
+  expect(readded.hasAttribute('tabindex')).to.be.false;
+});
+
 it('is accessible', async () => {
   const el = (await fixture(
     html`<lr-branch-picker index="1" count="3"></lr-branch-picker>`,

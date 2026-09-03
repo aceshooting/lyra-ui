@@ -10,11 +10,6 @@ introduced by the current release, it is the current package version.
   compatibility promises: once published, their public APIs receive the same full-semver protection
   as stable components until they are formally deprecated and removed.
 
-An experimental component graduates to stable only after its documented API, populated
-accessibility state, behavior in Chromium, Firefox, and WebKit, and compatibility contract pass
-maintainer review and release qualification. A stable component keeps that status only while those
-contracts remain release-blocking.
-
 Deprecation is explicit metadata, not an implication from status. Each deprecated component or
 member names a replacement, a deprecation version, a rationale, and the earliest permitted removal
 version. If an API is deprecated in major version M, it remains available for the complete M+1
@@ -51,8 +46,7 @@ The major-version landmarks after 9.0.0 are:
 
 - **10.0.0:** removed eligible members deprecated during 9.x and made the public-contract
   corrections listed in its changelog entry; follow that entry's per-member migration guidance.
-- **11.0.0:** carried no known consumer-breaking change. The major number recorded conservative
-  public-API-gate fingerprint and generated-type churn; consumers upgrading from 10.x were not
+- **11.0.0:** carried no known consumer-breaking change; consumers upgrading from 10.x were not
   expected to change code.
 - **12.0.0:** removed the inherited static `LyraElement.getPropertyDescriptor()` surface after Lit
   deprecated that finalization hook. Ordinary component consumers need no migration; only subclasses
@@ -66,10 +60,10 @@ Chromium 120+, Gecko 121+, WebKit 16.4+, and Node 20+ (ESM only; there is no Com
 Those floors are derived from platform features the source actually uses — `:dir()`, `:has()`,
 `@container`, `color-mix()`, `ElementInternals` form association — because the package ships
 untranspiled ES2022 modules with no polyfills and no build-time downleveling. There is deliberately
-no `browserslist` field: it would describe a build step this package does not have. CI proves the
-current stable build of each engine (the full suite on Chromium, a contract subset on Firefox and
-WebKit, on Node 20 and 22); the version floors are derived rather than tested. Raising any floor is
-a semver-major change. Full policy, including the known WebKit cross-shadow-selection gap and the
+no `browserslist` field: it would describe a build step this package does not have. The version
+floors are derived from those platform features rather than individually verified version-by-version.
+Raising any floor is a semver-major change. Full policy, including the known WebKit
+cross-shadow-selection gap and the
 rule for when a `@supports` fallback may be dropped:
 <https://github.com/aceshooting/lyra-ui/blob/main/docs/support-policy.md>.
 
@@ -187,12 +181,49 @@ The entry points, then:
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims), `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
 
+### Registration-free component helpers
+
+The following focused helpers are public, side-effect-free modules. They do not define a custom
+element, so they are suitable for server code, workers, or applications that need the same data
+normalization as a component without registering it:
+
+```ts
+import {
+  DEFAULT_INTERNAL_PATTERNS,
+  parseStackTrace,
+  STACK_TRACE_LIMITS,
+} from '@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace-parse.js';
+import {
+  MAX_RENDERED_LYRA_SPANS,
+  normalizeLyraSpans,
+} from '@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js';
+import {
+  agentStatusMessage,
+  agentStatusVariant,
+} from '@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js';
+import {
+  approvalAction,
+  approvalDecision,
+} from '@aceshooting/lyra-ui/components/agent-tools/approval-state.js';
+import { DEFAULT_WIDGET_TYPE_REGISTRY } from '@aceshooting/lyra-ui/components/conversation/widget-renderer/default-registry.js';
+```
+
+Their companion type exports remain on those same paths: stack parsing exposes `StackFrame`,
+`StackGroup`, `StackTraceParseOptions`, and `StackTraceParseResult`; span projection exposes
+`LyraSpan`, `LyraSpanKind`, `LyraSpanStatus`, and `LyraSpanProjection`; status and approval helpers
+expose their respective presentation and decision types. The status helpers are `agentStatusKind`,
+`agentStatusLabel`, `agentStatusMessage`, `agentStatusVariant`, `isAgentStatusTerminal`, and
+`isAgentStatusActive`; approval also exports `ApprovalAction` and `ApprovalDecision`; span also
+exports `normalizeLyraSpanKind` and `normalizeLyraSpanStatus`; the widget registry module exports
+only `DEFAULT_WIDGET_TYPE_REGISTRY`. Import a component registration entry separately when the page
+also renders that component.
+
 ### Optional autoloader
 
 `@aceshooting/lyra-ui/autoloader.js` exports `discover(root?, options?)`, `start(root?, options?)`,
-and `stop()`. It contains an inventory-generated literal class-module import for every known Lyra
-tag, so a bundler can split each component while ordinary granular imports remain independent.
-Importing this entry alone has no side effect and registers nothing.
+and `stop()`. It can load each known Lyra tag independently, allowing bundlers to split components
+while granular imports remain independent. Importing this entry alone has no side effect and
+registers nothing.
 
 - `discover()` scans once. `start()` performs the same initial scan, then observes dynamic and
   Turbo-style replacement subtrees; a later `start()` stops the previous watcher. `stop()` is
@@ -353,8 +384,8 @@ through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` o
 ## Form association
 
 `FormAssociated(Base)` (`@aceshooting/lyra-ui/utilities/form-associated.js`) makes a `LitElement`
-form-associated: `static formAssociated = true` plus `attachInternals()` in the constructor, which
-eagerly calls
+form-associated: `static formAssociated = true` plus a descriptor-safe `attachInternals` lookup in
+the constructor, which eagerly calls
 `internals.setFormValue('')` so an untouched control is present in `FormData` as `""` from
 construction — matching native `<input>` — instead of being absent.
 
@@ -813,8 +844,8 @@ both modes: `on-<e>` clears WCAG 1.4.3's 4.5:1 against `fill-<e>` at the _same_ 
 construction, and no other pairing is promised. `border-normal` and `border-loud` clear 1.4.11's
 3:1 against the page surface, so a control's visible bounds are always discernible. `border-quiet`
 is deliberately exempt: it exists for decoration that is not load-bearing — a rule between table
-rows, a hairline inside an already-bounded card — so never use it as a control's only boundary. All
-of this is checked at build time across both modes, not asserted by hand.
+rows, a hairline inside an already-bounded card — so never use it as a control's only boundary.
+These guarantees apply in both modes.
 
 **Every slot has its own `--lr-theme-*` override**, named after the slot, so one decision can be
 rethemed without forking anything beneath it:
@@ -1042,11 +1073,9 @@ fails when inherited from a wrapper, that is a component bug; setting the same h
 every host should not be necessary.
 
 **There is no way to tell a live `--lr-*` declaration from a dead one without rendering.** A dead
-declaration is byte-identical to a working one in the stylesheet, and nothing in a build reports
-it — a test asserting on stylesheet source text (`expect(source).toContain('--lr-token: …')`)
-passes just as happily when the token is being shadowed at a nested host. Verify with
-`getComputedStyle` on the real element in the real state, and perturb the value deliberately to
-confirm the assertion actually bites.
+declaration is byte-identical to a working one in the stylesheet; a stylesheet-text check cannot
+distinguish it. Verify with `getComputedStyle` on the real element in the real state, and perturb
+the value deliberately to confirm the assertion actually bites.
 
 The same trap has a second form inside a component's own styles: a _declared_ value always wins
 over a `var()` fallback arm, and `auto` is a declared value. That is why the exact-height escape
@@ -1672,11 +1701,8 @@ import {
   `CitationSelectEventDetail`, `ToolApprovalEventDetail`, `CancelEventDetail`, `RetryEventDetail`,
   `ExportEventDetail`
 
-The package's no-emit type-test program asserts that each type still matches the property it feeds
-on `lr-chat-message`, `lr-tool-call-chip`, `lr-tool-result-view`, `lr-source-card`,
-`lr-attachment-chip`, and `lr-document-preview`. The binding is enforced by `tsc` without shipping
-an importable contract module. The types are structural and provider-agnostic: map any vendor's
-payload onto them once, at the edge.
+These structural, provider-agnostic types correspond to the component inputs above; map a vendor
+payload onto them at the edge.
 
 ### Task-first AI composition guide
 
@@ -1777,24 +1803,17 @@ whose rendering depends on something only a browser can answer — its own light
 browser global such as `EyeDropper` — reproduces the server's answer on the hydrating render and
 corrects itself on the next update, so a slotted override lands one frame after hydration; a
 browser-only mount is unaffected and renders the final result the first time. Layout/observer/canvas/media work
-begins after hydration, and remote content is client-only. CI imports every granular module, renders
-every inventory tag through its declared tier, and crawls a real Chromium DSD page (including
-`lr-page`) while failing hydration warnings/errors or DOM-identity replacement.
+begins after hydration, and remote content is client-only.
 
-## Testing a downstream project: `@aceshooting/lyra-ui/testing`
+## Testing form-associated components: `@aceshooting/lyra-ui/testing`
 
-`testing/happy-dom-shims.ts` exports `installHappyDomFormAssociatedShims(): void` for a consumer's
-own Vitest + happy-dom suite. happy-dom implements no `ElementInternals`, and every form-associated
-component calls `this.attachInternals()` unconditionally in its constructor, so instantiating one
-throws immediately without the shim. Call it once from a Vitest `setupFiles` entry, before importing
-any component. It patches `HTMLElement.prototype.attachInternals` with a stub covering what the
-components actually call — `setFormValue()`, `setValidity()`, `checkValidity()`, `reportValidity()`,
-plus readonly `form`/`labels`/`validity`/`validationMessage`/`willValidate`. `setValidity()` matters
-beyond construction: `AnchoredValidityController` calls it on every update, so without the shim a
-form control throws on any `value` change, not only when it is created. The shim is a no-op wherever
-`attachInternals` already exists (any real browser), so it is safe to call unconditionally from a
-shared setup file. This package's own tests run in real browsers via `@web/test-runner` and never
-call it.
+`@aceshooting/lyra-ui/testing` exports `installHappyDomFormAssociatedShims(): void` for test
+environments without usable `ElementInternals`. In that environment, form participation is inert
+while components retain local validity and state behavior. Install the helper once before assertions
+that need form-value or validity behavior: it supplies
+`setFormValue()`, `setValidity()`, `checkValidity()`, `reportValidity()`, and readonly
+`form`/`labels`/`validity`/`validationMessage`/`willValidate`. The shim is a no-op where the
+platform already provides internals, so it is safe in a shared setup file.
 
 ## Accessibility contract
 
@@ -1820,20 +1839,13 @@ computed name. Check the component's own reference section (or its class JSDoc) 
 convention it uses before writing markup — an `accessible-label` attribute on an `aria-label`-only
 component is a silent no-op, not an error.
 
-**What that contract is verified by, precisely.** Every one of the 284 public tags carries at least
-one axe-core assertion in its own directory's tests, in a test that mounts its own tag; contrast
-(4.5:1 text, 3:1 control borders, in both the light and dark palettes), a 40px minimum target size,
-pressed-state coverage for every hoverable part, and `::part()` reachability are separate blocking
-gates. All of that is automated. **No screen reader has been run against this library, in any
-pairing, and no human accessibility audit exists** — so treat "accessible" here as "passes an
-automated rule engine and a written role/name/state contract", never as verified assistive-technology
-behavior, and expect no conformance claim or VPAT. The full statement of what is and is not covered,
-plus how to report an accessibility bug, is at
+Lyra UI does not make a formal assistive-technology conformance claim or provide a VPAT. For the
+documented accessibility scope and how to report an accessibility issue, see
 <https://github.com/aceshooting/lyra-ui/blob/main/docs/accessibility.md>.
 
 ## Editor and tooling integration
 
-The published package ships machine-readable metadata for editors, all regenerated on `prepack`:
+The published package ships machine-readable metadata for editors:
 `custom-elements.json` (Custom Elements Manifest), `web-types.json` (JetBrains, zero-config), and
 `vscode-html-data.json` / `vscode-css-data.json` (point `html.customData` / `css.customData` at them
 in `.vscode/settings.json`). For an agent, `llms/components/<tag>.md` is the cheaper source; these
@@ -2016,7 +2028,9 @@ arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementR
   application can build its **own** form-associated control alongside Lyra's and have it
   participate in a form, restore on reset, and report validity the same way every `lr-` control
   does. Reach for it instead of hand-rolling `attachInternals()` when a bespoke control has to sit
-  in the same `<form>` as these.
+  in the same `<form>` as these. `attachInternalsSafely()` inspects own and inherited data
+  descriptors without reading accessors, calls an eligible implementation once, and returns the
+  fallback internals for a missing, accessor-backed, non-callable, or throwing capability.
   The free-function signatures are `attachInternalsSafely(host)`,
   `createStringArrayFormDataState(name, values)`, `readStringArrayFormDataState(state)`, and
   `FormAssociated(Base, valueAdapter?)`. For a non-string value, pass a typed
@@ -2279,13 +2293,10 @@ number; clearTimeout(handle: number): void }`.
 - `formResetCallback()` restores the _content attribute_ default, so `el.value = 'x'` never redefines
   what `form.reset()` restores to (native `defaultValue`/`defaultSelected` semantics).
 
-## Packaging
+## Reference artifacts
 
-`custom-elements.json`, the React/Vue/Svelte declaration entry points, editor metadata, and derived
-LLM artifacts are regenerated by `prepack` and included in `package.json`'s `files` allowlist. The
-family references, this shared guide, and the introductory LLM sources are authored inputs; the
-generated index, per-component pages, tokens, peers, migration reference, and concatenated catalog
-are freshness-checked against them, the manifest, and `dist/` before publication.
+The package includes authored family and shared references plus derived index, component, token,
+peer, migration, and concatenated references.
 
 ## When no component fits, file it
 

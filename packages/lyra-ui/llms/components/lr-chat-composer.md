@@ -39,7 +39,8 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
 - `minRows: number = 1` (attribute `min-rows`) — floored to `1` at render time
 - `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`
 - `status: ChatComposerStatus = 'idle'` (reflected) — `'idle' | 'sending' | 'streaming'`; drives the
-  built-in button's icon/label (send vs. stop) and whether Enter still submits
+  built-in button's icon/label (send vs. stop) and whether Enter still submits. Invalid direct or
+  attribute values normalize and reflect as `idle`.
 - `frame: ChatComposerFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`; `ChatComposerFrame` is an alias of the shared `LyraFrame`).
   `'plain'` drops `[part="base"]`'s border, background, padding and corner radius so a composer

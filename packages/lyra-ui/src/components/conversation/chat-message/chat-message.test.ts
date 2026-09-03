@@ -24,6 +24,18 @@ it('defaults to messageRole="assistant" and status="sent" without taking over th
   expect(el.hasAttribute("role")).to.be.false;
 });
 
+it('inherits a 20px consumer font into the collapse control and its glyph', async () => {
+  const el = (await fixture(html`
+    <lr-chat-message collapsible style="font-size:20px">Message</lr-chat-message>
+  `)) as LyraChatMessage;
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="collapse-button"]')!;
+  const glyph = button.querySelector<SVGElement>('svg')!;
+
+  expect(getComputedStyle(button).fontSize).to.equal('20px');
+  expect(getComputedStyle(glyph).width).to.equal('20px');
+  expect(getComputedStyle(glyph).height).to.equal('20px');
+});
+
 it("normalizes an out-of-set status attribute to sent instead of throwing during render", async () => {
   const el = (await fixture(
     html`<lr-chat-message status="delivered">hi</lr-chat-message>`
@@ -1236,6 +1248,53 @@ describe("failure slot", () => {
       el.shadowRoot!.activeElement ===
         el.shadowRoot!.querySelector('[part="bubble"]')
     ).to.equal(true);
+  });
+
+  it('degrades safely when the owner activeElement getter throws or returns a partial value during failure removal', async () => {
+    const activeElementReads: readonly [string, () => unknown][] = [
+      ['throws', () => {
+        throw new TypeError('active element unavailable');
+      }],
+      ['returns a partial value', () => ({})],
+    ];
+
+    for (const [description, readActiveElement] of activeElementReads) {
+      const el = (await fixture(html`
+        <lr-chat-message status="failed">
+          <div slot="failure" role="alert">
+            Send failed
+            <button type="button" id="custom-retry">Retry</button>
+          </div>
+        </lr-chat-message>
+      `)) as LyraChatMessage;
+      const button = el.querySelector<HTMLButtonElement>('#custom-retry')!;
+      button.focus();
+      const descriptor = Object.getOwnPropertyDescriptor(document, 'activeElement');
+      Object.defineProperty(document, 'activeElement', {
+        configurable: true,
+        get: readActiveElement,
+      });
+
+      let updateRejected = false;
+      try {
+        el.status = 'sent';
+        await el.updateComplete;
+      } catch {
+        updateRejected = true;
+      } finally {
+        if (descriptor) {
+          Object.defineProperty(document, 'activeElement', descriptor);
+        } else {
+          delete (document as unknown as { activeElement?: unknown }).activeElement;
+        }
+      }
+
+      expect(updateRejected, `a ${description} getter must not reject the update`).to.equal(false);
+      expect(el.shadowRoot!.querySelector('slot[name="failure"]') === null).to.equal(true);
+      expect(() => button.blur()).to.not.throw();
+      expect(() => el.remove()).to.not.throw();
+      expect(el.isConnected).to.equal(false);
+    }
   });
 
   it("rescues focus through the adopted owner document when iframe failure content is removed", async () => {

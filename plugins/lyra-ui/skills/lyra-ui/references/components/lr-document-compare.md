@@ -28,7 +28,10 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 - `oldVersion?: DocumentCompareVersion`, `newVersion?: DocumentCompareVersion` (attribute: false) —
   the before/after inputs. `DocumentCompareVersion` extends `DocumentRef`
   (`id`, `name`, `mimeType?`, `uri?`, `version?`) with `text?: string` for diff mode and
-  `highlights?: LyraHighlight[]` for its own preview pane.
+  `highlights?: LyraHighlight[]` for its own preview pane. Each assignment becomes a frozen
+  snapshot: own string `id` and `name` are required or that pane is unset; valid string optional
+  fields are retained and other values are omitted. Its highlights use the shared snapshot too, so
+  mutation requires reassignment.
 - `view: 'diff' | 'side-by-side' = 'diff'` (reflected) — one inline text diff or two rendered
   preview panes. Invalid property or attribute values normalize to `diff` and repair the reflected
   attribute.
@@ -37,7 +40,8 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   repair the reflected attribute.
 - `copyable: boolean = false` — forwards the diff copy action.
 - `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
-  attribute: false) — optional syntax highlighting forwarded to the diff.
+  attribute: false) — optional syntax highlighting forwarded to the diff. A runtime non-string
+  `language` is treated as `''` without coercion.
 - `syncScroll: boolean = true` (attribute `sync-scroll`) — proportionally mirrors either
   side-by-side pane's scroll fraction to the other. The true-default converter accepts the literal
   `sync-scroll="false"`.

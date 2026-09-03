@@ -1325,6 +1325,10 @@ and `dateTimeFormat(locale, options)`.
   currently-selected paint for a `presets` quick-range button. Defaults are
   `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
   `var(--lr-color-brand)` respectively.
+- `--lr-date-picker-preset-selected-border` (default `var(--lr-color-brand)`) and
+  `--lr-date-picker-preset-selected-color` (default `var(--lr-color-on-brand)`) independently
+  theme a selected preset's border and foreground; the selected background token controls only its
+  background.
 - `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`,
   `--lr-date-picker-title-active-bg`, and `--lr-date-picker-title-active-radius` — Month-title
   hover/press paint and pressed shape; defaults to brand, brand, brand-quiet, and
@@ -3707,7 +3711,9 @@ single numeric string entry.
   a range readout joins both values with an en dash. The explicit HTML spelling
   `show-value="false"` stays false.
 - `value: number = 0`, `defaultValue: number = 0` (attribute `value`), `valueAsNumber: number`, and
-  `valueAsString: string` are synchronized, finite, clamped, and step-snapped.
+  `valueAsString: string` are synchronized and finite. Values normalize the low/high domain, snap
+  to the grid anchored at the low endpoint, then clamp so a non-grid endpoint remains reachable;
+  invalid, nonpositive, or below-resolution steps are unstepped.
 - `isRange: boolean` is the read-only normalized range-mode state.
 - `name: string | null = null`, `disabled = false`, `required = false`, reflected `customError`,
   plus read-only `form`, `labels`, `validity`, `validationMessage`, and `willValidate` make up the
@@ -4628,6 +4634,8 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 emitting an event), and `scrollPosition()` / `scrollPosition({top?,left?})`. The `input` getter
 returns the owned native textarea after render. `selectionStart`, `selectionEnd`, and
 `selectionDirection` use native nullable sentinels before that surface exists.
+`scrollPosition()` reads or writes `[part="editor"]`'s top/left offsets: the gutter and caret share
+that single scroll owner rather than a private textarea scroll position.
 The native textarea receives the actual `required` state. Its `aria-invalid` is true whenever
 visible property/slotted error chrome exists, or after interaction while native validity fails;
 showing error chrome alone does not mutate `ElementInternals` validity.
@@ -5276,6 +5284,12 @@ raises `customError` and blocks submission, `''` restores the picker's own compu
 required picker with nothing committed goes back to `valueMissing`. It survives every
 `value`/`required` change and a form reset. `getForm()` returns the browser-resolved owning form.
 
+The open list is a nonmodal overlay: only its topmost owner handles Escape and outside pointer
+dismissal; Escape restores the trigger, while Tab keeps ordinary document navigation. Disconnect or
+cross-document adoption closes it. A required, uncommitted value recomputes its intrinsic localized
+message when `.strings` or the effective locale changes; an author custom-validity message retains
+priority until cleared.
+
 **Slots:** `label`, `hint`, `error`.
 
 **CSS parts:** `form-control`, `form-control-label`, `trigger`,
@@ -5336,6 +5350,14 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
 - `--lr-locale-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
 - `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
+
+## Consumer integration notes
+
+For `lr-input`, `lr-time-input`, and `lr-checkbox-group`, host `aria-describedby` is projected to
+the semantic native control before built-in hint, error, and required-description ids. Host
+`aria-labelledby` deliberately does not project: the native label or fieldset legend remains the
+single name owner. This lets an application add external descriptions without replacing the
+component's visible form label.
 
 ## Exported TypeScript contracts
 

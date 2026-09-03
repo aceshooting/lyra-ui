@@ -24,6 +24,19 @@ export const Default: Story = {
   render: () => html`<div style="inline-size:16rem"><lr-node-palette .items=${items}></lr-node-palette></div>`,
 };
 
+/** The host's name and the listbox's own accessible name intentionally remain distinct. */
+export const AccessibleNaming: Story = {
+  render: () => html`
+    <div style="inline-size:16rem">
+      <lr-node-palette
+        aria-label="Workflow builder"
+        label="Workflow nodes"
+        .items=${items}
+      ></lr-node-palette>
+    </div>
+  `,
+};
+
 /**
  * `reorderable` lets a keyboard user curate the catalog: Ctrl/Cmd+ArrowUp/ArrowDown on the focused
  * item requests a move within its own category group. `lr-reorder` is only a request — the host

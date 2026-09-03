@@ -6,6 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './chat-message.styles.js';
@@ -389,9 +390,13 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
    *  for rendering -- so this walks the host's real children, same as `hasSlotted` above, rather
    *  than anything shadow-root-relative. */
   private isFocusWithinFailureSlot(): boolean {
-    const active = this.ownerDocument.activeElement;
-    if (!active) return false;
-    return Array.from(this.children).some((el) => el.getAttribute('slot') === 'failure' && el.contains(active));
+    const active = activeElementIn(this.ownerDocument);
+    try {
+      if (!active || active.nodeType !== Node.ELEMENT_NODE) return false;
+      return Array.from(this.children).some((el) => el.getAttribute('slot') === 'failure' && el.contains(active));
+    } catch {
+      return false;
+    }
   }
 
   private get normalizedTimestamp(): Date | undefined {

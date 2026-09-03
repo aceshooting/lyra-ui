@@ -1,6 +1,7 @@
 import { AnchoredPopoverController } from './anchored-popover-controller.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { dispatchNativeEvent, relayNativeEvent } from './native-event-relay.js';
+import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
 
 /** The common public row vocabulary for catalog-backed controls. */
 export interface LyraCatalogEntry {
@@ -78,6 +79,7 @@ interface CatalogPickerHost extends HTMLElement {
 interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
   catalog: () => LyraCatalog<T> | undefined;
   allowCustom: () => boolean;
+  isReadonly: () => boolean;
   locale: () => string;
   searchableFields: (entry: T) => readonly string[];
   emitChange: (detail: CatalogPickerChangeDetail) => void;
@@ -100,6 +102,7 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
  */
 export class CatalogPickerController<T extends LyraCatalogEntry> {
   private readonly popupPosition = new AnchoredPopoverController();
+  private overlay?: OverlayHandle;
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
   private _activeIndex = -1;
@@ -124,6 +127,10 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
 
   get closedMode(): boolean {
     return this.normalizedCatalog.length > 0 && !this.options.allowCustom();
+  }
+
+  private get isReadonly(): boolean {
+    return this.options.isReadonly();
   }
 
   get effectiveEntries(): DisplayCatalogEntry<T>[] {
@@ -182,11 +189,15 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       (typeof this.host.matches === 'function' && this.host.matches(':disabled'));
     const resolved = Boolean(next) && !liveDisabled;
     if (resolved === this._open) {
+      if (!resolved) this.deactivateOverlay(false);
       if (next && !resolved && this.host.hasAttribute('open')) this.host.removeAttribute('open');
       return;
     }
     const old = this._open;
-    if (!resolved) this.setActiveIndex(-1);
+    if (!resolved) {
+      this.setActiveIndex(-1);
+      this.deactivateOverlay(false);
+    }
     this._open = resolved;
     this.options.onStateChange('open', old);
   }
@@ -259,6 +270,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   commitValue(next: string): void {
+    if (this.isReadonly) return;
     const inCatalog = this.normalizedCatalog.some((entry) => entry.id === next);
     this.value = next;
     this.hide();
@@ -315,12 +327,6 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
           else this.hide();
         }
         break;
-      case 'Escape':
-        if (this._open) {
-          event.preventDefault();
-          this.hide();
-        }
-        break;
       case 'Home':
         if (this._open) {
           event.preventDefault();
@@ -355,13 +361,6 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
           this.commitFreeText();
         }
         break;
-      case 'Escape':
-        if (this._open) {
-          event.preventDefault();
-          this.setQuery(this.labelFor(this._value));
-          this.hide();
-        }
-        break;
       case 'Home':
         if (this._open) {
           event.preventDefault();
@@ -380,6 +379,11 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   handleInput(event: Event): void {
     const input = event.currentTarget as HTMLInputElement | null;
     if (!input) return;
+    if (this.isReadonly) {
+      input.value = this._open ? this._query : this.labelFor(this._value);
+      event.stopPropagation();
+      return;
+    }
     this.setQuery(input.value);
     this.setActiveIndex(-1);
     this.show();
@@ -509,13 +513,14 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
 
   disconnected(): void {
     this.popupPosition.disconnect();
-    this.unbindDocumentPointer();
+    this.deactivateOverlay(false);
     this.setOpen(false);
   }
 
   adopted(): void {
     this.popupPosition.disconnect();
     this.unbindDocumentPointer();
+    this.overlay?.suspend();
     if (this._open) queueMicrotask(() => this.syncPopup());
   }
 
@@ -544,7 +549,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       ) {
         return;
       }
-      if (!event.composedPath().includes(this.host)) this.hide();
+      if (!event.composedPath().includes(this.host)) this.overlay?.dismissBackdrop();
     };
     this.pointerListenerDocument = ownerDocument;
     this.pointerListener = listener;
@@ -559,12 +564,40 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.pointerListener = undefined;
   }
 
+  private activatePopupOverlay(): void {
+    if (this.overlay?.isActive()) {
+      this.overlay.resume();
+      return;
+    }
+    this.overlay = activateNonmodalOverlay({
+      host: this.host,
+      panel: () => this.host.renderRoot.querySelector<HTMLElement>('[part="listbox"]') ?? null,
+      onEscape: () => this.dismissFromEscape(),
+      onBackdrop: () => this.hide(),
+    });
+  }
+
+  private deactivateOverlay(restoreFocus: boolean): void {
+    const overlay = this.overlay;
+    this.overlay = undefined;
+    overlay?.deactivate({ restoreFocus });
+    this.unbindDocumentPointer();
+  }
+
+  private dismissFromEscape(): void {
+    if (!this._open) return;
+    if (!this.closedMode) this.setQuery(this.labelFor(this._value));
+    this.deactivateOverlay(true);
+    this.setOpen(false);
+  }
+
   private syncPopup(): void {
     this.popupPosition.disconnect();
     if (!this._open || !this.host.isConnected) {
-      this.unbindDocumentPointer();
+      this.deactivateOverlay(false);
       return;
     }
+    this.activatePopupOverlay();
     this.bindDocumentPointer();
     const anchor = this.host.renderRoot.querySelector<HTMLElement>(
       this.closedMode ? '[part="trigger"]' : '[part="combobox"]',

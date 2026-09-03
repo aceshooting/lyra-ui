@@ -15,6 +15,7 @@ import {
   MarkdownParserController,
   parseMarkdownDocument,
   processPendingHighlights,
+  renderMarkdownDocument,
   tokenizeMarkdownHighlight,
   watchMarkdownDarkTheme,
   setCachedHighlight,
@@ -46,6 +47,29 @@ describe('Markdown parser admission', () => {
   it('keeps an unresolved parser controller empty', () => {
     const controller = new MarkdownParserController();
     expect(controller.get(undefined)).to.equal(undefined);
+  });
+});
+
+describe('Markdown sanitizer boundary', () => {
+  it('fails closed when a capability-valid sanitizer returns non-markup', async () => {
+    const deps = await loadMarkdownDeps();
+    const outcome = renderMarkdownDocument({
+      tag: 'lr-markdown',
+      deps: {
+        marked: deps.marked,
+        DOMPurify: { sanitize: () => null },
+      },
+      htmlMode: 'sanitize',
+      math: false,
+      parse: () => ({ html: '<strong>safe source</strong>', hadMathFallback: false }),
+      onParsed: () => undefined,
+      isKatexConfirmedMissing: () => false,
+    });
+
+    expect(outcome.status).to.equal('fallback');
+    if (outcome.status === 'fallback') {
+      expect(outcome.error instanceof TypeError).to.equal(true);
+    }
   });
 });
 
@@ -196,12 +220,81 @@ describe('Markdown rendering edge guards', () => {
   });
 
   it('treats an anchor without an href attribute as a non-internal link', () => {
-    const anchor = {
-      localName: 'a',
-      getAttribute: () => null,
-    };
+    const anchor = document.createElement('a');
     const event = { composedPath: () => [anchor] } as unknown as MouseEvent;
     expect(internalLinkHrefFrom(event, '/docs/')).to.equal(null);
+  });
+
+  it('skips a hostile composed-path value before a later native anchor', () => {
+    const hostile = new Proxy({}, {
+      has() {
+        throw new Error('hostile composed-path probe');
+      },
+    });
+    const anchor = document.createElement('a');
+    anchor.setAttribute('href', '/docs/real');
+    const event = { composedPath: () => [hostile, anchor] } as unknown as MouseEvent;
+
+    expect(internalLinkHrefFrom(event, '/docs/')).to.equal('/docs/real');
+  });
+
+  it('skips a structural anchor lookalike before a later native anchor', () => {
+    const lookalike = {
+      nodeType: 1,
+      localName: 'a',
+      getAttribute: () => '/docs/forged',
+    };
+    const anchor = document.createElement('a');
+    anchor.setAttribute('href', '/docs/real');
+    const event = { composedPath: () => [lookalike, anchor] } as unknown as MouseEvent;
+
+    expect(internalLinkHrefFrom(event, '/docs/')).to.equal('/docs/real');
+  });
+
+  it('skips forged realm metadata before a later native anchor', () => {
+    const forgedElementConstructor = function (): void {};
+    Object.defineProperties(forgedElementConstructor.prototype, {
+      getAttribute: { value: () => '/docs/forged' },
+      localName: { get: () => 'a' },
+    });
+    const forged = {
+      nodeType: 1,
+      namespaceURI: 'http://www.w3.org/1999/xhtml',
+      ownerDocument: { defaultView: { Element: forgedElementConstructor } },
+    };
+    const anchor = document.createElement('a');
+    anchor.setAttribute('href', '/docs/real');
+    const event = { composedPath: () => [forged, anchor] } as unknown as MouseEvent;
+
+    expect(internalLinkHrefFrom(event, '/docs/')).to.equal('/docs/real');
+  });
+
+  it('keeps an iframe-created anchor accepted before and after adoption despite an own ownerDocument shadow', () => {
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    try {
+      const anchor = iframe.contentDocument!.createElement('a');
+      anchor.setAttribute('href', '/docs/foreign');
+      const beforeAdoption = { composedPath: () => [anchor] } as unknown as MouseEvent;
+
+      expect(internalLinkHrefFrom(beforeAdoption, '/docs/')).to.equal('/docs/foreign');
+
+      document.adoptNode(anchor);
+      const forgedElementConstructor = function (): void {};
+      Object.defineProperties(forgedElementConstructor.prototype, {
+        getAttribute: { value: () => '/docs/forged' },
+        localName: { get: () => 'a' },
+      });
+      Object.defineProperty(anchor, 'ownerDocument', {
+        configurable: true,
+        value: { defaultView: { Element: forgedElementConstructor } },
+      });
+      const afterAdoption = { composedPath: () => [anchor] } as unknown as MouseEvent;
+
+      expect(internalLinkHrefFrom(afterAdoption, '/docs/')).to.equal('/docs/foreign');
+    } finally {
+      iframe.remove();
+    }
   });
 });
 
@@ -304,6 +397,35 @@ describe('parseMarkdownDocument renderer overrides emit well-formed, matched-quo
 
     // No renderer-emitted attribute soup should have leaked into text content anywhere in the tree.
     expect(container.textContent).to.not.contain('part=');
+  });
+
+  it('uses only each task item\'s own primary inline text as an escaped checkbox label', async () => {
+    const marked = (await loadMarkdownDeps()).marked!;
+    const { html } = parseMarkdownDocument({
+      marked,
+      content: '- [x] **Own "primary"** [linked text](/docs/link) and `code`\n  - [ ] Nested task text',
+      gfm: true,
+      linkTarget: null,
+      headingOffset: 0,
+      escapeHtmlOption: false,
+      trustedHtmlOption: false,
+      highlightCodeOption: false,
+      getCachedHighlight: () => undefined,
+      failedHighlightKeys: new Set(),
+      headingAnchorsOption: false,
+      mathOption: false,
+      cachedKatex: null,
+      pendingKeys: [],
+      headingTreeOut: [],
+    });
+    expect(html).to.contain("aria-label='Own &quot;primary&quot; linked text and code'");
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    const inputs = container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    expect(inputs.length).to.equal(2);
+    expect(inputs[0]!.getAttribute('aria-label')).to.equal('Own "primary" linked text and code');
+    expect(inputs[0]!.getAttribute('aria-label')).to.not.contain('Nested task text');
+    expect(inputs[1]!.getAttribute('aria-label')).to.equal('Nested task text');
   });
 });
 

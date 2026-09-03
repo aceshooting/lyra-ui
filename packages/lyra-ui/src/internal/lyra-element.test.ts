@@ -338,25 +338,30 @@ it('detaches Date entries behind mutation-proof owner-realm facades', async () =
   el.items = [
     { label: 'hostile', nested: { values: [] }, when: hostileDate },
   ];
-  expect(el.items).to.deep.equal([]);
+  expect(el.items.length).to.equal(1);
+  expect(Object.keys(el.items)).to.deep.equal([]);
   expect(Object.isFrozen(el.items)).to.be.true;
 });
 
-it('does not invoke hostile array getters and truncates before an unsafe present row', async () => {
+it('retains holes for hostile descriptors and continues with later cyclic rows', async () => {
   const el = await fixture<DemoOwnedCollection>(
     `<lr-demo-owned-collection></lr-demo-owned-collection>`
   );
-  const source = [
-    { label: "hostile", nested: { values: [0] } },
-    { label: "safe", nested: { values: [1] } },
-  ];
+  const source = new Array<DemoCollectionEntry & { self?: unknown }>(4);
+  source[0] = { label: 'first', nested: { values: [0] } };
+  const cyclic: DemoCollectionEntry & { self?: unknown } = {
+    label: 'later',
+    nested: { values: [1] },
+  };
+  cyclic.self = cyclic;
+  source[2] = { label: 'hostile', nested: { values: [2] } };
+  source[3] = cyclic;
   const hostile = new Proxy(source, {
-    get(target, key, receiver) {
-      if (key === "length") throw new Error("length getter must not run");
-      return Reflect.get(target, key, receiver);
+    get() {
+      throw new Error('array values must be read from descriptors');
     },
     getOwnPropertyDescriptor(target, key) {
-      if (key === "0") throw new Error("first entry is hostile");
+      if (key === '2') throw new Error('third entry is hostile');
       return Reflect.getOwnPropertyDescriptor(target, key);
     },
   });
@@ -364,8 +369,137 @@ it('does not invoke hostile array getters and truncates before an unsafe present
   expect(() => {
     el.items = hostile;
   }).not.to.throw();
-  expect(el.items.length).to.equal(0);
+  expect(el.items.length).to.equal(4);
+  expect(Object.keys(el.items)).to.deep.equal(['0', '3']);
+  expect(el.items[0]!.label).to.equal('first');
+  expect(el.items[3]!.label).to.equal('later');
+  expect(
+    (el.items[3] as DemoCollectionEntry & { self: unknown }).self === el.items[3]
+  ).to.be.true;
   expect(Object.isFrozen(el.items)).to.be.true;
+  expect(Object.isFrozen(el.items[3])).to.be.true;
+});
+
+it('does not invoke array accessors and continues with later safe rows', async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  let getterCalls = 0;
+  const source = new Array<DemoCollectionEntry>(2);
+  Object.defineProperty(source, '0', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return { label: 'unsafe', nested: { values: [] } };
+    },
+  });
+  source[1] = { label: 'safe', nested: { values: [1] } };
+
+  el.items = source;
+
+  expect(getterCalls).to.equal(0);
+  expect(el.items.length).to.equal(2);
+  expect(Object.keys(el.items)).to.deep.equal(['1']);
+  expect(el.items[1]!.label).to.equal('safe');
+});
+
+it('rolls back only failed-row state while retaining committed aliases and budget', async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  let sharedScans = 0;
+  const shared = new Proxy(
+    Object.assign(Object.create(null) as object, { value: 'stable' }),
+    {
+      ownKeys(target) {
+        sharedScans += 1;
+        return Reflect.ownKeys(target);
+      },
+    }
+  );
+  const prefixPayload = Object.create(null) as Record<string, number>;
+  for (let index = 0; index < 10_000; index += 1)
+    prefixPayload[`prefix-${index}`] = index;
+  const provisional = Object.create(null) as Record<string, number>;
+  for (let index = 0; index < 20_000; index += 1)
+    provisional[`provisional-${index}`] = index;
+  const unsupported = Object.create({ inherited: true }) as object;
+  const source = [
+    { shared, payload: prefixPayload },
+    { shared, provisional, unsupported },
+    ...Array.from({ length: 8_500 }, (_, index) => ({
+      shared,
+      marker: `suffix-${index}`,
+      a: index,
+      b: index,
+      c: index,
+    })),
+  ];
+
+  (el as unknown as { items: readonly object[] }).items = source;
+
+  const snapshot = el.items as unknown as readonly Readonly<{
+    shared: Readonly<{ value: string }>;
+    marker?: string;
+  }>[];
+  expect(snapshot.length).to.equal(6_668);
+  expect(Object.keys(snapshot)).to.have.length(6_667);
+  expect(Object.prototype.hasOwnProperty.call(snapshot, 1)).to.be.false;
+  expect(snapshot[0]!.shared === snapshot[2]!.shared).to.be.true;
+  expect(snapshot[0]!.shared.value).to.equal('stable');
+  expect(snapshot.at(-1)!.marker).to.equal('suffix-6665');
+  expect(sharedScans).to.equal(1);
+  expect(Object.isFrozen(snapshot[2]!.shared)).to.be.true;
+});
+
+it('rolls back unsafe-row budget before retaining a later safe sibling', async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  const source: Record<string, unknown>[] = Array.from(
+    { length: 7_000 },
+    () => ({
+      provisional: { a: 1, b: 2, c: 3, d: 4, e: 5 },
+      unsupported: Object.create({ inherited: true }) as object,
+    })
+  );
+  source.push({ label: 'safe', nested: { values: [] } });
+
+  (el as unknown as { items: readonly Record<string, unknown>[] }).items = source;
+
+  const snapshot = el.items as unknown as readonly Record<string, unknown>[];
+  expect(snapshot.length).to.equal(7_001);
+  expect(Object.keys(snapshot)).to.deep.equal(['7000']);
+  expect(snapshot[7_000]!['label']).to.equal('safe');
+  expect(Object.isFrozen(snapshot[7_000])).to.be.true;
+});
+
+it('bounds non-retained work across repeated near-limit unsafe rows', async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  const nearLimit = Object.create(null) as Record<string, unknown>;
+  for (let index = 0; index < 49_000; index += 1)
+    nearLimit[`value-${index}`] = index;
+  nearLimit['unsupported'] = Object.create({ inherited: true }) as object;
+  let ownKeyScans = 0;
+  const unsafe = new Proxy(nearLimit, {
+    ownKeys(target) {
+      ownKeyScans += 1;
+      if (ownKeyScans > 3) throw new Error('unbounded unsafe-row rescan');
+      return Reflect.ownKeys(target);
+    },
+  });
+
+  (el as unknown as { items: readonly object[] }).items = Array.from(
+    { length: 10_000 },
+    () => unsafe
+  );
+
+  expect(ownKeyScans).to.be.at.most(3);
+  expect(el.items.length).to.equal(2);
+  expect(Object.keys(el.items)).to.deep.equal([]);
 });
 
 it('retains only complete typed rows when the global node budget is exhausted', async () => {
@@ -388,6 +522,78 @@ it('retains only complete typed rows when the global node budget is exhausted', 
   expect(Object.keys(snapshot.at(-1)!)).to.deep.equal(['a', 'b', 'c', 'd', 'e']);
   expect(snapshot.every((row) => row !== null)).to.be.true;
 });
+
+it('stops densely at genuine depth exhaustion instead of skipping to later rows', async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  let tooDeep: Record<string, unknown> = { terminal: true };
+  for (let depth = 0; depth <= 300; depth += 1)
+    tooDeep = { child: tooDeep };
+
+  (el as unknown as { items: readonly Record<string, unknown>[] }).items = [
+    { label: 'prefix' },
+    tooDeep,
+    { label: 'must-not-be-retained' },
+  ];
+
+  const snapshot = el.items as unknown as readonly Record<string, unknown>[];
+  expect(snapshot.length).to.equal(1);
+  expect(Object.keys(snapshot)).to.deep.equal(['0']);
+  expect(snapshot[0]!['label']).to.equal('prefix');
+});
+
+for (const collectionKind of ['Map', 'Set'] as const) {
+  it(`propagates nested ${collectionKind} depth exhaustion to the dense top-level stop`, async () => {
+    const el = await fixture<DemoOwnedCollection>(
+      `<lr-demo-owned-collection></lr-demo-owned-collection>`
+    );
+    let tooDeep: Record<string, unknown> = { terminal: true };
+    for (let depth = 0; depth <= 300; depth += 1)
+      tooDeep = { child: tooDeep };
+    const nested =
+      collectionKind === 'Map'
+        ? new Map([['entry', tooDeep]])
+        : new Set([tooDeep]);
+
+    (el as unknown as { items: readonly object[] }).items = [
+      { label: 'prefix' },
+      { nested },
+      { label: 'must-not-be-retained' },
+    ];
+
+    expect(el.items.length).to.equal(1);
+    expect(Object.keys(el.items)).to.deep.equal(['0']);
+    expect(el.items[0]!.label).to.equal('prefix');
+  });
+
+  it(`propagates nested ${collectionKind} node exhaustion to the dense top-level stop`, async () => {
+    const el = await fixture<DemoOwnedCollection>(
+      `<lr-demo-owned-collection></lr-demo-owned-collection>`
+    );
+    const records = Array.from({ length: 10_000 }, (_, index) => ({
+      a: index,
+      b: index,
+      c: index,
+      d: index,
+      e: index,
+    }));
+    const nested =
+      collectionKind === 'Map'
+        ? new Map(records.map((record, index) => [String(index), record]))
+        : new Set(records);
+
+    (el as unknown as { items: readonly object[] }).items = [
+      { label: 'prefix' },
+      { nested },
+      { label: 'must-not-be-retained' },
+    ];
+
+    expect(el.items.length).to.equal(1);
+    expect(Object.keys(el.items)).to.deep.equal(['0']);
+    expect(el.items[0]!.label).to.equal('prefix');
+  });
+}
 
 it('fails closed for hostile and wrong-brand collection roots', async () => {
   const owned = await fixture<DemoOwnedCollection>(
@@ -458,7 +664,8 @@ it('bounds hostile prototype traversal without invoking value accessors', async 
   });
   (el as unknown as { items: readonly object[] }).items = [customRecord];
   expect(inheritedKeyScans).to.equal(0);
-  expect(el.items).to.deep.equal([]);
+  expect(el.items.length).to.equal(1);
+  expect(Object.keys(el.items)).to.deep.equal([]);
   expect(Object.isFrozen(el.items)).to.be.true;
 });
 

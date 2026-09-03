@@ -8,6 +8,22 @@ interface WindowWithEventConstructors extends Window {
   FocusEvent: typeof FocusEvent;
 }
 
+type DescribedTimeInput = HTMLElement & {
+  ariaDescribedByElements?: readonly Element[] | null;
+};
+
+function hasDescribedByElementReflection(target: HTMLElement): boolean {
+  return Reflect.has(target, 'ariaDescribedByElements');
+}
+
+function describedByIds(target: HTMLElement): string[] {
+  const reflected = target as DescribedTimeInput;
+  if (hasDescribedByElementReflection(target)) {
+    return [...(reflected.ariaDescribedByElements ?? [])].map((element) => element.id);
+  }
+  return target.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
+}
+
 const segment = (el: LyraTimeInput, name: string): HTMLElement =>
   el.shadowRoot!.querySelector(`[data-segment="${name}"]`)!;
 const key = (target: Element, value: string, init: KeyboardEventInit = {}): void => {
@@ -23,6 +39,126 @@ const paste = (target: Element, value: string): Event => {
 };
 
 describe('lr-time-input segmented field', () => {
+  it('contains a throwing shadow-root activeElement getter while blurring', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
+    const root = el.shadowRoot!;
+    const prior = Object.getOwnPropertyDescriptor(root, 'activeElement');
+    let unavailable = true;
+    Object.defineProperty(root, 'activeElement', {
+      configurable: true,
+      get(): Element {
+        if (unavailable) throw new TypeError('active element unavailable');
+        return {} as Element;
+      },
+    });
+    try {
+      el.blur();
+      unavailable = false;
+      el.blur();
+      expect(el.isConnected).to.equal(true);
+    } finally {
+      if (prior) Object.defineProperty(root, 'activeElement', prior);
+      else delete (root as unknown as { activeElement?: unknown }).activeElement;
+    }
+  });
+
+  it('projects resolved host descriptions ahead of owned descriptions without projecting host labelledby', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <span id="time-input-external-description">External time guidance</span>
+        <span id="time-input-host-label">Host-only label</span>
+        <lr-time-input
+          aria-describedby="time-input-external-description time-input-unresolved time-input-external-description"
+          aria-labelledby="time-input-host-label"
+          error-text="Invalid time"
+          hint="Choose a staffed time"
+          label="Appointment time"
+          required
+        ></lr-time-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-time-input') as LyraTimeInput;
+    const input = el.shadowRoot!.querySelector<HTMLElement>('[part~="input"]')!;
+    const label = el.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!;
+    const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+    const error = el.shadowRoot!.querySelector<HTMLElement>('[part="error"]')!;
+    const required = el.shadowRoot!.querySelector<HTMLElement>('[data-required-description]')!;
+    const ownedIds = [error.id, hint.id, required.id];
+    const expected = hasDescribedByElementReflection(input)
+      ? ['time-input-external-description', ...ownedIds]
+      : ownedIds;
+
+    expect(describedByIds(input)).to.deep.equal(expected);
+    expect(input.getAttribute('aria-labelledby')).to.equal(label.id);
+    expect(input.getAttribute('aria-labelledby')).not.to.include('time-input-host-label');
+  });
+
+  it('reacquires live host descriptions through reconnect and adoption', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <span id="time-input-adopted-description">Original guidance</span>
+        <lr-time-input aria-describedby="time-input-adopted-description" hint="Choose a time"></lr-time-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-time-input') as LyraTimeInput;
+    const input = el.shadowRoot!.querySelector<HTMLElement>('[part~="input"]')!;
+    const source = wrapper.querySelector<HTMLElement>('#time-input-adopted-description')!;
+    const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
+
+    if (!hasDescribedByElementReflection(input)) {
+      expect(describedByIds(input)).to.deep.equal([hint.id]);
+      return;
+    }
+
+    expect((input as DescribedTimeInput).ariaDescribedByElements?.[0] === source).to.equal(true);
+    el.remove();
+    wrapper.append(el);
+    await waitUntil(
+      () => (input as DescribedTimeInput).ariaDescribedByElements?.[0] === source,
+      'the reconnected time input did not restore its external description',
+    );
+
+    const replacement = document.createElement('span');
+    replacement.id = source.id;
+    replacement.textContent = 'Replacement guidance';
+    source.replaceWith(replacement);
+    await waitUntil(
+      () => (input as DescribedTimeInput).ariaDescribedByElements?.[0] === replacement,
+      'the replaced time-input description was not projected',
+    );
+
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const foreignDocument = frame.contentDocument;
+    if (!foreignDocument) {
+      frame.remove();
+      throw new Error('The iframe document was unavailable.');
+    }
+
+    try {
+      foreignDocument.adoptNode(wrapper);
+      foreignDocument.body.append(wrapper);
+      await waitUntil(
+        () => (input as DescribedTimeInput).ariaDescribedByElements?.[0] === replacement,
+        'the adopted time input did not restore its external description',
+      );
+
+      const alternative = foreignDocument.createElement('span');
+      alternative.id = 'time-input-adopted-alternative';
+      alternative.textContent = 'Alternative guidance';
+      wrapper.prepend(alternative);
+      el.setAttribute('aria-describedby', alternative.id);
+      await waitUntil(
+        () => (input as DescribedTimeInput).ariaDescribedByElements?.[0] === alternative,
+        'the adopted owner realm did not observe a changed external description',
+      );
+    } finally {
+      if (wrapper.ownerDocument !== document) document.adoptNode(wrapper);
+      wrapper.remove();
+      frame.remove();
+    }
+  });
+
   it('completes its open-state first update on an SSR-shaped host without Element.matches()', async () => {
     const container = await fixture<HTMLDivElement>(html`<div></div>`);
     const el = container.ownerDocument.createElement('lr-time-input') as LyraTimeInput;
@@ -347,6 +483,27 @@ describe('lr-time-input segmented field', () => {
       await el.updateComplete;
       expect(el.shadowRoot!.activeElement === null).to.equal(true);
       expect(seen).to.deep.equal([]);
+    }
+  });
+});
+
+describe('hostile focus ownership', () => {
+  it('contains a throwing shadow-root activeElement getter while blurring', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
+    const root = el.shadowRoot!;
+    const prior = Object.getOwnPropertyDescriptor(root, 'activeElement');
+    Object.defineProperty(root, 'activeElement', {
+      configurable: true,
+      get(): never {
+        throw new TypeError('active element unavailable');
+      },
+    });
+    try {
+      el.blur();
+      expect(el.isConnected).to.equal(true);
+    } finally {
+      if (prior) Object.defineProperty(root, 'activeElement', prior);
+      else delete (root as unknown as { activeElement?: unknown }).activeElement;
     }
   });
 });

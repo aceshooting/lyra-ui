@@ -50,6 +50,7 @@ export const styles = css`
     appearance: none;
     background: none;
     border: none;
+    font: inherit;
     /* Continues the tablist's own rule so the line under the strip runs unbroken edge to edge. */
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     color: var(--lr-color-text-quiet);

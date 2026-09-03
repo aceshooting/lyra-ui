@@ -25,7 +25,7 @@ and `lr-citation-badge` for each evidence entry.
 **Properties:**
 
 - `assessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`,
-  imported from `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ supportedClaims: number;
+  imported from `@aceshooting/lyra-ui/ai`**: `{ supportedClaims: number;
 unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[];
 claims?: GroundedClaim[] }`, where `coverage` and `confidence` are 0–1 fractions. `null` renders
   the empty state
@@ -48,16 +48,16 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
   level used by both warnings and evidence sections; `'none'` keeps the visual text without
   exposing a heading role, and invalid untyped values fall back to level 3
 
-Direct citations and `assessment.claims` are canonicalized independently by nonblank `id` before
-counts, child composition, rendering, or events. Malformed rows and later duplicate ids are omitted;
-the first valid occurrence wins.
+Direct citations and `assessment.claims` are keyed independently by nonblank `id` before counts,
+rendering, or events. Usable display fields are captured once while emitted selected claim/citation
+objects retain their original identity. Malformed rows and later duplicate ids are omitted; the
+first valid occurrence wins.
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
 The inner `lr-citation-badge`'s generic activation is stopped at this composition boundary; this
-richer event exists because a bare `sourceId`/`index` pair can't tell a host which exact evidence
-_span_ to jump to. The composed `lr-claim-evidence` also surfaces
-`lr-claim-select` (`detail: { claim }`) unchanged when a claim is activated.
+richer event exists because a bare `sourceId`/`index` pair cannot identify the exact evidence span.
+The summary emits `lr-claim-select` (`detail: { claim }`) when a claim is activated.
 
 **Slots:** none.
 
@@ -69,7 +69,7 @@ row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-co
 its semantics survive list-style resets),
 `evidence-item` (one `<li>` containing a badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
-`Citation.span` range, omitted when unset), `claims` (the composed claim-evidence audit), `empty`
+`Citation.span` range, omitted when unset), `claims` (the claim/evidence region), `empty`
 (shown when `assessment` is `null`).
 
 **Themeable custom properties:** shared tokens only.

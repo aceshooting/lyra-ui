@@ -85,8 +85,8 @@ the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
 click when `lightDismiss` is enabled, or a `close()` call), and no-detail `focus`/`blur` events
 re-dispatched when the internal search input gains or loses focus.
-Native `input`/`change` and prefixed `lr-input` implementation events from the built-in checkbox and
-switch controls stop at the dialog boundary; listen for the single aggregate `lr-change` proposal.
+Native `input`/`change` and prefixed `lr-input` events from the built-in checkbox and switch
+controls stop at the dialog boundary; listen for the single aggregate `lr-change` proposal.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has

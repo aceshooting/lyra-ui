@@ -5,6 +5,22 @@ import '../button/button.js';
 import type { LyraInput } from './input.class.js';
 import { styles } from './input.styles.js';
 
+type DescribedInput = HTMLInputElement & {
+  ariaDescribedByElements?: readonly Element[] | null;
+};
+
+function hasDescribedByElementReflection(input: HTMLInputElement): boolean {
+  return Reflect.has(input, 'ariaDescribedByElements');
+}
+
+function describedByIds(input: HTMLInputElement): string[] {
+  if (hasDescribedByElementReflection(input)) {
+    return Array.from((input as DescribedInput).ariaDescribedByElements ?? [])
+      .map((element) => element.id);
+  }
+  return input.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
+}
+
 describe('lr-input', () => {
   it('applies the documented resting action color to clear and password actions', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
@@ -371,6 +387,151 @@ describe('lr-input', () => {
       )) as LyraInput;
       const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
       expect(input.getAttribute('aria-describedby')).to.equal('input-error input-hint');
+    });
+
+    it('projects resolved host descriptions before owned error, hint, and required descriptions without projecting labelledby', async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <span id="input-external-first">First external description</span>
+          <span id="input-external-second">Second external description</span>
+          <span id="input-host-label">Host-only label</span>
+          <lr-input
+            aria-describedby="input-external-first input-unresolved input-external-second input-external-first"
+            aria-labelledby="input-host-label"
+            hint="Supporting text"
+            error-text="Invalid value"
+            required
+          ></lr-input>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-input') as LyraInput;
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      const required = el.shadowRoot!.querySelector<HTMLElement>('[data-required-description]');
+      expect(required !== null).to.equal(true);
+      const requiredId = required?.id ?? 'missing-required-description';
+      const expected = hasDescribedByElementReflection(input)
+        ? ['input-external-first', 'input-external-second', 'input-error', 'input-hint', requiredId]
+        : ['input-error', 'input-hint', requiredId];
+
+      expect(describedByIds(input)).to.deep.equal(expected);
+      expect(input.getAttribute('aria-labelledby')).to.equal(null);
+      expect(input.required).to.equal(true);
+      expect(input.getAttribute('aria-required')).to.equal('true');
+    });
+
+    it('keeps host description projection live for late, replaced, removed, and reinserted targets', async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <lr-input aria-describedby="input-late-description" hint="Supporting text" error-text="Invalid value"></lr-input>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-input') as LyraInput;
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      const baseline = ['input-error', 'input-hint'];
+
+      if (!hasDescribedByElementReflection(input)) {
+        expect(describedByIds(input)).to.deep.equal(baseline);
+        return;
+      }
+
+      expect(describedByIds(input)).to.deep.equal(baseline);
+      const first = document.createElement('span');
+      first.id = 'input-late-description';
+      first.textContent = 'Late description';
+      wrapper.prepend(first);
+      await waitUntil(
+        () => describedByIds(input)[0] === first.id,
+        'the late host description was not projected',
+      );
+      expect(input.ariaDescribedByElements?.[0] === first).to.equal(true);
+
+      const replacement = document.createElement('span');
+      replacement.id = first.id;
+      replacement.textContent = 'Replacement description';
+      first.replaceWith(replacement);
+      await waitUntil(
+        () => input.ariaDescribedByElements?.[0] === replacement,
+        'the same-id replacement was not projected',
+      );
+
+      replacement.remove();
+      await waitUntil(
+        () => describedByIds(input).join(' ') === baseline.join(' '),
+        'the removed host description was retained',
+      );
+
+      wrapper.prepend(replacement);
+      await waitUntil(
+        () => input.ariaDescribedByElements?.[0] === replacement,
+        'the reinserted host description was not projected',
+      );
+
+      el.setAttribute('aria-describedby', 'input-replacement-description input-late-description');
+      const alternative = document.createElement('span');
+      alternative.id = 'input-replacement-description';
+      alternative.textContent = 'Alternative description';
+      wrapper.prepend(alternative);
+      await waitUntil(
+        () => describedByIds(input).join(' ') ===
+          ['input-replacement-description', 'input-late-description', ...baseline].join(' '),
+        'the changed host description list was not projected',
+      );
+    });
+
+    it('rebinds host descriptions in an adopted document', async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <span id="input-adopted-description">Original guidance</span>
+          <lr-input aria-describedby="input-adopted-description" hint="Supporting text"></lr-input>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-input') as LyraInput;
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      const source = wrapper.querySelector('#input-adopted-description')!;
+
+      if (!hasDescribedByElementReflection(input)) {
+        expect(describedByIds(input)).to.deep.equal(['input-hint']);
+        return;
+      }
+
+      expect(input.ariaDescribedByElements?.[0] === source).to.equal(true);
+      el.remove();
+      wrapper.append(el);
+      await waitUntil(
+        () => input.ariaDescribedByElements?.[0] === source,
+        'the reconnected input did not restore its external description',
+      );
+
+      const frame = document.createElement('iframe');
+      document.body.append(frame);
+      const foreignDocument = frame.contentDocument;
+      if (!foreignDocument) {
+        frame.remove();
+        throw new Error('The iframe document was unavailable.');
+      }
+
+      try {
+        foreignDocument.adoptNode(wrapper);
+        foreignDocument.body.append(wrapper);
+        await waitUntil(
+          () => input.ariaDescribedByElements?.[0] === source,
+          'the adopted description was not restored',
+        );
+
+        const replacement = foreignDocument.createElement('span');
+        replacement.id = 'input-adopted-replacement';
+        replacement.textContent = 'Replacement guidance';
+        wrapper.prepend(replacement);
+        el.setAttribute('aria-describedby', replacement.id);
+        await waitUntil(
+          () => input.ariaDescribedByElements?.[0] === replacement,
+          'the adopted document did not observe host description changes',
+        );
+      } finally {
+        if (wrapper.ownerDocument !== document) document.adoptNode(wrapper);
+        wrapper.remove();
+        frame.remove();
+      }
     });
   });
 

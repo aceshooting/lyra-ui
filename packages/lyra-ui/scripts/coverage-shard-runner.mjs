@@ -29,7 +29,11 @@ import { fileURLToPath } from 'node:url';
 import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
-import { discoverTestFiles, shardTestFiles } from './full-engine-shard.mjs';
+import {
+  discoverTestFiles,
+  runNativeScrollbarVerification,
+  shardTestFiles,
+} from './full-engine-shard.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const coverageDir = resolve(packageDir, 'coverage');
@@ -105,6 +109,7 @@ export function runCoverageShard(
     environment = process.env,
     packageDirectory = packageDir,
     spawn = spawnSync,
+    runNativeScrollbarVerification: runNative = runNativeScrollbarVerification,
   } = {},
 ) {
   if (testFiles.length === 0) throw new Error('No coverage test files were discovered.');
@@ -145,7 +150,14 @@ export function runCoverageShard(
       `Coverage shard ${shardIndex}/${COVERAGE_SHARD_TOTAL} was terminated by signal ${result.signal}.`,
     );
   }
-  return result.status ?? 1;
+  const status = result.status ?? 1;
+  if (status !== 0) return status;
+  return runNative(files, {
+    browser: environment.WTR_BROWSER,
+    environment,
+    packageDirectory,
+    spawn,
+  });
 }
 
 function requiredShardFile(coverageDirectory, shardIndex, filename) {

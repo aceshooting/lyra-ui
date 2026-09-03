@@ -19,13 +19,13 @@ import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { isRtl } from '../../../internal/rtl.js';
 import {
-  decimalPlaces,
   finiteInterpolate,
   finiteNumber,
   finiteRange,
   finiteRatio,
   isSliderKey,
 } from '../../../internal/numbers.js';
+import { clampSteppedValue } from '../../../internal/step-value.js';
 import { styles } from './slider.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
@@ -1101,34 +1101,7 @@ export class LyraSlider extends LyraSliderBase {
 
   private clampValue(raw: number): number {
     const { lo, hi } = this.domain();
-    // A NaN/Infinity `raw` (e.g. `valueAsNumber = NaN`, or a `value` string
-    // that fails Number conversion) would otherwise propagate straight
-    // through the Math.round/Math.max/Math.min calls below and poison the
-    // submitted form value with the literal "NaN"/"Infinity" —
-    // resolve it to a real, finite, in-domain number instead.
-    raw = finiteNumber(raw, lo);
-    // A non-positive or non-finite step would otherwise divide by zero/NaN
-    // below; treat it as "unstepped" instead of propagating NaN.
-    const step = finiteRange(this.step, 0, 0);
-    const hasStep = step > 0;
-    let stepped = raw;
-    if (hasStep) {
-      // Anchor the step grid at the domain's own `lo` (matching native
-      // `<input type=range>`) instead of absolute 0, and round back to
-      // `step`'s own decimal precision so repeated steps land on exact
-      // values like 0.7 instead of 0.7000000000000001.
-      const stepsFromLo = Math.round((raw - lo) / step);
-      if (Number.isFinite(stepsFromLo)) {
-        const candidate = lo + stepsFromLo * step;
-        const factor = 10 ** Math.min(decimalPlaces(step), 15);
-        if (Number.isFinite(candidate)) {
-          stepped = Number.isFinite(candidate * factor)
-            ? Math.round(candidate * factor) / factor
-            : candidate;
-        }
-      }
-    }
-    return Math.min(hi, Math.max(lo, stepped));
+    return clampSteppedValue(raw, lo, hi, this.step);
   }
 
   /** The live number a handle represents. */

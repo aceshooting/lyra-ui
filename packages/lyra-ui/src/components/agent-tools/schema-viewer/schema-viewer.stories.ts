@@ -9,7 +9,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Schema records and issue collections are bounded clone-owned frozen snapshots; create and reassign a new record or array after changes.',
+          'Schema records and issue collections are bounded clone-owned frozen snapshots. Supported own data fields are copied recursively; unsupported branches are omitted while valid siblings remain. Create and reassign a new record or array after changes.',
       },
     },
   },

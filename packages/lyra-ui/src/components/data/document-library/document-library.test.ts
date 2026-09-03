@@ -75,6 +75,33 @@ it("renders every document as a grid row, sorted by name ascending by default (u
   ]);
 });
 
+it('rejects accessor-backed documents without invoking them while retaining later safe records', async () => {
+  let idReads = 0;
+  const source: Record<string, unknown> = {};
+  Object.defineProperties(source, {
+    id: {
+      enumerable: true,
+      get(): never {
+        idReads += 1;
+        throw new Error('do not invoke document accessors');
+      },
+    },
+    name: { enumerable: true, value: 'One-read document' },
+    owner: { enumerable: true, value: 'Avery' },
+    tags: { enumerable: true, value: ['safe'] },
+  });
+  const el = await fixture<LyraDocumentLibrary>(html`<lr-document-library></lr-document-library>`);
+  el.documents = [
+    source as unknown as LibraryDocument,
+    { id: 'safe', name: 'Safe document', owner: 'Avery', tags: ['safe'] },
+  ];
+  await el.updateComplete;
+
+  expect(idReads).to.equal(0);
+  expect(el.documents.map((document) => document.id)).to.deep.equal(['safe']);
+  expect(el.documents[0]!.name).to.equal('Safe document');
+});
+
 it("keeps the first unique nonempty document id before filtering, selection, rows, counts, and open events", async () => {
   const first: LibraryDocument = { id: "shared", name: "First document", tags: ["first"] };
   const duplicate: LibraryDocument = { id: "shared", name: "Later duplicate", tags: ["duplicate"] };

@@ -118,6 +118,15 @@ downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Do
 
 **Known gotchas:**
 
+- Format options are read from their direct data fields into a frozen list. Accessor-backed, missing,
+  malformed, or throwing descriptor fields are ignored rather than evaluated; later menu rendering
+  and `lr-export` events use that snapshot. The snapshot includes only direct `formatId`, `label`,
+  `description`, and `extension` fields; accepted records are frozen and never reread from the
+  caller. An open multi-format menu is a non-modal overlay owned by the element's
+  current document: only its topmost menu handles that document's Escape, outside pointer, or Tab.
+  It rebinds after document adoption; Escape or a selected export returns focus to its own trigger,
+  while a Tab close permits normal document navigation. Placement uses the current trigger and panel
+  geometry and remains clamped to the current document's viewport.
 - CSV and JSON are the only built-in encoders. To offer XLSX/PDF/etc., pass an
   `LyraExportFormatDescriptor` and handle its `formatId` from `lr-export`; custom formats never trigger a
   download or `lr-export-complete` on their own. A descriptor's optional `extension` is metadata
@@ -184,7 +193,10 @@ positioning opinion of its own.
 **Methods:** `focus(options?)`, `blur()` and `click()` forward to the active built-in or custom
 trigger. `getToolbarActions(): readonly LyraToolbarAction[]` implements the public logical-toolbar
 provider protocol with one stable action whose id is `copy`; its focus, roving tab index, disabled
-state, and composed-event matching follow the active trigger without exposing that node.
+state, and composed-event matching follow the active trigger without exposing that node. Its
+`releaseTabIndex()` action method lets a parent stop managing its tab index on disconnect, adoption,
+trigger replacement, and parent departure: an untouched author-supplied `tabindex` is restored,
+while a newer author change is never overwritten.
 
 **Events:**
 
@@ -338,6 +350,15 @@ boolean = false` (reflected; unobserves a target after its first intersection). 
 target stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
 setting `once` to false is the explicit reset boundary.
 
+The browser capability is optional. A missing or throwing owner-window lookup or unavailable
+constructor leaves that rebuild inert rather than leaking an exception; an initial construction
+failure retries once with safe default options. Individual `observe`, `unobserve`, and `disconnect`
+failures are contained, so later valid targets and later rebuilds can still observe. Callbacks are
+tied to the current owner document, so a detached or adopted wrapper cannot emit a stale batch.
+Threshold collections inspect at most their first 10,000 direct data entries. Malformed or
+accessor-backed entries are skipped; a valid prefix remains active, while an entirely unusable value
+falls back to threshold `0`.
+
 **Events:** mapped `lr-intersect` once per entry with `{ entry }`, plus the existing batch alias
 `lr-intersection` with a frozen
 `Readonly<{ entries: readonly IntersectionObserverEntry[] }>` detail. The batch sequence is
@@ -364,6 +385,14 @@ form of `attr`, equivalent to `attr: '*'`) and `characterData` (`character-data`
 `charData`). Plus `subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`
 (neither reflects).
 
+The browser capability is optional. A missing or throwing owner-window lookup, or an unavailable or
+throwing constructor, leaves that rebuild inert rather than leaking an exception. Individual
+`observe` and `disconnect` failures are contained, so later valid targets and later rebuilds can still observe.
+Callbacks from a retired document are ignored after disconnect or adoption. `attributeFilter` is
+likewise a bounded own-data snapshot (examining at most its first 10,000 direct data entries);
+malformed or accessor-backed entries are skipped, a valid prefix remains active, and an entirely
+unusable value falls back to an empty filter.
+
 **Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
 `detail.records` and mapped `detail.mutationList` reference the same sequence, while each native
 `MutationRecord` retains identity.
@@ -376,7 +405,12 @@ form of `attr`, equivalent to `attr: '*'`) and `characterData` (`character-data`
 
 A collapsible, copyable tree view for an arbitrary JSON-serializable value (object, array, string,
 number, boolean, null, or `undefined`). Serves as a fallback renderer wherever a raw payload needs
-inspecting without a bespoke view. Expand/collapse state is keyed by structural path (not object
+inspecting without a bespoke view. Assignment creates one bounded, frozen graph from own enumerable
+data descriptors. It never invokes getters or object-conversion hooks; accessor/reflection-failed
+branches and function or symbol leaves are omitted, while bigint is retained as decimal text.
+Rendering, searching, toolbar copy, and per-node copy all use that same owned graph, so later
+mutation or revocation of the supplied object cannot change a displayed or copied value. Ordinary
+aliases, cycles, and sparse-array holes are retained. Expand/collapse state is keyed by structural path (not object
 identity), so it survives a `data` reassignment that keeps the same shape — e.g. a streaming result
 being patched in place. A container value that self-references (directly or through a longer cycle)
 renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no
@@ -749,13 +783,14 @@ called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announc
 
 A caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete
 inside a plain-text `<textarea>`/`<input>` the host owns. First-party invention (no Web Awesome
-equivalent). While open with a text-control `anchor`, the component atomically projects
-`role="combobox"` (unless the author supplied a role), `aria-expanded`, `aria-haspopup`, a
-resolvable controls element, and the active descendant. On platforms accepting cross-root ARIA
-element reflection, the host's own input keeps focus. Where the active-option reference is
-rejected, `focusActiveOption()` moves real focus into this component's shadow listbox so the focus
-owner and option share one tree scope. Every author ARIA value is restored on close, anchor
-replacement, disconnect, or adoption; a cross-root string IDREF is never left behind.
+equivalent). A textarea keeps its native textbox semantics while open and, after a consumed
+navigation key, `focusActiveOption()` moves real focus to the active option in the shadow listbox.
+A single-line text input retains its active-descendant element-reference route; only that route
+uses `syncActiveDescendant()`, which returns `false` for a textarea.
+Textarea ARIA/AOM values are restored on close, anchor replacement, disconnect, or adoption; a
+cross-root string IDREF is never left behind. Later localized result-count and active-position
+changes are announced once through the shared polite region; opening markup and unchanged state are
+silent.
 
 **Properties:**
 
@@ -797,9 +832,10 @@ replacement, disconnect, or adoption; a cross-root string IDREF is never left be
   `preventDefault()` when `filteredItems` is empty, letting the keystroke fall through to the
   host's own control unchanged. `Escape` closes with no selection. Returns `true` whenever the key
   was intercepted and `false` for keys the method does not recognize.
-- `syncActiveDescendant(control: HTMLElement): boolean` — clears any string
-  `aria-activedescendant`, then applies `ariaActiveDescendantElement` when the platform accepts the
-  cross-root reference. Returns whether that reference was accepted.
+- `syncActiveDescendant(control: HTMLElement): boolean` — applies
+  `ariaActiveDescendantElement` only for a retained single-line input route. For a textarea it
+  returns `false` without mutating `aria-activedescendant`; the managed textarea session clears that
+  value separately.
 - `focusActiveOption(options?: LyraMentionFocusOptions): Promise<boolean>` — same-tree fallback
   after a consumed navigation key when `syncActiveDescendant()` returns `false`. Focuses the active
   option, lets the popover handle subsequent navigation, and restores focus to `anchor` when the
@@ -982,6 +1018,12 @@ First-party invention (no Web Awesome equivalent).
   side. Larger input renders the localized `diffViewTooLarge` fallback without computing or
   highlighting the diff. `Infinity` relaxes this line-count ceiling, but the fixed aggregate
   character and comparison-work ceilings remain in force.
+
+Grammar entries are read from own enumerable data fields into a bounded frozen map. A getter,
+unreadable field, non-enumerable field, or malformed proxy branch is skipped without preventing a
+later valid grammar from being used; grammar values themselves remain opaque to the component.
+Non-enumerable names do not consume language slots, but every inspected name counts toward the
+20,000 structural ceiling.
 
 **Events:**
 
@@ -1363,7 +1405,9 @@ granular fields are then ignored entirely (`Intl` throws when the two are mixed)
 to use the granular set. An unparseable `date` renders the default slot. An invalid
 `timeZone` throws a `RangeError` inside `Intl`, which is caught and retried once without the zone —
 so the output falls back to the browser's local zone instead of failing to render. Valid output is
-wrapped in semantic `<time datetime="…">`.
+wrapped in semantic `<time datetime="…">`. Date input accepts primitive strings/numbers or a
+genuine `Date`; arbitrary objects are rejected without calling their `valueOf()`, `toString()`, or
+other conversion hooks.
 
 **Slots:** default — fallback content for an invalid/unparseable `date`.
 
@@ -1413,6 +1457,8 @@ are as described under `lr-format-number` above.
 
 Valid output is semantic `<time datetime="…">`. **Slots:** none — an unparseable `date` renders the
 empty string, with no fallback-content hook (unlike the three `lr-format-*` components above).
+Date input accepts primitive strings/numbers or a genuine `Date`; arbitrary objects are rejected
+without calling their conversion hooks.
 
 ## `lr-known-date`
 

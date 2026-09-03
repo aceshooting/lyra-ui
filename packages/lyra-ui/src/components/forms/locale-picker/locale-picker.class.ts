@@ -9,6 +9,10 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import {
+  activateNonmodalOverlay,
+  type OverlayHandle,
+} from '../../../internal/nonmodal-overlay-manager.js';
+import {
   getLyraLocaleDirection,
   getRegisteredLyraLocales,
   subscribeLyraLocaleRegistry,
@@ -140,6 +144,10 @@ export interface LyraLocalePickerEventMap {
  * commitment: `checkValidity()`/`required` are governed by the real `value`, which stays `''`
  * until the host sets it or the user actually picks a row. This mirrors a native `<select>`
  * rendering its first option's text without that being a committed selection.
+ *
+ * When a required picker is still empty, its library-owned validation message follows its current
+ * `.strings` and effective locale. A caller-provided `setCustomValidity()` message remains the
+ * higher-precedence validation layer until the caller clears it.
  *
  * Built directly on the shared trigger-button/`aria-activedescendant` listbox technique
  * `<lr-select>` uses (not composed from it) — a plain closed list, no filter/free-text mode; a
@@ -317,6 +325,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private listId = nextId('locale-picker-list');
   private controlId = nextId('locale-picker-control');
   private cleanup?: () => void;
+  private overlayHandle?: OverlayHandle;
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
   private stopRegistrySubscription?: () => void;
@@ -337,6 +346,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private typeAheadTimerWindow?: Window;
   private typeAheadTimerGeneration = 0;
   private activeScrollGeneration = 0;
+  private localizedValidityLocale = '';
+  private localizedIntrinsicMessage = '';
 
   constructor() {
     super();
@@ -397,6 +408,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncLocaleAttributeForLocalization();
     this.updateValidity();
     this.stopRegistrySubscription = subscribeLyraLocaleRegistry(() => {
       this.registryTick += 1;
@@ -408,7 +420,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
-    this.unbindDocumentPointer();
+    this.deactivatePopupOverlay(false);
     this.stopRegistrySubscription?.();
     this.stopRegistrySubscription = undefined;
     this.clearTypeAheadTimer();
@@ -426,11 +438,18 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.cleanup?.();
     this.cleanup = undefined;
     this.unbindDocumentPointer();
+    this.overlayHandle?.suspend();
     this.clearTypeAheadTimer();
+    if (this.open) queueMicrotask(() => this.syncPopup());
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // Lit renders before its normal property-reflection step. Keep the attribute-derived locale
+    // in sync before any `localize()` call in this update, otherwise that call can memoize the
+    // former locale for the render and for the required-message calculation.
+    if (changed.has('locale')) this.syncLocaleAttributeForLocalization();
+    if (this.hasUpdated) this.refreshLocalizedIntrinsicValidity(changed);
     if (this.open && (changed.has('locales') || changed.has('registryTick')) && this.activeIndex >= 0) {
       this.activeIndex = Math.min(this.activeIndex, this.normalizedEntries.length - 1);
       this.queueActiveScroll();
@@ -526,17 +545,48 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    * exactly like a native control — a real `<input required disabled>` matches neither `:valid` nor
    * `:invalid`. Without this guard a `<lr-locale-picker required disabled>` kept publishing
    * `valueMissing` and `:state(invalid)`, which is what painted every disabled picker with the
-   * documented `lr-locale-picker:state(user-invalid)` error styling.
+   * documented `lr-locale-picker:state(user-invalid)` error styling. This only writes the
+   * library-owned intrinsic layer; `AnchoredValidityController` preserves a caller's custom error
+   * while the localized required message changes.
    */
   private updateValidity(): void {
-    if (this.isBarred()) {
-      this.validityController.setValidity({});
-    } else if (this.required && !this._value) {
-      this.validityController.setValidity({ valueMissing: true }, this.localize('localePickerRequired'));
-    } else {
-      this.validityController.setValidity({});
-    }
+    this.localizedValidityLocale = this.effectiveMessageLocale;
+    const valueMissing = this.hasMissingRequiredValue();
+    const message = valueMissing ? this.localize('localePickerRequired') : '';
+    this.localizedIntrinsicMessage = message;
+    if (valueMissing) this.validityController.setValidity({ valueMissing: true }, message);
+    else this.validityController.setValidity({});
     this.syncCustomStates();
+  }
+
+  /** A localized catalog can change without a named Lit property change, so compare both the
+   * resolved locale and the current intrinsic message during each update. The comparison makes
+   * the controller write only when a library-owned validation input actually changed. */
+  private refreshLocalizedIntrinsicValidity(changed: PropertyValues): void {
+    const locale = this.effectiveMessageLocale;
+    const message = this.hasMissingRequiredValue() ? this.localize('localePickerRequired') : '';
+    if (
+      changed.has('strings') ||
+      locale !== this.localizedValidityLocale ||
+      message !== this.localizedIntrinsicMessage
+    ) {
+      this.updateValidity();
+    }
+  }
+
+  private hasMissingRequiredValue(): boolean {
+    return !this.isBarred() && this.required && !this._value;
+  }
+
+  /** Lit reflects a changed property after rendering. This component's localizer resolves the
+   * host attribute, so synchronize an explicit locale before either render-time or intrinsic
+   * validation text asks it for the effective message locale. */
+  private syncLocaleAttributeForLocalization(): void {
+    if (this.locale) {
+      if (this.getAttribute('locale') !== this.locale) this.setAttribute('locale', this.locale);
+    } else if (this.hasAttribute('locale')) {
+      this.removeAttribute('locale');
+    }
   }
 
   /** Whether constraint validation is currently barred. Shares the library-wide predicate rather
@@ -667,8 +717,20 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.open = false;
     this.setActiveIndex(-1);
   }
+
+  private dismissFromEscape(): void {
+    if (!this.open) return;
+    this.deactivatePopupOverlay(true);
+    this.hide();
+  }
+
   private onDocPointer = (e: PointerEvent): void => {
-    if (!e.composedPath().includes(this)) this.hide();
+    if (e.composedPath().includes(this)) return;
+    if (this.overlayHandle?.isActive()) {
+      this.overlayHandle.dismissBackdrop();
+      return;
+    }
+    this.hide();
   };
 
   private bindDocumentPointer(): void {
@@ -700,13 +762,35 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.pointerListener = undefined;
   }
 
+  private activatePopupOverlay(): void {
+    if (this.overlayHandle?.isActive()) {
+      this.overlayHandle.resume();
+      return;
+    }
+    this.overlayHandle = activateNonmodalOverlay({
+      host: this,
+      panel: () => this.renderRoot.querySelector<HTMLElement>('[part="listbox"]'),
+      onEscape: () => this.dismissFromEscape(),
+      onBackdrop: () => this.hide(),
+      restoreFocusTo: () => this.renderRoot.querySelector<HTMLElement>('[part="trigger"]'),
+    });
+  }
+
+  private deactivatePopupOverlay(restoreFocus: boolean): void {
+    const overlay = this.overlayHandle;
+    this.overlayHandle = undefined;
+    overlay?.deactivate({ restoreFocus });
+    this.unbindDocumentPointer();
+  }
+
   private syncPopup(): void {
     this.cleanup?.();
     this.cleanup = undefined;
     if (!this.open || !this.isConnected) {
-      this.unbindDocumentPointer();
+      this.deactivatePopupOverlay(false);
       return;
     }
+    this.activatePopupOverlay();
     this.bindDocumentPointer();
     const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
     const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
@@ -716,7 +800,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const reposition =
-      changed.has('open') || (this.open && (changed.has('locales') || changed.has('registryTick')));
+      changed.has('open') ||
+      (this.open && (changed.has('locales') || changed.has('registryTick') || changed.has('locale')));
     if (reposition) {
       this.syncPopup();
     }
@@ -885,9 +970,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         }
         break;
       case 'Escape':
-        if (this.open) {
+        if (
+          this.open &&
+          (!this.overlayHandle?.isActive() || this.overlayHandle.isTopmost())
+        ) {
           e.preventDefault();
-          this.hide();
+          this.dismissFromEscape();
         }
         break;
       case 'Home':

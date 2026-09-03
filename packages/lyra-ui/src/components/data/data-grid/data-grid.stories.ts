@@ -457,6 +457,48 @@ export const Virtualized: Story = {
   `,
 };
 
+export const MeasuredWideVirtualized: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A narrow, deliberately wide grid. Scroll the body horizontally: its header and footer follow the same logical position in either direction, while alternating wrapped rows retain measured heights as they leave and re-enter the virtual window. Hover or press a row, resize handle, sortable header, or page-size control to inspect the independent interaction-token hooks.',
+      },
+    },
+  },
+  render: () => {
+    const measuredColumns: DataGridColumn<DemoRow>[] = [
+      { field: 'name', label: 'Name', width: 280, footer: 'Roster' },
+      { field: 'team', label: 'Team', width: 220 },
+      { field: 'score', label: 'Score', width: 180, align: 'end' },
+      { field: 'joined', label: 'Joined', width: 220 },
+    ];
+    const measuredRows = Array.from({ length: 120 }, (_value, index) => ({
+      id: index + 1,
+      name:
+        index % 2 === 0
+          ? `Engineer ${index + 1}`
+          : `Engineer ${index + 1} works across the compiler, runtime, and accessibility review tracks.`,
+      team: `Team ${(index % 6) + 1}`,
+      score: 70 + (index % 30),
+      joined: `2024-${String((index % 12) + 1).padStart(2, '0')}-15`,
+    }));
+    return html`
+      <lr-data-grid
+        label="Measured wide engineering roster"
+        row-key="id"
+        paginate
+        page-size="120"
+        resizable
+        style="inline-size: var(--lr-size-20rem); --lr-data-grid-row-active-background: color-mix(in srgb, var(--lr-color-brand) var(--lr-color-mix-active), transparent); --lr-data-grid-control-hover-background: color-mix(in srgb, var(--lr-color-brand) var(--lr-color-mix-hover), transparent); --lr-data-grid-control-active-background: color-mix(in srgb, var(--lr-color-brand) var(--lr-color-mix-active), transparent); --lr-data-grid-sortable-header-hover-background: color-mix(in srgb, var(--lr-color-brand) var(--lr-color-mix-hover), transparent); --lr-data-grid-sortable-header-active-background: color-mix(in srgb, var(--lr-color-brand) var(--lr-color-mix-active), transparent); --lr-data-grid-page-size-active-background: color-mix(in srgb, var(--lr-color-brand) var(--lr-color-mix-hover), transparent)"
+        .columns=${measuredColumns}
+        .data=${measuredRows}
+        .pageSizeOptions=${[120]}
+      ></lr-data-grid>
+    `;
+  },
+};
+
 export const NarrowRtl: Story = {
   render: () => html`
     <div dir="rtl" style="inline-size:320px">

@@ -75,6 +75,34 @@ it("does not schedule a Lit update from the initial container measurement", asyn
   ).to.be.false;
 });
 
+it('normalizes only group metadata through own data descriptors without changing generic row identity', async () => {
+  let groupReads = 0;
+  const accessorBacked: Record<string, unknown> = { label: 'Accessor-backed group' };
+  Object.defineProperty(accessorBacked, 'startIndex', {
+    enumerable: true,
+    get(): never {
+      groupReads += 1;
+      throw new Error('do not invoke group accessors');
+    },
+  });
+  const group: Record<string, unknown> = { key: 'safe', startIndex: 0, label: 'Safe group' };
+  const item = { opaque: true };
+  const el = (await fixture(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height: 200px"
+      row-height="40"
+      .items=${[item]}
+      .groups=${[accessorBacked, group]}
+      .renderItem=${(value: unknown) => html`${value === item ? 'identity preserved' : 'changed'}`}
+    ></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await nextFrame();
+
+  expect(groupReads).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="group"]')?.textContent?.trim()).to.equal('Safe group');
+  expect(el.shadowRoot!.querySelector('[part="row"]')?.textContent).to.contain('identity preserved');
+});
+
 it("is accessible with an empty items array", async () => {
   const el = (await fixture(
     html`<lr-virtual-list
@@ -1632,11 +1660,27 @@ it("parses numeric row-height markup as a number and accepts numeric property wr
   expect(el.offsetForIndex(3)).to.equal(84);
 });
 
-it("positions rows via a transform instead of a padding-based spacer, so a new measurement only shifts later rows, not a page-wide reflow", () => {
-  expect(styles.cssText).to.match(
-    /\[part=['"]row['"]\][^}]*position:\s*absolute/
+it("renders row positions from the public offset coordinate rather than a padding proxy", async () => {
+  const el = (await fixture(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${["first", "second", "third"]}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const spacer = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+  const row = el.shadowRoot!.querySelector('[part="row"][data-row-index="1"]') as HTMLElement;
+
+  expect(getComputedStyle(row).position).to.equal("absolute");
+  expect(getComputedStyle(row).transform).to.not.equal("none");
+  expect(getComputedStyle(spacer).paddingBlockStart).to.equal("0px");
+  expect(row.getBoundingClientRect().top - spacer.getBoundingClientRect().top).to.be.closeTo(
+    el.offsetForIndex(1),
+    0.5
   );
-  expect(styles.cssText).to.not.match(/padding-block-start|padding-top/);
 });
 
 it('gives the always-focusable [part="base"] scroll region a :hover state, matching its own :focus-visible affordance', () => {

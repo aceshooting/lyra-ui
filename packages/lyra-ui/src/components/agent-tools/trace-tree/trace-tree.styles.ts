@@ -29,7 +29,7 @@ export const styles = css`
     flex-direction: column;
     overflow-x: auto;
     overflow-y: hidden;
-    font-size: var(--lr-font-size-sm);
+    font: inherit;
     color: var(--lr-color-text);
   }
 
@@ -150,6 +150,7 @@ export const styles = css`
        small-glyph, padded-hit-box pattern as lr-code-block's and lr-json-viewer's [part='toggle'].
        */
     flex: 0 0 auto;
+    font: inherit;
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
     min-inline-size: var(--lr-icon-button-size);

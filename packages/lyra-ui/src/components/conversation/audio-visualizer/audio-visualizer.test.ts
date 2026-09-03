@@ -51,6 +51,21 @@ function usableAudioStream(): MediaStream {
   } as MediaStream;
 }
 
+function restoreOwnProperty(
+  target: object,
+  name: PropertyKey,
+  descriptor: PropertyDescriptor | undefined,
+): void {
+  if (descriptor) Object.defineProperty(target, name, descriptor);
+  else delete (target as Record<PropertyKey, unknown>)[name];
+}
+
+function replaceOwnProperty(target: object, name: PropertyKey, value: unknown): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(target, name);
+  Object.defineProperty(target, name, { configurable: true, writable: true, value });
+  return () => restoreOwnProperty(target, name, descriptor);
+}
+
 /** Waits until no frame has been scheduled for two consecutive frames (mirrors the `settle` helper
  *  used by the draw-loop-scheduling tests below), or gives up after `frames` frames. */
 async function settleRaf(el: LyraAudioVisualizer, frames = 20): Promise<void> {
@@ -189,6 +204,26 @@ it('preserves a role supplied after mount across later reactive updates', async 
   await el.updateComplete;
 
   expect(el.getAttribute('role')).to.equal('presentation');
+});
+
+it('restores the default image role immediately when an authored role changes or is removed, including after reconnect', async () => {
+  const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+  expect(el.getAttribute('role')).to.equal('img');
+
+  el.setAttribute('role', 'presentation');
+  expect(el.getAttribute('role')).to.equal('presentation');
+  el.setAttribute('role', 'status');
+  expect(el.getAttribute('role')).to.equal('status');
+
+  // No reactive property update is involved: removing the authored role must synchronously restore
+  // the host's default semantics rather than waiting for an unrelated state change.
+  el.removeAttribute('role');
+  expect(el.getAttribute('role')).to.equal('img');
+
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  expect(el.getAttribute('role')).to.equal('img');
 });
 
 it('clamps bar-count to [1, 64]', async () => {
@@ -449,6 +484,147 @@ describe('draw-loop scheduling', () => {
   });
 });
 
+describe('IntersectionObserver visibility state machine', () => {
+  interface VisibilityObserverRecord {
+    callback: IntersectionObserverCallback;
+    target?: Element;
+    disconnects: number;
+  }
+
+  it('does not paint before a valid owner-observer entry, parks on false, and catches up on true', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+    const records: VisibilityObserverRecord[] = [];
+    class ControlledIntersectionObserver {
+      readonly record: VisibilityObserverRecord;
+      constructor(callback: IntersectionObserverCallback) {
+        this.record = { callback, disconnects: 0 };
+        records.push(this.record);
+      }
+      observe(target: Element): void {
+        this.record.target = target;
+      }
+      unobserve(): void {}
+      disconnect(): void {
+        this.record.disconnects++;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: ControlledIntersectionObserver,
+    });
+
+    let el: LyraAudioVisualizer | undefined;
+    try {
+      el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+      const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+      expect(records).to.have.length(1);
+      expect(records[0]!.target === el).to.be.true;
+      expect(state.visible).to.be.false;
+      expect(state.visibilityKnown).to.be.false;
+      expect(frameHandle(el)).to.be.undefined;
+
+      const observer = records[0]!;
+      observer.callback([], {} as IntersectionObserver);
+      observer.callback([{} as IntersectionObserverEntry], {} as IntersectionObserver);
+      const hostileEntry = Object.defineProperty({}, 'target', {
+        get: () => { throw new Error('malformed observer entry'); },
+      });
+      observer.callback(
+        [null, hostileEntry] as unknown as IntersectionObserverEntry[],
+        {} as IntersectionObserver,
+      );
+      const { proxy: revokedEntries, revoke } = Proxy.revocable([], {});
+      revoke();
+      observer.callback(revokedEntries as unknown as IntersectionObserverEntry[], {} as IntersectionObserver);
+      const throwingEntries = new Proxy([], {
+        get(target, key, receiver) {
+          if (key === Symbol.iterator) throw new Error('throwing observer entries container');
+          return Reflect.get(target, key, receiver);
+        },
+      });
+      observer.callback(throwingEntries as unknown as IntersectionObserverEntry[], {} as IntersectionObserver);
+      expect(state.visible).to.be.false;
+      expect(state.visibilityKnown).to.be.false;
+
+      observer.callback(
+        [{ target: el, isIntersecting: false } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(state.visible).to.be.false;
+      expect(state.visibilityKnown).to.be.true;
+
+      el.state = 'thinking';
+      await el.updateComplete;
+      expect(frameHandle(el)).to.be.undefined;
+
+      observer.callback(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(state.visible).to.be.true;
+      expect(frameHandle(el)).to.not.be.undefined;
+    } finally {
+      el?.remove();
+      restoreOwnProperty(window, 'IntersectionObserver', descriptor);
+    }
+  });
+
+  const eagerFallbackCases: ReadonlyArray<readonly [string, () => void]> = [
+    [
+      'the capability lookup throws',
+      () => Object.defineProperty(window, 'IntersectionObserver', {
+        configurable: true,
+        get: () => { throw new Error('unavailable observer capability'); },
+      }),
+    ],
+    [
+      'the constructor throws',
+      () => Object.defineProperty(window, 'IntersectionObserver', {
+        configurable: true,
+        value: class {
+          constructor() { throw new Error('observer constructor failed'); }
+        },
+      }),
+    ],
+    [
+      'observe throws',
+      () => Object.defineProperty(window, 'IntersectionObserver', {
+        configurable: true,
+        value: class {
+          constructor(_callback: IntersectionObserverCallback) {}
+          observe(): void { throw new Error('observer rejected target'); }
+          unobserve(): void {}
+          disconnect(): void {}
+          takeRecords(): IntersectionObserverEntry[] { return []; }
+        },
+      }),
+    ],
+  ];
+
+  for (const [name, install] of eagerFallbackCases) {
+    it(`falls back to eager drawing when ${name}`, async () => {
+      const descriptor = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+      install();
+      let el: LyraAudioVisualizer | undefined;
+      try {
+        el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+        const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+        expect(state.visible).to.be.true;
+        expect(state.visibilityKnown).to.be.true;
+        await waitFrame();
+        const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+        expect(canvas.width).to.be.greaterThan(0);
+      } finally {
+        el?.remove();
+        restoreOwnProperty(window, 'IntersectionObserver', descriptor);
+      }
+    });
+  }
+});
+
 describe('AudioContext resume on stream attach', () => {
   // Real browsers can create a brand-new AudioContext already `suspended` under autoplay
   // policy, and nothing spontaneously transitions it to `running` without an explicit
@@ -481,8 +657,7 @@ describe('AudioContext resume on stream attach', () => {
   }
 
   it('resumes a freshly-created AudioContext when a stream is first attached, not only a reused one', async () => {
-    const original = window.AudioContext;
-    (window as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext;
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', FakeAudioContext);
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       el.stream = usableAudioStream();
@@ -493,7 +668,7 @@ describe('AudioContext resume on stream attach', () => {
       expect(ctx!.state).to.equal('running');
       expect((el as unknown as { hasLiveSignal: boolean }).hasLiveSignal).to.be.true;
     } finally {
-      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+      restoreAudioContext();
     }
   });
 });
@@ -533,9 +708,8 @@ describe('transactional stream attachment', () => {
   }
 
   it('does not construct Web Audio while detached or for an empty stream', async () => {
-    const original = window.AudioContext;
     TransactionAudioContext.constructions = 0;
-    (window as unknown as { AudioContext: unknown }).AudioContext = TransactionAudioContext;
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', TransactionAudioContext);
     try {
       const detached = document.createElement('lr-audio-visualizer') as LyraAudioVisualizer;
       detached.stream = usableAudioStream();
@@ -548,15 +722,14 @@ describe('transactional stream attachment', () => {
       expect(TransactionAudioContext.constructions).to.equal(0);
       expect((el as unknown as { audioCtx?: unknown }).audioCtx).to.be.undefined;
     } finally {
-      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+      restoreAudioContext();
     }
   });
 
   it('closes and clears every partial graph when source construction fails', async () => {
-    const original = window.AudioContext;
     TransactionAudioContext.constructions = 0;
     TransactionAudioContext.closes = 0;
-    (window as unknown as { AudioContext: unknown }).AudioContext = TransactionAudioContext;
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', TransactionAudioContext);
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       el.stream = usableAudioStream();
@@ -567,7 +740,7 @@ describe('transactional stream attachment', () => {
       expect((el as unknown as { sourceNode?: unknown }).sourceNode).to.be.undefined;
       expect((el as unknown as { analyser?: unknown }).analyser).to.be.undefined;
     } finally {
-      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+      restoreAudioContext();
     }
   });
 });
@@ -698,10 +871,12 @@ describe('AudioContext constructor fallback', () => {
   }
 
   it('falls back to webkitAudioContext when window.AudioContext is unavailable', async () => {
-    const originalAudioContext = window.AudioContext;
-    const w = window as unknown as { AudioContext: unknown; webkitAudioContext?: unknown };
-    w.AudioContext = undefined;
-    w.webkitAudioContext = FakeWebkitAudioContext;
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', undefined);
+    const restoreWebkitAudioContext = replaceOwnProperty(
+      window,
+      'webkitAudioContext',
+      FakeWebkitAudioContext,
+    );
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       el.stream = usableAudioStream();
@@ -709,23 +884,73 @@ describe('AudioContext constructor fallback', () => {
       const ctx = (el as unknown as { audioCtx?: unknown }).audioCtx;
       expect(ctx).to.be.instanceOf(FakeWebkitAudioContext);
     } finally {
-      w.AudioContext = originalAudioContext;
-      delete w.webkitAudioContext;
+      restoreWebkitAudioContext();
+      restoreAudioContext();
     }
   });
 
   it('no-ops (leaves audioCtx unset) when neither AudioContext nor webkitAudioContext exist', async () => {
-    const originalAudioContext = window.AudioContext;
-    const w = window as unknown as { AudioContext: unknown; webkitAudioContext?: unknown };
-    w.AudioContext = undefined;
-    delete w.webkitAudioContext;
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', undefined);
+    const restoreWebkitAudioContext = replaceOwnProperty(window, 'webkitAudioContext', undefined);
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       el.stream = usableAudioStream();
       await el.updateComplete;
       expect((el as unknown as { audioCtx?: unknown }).audioCtx).to.be.undefined;
     } finally {
-      w.AudioContext = originalAudioContext;
+      restoreWebkitAudioContext();
+      restoreAudioContext();
+    }
+  });
+
+  it('restores exact AudioContext and webkitAudioContext descriptors across sequential test leases', () => {
+    const originalAudioContext = Object.getOwnPropertyDescriptor(window, 'AudioContext');
+    const originalWebkitAudioContext = Object.getOwnPropertyDescriptor(window, 'webkitAudioContext');
+    const webkitSentinel = Symbol('webkit-audio-context-sentinel');
+    let getterReads = 0;
+    const audioGetter = (): unknown => {
+      getterReads++;
+      return undefined;
+    };
+
+    Object.defineProperty(window, 'AudioContext', {
+      configurable: true,
+      enumerable: false,
+      get: audioGetter,
+    });
+    Object.defineProperty(window, 'webkitAudioContext', {
+      configurable: true,
+      enumerable: true,
+      writable: false,
+      value: webkitSentinel,
+    });
+    const expectedAudioContext = Object.getOwnPropertyDescriptor(window, 'AudioContext')!;
+    const expectedWebkitAudioContext = Object.getOwnPropertyDescriptor(window, 'webkitAudioContext')!;
+
+    try {
+      const restoreFirstAudio = replaceOwnProperty(window, 'AudioContext', FakeWebkitAudioContext);
+      const restoreFirstWebkit = replaceOwnProperty(window, 'webkitAudioContext', undefined);
+      restoreFirstWebkit();
+      restoreFirstAudio();
+      const afterFirstAudio = Object.getOwnPropertyDescriptor(window, 'AudioContext')!;
+      const afterFirstWebkit = Object.getOwnPropertyDescriptor(window, 'webkitAudioContext')!;
+      expect(afterFirstAudio.get === expectedAudioContext.get).to.be.true;
+      expect(afterFirstAudio.enumerable).to.equal(false);
+      expect(afterFirstWebkit.value === webkitSentinel).to.be.true;
+      expect(afterFirstWebkit.writable).to.equal(false);
+
+      const restoreSecondWebkit = replaceOwnProperty(window, 'webkitAudioContext', FakeWebkitAudioContext);
+      const restoreSecondAudio = replaceOwnProperty(window, 'AudioContext', undefined);
+      restoreSecondAudio();
+      restoreSecondWebkit();
+      const afterSecondAudio = Object.getOwnPropertyDescriptor(window, 'AudioContext')!;
+      const afterSecondWebkit = Object.getOwnPropertyDescriptor(window, 'webkitAudioContext')!;
+      expect(afterSecondAudio.get === expectedAudioContext.get).to.be.true;
+      expect(afterSecondWebkit.value === expectedWebkitAudioContext.value).to.be.true;
+      expect(getterReads).to.equal(0);
+    } finally {
+      restoreOwnProperty(window, 'webkitAudioContext', originalWebkitAudioContext);
+      restoreOwnProperty(window, 'AudioContext', originalAudioContext);
     }
   });
 });
@@ -761,8 +986,7 @@ describe('stream lifecycle: reattach and clear', () => {
   }
 
   it('disconnects the previous source on reattach, and disconnects + suspends on clear', async () => {
-    const original = window.AudioContext;
-    (window as unknown as { AudioContext: unknown }).AudioContext = TrackingFakeAudioContext;
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', TrackingFakeAudioContext);
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       el.stream = usableAudioStream();
@@ -785,7 +1009,7 @@ describe('stream lifecycle: reattach and clear', () => {
       expect((el as unknown as { analyser?: unknown }).analyser).to.be.undefined;
       expect((el as unknown as { sourceNode?: unknown }).sourceNode).to.be.undefined;
     } finally {
-      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+      restoreAudioContext();
     }
   });
 });
@@ -825,8 +1049,7 @@ describe('live analyser draw loop', () => {
   }
 
   it('keeps the loop alive and draws bars from real analyser time-domain data while the AudioContext is running', async () => {
-    const original = window.AudioContext;
-    (window as unknown as { AudioContext: unknown }).AudioContext = FakeRunningAudioContext;
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', FakeRunningAudioContext);
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       el.stream = usableAudioStream();
@@ -840,13 +1063,12 @@ describe('live analyser draw loop', () => {
       expect(amps).to.have.length(5); // default bar-count
       expect(amps.some((a) => a > 0)).to.be.true;
     } finally {
-      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+      restoreAudioContext();
     }
   });
 
   it('draws waveform samples directly from analyser time-domain data when mode is waveform', async () => {
-    const original = window.AudioContext;
-    (window as unknown as { AudioContext: unknown }).AudioContext = FakeRunningAudioContext;
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', FakeRunningAudioContext);
     try {
       const el = (await fixture(
         html`<lr-audio-visualizer mode="waveform"></lr-audio-visualizer>`,
@@ -859,7 +1081,7 @@ describe('live analyser draw loop', () => {
       expect(amps).to.have.length(128); // frequencyBinCount from the fake analyser
       expect(amps.some((a) => a !== 0)).to.be.true;
     } finally {
-      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+      restoreAudioContext();
     }
   });
 });
@@ -870,9 +1092,13 @@ describe('reduced-motion ambient throttling in drawFrame', () => {
       const el = (await fixture(html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
       const priv = el as unknown as {
         lastAmbientDrawMs: number;
+        visible: boolean;
+        visibilityKnown: boolean;
       };
       // Drive drawFrame by hand with controlled timestamps so the 500ms throttle window is deterministic.
       cancelCurrentFrame(el);
+      priv.visible = true;
+      priv.visibilityKnown = true;
       priv.lastAmbientDrawMs = 1000;
 
       invokeDrawFrame(el, 1200); // 200ms later: still inside the throttle window
@@ -1048,7 +1274,7 @@ describe('owner-window runtime after adoption', () => {
       requestAnimationFrame: frameWindow.requestAnimationFrame,
       cancelAnimationFrame: frameWindow.cancelAnimationFrame,
       getComputedStyle: frameWindow.getComputedStyle,
-      audioContext: frameWindow.AudioContext,
+      audioContext: Object.getOwnPropertyDescriptor(frameWindow, 'AudioContext'),
       devicePixelRatio: Object.getOwnPropertyDescriptor(frameWindow, 'devicePixelRatio'),
     };
     const realGetComputedStyle = frameWindow.getComputedStyle.bind(frameWindow);
@@ -1092,8 +1318,10 @@ describe('owner-window runtime after adoption', () => {
         computedStyleCalls++;
         return realGetComputedStyle(element, pseudo);
       }) as typeof frameWindow.getComputedStyle;
-      (frameWindow as unknown as { AudioContext: typeof AudioContext }).AudioContext =
-        FrameAudioContext as unknown as typeof AudioContext;
+      Object.defineProperty(frameWindow, 'AudioContext', {
+        configurable: true,
+        value: FrameAudioContext,
+      });
       Object.defineProperty(frameWindow, 'devicePixelRatio', { configurable: true, value: 2 });
 
       frameDocument.adoptNode(el);
@@ -1104,6 +1332,10 @@ describe('owner-window runtime after adoption', () => {
       expect(intersectionRecords.length).to.equal(1);
       expect(queryRecords.some((record) => record.media.includes('prefers-reduced-motion'))).to.be.true;
       expect(queryRecords.some((record) => record.media.includes('resolution: 2dppx'))).to.be.true;
+      intersectionRecords[0]!.callback(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
       expect(frameRequest(el)?.owner === frameWindow).to.equal(true);
 
       const staleResize = resizeRecords[0]!;
@@ -1130,17 +1362,19 @@ describe('owner-window runtime after adoption', () => {
       const priv = el as unknown as {
         hostSize?: { width: number; height: number };
         visible: boolean;
+        visibilityKnown: boolean;
         resolvedColors?: { active: string; quiet: string };
         draw: (nowMs: number) => void;
       };
       priv.hostSize = undefined;
       priv.visible = true;
+      priv.visibilityKnown = true;
       staleResize.callback(
         [{ contentRect: { width: 999, height: 999 } } as unknown as ResizeObserverEntry],
         {} as ResizeObserver,
       );
       staleIntersection.callback(
-        [{ isIntersecting: false } as IntersectionObserverEntry],
+        [{ target: el, isIntersecting: false } as unknown as IntersectionObserverEntry],
         {} as IntersectionObserver,
       );
       expect(priv.hostSize).to.be.undefined;
@@ -1149,13 +1383,13 @@ describe('owner-window runtime after adoption', () => {
 
       const activeIntersection = intersectionRecords[1]!;
       activeIntersection.callback(
-        [{ isIntersecting: false } as IntersectionObserverEntry],
+        [{ target: el, isIntersecting: false } as unknown as IntersectionObserverEntry],
         {} as IntersectionObserver,
       );
       expect(priv.visible).to.be.false;
       expect(frameRequest(el) === undefined).to.be.true;
       activeIntersection.callback(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
         {} as IntersectionObserver,
       );
       expect(priv.visible).to.be.true;
@@ -1188,7 +1422,7 @@ describe('owner-window runtime after adoption', () => {
       frameWindow.requestAnimationFrame = originals.requestAnimationFrame;
       frameWindow.cancelAnimationFrame = originals.cancelAnimationFrame;
       frameWindow.getComputedStyle = originals.getComputedStyle;
-      (frameWindow as unknown as { AudioContext: typeof AudioContext }).AudioContext = originals.audioContext;
+      restoreOwnProperty(frameWindow, 'AudioContext', originals.audioContext);
       if (originals.devicePixelRatio) {
         Object.defineProperty(frameWindow, 'devicePixelRatio', originals.devicePixelRatio);
       }
@@ -1403,8 +1637,7 @@ describe('waveform draw with a single sample (division-by-zero guard)', () => {
   }
 
   it('does not divide by zero when the waveform has exactly one sample', async () => {
-    const original = window.AudioContext;
-    (window as unknown as { AudioContext: unknown }).AudioContext = SingleSampleAudioContext;
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', SingleSampleAudioContext);
     try {
       const el = (await fixture(
         html`<lr-audio-visualizer mode="waveform"></lr-audio-visualizer>`,
@@ -1413,7 +1646,7 @@ describe('waveform draw with a single sample (division-by-zero guard)', () => {
       await el.updateComplete;
       expect(() => (el as unknown as { draw: (nowMs: number) => void }).draw(0)).to.not.throw();
     } finally {
-      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+      restoreAudioContext();
     }
   });
 });
@@ -1511,4 +1744,47 @@ describe('draw() defensive branches', () => {
     const ctx = (el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).getContext('2d')!;
     expect(ctx.fillStyle).to.equal('#010203');
   });
+
+  for (const mode of ['waveform', 'bars'] as const) {
+    it(`keeps every ${mode} canvas coordinate finite and bounded with MAX_VALUE gain while leaving visible output`, async () => {
+      const el = (await fixture(html`
+        <lr-audio-visualizer mode=${mode} level="1" .gain=${Number.MAX_VALUE}></lr-audio-visualizer>
+      `)) as LyraAudioVisualizer;
+      const priv = el as unknown as {
+        hostSize?: { width: number; height: number };
+        draw: (nowMs: number) => void;
+      };
+      priv.hostSize = { width: 40, height: 20 };
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      const ctx = canvas.getContext('2d')!;
+      const coordinates: number[][] = [];
+      const originalMoveTo = ctx.moveTo.bind(ctx);
+      const originalLineTo = ctx.lineTo.bind(ctx);
+      const originalFillRect = ctx.fillRect.bind(ctx);
+      ctx.moveTo = ((x: number, y: number) => {
+        coordinates.push([x, y]);
+        originalMoveTo(x, y);
+      }) as typeof ctx.moveTo;
+      ctx.lineTo = ((x: number, y: number) => {
+        coordinates.push([x, y]);
+        originalLineTo(x, y);
+      }) as typeof ctx.lineTo;
+      ctx.fillRect = ((x: number, y: number, width: number, height: number) => {
+        coordinates.push([x, y, width, height]);
+        originalFillRect(x, y, width, height);
+      }) as typeof ctx.fillRect;
+      try {
+        priv.draw(0);
+        expect(coordinates.length).to.be.greaterThan(0);
+        expect(coordinates.every((values) => values.every(Number.isFinite))).to.be.true;
+        expect(coordinates.every((values) => values.every((value) => value >= 0 && value <= 40))).to.be.true;
+        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        expect(Array.from(pixels).some((value, index) => index % 4 === 3 && value > 0)).to.be.true;
+      } finally {
+        ctx.moveTo = originalMoveTo;
+        ctx.lineTo = originalLineTo;
+        ctx.fillRect = originalFillRect;
+      }
+    });
+  }
 });

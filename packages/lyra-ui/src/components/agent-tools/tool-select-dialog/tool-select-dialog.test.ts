@@ -137,20 +137,66 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
 });
 
-it('keeps a host aria-label on the host while the dialog panel remains title-labelled', async () => {
+it('keeps authored host aria-label changes on the host while the dialog panel remains title-labelled', async () => {
   const el = (await fixture(
-    html`<lr-tool-select-dialog open aria-label="Custom tool picker name"></lr-tool-select-dialog>`,
+    html`<lr-tool-select-dialog open></lr-tool-select-dialog>`,
   )) as LyraToolSelectDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
 
+  el.setAttribute('aria-label', 'Custom tool picker name');
+  await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.equal('Custom tool picker name');
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
+
+  el.setAttribute('aria-label', 'Changed tool picker name');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Changed tool picker name');
   expect(panel.hasAttribute('aria-label')).to.equal(false);
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
 
   el.setAttribute('aria-label', '');
   await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
   expect(panel.hasAttribute('aria-label')).to.equal(false);
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(el.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
+});
+
+it('uses a direct accessibleLabel to name the dialog panel without reflecting a host aria-label', async () => {
+  const el = document.createElement('lr-tool-select-dialog') as LyraToolSelectDialog;
+  el.open = true;
+  el.accessibleLabel = 'Choose the active agent tools';
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+
+    expect(el.hasAttribute('aria-label')).to.equal(false);
+    expect(panel.getAttribute('aria-label')).to.equal('Choose the active agent tools');
+    expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+    await expect(el).to.be.accessible();
+
+    el.accessibleLabel = null;
+    await el.updateComplete;
+    expect(panel.hasAttribute('aria-label')).to.equal(false);
+    expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
+
+    el.accessibleLabel = 'Changed after connection';
+    await el.updateComplete;
+    expect(el.hasAttribute('aria-label')).to.equal(false);
+    expect(panel.getAttribute('aria-label')).to.equal('Changed after connection');
+    expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+  } finally {
+    el.open = false;
+    await el.updateComplete;
+    el.remove();
+  }
 });
 
 it('renders the default label and a live "N of M tools enabled" subtitle', async () => {
@@ -405,6 +451,34 @@ describe('search filtering', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(1);
     expect(checkboxFor(el, 'run_python')).to.exist;
+  });
+
+  it('contains native search input after committing query state without preventing the native event', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><lr-tool-select-dialog open .tools=${TOOLS}></lr-tool-select-dialog></div>
+    `);
+    const el = wrapper.querySelector('lr-tool-select-dialog') as LyraToolSelectDialog;
+    const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+    let hostInputs = 0;
+    let ancestorInputs = 0;
+    let queryDuringInput = '';
+    el.addEventListener('input', () => hostInputs += 1);
+    wrapper.addEventListener('input', () => ancestorInputs += 1);
+    input.addEventListener('input', () => {
+      queryDuringInput = (el as unknown as { query: string }).query;
+    });
+
+    input.value = 'python';
+    const nativeInput = new Event('input', { bubbles: true, cancelable: true, composed: true });
+    input.dispatchEvent(nativeInput);
+
+    expect(queryDuringInput).to.equal('python');
+    expect(nativeInput.defaultPrevented).to.equal(false);
+    expect(hostInputs).to.equal(0);
+    expect(ancestorInputs).to.equal(0);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(1);
+    expect(checkboxFor(el, 'run_python').value).to.equal('run_python');
   });
 
   it('hides a category entirely once it has zero matching tools, rather than an empty heading', async () => {
@@ -1136,6 +1210,287 @@ it('drops malformed tool identities while retaining a valid neighboring tool', a
 
   expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(1);
   expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent!.trim()).to.equal('Kept');
+});
+
+it('admits only descriptor-safe fully valid tool rows and lets a later valid duplicate win', async () => {
+  let accessorReads = 0;
+  const accessorTool = { id: 'accessor' } as Record<string, unknown>;
+  Object.defineProperty(accessorTool, 'name', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return 'Must not be read';
+    },
+  });
+  const revoked = Proxy.revocable({ id: 'revoked', name: 'Revoked' }, {});
+  revoked.revoke();
+  const nullPrototypeTool = Object.assign(Object.create(null) as Record<string, unknown>, {
+    id: 'null-prototype',
+    name: 'Null prototype tool',
+  });
+  const inheritedTool = Object.create({ id: 'inherited', name: 'Inherited tool' });
+  class CustomTool {
+    id = 'custom-prototype';
+    name = 'Custom prototype tool';
+  }
+
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${[
+        null,
+        17,
+        { id: 42, name: 'Numeric identity' },
+        { name: 'Missing identity' },
+        { id: 'same' },
+        { id: 'same', name: 'Later valid duplicate' },
+        { id: 'invalid-disabled', name: 'Invalid disabled', disabled: 'true' },
+        { id: 'invalid-description', name: 'Invalid description', description: 42 },
+        accessorTool,
+        revoked.proxy,
+        inheritedTool,
+        new CustomTool(),
+        nullPrototypeTool,
+        { id: 'later', name: 'Later selectable sibling' },
+      ] as unknown as ToolSelectDialogTool[]}
+    ></lr-tool-select-dialog>
+  `);
+
+  const names = Array.from(
+    el.shadowRoot!.querySelectorAll<HTMLElement>('[part="tool-name"]'),
+    (node) => node.textContent?.trim() ?? '',
+  );
+  expect(names).to.deep.equal([
+    'Later valid duplicate',
+    'Null prototype tool',
+    'Later selectable sibling',
+  ]);
+  expect(accessorReads).to.equal(0);
+});
+
+it('rejects a custom prototype that spoofs the Object constructor', async () => {
+  const spoofedPrototype = Object.create(null) as Record<string, unknown>;
+  Object.defineProperty(spoofedPrototype, 'constructor', {
+    configurable: true,
+    enumerable: true,
+    value: Object,
+  });
+  const spoofedTool = Object.create(spoofedPrototype) as Record<string, unknown>;
+  Object.defineProperties(spoofedTool, {
+    id: { configurable: true, enumerable: true, value: 'spoofed' },
+    name: { configurable: true, enumerable: true, value: 'Spoofed tool' },
+  });
+
+  const el = await fixture<LyraToolSelectDialog>(html`<lr-tool-select-dialog open></lr-tool-select-dialog>`);
+  // The public collection boundary correctly snapshots custom-prototype rows into ordinary data
+  // records. Exercise this schema validator directly as a defense-in-depth boundary too: a
+  // subclass or internal producer can still provide a pre-owned collection without that outer
+  // snapshot step.
+  Object.defineProperty(el, 'tools', {
+    configurable: true,
+    value: [spoofedTool, { id: 'kept', name: 'Kept neighboring tool' }],
+  });
+  el.requestUpdate('tools');
+  await el.updateComplete;
+
+  const names = Array.from(
+    el.shadowRoot!.querySelectorAll<HTMLElement>('[part="tool-name"]'),
+    (node) => node.textContent?.trim() ?? '',
+  );
+  expect(names).to.deep.equal(['Kept neighboring tool']);
+});
+
+it('rejects a forged custom constructor that mimics Object', async () => {
+  function CustomRecord(): void {}
+  Object.setPrototypeOf(CustomRecord.prototype, null);
+  Object.defineProperty(CustomRecord, 'name', {
+    configurable: true,
+    value: 'Object',
+  });
+  const forgedTool = Object.create(CustomRecord.prototype) as Record<string, unknown>;
+  Object.defineProperties(forgedTool, {
+    id: { configurable: true, enumerable: true, value: 'forged' },
+    name: { configurable: true, enumerable: true, value: 'Forged tool' },
+  });
+
+  const el = await fixture<LyraToolSelectDialog>(html`<lr-tool-select-dialog open></lr-tool-select-dialog>`);
+  // As above, exercise the component's inner schema boundary without the public collection
+  // snapshot normalizing this hostile prototype into an ordinary record first.
+  Object.defineProperty(el, 'tools', {
+    configurable: true,
+    value: [forgedTool, { id: 'kept', name: 'Kept neighboring tool' }],
+  });
+  el.requestUpdate('tools');
+  await el.updateComplete;
+
+  const names = Array.from(
+    el.shadowRoot!.querySelectorAll<HTMLElement>('[part="tool-name"]'),
+    (node) => node.textContent?.trim() ?? '',
+  );
+  expect(names).to.deep.equal(['Kept neighboring tool']);
+});
+
+it('admits a cross-realm plain tool record through the descriptor-safe schema guard', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const foreignWindow = frame.contentWindow as Window & typeof globalThis;
+  const foreignTool = foreignWindow.JSON.parse('{"id":"foreign","name":"Foreign tool"}') as ToolSelectDialogTool;
+  const nullPrototypeTool = Object.assign(Object.create(null) as Record<string, unknown>, {
+    id: 'null-prototype',
+    name: 'Null prototype tool',
+  });
+  const el = await fixture<LyraToolSelectDialog>(html`<lr-tool-select-dialog open></lr-tool-select-dialog>`);
+
+  // Bypass the outer owned snapshot so the foreign realm's actual Object constructor reaches
+  // this component-private guard. Normal public assignment intentionally normalizes it first.
+  Object.defineProperty(el, 'tools', {
+    configurable: true,
+    value: [foreignTool, nullPrototypeTool],
+  });
+  el.requestUpdate('tools');
+  await el.updateComplete;
+
+  const names = Array.from(
+    el.shadowRoot!.querySelectorAll<HTMLElement>('[part="tool-name"]'),
+    (node) => node.textContent?.trim() ?? '',
+  );
+  expect(names).to.deep.equal(['Foreign tool', 'Null prototype tool']);
+});
+
+it('requires runtime arrays and retains independently valid selected identities absent from tools', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${{ id: 'not-an-array', name: 'Not an array' } as unknown as ToolSelectDialogTool[]}
+      .selectedToolIds=${'not-an-array' as unknown as readonly string[]}
+    ></lr-tool-select-dialog>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(0);
+
+  el.tools = [{ id: 'known', name: 'Known tool' }];
+  el.selectedToolIds = ['outside', 'known', 'outside', '', '   '];
+  await el.updateComplete;
+  expect(checkboxFor(el, 'known').checked).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent!.trim()).to.equal('1 of 1 tools enabled');
+
+  const proposed = oneEvent(el, 'lr-change');
+  el.shadowRoot!.querySelector('lr-switch')!.dispatchEvent(new CustomEvent('lr-change', {
+    detail: { checked: true },
+    bubbles: true,
+    composed: true,
+  }));
+  expect((await proposed).detail.selectedToolIds).to.deep.equal(['outside', 'known']);
+});
+
+it('bounds a newly checked tool selection before its immutable change detail is emitted', async () => {
+  const independentlyRetainedIds = Array.from(
+    { length: 9_999 },
+    (_, index) => `outside-${index}`,
+  );
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${[
+        { id: 'already-known', name: 'Already known tool' },
+        { id: 'new-known', name: 'New known tool' },
+      ]}
+      .selectedToolIds=${[...independentlyRetainedIds, 'already-known']}
+    ></lr-tool-select-dialog>
+  `);
+
+  const proposed = oneEvent(el, 'lr-change');
+  checkboxFor(el, 'new-known').dispatchEvent(new CustomEvent('lr-change', {
+    detail: { checked: true },
+    bubbles: true,
+    composed: true,
+  }));
+  const event = await proposed;
+
+  expect(event.detail).not.to.equal(null);
+  expect(event.detail.selectedToolIds).to.have.length(10_000);
+  expect(event.detail.selectedToolIds.slice(0, -1)).to.deep.equal(independentlyRetainedIds);
+  expect(event.detail.selectedToolIds.at(-1)).to.equal('new-known');
+  expect(event.detail.selectedToolIds).not.to.include('already-known');
+
+  await el.updateComplete;
+  expect(el.selectedToolIds).to.deep.equal(event.detail.selectedToolIds);
+});
+
+it('preserves sequential accepted tool toggles in the same update turn', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${[
+        { id: 'first', name: 'First tool' },
+        { id: 'second', name: 'Second tool' },
+      ]}
+    ></lr-tool-select-dialog>
+  `);
+
+  for (const id of ['first', 'second']) {
+    checkboxFor(el, id).dispatchEvent(new CustomEvent('lr-change', {
+      detail: { checked: true },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  await el.updateComplete;
+  expect(el.selectedToolIds).to.deep.equal(['first', 'second']);
+});
+
+it('merges an external selection write with a synchronous later tool toggle', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${[
+        { id: 'first', name: 'First tool' },
+        { id: 'second', name: 'Second tool' },
+      ]}
+    ></lr-tool-select-dialog>
+  `);
+
+  // The external controlled write queues Lit's update. A user toggle can arrive before that
+  // queue flushes, so it must derive from the newly written selection rather than the prior
+  // render's cache.
+  el.selectedToolIds = ['first'];
+  checkboxFor(el, 'second').dispatchEvent(new CustomEvent('lr-change', {
+    detail: { checked: true },
+    bubbles: true,
+    composed: true,
+  }));
+
+  await el.updateComplete;
+  expect(el.selectedToolIds).to.deep.equal(['first', 'second']);
+});
+
+it('contains per-row custom-filter failures while retaining a later selectable sibling', async () => {
+  const calls: string[] = [];
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${[
+        { id: 'throws', name: 'Throwing row' },
+        { id: 'later', name: 'Later selectable sibling' },
+      ]}
+    ></lr-tool-select-dialog>
+  `);
+  el.filter = (tool) => {
+    calls.push(tool.id);
+    if (tool.id === 'throws') throw new Error('filter failure');
+    return true;
+  };
+  const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+  input.value = 'any query';
+  input.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+
+  expect(calls).to.deep.equal(['throws', 'later']);
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(1);
+  expect(checkboxFor(el, 'later').checked).to.equal(false);
+  const proposed = oneEvent(el, 'lr-change');
+  clickCheckbox(checkboxFor(el, 'later'));
+  expect((await proposed).detail.selectedToolIds).to.deep.equal(['later']);
 });
 
 it('bounds a large catalog while reserving selected identities and a keyboard-reachable continuation', async () => {

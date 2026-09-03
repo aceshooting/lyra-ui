@@ -1,7 +1,9 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './graph-legend.js';
 import type { LyraGraphLegend } from './graph-legend.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -136,6 +138,110 @@ it('toggles hiddenTypes and emits lr-visibility-change with the full updated arr
   expect(event2.detail.hiddenTypes).to.deep.equal([]);
 });
 
+it('emits a frozen cancelable proposal before assigning, announcing, and posting an accepted visibility change', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+  const announcementsBefore = sinkTexts().length;
+  let preEvent: CustomEvent<{ hiddenTypes: string[] }> | undefined;
+  let preSawCurrentState = false;
+  let postSawCommittedState = false;
+  let postSawAnnouncement = false;
+  let proposals = 0;
+  let commits = 0;
+  el.addEventListener('lr-before-visibility-change', (event) => {
+    proposals += 1;
+    preEvent = event as CustomEvent<{ hiddenTypes: string[] }>;
+    preSawCurrentState = el.hiddenTypes.length === 0 && sinkTexts().length === announcementsBefore;
+    try {
+      preEvent.detail.hiddenTypes.push('mutated');
+    } catch {
+      // A frozen proposal may throw in strict mode; either outcome must leave the detail unchanged.
+    }
+  });
+  el.addEventListener('lr-visibility-change', () => {
+    commits += 1;
+    postSawCommittedState = el.hiddenTypes.join(',') === 'person';
+    postSawAnnouncement = sinkTexts().length === announcementsBefore + 1;
+  });
+
+  button.click();
+  await el.updateComplete;
+
+  expect(preEvent === undefined).to.equal(false);
+  expect(preEvent!.bubbles).to.equal(true);
+  expect(preEvent!.composed).to.equal(true);
+  expect(preEvent!.cancelable).to.equal(true);
+  expect(Object.isFrozen(preEvent!.detail)).to.equal(true);
+  expect(Object.isFrozen(preEvent!.detail.hiddenTypes)).to.equal(true);
+  expect(preEvent!.detail.hiddenTypes).to.deep.equal(['person']);
+  expect(preSawCurrentState).to.equal(true);
+  expect(postSawCommittedState).to.equal(true);
+  expect(postSawAnnouncement).to.equal(true);
+  expect(proposals).to.equal(1);
+  expect(commits).to.equal(1);
+  expect(el.hiddenTypes).to.deep.equal(['person']);
+
+  el.hiddenTypes = ['org'];
+  await el.updateComplete;
+  expect(proposals).to.equal(1);
+  expect(commits).to.equal(1);
+  expect(sinkTexts().length).to.equal(announcementsBefore + 1);
+  await expect(el).to.be.accessible();
+});
+
+it('lets only a canceled proposal veto the child mutation, announcement, and post event', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+  const announcementsBefore = sinkTexts().length;
+  let proposals = 0;
+  let commits = 0;
+  el.addEventListener('lr-before-visibility-change', (event) => {
+    proposals += 1;
+    event.preventDefault();
+  });
+  el.addEventListener('lr-visibility-change', () => commits += 1);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(proposals).to.equal(1);
+  expect(commits).to.equal(0);
+  expect(el.hiddenTypes).to.deep.equal([]);
+  expect(sinkTexts().length).to.equal(announcementsBefore);
+  expect(button.getAttribute('aria-pressed')).to.equal('true');
+});
+
+it('uses the same proposal and commit sequence for native pointer and keyboard activation', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+  const proposals: string[][] = [];
+  const commits: string[][] = [];
+  el.addEventListener('lr-before-visibility-change', (event) => {
+    proposals.push([...(event as CustomEvent<{ hiddenTypes: string[] }>).detail.hiddenTypes]);
+  });
+  el.addEventListener('lr-visibility-change', (event) => {
+    commits.push([...(event as CustomEvent<{ hiddenTypes: string[] }>).detail.hiddenTypes]);
+  });
+  try {
+    await resetMouse();
+    button.scrollIntoView({ block: 'center', inline: 'center' });
+    const rect = button.getBoundingClientRect();
+    await sendMouse({
+      type: 'click',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(() => el.hiddenTypes.join(',') === 'person', 'native pointer activation did not commit');
+
+    button.focus();
+    await sendKeys({ press: 'Enter' });
+    await waitUntil(() => el.hiddenTypes.length === 0, 'keyboard activation did not commit');
+  } finally {
+    await resetMouse();
+  }
+  expect(proposals).to.deep.equal([['person'], []]);
+  expect(commits).to.deep.equal([['person'], []]);
+});
+
 it('wires the Default story to visible hide and restore feedback', async () => {
   const { Default } = await import('./graph-legend.stories.js');
   const root = (await fixture(
@@ -155,6 +261,26 @@ it('wires the Default story to visible hide and restore feedback', async () => {
   first.click();
   await legend.updateComplete;
   expect(feedback.textContent?.trim()).to.equal('All types are visible.');
+});
+
+it('shows the controlled story vetoing first and accepting a later proposal', async () => {
+  const { ControlledVisibility } = await import('./graph-legend.stories.js');
+  const root = (await fixture(ControlledVisibility.render!({}, null as never))) as HTMLElement;
+  const legend = root.querySelector<LyraGraphLegend>('lr-graph-legend')!;
+  const allow = root.querySelector<HTMLInputElement>('[data-allow-visibility]')!;
+  const feedback = root.querySelector<HTMLElement>('[data-controlled-visibility-feedback]')!;
+  const first = legend.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+
+  first.click();
+  await legend.updateComplete;
+  expect(legend.hiddenTypes).to.deep.equal([]);
+  expect(feedback.textContent?.trim()).to.equal('Change vetoed before it was applied.');
+
+  allow.checked = true;
+  first.click();
+  await legend.updateComplete;
+  expect(legend.hiddenTypes).to.deep.equal(['person']);
+  expect(feedback.textContent?.trim()).to.equal('Accepted hidden types: person');
 });
 
 it('announces the toggle through the shared light-DOM region and keeps the shadow part inert', async () => {

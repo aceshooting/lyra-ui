@@ -4,6 +4,7 @@ import {
   expect,
   html,
   elementUpdated,
+  oneEvent,
   waitUntil,
 } from "@open-wc/testing";
 import "./slider.js";
@@ -1887,6 +1888,69 @@ it("sanitizes value and form submission synchronously when the range changes", a
   expect(new FormData(form).get("temperature")).to.equal("0");
 });
 
+it('uses one snap-then-final-clamp path for assignments, keyboard events, and later bounds', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-slider name="temperature" min="0" max="1" step="0.7" value="0"></lr-slider>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-slider') as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+
+  el.valueAsNumber = 1.1;
+  await elementUpdated(el);
+  expect(el.valueAsNumber).to.equal(1);
+  expect(new FormData(form).get('temperature')).to.equal('1');
+
+  el.valueAsNumber = 0.7;
+  await elementUpdated(el);
+  const input = oneEvent(el, 'lr-input');
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect((await input as CustomEvent<{ value: number }>).detail.value).to.equal(1);
+  expect(el.valueAsNumber).to.equal(1);
+
+  const change = oneEvent(el, 'lr-change');
+  thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+  expect((await change as CustomEvent<{ value: number }>).detail.value).to.equal(1);
+
+  el.max = 1.2;
+  await elementUpdated(el);
+  el.valueAsNumber = 1.1;
+  await elementUpdated(el);
+  expect(el.valueAsNumber).to.equal(1.2);
+  el.max = 1;
+  await elementUpdated(el);
+  expect(el.valueAsNumber).to.equal(1);
+});
+
+it('preserves the fractional low-end anchor through direct and keyboard slider updates', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-slider name="temperature" .min=${0.5} .max=${10} .step=${1} .valueAsNumber=${1.5}></lr-slider>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-slider') as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+
+  expect(el.valueAsNumber).to.equal(1.5);
+  expect(new FormData(form).get('temperature')).to.equal('1.5');
+  expect(thumb.getAttribute('aria-valuenow')).to.equal('1.5');
+
+  const input = oneEvent(el, 'lr-input');
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect((await input as CustomEvent<{ value: number }>).detail.value).to.equal(2.5);
+  expect(el.valueAsNumber).to.equal(2.5);
+  expect(new FormData(form).get('temperature')).to.equal('2.5');
+
+  el.min = 0.07;
+  el.max = 1;
+  el.step = 0.1;
+  el.valueAsNumber = 0.17;
+  await elementUpdated(el);
+  expect(el.valueAsNumber).to.equal(0.17);
+  expect(thumb.getAttribute('aria-valuenow')).to.equal('0.17');
+});
+
 it("rounds exponential step values without collapsing them to zero", async () => {
   const el = (await fixture(
     html`<lr-slider min="0" max="1" value="0" step="1e-7"></lr-slider>`
@@ -1899,15 +1963,9 @@ it("rounds exponential step values without collapsing them to zero", async () =>
   expect(el.value).to.equal(1e-7);
 });
 
-it("falls back to the unrounded stepped candidate when its own rounding precision factor would overflow", async () => {
-  // clampValue()'s step-rounding path multiplies the stepped candidate by
-  // 10**decimalPlaces(step) to round back to the step's own decimal
-  // precision. With a huge domain and a step whose decimal-place count
-  // implies a much finer precision than the step's own magnitude
-  // (5e-15 -> 15 decimal places -> a 1e15 factor), that multiplication can
-  // itself overflow to Infinity even though the candidate value is a
-  // perfectly ordinary finite number -- the guard must fall back to the
-  // unrounded candidate instead of poisoning the value with Infinity/NaN.
+it("retains a huge finite value when a tiny step grid cannot be represented", async () => {
+  // A 5e-15 grid cannot be represented reliably across this 1e300 domain.
+  // The finite value must remain usable rather than becoming Infinity or NaN.
   const form = (await fixture(html`
     <form>
       <lr-slider name="huge" min="0" max="1e300" step="5e-15"></lr-slider>

@@ -43,4 +43,11 @@ describe('bounded model-viewer search work', () => {
     expect(budget.complete).to.be.false;
     expect(budget.exhausted).to.be.true;
   });
+
+  it('can reject one oversized field without spending a later sibling\'s admission budget', () => {
+    const budget = new ViewerSearchWorkBudget(2);
+    expect(budget.canConsume('abc')).to.be.false;
+    expect(budget.consume('x')).to.be.true;
+    expect(budget.consume('y')).to.be.true;
+  });
 });

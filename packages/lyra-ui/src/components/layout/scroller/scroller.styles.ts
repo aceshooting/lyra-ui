@@ -130,6 +130,7 @@ export const styles = css`
        interactive box still meets the shared minimum target -- the small-glyph, padded-hit-box
        pattern of lr-code-block's and lr-json-viewer's [part='toggle']. Covers previous and next,
        which share this part. */
+    font: inherit;
     display: inline-grid;
     place-items: center;
     inline-size: var(--lr-scroller-control-size, var(--lr-size-2rem));

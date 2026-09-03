@@ -3,7 +3,7 @@ import './calendar.js';
 import type { LyraCalendar } from './calendar.js';
 import { formatISO } from '../../forms/date-picker/calendar-core.js';
 import { sendKeys } from '@web/test-runner-commands';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 /**
  * Resolve a design token in the same scope `calendar.styles.ts` reads it from -- the calendar host,
@@ -51,6 +51,100 @@ it('keeps rendering the month grid when every event row is malformed', async () 
 
   expect(el.shadowRoot!.querySelectorAll('[part~="day"]')).to.have.lengthOf(42);
   expect(el.shadowRoot!.querySelectorAll('[part~="event"]')).to.have.lengthOf(0);
+});
+
+it('projects calendar event fields once from own data descriptors while retaining event identity', async () => {
+  const target = {
+    date: '2026-07-15',
+    title: 'Safe event',
+    color: 'rgb(12, 34, 56)',
+    data: { opaque: true },
+  };
+  let descriptorReads = 0;
+  const source = new Proxy(target, {
+    get(): never {
+      throw new Error('the event source must remain opaque after projection');
+    },
+    getOwnPropertyDescriptor(value, key): PropertyDescriptor | undefined {
+      descriptorReads += 1;
+      return Reflect.getOwnPropertyDescriptor(value, key);
+    },
+  });
+  const unsafe = Object.defineProperty({}, 'date', {
+    enumerable: true,
+    get(): never {
+      throw new Error('unsafe event accessor');
+    },
+  });
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01"></lr-calendar>`,
+  )) as LyraCalendar;
+
+  el.events = [unsafe, source] as unknown as typeof el.events;
+  await el.updateComplete;
+  const marker = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="event"]')!;
+  expect(marker.textContent?.trim()).to.equal('Safe event');
+  expect(descriptorReads, 'only date, title, and color are projected').to.equal(3);
+
+  target.title = 'Mutated after assignment';
+  el.value = '2026-07-15';
+  await el.updateComplete;
+  const retainedMarker = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="event"]')!;
+  expect(retainedMarker.textContent?.trim()).to.equal('Safe event');
+
+  const selected = oneEvent(el, 'lr-event-select');
+  retainedMarker.click();
+  expect((await selected).detail.event).to.equal(source);
+});
+
+it('omits a revoked event proxy while retaining a later valid event and its source identity', async () => {
+  const { proxy: revoked, revoke } = Proxy.revocable(
+    { date: '2026-07-15', title: 'Revoked event' },
+    {},
+  );
+  revoke();
+  const source = { date: '2026-07-15', title: 'Safe event' };
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01"></lr-calendar>`,
+  )) as LyraCalendar;
+
+  el.events = [revoked, source] as unknown as typeof el.events;
+  await el.updateComplete;
+
+  const marker = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="event"]')!;
+  expect(marker.textContent?.trim()).to.equal('Safe event');
+  const selected = oneEvent(el, 'lr-event-select');
+  marker.click();
+  expect((await selected).detail.event).to.equal(source);
+});
+
+it('accepts finite number and branded Date event dates without invoking overridden Date methods', async () => {
+  const guarded = new Date(2026, 6, 15);
+  Object.defineProperty(guarded, 'getTime', {
+    configurable: true,
+    get(): never {
+      throw new Error('calendar must use the native Date slot');
+    },
+  });
+  const numeric = new Date(2026, 6, 16).getTime();
+  const structural = { getTime: () => new Date(2026, 6, 17).getTime() };
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01"></lr-calendar>`,
+  )) as LyraCalendar;
+
+  el.events = [
+    { date: guarded, title: 'Branded date' },
+    { date: numeric, title: 'Epoch number' },
+    { date: structural, title: 'Structural impostor' },
+  ] as unknown as typeof el.events;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part~="event"]')).to.have.lengthOf(2);
+  expect(
+    Array.from(el.shadowRoot!.querySelectorAll('[part~="event"]')).map((event) =>
+      event.textContent?.trim(),
+    ),
+  ).to.deep.equal(['Branded date', 'Epoch number']);
 });
 
 it('keeps exactly one focusable day after navigating the view away from any anchor date', async () => {
@@ -156,6 +250,86 @@ it('renders hover and keyboard focus-visible treatment on nav, day, and agenda-e
       return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(4, 5, 6)';
     }, `${target.getAttribute('part')} never painted its keyboard focus ring`);
   }
+});
+
+it('keeps calendar nav, day, and agenda hover and active paint hooks independent', async () => {
+  const month = (await fixture(html`
+    <lr-calendar
+      view-date="2026-07-01"
+      style="
+        --lr-calendar-nav-hover-bg: rgb(1, 2, 3);
+        --lr-calendar-nav-active-bg: rgb(4, 5, 6);
+        --lr-calendar-day-hover-bg: rgb(7, 8, 9);
+        --lr-calendar-day-active-bg: rgb(10, 11, 12);
+      "
+    ></lr-calendar>
+  `)) as LyraCalendar;
+  const agenda = (await fixture(html`
+    <lr-calendar
+      view="agenda"
+      view-date="2026-07-01"
+      style="
+        --lr-calendar-agenda-event-hover-bg: rgb(13, 14, 15);
+        --lr-calendar-agenda-event-active-bg: rgb(16, 17, 18);
+      "
+      .events=${[{ date: '2026-07-15', title: 'Standup' }]}
+    ></lr-calendar>
+  `)) as LyraCalendar;
+  const targets: Array<{
+    target: HTMLElement;
+    hover: string;
+    active: string;
+  }> = [
+    {
+      target: month.shadowRoot!.querySelector<HTMLElement>('button[part~="nav"]')!,
+      hover: 'rgb(1, 2, 3)',
+      active: 'rgb(4, 5, 6)',
+    },
+    {
+      target: month.shadowRoot!.querySelector<HTMLElement>('[data-date="2026-07-15"]')!,
+      hover: 'rgb(7, 8, 9)',
+      active: 'rgb(10, 11, 12)',
+    },
+    {
+      target: agenda.shadowRoot!.querySelector<HTMLElement>('[part="agenda-event"]')!,
+      hover: 'rgb(13, 14, 15)',
+      active: 'rgb(16, 17, 18)',
+    },
+  ];
+
+  for (const { target, hover, active } of targets) {
+    try {
+      await hoverUntilMatched(
+        target,
+        `${target.getAttribute('part')} did not receive its hover pointer`,
+      );
+      await waitUntil(
+        () => getComputedStyle(target).backgroundColor === hover,
+        `${target.getAttribute('part')} did not apply its hover hook`,
+      );
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(target).backgroundColor === active,
+        `${target.getAttribute('part')} did not apply its active hook`,
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  }
+});
+
+it('inherits the calendar nav and day control font while its nav glyph stays one em', async () => {
+  const el = (await fixture(html`
+    <lr-calendar view-date="2026-07-01" style="font-size: 20px"></lr-calendar>
+  `)) as LyraCalendar;
+  const nav = el.shadowRoot!.querySelector<HTMLElement>('button[part~="nav"]')!;
+  const day = el.shadowRoot!.querySelector<HTMLElement>('[part="day"]')!;
+  const glyph = nav.querySelector<HTMLElement>('[part="nav-glyph"]')!;
+
+  expect(getComputedStyle(nav).fontSize).to.equal('20px');
+  expect(getComputedStyle(day).fontSize).to.equal('20px');
+  expect(getComputedStyle(glyph).fontSize).to.equal('20px');
 });
 
 // Regression test: [part='day'][data-selected='true'] used to be declared AFTER the

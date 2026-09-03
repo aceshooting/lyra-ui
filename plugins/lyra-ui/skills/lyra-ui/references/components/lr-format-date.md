@@ -39,6 +39,8 @@ granular fields are then ignored entirely (`Intl` throws when the two are mixed)
 to use the granular set. An unparseable `date` renders the default slot. An invalid
 `timeZone` throws a `RangeError` inside `Intl`, which is caught and retried once without the zone —
 so the output falls back to the browser's local zone instead of failing to render. Valid output is
-wrapped in semantic `<time datetime="…">`.
+wrapped in semantic `<time datetime="…">`. Date input accepts primitive strings/numbers or a
+genuine `Date`; arbitrary objects are rejected without calling their `valueOf()`, `toString()`, or
+other conversion hooks.
 
 **Slots:** default — fallback content for an invalid/unparseable `date`.

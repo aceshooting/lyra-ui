@@ -9,10 +9,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+node scripts/check-node-version.mjs
+
 if ! command -v pnpm >/dev/null 2>&1; then
   echo "Error: pnpm is required to upgrade workspace dependencies." >&2
   exit 1
 fi
+
+# Keep the reviewed consumer peer floors independent from the development ranges that this script
+# updates. The private snapshot is removed on every exit path and is checked after the peer pass.
+peer_manifest_before="$(mktemp "${TMPDIR:-/tmp}/lyra-ui-peer-manifest.XXXXXX")"
+trap 'rm -f "$peer_manifest_before"' EXIT
+cp packages/lyra-ui/package.json "$peer_manifest_before"
 
 echo "==> Upgrading dependencies in the workspace root and all workspace packages"
 pnpm dlx npm-check-updates@latest \
@@ -29,16 +37,28 @@ pnpm dlx npm-check-updates@latest \
   --workspaces \
   --root \
   --dep peer \
-  --reject libphonenumber-js,maplibre-gl \
+  --reject @sgratzl/chartjs-chart-boxplot,chart.js,chartjs-plugin-annotation,chartjs-plugin-datalabels,chartjs-plugin-zoom,dompurify,katex,mammoth,marked,pdfjs-dist,libphonenumber-js,maplibre-gl \
   --target latest \
   --install never \
   --upgrade
+
+echo
+echo "==> Verifying authority-managed peer floors"
+node scripts/check-peer-compatibility.mjs --check-managed-peer-rewrites "$peer_manifest_before"
+
+echo
+echo "==> Synchronizing package-manager documentation"
+node scripts/sync-package-manager-docs.mjs --write
 
 echo
 echo "==> Installing workspace dependencies and refreshing pnpm-lock.yaml"
 # npm-check-updates has just changed the workspace manifests, so override pnpm's CI default of a
 # frozen lockfile and persist the upgraded dependency graph before building generated artifacts.
 pnpm install --prod=false --no-frozen-lockfile
+
+echo
+echo "==> Synchronizing peer-compatibility current versions"
+node scripts/check-peer-compatibility.mjs --write-current-versions
 
 echo
 echo "==> Building all workspace packages"

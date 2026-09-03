@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 38 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 38 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -388,6 +388,10 @@ and `dateTimeFormat(locale, options)`.
   currently-selected paint for a `presets` quick-range button. Defaults are
   `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
   `var(--lr-color-brand)` respectively.
+- `--lr-date-picker-preset-selected-border` (default `var(--lr-color-brand)`) and
+  `--lr-date-picker-preset-selected-color` (default `var(--lr-color-on-brand)`) independently
+  theme a selected preset's border and foreground; the selected background token controls only its
+  background.
 - `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`,
   `--lr-date-picker-title-active-bg`, and `--lr-date-picker-title-active-radius` — Month-title
   hover/press paint and pressed shape; defaults to brand, brand, brand-quiet, and

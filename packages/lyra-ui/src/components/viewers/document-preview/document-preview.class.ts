@@ -24,9 +24,18 @@ import type {
 import {
   sanitizeCssLength,
   sanitizePercentRect,
+  type SafePercentRect,
 } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
-import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
+import {
+  snapshotLyraHighlightAnchorKind,
+  snapshotLyraHighlights,
+} from '../../../internal/highlight-collection.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_convertingDocument, LYRA_DEFAULT_documentPreviewAlt, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewNotAvailable, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -61,8 +70,61 @@ function classifyFormat(mimeType: string): PreviewFormat {
   return 'generic';
 }
 
-function sameRegionAnchor(a: LyraAnchor, b: LyraAnchor): boolean {
-  if (a.kind !== 'region' || b.kind !== 'region') return false;
+interface ProjectedRegionAnchor {
+  readonly page?: number;
+  readonly rect: SafePercentRect;
+}
+
+interface ProjectedRegionHighlight {
+  readonly id: string;
+  readonly label?: string;
+  readonly tone?: LyraHighlight['tone'];
+  readonly anchor: ProjectedRegionAnchor;
+}
+
+const EMPTY_REGION_HIGHLIGHTS: readonly ProjectedRegionHighlight[] = Object.freeze([]);
+
+/** Projects only the safe geometry a region renderer needs; the original anchor stays opaque. */
+function projectRegionAnchor(
+  value: unknown,
+  knownRegionKind = false,
+): ProjectedRegionAnchor | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    if (!knownRegionKind) {
+      const kind = getOwnDataDescriptor(value, 'kind');
+      if (
+        kind === MISSING_OWN_DATA_DESCRIPTOR ||
+        kind === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        kind.value !== 'region'
+      )
+        return undefined;
+    }
+    const rectDescriptor = getOwnDataDescriptor(value, 'rect');
+    if (
+      rectDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      rectDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      return undefined;
+    const rect = sanitizePercentRect(rectDescriptor.value);
+    if (!rect) return undefined;
+
+    const pageDescriptor = getOwnDataDescriptor(value, 'page');
+    const page =
+      pageDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      pageDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : pageDescriptor.value;
+    return Object.freeze({
+      rect,
+      ...(typeof page === 'number' && Number.isFinite(page) ? { page } : {}),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function sameRegionAnchor(a: ProjectedRegionAnchor, b: ProjectedRegionAnchor): boolean {
   return (
     a.page === b.page &&
     a.rect.x === b.rect.x &&
@@ -198,6 +260,8 @@ export interface LyraDocumentPreviewEventMap {
  * @csspart region-highlight-action - One action in the non-overlapping highlight action list.
  * @cssprop [--lr-document-preview-max-height=none] - Maximum body block size before the preview scrolls internally.
  * @cssprop [--lr-document-preview-font=var(--lr-font-mono)] - Font used for plain-text previews.
+ * @cssprop [--lr-document-preview-download-link-hover-bg=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Hover background of the generic download link.
+ * @cssprop [--lr-document-preview-download-link-active-bg=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of the generic download link.
  * @cssprop [--lr-document-preview-spin-duration=var(--lr-transition-ambient)] - Timing of one
  *   indeterminate loading-indicator rotation.
  * @cssprop [--lr-document-preview-progress=0] - Unitless 0-100 completion of the determinate
@@ -286,6 +350,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   @property({ attribute: false }) suppressDownload = false;
 
   private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
+  private _regionHighlights: readonly ProjectedRegionHighlight[] = EMPTY_REGION_HIGHLIGHTS;
   /** Display-only region highlights over the image-format preview (see the class doc's format-
    * dispatch scope -- text/generic formats never render these). IDs are trimmed and must be
    * nonempty; the first record for an ID is retained and blank or later duplicates are ignored. */
@@ -294,6 +359,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   set highlights(value: readonly LyraHighlight[]) {
     const previous = this._highlights;
     this._highlights = snapshotLyraHighlights(value);
+    this._regionHighlights = this.projectRegionHighlights(this._highlights);
     this.requestUpdate('highlights', previous);
   }
   @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
@@ -557,32 +623,30 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     return html`${frame}${this.renderHighlightActions(regionHighlights)}`;
   }
 
-  private regionHighlights(): Array<
-    LyraHighlight & {
-      anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } };
+  private projectRegionHighlights(
+    highlights: readonly LyraHighlight[],
+  ): readonly ProjectedRegionHighlight[] {
+    const regions: ProjectedRegionHighlight[] = [];
+    for (const highlight of highlights) {
+      if (snapshotLyraHighlightAnchorKind(highlight) !== 'region') continue;
+      const anchor = projectRegionAnchor(highlight.anchor, true);
+      if (!anchor) continue;
+      regions.push(Object.freeze({
+        id: highlight.id,
+        ...(typeof highlight.label === 'string' ? { label: highlight.label } : {}),
+        ...(highlight.tone === undefined ? {} : { tone: highlight.tone }),
+        anchor,
+      }));
     }
-  > {
-    return this.highlights.flatMap((highlight) => {
-      if (highlight.anchor.kind !== 'region') return [];
-      const rect = sanitizePercentRect(highlight.anchor.rect);
-      return rect
-        ? [
-            {
-              ...highlight,
-              anchor: { ...highlight.anchor, rect },
-            } as LyraHighlight & {
-              anchor: {
-                kind: 'region';
-                rect: { x: number; y: number; width: number; height: number };
-              };
-            },
-          ]
-        : [];
-    });
+    return Object.freeze(regions);
+  }
+
+  private regionHighlights(): readonly ProjectedRegionHighlight[] {
+    return this._regionHighlights;
   }
 
   private highlightActionLabel(
-    highlight: LyraHighlight,
+    highlight: ProjectedRegionHighlight,
     index: number,
     total: number,
   ): string {
@@ -597,7 +661,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   private renderHighlightLayer(
-    regionHighlights: ReturnType<LyraDocumentPreview['regionHighlights']>,
+    regionHighlights: readonly ProjectedRegionHighlight[],
     interactive: boolean,
   ): TemplateResult | typeof nothing {
     if (!regionHighlights.length) return nothing;
@@ -640,7 +704,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   private renderHighlightActions(
-    regionHighlights: ReturnType<LyraDocumentPreview['regionHighlights']>,
+    regionHighlights: readonly ProjectedRegionHighlight[],
   ): TemplateResult | typeof nothing {
     if (regionHighlights.length < 2) return nothing;
     return html`<div part="highlight-actions">
@@ -664,21 +728,32 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   /** Scrolls a `region` highlight into view (image format only). See `<lr-svg-viewer>`'s
    *  identical method for the id/anchor-reference resolution and no-retry-loop rationale. */
   async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
-    const highlight =
-      typeof target === 'string'
-        ? this.highlights.find((h) => h.id === target)
-        : this.highlights.find((h) => h.anchor === target || sameRegionAnchor(h.anchor, target));
-    const anchor = highlight?.anchor;
+    let region: ProjectedRegionHighlight | undefined;
+    if (typeof target === 'string') {
+      region = this._regionHighlights.find((highlight) => highlight.id === target);
+    } else {
+      const directHighlight = this.highlights.find((highlight) => highlight.anchor === target);
+      if (directHighlight) {
+        region = this._regionHighlights.find((highlight) => highlight.id === directHighlight.id);
+      } else {
+        const targetRegion = projectRegionAnchor(target);
+        if (targetRegion) {
+          region = this._regionHighlights.find((highlight) =>
+            sameRegionAnchor(highlight.anchor, targetRegion),
+          );
+        }
+      }
+    }
     const ready = classifyFormat(this.mimeType) === 'image' && safeMediaSrc(this.src) !== null;
-    if (!highlight || !anchor || anchor.kind !== 'region' || !ready) return false;
+    if (!region || !ready) return false;
     await this.updateComplete;
     // A constant selector plus exact comparison works in partial/adopted DOM realms without
     // depending on the ambient `CSS.escape`, and accepts ids containing selector punctuation.
-    const region = [...this.renderRoot.querySelectorAll('[part~="region-highlight"][data-id]')]
-      .find((candidate) => candidate.getAttribute('data-id') === highlight.id);
-    if (!region) return false;
+    const regionElement = [...this.renderRoot.querySelectorAll('[part~="region-highlight"][data-id]')]
+      .find((candidate) => candidate.getAttribute('data-id') === region.id);
+    if (!regionElement) return false;
     const behavior = prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth';
-    region.scrollIntoView({ behavior, block: 'center', inline: 'center' });
+    regionElement.scrollIntoView({ behavior, block: 'center', inline: 'center' });
     return true;
   }
 

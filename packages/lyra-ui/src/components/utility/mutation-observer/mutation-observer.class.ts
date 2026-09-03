@@ -4,6 +4,42 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './mutation-observer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
+
+const MAX_OBSERVER_ATTRIBUTE_FILTERS = 10_000;
+
+function normalizedAttributeFilter(value: unknown): readonly string[] {
+  try {
+    if (!Array.isArray(value)) return Object.freeze([]);
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return Object.freeze([]);
+    const values: string[] = [];
+    for (let index = 0; index < Math.min(length.value, MAX_OBSERVER_ATTRIBUTE_FILTERS); index += 1) {
+      const entry = getOwnDataDescriptor(value, String(index));
+      if (
+        entry === MISSING_OWN_DATA_DESCRIPTOR ||
+        entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof entry.value !== 'string'
+      )
+        continue;
+      values.push(entry.value);
+    }
+    return Object.freeze(values);
+  } catch {
+    return Object.freeze([]);
+  }
+}
 
 export interface LyraMutationObserverEventMap {
   'lr-mutation': CustomEvent<
@@ -116,33 +152,64 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
 
   private disconnect(): void {
     this.observerGeneration += 1;
-    this.observer = disconnectObserver(this.observer);
+    const observer = this.observer;
+    // Clear the ownership fields before crossing a consumer-controlled observer boundary. A
+    // malformed implementation can throw while resolving or invoking disconnect(), but it must
+    // not retain a current observer through a later rebuild or reconnect.
+    this.observer = undefined;
     this.observerDocument = undefined;
+    try {
+      disconnectObserver(observer);
+    } catch {
+      // Observer implementations are optional capabilities; teardown failures fail closed.
+    }
   }
 
   private observeTargets = (): void => {
     this.disconnect();
     const ownerDocument = this.ownerDocument;
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (this.disabled || !this.isConnected || !MutationObserverCtor) return;
-    const targets = slottedElementTargets(this.renderRoot);
-    const attr = this.attr?.trim() ?? null;
+    let MutationObserverCtor: typeof MutationObserver | undefined;
+    try {
+      MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    } catch {
+      // A configurable owner-window capability getter is also part of the optional boundary.
+      return;
+    }
+    const disabled = this.disabled === true;
+    const childList = this.childList === true;
+    const attrValue = this.attr;
+    const attr = typeof attrValue === 'string' ? attrValue.trim() : null;
     const attrTokens = (attr ?? '').split(/\s+/).filter(Boolean);
     const mappedAttributes = attr === '*' || attrTokens.length > 0;
+    const attrOldValue = this.attrOldValue === true;
+    const charData = this.charData === true;
+    const charDataOldValue = this.charDataOldValue === true;
+    const observeAttributes = this.observeAttributes === true;
+    const characterData = this.characterData === true;
+    const subtree = this.subtree === true;
+    const attributeFilter = attr === null ? normalizedAttributeFilter(this.attributeFilter) : Object.freeze([]);
     const observesAttributes =
-      mappedAttributes || this.attrOldValue || this.observeAttributes || this.attributeFilter.length > 0;
-    const observesCharacterData = this.charData || this.charDataOldValue || this.characterData;
-    if (targets.length === 0 || (!this.childList && !observesAttributes && !observesCharacterData)) return;
+      mappedAttributes || attrOldValue || observeAttributes || attributeFilter.length > 0;
+    const observesCharacterData = charData || charDataOldValue || characterData;
+    if (disabled || !this.isConnected || !MutationObserverCtor) return;
+    let targets: Element[];
+    try {
+      targets = slottedElementTargets(this.renderRoot);
+    } catch {
+      return;
+    }
+    if (targets.length === 0 || (!childList && !observesAttributes && !observesCharacterData)) return;
     const options: MutationObserverInit = {
-      childList: this.childList,
+      childList,
       attributes: observesAttributes,
       characterData: observesCharacterData,
-      subtree: this.subtree,
+      subtree,
     };
-    const attributeFilter = attr === null ? this.attributeFilter : attr === '*' ? [] : attrTokens;
-    if (attributeFilter.length > 0) options.attributeFilter = attributeFilter;
-    if (this.attrOldValue && observesAttributes) options.attributeOldValue = true;
-    if (this.charDataOldValue && observesCharacterData) options.characterDataOldValue = true;
+    const mappedFilter = attr === '*' ? Object.freeze([]) : Object.freeze(attrTokens);
+    const effectiveFilter = attr === null ? attributeFilter : mappedFilter;
+    if (effectiveFilter.length > 0) options.attributeFilter = [...effectiveFilter];
+    if (attrOldValue && observesAttributes) options.attributeOldValue = true;
+    if (charDataOldValue && observesCharacterData) options.characterDataOldValue = true;
     // One shared observer across every slotted target (mirrors <lr-intersection-observer>'s and
     // <lr-resize-observer>'s identical single-instance pattern) rather than one instance per
     // target -- MutationObserver natively supports observing multiple nodes and batches every
@@ -150,22 +217,41 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     // mutated synchronously in the same script produce one coalesced `lr-mutation` event instead
     // of one per target.
     const generation = this.observerGeneration;
-    const observer = new MutationObserverCtor((records) => {
-      if (
-        this.observer !== observer ||
-        this.observerDocument !== ownerDocument ||
-        this.observerGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      const mutationList = Object.freeze([...records]);
-      this.emit('lr-mutation', { records: mutationList, mutationList });
-    });
+    let observer: MutationObserver;
+    try {
+      observer = new MutationObserverCtor((records) => {
+        if (
+          this.observer !== observer ||
+          this.observerDocument !== ownerDocument ||
+          this.observerGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument
+        ) {
+          return;
+        }
+        let mutationList: readonly MutationRecord[];
+        try {
+          mutationList = Object.freeze([...records]);
+        } catch {
+          return;
+        }
+        this.emit('lr-mutation', { records: mutationList, mutationList });
+      });
+    } catch {
+      return;
+    }
     this.observer = observer;
     this.observerDocument = ownerDocument;
-    for (const target of targets) observer.observe(target, options);
+    let observed = false;
+    for (const target of targets) {
+      try {
+        observer.observe(target, options);
+        observed = true;
+      } catch {
+        // A rejected target cannot prevent a valid later slotted sibling from observing.
+      }
+    }
+    if (!observed) this.disconnect();
   };
 
   override render(): TemplateResult {

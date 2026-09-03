@@ -35,7 +35,7 @@ export const styles = [
     [part='interim-area'] {
       margin-block-start: var(--lr-space-xs);
     }
-    [part='entry'] {
+    [part~='entry'] {
       display: flex;
       flex-wrap: wrap;
       min-inline-size: 0;
@@ -55,12 +55,12 @@ export const styles = [
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      [part='entry'] {
+      [part~='entry'] {
         animation: none !important;
       }
     }
-    [part='entry'][data-interim] {
-      opacity: var(--lr-opacity-disabled);
+    [part~='entry'][data-interim] {
+      color: var(--lr-color-text-quiet);
       font-style: italic;
     }
     [part='speaker'] {
@@ -88,6 +88,7 @@ export const styles = [
       text-align: center;
     }
     [part='jump-button'] {
+      font: inherit;
       position: absolute;
       inset-block-end: var(--lr-space-s);
       inset-inline-end: var(--lr-space-s);

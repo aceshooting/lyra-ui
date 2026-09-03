@@ -8,7 +8,7 @@ import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger, finiteRatio } from '../../../internal/numbers.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
-import { getCollator } from '../../../internal/intl-cache.js';
+import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -20,9 +20,10 @@ import {
 } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -59,6 +60,8 @@ const DEFAULT_RESIZE_MIN_WIDTH_PX = 48; // used when --lr-table-resize-min-width
 /** An omitted ARIA maximum defaults to 100 for `role="separator"`. Represent an author-unbounded
  * CSS maximum with the largest exact finite integer so wider pixel values stay truthful. */
 const UNBOUNDED_RESIZE_ARIA_MAX = Number.MAX_SAFE_INTEGER;
+const MISSING_CELL_RENDERER_WARNING = 'lyra-table-missing-cell-renderer';
+const MISSING_ACCESSIBLE_NAME_WARNING = 'lyra-table-missing-accessible-name';
 
 function frozenArray<Value>(values: Iterable<Value>): readonly Value[] {
   const snapshot: Value[] = [];
@@ -161,29 +164,6 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
     return value ? '' : 'false';
   },
 };
-
-/**
- * Development-only diagnostics need to disappear from production bundles and unbundled browser
- * use. Prefer an explicit NODE_ENV when a bundler exposes one, then Vite's import-meta contract;
- * an unknown environment fails quiet instead of logging to end users.
- */
-function isDevelopmentRuntime(): boolean {
-  const nodeEnv = (
-    globalThis as typeof globalThis & {
-      process?: { env?: { NODE_ENV?: unknown } };
-    }
-  ).process?.env?.NODE_ENV;
-  if (nodeEnv === 'production') return false;
-  if (nodeEnv === 'development') return true;
-
-  const viteEnv = (
-    import.meta as ImportMeta & {
-      readonly env?: { readonly DEV?: unknown; readonly MODE?: unknown };
-    }
-  ).env;
-  if (typeof viteEnv?.DEV === 'boolean') return viteEnv.DEV;
-  return viteEnv?.MODE === 'development';
-}
 
 /** Which inline-start/inline-end edge a column aligns or sticks to. */
 export type TableEdgeAlign = 'start' | 'end';
@@ -646,7 +626,9 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart caption - The `<caption>` element, rendered only when `caption` is set.
  * @csspart head - The `<thead>` element.
  * @csspart header-cell - Each `<th>` header cell.
- * @csspart resize-handle - The focusable separator used to resize a `resizable` column.
+ * @csspart resize-handle - The focusable separator used to resize a `resizable` column. Its
+ *   numeric ARIA range remains in CSS pixels while `aria-valuetext` reports the current value
+ *   through the effective locale.
  * @csspart row - Each body `<tr>`.
  * @csspart cell - Each body `<td>`.
  * @csspart row-total-cell - Each body row's trailing `<td>` holding `rowTotal(row)`, rendered only
@@ -665,8 +647,8 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart expand-toggle-cell - Each row's (and the header's) leading
  *   chevron-toggle cell, rendered only when `expandedContent` is set.
  * @csspart row-expand-toggle - The `<button>` inside `expand-toggle-cell`,
- *   absent for a row that fails `canExpand`.
- * @csspart row-expand-icon - The chevron icon inside `row-expand-toggle`.
+ *   absent for a row that fails `canExpand`; it inherits the table's typography.
+ * @csspart row-expand-icon - The 1em chevron icon inside `row-expand-toggle`.
  * @csspart expanded-row - The full-width panel `<tr>` rendered beneath a
  *   row whose key is in `expandedRowKeys`.
  * @csspart expanded-cell - The single `colspan`-spanning `<td>` inside
@@ -760,6 +742,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     open: LYRA_DEFAULT_open,
     popover: LYRA_DEFAULT_popover,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
+    resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
@@ -1189,6 +1172,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return rendered && rendered > 0 ? rendered : this.minimumResizeWidth(column);
   }
 
+  private resizeValueText(width: number): string {
+    return this.localize('resizeValuePixels', undefined, {
+      value: getNumberFormat(this.effectiveLocale).format(Math.round(width)),
+    });
+  }
+
   private resizeColumnTo(column: TableColumn<T>, requestedWidth: number): void {
     const minWidth = this.minimumResizeWidth(column);
     const maxWidth = this.maximumResizeWidth(column, minWidth);
@@ -1283,6 +1272,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (!column.resizable) return nothing;
     const minWidth = this.minimumResizeWidth(column);
     const maxWidth = this.maximumResizeWidth(column, minWidth);
+    const width = this.currentResizeWidth(column);
     return html`<span
       part="resize-handle"
       data-col-key=${column.key}
@@ -1291,7 +1281,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       aria-orientation="vertical"
       aria-label=${this.localize('resizeColumn', undefined, { label: column.label })}
       aria-valuemin=${Math.round(minWidth)}
-      aria-valuenow=${Math.round(this.currentResizeWidth(column))}
+      aria-valuenow=${Math.round(width)}
+      aria-valuetext=${this.resizeValueText(width)}
       aria-valuemax=${Number.isFinite(maxWidth) ? Math.round(maxWidth) : UNBOUNDED_RESIZE_ARIA_MAX}
       @pointerdown=${this.onResizePointerDown}
       @keydown=${this.onResizeKeyDown}
@@ -1307,7 +1298,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         continue;
       }
       const rendered = handle.closest('th[data-col-key]')?.getBoundingClientRect().width;
-      if (rendered && rendered > 0) handle.setAttribute('aria-valuenow', String(Math.round(rendered)));
+      if (rendered && rendered > 0) {
+        const width = Math.round(rendered);
+        handle.setAttribute('aria-valuenow', String(width));
+        handle.setAttribute('aria-valuetext', this.resizeValueText(width));
+      }
     }
   }
 
@@ -1407,10 +1402,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    // A grid with no accessible name is a real a11y defect but silently renders. Warn once per
-    // element (dev signal; the guard keeps it out of hot render paths and prevents log spam).
-    if (isDevelopmentRuntime() && !this.accessibleLabel && !this.hasAttribute('aria-label') && !this.caption) {
-      console.warn(
+    // A grid with no accessible name is a real a11y defect but silently renders. The shared
+    // development diagnostic is page-bounded and production-silent.
+    if (!this.accessibleLabel && !this.hasAttribute('aria-label') && !this.caption) {
+      devWarnOnce(
+        MISSING_ACCESSIBLE_NAME_WARNING,
         '<lr-table> has no accessible name: set `accessibleLabel`, a host `aria-label`, or ' +
           '`caption` so assistive technology can identify the grid.'
       );
@@ -2549,36 +2545,24 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *
    *  No `tabindex` on either: a persistent editor is a plain tab stop, exactly like the row-expand
    *  toggle rendered a few lines above, and stays outside the header/row roving model. */
-  /** Column keys already reported by `renderCellValue()`, so a 400-row table logs once, not 400
-   *  times, for the same authoring mistake. */
-  private readonly reportedMissingCellColumns = new Set<string>();
-
   /**
    * Renders one cell, tolerating a column that omits its required `cell` renderer.
    *
    * `TableColumn.cell` is typed and documented required, but columns arrive through a lit
    * `.columns=${[...]}` property binding, and lit-html property bindings are not type-checked by
    * `tsc` -- only by lit-analyzer, which many projects do not run. So required-ness is unenforced
-   * where it is actually written. Calling it unguarded meant a single malformed column threw out of
-   * lit's `repeat` directive and took the WHOLE table down, with a stack carrying only lyra and
-   * lit-html frames: no application frame, no column key, no table identity. One report described
-   * carrying it undiagnosed across two releases as 16 unattributed unhandled rejections, while the
-   * suite still passed because its assertions were on surrounding markup.
+   * where it is actually written. Calling it unguarded would make a malformed column interrupt the
+   * table render.
    *
-   * So: degrade to an empty cell -- the rest of the table stays usable -- and report once per
-   * column, naming the key and the tag, because attribution was the harder half of that bug.
+   * Degrade to an empty cell so the rest of the table stays usable, and emit one fixed
+   * development-only diagnostic for the page without retaining or reporting caller data.
    */
   private renderCellValue(col: TableColumn<T>, row: T): unknown {
     if (typeof col.cell === 'function') return col.cell(row);
-    const key = String(col.key ?? '(unkeyed)');
-    if (!this.reportedMissingCellColumns.has(key)) {
-      this.reportedMissingCellColumns.add(key);
-      console.error(
-        `<lr-table>: column ${JSON.stringify(key)} has no \`cell\` renderer, so its cells `
-          + 'render empty. `cell` is required, but a lit `.columns=${...}` binding is not '
-          + 'type-checked, so this cannot be caught by tsc alone.',
-      );
-    }
+    devWarnOnce(
+      MISSING_CELL_RENDERER_WARNING,
+      '<lr-table>: a column has no required `cell` renderer, so its cells render empty. Supply a `cell` callback for every column.',
+    );
     return nothing;
   }
 

@@ -24,7 +24,7 @@ export const viewerLoadingStyles = css`
     border: var(--lr-border-width-thick) solid var(--lr-color-border);
     border-block-start-color: var(--lr-color-brand);
     border-radius: 50%;
-    animation: lr-viewer-loading-spin var(--lr-duration-icon) var(--lr-easing-linear) infinite;
+    animation: lr-viewer-loading-spin var(--lr-duration-ambient) var(--lr-easing-linear) infinite;
   }
 
   @keyframes lr-viewer-loading-spin {

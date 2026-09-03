@@ -889,6 +889,19 @@ it('gives the expand/collapse toggle the shared minimum tappable size', async ()
   expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
 });
 
+it('inherits the host font size into the disclosure toggle and its 1em glyph', async () => {
+  const branch = { ...item, children: [{ id: '1.1', label: 'Child' }] };
+  const el = (await fixture(html`
+    <lr-tree-item style="font-size: 20px" .item=${branch}></lr-tree-item>
+  `)) as LyraTreeItem;
+  const control = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+  const glyph = control.querySelector<SVGElement>('svg')!;
+
+  expect(getComputedStyle(control).fontSize).to.equal('20px');
+  expect(getComputedStyle(glyph).width).to.equal('20px');
+  expect(getComputedStyle(glyph).height).to.equal('20px');
+});
+
 it('gives the expand/collapse toggle distinct pointer-hover feedback', async function () {
   if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
   const el = (await fixture(html`<lr-tree-item

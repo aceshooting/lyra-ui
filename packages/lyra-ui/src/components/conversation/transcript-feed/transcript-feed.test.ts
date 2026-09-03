@@ -2,9 +2,28 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './transcript-feed.js';
 import type { LyraTranscriptFeed, LyraTranscriptEntry } from './transcript-feed.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 function entryEls(el: LyraTranscriptFeed): HTMLElement[] {
   return [...el.shadowRoot!.querySelectorAll('[part~="entry"]')] as HTMLElement[];
+}
+
+function relativeLuminance(color: string): number {
+  const channels = color.match(/[\d.]+/gu)?.slice(0, 3).map(Number);
+  if (!channels || channels.length !== 3) {
+    throw new Error(`Expected a computed RGB color, received ${color}`);
+  }
+  const [red, green, blue] = channels.map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  return red! * 0.2126 + green! * 0.7152 + blue! * 0.0722;
+}
+
+function contrastRatio(foreground: string, background: string): number {
+  const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background));
+  const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background));
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 it('defaults to entries=[], follow=true, show-timestamps=false, max-rendered-entries=500', async () => {
@@ -70,6 +89,91 @@ it('renders interim entries outside the log, marked data-interim with a visually
   const interimEntry = interimArea.querySelector('[part~="entry"]') as HTMLElement;
   expect(interimEntry.hasAttribute('data-interim')).to.be.true;
   expect(interimEntry.querySelector('.sr-only')!.textContent).to.equal('Transcribing…');
+});
+
+it('styles direct and interim token-list entry parts, including reduced motion', async () => {
+  await setReducedMotion('no-preference');
+  try {
+    const surface = (await fixture(html`
+      <div style="background: rgb(255, 255, 255)">
+        <lr-transcript-feed data-lr-theme="light"></lr-transcript-feed>
+      </div>
+    `)) as HTMLDivElement;
+    const el = surface.querySelector('lr-transcript-feed') as LyraTranscriptFeed;
+    el.showTimestamps = true;
+    el.entries = [
+      { id: 'final', speaker: 'You', text: 'Final caption', timestamp: Date.UTC(2026, 0, 1) },
+      { id: 'interim', speaker: 'Agent', text: 'Interim caption', timestamp: Date.UTC(2026, 0, 1), interim: true },
+    ];
+    await el.updateComplete;
+
+    const finalEntry = el.shadowRoot!.querySelector<HTMLElement>('[part="entry"]')!;
+    const interimEntry = el.shadowRoot!.querySelector<HTMLElement>('[part~="entry"][data-interim]')!;
+    const finalStyle = getComputedStyle(finalEntry);
+    const interimStyle = getComputedStyle(interimEntry);
+    expect(finalStyle.display).to.equal('flex');
+    expect(finalStyle.flexWrap).to.equal('wrap');
+    expect(finalStyle.gap).to.equal('2px');
+    expect(finalStyle.animationName).to.equal('lr-transcript-fade-in');
+    expect(interimStyle.display).to.equal('flex');
+    expect(interimStyle.flexWrap).to.equal('wrap');
+    expect(interimStyle.gap).to.equal('2px');
+    expect(interimStyle.animationName).to.equal('lr-transcript-fade-in');
+    expect(interimStyle.fontStyle).to.equal('italic');
+
+    for (const entry of entryEls(el)) {
+      entry.getAnimations().forEach((animation) => animation.finish());
+    }
+    const interimText = interimEntry.querySelector<HTMLElement>('[part="text"]')!;
+    const interimSpeaker = interimEntry.querySelector<HTMLElement>('[part="speaker"]')!;
+    const interimTimestamp = interimEntry.querySelector<HTMLElement>('[part="timestamp"]')!;
+    const background = getComputedStyle(surface).backgroundColor;
+    expect(getComputedStyle(interimEntry).opacity).to.equal('1');
+    expect(contrastRatio(getComputedStyle(interimText).color, background)).to.be.at.least(4.5);
+    expect(contrastRatio(getComputedStyle(interimSpeaker).color, background)).to.be.at.least(4.5);
+    expect(contrastRatio(getComputedStyle(interimTimestamp).color, background)).to.be.at.least(4.5);
+
+    await setReducedMotion('reduce');
+    await waitUntil(
+      () => getComputedStyle(finalEntry).animationName === 'none' && getComputedStyle(interimEntry).animationName === 'none',
+      'the reduced-motion entry styles did not apply',
+    );
+    expect(getComputedStyle(finalEntry).animationName).to.equal('none');
+    expect(getComputedStyle(interimEntry).animationName).to.equal('none');
+  } finally {
+    await setReducedMotion('no-preference');
+  }
+});
+
+it('keeps fully visible interim text, speaker, and timestamp at WCAG contrast in dark theme', async () => {
+  await setReducedMotion('no-preference');
+  try {
+    const surface = (await fixture(html`
+      <div style="background: rgb(26, 26, 26)">
+        <lr-transcript-feed data-lr-theme="dark"></lr-transcript-feed>
+      </div>
+    `)) as HTMLDivElement;
+    const el = surface.querySelector('lr-transcript-feed') as LyraTranscriptFeed;
+    el.showTimestamps = true;
+    el.entries = [{ id: 'interim', speaker: 'Agent', text: 'Interim caption', timestamp: Date.UTC(2026, 0, 1), interim: true }];
+    await el.updateComplete;
+
+    const interimEntry = el.shadowRoot!.querySelector<HTMLElement>('[part~="entry"][data-interim]')!;
+    await setReducedMotion('reduce');
+    await waitUntil(
+      () => getComputedStyle(interimEntry).animationName === 'none',
+      'the reduced-motion entry state did not apply',
+    );
+    const background = getComputedStyle(surface).backgroundColor;
+    expect(getComputedStyle(interimEntry).animationName).to.equal('none');
+    expect(getComputedStyle(interimEntry).opacity).to.equal('1');
+    for (const part of ['text', 'speaker', 'timestamp']) {
+      const content = interimEntry.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      expect(contrastRatio(getComputedStyle(content).color, background), part).to.be.at.least(4.5);
+    }
+  } finally {
+    await setReducedMotion('no-preference');
+  }
 });
 
 it('finalizing an entry (same id, interim flips to unset) moves it from the interim area into the log', async () => {
@@ -384,6 +488,18 @@ describe('follow / stick-to-bottom contract', () => {
     expect(style.minInlineSize).to.equal('40px');
     expect(style.minBlockSize).to.equal('40px');
   });
+
+  it('inherits a 20px consumer font into the jump control', async () => {
+    const el = (await fixture(html`
+      <lr-transcript-feed
+        follow="false"
+        style="font-size:20px"
+        .entries=${[{ id: '1', text: 'Latest caption' }]}
+      ></lr-transcript-feed>
+    `)) as LyraTranscriptFeed;
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="jump-button"]')!;
+    expect(getComputedStyle(button).fontSize).to.equal('20px');
+  });
 });
 
 it('gives [part="text"] dir="auto" for mixed-language captions', async () => {
@@ -437,11 +553,10 @@ it('is accessible with a mix of final and interim entries', async () => {
   ];
   await el.updateComplete;
   // Every `[part='entry']` plays lr-transcript-fade-in as it's rendered. Left running, axe's
-  // color-contrast check factors in each entry's current (transitional) opacity, so sampling
-  // mid-fade blends its text and background toward each other and reports a false "serious"
-  // violation. Finishing the animations outright matches the idiom overlay.test.ts already uses
-  // for this same kind of reveal animation.
-  el.shadowRoot!.querySelectorAll('[part="entry"]').forEach((entry) => {
+  // color-contrast check factors in each entry's current transitional opacity, so sampling
+  // mid-fade blends its text and background toward each other and reports a false violation.
+  // Finishing the reveal matches the stable, fully visible rendering that users receive.
+  el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="entry"]').forEach((entry) => {
     entry.getAnimations().forEach((animation) => animation.finish());
   });
   await expect(el).to.be.accessible();

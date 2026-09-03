@@ -2018,7 +2018,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // Only sampled source rows can render a selected mark. Bound work by the same visual ceiling
     // instead of running `includes()` against an unbounded controlled array for every mark.
     const renderedRows = new Set(recordSample.rowIndexes);
-    for (let index = 0; index < Math.min(this.selectedIndices.length, MAX_RENDERED_CHART_RECORDS); index++) {
+    for (let index = 0; index < this.selectedIndices.length; index++) {
       const candidate = this.selectedIndices[index];
       if (
         typeof candidate === 'number' &&
@@ -2156,7 +2156,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         <div
           id=${this.dataTableId}
           part="data-table"
-          ?data-visually-hidden=${!hasCustomDataTable && !this.dataTableVisible}
+          ?data-visually-hidden=${!this.dataTableVisible}
         >
           <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
           ${hasCustomDataTable ? nothing : this.datasets.length > 1
@@ -2218,7 +2218,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                 )}
               </tbody>
             </table>`
-          : html`<ul part="data-list" class="sr-only" aria-label=${this.localize('chartData')}>
+          : html`<ul
+              part="data-list"
+              class=${this.dataTableVisible ? nothing : 'sr-only'}
+              aria-label=${this.localize('chartData')}
+            >
               ${marksForA11y.map((_mark, index) => html`<li>${this.markAnnouncement(index, marksForA11y)}</li>`)}
             </ul>`}
         </div>

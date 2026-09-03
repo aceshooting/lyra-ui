@@ -49,6 +49,52 @@ it("uses filterId as the public filter-definition identity", async () => {
   expect(control(el, "status").localName).to.equal("lr-select");
 });
 
+it('contains a throwing chip shadow-root activeElement getter while removing an active filter', async () => {
+  const el = await fixture<LyraFilterBar>(html`
+    <lr-filter-bar .filters=${basicFilters} .value=${{ status: 'open' }}></lr-filter-bar>
+  `);
+  const chip = el.shadowRoot!.querySelector<HTMLElement>('lr-chip[part="chip"]')!;
+  const root = chip.shadowRoot!;
+  const prior = Object.getOwnPropertyDescriptor(root, 'activeElement');
+  let partialRoot: ShadowRoot | undefined;
+  let partialPrior: PropertyDescriptor | undefined;
+  let unavailable = true;
+  Object.defineProperty(root, 'activeElement', {
+    configurable: true,
+    get(): Element {
+      if (unavailable) throw new TypeError('active element unavailable');
+      return {} as Element;
+    },
+  });
+  try {
+    chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    unavailable = false;
+    el.value = { status: 'open' };
+    await el.updateComplete;
+    const partialChip = el.shadowRoot!.querySelector<HTMLElement>('lr-chip[part="chip"]')!;
+    partialRoot = partialChip.shadowRoot!;
+    partialPrior = Object.getOwnPropertyDescriptor(partialRoot, 'activeElement');
+    Object.defineProperty(partialRoot, 'activeElement', {
+      configurable: true,
+      get(): Element {
+        return {} as Element;
+      },
+    });
+    partialChip
+      .dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(Object.hasOwn(el.value, 'status')).to.equal(false);
+  } finally {
+    if (prior) Object.defineProperty(root, 'activeElement', prior);
+    else delete (root as unknown as { activeElement?: unknown }).activeElement;
+    if (partialRoot) {
+      if (partialPrior) Object.defineProperty(partialRoot, 'activeElement', partialPrior);
+      else delete (partialRoot as unknown as { activeElement?: unknown }).activeElement;
+    }
+  }
+});
+
 function control(el: LyraFilterBar, filterId: string): HTMLElement {
   return el.shadowRoot!.querySelector(
     `[data-filter-id="${filterId}"]`

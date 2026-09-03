@@ -106,6 +106,7 @@ export const styles = css`
     border-radius: var(--lr-radius-pill);
     background: transparent;
     color: inherit;
+    font: inherit;
     cursor: pointer;
   }
 

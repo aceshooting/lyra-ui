@@ -529,6 +529,42 @@ function defaultCard(el: LyraFlowCanvas, id: string): HTMLElement & {
   };
 }
 
+function truncatedFlow(): { nodes: FlowNode[]; edges: FlowEdge[] } {
+  const nodeCount = 151;
+  return {
+    nodes: Array.from({ length: nodeCount }, (_, index) => ({ id: `n-${index}` })),
+    edges: [
+      ...Array.from({ length: nodeCount - 1 }, (_, index) => ({
+        id: `chain-${index}`,
+        source: `n-${index}`,
+        target: `n-${index + 1}`,
+      })),
+      ...Array.from({ length: nodeCount - 2 }, (_, index) => ({
+        id: `span-${index + 2}`,
+        source: 'n-0',
+        target: `n-${index + 2}`,
+      })),
+    ],
+  };
+}
+
+async function settleFlowLayout(el: LyraFlowCanvas): Promise<void> {
+  await el.updateComplete;
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+  );
+  await el.updateComplete;
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+}
+
+async function settleDirectChildReconciliation(el: LyraFlowCanvas): Promise<void> {
+  // MutationObserver delivery and a reconciliation queue can occupy consecutive microtasks.
+  await Promise.resolve();
+  await Promise.resolve();
+  await el.updateComplete;
+  await Promise.resolve();
+}
+
 describe('static rendering', () => {
   it('renders a declarative default lr-flow-node per node without mutating light DOM', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
@@ -576,23 +612,84 @@ describe('static rendering', () => {
     }
   });
 
-  it('warns and leaves a stale user-authored child unslotted when its node-id matches no node', async () => {
+  it('uses one fixed dev-only warning for unmatched cards without exposing caller data', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
     const originalWarn = console.warn;
-    let warning: unknown[] | undefined;
-    console.warn = (...args: unknown[]) => {
-      warning = args;
-    };
-    const el = (await fixture(
-      html`<lr-flow-canvas><div node-id="ghost">Gone</div></lr-flow-canvas>`,
-    )) as LyraFlowCanvas;
+    const warnings: string[] = [];
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
     try {
+      const el = (await fixture(html`
+        <lr-flow-canvas><div node-id="caller-secret-a">Caller-only text</div></lr-flow-canvas>
+      `)) as LyraFlowCanvas;
       el.nodes = nodes;
       await el.updateComplete;
+      const later = document.createElement('div');
+      later.setAttribute('node-id', 'caller-secret-b');
+      later.textContent = 'Another caller-only value';
+      el.append(later);
+      el.nodes = [...nodes];
+      await el.updateComplete;
+
+      const diagnostic = warnings.join('\n');
+      expect(warnings.length).to.equal(1);
+      expect(diagnostic).to.contain('lr-flow-canvas');
+      expect(diagnostic).to.contain('node-id');
+      expect(diagnostic).to.not.contain('caller-secret-a');
+      expect(diagnostic).to.not.contain('caller-secret-b');
+      expect(diagnostic).to.not.contain('Caller-only text');
+      expect(later.getAttribute('slot')).to.equal(null);
+    } finally {
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+      console.warn = originalWarn;
+    }
+  });
+
+  it('keeps unmatched-card diagnostics silent outside Lit development mode', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    delete runtime.litIssuedWarnings;
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+    try {
+      const el = (await fixture(html`
+        <lr-flow-canvas><div node-id="caller-secret-production">Private content</div></lr-flow-canvas>
+      `)) as LyraFlowCanvas;
+      el.nodes = nodes;
+      await el.updateComplete;
+      expect(warnings).to.deep.equal([]);
+    } finally {
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+      console.warn = originalWarn;
+    }
+  });
+
+  it('keeps unmatched cards out of the rendered canvas without disturbing named companions', async () => {
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      const el = (await fixture(html`
+        <lr-flow-canvas>
+          <div node-id="ghost">Unmatched private card</div>
+          <span slot="top-start" data-companion="top-start">Controls</span>
+        </lr-flow-canvas>
+      `)) as LyraFlowCanvas;
+      el.nodes = [{ id: 'a', data: { label: 'Fallback card' } }];
+      await el.updateComplete;
+
+      const unmatched = el.querySelector('[node-id="ghost"]') as HTMLElement;
+      const companion = el.querySelector('[data-companion="top-start"]') as HTMLElement;
+      expect(unmatched.assignedSlot === null).to.equal(true);
+      expect(el.shadowRoot!.querySelectorAll('slot:not([name])').length).to.equal(0);
+      expect(companion.assignedSlot?.name).to.equal('top-start');
+      expect(defaultCard(el, 'a').heading).to.equal('Fallback card');
     } finally {
       console.warn = originalWarn;
     }
-    expect(warning?.join(' ')).to.include('node-id="ghost"');
-    expect(el.querySelector('[node-id="ghost"]')!.getAttribute('slot')).to.be.null;
   });
 
   it('stays silent when one of its own default cards is retired -- the warning is for user-authored children only', async () => {
@@ -761,6 +858,241 @@ describe('static rendering', () => {
     await el.updateComplete;
     const cardA = defaultCard(el, 'a');
     expect(cardA.status).to.equal('running');
+  });
+});
+
+describe('direct authored-card leases', () => {
+  it('retargets direct cards by live node-id and restores the latest authored slot when a lease releases', async () => {
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      const el = (await fixture(html`
+        <lr-flow-canvas>
+          <div node-id="a" slot="author-origin" data-card="leased"></div>
+          <span slot="top-end" data-companion="top-end"></span>
+        </lr-flow-canvas>
+      `)) as LyraFlowCanvas;
+      el.nodes = [
+        { id: 'a', position: { x: 0, y: 0 } },
+        { id: 'b', position: { x: 200, y: 0 } },
+      ];
+      await el.updateComplete;
+      const card = el.querySelector('[data-card="leased"]') as HTMLElement;
+      const companion = el.querySelector('[data-companion="top-end"]') as HTMLElement;
+      expect(card.getAttribute('slot')).to.equal('node-a');
+
+      card.setAttribute('node-id', 'b');
+      await settleDirectChildReconciliation(el);
+      expect(card.getAttribute('slot')).to.equal('node-b');
+
+      card.setAttribute('slot', 'author-reclaimed');
+      el.nodes = [...el.nodes];
+      await el.updateComplete;
+      await settleDirectChildReconciliation(el);
+      expect(card.getAttribute('slot')).to.equal('author-reclaimed');
+
+      el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+      await el.updateComplete;
+      await settleDirectChildReconciliation(el);
+      expect(card.getAttribute('slot')).to.equal('author-reclaimed');
+
+      el.nodes = [
+        { id: 'a', position: { x: 0, y: 0 } },
+        { id: 'b', position: { x: 200, y: 0 } },
+      ];
+      await el.updateComplete;
+      await settleDirectChildReconciliation(el);
+      expect(card.getAttribute('slot')).to.equal('node-b');
+
+      card.setAttribute('node-id', 'ghost');
+      await settleDirectChildReconciliation(el);
+      expect(card.getAttribute('slot')).to.equal('author-reclaimed');
+
+      card.setAttribute('node-id', 'a');
+      await settleDirectChildReconciliation(el);
+      expect(card.getAttribute('slot')).to.equal('node-a');
+      expect(companion.assignedSlot?.name).to.equal('top-end');
+
+      card.remove();
+      await settleDirectChildReconciliation(el);
+      expect(card.getAttribute('slot')).to.equal('author-reclaimed');
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it('continues after one card setter throws and projects full state to the following direct card', async () => {
+    const el = (await fixture(html`<lr-flow-canvas orientation="vertical"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'broken', type: 'broken-type', inputs: [{ id: 'in' }], outputs: [{ id: 'out' }] },
+      { id: 'valid', type: 'valid-type', inputs: [{ id: 'valid-in' }], outputs: [{ id: 'valid-out' }] },
+    ];
+    el.selectedNodeIds = ['valid'];
+    el.decorations = {
+      valid: { status: 'running', progress: 0.5, detail: 'Halfway', durationMs: 125 },
+    };
+    await el.updateComplete;
+
+    const throwing = document.createElement('div');
+    throwing.setAttribute('node-id', 'broken');
+    Object.defineProperty(throwing, 'inputs', {
+      configurable: true,
+      set: () => {
+        throw new Error('test-only throwing card setter');
+      },
+    });
+    const valid = document.createElement('div');
+    valid.setAttribute('node-id', 'valid');
+    valid.setAttribute('slot', 'author-valid-slot');
+    const values: Record<string, unknown> = {};
+    const record = (name: string): PropertyDescriptor => ({
+      configurable: true,
+      set: (value: unknown) => {
+        values[name] = value;
+      },
+    });
+    Object.defineProperties(valid, {
+      inputs: record('inputs'),
+      outputs: record('outputs'),
+      flowType: record('flowType'),
+      orientation: record('orientation'),
+      selected: record('selected'),
+      status: record('status'),
+      progress: record('progress'),
+      statusDetail: record('statusDetail'),
+      durationMs: record('durationMs'),
+    });
+    el.append(throwing, valid);
+    await settleDirectChildReconciliation(el);
+
+    expect(valid.getAttribute('slot')).to.equal('node-valid');
+    expect(values['flowType']).to.equal('valid-type');
+    expect(values['orientation']).to.equal('vertical');
+    expect(values['selected']).to.equal(true);
+    expect(values['status']).to.equal('running');
+    expect(values['progress']).to.equal(0.5);
+    expect(values['statusDetail']).to.equal('Halfway');
+    expect(values['durationMs']).to.equal(125);
+    expect(values['inputs']).to.deep.equal([{ id: 'valid-in' }]);
+    expect(values['outputs']).to.deep.equal([{ id: 'valid-out' }]);
+  });
+
+  it('restores explicit-empty and absent authored slots exactly when removed cards release their leases', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas>
+        <div node-id="a" slot="" data-card="empty-slot"></div>
+        <div node-id="b" data-card="absent-slot"></div>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const emptySlot = el.querySelector('[data-card="empty-slot"]') as HTMLElement;
+    const absentSlot = el.querySelector('[data-card="absent-slot"]') as HTMLElement;
+    expect(emptySlot.getAttribute('slot')).to.equal('node-a');
+    expect(absentSlot.getAttribute('slot')).to.equal('node-b');
+
+    emptySlot.remove();
+    absentSlot.remove();
+    await settleDirectChildReconciliation(el);
+
+    expect(emptySlot.hasAttribute('slot')).to.equal(true);
+    expect(emptySlot.getAttribute('slot')).to.equal('');
+    expect(absentSlot.hasAttribute('slot')).to.equal(false);
+  });
+
+  it('uses the adopted owner realm observer and ignores its stale callback after reconnect', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.remove();
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const ownerDocument = iframe.contentDocument!;
+    const ownerWindow = iframe.contentWindow!;
+    const originalMutationObserver = ownerWindow.MutationObserver;
+    const observers: Array<{
+      callback: MutationCallback;
+      observations: Array<{ target: Node; options: MutationObserverInit }>;
+      disconnects: number;
+    }> = [];
+
+    class FrameMutationObserver {
+      private readonly record: (typeof observers)[number];
+
+      constructor(callback: MutationCallback) {
+        this.record = { callback, observations: [], disconnects: 0 };
+        observers.push(this.record);
+      }
+
+      observe(target: Node, options: MutationObserverInit): void {
+        this.record.observations.push({ target, options });
+      }
+
+      disconnect(): void {
+        this.record.disconnects += 1;
+      }
+
+      takeRecords(): MutationRecord[] {
+        return [];
+      }
+    }
+
+    ownerWindow.MutationObserver = FrameMutationObserver as unknown as typeof MutationObserver;
+    try {
+      ownerDocument.adoptNode(el);
+      el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+      ownerDocument.body.append(el);
+      await el.updateComplete;
+      const firstFlowObserver = observers.find((observer) =>
+        observer.observations.some((observation) => observation.target === el),
+      );
+      expect(firstFlowObserver !== undefined).to.equal(true);
+
+      const nested = ownerDocument.createElement('div');
+      nested.setAttribute('node-id', 'a');
+      nested.setAttribute('slot', 'nested-author-slot');
+      const nestedParent = ownerDocument.createElement('div');
+      nestedParent.append(nested);
+      el.append(nestedParent);
+      firstFlowObserver!.callback([
+        { type: 'attributes', target: nested } as unknown as MutationRecord,
+      ], {} as MutationObserver);
+      await settleDirectChildReconciliation(el);
+      expect(nested.getAttribute('slot')).to.equal('nested-author-slot');
+
+      const card = ownerDocument.createElement('div');
+      card.setAttribute('node-id', 'a');
+      card.setAttribute('slot', 'frame-author-slot');
+      el.append(card);
+      firstFlowObserver!.callback([
+        { type: 'childList', target: el } as unknown as MutationRecord,
+      ], {} as MutationObserver);
+      await settleDirectChildReconciliation(el);
+      expect(card.getAttribute('slot')).to.equal('node-a');
+
+      el.remove();
+      expect(firstFlowObserver!.disconnects).to.equal(1);
+      expect(card.getAttribute('slot')).to.equal('frame-author-slot');
+      ownerDocument.body.append(el);
+      await el.updateComplete;
+      const secondFlowObserver = observers.find(
+        (observer) =>
+          observer !== firstFlowObserver &&
+          observer.observations.some((observation) => observation.target === el),
+      );
+      expect(secondFlowObserver !== undefined).to.equal(true);
+
+      card.setAttribute('slot', 'author-after-reconnect');
+      firstFlowObserver!.callback([
+        { type: 'childList', target: el } as unknown as MutationRecord,
+      ], {} as MutationObserver);
+      await settleDirectChildReconciliation(el);
+      expect(card.getAttribute('slot')).to.equal('author-after-reconnect');
+    } finally {
+      el.remove();
+      ownerWindow.MutationObserver = originalMutationObserver;
+      iframe.remove();
+    }
   });
 });
 
@@ -3507,7 +3839,91 @@ describe('flow layout truth and parity', () => {
       'LAYOUT-LIMIT-MARKER',
     );
     expect(notice.hasAttribute('role')).to.be.false;
-    expect(sinkTexts()).to.include('LAYOUT-LIMIT-MARKER');
+    expect(sinkTexts()).to.not.include('LAYOUT-LIMIT-MARKER');
+  });
+});
+
+describe('layout-limit announcement baseline', () => {
+  it('keeps a pre-connect truncated first layout silent while retaining its visible localized notice and later transition', async () => {
+    const marker = 'FLOW-LAYOUT-LIMIT-MARKER';
+    const graph = truncatedFlow();
+    const el = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+    el.strings = { flowCanvasLayoutLimit: marker };
+    (el as unknown as { announcer: { throttleMs: number } }).announcer.throttleMs = 0;
+    const layoutEvents: boolean[] = [];
+    el.addEventListener('lr-layout-change', (event) => {
+      layoutEvents.push((event as CustomEvent<{ truncated: boolean }>).detail.truncated);
+    });
+    el.nodes = graph.nodes;
+    el.edges = graph.edges;
+    document.body.append(el);
+    try {
+      await settleFlowLayout(el);
+      const initialAnnouncements = sinkTexts().filter((text) => text === marker);
+      const notice = el.shadowRoot!.querySelector('[part="layout-limit"]') as HTMLElement | null;
+
+      el.nodes = [{ id: 'small' }];
+      el.edges = [];
+      await settleFlowLayout(el);
+      el.nodes = graph.nodes;
+      el.edges = graph.edges;
+      await settleFlowLayout(el);
+
+      expect(notice?.textContent?.trim()).to.equal(marker);
+      expect(layoutEvents.includes(true)).to.equal(true);
+      expect(initialAnnouncements).to.deep.equal([]);
+      expect(sinkTexts().filter((text) => text === marker)).to.deep.equal([marker]);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('resets the silent first-layout baseline across reconnect before later truncation transitions announce', async () => {
+    const marker = 'FLOW-RECONNECT-LAYOUT-MARKER';
+    const graph = truncatedFlow();
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.strings = { flowCanvasLayoutLimit: marker };
+    (el as unknown as { announcer: { throttleMs: number } }).announcer.throttleMs = 0;
+    el.nodes = [{ id: 'small' }];
+    await settleFlowLayout(el);
+    el.remove();
+    document.body.append(el);
+    try {
+      el.nodes = graph.nodes;
+      el.edges = graph.edges;
+      await settleFlowLayout(el);
+      const reconnectAnnouncements = sinkTexts().filter((text) => text === marker);
+
+      el.nodes = [{ id: 'small-again' }];
+      el.edges = [];
+      await settleFlowLayout(el);
+      el.nodes = graph.nodes;
+      el.edges = graph.edges;
+      await settleFlowLayout(el);
+
+      expect(reconnectAnnouncements).to.deep.equal([]);
+      expect(sinkTexts().filter((text) => text === marker)).to.deep.equal([marker]);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('does not announce a transient truncation that clears before its queued render commits', async () => {
+    const marker = 'FLOW-TRANSIENT-LAYOUT-MARKER';
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.strings = { flowCanvasLayoutLimit: marker };
+    (el as unknown as { announcer: { throttleMs: number } }).announcer.throttleMs = 0;
+    el.nodes = [{ id: 'baseline' }];
+    await settleFlowLayout(el);
+
+    const layout = el as unknown as { setLayoutTruncated(truncated: boolean): void };
+    layout.setLayoutTruncated(true);
+    layout.setLayoutTruncated(false);
+    await el.updateComplete;
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+
+    expect(el.shadowRoot!.querySelector('[part="layout-limit"]') === null).to.equal(true);
+    expect(sinkTexts().filter((text) => text === marker)).to.deep.equal([]);
   });
 });
 

@@ -30,16 +30,42 @@ it('unwraps an injected `{ default }` CJS-interop shape', async () => {
   expect(await loadSvgSanitizerDeps(() => Promise.resolve({ default: fake }))).to.equal(fake);
 });
 
-it('returns null and logs the import error when dompurify is unavailable', async () => {
-  const importError = new Error('dompurify boom');
+it('returns null with one fixed dev diagnostic that never includes importer failures', async () => {
+  const importError = new Error('dompurify boom; svg-secret');
   const originalWarn = console.warn;
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
   const calls: unknown[][] = [];
   console.warn = (...args: unknown[]) => calls.push(args);
+  runtime.litIssuedWarnings = new Set();
   try {
     expect(await loadSvgSanitizerDeps(() => Promise.reject(importError))).to.equal(null);
-    expect(calls.flat()).to.contain(importError);
-    expect(calls.flat().join(' ')).to.contain('pnpm add dompurify');
+    expect(await loadSvgSanitizerDeps(() => Promise.reject(new Error('second failure')))).to.equal(null);
+    expect(calls).to.have.length(1);
+    const message = calls.flat().map(String).join(' ');
+    expect(message).to.equal('<lr-svg-viewer> could not load its optional dompurify peer.');
+    expect(message).to.not.contain(importError.message);
+    expect(message).to.not.contain('second failure');
   } finally {
     console.warn = originalWarn;
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
+  }
+});
+
+it('stays silent when Lit development diagnostics are unavailable', async () => {
+  const originalWarn = console.warn;
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  delete runtime.litIssuedWarnings;
+  try {
+    expect(await loadSvgSanitizerDeps(() => Promise.reject(new Error('production secret')))).to.equal(null);
+    expect(calls).to.have.length(0);
+  } finally {
+    console.warn = originalWarn;
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
   }
 });

@@ -240,6 +240,24 @@ describe('lr-test-results', () => {
     expect(failedRow.querySelector('[part="failure-message"]')!.textContent).to.include('expected 2 got 3');
   });
 
+  it('uses a per-instance accessibleLabelSeparator in the real failure-detail toggle name', async () => {
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results
+        .suites=${suites}
+        .autoExpandFailures=${false}
+        .strings=${{
+          accessibleLabelSeparator: ' / ',
+          testResultsExpandTest: 'Open {name}',
+        }}
+      ></lr-test-results>
+    `);
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part="test"][data-status="failed"] [part="test-expand-toggle"]',
+    )!;
+
+    expect(toggle.getAttribute('aria-label')).to.equal('Open math.test.ts / subtracts numbers');
+  });
+
   it('emits lr-toggle when a failure row is manually collapsed/expanded', async () => {
     const el = (await fixture(
       html`<lr-test-results .suites=${suites} .autoExpandFailures=${false}></lr-test-results>`,

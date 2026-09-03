@@ -156,7 +156,7 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
   card this state rendered before `open` existed. Setting `open = true` reveals it as a
   focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a backdrop click set
-  `open` back to `false`. While open, the floating panel is the modal root and every sibling pane
+  proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
   way `<lr-app-rail>` closes its mobile overlay when leaving `'mobile'` while open.
 
@@ -179,6 +179,10 @@ or keyboard step commits. A genuine pointer gesture has one terminal persistence
 release emits no additional event; direct `sizes` assignments stay silent),
 `lr-multi-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
+`lr-toggle` (`detail: LyraMultiSplitToggleDetail = { open: boolean }`) — Escape/backdrop close
+proposals are cancelable and fire before `open` changes; preventing the event or making a synchronous
+reentrant mutation aborts the proposal. A forced close when a responsive collapse transition leaves
+`floating` fires noncancelably after `open` is false. Direct `open` writes and no-op dismissals are silent,
 `lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
 normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,

@@ -64,6 +64,30 @@ it('defaults to value="", disabled=false, variant="default", type="normal", chec
   expect(el.checked).to.be.false;
 });
 
+it('contains a throwing owner activeElement getter while disabling the focused item', async () => {
+  const el = (await fixture(html`<lr-menu-item>One</lr-menu-item>`)) as LyraMenuItem;
+  const prior = Object.getOwnPropertyDescriptor(document, 'activeElement');
+  let unavailable = true;
+  Object.defineProperty(document, 'activeElement', {
+    configurable: true,
+    get(): Element {
+      if (unavailable) throw new TypeError('active element unavailable');
+      return {} as Element;
+    },
+  });
+  try {
+    el.disabled = true;
+    await el.updateComplete;
+    unavailable = false;
+    el.loading = true;
+    await el.updateComplete;
+    expect(el.disabled).to.equal(true);
+  } finally {
+    if (prior) Object.defineProperty(document, 'activeElement', prior);
+    else delete (document as unknown as { activeElement?: unknown }).activeElement;
+  }
+});
+
 it('sets role="menuitem" on the host', async () => {
   const el = await fixtureInMenu(html`<lr-menu-item>Rename</lr-menu-item>`);
   expect(el.getAttribute('role')).to.equal('menuitem');

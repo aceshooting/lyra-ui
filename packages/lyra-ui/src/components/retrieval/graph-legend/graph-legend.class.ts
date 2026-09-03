@@ -33,6 +33,9 @@ export interface LyraGraphLegendVisibilityDetail {
 }
 
 export interface LyraGraphLegendEventMap {
+  'lr-before-visibility-change': CustomEvent<
+    LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>
+  >;
   'lr-visibility-change': CustomEvent<
     LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>
   >;
@@ -67,8 +70,10 @@ const FALLBACK_PALETTE = [
  * untyped payload cannot create an unnamed interactive filter.
  *
  * @customElement lr-graph-legend
+ * @event lr-before-visibility-change - Cancelable proposed visibility change. `detail: { hiddenTypes }`
+ *   is a frozen complete next array; canceling leaves state, announcements, and the post event unchanged.
  * @event lr-visibility-change - `detail: { hiddenTypes }` — the complete updated array, fired
- * after each toggle.
+ *   after an accepted toggle has assigned and announced it.
  * @csspart base - The legend wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart item - One row per type — a `<button>` when `interactive`, a plain `<div>` otherwise.
@@ -107,6 +112,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     srOnly,
   ];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-before-visibility-change',
     'lr-visibility-change',
   ]);
 
@@ -171,6 +177,12 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     const next = wasVisible
       ? [...hiddenTypes, type.id]
       : hiddenTypes.filter((id) => id !== type.id);
+    const proposal = this.emit(
+      'lr-before-visibility-change',
+      { hiddenTypes: next },
+      { cancelable: true },
+    );
+    if (proposal.defaultPrevented) return;
     this.hiddenTypes = next;
     this.liveText = this.localize(
       wasVisible ? 'legendTypeHidden' : 'legendTypeShown',

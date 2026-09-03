@@ -1124,6 +1124,7 @@ export type LyraBarChartVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -1186,6 +1187,7 @@ export type LyraBoxPlotVueProps = LyraVueCustomElement<
   | 'lr-point-click',
   | '--lr-box-plot-data-table-toggle-active-bg'
   | '--lr-box-plot-data-table-toggle-hover-bg'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
@@ -1341,6 +1343,7 @@ export type LyraBubbleChartVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -1493,12 +1496,18 @@ export type LyraCalendarVueProps = LyraVueCustomElement<
   | 'lr-date-select'
   | 'lr-event-select'
   | 'lr-view-change',
+  | '--lr-calendar-agenda-event-active-bg'
+  | '--lr-calendar-agenda-event-hover-bg'
+  | '--lr-calendar-day-active-bg'
+  | '--lr-calendar-day-hover-bg'
   | '--lr-calendar-day-min-block-size'
   | '--lr-calendar-day-min-block-size-narrow'
   | '--lr-calendar-day-outside-bg'
   | '--lr-calendar-day-outside-color'
   | '--lr-calendar-day-selected-bg'
-  | '--lr-calendar-day-today-outline-color',
+  | '--lr-calendar-day-today-outline-color'
+  | '--lr-calendar-nav-active-bg'
+  | '--lr-calendar-nav-hover-bg',
   {
     'aria-label'?: LyraCalendar['accessibleLabel'];
     'first-day-of-week'?: LyraCalendar['firstDayOfWeek'];
@@ -1713,6 +1722,7 @@ export type LyraChartVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -2883,6 +2893,12 @@ export type LyraDataGridVueProps = LyraVueCustomElement<
   | '--lr-data-grid-cell-color'
   | '--lr-data-grid-cell-link-color'
   | '--lr-data-grid-cell-link-hover-color'
+  | '--lr-data-grid-control-active-background'
+  | '--lr-data-grid-control-hover-background'
+  | '--lr-data-grid-page-size-active-background'
+  | '--lr-data-grid-row-active-background'
+  | '--lr-data-grid-sortable-header-active-background'
+  | '--lr-data-grid-sortable-header-hover-background'
   | '--max-height'
   | '--row-height'
   | '--row-hover-background'
@@ -3109,6 +3125,8 @@ export type LyraDatePickerVueProps = LyraVueCustomElement<
   | '--lr-date-picker-preset-active-bg'
   | '--lr-date-picker-preset-hover-bg'
   | '--lr-date-picker-preset-selected-bg'
+  | '--lr-date-picker-preset-selected-border'
+  | '--lr-date-picker-preset-selected-color'
   | '--lr-date-picker-radius'
   | '--lr-date-picker-range-bg'
   | '--lr-date-picker-range-color'
@@ -3385,6 +3403,8 @@ export type LyraDocumentPreviewVueProps = LyraVueCustomElement<
   | 'lr-highlight-activate'
   | 'lr-render-error',
   | '--lr-document-preview-active-border'
+  | '--lr-document-preview-download-link-active-bg'
+  | '--lr-document-preview-download-link-hover-bg'
   | '--lr-document-preview-font'
   | '--lr-document-preview-highlight-accent-color'
   | '--lr-document-preview-highlight-danger-color'
@@ -3421,6 +3441,8 @@ export type LyraDocumentViewerVueProps = LyraVueCustomElement<
   | 'lr-close'
   | 'lr-download'
   | 'lr-render-error',
+  | '--lr-document-viewer-download-link-active-bg'
+  | '--lr-document-viewer-download-link-hover-bg'
   | '--lr-document-viewer-max-height',
   {
     'mime-type'?: LyraDocumentViewer['mimeType'];
@@ -3523,6 +3545,7 @@ export type LyraDoughnutChartVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -4653,6 +4676,7 @@ export type LyraGraphLegendVueProps = LyraVueCustomElement<
   | 'types',
   {},
   LyraGraphLegendEventMap,
+  | 'lr-before-visibility-change'
   | 'lr-visibility-change',
   | '--lr-graph-legend-hidden-color'
   | '--lr-graph-legend-hidden-swatch-opacity',
@@ -4898,6 +4922,7 @@ export type LyraHistogramVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -5642,6 +5667,7 @@ export type LyraLineChartVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -6124,13 +6150,17 @@ never,
 
 export type LyraMessageFeedbackVueProps = LyraVueCustomElement<
   LyraMessageFeedback,
+  | 'autocapitalize'
+  | 'autocorrect'
   | 'detail'
   | 'detailFor'
   | 'disabled'
   | 'locale'
   | 'pending'
   | 'rating'
-  | 'strings',
+  | 'spellcheck'
+  | 'strings'
+  | 'wrap',
   {},
   LyraMessageFeedbackEventMap,
   | 'blur'
@@ -6228,6 +6258,7 @@ export type LyraModelSelectVueProps = LyraVueCustomElement<
   | 'open'
   | 'placeholder'
   | 'provider'
+  | 'readonly'
   | 'required'
   | 'selectionDirection'
   | 'selectionEnd'
@@ -6327,7 +6358,8 @@ export type LyraMultiSplitVueProps = LyraVueCustomElement<
   | 'lr-multi-split-constraints-invalid'
   | 'lr-multi-split-orientation-change'
   | 'lr-resize'
-  | 'lr-resize-request',
+  | 'lr-resize-request'
+  | 'lr-toggle',
   | '--lr-multi-split-divider-target-size'
   | '--lr-multi-split-overlay-color',
   {
@@ -7111,6 +7143,7 @@ export type LyraPieChartVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -7208,6 +7241,7 @@ export type LyraPolarAreaChartVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -7735,6 +7769,7 @@ export type LyraRadarChartVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -8403,6 +8438,7 @@ export type LyraScatterChartVueProps = LyraVueCustomElement<
   | '--grid-border-width'
   | '--grid-color'
   | '--line-border-width'
+  | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
@@ -9556,8 +9592,13 @@ export type LyraTerminalVueProps = LyraVueCustomElement<
   | '--lr-terminal-highlight-neutral-bg'
   | '--lr-terminal-highlight-success-bg'
   | '--lr-terminal-highlight-warning-bg'
+  | '--lr-terminal-line-active-bg'
+  | '--lr-terminal-line-hover-bg'
   | '--lr-terminal-search-active-outline-color'
-  | '--lr-terminal-search-outline-color',
+  | '--lr-terminal-search-outline-color'
+  | '--lr-terminal-surface-color'
+  | '--lr-terminal-toolbar-button-active-bg'
+  | '--lr-terminal-toolbar-button-hover-bg',
   {
     'announce-output'?: LyraTerminal['announceOutput'];
     'aria-label'?: LyraTerminal['accessibleLabel'];
@@ -9691,6 +9732,7 @@ export type LyraThinkingPanelVueProps = LyraVueCustomElement<
   | 'lr-toggle'
   | 'lr-toggle-request',
   | '--lr-thinking-panel-compact-body-padding'
+  | '--lr-thinking-panel-compact-header-font-size'
   | '--lr-thinking-panel-compact-header-gap'
   | '--lr-thinking-panel-compact-header-padding'
   | '--lr-thinking-panel-max-block-size'
@@ -9742,7 +9784,15 @@ export type LyraThreadListVueProps = LyraVueCustomElement<
   | '--lr-thread-list-excerpt-highlight-background'
   | '--lr-thread-list-excerpt-highlight-foreground'
   | '--lr-thread-list-excerpt-highlight-padding'
-  | '--lr-thread-list-excerpt-highlight-radius',
+  | '--lr-thread-list-excerpt-highlight-radius'
+  | '--lr-thread-list-group-toggle-active-bg'
+  | '--lr-thread-list-group-toggle-active-color'
+  | '--lr-thread-list-group-toggle-hover-bg'
+  | '--lr-thread-list-group-toggle-hover-color'
+  | '--lr-thread-list-row-action-active-bg'
+  | '--lr-thread-list-row-action-active-color'
+  | '--lr-thread-list-row-action-hover-bg'
+  | '--lr-thread-list-row-action-hover-color',
   {
     'active-conversation-id'?: LyraThreadList['activeConversationId'];
     'show-archived'?: LyraThreadList['showArchived'];
@@ -10673,6 +10723,7 @@ export type LyraVoicePickerVueProps = LyraVueCustomElement<
   | 'placeholder'
   | 'preview'
   | 'provider'
+  | 'readonly'
   | 'required'
   | 'selectionDirection'
   | 'selectionEnd'

@@ -18,6 +18,11 @@ import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
@@ -25,7 +30,7 @@ import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_download, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_download, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -42,7 +47,7 @@ export interface LyraEmailAttachmentOpenDetail {
 type EmailFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'loaded'; email: ParsedEmail; fromAddress?: Address; toAddresses?: Address[] }
+  | { kind: 'loaded'; email: ParsedEmail; fromAddress?: Address; toAddresses?: readonly Address[] }
   | { kind: 'error'; message: string };
 
 export interface LyraEmailViewerEventMap extends LyraTextViewerTargetEventMap {
@@ -53,12 +58,188 @@ export interface LyraEmailViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-text-select': CustomEvent<TextSelectDetail>;
 }
 
-interface Address { name?: string; address?: string; group?: Address[]; }
+interface Address { name?: string; address?: string; group?: readonly Address[]; }
 
-function normalizeAttachmentContent(content: ArrayBuffer | Uint8Array | string): Uint8Array {
-  if (content instanceof Uint8Array) return content;
-  if (content instanceof ArrayBuffer) return new Uint8Array(content);
-  return new TextEncoder().encode(content);
+const MAX_EMAIL_RECIPIENT_POSITIONS = 10_000;
+const MAX_EMAIL_RECIPIENT_DEPTH = 100;
+const MAX_EMAIL_ATTACHMENT_POSITIONS = 10_000;
+
+interface RecipientProjectionBudget {
+  positions: number;
+  nodes: number;
+  readonly seen: WeakSet<object>;
+}
+
+interface NormalizedParsedEmail {
+  readonly html?: string;
+  readonly text?: string;
+  readonly from?: Address;
+  readonly to: readonly Address[];
+  readonly subject?: string;
+  readonly date?: string;
+  readonly attachments: readonly ParsedEmailAttachment[];
+}
+
+function isArrayValue(value: unknown): value is readonly unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+/** Accept ordinary/null-prototype peer records while rejecting collections, custom instances,
+ * revoked proxies, and reflection-failing values before any fields are inspected. */
+function isSafeRecord(value: unknown): value is object {
+  if (value === null || typeof value !== 'object' || isArrayValue(value)) return false;
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === null || Object.getPrototypeOf(prototype) === null;
+  } catch {
+    return false;
+  }
+}
+
+function optionalOwnString(value: object, key: string): string | undefined {
+  const descriptor = getOwnDataDescriptor(value, key);
+  return descriptor !== MISSING_OWN_DATA_DESCRIPTOR
+    && descriptor !== UNSAFE_OWN_DATA_DESCRIPTOR
+    && typeof descriptor.value === 'string'
+    ? descriptor.value
+    : undefined;
+}
+
+function optionalOwnValue(value: object, key: string): unknown {
+  const descriptor = getOwnDataDescriptor(value, key);
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    ? undefined
+    : descriptor.value;
+}
+
+function projectAddressList(
+  value: unknown,
+  budget: RecipientProjectionBudget,
+  depth: number,
+): Address[] {
+  if (!isArrayValue(value) || budget.positions >= MAX_EMAIL_RECIPIENT_POSITIONS) return [];
+  const length = getOwnDataDescriptor(value, 'length');
+  if (
+    length === MISSING_OWN_DATA_DESCRIPTOR
+    || length === UNSAFE_OWN_DATA_DESCRIPTOR
+    || typeof length.value !== 'number'
+    || !Number.isSafeInteger(length.value)
+    || length.value < 0
+  )
+    return [];
+  const addresses: Address[] = [];
+  const count = Math.min(length.value, MAX_EMAIL_RECIPIENT_POSITIONS - budget.positions);
+  for (let index = 0; index < count; index += 1) {
+    budget.positions += 1;
+    const descriptor = getOwnDataDescriptor(value, String(index));
+    if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+    const address = projectAddress(descriptor.value, budget, depth);
+    if (address) addresses.push(address);
+  }
+  return addresses;
+}
+
+/** Projects optional sender/recipient records without walking getters, cycles, or an unbounded
+ * nested group. A malformed optional field simply disappears; a valid sibling remains useful. */
+function projectAddress(
+  value: unknown,
+  budget: RecipientProjectionBudget,
+  depth: number,
+): Address | undefined {
+  if (
+    depth > MAX_EMAIL_RECIPIENT_DEPTH
+    || budget.nodes >= MAX_EMAIL_RECIPIENT_POSITIONS
+    || !isSafeRecord(value)
+    || budget.seen.has(value)
+  )
+    return undefined;
+  budget.seen.add(value);
+  budget.nodes += 1;
+  const name = optionalOwnString(value, 'name');
+  const address = optionalOwnString(value, 'address');
+  const groupValue = optionalOwnValue(value, 'group');
+  const group = groupValue === undefined
+    ? []
+    : projectAddressList(groupValue, budget, depth + 1);
+  if (name === undefined && address === undefined && group.length === 0) return undefined;
+  return Object.freeze({
+    ...(name === undefined ? {} : { name }),
+    ...(address === undefined ? {} : { address }),
+    ...(group.length === 0 ? {} : { group: Object.freeze(group) }),
+  });
+}
+
+/** Clones admitted attachment bytes immediately so later peer/caller mutation cannot alter the
+ * rendered size or a future public attachment snapshot. */
+function normalizeAttachmentContent(content: unknown): Uint8Array | undefined {
+  try {
+    if (typeof content === 'string') return new TextEncoder().encode(content);
+    if (content instanceof Uint8Array) return new Uint8Array(content);
+    if (content instanceof ArrayBuffer) return new Uint8Array(content.slice(0));
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+function projectAttachments(value: unknown): readonly ParsedEmailAttachment[] {
+  if (!isArrayValue(value)) return Object.freeze([]);
+  const length = getOwnDataDescriptor(value, 'length');
+  if (
+    length === MISSING_OWN_DATA_DESCRIPTOR
+    || length === UNSAFE_OWN_DATA_DESCRIPTOR
+    || typeof length.value !== 'number'
+    || !Number.isSafeInteger(length.value)
+    || length.value < 0
+  )
+    return Object.freeze([]);
+  const attachments: ParsedEmailAttachment[] = [];
+  const count = Math.min(length.value, MAX_EMAIL_ATTACHMENT_POSITIONS);
+  for (let index = 0; index < count; index += 1) {
+    const entry = getOwnDataDescriptor(value, String(index));
+    if (
+      entry === MISSING_OWN_DATA_DESCRIPTOR
+      || entry === UNSAFE_OWN_DATA_DESCRIPTOR
+      || !isSafeRecord(entry.value)
+    )
+      continue;
+    const content = normalizeAttachmentContent(optionalOwnValue(entry.value, 'content'));
+    if (!content) continue;
+    const filename = optionalOwnString(entry.value, 'filename') ?? '';
+    const mimeType = optionalOwnString(entry.value, 'mimeType') ?? '';
+    attachments.push(Object.freeze({ filename, mimeType, size: content.byteLength, content }));
+  }
+  return Object.freeze(attachments);
+}
+
+/** Retains a descriptor-safe, detached subset of a postal-mime result. Its optional fields are
+ * independently recoverable so one malformed address or attachment cannot discard valid text. */
+function normalizeParsedEmail(value: unknown): NormalizedParsedEmail | null {
+  if (!isSafeRecord(value)) return null;
+  const budget: RecipientProjectionBudget = { positions: 0, nodes: 0, seen: new WeakSet() };
+  const htmlValue = optionalOwnValue(value, 'html');
+  const textValue = optionalOwnValue(value, 'text');
+  const subjectValue = optionalOwnValue(value, 'subject');
+  const dateValue = optionalOwnValue(value, 'date');
+  const html = typeof htmlValue === 'string' ? htmlValue : undefined;
+  const text = typeof textValue === 'string' ? textValue : undefined;
+  const subject = typeof subjectValue === 'string' ? subjectValue : undefined;
+  const date = typeof dateValue === 'string' ? dateValue : undefined;
+  const from = projectAddress(optionalOwnValue(value, 'from'), budget, 0);
+  const to = projectAddressList(optionalOwnValue(value, 'to'), budget, 0);
+  return Object.freeze({
+    ...(html === undefined ? {} : { html }),
+    ...(text === undefined ? {} : { text }),
+    ...(from === undefined ? {} : { from }),
+    to: Object.freeze(to),
+    ...(subject === undefined ? {} : { subject }),
+    ...(date === undefined ? {} : { date }),
+    attachments: projectAttachments(optionalOwnValue(value, 'attachments')),
+  });
 }
 
 function immutableAttachmentBlob(content: Uint8Array, mimeType: string): Blob {
@@ -206,6 +387,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
@@ -375,22 +557,16 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (
-        !this.isConnected ||
-        generation !== this.generation ||
-        this.ownerDocument.defaultView !== fetchTarget.view
-      ) return;
+      if (!this.isCurrentLoad(generation, fetchTarget.view)) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const buffer = await readResponseArrayBuffer(response);
-      if (
-        !this.isConnected ||
-        generation !== this.generation ||
-        this.ownerDocument.defaultView !== fetchTarget.view
-      ) return;
-      const result = await this.parse(buffer, generation);
-      if (result && this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', ...result };
+      if (!this.isCurrentLoad(generation, fetchTarget.view)) return;
+      const result = await this.parse(buffer, generation, fetchTarget.view);
+      if (result && this.isCurrentLoad(generation, fetchTarget.view)) {
+        this.fetchState = { kind: 'loaded', ...result };
+      }
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (isAbortError(error) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lr-render-error', { error });
     }
@@ -402,19 +578,28 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     this.emit('lr-render-error', { error });
   }
 
+  private isCurrentLoad(generation: number, ownerView: Window): boolean {
+    return this.isConnected
+      && generation === this.generation
+      && this.ownerDocument.defaultView === ownerView;
+  }
+
   private async parse(
     buffer: ArrayBuffer,
     generation: number,
-  ): Promise<{ email: ParsedEmail; fromAddress?: Address; toAddresses?: Address[] } | null> {
+    ownerView: Window,
+  ): Promise<{ email: ParsedEmail; fromAddress?: Address; toAddresses?: readonly Address[] } | null> {
     const { PostalMime, DOMPurify } = await loadEmailDeps();
-    if (!this.isConnected || generation !== this.generation) return null;
+    if (!this.isCurrentLoad(generation, ownerView)) return null;
     if (!PostalMime) throw new LyraUserFacingError(this.localize('emailViewerMissingParser'));
-    const parsed = await PostalMime.parse(buffer);
-    if (!this.isConnected || generation !== this.generation) return null;
-    const bodyHtml = parsed.html && DOMPurify
+    const rawParsed = await PostalMime.parse(buffer);
+    if (!this.isCurrentLoad(generation, ownerView)) return null;
+    const parsed = normalizeParsedEmail(rawParsed);
+    if (!parsed) throw new LyraUserFacingError(this.localize('documentPreviewFailedToLoad'));
+    const bodyHtml = parsed.html !== undefined && DOMPurify
       ? sanitizePassiveMarkup(DOMPurify, parsed.html, this.ownerDocument, 'passive-document')
       : null;
-    if (!this.isConnected || generation !== this.generation) return null;
+    if (!this.isCurrentLoad(generation, ownerView)) return null;
     if (parsed.html && !DOMPurify && !parsed.text) {
       // An HTML-only message (no text/plain alternative) with the optional
       // `dompurify` peer unavailable would otherwise fall through to an empty
@@ -424,9 +609,8 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       // dropping the only content the message has.
       throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
     }
-    const content = parsed.attachments ?? [];
     return {
-      fromAddress: parsed.from,
+      ...(parsed.from === undefined ? {} : { fromAddress: parsed.from }),
       toAddresses: parsed.to,
       email: {
         from: this.formatAddress(parsed.from),
@@ -435,15 +619,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
         date: parsed.date ?? '',
         bodyHtml,
         bodyText: bodyHtml ? null : (parsed.text ?? null),
-        attachments: content.map((attachment: { filename?: string | null; mimeType?: string; content: ArrayBuffer | Uint8Array | string }) => {
-          const normalized = normalizeAttachmentContent(attachment.content);
-          return {
-            filename: attachment.filename ?? '',
-            mimeType: attachment.mimeType ?? '',
-            size: normalized.byteLength,
-            content: normalized,
-          };
-        }),
+        attachments: [...parsed.attachments],
       },
     };
   }
@@ -463,7 +639,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     return value.address ?? value.name ?? '';
   }
 
-  private formatAddresses(values: Address[] | undefined): string {
+  private formatAddresses(values: readonly Address[] | undefined): string {
     return getListFormat(this.effectiveLocale, { style: 'long', type: 'conjunction' })
       .format((values ?? []).map((value) => this.formatAddress(value)).filter(Boolean));
   }
@@ -476,7 +652,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       : getDateTimeFormat(this.effectiveLocale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
   }
 
-  private renderHeaders(email: ParsedEmail, fromAddress?: Address, toAddresses?: Address[]): TemplateResult {
+  private renderHeaders(email: ParsedEmail, fromAddress?: Address, toAddresses?: readonly Address[]): TemplateResult {
     return html`<div part="headers">
       <span part="from-label">${this.localize('emailViewerFrom')}</span><span part="from">${fromAddress ? this.formatAddress(fromAddress) : email.from}</span>
       <span part="to-label">${this.localize('emailViewerTo')}</span><span part="to">${toAddresses ? this.formatAddresses(toAddresses) : email.to}</span>

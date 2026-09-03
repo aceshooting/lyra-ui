@@ -372,6 +372,28 @@ describe("<lr-scroller>", () => {
     expect(getComputedStyle(next).minBlockSize).to.equal("40px");
   });
 
+  it('inherits the host font size through each native control and glyph', async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller controls style="font-size: 20px"><span>Content</span></lr-scroller>
+    `);
+    const controls = [
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="previous"]')!,
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next"]')!,
+    ];
+    const glyphs = [
+      el.shadowRoot!.querySelector<HTMLElement>('[part="previous-glyph"]')!,
+      el.shadowRoot!.querySelector<HTMLElement>('[part="next-glyph"]')!,
+    ];
+
+    expect(getComputedStyle(el).fontSize).to.equal('20px');
+    for (const control of controls) {
+      expect(getComputedStyle(control).fontSize).to.equal('20px');
+    }
+    for (const glyph of glyphs) {
+      expect(getComputedStyle(glyph).fontSize).to.equal('20px');
+    }
+  });
+
   it("is accessible", async () => {
     const el = await fixture<LyraScroller>(
       html`<lr-scroller label="Recent items"><span>Content</span></lr-scroller>`
@@ -616,7 +638,7 @@ describe("<lr-scroller>", () => {
     }
   });
 
-  it("emits lr-scroll for ordinary movement even when neither edge state changes", async () => {
+  it("emits only lr-scroll with its exact detail for ordinary movement when neither edge state changes", async () => {
     const el = await fixture<LyraScroller>(html`
       <lr-scroller label="Items" style="inline-size: 100px;">
         <div style="inline-size: 500px;">wide content</div>
@@ -635,20 +657,24 @@ describe("<lr-scroller>", () => {
     });
     const details: Array<{
       scrollLeft: number;
+      scrollTop: number;
       scrollStart: boolean;
       scrollEnd: boolean;
     }> = [];
+    let virtualScrollEvents = 0;
     el.addEventListener("lr-scroll", (event) => {
       details.push(
         (
           event as CustomEvent<{
             scrollLeft: number;
+            scrollTop: number;
             scrollStart: boolean;
             scrollEnd: boolean;
           }>
         ).detail
       );
     });
+    el.addEventListener('lr-virtual-scroll', () => virtualScrollEvents += 1);
 
     Object.defineProperty(viewport, "scrollLeft", {
       configurable: true,
@@ -663,8 +689,16 @@ describe("<lr-scroller>", () => {
 
     expect(details).to.have.length(2);
     expect(details.map((detail) => detail.scrollLeft)).to.deep.equal([20, 30]);
+    expect(details.map((detail) => detail.scrollTop)).to.deep.equal([0, 0]);
+    expect(Object.keys(details[0]!).sort()).to.deep.equal([
+      'scrollEnd',
+      'scrollLeft',
+      'scrollStart',
+      'scrollTop',
+    ]);
     expect(details.every((detail) => !detail.scrollStart && !detail.scrollEnd))
       .to.be.true;
+    expect(virtualScrollEvents, 'lr-virtual-scroll belongs only to lr-virtual-list').to.equal(0);
   });
 
   it("coalesces a burst of native scroll events into one lr-scroll per animation frame", async () => {
@@ -696,8 +730,8 @@ describe("<lr-scroller>", () => {
     });
 
     // One fling: a dozen native scroll ticks inside a single frame. Uncoalesced this emitted a
-    // dozen CustomEvents (and did a dozen scrollWidth/clientWidth layout reads); lr-virtual-list's
-    // identically-named lr-scroll already contracts at most one per frame.
+    // dozen CustomEvents (and did a dozen scrollWidth/clientWidth layout reads). The scroller
+    // reports the final position once at the frame boundary.
     for (let step = 1; step <= 12; step += 1) {
       viewport.scrollLeft = 20 + step * 5;
       viewport.dispatchEvent(new Event("scroll"));

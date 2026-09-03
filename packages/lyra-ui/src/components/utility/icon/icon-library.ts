@@ -7,6 +7,11 @@
  * A resolver therefore cannot widen what an icon is allowed to render.
  */
 
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const ICON_LIBRARY_LISTENER_WARNING_KEY = 'lyra-icon-library-listener-threw';
+const ICON_LIBRARY_LISTENER_WARNING = '<lr-icon> ignored a throwing icon library listener.';
+
 /** Maps an icon name, family, and variant to the URL of a single SVG document. Async resolvers are
  *  awaited and generation-guarded, so stale results never start a request or replace a newer icon. */
 export type LyraIconLibraryResolver = (
@@ -37,8 +42,8 @@ function notify(name: string): void {
   for (const listener of [...listeners]) {
     try {
       listener(name);
-    } catch (error) {
-      console.warn('[lr] an icon library listener threw while re-resolving icons:', error);
+    } catch {
+      devWarnOnce(ICON_LIBRARY_LISTENER_WARNING_KEY, ICON_LIBRARY_LISTENER_WARNING);
     }
   }
 }

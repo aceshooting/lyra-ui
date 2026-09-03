@@ -74,6 +74,8 @@ export interface LyraDocumentViewerEventMap {
  *   the shared document-level polite/assertive sinks.
  * @csspart download-link - The native download action shown when `src` is safe.
  * @cssprop [--lr-document-viewer-max-height=70vh] - Maximum block size of the dialog body before it scrolls internally.
+ * @cssprop [--lr-document-viewer-download-link-hover-bg=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Hover background of the download link.
+ * @cssprop [--lr-document-viewer-download-link-active-bg=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of the download link.
  * @status stable
  * @since 4.0.0
  */

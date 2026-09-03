@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,6 +45,10 @@ Data-mode thread ids must be nonempty, nonblank, and unique, and every row must 
 `title`; invalid rows and later duplicates are omitted with the first valid occurrence winning
 before the mode is selected, so focus, actions, slot ownership, and emitted `conversationId`
 values remain unambiguous.
+
+Display fields are captured when `threads` is assigned. After a change, create and assign a new
+collection; changing an assigned record or mutating the assigned array does not update the view.
+`filter`, `groupBy`, row callbacks, and group contexts receive the original source records.
 
 **Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
 (attribute `active-conversation-id`) — data mode:
@@ -156,6 +160,21 @@ prefix: `row-item-base`, `row-item-active-indicator`, `row-item-select-button`, 
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
 internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
 marks returned by `renderRowContent` or any other hook.
+
+**Themeable control states:** `--lr-thread-list-group-toggle-hover-bg` (default
+`var(--lr-color-surface-raised)`), `--lr-thread-list-group-toggle-hover-color` (default
+`var(--lr-color-text)`), `--lr-thread-list-group-toggle-active-bg` (default `color-mix(in oklab,
+var(--lr-thread-list-group-toggle-hover-bg, var(--lr-color-surface-raised)),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-thread-list-group-toggle-active-color` (default
+`var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text))`) style group-toggle hover
+and pressed states. `--lr-thread-list-row-action-hover-bg` (default
+`var(--lr-color-surface-raised)`), `--lr-thread-list-row-action-hover-color` (default
+`var(--lr-color-text)`), `--lr-thread-list-row-action-active-bg` (default `color-mix(in oklab,
+var(--lr-thread-list-row-action-hover-bg, var(--lr-color-surface-raised)),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-thread-list-row-action-active-color` (default
+`var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))`) do the same for row actions.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
 component's own render-callback output (`wrapRow`, `renderStart`, `renderExcerpt`,

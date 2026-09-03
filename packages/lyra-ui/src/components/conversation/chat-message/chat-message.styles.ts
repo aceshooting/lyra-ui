@@ -74,6 +74,7 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='collapse-button'] {
+    font: inherit;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;

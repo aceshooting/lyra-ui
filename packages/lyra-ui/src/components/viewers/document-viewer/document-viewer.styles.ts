@@ -4,6 +4,16 @@ export const styles = css`
   :host {
     display: contents;
     --_lr-document-viewer-max-height: 70vh;
+    --_lr-document-viewer-download-link-hover-bg: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
+    --_lr-document-viewer-download-link-active-bg: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
 
   [part="body"] {
@@ -41,23 +51,16 @@ export const styles = css`
   }
 
   [part="download-link"]:hover {
-    background: color-mix(
-      in srgb,
-      var(--lr-color-brand) 85%,
-      var(--lr-color-shadow)
+    background: var(
+      --lr-document-viewer-download-link-hover-bg,
+      var(--_lr-document-viewer-download-link-hover-bg)
     );
   }
 
-  /* Pressed deepens toward --lr-color-shadow, not --lr-color-mix-partner, matching
-     <lr-document-preview>'s identical download button: the fill is brand under an
-     --lr-color-on-brand label, so mixing toward the page text colour would lighten the fill in a
-     dark theme and eat the label's contrast. --lr-color-mix-active still sets the amount, keeping
-     the step themeable. */
   [part="download-link"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-shadow) var(--lr-color-mix-active)
+    background: var(
+      --lr-document-viewer-download-link-active-bg,
+      var(--_lr-document-viewer-download-link-active-bg)
     );
   }
 

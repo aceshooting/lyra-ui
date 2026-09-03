@@ -296,6 +296,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.toolbarAction.releaseTabIndex?.();
     super.disconnectedCallback();
     this.resetFeedback();
     this.sink?.release();
@@ -303,6 +304,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.toolbarAction.releaseTabIndex?.();
     super.adoptedCallback();
     // Adoption may occur while already disconnected, so defensively retire old-realm resources
     // even when no additional disconnected callback will run.
@@ -339,6 +341,21 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private createToolbarAction(): LyraToolbarAction {
     const host = this;
+    let leasedTrigger: HTMLElement | undefined;
+    let authoredTabIndex: string | null = null;
+    let lastManagedTabIndex: string | null = null;
+    let consumerOwnsTabIndex = false;
+    const releaseTabIndex = (): void => {
+      const target = leasedTrigger;
+      if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
+        if (authoredTabIndex === null) target.removeAttribute('tabindex');
+        else target.setAttribute('tabindex', authoredTabIndex);
+      }
+      leasedTrigger = undefined;
+      authoredTabIndex = null;
+      lastManagedTabIndex = null;
+      consumerOwnsTabIndex = false;
+    };
     return {
       id: 'copy',
       get disabled() {
@@ -350,8 +367,27 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
       },
       setTabIndex(tabIndex) {
         const trigger = host.activeTrigger();
-        if (trigger) trigger.tabIndex = tabIndex;
+        if (!trigger) {
+          releaseTabIndex();
+          return;
+        }
+        if (leasedTrigger !== trigger) {
+          releaseTabIndex();
+          leasedTrigger = trigger;
+          authoredTabIndex = trigger.getAttribute('tabindex');
+        }
+        if (
+          consumerOwnsTabIndex ||
+          (lastManagedTabIndex !== null &&
+            trigger.getAttribute('tabindex') !== lastManagedTabIndex)
+        ) {
+          consumerOwnsTabIndex = true;
+          return;
+        }
+        trigger.tabIndex = tabIndex;
+        lastManagedTabIndex = trigger.getAttribute('tabindex');
       },
+      releaseTabIndex,
       matchesEventPath(path) {
         const trigger = host.activeTrigger();
         return trigger !== undefined && path.includes(trigger);
@@ -359,7 +395,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     };
   }
 
-  /** The stable logical copy action exposed to an enclosing composite toolbar. */
+  /** The stable logical copy action exposed to an enclosing composite toolbar. Its optional
+   *  release method restores an untouched authored trigger tabindex when the parent leaves. */
   getToolbarActions(): readonly LyraToolbarAction[] {
     return [this.toolbarAction];
   }

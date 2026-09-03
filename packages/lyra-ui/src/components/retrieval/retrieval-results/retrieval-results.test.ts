@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './retrieval-results.js';
 import type {
   LyraRetrievalResults,
@@ -43,6 +43,35 @@ const chunks: RetrievalChunk[] = [
 // crosses that boundary, so reaching a row requires walking through it explicitly.
 function vlist(el: LyraRetrievalResults): LyraVirtualList {
   return el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+}
+
+function recordVirtualListOffsetRebuilds(list: LyraVirtualList): {
+  count: () => number;
+  updates: () => string[][];
+  restore: () => void;
+} {
+  const seam = list as unknown as { recomputeOffsets: () => void };
+  const updateSeam = list as unknown as { willUpdate: (changed: Map<PropertyKey, unknown>) => void };
+  const original = seam.recomputeOffsets;
+  const originalWillUpdate = updateSeam.willUpdate;
+  let count = 0;
+  const updates: string[][] = [];
+  seam.recomputeOffsets = () => {
+    count += 1;
+    original.call(list);
+  };
+  updateSeam.willUpdate = (changed) => {
+    updates.push([...changed.keys()].map(String));
+    originalWillUpdate.call(list, changed);
+  };
+  return {
+    count: () => count,
+    updates: () => updates,
+    restore: () => {
+      seam.recomputeOffsets = original;
+      updateSeam.willUpdate = originalWillUpdate;
+    },
+  };
 }
 
 function flatRows(el: LyraRetrievalResults): Element[] {
@@ -486,6 +515,78 @@ it('renders through the internal virtual-list once the canonical count exceeds v
   await el.updateComplete;
   expect(vlist(el)).to.exist;
   expect(vlist(el).items.length).to.equal(5);
+});
+
+it('keeps the retrieval virtual-list key callback stable across a selection-only update', async () => {
+  const el = await fixture<LyraRetrievalResults>(
+    html`<lr-retrieval-results virtualize-at="1"></lr-retrieval-results>`,
+  );
+  el.chunks = chunks;
+  await el.updateComplete;
+  const list = vlist(el);
+  const keyFunction = list.keyFunction;
+
+  el.selectedChunkIds = ['c1'];
+  await el.updateComplete;
+  await list.updateComplete;
+
+  expect(list.keyFunction).to.equal(keyFunction);
+});
+
+it('refreshes virtual result rows without offset rebuilds for controlled state updates while chunk data reconciles', async () => {
+  const el = await fixture<LyraRetrievalResults>(
+    html`<lr-retrieval-results virtualize-at="1"></lr-retrieval-results>`,
+  );
+  el.chunks = chunks;
+  await el.updateComplete;
+  const list = vlist(el);
+  list.rowHeight = 24;
+  await list.updateComplete;
+  await aTimeout(100);
+  const items = list.items;
+  const rebuilds = recordVirtualListOffsetRebuilds(list);
+  try {
+    const selectedCheckbox = (): LyraCheckbox =>
+      list.shadowRoot!.querySelector<LyraCheckbox>('lr-checkbox[data-chunk-id="c1"]')!;
+    expect(selectedCheckbox().checked).to.equal(false);
+
+    el.selectedChunkIds = ['c1'];
+    await el.updateComplete;
+    await list.updateComplete;
+
+    expect(rebuilds.count(), JSON.stringify(rebuilds.updates())).to.equal(0);
+    expect(list.items).to.equal(items);
+    expect(selectedCheckbox().checked).to.equal(true);
+
+    el.presentation = 'compact';
+    await el.updateComplete;
+    await list.updateComplete;
+
+    const inspector = list.shadowRoot!.querySelector<LyraChunkInspector>(
+      'lr-chunk-inspector[data-chunk-id="c1"]',
+    )!;
+    expect(inspector.compact).to.equal(true);
+    expect(rebuilds.count()).to.equal(0);
+    expect(list.items).to.equal(items);
+
+    el.chunks = [
+      ...chunks,
+      {
+        id: 'c4',
+        text: 'A newly arrived chunk still reconciles the virtualized source.',
+        score: 0.4,
+        source: { id: 's3', name: 'new-source.pdf' },
+      },
+    ];
+    await el.updateComplete;
+    await list.updateComplete;
+
+    expect(rebuilds.count()).to.equal(1);
+    expect(list.items).to.not.equal(items);
+    expect((list.items as RetrievalChunk[]).some((chunk) => chunk.id === 'c4')).to.equal(true);
+  } finally {
+    rebuilds.restore();
+  }
 });
 
 it('stays in flat (non-virtualized) mode below the virtualizeAt threshold', async () => {

@@ -39,11 +39,11 @@ for the page.
 |---|---|---|
 | `@aceshooting/lyra-flags` | `^2.3.0` | _(loaded by a shared internal module)_ |
 | `@aiden0z/pptx-renderer` | `^1.2.4` | `lr-pptx-viewer` |
-| `@sgratzl/chartjs-chart-boxplot` | `^4.4.5` | `lr-box-plot` |
-| `chart.js` | `^4.5.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
-| `chartjs-plugin-annotation` | `^3.1.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
+| `@sgratzl/chartjs-chart-boxplot` | `^4.0.0` | `lr-box-plot` |
+| `chart.js` | `^4.0.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
+| `chartjs-plugin-annotation` | `^3.0.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-datalabels` | `^2.2.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
-| `chartjs-plugin-zoom` | `^2.2.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
+| `chartjs-plugin-zoom` | `^2.0.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `d3-drag` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-force` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-selection` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
@@ -52,9 +52,9 @@ for the page.
 | `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |
-| `katex` | `^0.18.5` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
+| `katex` | `^0.18.4` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `libphonenumber-js` | `>=1.11.0 <2` | _(not referenced by any component)_ |
-| `mammoth` | `^1.12.2` | `lr-docx-viewer` |
+| `mammoth` | `^1.12.1` | `lr-docx-viewer` |
 | `maplibre-gl` | `>=5 <7` | `lr-geojson-view`, `lr-geojson-viewer`, `lr-map` |
 | `marked` | `^18.0.11` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `papaparse` | `^5.7.0` | `lr-csv-viewer`, `lr-dataset-viewer` |

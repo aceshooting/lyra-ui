@@ -1,4 +1,8 @@
 import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const PPTX_RENDERER_WARNING_KEY = 'lyra-pptx-viewer-renderer-unavailable';
+const PPTX_RENDERER_WARNING = '<lr-pptx-viewer> could not load its optional @aiden0z/pptx-renderer peer.';
 
 export interface PptxViewerApi extends EventTarget {
   slideCount: number;
@@ -241,8 +245,8 @@ export async function loadPptxRenderer(
   try {
     const module = await importer();
     return resolveOptionalPeerCapability(module, hasPptxOpenCapability);
-  } catch (error) {
-    console.warn('The optional `@aiden0z/pptx-renderer` peer is required to render PPTX files.', error);
+  } catch {
+    devWarnOnce(PPTX_RENDERER_WARNING_KEY, PPTX_RENDERER_WARNING);
     return null;
   }
 }

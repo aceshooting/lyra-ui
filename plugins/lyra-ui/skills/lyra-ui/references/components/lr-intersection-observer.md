@@ -27,6 +27,15 @@ boolean = false` (reflected; unobserves a target after its first intersection). 
 target stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
 setting `once` to false is the explicit reset boundary.
 
+The browser capability is optional. A missing or throwing owner-window lookup or unavailable
+constructor leaves that rebuild inert rather than leaking an exception; an initial construction
+failure retries once with safe default options. Individual `observe`, `unobserve`, and `disconnect`
+failures are contained, so later valid targets and later rebuilds can still observe. Callbacks are
+tied to the current owner document, so a detached or adopted wrapper cannot emit a stale batch.
+Threshold collections inspect at most their first 10,000 direct data entries. Malformed or
+accessor-backed entries are skipped; a valid prefix remains active, while an entirely unusable value
+falls back to threshold `0`.
+
 **Events:** mapped `lr-intersect` once per entry with `{ entry }`, plus the existing batch alias
 `lr-intersection` with a frozen
 `Readonly<{ entries: readonly IntersectionObserverEntry[] }>` detail. The batch sequence is

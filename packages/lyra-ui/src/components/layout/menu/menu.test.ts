@@ -116,6 +116,31 @@ it('collects a same-origin foreign-realm menu item without instanceof', async ()
   }
 });
 
+it('contains a throwing owner activeElement getter while reconciling an open menu', async () => {
+  const el = (await fixture(html`
+    <lr-menu><lr-menu-item value="one">One</lr-menu-item></lr-menu>
+  `)) as LyraMenu;
+  const prior = Object.getOwnPropertyDescriptor(document, 'activeElement');
+  let unavailable = true;
+  Object.defineProperty(document, 'activeElement', {
+    configurable: true,
+    get(): Element {
+      if (unavailable) throw new TypeError('active element unavailable');
+      return { nodeType: 1 } as Element;
+    },
+  });
+  try {
+    const internals = el as unknown as { syncItemsFromSlot(slot: HTMLSlotElement): void };
+    internals.syncItemsFromSlot(el.shadowRoot!.querySelector('slot:not([name])')!);
+    unavailable = false;
+    internals.syncItemsFromSlot(el.shadowRoot!.querySelector('slot:not([name])')!);
+    expect(el.isConnected).to.equal(true);
+  } finally {
+    if (prior) Object.defineProperty(document, 'activeElement', prior);
+    else delete (document as unknown as { activeElement?: unknown }).activeElement;
+  }
+});
+
 it('is an inline mapped menu with no additive root-overlay API', async () => {
   const menu = await fixture<LyraMenu>(basic());
   expect(list(menu).getAttribute('role')).to.equal('menu');

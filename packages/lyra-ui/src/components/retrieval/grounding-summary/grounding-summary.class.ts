@@ -2,7 +2,11 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { firstByRetrievalIdentity } from '../retrieval-identity.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import {
   finiteCount,
   finiteRange,
@@ -29,12 +33,338 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraGroundingSummaryEventMap {
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-claim-select': CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
+}
+
+const MAX_PROJECTED_GROUNDING_ROWS = 10_000;
+
+interface CanonicalRange {
+  readonly start: number;
+  readonly end: number;
+}
+
+interface CanonicalClaim {
+  /** The admitted source remains opaque and is used only for the outer public event. */
+  readonly source: GroundedClaim;
+  /** Safe, frozen input passed to the composed claim-evidence child. */
+  readonly input: GroundedClaim;
+  readonly id: string;
+}
+
+interface CanonicalCitation {
+  /** The admitted source remains opaque and is used only for the outer public event. */
+  readonly source: Citation;
+  /** Safe, frozen input passed to the composed claim-evidence child. */
+  readonly input: Citation;
+  readonly id: string;
+  readonly sourceId?: string;
+  readonly label?: string;
+  readonly span?: CanonicalRange;
+}
+
+interface CanonicalAssessment {
+  readonly supportedClaims: number;
+  readonly unsupportedClaims: number;
+  readonly coverage: number;
+  readonly confidence?: number;
+  readonly warnings: readonly string[];
+  readonly claims: readonly CanonicalClaim[];
+}
+
+const EMPTY_CANONICAL_CLAIMS: readonly CanonicalClaim[] = Object.freeze([]);
+const EMPTY_CANONICAL_CITATIONS: readonly CanonicalCitation[] = Object.freeze(
+  []
+);
+const EMPTY_WARNINGS: readonly string[] = Object.freeze([]);
+
+function descriptorValue(
+  value: object,
+  property: PropertyKey
+): ReturnType<typeof getOwnDataDescriptor> {
+  return getOwnDataDescriptor(value, property);
+}
+
+function valueOfDescriptor(
+  descriptor: ReturnType<typeof getOwnDataDescriptor>
+): unknown | undefined {
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    ? undefined
+    : descriptor.value;
+}
+
+function hasUnsafeDescriptor(
+  descriptors: readonly ReturnType<typeof getOwnDataDescriptor>[]
+): boolean {
+  return descriptors.some(
+    (descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+  );
+}
+
+function nestedEventDetailValue(
+  event: CustomEvent<unknown>,
+  property: PropertyKey
+): unknown | undefined {
+  const detail = event.detail;
+  if (detail === null || typeof detail !== 'object') return undefined;
+  const descriptor = descriptorValue(detail, property);
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    ? undefined
+    : descriptor.value;
+}
+
+function projectStringList(value: unknown): readonly string[] | undefined {
+  try {
+    if (!Array.isArray(value)) return undefined;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    )
+      return undefined;
+
+    const values: string[] = [];
+    const length = Math.min(
+      lengthDescriptor.value,
+      MAX_PROJECTED_GROUNDING_ROWS
+    );
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = descriptorValue(value, String(index));
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+      if (
+        descriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
+        typeof descriptor.value === 'string'
+      )
+        values.push(descriptor.value);
+    }
+    return Object.freeze(values);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectRange(value: unknown): CanonicalRange | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+      return undefined;
+    const startDescriptor = descriptorValue(value, 'start');
+    const endDescriptor = descriptorValue(value, 'end');
+    if (hasUnsafeDescriptor([startDescriptor, endDescriptor])) return undefined;
+    const start = valueOfDescriptor(startDescriptor);
+    const end = valueOfDescriptor(endDescriptor);
+    if (typeof start !== 'number' || typeof end !== 'number') return undefined;
+    return Object.freeze({ start, end });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectClaim(value: unknown): CanonicalClaim | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+      return undefined;
+    const idDescriptor = descriptorValue(value, 'id');
+    const textDescriptor = descriptorValue(value, 'text');
+    const statusDescriptor = descriptorValue(value, 'status');
+    const citationIdsDescriptor = descriptorValue(value, 'citationIds');
+    const confidenceDescriptor = descriptorValue(value, 'confidence');
+    const explanationDescriptor = descriptorValue(value, 'explanation');
+    if (
+      hasUnsafeDescriptor([
+        idDescriptor,
+        textDescriptor,
+        statusDescriptor,
+        citationIdsDescriptor,
+        confidenceDescriptor,
+        explanationDescriptor,
+      ])
+    )
+      return undefined;
+
+    const id = valueOfDescriptor(idDescriptor);
+    const text = valueOfDescriptor(textDescriptor);
+    const citationIds = projectStringList(valueOfDescriptor(citationIdsDescriptor));
+    if (
+      typeof id !== 'string' ||
+      id.trim().length === 0 ||
+      typeof text !== 'string' ||
+      citationIds === undefined
+    )
+      return undefined;
+
+    const status = valueOfDescriptor(statusDescriptor);
+    const confidence = valueOfDescriptor(confidenceDescriptor);
+    const explanation = valueOfDescriptor(explanationDescriptor);
+    const input = Object.freeze({
+      id,
+      text,
+      status: (typeof status === 'string' ? status : 'unsupported') as GroundedClaim['status'],
+      citationIds,
+      ...(typeof confidence === 'number' && Number.isFinite(confidence)
+        ? { confidence }
+        : {}),
+      ...(typeof explanation === 'string' ? { explanation } : {}),
+    });
+    return Object.freeze({ source: value as GroundedClaim, input, id });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectCitation(value: unknown): CanonicalCitation | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+      return undefined;
+    const idDescriptor = descriptorValue(value, 'id');
+    const chunkIdDescriptor = descriptorValue(value, 'chunkId');
+    const sourceIdDescriptor = descriptorValue(value, 'sourceId');
+    const spanDescriptor = descriptorValue(value, 'span');
+    const labelDescriptor = descriptorValue(value, 'label');
+    const quoteDescriptor = descriptorValue(value, 'quote');
+    if (
+      hasUnsafeDescriptor([
+        idDescriptor,
+        chunkIdDescriptor,
+        sourceIdDescriptor,
+        spanDescriptor,
+        labelDescriptor,
+        quoteDescriptor,
+      ])
+    )
+      return undefined;
+
+    const id = valueOfDescriptor(idDescriptor);
+    if (typeof id !== 'string' || id.trim().length === 0) return undefined;
+    const chunkId = valueOfDescriptor(chunkIdDescriptor);
+    const sourceId = valueOfDescriptor(sourceIdDescriptor);
+    const spanValue = valueOfDescriptor(spanDescriptor);
+    const label = valueOfDescriptor(labelDescriptor);
+    const quote = valueOfDescriptor(quoteDescriptor);
+    const span =
+      spanDescriptor === MISSING_OWN_DATA_DESCRIPTOR || spanValue === undefined
+        ? undefined
+        : projectRange(spanValue);
+    if (spanValue !== undefined && span === undefined) return undefined;
+    const input = Object.freeze({
+      id,
+      ...(typeof chunkId === 'string' ? { chunkId } : {}),
+      ...(typeof sourceId === 'string' ? { sourceId } : {}),
+      ...(span === undefined ? {} : { span }),
+      ...(typeof label === 'string' ? { label } : {}),
+      ...(typeof quote === 'string' ? { quote } : {}),
+    });
+    return Object.freeze({
+      source: value as Citation,
+      input,
+      id,
+      ...(typeof sourceId === 'string' ? { sourceId } : {}),
+      ...(typeof label === 'string' ? { label } : {}),
+      ...(span === undefined ? {} : { span }),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectRows<T extends { readonly id: string }>(
+  value: unknown,
+  project: (entry: unknown) => T | undefined,
+  empty: readonly T[]
+): readonly T[] {
+  try {
+    if (!Array.isArray(value)) return empty;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    )
+      return empty;
+
+    const rows: T[] = [];
+    const seen = new Set<string>();
+    const length = Math.min(
+      lengthDescriptor.value,
+      MAX_PROJECTED_GROUNDING_ROWS
+    );
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = descriptorValue(value, String(index));
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
+        continue;
+      const row = project(descriptor.value);
+      // A malformed duplicate must never reserve its public identity ahead of a valid later row.
+      if (!row || seen.has(row.id)) continue;
+      seen.add(row.id);
+      rows.push(row);
+    }
+    return Object.freeze(rows);
+  } catch {
+    return empty;
+  }
+}
+
+function projectAssessment(value: unknown): CanonicalAssessment | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+      return undefined;
+    const supportedClaimsDescriptor = descriptorValue(value, 'supportedClaims');
+    const unsupportedClaimsDescriptor = descriptorValue(value, 'unsupportedClaims');
+    const coverageDescriptor = descriptorValue(value, 'coverage');
+    const confidenceDescriptor = descriptorValue(value, 'confidence');
+    const warningsDescriptor = descriptorValue(value, 'warnings');
+    const claimsDescriptor = descriptorValue(value, 'claims');
+    if (
+      hasUnsafeDescriptor([
+        supportedClaimsDescriptor,
+        unsupportedClaimsDescriptor,
+        coverageDescriptor,
+        confidenceDescriptor,
+        warningsDescriptor,
+        claimsDescriptor,
+      ])
+    )
+      return undefined;
+
+    const supportedClaims = valueOfDescriptor(supportedClaimsDescriptor);
+    const unsupportedClaims = valueOfDescriptor(unsupportedClaimsDescriptor);
+    const coverage = valueOfDescriptor(coverageDescriptor);
+    const confidence = valueOfDescriptor(confidenceDescriptor);
+    const warningsValue = valueOfDescriptor(warningsDescriptor);
+    const claimsValue = valueOfDescriptor(claimsDescriptor);
+    const warnings =
+      warningsDescriptor === MISSING_OWN_DATA_DESCRIPTOR || warningsValue === undefined
+        ? EMPTY_WARNINGS
+        : projectStringList(warningsValue) ?? EMPTY_WARNINGS;
+    const claims =
+      claimsDescriptor === MISSING_OWN_DATA_DESCRIPTOR || claimsValue === undefined
+        ? EMPTY_CANONICAL_CLAIMS
+        : projectRows(claimsValue, projectClaim, EMPTY_CANONICAL_CLAIMS);
+    return Object.freeze({
+      supportedClaims: typeof supportedClaims === 'number' ? supportedClaims : 0,
+      unsupportedClaims:
+        typeof unsupportedClaims === 'number' ? unsupportedClaims : 0,
+      coverage: typeof coverage === 'number' ? coverage : 0,
+      ...(typeof confidence === 'number' ? { confidence } : {}),
+      warnings,
+      claims,
+    });
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -55,10 +385,12 @@ export interface LyraGroundingSummaryEventMap {
  * carrying the full `Citation` -- including its `span` -- since a bare `sourceId`/`index` pair
  * can't by itself tell a host which exact evidence span to jump to.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
- * Blank claim/citation ids and later duplicates are ignored before counts, lookup, rendering, or
- * activation. The first record for an id wins.
+ * Public collection sequences are bounded, frozen snapshots. The assessment and admitted
+ * claim/citation source identities remain opaque while descriptor-safe projections copy fields
+ * used for display, lookup, and composition once; later rendering and events never reread a
+ * source record. Create a new collection and reassign it after changes; mutating the assigned
+ * array does not update the view. Blank claim/citation ids and later duplicates are ignored before
+ * counts, lookup, rendering, or activation. The first record for an id wins.
  *
  * @customElement lr-grounding-summary
  * @event lr-citation-select - An evidence citation badge was activated. `detail: { citation }`.
@@ -89,6 +421,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    citation: LYRA_DEFAULT_citation,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     groundingSummaryConfidenceLabel: LYRA_DEFAULT_groundingSummaryConfidenceLabel,
@@ -113,12 +446,24 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     'assessment',
     'citations',
   ]);
+  /** Assessment is a closed schema projected below without generic record enumeration. */
+  protected static override readonly identityCollectionObjectProperties =
+    Object.freeze(['assessment']);
+  /** Citation records carry opaque caller fields returned by the public selection event. */
+  protected static override readonly identityCollectionProperties = Object.freeze([
+    'citations',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-citation-select',
     'lr-claim-select',
   ]);
+  /** Preserve admitted source identities inside the otherwise frozen event envelopes. */
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-citation-select': Object.freeze(['citation']),
+    'lr-claim-select': Object.freeze(['claim']),
+  });
 
   /** The assessment to summarize. `null` (the default) renders the empty state. */
   @property({ attribute: false }) assessment: Readonly<GroundingAssessment> | null = null;
@@ -156,20 +501,38 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   @property({ attribute: 'heading-level' })
   headingLevel: LyraHeadingLevel = '3';
 
-  private get normalizedCitations(): Citation[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.citations) ? this.citations : [],
-      (citation) => citation.id
-    );
+  private readonly canonicalAssessmentBySource = new WeakMap<
+    object,
+    CanonicalAssessment | null
+  >();
+  private readonly canonicalCitationsBySource = new WeakMap<
+    object,
+    readonly CanonicalCitation[]
+  >();
+
+  private get normalizedAssessment(): CanonicalAssessment | undefined {
+    const source = this.assessment;
+    if (source === null || typeof source !== 'object') return undefined;
+    const cached = this.canonicalAssessmentBySource.get(source);
+    if (cached !== undefined) return cached ?? undefined;
+    const assessment = projectAssessment(source);
+    this.canonicalAssessmentBySource.set(source, assessment ?? null);
+    return assessment;
   }
 
-  private normalizedClaims(
-    assessment: Readonly<GroundingAssessment>
-  ): GroundedClaim[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(assessment.claims) ? assessment.claims : [],
-      (claim) => claim.id
+  private get normalizedCitations(): readonly CanonicalCitation[] {
+    const source = this.citations;
+    if (source === null || typeof source !== 'object')
+      return EMPTY_CANONICAL_CITATIONS;
+    const cached = this.canonicalCitationsBySource.get(source);
+    if (cached) return cached;
+    const citations = projectRows(
+      source,
+      projectCitation,
+      EMPTY_CANONICAL_CITATIONS
     );
+    this.canonicalCitationsBySource.set(source, citations);
+    return citations;
   }
 
   private sectionHeading(part: string, text: string): TemplateResult {
@@ -205,13 +568,38 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     );
   }
 
-  private onCitationSelect(citation: Citation, event: Event): void {
+  private onCitationSelect(citation: CanonicalCitation, event: Event): void {
     event.stopPropagation();
-    this.emit('lr-citation-select', { citation });
+    this.emit('lr-citation-select', { citation: citation.source });
+  }
+
+  private onNestedCitationSelect(
+    citations: readonly CanonicalCitation[],
+    event: CustomEvent<unknown>
+  ): void {
+    event.stopPropagation();
+    const selected = nestedEventDetailValue(event, 'citation');
+    const citation = citations.find(
+      (candidate) => candidate.input === selected
+    );
+    if (citation)
+      this.emit('lr-citation-select', { citation: citation.source });
+  }
+
+  private onNestedClaimSelect(
+    claims: readonly CanonicalClaim[],
+    event: CustomEvent<unknown>
+  ): void {
+    event.stopPropagation();
+    const selected = nestedEventDetailValue(event, 'claim');
+    const claim = claims.find(
+      (candidate) => candidate.input === selected
+    );
+    if (claim) this.emit('lr-claim-select', { claim: claim.source });
   }
 
   private renderEvidenceItem = (
-    citation: Citation,
+    citation: CanonicalCitation,
     index: number
   ): TemplateResult => {
     // The offsets are locale-formatted before interpolation, the same way every other number in
@@ -252,7 +640,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
       this.label == null ? this.localize('groundingSummaryLabel') : this.label
     );
     const groupRole = retrievalSemanticRole(this, 'group');
-    const a = this.assessment;
+    const a = this.normalizedAssessment;
 
     if (!a) {
       return html`<div
@@ -271,11 +659,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     const unsupportedClaims = finiteCount(a.unsupportedClaims);
     const coverage = finiteRange(a.coverage, 0, 0, 1);
     const hasConfidence = typeof a.confidence === 'number';
-    const warnings = Array.isArray(a.warnings)
-      ? a.warnings.filter((warning): warning is string => typeof warning === 'string')
-      : [];
+    const warnings = a.warnings;
     const numberFormat = getNumberFormat(this.effectiveLocale);
-    const claims = this.normalizedClaims(a);
+    const claims = a.claims;
     const citations = this.normalizedCitations;
 
     return html`
@@ -332,8 +718,12 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
           ? html`
               <lr-claim-evidence
                 part="claims"
-                .claims=${claims}
-                .citations=${citations}
+                .claims=${claims.map((claim) => claim.input)}
+                .citations=${citations.map((citation) => citation.input)}
+                @lr-claim-select=${(event: CustomEvent<unknown>) =>
+                  this.onNestedClaimSelect(claims, event)}
+                @lr-citation-select=${(event: CustomEvent<unknown>) =>
+                  this.onNestedCitationSelect(citations, event)}
               ></lr-claim-evidence>
             `
           : nothing}

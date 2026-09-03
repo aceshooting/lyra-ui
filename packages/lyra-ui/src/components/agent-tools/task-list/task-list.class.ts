@@ -12,6 +12,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -31,6 +32,9 @@ export type TaskStatus = 'pending' | 'running' | 'success' | 'error';
 function normalizeTaskStatus(value: unknown): TaskStatus {
   return value === 'running' || value === 'success' || value === 'error' ? value : 'pending';
 }
+
+const DEEP_NESTING_WARNING_KEY = 'lyra-task-list-nesting-depth';
+const DEEP_NESTING_WARNING = '<lr-task-list>: task nesting deeper than one level is ignored.';
 
 function validTaskItems(value: unknown): TaskItem[] {
   const items: TaskItem[] = [];
@@ -63,8 +67,7 @@ export interface TaskItem {
   status: TaskStatus;
   /** Optional secondary plain-text line, e.g. an error message or a short progress note. */
   detail?: string;
-  /** One level of sub-steps. Deeper nesting (a child's own `children`) is ignored, with a
-   *  `console.warn`. */
+  /** One level of sub-steps. Deeper nesting (a child's own `children`) is ignored. */
   children?: readonly TaskItem[];
 }
 
@@ -314,10 +317,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     if (changed.has('items')) {
       for (const item of validTaskItems(this.items)) {
         for (const child of validTaskItems(item.children)) {
-          for (const grandchild of validTaskItems(child.children)) {
-            console.warn(
-              `<lr-task-list> item "${grandchild.id}" is nested more than one level deep and will be ignored -- only one level of nesting is supported.`,
-            );
+          if (validTaskItems(child.children).length > 0) {
+            devWarnOnce(DEEP_NESTING_WARNING_KEY, DEEP_NESTING_WARNING);
           }
         }
       }

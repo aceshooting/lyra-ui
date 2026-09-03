@@ -31,7 +31,7 @@ cancelable. Retry is available for `error` and `cancelled`.
 **Properties:**
 
 - `run: AgentRun | null = null` (attribute: false) — **`AgentRun`, imported from
-  `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; status: AgentStatus; startedAt?:
+  `@aceshooting/lyra-ui/ai`**: `{ id: string; status: AgentStatus; startedAt?:
 number; endedAt?: number; model?: string; costEstimate?: number; steps: readonly AgentStep[] }`, where
   `AgentStatus { kind: AgentStatusKind; message?: string }` and `AgentStep { id: string; kind:
 string; label: string; status: AgentStatus; startedAt?: number; endedAt?: number }`. All timestamps

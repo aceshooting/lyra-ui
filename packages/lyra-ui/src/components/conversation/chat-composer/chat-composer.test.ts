@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import "./chat-composer.js";
+import { CHAT_COMPOSER_STATUSES } from "./chat-composer.js";
 import type { LyraChatComposer } from "./chat-composer.js";
 
 function textareaOf(el: LyraChatComposer): HTMLTextAreaElement {
@@ -51,6 +51,31 @@ it('defaults to status="idle", min-rows=1, max-rows=8, submit-on-enter=true, and
   // `false` ever needs a reflected attribute at all.
   expect(el.hasAttribute("submit-on-enter")).to.be.false;
   expect(el.submitDisabled).to.be.false;
+});
+
+it('exposes an immutable status literal set for shared normalizers', () => {
+  expect(Object.isFrozen(CHAT_COMPOSER_STATUSES)).to.equal(true);
+  expect([...CHAT_COMPOSER_STATUSES]).to.deep.equal([
+    'idle',
+    'sending',
+    'streaming',
+  ]);
+});
+
+it('normalizes hostile status values to idle and reflects that canonical value even when already idle', async () => {
+  const el = (await fixture(
+    html`<lr-chat-composer status="busy"></lr-chat-composer>`
+  )) as LyraChatComposer;
+  await el.updateComplete;
+
+  expect(el.status).to.equal('idle');
+  expect(el.getAttribute('status')).to.equal('idle');
+
+  (el as unknown as { status: unknown }).status = 'busy';
+  await el.updateComplete;
+
+  expect(el.status).to.equal('idle');
+  expect(el.getAttribute('status')).to.equal('idle');
 });
 
 it('uses placeholder as the textarea accessible name, falling back to "Message"', async () => {
@@ -700,6 +725,20 @@ it("grows the textarea height as multi-line content is typed, then switches to i
     "content taller than max-rows must switch to internal scrolling"
   ).to.equal("auto");
   expect(ta.scrollHeight).to.be.greaterThan(ta.clientHeight);
+});
+
+it('clips horizontal textarea overflow unless the real native wrap attribute is off', async () => {
+  const soft = (await fixture(
+    html`<lr-chat-composer wrap="soft"></lr-chat-composer>`
+  )) as LyraChatComposer;
+  const off = (await fixture(
+    html`<lr-chat-composer wrap="off"></lr-chat-composer>`
+  )) as LyraChatComposer;
+
+  expect(textareaOf(soft).getAttribute('wrap')).to.equal('soft');
+  expect(getComputedStyle(textareaOf(soft)).overflowX).to.equal('hidden');
+  expect(textareaOf(off).getAttribute('wrap')).to.equal('off');
+  expect(getComputedStyle(textareaOf(off)).overflowX).to.equal('auto');
 });
 
 it("re-fits the textarea height when the host narrows, with no value/min-rows/max-rows change", async () => {

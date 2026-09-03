@@ -122,6 +122,18 @@ it('lets per-instance close strings reach the rendered action', async () => {
   ).to.equal('Dismiss callout');
 });
 
+it('inherits the panel font through the close control and text glyph', async () => {
+  const el = (await fixture(html`
+    <lr-callout closable style="--lr-callout-font-size: 20px">Message</lr-callout>
+  `)) as LyraCallout;
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  const glyph = el.shadowRoot!.querySelector<HTMLElement>('[part="close-icon"]')!;
+
+  expect(getComputedStyle(el).fontSize).to.equal('20px');
+  expect(getComputedStyle(close).fontSize).to.equal('20px');
+  expect(getComputedStyle(glyph).fontSize).to.equal('20px');
+});
+
 it('exposes the reflected appearance vocabulary without changing the unset treatment', async () => {
   const el = (await fixture(html`
     <lr-callout

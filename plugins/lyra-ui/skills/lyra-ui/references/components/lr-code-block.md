@@ -17,8 +17,8 @@
 ## `lr-code-block`
 
 Fenced code display with optional lazy syntax highlighting and a copy button. First-party invention
-(no Web Awesome equivalent). It lazy-loads the optional peer dependency `shiki` (see
-`code-loader.ts`) for the actual tokenizing, and includes a compact GreyCat/GCL grammar because
+(no Web Awesome equivalent). It lazily loads the optional `shiki` peer for syntax highlighting and
+includes a compact GreyCat/GCL grammar because
 Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer isn't installed or
 `language` is unset/unrecognized. That
 fallback is the _default_ rendering path, not a degraded one: unhighlighted code is perfectly usable,
@@ -49,7 +49,8 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   numbers for both highlighted output and the plain-text fallback
 - `highlightLines: string = ''` (attribute `highlight-lines`) — comma-separated 1-based inclusive
   line ranges (e.g. `"3-5,7"`) to visually emphasize. Declarative sugar over `highlights` — merges
-  with, and renders identically to, any `line-range` entries there.
+  with, and renders identically to, any `line-range` entries there. Malformed segments are ignored
+  while valid segments still apply.
 - `activatableLines: boolean = false` (attribute `activatable-lines`) — turns the
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-activate`.
   Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
@@ -128,14 +129,10 @@ so it inherits: set it on the element, on an ancestor, or at the theme level.
 `:host` declaration) so it inherits, retinting just the highlighted-line background and leaving every
 other `--lr-color-warning-quiet` surface alone.
 
-**Optional peer deps:** `shiki` (lazy-loaded and cached once per page by `code-loader.ts`'s
-`loadShikiHighlighter()`, which builds a single `Highlighter` seeded with the bundled `github-light`/
-`github-dark` "dual themes" and _zero_ language grammars up front; each `language` a
-`<lr-code-block>` actually requests is loaded incrementally on first use via
-`loadShikiLanguage()`, and a language id that fails to load once is remembered and never retried. If
-`shiki` isn't installed, `loadShikiHighlighter()` resolves to `null` with a one-time `console.warn`
-and every instance falls back to plain text — install it with `pnpm add shiki` to enable
-highlighting).
+**Optional peer deps:** `shiki` — requested only when syntax highlighting is used and shared by
+code blocks on a page. Languages load on demand. If the peer or requested language is unavailable,
+every instance retains a readable plain-text fallback; install it with `pnpm add shiki` to enable
+highlighting.
 
 ```ts
 import { html } from "lit";
@@ -174,9 +171,8 @@ one deliberate exception to every other color being a `--lr-*` token.
 
 - `copyable` defaults to `true` and reflects — literal `copyable="false"` and a `.copyable=${false}`
   property binding both disable it; a `?copyable=${false}` boolean-attribute binding does not.
-- an in-flight per-language grammar load is guarded by an internal token so a `code`/`language` change
-  that arrives before a previous load resolves never applies a stale result — only the load matching
-  the _current_ `language` is ever rendered.
+- if `code` or `language` changes while highlighting is loading, only the result matching the
+  current values is rendered.
 - a malformed `code`/`language` combination that makes shiki's `codeToHtml()` throw falls back to
   plain text silently, not a blank code block.
 - the "Copied!" label appears only after clipboard fulfillment and reverts to "Copy" after 1500ms.

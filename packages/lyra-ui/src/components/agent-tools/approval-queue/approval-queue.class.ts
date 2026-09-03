@@ -46,7 +46,9 @@ export interface LyraApprovalQueueEventMap {
  * @event lr-approval-select - A request was selected. `detail: { invocationId }`.
  * @event lr-approval-decision - A request was approved or denied. `detail: { invocationId,
  *   approved, args? }`. Cancelable; preventing it keeps the nested dialog pending.
- * @event lr-approval-close - The nested decision dialog closed. `detail: { invocationId, reason }`.
+ * @event lr-approval-close - The nested decision dialog closed, or controlled requests invalidated
+ *   its formerly pending selection. `detail: { invocationId, reason }`; invalidation uses
+ *   `reason: 'request-invalidated'` after selection and open state are cleared. Non-cancelable.
  * @csspart base - The root queue wrapper.
  * @csspart heading-row - The heading and pending-count row.
  * @csspart heading - The visible queue heading.
@@ -96,8 +98,18 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
    *  `approvalQueueLabel` message; an explicit empty string renders no visible/accessible label. */
   @property() label?: string;
 
+  // A nested dialog close may accompany a host request replacement in the
+  // same update. Its existing close event is the sole close notification for
+  // that turn; a later independent invalidation remains observable.
+  private nestedCloseInvocationId: string | null = null;
+
+  private normalizedRequestsFor(value: unknown): ToolApprovalRequest[] {
+    const requests = Array.isArray(value) ? value as ToolApprovalRequest[] : [];
+    return firstByIdentity(requests, (request) => request.id);
+  }
+
   private get normalizedRequests(): ToolApprovalRequest[] {
-    return firstByIdentity(Array.isArray(this.requests) ? this.requests : [], (request) => request.id);
+    return this.normalizedRequestsFor(this.requests);
   }
 
   private get selectedRequest(): ToolApprovalRequest | undefined {
@@ -107,10 +119,35 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!changed.has('requests') && !changed.has('selectedInvocationId')) return;
+    const selectedInvocationId = this.selectedInvocationId;
     const selected = this.selectedRequest;
     if (selected && (selected.status ?? 'pending') === 'pending') return;
-    if (this.selectedInvocationId !== null) this.selectedInvocationId = null;
-    if (this.open) this.open = false;
+    const previousSelected = selectedInvocationId !== null && changed.has('requests')
+      ? this.normalizedRequestsFor(changed.get('requests')).find(
+          (request) => request.id === selectedInvocationId,
+        )
+      : undefined;
+    const invalidated =
+      this.hasUpdated &&
+      !changed.has('selectedInvocationId') &&
+      selectedInvocationId !== null &&
+      previousSelected !== undefined &&
+      (previousSelected.status ?? 'pending') === 'pending';
+    const nestedCloseInSameCycle =
+      this.nestedCloseInvocationId === selectedInvocationId;
+    this.selectedInvocationId = null;
+    this.open = false;
+    if (invalidated && !nestedCloseInSameCycle) {
+      this.emit('lr-approval-close', {
+        invocationId: selectedInvocationId,
+        reason: 'request-invalidated',
+      });
+    }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.nestedCloseInvocationId = null;
   }
 
   private pendingCount(): number {
@@ -162,7 +199,18 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
 
   private onClose(request: ToolApprovalRequest, event: CustomEvent<ToolApprovalDialogCloseReason>): void {
     event.stopPropagation();
-    this.open = false;
+    this.nestedCloseInvocationId = request.id;
+    if (request.id === this.selectedInvocationId) {
+      const wasOpen = this.open;
+      this.open = false;
+      // A closed child produces no reactive property write, but its one-cycle close marker must
+      // still clear even when a host does not replace requests from this event.
+      if (!wasOpen) this.requestUpdate();
+    } else {
+      // A decision listener can synchronously select a replacement before the old dialog closes.
+      // Keep that replacement open, while still scheduling the stale close marker's cleanup.
+      this.requestUpdate();
+    }
     this.emit('lr-approval-close', { invocationId: request.id, reason: event.detail });
   }
 

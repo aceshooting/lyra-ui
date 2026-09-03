@@ -14,6 +14,29 @@ it('renders a fully-unfilled track with no segment parts when segments is empty'
   expect(el.shadowRoot!.querySelector('[part="track"]')).to.exist;
 });
 
+it('omits malformed and accessor-backed segments while retaining later descriptor-safe segments', async () => {
+  let accessorReads = 0;
+  const accessorBacked: Record<string, unknown> = { label: 'Accessor backed' };
+  Object.defineProperty(accessorBacked, 'value', {
+    enumerable: true,
+    get(): never {
+      accessorReads += 1;
+      throw new Error('do not invoke segment accessors');
+    },
+  });
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
+  el.segments = [
+    { label: 'Malformed', value: '25' as unknown as number },
+    accessorBacked as unknown as ContextMeterSegment,
+    { label: 'Safe', value: 25, tone: 'success' },
+  ];
+  await el.updateComplete;
+
+  expect(accessorReads).to.equal(0);
+  expect([...el.shadowRoot!.querySelectorAll('[part="segment-item"]')].map((item) => item.textContent?.trim()))
+    .to.deep.equal(['Safe: 25']);
+});
+
 it('renders a fully-unfilled track with no segment parts when total is 0', async () => {
   const el = (await fixture(html`<lr-context-meter></lr-context-meter>`)) as LyraContextMeter;
   el.segments = SEGMENTS;

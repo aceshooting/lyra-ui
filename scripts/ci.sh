@@ -51,12 +51,7 @@ fi
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
 require_primary_toolchain() {
-  local actual_node_major
-  actual_node_major="$(node -p 'process.versions.node.split(".")[0]')"
-  if [[ "$actual_node_major" != "22" ]]; then
-    echo "primary CI jobs require Node 22 (active: $(node --version)); activate Node 22 before running scripts/ci.sh" >&2
-    exit 1
-  fi
+  node scripts/check-node-version.mjs
 
   local expected_pnpm
   local actual_pnpm
@@ -104,11 +99,48 @@ report_freshness_failures() {
 
 resolve_command() {
   local requested="$1"
+  local resolved=""
   if [[ "$requested" == */* ]]; then
-    [[ -x "$requested" ]] && printf '%s\n' "$requested"
-    return
+    resolved="$requested"
+  else
+    # `command -v` may resolve aliases, functions, builtins, or a relative PATH
+    # entry. Platform toolchains must always be external executable files.
+    resolved="$(type -P -- "$requested" 2>/dev/null || true)"
   fi
-  command -v "$requested" 2>/dev/null || true
+  [[ -n "$resolved" ]] || return 0
+
+  [[ "$resolved" == /* ]] || resolved="$PWD/$resolved"
+  local resolved_directory
+  if ! resolved_directory="$(cd -P -- "$(dirname -- "$resolved")" 2>/dev/null && pwd)"; then
+    return 0
+  fi
+  resolved="$resolved_directory/$(basename -- "$resolved")"
+  if [[ -f "$resolved" && -x "$resolved" ]]; then
+    printf '%s\n' "$resolved"
+  fi
+  return 0
+}
+
+node_patch_for_binary() {
+  local node_bin="$1"
+  "$node_bin" -p 'process.versions.node' 2>/dev/null || true
+}
+
+semver_is_newer() {
+  local candidate="$1"
+  local current="$2"
+  [[ -z "$current" ]] && return 0
+  local candidate_major candidate_minor candidate_patch
+  local current_major current_minor current_patch
+  IFS=. read -r candidate_major candidate_minor candidate_patch <<< "$candidate"
+  IFS=. read -r current_major current_minor current_patch <<< "$current"
+  if (( 10#$candidate_major != 10#$current_major )); then
+    (( 10#$candidate_major > 10#$current_major ))
+  elif (( 10#$candidate_minor != 10#$current_minor )); then
+    (( 10#$candidate_minor > 10#$current_minor ))
+  else
+    (( 10#$candidate_patch > 10#$current_patch ))
+  fi
 }
 
 resolve_node_for_version() {
@@ -124,6 +156,39 @@ resolve_node_for_version() {
     return
   fi
 
+  # Node 22 is the primary, exact-patch authority. Prefer the already-active
+  # exact runtime, ignore wrong versioned shims, and then select only the NVM
+  # installation named by .nvmrc. A newer 22.x installation is not equivalent
+  # to the reviewed patch and will be rejected by validate_platform_toolchain.
+  if [[ "$version" == "22" ]]; then
+    local expected_node_patch
+    expected_node_patch="$(<"$CI_SH_ROOT/.nvmrc")"
+    expected_node_patch="${expected_node_patch%$'\r'}"
+    if [[ ! "$expected_node_patch" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+      echo "$CI_SH_ROOT/.nvmrc does not contain one canonical exact Node patch" >&2
+      return 1
+    fi
+
+    local requested
+    local candidate
+    for requested in node node22 node-22; do
+      candidate="$(resolve_command "$requested")"
+      if [[ -n "$candidate" && "$(node_patch_for_binary "$candidate")" == "$expected_node_patch" ]]; then
+        printf '%s\n' "$candidate"
+        return
+      fi
+    done
+
+    if [[ -n "${NVM_DIR:-}" ]]; then
+      candidate="$NVM_DIR/versions/node/v$expected_node_patch/bin/node"
+      if [[ -x "$candidate" && "$(node_patch_for_binary "$candidate")" == "$expected_node_patch" ]]; then
+        printf '%s\n' "$candidate"
+        return
+      fi
+    fi
+    return
+  fi
+
   local resolved
   resolved="$(resolve_command "node$version")"
   [[ -n "$resolved" ]] && { printf '%s\n' "$resolved"; return; }
@@ -131,15 +196,22 @@ resolve_node_for_version() {
   [[ -n "$resolved" ]] && { printf '%s\n' "$resolved"; return; }
 
   # NVM installations commonly expose versioned node binaries without a
-  # node20/node22 shim. Pick the newest installed patch release for the major;
-  # shell glob order is lexical (v20.9 sorts after v20.19), so sort versions
-  # explicitly before selecting the last executable candidate.
+  # node20/node22 shim. Pick the newest installed patch numerically; GNU
+  # `sort -V` is deliberately avoided because stock macOS/BSD sort lacks it.
   if [[ -n "${NVM_DIR:-}" ]]; then
     local candidate=""
+    local candidate_version=""
     local newest=""
+    local newest_version=""
     while IFS= read -r candidate; do
-      [[ -x "$candidate" ]] && newest="$candidate"
-    done < <(compgen -G "$NVM_DIR/versions/node/v$version.*/bin/node" | LC_ALL=C sort -V)
+      [[ -x "$candidate" ]] || continue
+      candidate_version="$(node_patch_for_binary "$candidate")"
+      [[ "$candidate_version" =~ ^$version\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || continue
+      if semver_is_newer "$candidate_version" "$newest_version"; then
+        newest="$candidate"
+        newest_version="$candidate_version"
+      fi
+    done < <(compgen -G "$NVM_DIR/versions/node/v$version.*/bin/node")
     if [[ -n "$newest" ]]; then
       printf '%s\n' "$newest"
       return
@@ -147,19 +219,194 @@ resolve_node_for_version() {
   fi
 }
 
+CI_SH_ACTIVE_TOOLCHAIN_PID=""
+
 run_with_toolchain() {
+  local worker_status=0
+  _run_with_toolchain_worker "$@" &
+  CI_SH_ACTIVE_TOOLCHAIN_PID="$!"
+  if wait "$CI_SH_ACTIVE_TOOLCHAIN_PID"; then
+    worker_status=0
+  else
+    worker_status=$?
+  fi
+  CI_SH_ACTIVE_TOOLCHAIN_PID=""
+  return "$worker_status"
+}
+
+forward_active_toolchain_signal() {
+  local signal_name="$1"
+  local signal_status="$2"
+  local worker_pid="${CI_SH_ACTIVE_TOOLCHAIN_PID:-}"
+  # A selected command may handle the forwarded signal and send another one
+  # upward while the worker is still terminating it. Keep every supported
+  # termination signal inert until the worker's bounded teardown completes.
+  trap '' HUP INT TERM
+  if [[ -n "$worker_pid" ]]; then
+    kill -s "$signal_name" "$worker_pid" 2>/dev/null || true
+    wait "$worker_pid" 2>/dev/null || true
+    CI_SH_ACTIVE_TOOLCHAIN_PID=""
+  fi
+  exit "$signal_status"
+}
+
+trap 'forward_active_toolchain_signal HUP 129' HUP
+trap 'forward_active_toolchain_signal INT 130' INT
+trap 'forward_active_toolchain_signal TERM 143' TERM
+
+_run_with_toolchain_worker() {
   local node_bin="$1"
   local pnpm_bin="$2"
   shift 2
+  local selected_node_proxy_dir=""
+  local selected_node_proxy_parent="${TMPDIR:-/tmp}"
+  local selected_command_pid=""
+
+  cleanup_selected_toolchain() {
+    local original_status="$1"
+    local cleanup_status=0
+    # The top-level shell may forward a signal after the selected command has
+    # exited but while this worker is removing its private proxies. Defer those
+    # signals for the bounded cleanup so they cannot strand executable debris;
+    # the top-level handler still exits with the original signal status.
+    trap '' HUP INT TERM
+    trap - EXIT
+    if [[ -n "$selected_node_proxy_dir" ]]; then
+      rm -f -- "$selected_node_proxy_dir/script-shell" || cleanup_status=$?
+      rm -f -- "$selected_node_proxy_dir/pnpm" || cleanup_status=$?
+      rm -f -- "$selected_node_proxy_dir/node" || cleanup_status=$?
+      rmdir -- "$selected_node_proxy_dir" || cleanup_status=$?
+    fi
+    if [[ "$cleanup_status" -ne 0 ]]; then
+      echo "could not clean selected-Node proxy directory $selected_node_proxy_dir" >&2
+      [[ "$original_status" -ne 0 ]] || original_status="$cleanup_status"
+    fi
+    exit "$original_status"
+  }
+  trap 'cleanup_selected_toolchain "$?"' EXIT
+
+  terminate_selected_command() {
+    local signal_name="$1"
+    local signal_status="$2"
+    local escalation_pid=""
+    trap '' HUP INT TERM
+    if [[ -n "$selected_command_pid" ]]; then
+      kill -s "$signal_name" -- "-$selected_command_pid" 2>/dev/null || \
+        kill -s "$signal_name" "$selected_command_pid" 2>/dev/null || true
+
+      # Give the selected process one second to handle the original signal,
+      # then fail closed with SIGKILL. The timer has its own process group under
+      # job control, so killing the selected group cannot kill the escalation.
+      (
+        trap '' HUP INT TERM
+        sleep 1
+        kill -KILL -- "-$selected_command_pid" 2>/dev/null || \
+          kill -KILL "$selected_command_pid" 2>/dev/null || true
+      ) &
+      escalation_pid="$!"
+      wait "$selected_command_pid" 2>/dev/null || true
+      kill -KILL -- "-$escalation_pid" 2>/dev/null || \
+        kill -KILL "$escalation_pid" 2>/dev/null || true
+      wait "$escalation_pid" 2>/dev/null || true
+      selected_command_pid=""
+    fi
+    exit "$signal_status"
+  }
+  trap 'terminate_selected_command HUP 129' HUP
+  trap 'terminate_selected_command INT 130' INT
+  trap 'terminate_selected_command TERM 143' TERM
+
+  local selected_node_bin
+  if ! selected_node_bin="$("$node_bin" -p 'process.execPath')"; then
+    echo "could not resolve the selected Node executable through $node_bin" >&2
+    return 1
+  fi
+  if [[ "$selected_node_bin" != /* || ! -f "$selected_node_bin" || ! -x "$selected_node_bin" ]]; then
+    echo "$node_bin resolved an invalid Node process.execPath: $selected_node_bin" >&2
+    return 1
+  fi
+  local selected_script_shell="${CI_SH_SCRIPT_SHELL:-/bin/sh}"
+  if [[ "$selected_script_shell" != /* || ! -f "$selected_script_shell" || ! -x "$selected_script_shell" ]]; then
+    echo "selected lifecycle script shell is not an absolute executable: $selected_script_shell" >&2
+    return 1
+  fi
+
+  # A CI_SH_NODE*_BIN override may be a versioned shim in a directory with no
+  # executable literally named `node`. pnpm's env shebang and nested lifecycle
+  # pnpm calls still resolve `node` through PATH, so give them a private proxy
+  # to the executable that the selected shim actually launched.
+  [[ "$selected_node_proxy_parent" == /* ]] || selected_node_proxy_parent="$PWD/$selected_node_proxy_parent"
+  if ! selected_node_proxy_parent="$(cd -P -- "$selected_node_proxy_parent" 2>/dev/null && pwd)"; then
+    echo "could not resolve the selected-Node proxy parent directory" >&2
+    return 1
+  fi
+  if ! selected_node_proxy_dir="$(mktemp -d "$selected_node_proxy_parent/lyra-ci-selected-node.XXXXXXXX")"; then
+    echo "could not create the selected-Node proxy directory" >&2
+    return 1
+  fi
+  if ! ln -s "$selected_node_bin" "$selected_node_proxy_dir/node"; then
+    echo "could not create the selected-Node proxy for $selected_node_bin" >&2
+    return 1
+  fi
+
+  # pnpm may prepend lifecycle-specific node_modules/.bin paths and may run a
+  # nested command from a different cwd. The wrapper is itself found through
+  # the selected directory and re-prepends that absolute directory before the
+  # selected pnpm shebang is evaluated again.
+  if ! printf '%s\n' \
+      '#!/bin/sh' \
+      'set -eu' \
+      ': "${CI_SH_SELECTED_PNPM_BIN:?selected pnpm executable is required}"' \
+      ': "${CI_SH_SELECTED_TOOLCHAIN_DIR:?selected toolchain directory is required}"' \
+      'PATH="$CI_SH_SELECTED_TOOLCHAIN_DIR:$PATH"' \
+      'export PATH' \
+      'exec env npm_config_manage_package_manager_versions=false npm_config_scripts_prepend_node_path=false npm_config_script_shell="$CI_SH_SELECTED_TOOLCHAIN_DIR/script-shell" "$CI_SH_SELECTED_PNPM_BIN" --config.script-shell="$CI_SH_SELECTED_TOOLCHAIN_DIR/script-shell" "$@"' \
+      > "$selected_node_proxy_dir/pnpm"; then
+    echo "could not create the nested pnpm proxy" >&2
+    return 1
+  fi
+  chmod 700 "$selected_node_proxy_dir/pnpm"
+  if ! printf '%s\n' \
+      '#!/bin/sh' \
+      'set -eu' \
+      ': "${CI_SH_SELECTED_SCRIPT_SHELL:?selected lifecycle shell is required}"' \
+      ': "${CI_SH_SELECTED_TOOLCHAIN_DIR:?selected toolchain directory is required}"' \
+      'PATH="$CI_SH_SELECTED_TOOLCHAIN_DIR:$PATH"' \
+      'export PATH' \
+      'exec "$CI_SH_SELECTED_SCRIPT_SHELL" "$@"' \
+      > "$selected_node_proxy_dir/script-shell"; then
+    echo "could not create the selected lifecycle shell proxy" >&2
+    return 1
+  fi
+  chmod 700 "$selected_node_proxy_dir/script-shell"
+
   # Lifecycle scripts can invoke `pnpm` again. The proxy reapplies the selected
   # package manager on every nested invocation; pnpm serializes a false boolean
   # config value as an empty environment variable, which otherwise re-enables
-  # packageManager switching in the child process.
-  PATH="$CI_SH_ROOT/scripts/ci-bin:$(dirname "$node_bin"):$PATH" \
+  # packageManager switching in the child process. pnpm also resolves the
+  # temporary directory again after `--dir` changes its cwd, so a relative
+  # TMPDIR that was valid here dangles there; hand it the resolved absolute
+  # parent that already hosts the proxy directory.
+  set -m
+  PATH="$selected_node_proxy_dir:$PATH" \
+    TMPDIR="$selected_node_proxy_parent" \
     CI_SH_SELECTED_PNPM_BIN="$pnpm_bin" \
+    CI_SH_SELECTED_SCRIPT_SHELL="$selected_script_shell" \
+    CI_SH_SELECTED_TOOLCHAIN_DIR="$selected_node_proxy_dir" \
     CI=true npm_config_manage_package_manager_versions=false \
+    npm_config_script_shell="$selected_node_proxy_dir/script-shell" \
     npm_config_scripts_prepend_node_path=false \
-    "$pnpm_bin" "$@"
+    "$selected_node_proxy_dir/pnpm" "$@" &
+  selected_command_pid="$!"
+  local selected_command_status=0
+  if wait "$selected_command_pid"; then
+    selected_command_status=0
+  else
+    selected_command_status=$?
+  fi
+  selected_command_pid=""
+  set +m
+  return "$selected_command_status"
 }
 
 validate_platform_toolchain() {
@@ -169,11 +416,15 @@ validate_platform_toolchain() {
   local manifest="package.json"
   [[ "$node_version" == "20" ]] && manifest=".github/ci-pnpm10.json"
 
-  local actual_node_major
-  actual_node_major="$("$node_bin" -p 'process.versions.node.split(".")[0]')"
-  if [[ "$actual_node_major" != "$node_version" ]]; then
-    echo "$node_bin is Node $actual_node_major, expected Node $node_version" >&2
-    return 1
+  if [[ "$node_version" == "22" ]]; then
+    "$node_bin" scripts/check-node-version.mjs || return
+  else
+    local actual_node_major
+    actual_node_major="$("$node_bin" -p 'process.versions.node.split(".")[0]')"
+    if [[ "$actual_node_major" != "$node_version" ]]; then
+      echo "$node_bin is Node $actual_node_major, expected Node $node_version" >&2
+      return 1
+    fi
   fi
 
   local expected_pnpm
@@ -204,7 +455,7 @@ run_platform_matrix_leg() {
   if [[ "$node_version" == "20" && "$browser" == "firefox" && "$shard_index" == "1" && "$shard_total" == "1" ]]; then
     step "packed consumer: Node 20"
     run_with_toolchain "$node_bin" "$pnpm_bin" build || return
-    run_with_toolchain "$node_bin" "$pnpm_bin" check:packed-consumer || return
+    run_with_toolchain "$node_bin" "$pnpm_bin" check:packed-consumer:contracts || return
   fi
 }
 
@@ -226,11 +477,8 @@ pnpm check:workflows
 step "release qualification manifest and workflow contract"
 pnpm check:release-qualification
 
-step "release-integrity helper tests"
-node scripts/release-integrity.test.mjs
-
-step "publish.sh helper tests"
-node scripts/publish.test.mjs
+step "release tooling checks"
+pnpm check:release-tooling
 
 # This mirrors static-checks' networked upstream contract: direct public npm fetches are pinned by
 # package identity, exact version, tarball SHA-512 and manifest SHA-256, with no lifecycle process.
@@ -347,8 +595,12 @@ pnpm --filter @aceshooting/lyra-ui check:package-size
 step "check:packed-consumer"
 pnpm check:packed-consumer
 
-step "public API semver gate"
+step "peer compatibility profiles"
+node scripts/check-peer-compatibility.mjs
+
+step "workspace public API semver gates"
 pnpm --filter @aceshooting/lyra-ui check:public-api
+pnpm --filter @aceshooting/lyra-flags check:public-api
 
 if [[ "$RUN_PLATFORM" == "1" ]]; then
   for browser in firefox chromium chrome edge safari; do

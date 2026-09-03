@@ -3,7 +3,8 @@ import { property, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
-import { finiteCount, finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './sequence-playback.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -14,26 +15,12 @@ import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, L
 
 
 const MIN_INTERVAL_MS = 16; // ~one animation frame; prevents a near-zero-delay tick loop
+const INVALID_INTERVAL_WARNING_KEY = 'lyra-sequence-playback-invalid-interval';
+const INVALID_INTERVAL_WARNING =
+  '<lr-sequence-playback>: interval-ms is outside the supported timer range and the timer delay was clamped.';
 
-// Deduplicated per distinct bad value (like the analogous one-time warnings
-// in lr-heatmap/lr-word-cloud) rather than a single once-ever flag, so a
-// later, genuinely different bad value is never silently swallowed by an
-// earlier, unrelated one.
-const warnedInvalidIntervals = new Set<number>();
-function warnInvalidInterval(value: number, normalized: number): void {
-  if (warnedInvalidIntervals.has(value)) return;
-  warnedInvalidIntervals.add(value);
-  // The clamp fires for any value outside the timer-safe range, so report the
-  // reason that actually applies instead of collapsing every bad value into
-  // one misleading "non-finite or non-positive" message.
-  const reason = !Number.isFinite(value)
-    ? 'non-finite'
-    : value < MIN_INTERVAL_MS
-      ? `below the ${MIN_INTERVAL_MS}ms floor`
-      : `above the ${MAX_TIMEOUT_MS}ms ceiling`;
-  console.warn(
-    `<lr-sequence-playback> interval-ms (${value}) is ${reason}; clamping to ${normalized}ms.`,
-  );
+function warnInvalidInterval(): void {
+  devWarnOnce(INVALID_INTERVAL_WARNING_KEY, INVALID_INTERVAL_WARNING);
 }
 
 export interface LyraSequencePlaybackStepDetail {
@@ -95,8 +82,8 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   @property({ type: Number, attribute: 'item-count' }) itemCount = 0;
   /** The current sequence item, in `[0, itemCount)`. */
   @property({ type: Number, attribute: 'current-index' }) currentIndex = 0;
-  /** Delay between ticks, in milliseconds, while playing. Clamped to
-   *  `[MIN_INTERVAL_MS, MAX_TIMEOUT_MS]` — see `scheduleTick()`. */
+  /** Delay between ticks, in milliseconds, while playing. Clamped to the timer-safe range in
+   *  `scheduleTick()`. */
   @property({ type: Number, attribute: 'interval-ms' }) intervalMs = 900;
   // `playing` is declared via `static properties` above (noAccessor) with a
   // hand-written accessor below, so a direct `el.playing = true/false`
@@ -230,7 +217,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   private scheduleTick(): void {
     const rawDelay = this.intervalMs;
     const delay = finiteDuration(rawDelay, MIN_INTERVAL_MS, MIN_INTERVAL_MS);
-    if (delay !== rawDelay) warnInvalidInterval(rawDelay, delay);
+    if (delay !== rawDelay) warnInvalidInterval();
     // Self-identifying: a synchronous pause()+play() (or a synchronous
     // play() from a 'lr-pause'/'lr-sequence-step' listener) invoked while this
     // callback is running schedules its own new timer and overwrites

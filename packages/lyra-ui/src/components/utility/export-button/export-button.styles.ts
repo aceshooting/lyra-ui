@@ -89,13 +89,14 @@ export const styles = css`
   [part='menu-item'] {
     display: flex;
     flex-direction: column;
-    align-items: start;
+    align-items: center;
+    justify-content: center;
     gap: var(--lr-size-1px);
     box-sizing: border-box;
     inline-size: 100%;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
-    text-align: start;
+    text-align: center;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;
     background: none;

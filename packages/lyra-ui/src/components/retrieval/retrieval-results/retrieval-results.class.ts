@@ -1,6 +1,7 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   firstByRetrievalIdentity,
@@ -307,6 +308,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private isMounting = true;
   private errorAnnouncementSink?: AnnouncementSink;
   private emptyAnnouncementSink?: AnnouncementSink;
+  private readonly retrievalChunkKey = (item: unknown): string => (item as RetrievalChunk).id;
   private wasEmptyPresented = false;
   // Memoizes `computeProcessedChunks()` (identity + sort + group) for the current render cycle.
   // `willUpdate()` refreshes it exactly once whenever an input it actually depends on (`chunks`,
@@ -781,6 +783,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const useVirtualList =
       processed.groups.length > 0 ||
       processed.chunks.length > this.effectiveVirtualizeAt;
+    // `renderRow()` reads controlled selection and presentation state. Keep this wrapper fresh so
+    // virtualized visible rows receive those state changes without reassigning the guarded item
+    // collection (which would rebuild its offsets).
+    const renderVirtualRow = (item: unknown): TemplateResult => this.renderRow(item);
     return html`
       <div
         part="base"
@@ -791,9 +797,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         ${useVirtualList
           ? html`<lr-virtual-list
               exportparts="row:row, group:group-header, select:select, row-body:row-body, row-body-selected:row-body-selected, metadata:metadata, metadata-entry:metadata-entry, metadata-term:metadata-term, metadata-value:metadata-value, chunk:chunk, chunk-current:chunk-current, chunk-score:chunk-score, chunk-score-current:chunk-score-current, chunk-score-bar:chunk-score-bar, chunk-score-fill:chunk-score-fill, chunk-score-fill-success:chunk-score-fill-success, chunk-score-fill-warning:chunk-score-fill-warning, chunk-score-fill-danger:chunk-score-fill-danger, chunk-open-button:chunk-open-button, chunk-title:chunk-title, chunk-text:chunk-text, chunk-text-clamped:chunk-text-clamped, chunk-toggle:chunk-toggle"
-              .items=${processed.chunks}
-              .renderItem=${this.renderRow}
-              .keyFunction=${(item: unknown) => (item as RetrievalChunk).id}
+              .items=${guard([processed.chunks], () => processed.chunks)}
+              .renderItem=${renderVirtualRow}
+              .keyFunction=${this.retrievalChunkKey}
               .groups=${processed.groups}
               .activeItemId=${this.activeChunkId || ''}
               ?loading=${this.loading}

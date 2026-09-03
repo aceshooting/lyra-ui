@@ -10,6 +10,11 @@ import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { warnUnknownAttributes } from './dev-mode-attribute-warning.js';
+import {
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+  getOwnDataDescriptor,
+} from './data-descriptors.js';
 
 // `LyraElement<any>`, not the generic-defaulted `LyraElement`: the hook is invoked from inside the
 // class's own constructor/attachInternals(), where `this` is `LyraElement<Events>` for whatever
@@ -168,15 +173,37 @@ export type LyraEmittedEvent<Events, K extends keyof Events & string> = [
 const PUBLIC_COLLECTION_ENTRY_LIMIT = 10_000;
 /** Maximum number of plain-record properties retained across one snapshot. */
 const PUBLIC_COLLECTION_NODE_LIMIT = 50_000;
+/** Maximum non-rollback source positions inspected while producing one snapshot. */
+const PUBLIC_COLLECTION_WORK_LIMIT = PUBLIC_COLLECTION_NODE_LIMIT * 2;
 /** Maximum nesting depth traversed while detaching plain records and nested arrays. */
 const PUBLIC_COLLECTION_DEPTH_LIMIT = 256;
 const OMIT_COLLECTION_VALUE = Symbol('omit-public-collection-value');
+const EXHAUSTED_COLLECTION_VALUE = Symbol('exhausted-public-collection-value');
+
+type CollectionSnapshotFailure =
+  | typeof OMIT_COLLECTION_VALUE
+  | typeof EXHAUSTED_COLLECTION_VALUE;
+
+function isCollectionSnapshotFailure(
+  value: unknown
+): value is CollectionSnapshotFailure {
+  return (
+    value === OMIT_COLLECTION_VALUE || value === EXHAUSTED_COLLECTION_VALUE
+  );
+}
 
 interface CollectionSnapshotBudget {
   remaining: number;
+  remainingWork: number;
   readonly seen: WeakMap<object, unknown>;
   readonly additions: object[];
   readonly realm: SnapshotRealm;
+}
+
+function consumeSnapshotWork(budget: CollectionSnapshotBudget): boolean {
+  if (budget.remainingWork <= 0) return false;
+  budget.remainingWork -= 1;
+  return true;
 }
 
 interface SnapshotRealm {
@@ -314,17 +341,19 @@ function rememberSnapshot(
 
 function snapshotTransaction<T>(
   budget: CollectionSnapshotBudget,
-  create: () => T | typeof OMIT_COLLECTION_VALUE
-): T | typeof OMIT_COLLECTION_VALUE {
+  create: () => T | CollectionSnapshotFailure
+): T | CollectionSnapshotFailure {
   const remaining = budget.remaining;
   const additions = budget.additions.length;
   const result = create();
-  if (result !== OMIT_COLLECTION_VALUE) return result;
+  if (!isCollectionSnapshotFailure(result)) return result;
+  // A failed branch may return its retained-node allowance and provisional aliases, but source
+  // positions already inspected remain spent so many hostile rows cannot multiply total work.
   budget.remaining = remaining;
   for (let index = budget.additions.length - 1; index >= additions; index -= 1)
     budget.seen.delete(budget.additions[index]!);
   budget.additions.length = additions;
-  return OMIT_COLLECTION_VALUE;
+  return result;
 }
 
 function emptyRealmArray(realm: SnapshotRealm): readonly unknown[] {
@@ -332,10 +361,7 @@ function emptyRealmArray(realm: SnapshotRealm): readonly unknown[] {
 }
 
 function* ownEnumerableStringKeys(value: object): IterableIterator<string> {
-  for (const key in value) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (descriptor?.enumerable) yield key;
-  }
+  for (const key in value) yield key;
 }
 
 function snapshotDataRecord(
@@ -346,7 +372,7 @@ function snapshotDataRecord(
   depth: number,
   preserveRecordKeys?: ReadonlySet<PropertyKey>,
   preserveCollectionItemKeys?: ReadonlySet<PropertyKey>
-): unknown | typeof OMIT_COLLECTION_VALUE {
+): unknown | CollectionSnapshotFailure {
   const output = budget.realm.Object.create(prototype) as Record<
     PropertyKey,
     unknown
@@ -354,16 +380,22 @@ function snapshotDataRecord(
   rememberSnapshot(budget, value, output);
   try {
     for (const key of keys) {
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
-      if (!descriptor?.enumerable || !('value' in descriptor)) continue;
-      if (budget.remaining <= 0) return OMIT_COLLECTION_VALUE;
+      if (!consumeSnapshotWork(budget)) return EXHAUSTED_COLLECTION_VALUE;
+      const descriptor = getOwnDataDescriptor(value, key);
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        !descriptor.enumerable
+      )
+        continue;
+      if (budget.remaining <= 0) return EXHAUSTED_COLLECTION_VALUE;
       budget.remaining -= 1;
       const entry = preserveRecordKeys?.has(key)
         ? descriptor.value
         : preserveCollectionItemKeys?.has(key)
         ? snapshotIdentityCollection(descriptor.value, budget.realm, budget)
         : snapshotCollectionValue(descriptor.value, budget, depth + 1);
-      if (entry === OMIT_COLLECTION_VALUE) return OMIT_COLLECTION_VALUE;
+      if (isCollectionSnapshotFailure(entry)) return entry;
       Object.defineProperty(output, key, {
         value: entry,
         enumerable: true,
@@ -388,8 +420,8 @@ function snapshotCollectionValue(
   depth: number,
   preserveRecordKeys?: ReadonlySet<PropertyKey>,
   preserveCollectionItemKeys?: ReadonlySet<PropertyKey>,
-  allowArrayPrefixTruncation = false
-): unknown | typeof OMIT_COLLECTION_VALUE {
+  allowPrefixTruncation = false
+): unknown | CollectionSnapshotFailure {
   if (
     value === null ||
     (typeof value !== 'object' && typeof value !== 'function')
@@ -399,65 +431,61 @@ function snapshotCollectionValue(
   if (typeof value === 'function') return value;
   if (budget.seen.has(value)) return budget.seen.get(value);
   if (depth > PUBLIC_COLLECTION_DEPTH_LIMIT || budget.remaining <= 0)
-    return OMIT_COLLECTION_VALUE;
+    return EXHAUSTED_COLLECTION_VALUE;
 
   if (isArrayValue(value)) {
-    let lengthDescriptor: PropertyDescriptor | undefined;
-    try {
-      lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
-    } catch {
-      return allowArrayPrefixTruncation
+    if (!consumeSnapshotWork(budget)) return EXHAUSTED_COLLECTION_VALUE;
+    const lengthDescriptor = getOwnDataDescriptor(value, 'length');
+    if (lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
+      return allowPrefixTruncation
         ? emptyRealmArray(budget.realm)
         : OMIT_COLLECTION_VALUE;
     }
     if (
-      !lengthDescriptor ||
-      !('value' in lengthDescriptor) ||
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
       typeof lengthDescriptor.value !== 'number' ||
       !Number.isSafeInteger(lengthDescriptor.value) ||
       lengthDescriptor.value < 0
     )
-      return allowArrayPrefixTruncation
+      return allowPrefixTruncation
         ? emptyRealmArray(budget.realm)
         : OMIT_COLLECTION_VALUE;
     const sourceLength = lengthDescriptor.value;
     if (
-      !allowArrayPrefixTruncation &&
+      !allowPrefixTruncation &&
       sourceLength > PUBLIC_COLLECTION_ENTRY_LIMIT
     )
-      return OMIT_COLLECTION_VALUE;
+      return EXHAUSTED_COLLECTION_VALUE;
     const length = Math.min(sourceLength, PUBLIC_COLLECTION_ENTRY_LIMIT);
     const output = new budget.realm.Array(length) as unknown[];
     rememberSnapshot(budget, value, output);
     for (let index = 0; index < length; index += 1) {
       if (budget.remaining <= 0) {
-        if (!allowArrayPrefixTruncation) return OMIT_COLLECTION_VALUE;
+        if (!allowPrefixTruncation) return EXHAUSTED_COLLECTION_VALUE;
         output.length = index;
         break;
       }
-      let descriptor: PropertyDescriptor | undefined;
-      try {
-        descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-      } catch {
-        if (!allowArrayPrefixTruncation) return OMIT_COLLECTION_VALUE;
+      if (!consumeSnapshotWork(budget)) {
+        if (!allowPrefixTruncation) return EXHAUSTED_COLLECTION_VALUE;
         output.length = index;
         break;
       }
-      if (!descriptor) continue;
-      if (!('value' in descriptor)) {
-        if (!allowArrayPrefixTruncation) return OMIT_COLLECTION_VALUE;
-        output.length = index;
-        break;
+      const descriptor = getOwnDataDescriptor(value, String(index));
+      if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) continue;
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
+        if (!allowPrefixTruncation) return OMIT_COLLECTION_VALUE;
+        continue;
       }
       const entry = snapshotTransaction(budget, () => {
         budget.remaining -= 1;
         return snapshotCollectionValue(descriptor.value, budget, depth + 1);
       });
-      // A present row that cannot be snapshotted ends the bounded prefix. Keeping a hole here
-      // would make a dense `readonly Row[]` claim false, while inserting a sentinel would put a
-      // value outside the declared element type. Genuine source holes above retain their index.
       if (entry === OMIT_COLLECTION_VALUE) {
-        if (!allowArrayPrefixTruncation) return OMIT_COLLECTION_VALUE;
+        if (!allowPrefixTruncation) return OMIT_COLLECTION_VALUE;
+        continue;
+      }
+      if (entry === EXHAUSTED_COLLECTION_VALUE) {
+        if (!allowPrefixTruncation) return EXHAUSTED_COLLECTION_VALUE;
         output.length = index;
         break;
       }
@@ -496,9 +524,23 @@ function snapshotCollectionValue(
     return snapshotReadonlyDate(value, dateTime, budget);
 
   const entries = nativeMapEntries(value);
-  if (entries) return snapshotDetachedMap(value, entries, budget, depth);
+  if (entries)
+    return snapshotDetachedMap(
+      value,
+      entries,
+      budget,
+      depth,
+      allowPrefixTruncation
+    );
   const values = nativeSetValues(value);
-  if (values) return snapshotDetachedSet(value, values, budget, depth);
+  if (values)
+    return snapshotDetachedSet(
+      value,
+      values,
+      budget,
+      depth,
+      allowPrefixTruncation
+    );
   // Mutable binary views have no truthful recursively-frozen same-shape representation. No
   // enrolled public property uses one; a hostile/untyped assignment fails closed here. Event
   // contracts that expose bytes must define their own detached representation.
@@ -526,6 +568,7 @@ function snapshotPublicCollection(
   const realm = snapshotRealm(view);
   const budget: CollectionSnapshotBudget = {
     remaining: PUBLIC_COLLECTION_NODE_LIMIT,
+    remainingWork: PUBLIC_COLLECTION_WORK_LIMIT,
     seen: new WeakMap(),
     additions: [],
     realm,
@@ -533,7 +576,7 @@ function snapshotPublicCollection(
   const snapshot = snapshotTransaction(budget, () =>
     snapshotCollectionValue(value, budget, 0, undefined, undefined, true)
   );
-  if (snapshot !== OMIT_COLLECTION_VALUE) return snapshot;
+  if (!isCollectionSnapshotFailure(snapshot)) return snapshot;
   if (isArrayValue(value) || isNativeArrayBufferView(value as object))
     return emptyRealmArray(realm);
   if (typeof value === 'object') {
@@ -680,14 +723,15 @@ function readonlySetFacade(
 /** Creates a frozen facade whose mutating `Map` methods and mutable backing store are unreachable. */
 function snapshotIdentityMap(
   entries: IterableIterator<readonly [unknown, unknown]>,
-  realm = snapshotRealm()
-): ReadonlyMap<unknown, unknown> {
+  realm = snapshotRealm(),
+  budget?: CollectionSnapshotBudget
+): ReadonlyMap<unknown, unknown> | typeof EXHAUSTED_COLLECTION_VALUE {
   const backing = new realm.Map<unknown, unknown>();
-  for (
-    let next = entries.next(), count = 0;
-    !next.done && count < PUBLIC_COLLECTION_ENTRY_LIMIT;
-    next = entries.next(), count += 1
-  ) {
+  for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
+    const next = entries.next();
+    if (next.done) break;
+    if (budget && !consumeSnapshotWork(budget))
+      return EXHAUSTED_COLLECTION_VALUE;
     backing.set(next.value[0], next.value[1]);
   }
   return readonlyMapFacade(backing, realm);
@@ -696,14 +740,15 @@ function snapshotIdentityMap(
 /** Creates a frozen facade whose mutating `Set` methods and mutable backing store are unreachable. */
 function snapshotIdentitySet(
   values: IterableIterator<unknown>,
-  realm = snapshotRealm()
-): ReadonlySet<unknown> {
+  realm = snapshotRealm(),
+  budget?: CollectionSnapshotBudget
+): ReadonlySet<unknown> | typeof EXHAUSTED_COLLECTION_VALUE {
   const backing = new realm.Set<unknown>();
-  for (
-    let next = values.next(), count = 0;
-    !next.done && count < PUBLIC_COLLECTION_ENTRY_LIMIT;
-    next = values.next(), count += 1
-  ) {
+  for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
+    const next = values.next();
+    if (next.done) break;
+    if (budget && !consumeSnapshotWork(budget))
+      return EXHAUSTED_COLLECTION_VALUE;
     backing.add(next.value);
   }
   return readonlySetFacade(backing, realm);
@@ -713,8 +758,9 @@ function snapshotDetachedMap(
   source: object,
   entries: IterableIterator<readonly [unknown, unknown]>,
   budget: CollectionSnapshotBudget,
-  depth: number
-): ReadonlyMap<unknown, unknown> {
+  depth: number,
+  allowPrefixTruncation: boolean
+): ReadonlyMap<unknown, unknown> | typeof EXHAUSTED_COLLECTION_VALUE {
   const backing = new budget.realm.Map<unknown, unknown>();
   const facade = readonlyMapFacade(backing, budget.realm);
   rememberSnapshot(budget, source, facade);
@@ -725,16 +771,24 @@ function snapshotDetachedMap(
     } catch {
       break;
     }
-    if (next.done || budget.remaining <= 0) break;
-    const pair = snapshotTransaction(budget, () => {
+    if (next.done) break;
+    if (budget.remaining <= 0 || !consumeSnapshotWork(budget))
+      return allowPrefixTruncation
+        ? facade
+        : EXHAUSTED_COLLECTION_VALUE;
+    const pair = snapshotTransaction<readonly [unknown, unknown]>(budget, () => {
       budget.remaining -= 1;
       const key = snapshotCollectionValue(next.value[0], budget, depth + 1);
-      if (key === OMIT_COLLECTION_VALUE) return OMIT_COLLECTION_VALUE;
+      if (isCollectionSnapshotFailure(key)) return key;
       const entry = snapshotCollectionValue(next.value[1], budget, depth + 1);
-      return entry === OMIT_COLLECTION_VALUE
-        ? OMIT_COLLECTION_VALUE
+      return isCollectionSnapshotFailure(entry)
+        ? entry
         : ([key, entry] as const);
     });
+    if (pair === EXHAUSTED_COLLECTION_VALUE)
+      return allowPrefixTruncation
+        ? facade
+        : EXHAUSTED_COLLECTION_VALUE;
     if (pair !== OMIT_COLLECTION_VALUE) backing.set(pair[0], pair[1]);
   }
   return facade;
@@ -744,8 +798,9 @@ function snapshotDetachedSet(
   source: object,
   values: IterableIterator<unknown>,
   budget: CollectionSnapshotBudget,
-  depth: number
-): ReadonlySet<unknown> {
+  depth: number,
+  allowPrefixTruncation: boolean
+): ReadonlySet<unknown> | typeof EXHAUSTED_COLLECTION_VALUE {
   const backing = new budget.realm.Set<unknown>();
   const facade = readonlySetFacade(backing, budget.realm);
   rememberSnapshot(budget, source, facade);
@@ -756,11 +811,19 @@ function snapshotDetachedSet(
     } catch {
       break;
     }
-    if (next.done || budget.remaining <= 0) break;
+    if (next.done) break;
+    if (budget.remaining <= 0 || !consumeSnapshotWork(budget))
+      return allowPrefixTruncation
+        ? facade
+        : EXHAUSTED_COLLECTION_VALUE;
     const entry = snapshotTransaction(budget, () => {
       budget.remaining -= 1;
       return snapshotCollectionValue(next.value, budget, depth + 1);
     });
+    if (entry === EXHAUSTED_COLLECTION_VALUE)
+      return allowPrefixTruncation
+        ? facade
+        : EXHAUSTED_COLLECTION_VALUE;
     if (entry !== OMIT_COLLECTION_VALUE) backing.add(entry);
   }
   return facade;
@@ -770,7 +833,7 @@ function snapshotIdentityCollection(
   value: unknown,
   view?: Window | SnapshotRealm | null,
   budget?: CollectionSnapshotBudget
-): unknown {
+): unknown | CollectionSnapshotFailure {
   const realm = snapshotRealm(view);
   if (
     budget &&
@@ -780,15 +843,12 @@ function snapshotIdentityCollection(
   )
     return budget.seen.get(value);
   if (isArrayValue(value)) {
-    let lengthDescriptor: PropertyDescriptor | undefined;
-    try {
-      lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
-    } catch {
-      return emptyRealmArray(realm);
-    }
+    if (budget && !consumeSnapshotWork(budget))
+      return EXHAUSTED_COLLECTION_VALUE;
+    const lengthDescriptor = getOwnDataDescriptor(value, 'length');
     const length =
-      lengthDescriptor &&
-      'value' in lengthDescriptor &&
+      lengthDescriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
+      lengthDescriptor !== UNSAFE_OWN_DATA_DESCRIPTOR &&
       typeof lengthDescriptor.value === 'number' &&
       Number.isSafeInteger(lengthDescriptor.value) &&
       lengthDescriptor.value >= 0
@@ -797,13 +857,14 @@ function snapshotIdentityCollection(
     const output = new realm.Array(length) as unknown[];
     if (budget) rememberSnapshot(budget, value, output);
     for (let index = 0; index < length; index += 1) {
-      let descriptor: PropertyDescriptor | undefined;
-      try {
-        descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-      } catch {
+      if (budget && !consumeSnapshotWork(budget))
+        return EXHAUSTED_COLLECTION_VALUE;
+      const descriptor = getOwnDataDescriptor(value, String(index));
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
         continue;
-      }
-      if (!descriptor || !('value' in descriptor)) continue;
       Object.defineProperty(output, index, {
         value: descriptor.value,
         enumerable: true,
@@ -816,13 +877,15 @@ function snapshotIdentityCollection(
   if (value === null || typeof value !== 'object') return value;
   const mapEntries = nativeMapEntries(value);
   if (mapEntries) {
-    const output = snapshotIdentityMap(mapEntries, realm);
+    const output = snapshotIdentityMap(mapEntries, realm, budget);
+    if (output === EXHAUSTED_COLLECTION_VALUE) return output;
     if (budget) rememberSnapshot(budget, value, output);
     return output;
   }
   const setValues = nativeSetValues(value);
   if (setValues) {
-    const output = snapshotIdentitySet(setValues, realm);
+    const output = snapshotIdentitySet(setValues, realm, budget);
+    if (output === EXHAUSTED_COLLECTION_VALUE) return output;
     if (budget) rememberSnapshot(budget, value, output);
     return output;
   }
@@ -838,6 +901,7 @@ function snapshotEventDetail(
   if (value === undefined || value === null) return value;
   const budget: CollectionSnapshotBudget = {
     remaining: PUBLIC_COLLECTION_NODE_LIMIT,
+    remainingWork: PUBLIC_COLLECTION_WORK_LIMIT,
     seen: new WeakMap(),
     additions: [],
     realm: snapshotRealm(view),
@@ -851,7 +915,7 @@ function snapshotEventDetail(
       preserveCollectionItemKeys
     )
   );
-  return snapshot === OMIT_COLLECTION_VALUE ? null : snapshot;
+  return isCollectionSnapshotFailure(snapshot) ? null : snapshot;
 }
 
 /**

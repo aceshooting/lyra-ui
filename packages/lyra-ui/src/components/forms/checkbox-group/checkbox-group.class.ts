@@ -12,8 +12,11 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import {
   acquireAriaDescription,
+  acquireResolvedAriaRelationship,
   type AriaDescriptionLease,
+  type ResolvedAriaRelationshipLease,
 } from '../../../internal/aria-controls.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -36,15 +39,9 @@ import { LYRA_DEFAULT_checkboxGroupRequired, LYRA_DEFAULT_fieldRequired } from '
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** Fired once per duplicated value per group instance, so a group re-syncing on every child toggle
- *  does not spam the console. */
-function warnDuplicateValue(group: LyraCheckboxGroup, value: string): void {
-  console.warn(
-    `<lr-checkbox-group> has more than one <lr-checkbox> child with value="${value}"` +
-      `${group.name ? ` (name="${group.name}")` : ''}; every checked one contributes an identical ` +
-      'FormData entry, so the submitted data cannot say which was checked. Give each child a distinct `value`.',
-  );
-}
+const DUPLICATE_VALUE_WARNING_KEY = 'lyra-checkbox-group-duplicate-child-values';
+const DUPLICATE_VALUE_WARNING =
+  '<lr-checkbox-group>: duplicate child values make submitted FormData ambiguous; give each child a distinct value.';
 
 export interface LyraCheckboxGroupEventMap {
   'lr-invalid': CustomEvent<null>;
@@ -61,7 +58,10 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * RTL allocation; options wrap without shrinking their checkbox targets.
  * Its fieldset owns aggregate `aria-invalid` state and, while required, a localized hidden
  * requiredness description that composes with existing hint/error relationships without marking
- * every child checkbox required.
+ * every child checkbox required. A host `aria-describedby` is resolved onto that fieldset before
+ * its own hint/error/required descriptions, preserving external guidance across the shadow
+ * boundary. Host `aria-labelledby` is deliberately not projected: the native legend supplies the
+ * group's visible label relationship.
  *
  * @customElement lr-checkbox-group
  * @slot - `<lr-checkbox>` children.
@@ -176,6 +176,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private hintId = nextId('checkbox-group-hint');
   private errorId = nextId('checkbox-group-error');
   private requiredDescriptionId = nextId('checkbox-group-required');
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private requiredDescriptionLease?: AriaDescriptionLease;
   private requiredDescriptionTarget?: HTMLElement;
   // Inherited from an ancestor `<fieldset disabled>` via `formDisabledCallback()`.
@@ -188,7 +189,6 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private _required = false;
   private _disabled = false;
   private _value: string[] = [];
-  private _warnedDuplicateValues = new Set<string>();
   private pendingRestoreValues?: string[];
   /** A `value` assignment made before any checkbox child existed; applied on the next slotchange. */
   private pendingValues?: string[];
@@ -345,9 +345,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
         seen.add(value);
         continue;
       }
-      if (this._warnedDuplicateValues.has(value)) continue;
-      this._warnedDuplicateValues.add(value);
-      warnDuplicateValue(this, value);
+      devWarnOnce(DUPLICATE_VALUE_WARNING_KEY, DUPLICATE_VALUE_WARNING);
+      return;
     }
   }
 
@@ -530,7 +529,10 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     // schedules a redundant follow-up update and triggers Lit's change-in-update warning.
     this.onSlotChange();
     this.armChildObserver();
-    if (this.hasUpdated) this.syncRequiredDescription();
+    if (this.hasUpdated) {
+      this.syncRequiredDescription();
+      this.syncExternalDescription();
+    }
   }
 
   private armChildObserver(): void {
@@ -564,6 +566,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     this.releaseRequiredDescription();
     this.removeEventListener('input', this.onChildEvent, { capture: true });
     this.removeEventListener('change', this.onChildEvent, { capture: true });
@@ -582,7 +585,13 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.releaseExternalDescription();
+    this.releaseRequiredDescription();
     this.resetChildObserver();
+    if (this.isConnected && this.hasUpdated) {
+      this.syncRequiredDescription();
+      this.syncExternalDescription();
+    }
   }
 
   private resetChildObserver(): void {
@@ -628,6 +637,30 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     super.updated(changed);
     if (changed.has('size')) this.propagateSize();
     this.syncRequiredDescription();
+    this.syncExternalDescription();
+  }
+
+  /** Resolves host-owned descriptions ahead of the fieldset's own form-control descriptions. */
+  private syncExternalDescription(): void {
+    const target = this.renderRoot.querySelector<HTMLElement>('fieldset');
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (!this.externalDescriptionLease) {
+      this.externalDescriptionLease = acquireResolvedAriaRelationship(
+        this,
+        target,
+        'aria-describedby',
+      );
+      return;
+    }
+    this.externalDescriptionLease.update(target);
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
   }
 
   /** Owns only the aggregate requiredness text; hint and error remain Lit's baseline relationship. */

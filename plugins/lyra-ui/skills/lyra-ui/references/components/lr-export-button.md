@@ -123,6 +123,15 @@ downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Do
 
 **Known gotchas:**
 
+- Format options are read from their direct data fields into a frozen list. Accessor-backed, missing,
+  malformed, or throwing descriptor fields are ignored rather than evaluated; later menu rendering
+  and `lr-export` events use that snapshot. The snapshot includes only direct `formatId`, `label`,
+  `description`, and `extension` fields; accepted records are frozen and never reread from the
+  caller. An open multi-format menu is a non-modal overlay owned by the element's
+  current document: only its topmost menu handles that document's Escape, outside pointer, or Tab.
+  It rebinds after document adoption; Escape or a selected export returns focus to its own trigger,
+  while a Tab close permits normal document navigation. Placement uses the current trigger and panel
+  geometry and remains clamped to the current document's viewport.
 - CSV and JSON are the only built-in encoders. To offer XLSX/PDF/etc., pass an
   `LyraExportFormatDescriptor` and handle its `formatId` from `lr-export`; custom formats never trigger a
   download or `lr-export-complete` on their own. A descriptor's optional `extension` is metadata

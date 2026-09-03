@@ -114,8 +114,8 @@ around either the slotted content or the plain `value` text).
 
 - `HTMLElement.textContent` read on a shadow-DOM wrapper containing a `<slot>` does NOT include the
   slot's assigned/projected light-DOM content — only literal fallback children of the `<slot>` tag
-  itself (there are none here). Asserting against `[part="value"]`'s own `.textContent` to check
-  rendered slotted content will read as empty even when the component is rendering correctly;
-  assert against the slot's `assignedNodes()`/`assignedElements()` instead.
+  itself (there are none here). Reading `[part="value"]`'s own `.textContent` yields an empty value
+  even when slotted content is rendering correctly; use the slot's
+  `assignedNodes()`/`assignedElements()` instead.
 
 ---

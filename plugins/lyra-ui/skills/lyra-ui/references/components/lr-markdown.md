@@ -74,7 +74,9 @@ uses for its own `[part="body"]`.
   to plain text if the peer is unavailable; `escape` displays raw HTML source as text while ordinary
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
   content.
-- `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists)
+- `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
+  GFM task-list checkboxes stay disabled. A task's primary inline text supplies its accessible name;
+  nested task text is excluded, and a blank task receives no generated name.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — `target` applied to every
   rendered `<a>`, with `rel="noopener noreferrer"` always added alongside it whenever a `target` is
   emitted. `'_blank'` (the default) preserves the original output; a falsy value (`null`, or the
@@ -140,9 +142,10 @@ placed first and preserved inside both ceilings.
 
 **Events:**
 
-- `lr-link-click` (`detail: { href: string }`) — fired, with the click prevented,
-  when a rendered link's `href` starts with `internal-link-prefix`; ordinary external links navigate
-  normally and never fire this
+- `lr-link-click` (`detail: { href: string }`) — fired, with navigation prevented, when a rendered
+  link's `href` starts with `internal-link-prefix`; ordinary external links navigate normally and
+  never fire this. If an intercepted link overlaps a painted highlight,
+  `lr-highlight-activate` fires first for pointer and Enter activation.
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
   fallback matrix below), or `math` is set but the `katex` peer isn't installed
 - `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked

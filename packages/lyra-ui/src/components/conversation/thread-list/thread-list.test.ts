@@ -1,5 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./thread-list.js";
 import "../../overlays/chip/chip.js";
 import "../../layout/menu/menu.js";
@@ -41,15 +41,11 @@ async function nextFrame(): Promise<void> {
 async function suppressExpectedDataSlotWarning(
   callback: () => Promise<void>
 ): Promise<void> {
+  const expected =
+    '<lr-thread-list>: both `threads` and slotted content were supplied; `threads` data mode wins and the default slot is ignored.';
   const originalWarn = console.warn;
   console.warn = (...args: unknown[]) => {
-    if (
-      !String(args[0]).includes(
-        "[lr-thread-list] both `threads` and slotted content"
-      )
-    ) {
-      originalWarn(...args);
-    }
+    if (args.length !== 1 || args[0] !== expected) originalWarn(...args);
   };
   try {
     await callback();
@@ -162,6 +158,150 @@ it("ignores invalid-only thread records when choosing slotted mode", async () =>
     expect(warnings).to.deep.equal([]);
   } finally {
     console.warn = originalWarn;
+  }
+});
+
+it('projects thread fields from own data descriptors while render callbacks retain the opaque source identity', async () => {
+  const target = {
+    id: 'safe',
+    title: 'Safe thread',
+    excerpt: 'Projected once',
+    timestamp: new Date(),
+    pinned: false,
+    archived: false,
+    callerOnly: { opaque: true },
+  };
+  let descriptorReads = 0;
+  const source = new Proxy(target, {
+    get(): never {
+      throw new Error('thread fields must not be read from the source after projection');
+    },
+    getOwnPropertyDescriptor(value, key): PropertyDescriptor | undefined {
+      descriptorReads += 1;
+      return Reflect.getOwnPropertyDescriptor(value, key);
+    },
+  });
+  const unsafe = Object.defineProperty({}, 'id', {
+    enumerable: true,
+    get(): never {
+      throw new Error('unsafe thread accessor');
+    },
+  });
+  const el = (await fixture(
+    html`<lr-thread-list grouping="none" style="block-size:400px"></lr-thread-list>`,
+  )) as LyraThreadList;
+  let callbackSource: unknown;
+  el.renderActions = (thread) => {
+    callbackSource = thread;
+    return html``;
+  };
+  el.threads = [unsafe, source] as unknown as typeof el.threads;
+  await el.updateComplete;
+  await nextFrame();
+
+  expect(renderedThreadIds(el)).to.deep.equal(['safe']);
+  expect(descriptorReads, 'the closed display schema is inspected once').to.equal(6);
+  expect(callbackSource).to.equal(source);
+
+  target.title = 'Mutated after assignment';
+  el.activeConversationId = 'safe';
+  await el.updateComplete;
+  await nextFrame();
+  expect(dataRow(el, 'safe').label).to.equal('Safe thread');
+});
+
+it('omits a revoked thread proxy while retaining a later valid row and its source identity', async () => {
+  const { proxy: revoked, revoke } = Proxy.revocable(
+    { id: 'revoked', title: 'Revoked thread' },
+    {},
+  );
+  revoke();
+  const source = { id: 'safe', title: 'Safe thread' };
+  const el = (await fixture(
+    html`<lr-thread-list grouping="none" style="block-size:400px"></lr-thread-list>`,
+  )) as LyraThreadList;
+  let callbackSource: unknown;
+  el.renderActions = (thread) => {
+    callbackSource = thread;
+    return html``;
+  };
+  el.threads = [revoked, source] as unknown as typeof el.threads;
+  await el.updateComplete;
+  await nextFrame();
+
+  expect(renderedThreadIds(el)).to.deep.equal(['safe']);
+  expect(callbackSource).to.equal(source);
+});
+
+it('uses a branded timestamp Date slot without invoking an overridden method', async () => {
+  const guarded = new Date();
+  Object.defineProperty(guarded, 'getTime', {
+    configurable: true,
+    get(): never {
+      throw new Error('thread timestamps must use the native Date slot');
+    },
+  });
+  const el = (await fixture(
+    html`<lr-thread-list style="block-size:400px"></lr-thread-list>`,
+  )) as LyraThreadList;
+  el.threads = [{ id: 'today', title: 'Branded timestamp', timestamp: guarded }];
+  await el.updateComplete;
+  await nextFrame();
+
+  expect(renderedGroupLabels(el)).to.include('Today');
+  expect(renderedThreadIds(el)).to.deep.equal(['today']);
+});
+
+it('emits one fixed development-only data-and-slot diagnostic without changing the visible data-mode fallback', async () => {
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const previousWarnings = runtime.litIssuedWarnings;
+  const previousWarn = console.warn;
+  const messages: string[] = [];
+  runtime.litIssuedWarnings = new Set();
+  console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+  try {
+    const first = (await fixture(html`
+      <lr-thread-list
+        style="block-size:400px"
+        .strings=${{ threadGroupPrevious30Days: 'Localized fallback group' }}
+        .threads=${[{ id: 'safe', title: 'Visible row' }]}
+      >
+        <lr-conversation-item label="private slotted title"></lr-conversation-item>
+      </lr-thread-list>
+    `)) as LyraThreadList;
+    await first.updateComplete;
+    await nextFrame();
+    const second = (await fixture(html`
+      <lr-thread-list style="block-size:400px" .threads=${[{ id: 'again', title: 'Second row' }]}>
+        <lr-conversation-item label="another private title"></lr-conversation-item>
+      </lr-thread-list>
+    `)) as LyraThreadList;
+    await second.updateComplete;
+    await nextFrame();
+
+    expect(first.shadowRoot!.querySelector('lr-virtual-list') !== null).to.equal(true);
+    expect(renderedThreadIds(first)).to.deep.equal(['safe']);
+    expect(renderedGroupLabels(first)).to.include('Localized fallback group');
+    expect(messages).to.have.lengthOf(1);
+    expect(messages[0]).to.contain('both `threads` and slotted content');
+    expect(messages[0]).to.not.contain('private slotted title');
+    expect(messages[0]).to.not.contain('another private title');
+
+    messages.length = 0;
+    delete runtime.litIssuedWarnings;
+    const production = (await fixture(html`
+      <lr-thread-list style="block-size:400px" .threads=${[{ id: 'prod', title: 'Localized visible row' }]}>
+        <lr-conversation-item label="production-only private title"></lr-conversation-item>
+      </lr-thread-list>
+    `)) as LyraThreadList;
+    await production.updateComplete;
+    await nextFrame();
+    expect(renderedThreadIds(production)).to.deep.equal(['prod']);
+    expect(messages).to.deep.equal([]);
+  } finally {
+    if (previousWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = previousWarnings;
+    console.warn = previousWarn;
   }
 });
 
@@ -987,6 +1127,99 @@ describe("data mode", () => {
     }
   });
 
+  it('keeps group-toggle and row-action hover and active color hooks independent', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="
+          block-size:400px;
+          --lr-thread-list-group-toggle-hover-bg: rgb(1, 2, 3);
+          --lr-thread-list-group-toggle-hover-color: rgb(4, 5, 6);
+          --lr-thread-list-group-toggle-active-bg: rgb(7, 8, 9);
+          --lr-thread-list-group-toggle-active-color: rgb(10, 11, 12);
+          --lr-thread-list-row-action-hover-bg: rgb(13, 14, 15);
+          --lr-thread-list-row-action-hover-color: rgb(16, 17, 18);
+          --lr-thread-list-row-action-active-bg: rgb(19, 20, 21);
+          --lr-thread-list-row-action-active-color: rgb(22, 23, 24);
+        "
+        .threads=${threads}
+        .rowActions=${['pin']}
+      ></lr-thread-list>`,
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.shadowRoot!.querySelector<LyraVirtualList>('lr-virtual-list')!;
+    const groupToggle = list.shadowRoot!.querySelector<HTMLElement>('[part~="group-toggle"]')!;
+    const rowAction = dataRow(el, 't1').querySelector<HTMLElement>('[part~="row-action"]')!;
+    const targets: Array<{
+      target: HTMLElement;
+      hoverBackground: string;
+      hoverColor: string;
+      activeBackground: string;
+      activeColor: string;
+    }> = [
+      {
+        target: groupToggle,
+        hoverBackground: 'rgb(1, 2, 3)',
+        hoverColor: 'rgb(4, 5, 6)',
+        activeBackground: 'rgb(7, 8, 9)',
+        activeColor: 'rgb(10, 11, 12)',
+      },
+      {
+        target: rowAction,
+        hoverBackground: 'rgb(13, 14, 15)',
+        hoverColor: 'rgb(16, 17, 18)',
+        activeBackground: 'rgb(19, 20, 21)',
+        activeColor: 'rgb(22, 23, 24)',
+      },
+    ];
+
+    for (const target of targets) {
+      try {
+        await hoverUntilMatched(
+          target.target,
+          `${target.target.getAttribute('part')} did not receive its hover pointer`,
+        );
+        await waitUntil(
+          () => {
+            const computed = getComputedStyle(target.target);
+            return computed.backgroundColor === target.hoverBackground && computed.color === target.hoverColor;
+          },
+          `${target.target.getAttribute('part')} did not apply its hover hooks`,
+        );
+        await sendMouse({ type: 'down' });
+        await waitUntil(
+          () => {
+            const computed = getComputedStyle(target.target);
+            return computed.backgroundColor === target.activeBackground && computed.color === target.activeColor;
+          },
+          `${target.target.getAttribute('part')} did not apply its active hooks`,
+        );
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    }
+  });
+
+  it('inherits the row-action font from its live row while its action glyph stays one em', async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="block-size:400px;--lr-theme-font-size-md-sm:20px"
+        .threads=${threads}
+        .rowActions=${['pin']}
+      ></lr-thread-list>`,
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const rowAction = dataRow(el, 't1').querySelector<HTMLElement>('[part~="row-action"]')!;
+    const glyph = rowAction.querySelector<HTMLElement>('svg')!;
+
+    expect(getComputedStyle(rowAction).fontSize).to.equal('20px');
+    expect(glyph.getAttribute('width')).to.equal('1em');
+    expect(glyph.getAttribute('height')).to.equal('1em');
+    expect(getComputedStyle(glyph).fontSize).to.equal('20px');
+  });
+
   it("shows a small pin glyph in the meta slot for a pinned row", async () => {
     const el = (await fixture(
       html`<lr-thread-list
@@ -1702,9 +1935,12 @@ describe("data mode", () => {
     );
   });
 
-  it("warns and prefers threads (data mode) when both threads and slotted content are supplied", async () => {
+  it("prefers threads (data mode) when both threads and slotted content are supplied", async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const previousWarnings = runtime.litIssuedWarnings;
     const originalWarn = console.warn;
     const calls: unknown[][] = [];
+    delete runtime.litIssuedWarnings;
     console.warn = (...args: unknown[]) => calls.push(args);
     try {
       const el = (await fixture(
@@ -1713,10 +1949,11 @@ describe("data mode", () => {
         ></lr-thread-list>`
       )) as LyraThreadList;
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector("lr-virtual-list")).to.exist;
-      expect(calls.some((args) => String(args[0]).includes("lr-thread-list")))
-        .to.be.true;
+      expect(el.shadowRoot!.querySelector('lr-virtual-list') !== null).to.equal(true);
+      expect(calls).to.deep.equal([]);
     } finally {
+      if (previousWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = previousWarnings;
       console.warn = originalWarn;
     }
   });

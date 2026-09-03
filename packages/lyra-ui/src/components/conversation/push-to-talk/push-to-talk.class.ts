@@ -40,6 +40,49 @@ type PushToTalkWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
 
+/** A document/realm ownership snapshot. Browser media objects, timers, and promise continuations
+ * cannot safely cross an adoption boundary, so window identity alone is not sufficient. */
+interface CaptureOwner {
+  readonly document: Document;
+  readonly window: PushToTalkWindow;
+  generation: number;
+}
+
+/** The current user or programmatic request to capture. A hold intent is live only while its
+ * matching pointer/key is still held; a later hold may adopt a same-owner permission request. */
+interface CaptureIntent {
+  readonly id: number;
+  readonly owner: CaptureOwner;
+  readonly kind: 'hold' | 'programmatic';
+  readonly source?: 'pointer' | 'keyboard';
+  readonly pointerId?: number;
+  readonly key?: string;
+}
+
+/** An in-flight permission prompt. It has its own owner and never receives authority merely
+ * because a newer intent happens to exist on the component. */
+interface PendingCaptureRequest {
+  readonly id: number;
+  readonly owner: CaptureOwner;
+  intent: CaptureIntent;
+  completion?: Promise<boolean>;
+  invalidated: boolean;
+  notifyCancellation: boolean;
+  retiredAtIntentId?: number;
+  retiredAtGeneration?: number;
+  cancellationNotified: boolean;
+}
+
+/** A recorder session after a permission request has been admitted. Runtime fields stay on the
+ * element for the public/test-facing lifecycle, while this identity prevents stale callbacks from
+ * clearing a newer session. */
+interface ActiveCapture {
+  readonly id: number;
+  readonly owner: CaptureOwner;
+  readonly intent: CaptureIntent;
+  notifyCancellation: boolean;
+}
+
 function isPushToTalkSupported(owner: Window | null): owner is PushToTalkWindow {
   const runtime = owner as PushToTalkWindow | null;
   return !!runtime?.MediaRecorder && typeof runtime.navigator.mediaDevices?.getUserMedia === 'function';
@@ -219,16 +262,17 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   /** Window that granted the active capture. Native objects and scheduled work for a take stay
    *  bound to this realm even if the custom element is adopted before the recorder stops. */
   private captureWindow?: PushToTalkWindow;
+  private activeCapture?: ActiveCapture;
+  private pendingRequest?: PendingCaptureRequest;
+  private captureIntent?: CaptureIntent;
+  private queuedIntent?: CaptureIntent;
+  private lifecycleGeneration = 0;
+  private captureSequence = 0;
+  private intentSequence = 0;
   private cancelRequested = false;
   private recorderStopRequested = false;
   private recorderFailed = false;
-  private holdGesture?: {
-    generation: number;
-    source: 'pointer' | 'keyboard';
-    pointerId?: number;
-    key?: string;
-  };
-  private holdGestureGeneration = 0;
+  private holdGesture?: CaptureIntent;
   private tickTimer?: OwnedTimer;
   private maxDurationTimer?: OwnedTimer;
   private audioCtx?: AudioContext;
@@ -239,6 +283,167 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   /** Lit's server DOM intentionally gives custom elements no browser-owned document. */
   private get ownerWindow(): Window | null {
     return (this.ownerDocument as Document | undefined)?.defaultView ?? null;
+  }
+
+  private get captureOwner(): CaptureOwner | undefined {
+    const owner = this.ownerWindow;
+    if (!isPushToTalkSupported(owner)) return undefined;
+    return {
+      document: this.ownerDocument,
+      window: owner,
+      generation: this.lifecycleGeneration,
+    };
+  }
+
+  private ownsCurrentLifecycle(owner: CaptureOwner): boolean {
+    return (
+      this.isConnected &&
+      this.isCurrentRealm(owner) &&
+      this.lifecycleGeneration === owner.generation
+    );
+  }
+
+  private isCurrentRealm(owner: CaptureOwner): boolean {
+    return this.ownerDocument === owner.document && this.ownerWindow === owner.window;
+  }
+
+  private rebaseCurrentRealmOwner(owner: CaptureOwner): void {
+    if (this.isCurrentRealm(owner)) owner.generation = this.lifecycleGeneration;
+  }
+
+  private createIntent(
+    kind: CaptureIntent['kind'],
+    details: Pick<CaptureIntent, 'source' | 'pointerId' | 'key'> = {}
+  ): CaptureIntent | undefined {
+    const owner = this.captureOwner;
+    if (!owner) return undefined;
+    const intent: CaptureIntent = {
+      id: ++this.intentSequence,
+      owner,
+      kind,
+      ...details,
+    };
+    this.captureIntent = intent;
+    return intent;
+  }
+
+  private isLiveIntent(intent: CaptureIntent): boolean {
+    return (
+      this.captureIntent === intent &&
+      !this.disabled &&
+      this.ownsCurrentLifecycle(intent.owner) &&
+      (intent.kind !== 'hold' || this.holdGesture === intent)
+    );
+  }
+
+  private clearIntent(intent: CaptureIntent): void {
+    if (this.captureIntent === intent) this.captureIntent = undefined;
+    if (this.holdGesture === intent) this.holdGesture = undefined;
+    if (this.queuedIntent === intent) this.queuedIntent = undefined;
+  }
+
+  /** Makes a request incapable of mutating a later lifecycle. A native permission prompt cannot
+   * be aborted, so its eventual stream is stopped in its own continuation rather than being
+   * allowed to re-enter the component's current state. */
+  private retirePendingRequest(request: PendingCaptureRequest, notifyCancellation: boolean): void {
+    request.invalidated = true;
+    request.notifyCancellation ||= notifyCancellation;
+    request.retiredAtIntentId = this.intentSequence;
+    request.retiredAtGeneration = this.lifecycleGeneration;
+    if (this.pendingRequest === request) this.pendingRequest = undefined;
+    this.clearIntent(request.intent);
+    if (this._state === 'requesting' && !this.activeCapture) this.setState('idle');
+  }
+
+  /** Disconnect, adoption, and disablement revoke both the physical intent and request authority
+   * before any release handler can turn an involuntary teardown into a normal `lr-record-stop`. */
+  private invalidateLifecycle(notifyCancellation: boolean, retainCurrentRealmIntents = false): void {
+    this.lifecycleGeneration += 1;
+    if (this.captureIntent && retainCurrentRealmIntents && this.isCurrentRealm(this.captureIntent.owner)) {
+      this.rebaseCurrentRealmOwner(this.captureIntent.owner);
+    } else {
+      this.captureIntent = undefined;
+    }
+    if (this.holdGesture && retainCurrentRealmIntents && this.isCurrentRealm(this.holdGesture.owner)) {
+      this.rebaseCurrentRealmOwner(this.holdGesture.owner);
+    } else {
+      this.holdGesture = undefined;
+    }
+    if (this.queuedIntent && retainCurrentRealmIntents && this.isCurrentRealm(this.queuedIntent.owner)) {
+      this.rebaseCurrentRealmOwner(this.queuedIntent.owner);
+    } else {
+      this.queuedIntent = undefined;
+    }
+    const request = this.pendingRequest;
+    if (request) {
+      if (retainCurrentRealmIntents && this.isCurrentRealm(request.owner)) {
+        this.rebaseCurrentRealmOwner(request.owner);
+      } else {
+        this.retirePendingRequest(request, notifyCancellation);
+      }
+    }
+    const active = this.activeCapture;
+    if (active) {
+      active.notifyCancellation &&= notifyCancellation;
+      this.requestRecorderStop(true);
+    }
+  }
+
+  private canAdoptRequest(request: PendingCaptureRequest, intent: CaptureIntent): boolean {
+    return (
+      this.pendingRequest === request &&
+      !request.invalidated &&
+      this._state === 'requesting' &&
+      this.ownsCurrentLifecycle(request.owner) &&
+      this.isLiveIntent(intent) &&
+      request.owner.document === intent.owner.document &&
+      request.owner.window === intent.owner.window &&
+      request.owner.generation === intent.owner.generation
+    );
+  }
+
+  private canStartRequest(request: PendingCaptureRequest): boolean {
+    return this.canAdoptRequest(request, request.intent);
+  }
+
+  private notifyCancellation(): void {
+    this.emit('lr-record-cancel', null);
+    if (this.isConnected) this.announce(this.localize('pushToTalkCancelled'));
+  }
+
+  /** A physical B press can land after A has requested recorder stop but before `onstop` runs.
+   * Queue only that still-held intent, so B cannot be lost or create a concurrent recorder. */
+  private resumeQueuedIntent(): void {
+    const intent = this.queuedIntent;
+    this.queuedIntent = undefined;
+    if (!intent || !this.isLiveIntent(intent)) return;
+    void this.startForIntent(intent);
+  }
+
+  private finishRetiredRequest(request: PendingCaptureRequest): void {
+    if (
+      request.notifyCancellation &&
+      !request.cancellationNotified &&
+      request.retiredAtIntentId === this.intentSequence &&
+      request.retiredAtGeneration === this.lifecycleGeneration &&
+      !this.pendingRequest &&
+      !this.activeCapture &&
+      !this.captureIntent
+    ) {
+      request.cancellationNotified = true;
+      this.notifyCancellation();
+    }
+  }
+
+  private finishUnusableRequest(request: PendingCaptureRequest): void {
+    if (request.invalidated) {
+      this.finishRetiredRequest(request);
+      return;
+    }
+    if (this.pendingRequest === request) this.pendingRequest = undefined;
+    this.clearIntent(request.intent);
+    if (this._state === 'requesting' && !this.activeCapture) this.setState('idle');
+    this.notifyCancellation();
   }
 
   private syncCaptureSupport(): void {
@@ -252,12 +457,13 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.releaseHoldGesture();
-    if (this._state === 'recording' || this._state === 'requesting') this.cancel();
+    const previousOwner = this.activeCapture?.owner ?? this.pendingRequest?.owner;
+    this.invalidateLifecycle(false, !!previousOwner && !this.isCurrentRealm(previousOwner));
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
+    this.invalidateLifecycle(false, true);
     super.adoptedCallback();
     this.syncCaptureSupport();
   }
@@ -266,10 +472,11 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     super.willUpdate(changed);
     if (this.hasUpdated) this.syncCaptureSupport();
     else this.seedFirstRenderState(() => this.syncCaptureSupport());
-    if (changed.has('mode') && this.holdGesture) this.releaseHoldGesture();
+    if (changed.has('mode') && changed.get('mode') !== undefined && this.holdGesture) {
+      this.releaseHoldGesture(true);
+    }
     if (changed.has('disabled') && this.disabled) {
-      this.releaseHoldGesture();
-      if (this._state === 'recording' || this._state === 'requesting') this.cancel();
+      this.invalidateLifecycle(true);
     }
     const owner = this.captureWindow;
     if (this._state !== 'recording' || !owner) return;
@@ -322,71 +529,137 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     region.announce(text, { force: true });
   }
 
-  /** Begins a take: requests the microphone, then starts recording. Resolves `false` if the request
-   *  is denied, errors, or the control is disabled/unsupported/already active/requesting. */
+  /** Begins a take. A public call creates a programmatic intent; a same-owner physical B press
+   * can instead attach its live intent to A's one pending browser permission request. */
   async start(): Promise<boolean> {
-    if (this.disabled || this._state === 'recording' || this._state === 'requesting') return false;
-    const owner = this.ownerWindow;
-    if (!isPushToTalkSupported(owner)) return false;
-    this.captureWindow = owner;
-    this.cancelRequested = false;
-    this.setState('requesting');
-    try {
-      const additionalConstraints = {
-        ...(this.audioConstraints ?? {}),
-      } as MediaTrackConstraints;
-      delete additionalConstraints.deviceId;
-      const constraints: MediaStreamConstraints = {
-        audio: {
-          ...additionalConstraints,
-          ...(this.deviceId ? { deviceId: { exact: this.deviceId } } : {}),
-        },
-      };
-      const stream = await owner.navigator.mediaDevices.getUserMedia(constraints);
+    if (this.disabled || this._state === 'recording') return false;
+    const intent = this.createIntent('programmatic');
+    if (!intent) return false;
+    return this.startForIntent(intent);
+  }
+
+  private startForIntent(intent: CaptureIntent): Promise<boolean> {
+    const pending = this.pendingRequest;
+    if (pending) {
+      if (!this.canAdoptRequest(pending, intent)) {
+        this.clearIntent(intent);
+        return Promise.resolve(false);
+      }
+      pending.intent = intent;
+      return pending.completion ?? Promise.resolve(false);
+    }
+    if (this._state === 'recording') {
       if (
-        this.disabled ||
-        !this.isConnected ||
-        this.cancelRequested ||
-        this.captureWindow !== owner ||
-        this.ownerWindow !== owner
+        intent.kind === 'hold' &&
+        this.activeCapture &&
+        this.recorderStopRequested &&
+        this.isLiveIntent(intent)
       ) {
+        this.queuedIntent = intent;
+        return Promise.resolve(false);
+      }
+      this.clearIntent(intent);
+      return Promise.resolve(false);
+    }
+    if (!this.isLiveIntent(intent)) {
+      this.clearIntent(intent);
+      return Promise.resolve(false);
+    }
+
+    const request: PendingCaptureRequest = {
+      id: ++this.captureSequence,
+      owner: intent.owner,
+      intent,
+      invalidated: false,
+      notifyCancellation: false,
+      cancellationNotified: false,
+    };
+    this.pendingRequest = request;
+    this.setState('requesting');
+    const completion = this.requestPermission(request);
+    request.completion = completion;
+    return completion;
+  }
+
+  private captureConstraints(): MediaStreamConstraints {
+    const additionalConstraints = {
+      ...(this.audioConstraints ?? {}),
+    } as MediaTrackConstraints;
+    delete additionalConstraints.deviceId;
+    return {
+      audio: {
+        ...additionalConstraints,
+        ...(this.deviceId ? { deviceId: { exact: this.deviceId } } : {}),
+      },
+    };
+  }
+
+  private async requestPermission(request: PendingCaptureRequest): Promise<boolean> {
+    try {
+      const stream = await request.owner.window.navigator.mediaDevices.getUserMedia(this.captureConstraints());
+      if (!this.canStartRequest(request)) {
         for (const track of stream.getTracks()) track.stop();
-        this.cancelRequested = false;
-        if (this.captureWindow === owner) this.captureWindow = undefined;
-        this.setState('idle');
-        this.emit('lr-record-cancel', null);
-        this.announce(this.localize('pushToTalkCancelled'));
+        this.finishUnusableRequest(request);
         return false;
       }
-      this._stream = stream;
+      this.pendingRequest = undefined;
+      return this.startRecorder(request, stream);
+    } catch (error) {
+      if (!this.canStartRequest(request)) {
+        this.finishUnusableRequest(request);
+        return false;
+      }
+      this.pendingRequest = undefined;
+      this.clearIntent(request.intent);
+      const denied =
+        typeof error === 'object' && error !== null && 'name' in error && error.name === 'NotAllowedError';
+      this.setState(denied ? 'denied' : 'error');
+      this.emit('lr-record-error', { error: error as DOMException | Error });
+      this.announce(this.localize(denied ? 'pushToTalkDenied' : 'pushToTalkError'));
+      return false;
+    }
+  }
+
+  private startRecorder(request: PendingCaptureRequest, stream: MediaStream): boolean {
+    const owner = request.owner.window;
+    const active: ActiveCapture = {
+      id: request.id,
+      owner: request.owner,
+      intent: request.intent,
+      notifyCancellation: true,
+    };
+    this.activeCapture = active;
+    this.captureWindow = owner;
+    this._stream = stream;
+    this.cancelRequested = false;
+    this.recorderStopRequested = false;
+    this.recorderFailed = false;
+    this.chunks = [];
+    try {
       const mimeType = this.resolveMimeType(owner);
       const recorder = new owner.MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       this.recorder = recorder;
-      this.recorderStopRequested = false;
-      this.recorderFailed = false;
-      this.chunks = [];
       const timeslice =
         this.timesliceMs > 0 ? finiteDuration(this.timesliceMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS) : undefined;
       const emitChunksForTake = timeslice !== undefined;
-      recorder.ondataavailable = (e: BlobEvent) => {
-        if (this.recorder !== recorder || this.captureWindow !== owner) return;
-        if (!e.data || e.data.size === 0) return;
-        this.chunks.push(e.data);
-        if (emitChunksForTake) this.emit('lr-record-chunk', { blob: e.data });
+      recorder.ondataavailable = (event: BlobEvent) => {
+        if (this.recorder !== recorder || this.activeCapture !== active) return;
+        if (!event.data || event.data.size === 0) return;
+        this.chunks.push(event.data);
+        if (emitChunksForTake) this.emit('lr-record-chunk', { blob: event.data });
       };
-      recorder.onstop = () => this.finalizeStop(recorder, owner);
+      recorder.onstop = () => this.finalizeStop(recorder, active);
       recorder.onerror = (event: Event) =>
         this.failRecorder(
           recorder,
-          owner,
+          active,
           (event as Event & { error?: DOMException }).error ?? new Error('MediaRecorder failed')
         );
       // Both duration-like properties are clamped right here, at the point they reach a native
       // timer/API, rather than by normalizing the public property itself -- same convention as
       // lr-sequence-playback's scheduleTick() for interval-ms. `> 0` already excludes
-      // NaN/negative (both
-      // fail that comparison), but not Infinity or an oversized finite value that would otherwise
-      // overflow setTimeout's 32-bit delay or fail MediaRecorder.start()'s unsigned-long timeslice.
+      // NaN/negative (both fail that comparison), but not Infinity or an oversized finite value
+      // that would otherwise overflow setTimeout's 32-bit delay or fail MediaRecorder.start().
       recorder.start(timeslice);
       this.recordingStartedAt = owner.performance.now();
       this.elapsedMs = 0;
@@ -397,19 +670,16 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       this.syncMaxDurationTimer(owner, true);
       this.syncElapsedTimer(owner, true);
       return true;
-    } catch (err) {
-      this.teardownStream();
-      if (this.cancelRequested || this.disabled || !this.isConnected || this.ownerWindow !== owner) {
-        this.cancelRequested = false;
-        this.setState('idle');
-        this.emit('lr-record-cancel', null);
-        if (this.isConnected) this.announce(this.localize('pushToTalkCancelled'));
+    } catch (error) {
+      if (this.activeCapture !== active) {
+        for (const track of stream.getTracks()) track.stop();
         return false;
       }
-      const denied = typeof err === 'object' && err !== null && 'name' in err && err.name === 'NotAllowedError';
-      this.setState(denied ? 'denied' : 'error');
-      this.emit('lr-record-error', { error: err as DOMException | Error });
-      this.announce(this.localize(denied ? 'pushToTalkDenied' : 'pushToTalkError'));
+      this.teardownStream(active);
+      this.clearIntent(active.intent);
+      this.setState('error');
+      this.emit('lr-record-error', { error: error as DOMException | Error });
+      this.announce(this.localize('pushToTalkError'));
       return false;
     }
   }
@@ -421,8 +691,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   /** Discards the active or pending take: fires `lr-record-cancel`, never `lr-record-stop`. */
   cancel(): void {
-    if (this._state === 'requesting') {
-      this.cancelRequested = true;
+    const pending = this.pendingRequest;
+    if (pending && this._state === 'requesting') {
+      this.retirePendingRequest(pending, true);
       return;
     }
     if (this._state !== 'recording') return;
@@ -430,7 +701,8 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   private requestRecorderStop(cancelled: boolean): void {
-    if (this._state !== 'recording') return;
+    const active = this.activeCapture;
+    if (this._state !== 'recording' || !active) return;
     if (cancelled) this.cancelRequested = true;
     if (this.recorderStopRequested) return;
     this.recorderStopRequested = true;
@@ -439,43 +711,48 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     if (recorder && recorder.state !== 'inactive') recorder.stop();
   }
 
-  private finalizeStop(recorder: MediaRecorder, owner: PushToTalkWindow): void {
-    if (this.recorder !== recorder || this.captureWindow !== owner || this.recorderFailed) return;
+  private finalizeStop(recorder: MediaRecorder, active: ActiveCapture): void {
+    if (this.recorder !== recorder || this.activeCapture !== active || this.recorderFailed) return;
+    const owner = active.owner.window;
     const cancelled = this.cancelRequested;
     const durationMs = Math.round(owner.performance.now() - this.recordingStartedAt);
     const mimeType = recorder.mimeType || this.resolveMimeType(owner) || 'audio/webm';
     const blob = new owner.Blob(this.chunks, { type: mimeType });
-    this.teardownStream();
+    this.teardownStream(active);
+    this.clearIntent(active.intent);
     this.setState('idle');
     if (cancelled) {
-      this.emit('lr-record-cancel', null);
-      this.announce(this.localize('pushToTalkCancelled'));
+      if (active.notifyCancellation) this.notifyCancellation();
     } else {
       this.emit('lr-record-stop', { blob, durationMs });
       this.announce(this.localize('pushToTalkStopped'));
     }
     this.cancelRequested = false;
+    this.resumeQueuedIntent();
   }
 
-  private failRecorder(recorder: MediaRecorder, owner: PushToTalkWindow, error: DOMException | Error): void {
+  private failRecorder(recorder: MediaRecorder, active: ActiveCapture, error: DOMException | Error): void {
     // Cancellation owns the terminal outcome. MediaRecorder may report an asynchronous error
     // between cancel() calling stop() and the corresponding stop event; allowing that callback to
     // clear the flag would turn the promised cancel event into a spurious recorder error.
     if (
       this.recorder !== recorder ||
-      this.captureWindow !== owner ||
+      this.activeCapture !== active ||
       this.recorderFailed ||
       this.cancelRequested
     ) return;
     this.recorderFailed = true;
     this.cancelRequested = false;
-    this.teardownStream();
+    this.teardownStream(active);
+    this.clearIntent(active.intent);
     this.setState('error');
     this.emit('lr-record-error', { error });
     this.announce(this.localize('pushToTalkError'));
+    this.resumeQueuedIntent();
   }
 
-  private teardownStream(): void {
+  private teardownStream(active = this.activeCapture): void {
+    if (!active || this.activeCapture !== active) return;
     for (const track of this._stream?.getTracks() ?? []) track.stop();
     this._stream = null;
     if (this.recorder) {
@@ -488,6 +765,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this.chunks = [];
     this.stopRuntimeLoops();
     this.captureWindow = undefined;
+    this.activeCapture = undefined;
   }
 
   private stopRuntimeLoops(): void {
@@ -501,11 +779,27 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private syncElapsedTimer(owner: PushToTalkWindow, initial = false): void {
     if (this.tickTimer) this.tickTimer.owner.clearInterval(this.tickTimer.handle);
     this.tickTimer = undefined;
-    if (!this.showTimer || this._state !== 'recording' || this.captureWindow !== owner) return;
+    const active = this.activeCapture;
+    if (
+      !this.showTimer ||
+      this._state !== 'recording' ||
+      !active ||
+      active.owner.window !== owner ||
+      !this.ownsCurrentLifecycle(active.owner)
+    ) {
+      return;
+    }
     if (!initial) this.elapsedMs = owner.performance.now() - this.recordingStartedAt;
     const timer: OwnedTimer = { owner, handle: 0 };
     timer.handle = owner.setInterval(() => {
-      if (this.tickTimer !== timer || this.captureWindow !== owner || this._state !== 'recording') return;
+      if (
+        this.tickTimer !== timer ||
+        this.activeCapture !== active ||
+        this._state !== 'recording' ||
+        !this.ownsCurrentLifecycle(active.owner)
+      ) {
+        return;
+      }
       this.elapsedMs = owner.performance.now() - this.recordingStartedAt;
     }, 1000);
     this.tickTimer = timer;
@@ -514,12 +808,27 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private syncMaxDurationTimer(owner: PushToTalkWindow, initial = false): void {
     if (this.maxDurationTimer) this.maxDurationTimer.owner.clearTimeout(this.maxDurationTimer.handle);
     this.maxDurationTimer = undefined;
-    if (this.maxDurationMs <= 0 || this._state !== 'recording' || this.captureWindow !== owner) return;
+    const active = this.activeCapture;
+    if (
+      this.maxDurationMs <= 0 ||
+      this._state !== 'recording' ||
+      !active ||
+      active.owner.window !== owner ||
+      !this.ownsCurrentLifecycle(active.owner)
+    ) {
+      return;
+    }
     const duration = finiteDuration(this.maxDurationMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS);
     const elapsed = initial ? 0 : Math.max(0, owner.performance.now() - this.recordingStartedAt);
     const timer: OwnedTimer = { owner, handle: 0 };
     timer.handle = owner.setTimeout(() => {
-      if (this.maxDurationTimer !== timer || this.captureWindow !== owner) return;
+      if (
+        this.maxDurationTimer !== timer ||
+        this.activeCapture !== active ||
+        !this.ownsCurrentLifecycle(active.owner)
+      ) {
+        return;
+      }
       this.maxDurationTimer = undefined;
       this.stop();
     }, Math.max(0, duration - elapsed));
@@ -527,7 +836,15 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   private syncLevelMeter(owner: PushToTalkWindow): void {
-    if (!this.levelEvents || this._state !== 'recording' || this.captureWindow !== owner || !this._stream) {
+    const active = this.activeCapture;
+    if (
+      !this.levelEvents ||
+      this._state !== 'recording' ||
+      !active ||
+      active.owner.window !== owner ||
+      !this.ownsCurrentLifecycle(active.owner) ||
+      !this._stream
+    ) {
       this.stopLevelMeter();
       return;
     }
@@ -536,20 +853,28 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   private startLevelMeter(stream: MediaStream, owner: PushToTalkWindow): void {
     const AudioCtxCtor = owner.AudioContext ?? owner.webkitAudioContext;
-      if (!AudioCtxCtor) return;
-      const audioCtx = new AudioCtxCtor();
-      this.audioCtx = audioCtx;
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      this.analyser = analyser;
-      analyser.fftSize = 256;
-      source.connect(analyser);
-      this.levelData = new owner.Uint8Array(analyser.frequencyBinCount);
-      this.sampleLevel(owner);
+    if (!AudioCtxCtor) return;
+    const audioCtx = new AudioCtxCtor();
+    this.audioCtx = audioCtx;
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    this.analyser = analyser;
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    this.levelData = new owner.Uint8Array(analyser.frequencyBinCount);
+    this.sampleLevel(owner);
   }
 
   private sampleLevel(owner: PushToTalkWindow): void {
-    if (!this.analyser || !this.levelData || this._state !== 'recording' || this.captureWindow !== owner) {
+    const active = this.activeCapture;
+    if (
+      !this.analyser ||
+      !this.levelData ||
+      this._state !== 'recording' ||
+      !active ||
+      active.owner.window !== owner ||
+      !this.ownsCurrentLifecycle(active.owner)
+    ) {
       return;
     }
     this.analyser.getByteTimeDomainData(this.levelData);
@@ -562,9 +887,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this.emit('lr-level', { level: Math.min(1, rms) });
     const request: OwnedAnimationFrame = { owner, handle: 0 };
     request.handle = owner.requestAnimationFrame(() => {
-      if (this.levelFrame !== request) return;
+      if (this.levelFrame !== request || this.activeCapture !== active) return;
       this.levelFrame = undefined;
-      if (!this.isConnected || this.ownerWindow !== owner) return;
+      if (!this.ownsCurrentLifecycle(active.owner)) return;
       this.sampleLevel(owner);
     });
     this.levelFrame = request;
@@ -608,12 +933,13 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       // Continue with the hold gesture; pointerup/blur/cancel still share the same release path.
     }
     if (this.holdGesture) return;
-    this.holdGesture = {
-      generation: ++this.holdGestureGeneration,
+    const intent = this.createIntent('hold', {
       source: 'pointer',
       pointerId: e.pointerId,
-    };
-    void this.start();
+    });
+    if (!intent) return;
+    this.holdGesture = intent;
+    void this.startForIntent(intent);
   };
   private onPointerUp = (event: PointerEvent): void => {
     if (this.holdGesture?.source !== 'pointer' || this.holdGesture.pointerId !== event.pointerId) return;
@@ -623,15 +949,20 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     if (this.holdGesture?.source !== 'pointer' || this.holdGesture.pointerId !== event.pointerId) return;
     this.releaseHoldGesture();
   };
-  /** Ends a hold-mode press: stops an active take, or cancels a still-pending permission request
-   *  so recording never silently starts after the user already let go. Mirrors
-   *  disconnectedCallback()'s identical dual check. */
-  private releaseHoldGesture(): void {
-    if (!this.holdGesture) return;
+  /** Releasing A only clears A's physical intent. Its browser permission prompt stays available
+   * for a same-owner B press; an explicit mode/lifecycle change retires it instead. */
+  private releaseHoldGesture(retirePending = false): void {
+    const intent = this.holdGesture;
+    if (!intent) return;
     this.holdGesture = undefined;
-    this.holdGestureGeneration += 1;
-    if (this._state === 'requesting') this.cancel();
-    else this.stop();
+    if (this.captureIntent === intent) this.captureIntent = undefined;
+    if (this.queuedIntent === intent) this.queuedIntent = undefined;
+    const pending = this.pendingRequest;
+    if (pending?.intent === intent) {
+      if (retirePending) this.retirePendingRequest(pending, true);
+      return;
+    }
+    if (this.activeCapture?.intent === intent) this.requestRecorderStop(false);
   }
 
   // -- Keyboard -----------------------------------------------------------
@@ -652,12 +983,13 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     if (e.repeat) return;
     e.preventDefault();
     if (this.holdGesture) return;
-    this.holdGesture = {
-      generation: ++this.holdGestureGeneration,
+    const intent = this.createIntent('hold', {
       source: 'keyboard',
       key: e.key,
-    };
-    void this.start();
+    });
+    if (!intent) return;
+    this.holdGesture = intent;
+    void this.startForIntent(intent);
   };
   private onKeyUp = (e: KeyboardEvent): void => {
     if (e.key !== 'Enter' && e.key !== ' ') return;

@@ -25,7 +25,7 @@ text verbatim. Large sets window through an internal `lr-virtual-list`.
 **Properties:**
 
 - `chunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk`, imported from
-  `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; text: string; score: number;
+  `@aceshooting/lyra-ui/ai`**: `{ id: string; text: string; score: number;
 source: DocumentRef; metadata?: Record<string, unknown>; rank?: number; locator?: DocumentLocator;
 queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreakdown }`. The raw,
   unsorted/ungrouped result set; host-owned. Blank ids and later duplicate ids are omitted

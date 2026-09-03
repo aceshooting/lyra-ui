@@ -7,12 +7,13 @@ import { closeIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -162,14 +163,16 @@ export interface LyraAppRailEventMap {
  * @csspart nav - The wrapper around the default (nav items) slot.
  * @csspart footer - The wrapper around the `footer` slot.
  * @csspart toggle - The mobile hamburger/close toggle button. Hidden via
- *   CSS outside `'mobile'` mode, or entirely via `hideToggle`.
+ *   CSS outside `'mobile'` mode, or entirely via `hideToggle`; it inherits the rail's typography
+ *   and its glyph scales at 1em.
  * @csspart backdrop - The mobile overlay's scrim. Only rendered while open.
  * @csspart panel - The mobile overlay's floating panel — see the class doc
  *   for why it's the same element as `base`, never both at once.
  * @csspart resizer - The `resizable` opt-in's drag handle -- its interactive hit target, sized to
  *   the shared minimum tappable size (`--lr-icon-button-size`), independent of the slimmer
- *   visible line rendered by its `resizer-track` child. Only rendered while `resizable` and `mode`
- *   is `'full'`.
+ *   visible line rendered by its `resizer-track` child. Its numeric ARIA range remains in CSS
+ *   pixels while `aria-valuetext` reports the current width through the effective locale. Only
+ *   rendered while `resizable` and `mode` is `'full'`.
  * @csspart resizer-track - The resizer's slim visible drag line, centered inside `[part="resizer"]`'s
  *   larger hit target (mirrors `<lr-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
  *   split). Colors on hover/focus the same way the whole handle previously did.
@@ -212,6 +215,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     openNavigation: LYRA_DEFAULT_openNavigation,
     resizeNavigation: LYRA_DEFAULT_resizeNavigation,
+    resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -470,6 +474,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       return finiteRange(this.railWidthPx, this.safeMinRailWidthPx, this.safeMinRailWidthPx, this.safeMaxRailWidthPx);
     }
     return this.baseEl?.getBoundingClientRect().width ?? 240;
+  }
+
+  private resizeValueText(widthPx: number): string {
+    return this.localize('resizeValuePixels', undefined, {
+      value: getNumberFormat(this.effectiveLocale).format(Math.round(widthPx)),
+    });
   }
 
   private get storageFullKey(): string | undefined {
@@ -907,6 +917,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   override render(): TemplateResult {
     const mobile = this._mode === 'mobile';
+    const railWidthPx = this.effectiveRailWidthPx;
     return html`
       <button
         part="toggle"
@@ -946,7 +957,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
             role="separator"
             aria-orientation="vertical"
             aria-label=${this.localize('resizeNavigation')}
-            aria-valuenow=${Math.round(this.effectiveRailWidthPx)}
+            aria-valuenow=${Math.round(railWidthPx)}
+            aria-valuetext=${this.resizeValueText(railWidthPx)}
             aria-valuemin=${this.safeMinRailWidthPx}
             aria-valuemax=${this.safeMaxRailWidthPx}
             tabindex="0"

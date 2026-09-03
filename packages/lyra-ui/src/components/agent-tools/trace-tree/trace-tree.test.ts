@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './trace-tree.js';
 import type { LyraTraceTree } from './trace-tree.js';
-import type { LyraSpan } from './span.js';
+import { normalizeLyraSpans, type LyraSpan } from './span.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const SPANS: LyraSpan[] = [
@@ -86,6 +86,78 @@ const channels = (color: string): [number, number, number] => {
 };
 
 describe('lr-trace-tree', () => {
+  it('projects admitted span fields once from own data descriptors without invoking accessors', () => {
+    let unsafeReads = 0;
+    const accessorBacked = Object.create(null) as LyraSpan;
+    Object.defineProperties(accessorBacked, {
+      id: {
+        configurable: true,
+        enumerable: true,
+        get: () => {
+          unsafeReads += 1;
+          throw new Error('trace projection must not invoke source accessors');
+        },
+      },
+      startMs: { configurable: true, enumerable: true, value: 0 },
+    });
+    const source: LyraSpan = {
+      id: 'safe',
+      parentId: 'parent',
+      name: 'Safe span',
+      kind: 'tool',
+      startMs: 12,
+      endMs: 24,
+      status: 'success',
+      tokensIn: 4,
+      tokensOut: 8,
+      costText: '$0.01',
+      detail: 'Projected once',
+    };
+    const reads = new Map<string, number>();
+    const originalGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+    Object.getOwnPropertyDescriptor = ((target: object, key: PropertyKey) => {
+      if (target === source && typeof key === 'string') {
+        reads.set(key, (reads.get(key) ?? 0) + 1);
+      }
+      return originalGetOwnPropertyDescriptor.call(Object, target, key);
+    }) as typeof Object.getOwnPropertyDescriptor;
+    try {
+      const projection = normalizeLyraSpans([accessorBacked, source]);
+      expect(unsafeReads).to.equal(0);
+      expect(projection.spans.map((span) => span.id)).to.deep.equal(['safe']);
+      expect(projection.spans[0]).to.deep.equal(source);
+    } finally {
+      Object.getOwnPropertyDescriptor = originalGetOwnPropertyDescriptor;
+    }
+    for (const field of [
+      'id',
+      'parentId',
+      'name',
+      'kind',
+      'startMs',
+      'endMs',
+      'status',
+      'tokensIn',
+      'tokensOut',
+      'costText',
+      'detail',
+    ]) {
+      expect(reads.get(field), field).to.equal(1);
+    }
+  });
+
+  it('inherits the host font into its native toggle and one-em glyph', async () => {
+    const el = await fixture<LyraTraceTree>(html`
+      <lr-trace-tree style="font: 20px/1 monospace" .spans=${SPANS}></lr-trace-tree>
+    `);
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
+    const glyph = toggle.querySelector<SVGElement>('svg')!;
+    expect(getComputedStyle(toggle).fontSize).to.equal('20px');
+    expect(getComputedStyle(toggle).fontFamily).to.include('monospace');
+    expect(getComputedStyle(glyph).width).to.equal('20px');
+    expect(getComputedStyle(glyph).height).to.equal('20px');
+  });
+
   it('never scrolls vertically -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

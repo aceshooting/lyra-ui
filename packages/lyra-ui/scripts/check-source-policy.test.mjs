@@ -195,3 +195,175 @@ test('unsafe Intl locale policy follows safe const aliases without trusting thei
     'a reassuring arbitrary variable name cannot evade the rule',
   );
 });
+
+test('strings-test-coverage ties each literal localize key to output evidence in the same test', () => {
+  const source = `
+    class LocalePickerProbe {
+      render() {
+        return html\`<button aria-label=\${this.localize('localePickerLabel')}></button>\`;
+      }
+      updateValidity() {
+        this.setValidity({ valueMissing: true }, this.localize('localePickerRequired'));
+      }
+    }
+  `;
+  const options = {
+    file: path.join(packageDir, 'src/components/forms/locale-picker/locale-picker.class.ts'),
+    source,
+    knownKeys: new Set(['localePickerLabel', 'localePickerRequired']),
+  };
+  const completeTest = `
+    it('renders localized locale-picker output', async () => {
+      const el = await fixture(html\`<lr-locale-picker required></lr-locale-picker>\`);
+      el.strings = {
+        localePickerLabel: 'Langue',
+        localePickerRequired: 'Choisissez…',
+      };
+      await el.updateComplete;
+      expect(trigger(el).getAttribute('aria-label')).to.equal('Langue');
+      expect(el.validationMessage).to.equal('Choisissez…');
+    });
+  `;
+  assert.deepEqual(collectSourcePolicyFindings({ ...options, testSource: completeTest }), []);
+
+  const appliedCatalogTest = `
+    it('renders an applied catalog string on its locale picker', async () => {
+      const el = await fixture(html\`<lr-locale-picker required></lr-locale-picker>\`);
+      registerLyraLocale('qaa-QA', {
+        localePickerLabel: 'Catalog language',
+        localePickerRequired: 'Choose from catalog',
+      });
+      el.locale = 'qaa-QA';
+      await el.updateComplete;
+      expect(trigger(el).getAttribute('aria-label')).to.equal('Catalog language');
+      expect(el.validationMessage).to.equal('Choose from catalog');
+    });
+  `;
+  assert.deepEqual(
+    collectSourcePolicyFindings({ ...options, testSource: appliedCatalogTest }),
+    [],
+    'an applied catalog and its picker-local output count as coverage',
+  );
+
+  const incompleteTests = [
+    [
+      'unrelated key',
+      `
+        it('uses a different key', () => {
+          el.strings = { noData: 'Aucune donnée' };
+          expect(trigger(el).getAttribute('aria-label')).to.equal('Aucune donnée');
+        });
+      `,
+    ],
+    [
+      'unused registration',
+      `
+        it('registers a catalog without observing it', () => {
+          registerLyraLocale('fr', { localePickerLabel: 'Langue', localePickerRequired: 'Choisissez…' });
+        });
+      `,
+    ],
+    [
+      'comment and token-only mentions',
+      `
+        it('mentions keys without rendered evidence', () => {
+          // localePickerLabel and localePickerRequired render correctly.
+          const keys = ['localePickerLabel', 'localePickerRequired'];
+          expect(keys).to.have.length(2);
+        });
+      `,
+    ],
+    [
+      'row-count proxy',
+      `
+        it('only counts rows', () => {
+          el.strings = { localePickerLabel: 'Langue', localePickerRequired: 'Choisissez…' };
+          expect(rows(el)).to.have.length(2);
+        });
+      `,
+    ],
+    [
+      'unrelated document output',
+      `
+        it('asserts unrelated document text', async () => {
+          const el = await fixture(html\`<lr-locale-picker required></lr-locale-picker>\`);
+          el.strings = { localePickerLabel: 'Langue', localePickerRequired: 'Choisissez…' };
+          expect(document.body.textContent).to.include('Langue');
+          expect(document.body.textContent).to.include('Choisissez…');
+        });
+      `,
+    ],
+    [
+      'unbound control',
+      `
+        it('asserts a similarly shaped unrelated object', () => {
+          const el = {};
+          el.strings = { localePickerLabel: 'Langue', localePickerRequired: 'Choisissez…' };
+          expect(el.validationMessage).to.include('Langue');
+          expect(el.validationMessage).to.include('Choisissez…');
+        });
+      `,
+    ],
+  ];
+  for (const [description, testSource] of incompleteTests) {
+    const findings = collectSourcePolicyFindings({ ...options, testSource });
+    const missingKeyFindings = findings.filter((finding) => finding.includes('[strings-test-coverage]'));
+    assert.equal(missingKeyFindings.length, 2, `${description} must fail for both literal keys`);
+    assert.match(missingKeyFindings[0] ?? '', /localePickerLabel/u, description);
+    assert.match(missingKeyFindings[1] ?? '', /localePickerRequired/u, description);
+  }
+
+  const stringLiteralSource = `
+    class LocalePickerProbe {
+      render() {
+        const prose = "this.localize('localePickerLabel')";
+        return html\`<button>\${prose}</button>\`;
+      }
+    }
+  `;
+  const templateLiteralSource = `
+    class LocalePickerProbe {
+      render() {
+        const prose = html\`<button aria-label="this.localize('localePickerLabel')"></button>\`;
+        return prose;
+      }
+    }
+  `;
+  for (const nonCodeSource of [stringLiteralSource, templateLiteralSource]) {
+    assert.deepEqual(
+      collectSourcePolicyFindings({ ...options, source: nonCodeSource, testSource: '' }),
+      [],
+      'string/template content that merely spells a localize call is not a call expression',
+    );
+  }
+
+  const inertTestString = `
+    const forged = \`it('forges localized output coverage', async () => {
+      const el = await fixture('<lr-locale-picker required></lr-locale-picker>');
+      el.strings = { localePickerLabel: 'Langue', localePickerRequired: 'Choisissez…' };
+      expect(trigger(el).getAttribute('aria-label')).to.equal('Langue');
+      expect(el.validationMessage).to.equal('Choisissez…');
+    });\`;
+  `;
+  const executableForgedString = `
+    it('keeps forged prose inert', () => {
+      const forged = \`it('forges localized output coverage', async () => {
+        const el = await fixture('<lr-locale-picker required></lr-locale-picker>');
+        el.strings = { localePickerLabel: 'Langue', localePickerRequired: 'Choisissez…' };
+        expect(trigger(el).getAttribute('aria-label')).to.equal('Langue');
+        expect(el.validationMessage).to.equal('Choisissez…');
+      });\`;
+    });
+  `;
+  for (const forgedTestSource of [inertTestString, executableForgedString]) {
+    const inertStringFindings = collectSourcePolicyFindings({
+      ...options,
+      testSource: forgedTestSource,
+    }).filter((finding) => finding.includes('[strings-test-coverage]'));
+    assert.equal(
+      inertStringFindings.length,
+      2,
+      'a string that merely spells an it() block cannot prove localized output coverage',
+    );
+  }
+});

@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import { styles } from './tool-approval-dialog.styles.js';
 import type { ApprovalAction } from '../approval-state.js';
@@ -431,7 +431,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   };
 
   private onDraftInput = (e: Event): void => {
-    if (this.pending != null) return;
+    if (this.pending != null) {
+      e.stopPropagation();
+      return;
+    }
     const value = (e.target as HTMLTextAreaElement).value;
     this.draftText = value;
     try {
@@ -443,6 +446,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       // SpiderMonkey vs. JavaScriptCore). Always show the localized message.
       this.draftError = this.localize('invalidJson');
     }
+    e.stopPropagation();
   };
   private onEditorFocus = (): void => { this.emit('focus'); };
   private onEditorBlur = (): void => { this.emit('blur'); };
@@ -487,7 +491,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     const headingParts = resolveLocalizedParts(headingTemplate, (marker) =>
       this.localize('toolApprovalHeading', undefined, { tool: marker }),
     );
-    const panelLabel = hostAriaLabel(this) === null && this.accessibleLabel ? this.accessibleLabel : null;
+    // An authored host label belongs to the custom-element host. A direct property assignment has
+    // no host attribute to preserve, so it instead names the actual dialog owner in this shadow tree.
+    const panelLabel = !this.hasAttribute('aria-label') &&
+      typeof this.accessibleLabel === 'string' &&
+      this.accessibleLabel.length > 0
+      ? this.accessibleLabel
+      : null;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div

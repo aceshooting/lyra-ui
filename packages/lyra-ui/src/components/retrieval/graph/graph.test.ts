@@ -806,6 +806,105 @@ it('shares one bounded description-first tooltip model across SVG titles and the
   );
 });
 
+it('fails closed on malformed node and link text without coercion while retaining valid siblings', async () => {
+  let coercionCalls = 0;
+  const nonStringText = {
+    toString() {
+      coercionCalls += 1;
+      throw new Error('graph text must not be coerced');
+    },
+    valueOf() {
+      coercionCalls += 1;
+      throw new Error('graph text must not be coerced');
+    },
+  };
+  const el = (await fixture(
+    html`<lr-graph seed="7" show-edge-labels></lr-graph>`
+  )) as LyraGraph;
+  (el as unknown as { nodes: unknown }).nodes = [
+    {
+      id: 'numeric',
+      label: 42,
+      accessibleLabel: nonStringText,
+      description: nonStringText,
+    },
+    {
+      id: 'valid',
+      label: 'Visible node',
+      accessibleLabel: 'Spoken valid node',
+      description: 'Valid node detail',
+    },
+  ];
+  (el as unknown as { links: unknown }).links = [
+    {
+      id: 'malformed',
+      source: 'numeric',
+      target: 'valid',
+      label: nonStringText,
+      accessibleLabel: 42,
+      description: nonStringText,
+    },
+    {
+      id: 'valid-link',
+      source: 'valid',
+      target: 'numeric',
+      label: 'Visible link',
+      accessibleLabel: 'Spoken valid link',
+      description: 'Valid link detail',
+    },
+  ];
+  await el.updateComplete;
+  await waitUntil(
+    () =>
+      el.shadowRoot!.querySelectorAll('[part="node"]').length === 2 &&
+      el.shadowRoot!.querySelectorAll('[part="link"]').length === 2,
+    undefined,
+    { timeout: NODE_COUNT_TIMEOUT }
+  );
+
+  const nodeEls = Array.from(
+    el.shadowRoot!.querySelectorAll<SVGElement>('[part="node"]')
+  );
+  const linkEls = Array.from(
+    el.shadowRoot!.querySelectorAll<SVGElement>('[part="link"]')
+  );
+  expect(nodeEls[0]!.getAttribute('aria-label')).to.equal('numeric');
+  expect(nodeEls[0]!.querySelector('title')?.textContent).to.equal('numeric');
+  expect(nodeEls[1]!.getAttribute('aria-label')).to.equal('Spoken valid node');
+  expect(nodeEls[1]!.querySelector('title')?.textContent).to.equal(
+    'Valid node detail'
+  );
+  expect(linkEls[0]!.getAttribute('aria-label')?.includes('numeric')).to.equal(
+    true
+  );
+  expect(linkEls[0]!.querySelector('title')?.textContent).to.equal(
+    linkEls[0]!.getAttribute('aria-label')
+  );
+  expect(linkEls[1]!.getAttribute('aria-label')).to.equal('Spoken valid link');
+  expect(linkEls[1]!.querySelector('title')?.textContent).to.equal(
+    'Valid link detail'
+  );
+  expect(
+    Array.from(
+      el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="link-label"]')
+    ).map((label) => label.textContent)
+  ).to.deep.equal(['Visible link']);
+  const summaries = Array.from(
+    el.shadowRoot!.querySelectorAll('[part="data-list"] li')
+  ).map((item) => item.textContent ?? '');
+  expect(summaries.some((summary) => summary.includes('numeric'))).to.equal(
+    true
+  );
+  expect(
+    summaries.some((summary) => summary.includes('[object Object]'))
+  ).to.equal(false);
+
+  nodeEls[0]!.focus();
+  const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]')!;
+  await waitUntil(() => liveRegion.textContent?.includes('numeric') ?? false);
+  expect(coercionCalls).to.equal(0);
+});
+
 it('keeps zero-width and fully transparent links non-operable while retaining topology summaries', async () => {
   const el = (await fixture(
     html`<lr-graph style="--transparent-link: transparent"></lr-graph>`

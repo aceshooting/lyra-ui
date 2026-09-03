@@ -197,7 +197,7 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
   card this state rendered before `open` existed. Setting `open = true` reveals it as a
   focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a backdrop click set
-  `open` back to `false`. While open, the floating panel is the modal root and every sibling pane
+  proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
   way `<lr-app-rail>` closes its mobile overlay when leaving `'mobile'` while open.
 
@@ -220,6 +220,10 @@ or keyboard step commits. A genuine pointer gesture has one terminal persistence
 release emits no additional event; direct `sizes` assignments stay silent),
 `lr-multi-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
+`lr-toggle` (`detail: LyraMultiSplitToggleDetail = { open: boolean }`) — Escape/backdrop close
+proposals are cancelable and fire before `open` changes; preventing the event or making a synchronous
+reentrant mutation aborts the proposal. A forced close when a responsive collapse transition leaves
+`floating` fires noncancelably after `open` is false. Direct `open` writes and no-op dismissals are silent,
 `lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
 normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,
@@ -843,11 +847,11 @@ well as full-width layouts.
 - `scrollStep: number = 0` (attribute `scroll-step`) — custom step; zero uses 80% of the viewport
 - `label: string = ''` — accessible region name; a host `aria-label` is used when set
 
-**Events:** `lr-scroll` with `scrollStart`, `scrollEnd`, `scrollLeft`, and `scrollTop` in the
-detail object. Scroll-driven emissions are coalesced through one `requestAnimationFrame` tick, so a
-fling that fires dozens of native `scroll` events produces at most one `lr-scroll` per frame — the
-same contract `lr-virtual-list`'s identically-named event carries, so the two are interchangeable
-for scroll-linked layout work.
+**Events:** `lr-scroll` has detail `{ scrollStart, scrollEnd, scrollLeft, scrollTop }`.
+Scroll-driven emissions are coalesced through one `requestAnimationFrame` tick, so a fling that
+fires dozens of native `scroll` events produces at most one `lr-scroll` per frame. This is the
+scroller's own event shape, not `lr-virtual-list`'s `lr-virtual-scroll` event
+(`{ scrollTop, viewportHeight }`).
 
 **Slots:** default scrollable content.
 
@@ -3068,16 +3072,17 @@ from assistive technology: do not place independent links, buttons, inputs, form
 targets there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden
 visual contract, while the trigger button remains the sole action. Details has `summary`,
 `header-actions`, `expand-icon`, `collapse-icon`, plus default content. `header-actions` renders
-extra controls (e.g. a trailing "add" button) inside the `<summary>` header row — the one subtree a
-native `<details>` keeps out of its generated content box — so they stay rendered, visible, and
-hit-testable while the panel is collapsed. Activating one never toggles the panel: a click whose
+extra controls (e.g. a trailing "add" button) as a sibling of the private native `<details>` in the
+complete header row, so they stay rendered, visible, and hit-testable while the panel is collapsed
+or disabled. Activating one never toggles the panel: a click whose
 composed path crosses `[part~="header-actions"]` is exempted from disclosure activation. Its wrapper
 is hidden and reclaims layout space whenever the slot is empty.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
 same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
-exposes `base` and `details` on the same native `<details>` wrapper, plus `header`, `summary`,
-`icon`, `header-actions`, and `content`.
+exposes `base` and `details` on the same outer container, plus `header`, `summary`, `icon`,
+`header-actions`, and `content`. The native `<details>` is private; `content` is inside its
+findable `hidden="until-found"` closed-state gate.
 The Details icon wrapper also carries Shoelace's `summary-icon` alias, so either part name styles
 the same node. `header-actions` is the wrapper around the `header-actions` slot.
 
@@ -3713,6 +3718,22 @@ import "@aceshooting/lyra-ui/components/layout/page/page.js";
 </lr-page>
 ```
 
+## Consumer integration notes
+
+- **Multi-split:** `LyraMultiSplitToggleDetail` is `{ open: boolean }`. Escape or a backdrop click
+  proposes a floating-panel state cancelably before `open` changes; `preventDefault()` or a
+  synchronous reentrant write aborts the proposal. Leaving floating mode closes the panel, emits
+  the collapse change, and then emits noncancelable `lr-toggle`; direct writes and no-ops stay
+  silent. Divider numeric ARIA values remain percentages and their `aria-valuetext` is localized.
+- **Resizers:** `lr-split-panel` retains numeric percent ranges with localized current-percent
+  `aria-valuetext`; `lr-app-rail` and `lr-dock-panel` expose CSS-pixel ranges with localized current
+  width/extent text. The app-rail toggle inherits rail typography and its glyph is `1em`.
+- **Details structure:** `base` is the outer details container and `header` is its complete row.
+  A private native `<details>` owns the summary; `header-actions` is its sibling after that native
+  element, stays enabled and non-toggling even while the disclosure is disabled, and `content` is
+  behind a private `hidden="until-found"` gate. `beforematch` or a fragment reveal follows the
+  normal programmatic lifecycle, or re-arms the gate after a veto or disabled state.
+
 ## Exported TypeScript contracts
 
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
@@ -4008,6 +4029,9 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-layout-multi-split-multi-split-contracts`** — Supporting data types and helpers for this component family.
   `LyraMultiSplitCollapseChangeDetail {
   state: unknown;
+}`
+  `LyraMultiSplitToggleDetail {
+  readonly open: boolean;
 }`
   `LyraMultiSplitConstraintIssueDetail {
   reason: unknown;

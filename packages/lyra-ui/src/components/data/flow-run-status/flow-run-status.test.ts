@@ -195,7 +195,7 @@ it('shares one inherited status palette across node, minimap, and run-status pre
   expect(getComputedStyle(runDot).backgroundColor).to.equal('rgb(4, 5, 6)');
 });
 
-it('warns when a foreign decorations value is about to be overwritten', async () => {
+it('uses one fixed development-only diagnostic when direct decorations writes conflict', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas>
       <lr-flow-run-status slot="top-end"></lr-flow-run-status>
@@ -205,17 +205,39 @@ it('warns when a foreign decorations value is about to be overwritten', async ()
   await wrapper.updateComplete;
   const overlay = wrapper.querySelector('lr-flow-run-status') as LyraFlowRunStatus;
   await overlay.updateComplete;
-  wrapper.decorations = { fetch: { status: 'error' } }; // foreign write, not through the overlay
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
   const originalWarn = console.warn;
-  let warned = false;
-  console.warn = (...args: unknown[]) => {
-    warned = true;
-    void args;
-  };
-  overlay.decorations = { fetch: { status: 'success' } };
-  await overlay.updateComplete;
-  console.warn = originalWarn;
-  expect(warned).to.be.true;
+  const messages: string[] = [];
+  runtime.litIssuedWarnings = new Set();
+  console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+  try {
+    wrapper.decorations = { fetch: { status: 'error' } }; // foreign write, not through the overlay
+    overlay.decorations = { fetch: { status: 'success' } };
+    await overlay.updateComplete;
+    expect(wrapper.decorations).to.deep.equal({ fetch: { status: 'success' } });
+
+    wrapper.decorations = { fetch: { status: 'denied' } };
+    overlay.decorations = { fetch: { status: 'running' } };
+    await overlay.updateComplete;
+    expect(wrapper.decorations).to.deep.equal({ fetch: { status: 'running' } });
+    expect(messages).to.deep.equal([
+      '<lr-flow-run-status>: direct and companion decorations writes conflict; the companion decorations take precedence.',
+    ]);
+    expect(runtime.litIssuedWarnings!.has('lyra-flow-run-status-decoration-ownership-conflict')).to.be.true;
+
+    messages.length = 0;
+    delete runtime.litIssuedWarnings;
+    wrapper.decorations = { fetch: { status: 'error' } };
+    overlay.decorations = { fetch: { status: 'success' } };
+    await overlay.updateComplete;
+    expect(wrapper.decorations).to.deep.equal({ fetch: { status: 'success' } });
+    expect(messages).to.deep.equal([]);
+  } finally {
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
+    console.warn = originalWarn;
+  }
 });
 
 it('renders the "{done} of {total} steps complete" summary and per-status counts', async () => {

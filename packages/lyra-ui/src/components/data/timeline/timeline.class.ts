@@ -10,6 +10,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import type { LyraTimelineItem } from './timeline-item.class.js';
 import {
@@ -26,6 +27,58 @@ import { LYRA_DEFAULT_timeline, LYRA_DEFAULT_timelineClusterCount } from '../../
 
 const normalizeTimelineOrientation = (value: unknown): LyraOrientation =>
   value === 'horizontal' ? 'horizontal' : 'vertical';
+
+/** Browser active-element getters are typed as Element but partial DOMs can return structural
+ * lookalikes. Brand-check before focus repair or composed containment traverses a candidate. */
+function isUsableActiveElement(value: unknown): value is Element {
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null)
+    return false;
+  try {
+    const candidate = value as Node;
+    if (candidate.nodeType !== 1) return false;
+    const NodeConstructor =
+      candidate.ownerDocument?.defaultView?.Node ??
+      (typeof Node === 'undefined' ? undefined : Node);
+    if (!NodeConstructor) return false;
+    NodeConstructor.prototype.getRootNode.call(candidate);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Descends only across genuine active-element values; an invalid nested answer makes focus
+ * ownership unknowable, so cluster repair fails closed instead of forwarding it to shared walks. */
+function safelyDeepActiveElement(
+  root: Document | ShadowRoot | null | undefined,
+): Element | null {
+  const initial: unknown = activeElementIn(root);
+  if (!isUsableActiveElement(initial)) return null;
+  let active: Element = initial;
+  while (true) {
+    let shadowRoot: ShadowRoot | null;
+    try {
+      shadowRoot = active.shadowRoot;
+    } catch {
+      return null;
+    }
+    if (!shadowRoot) return active;
+    const nested: unknown = activeElementIn(shadowRoot);
+    if (nested === null) return active;
+    if (!isUsableActiveElement(nested)) return null;
+    active = nested;
+  }
+}
+
+/** A genuine candidate can still become detached between the guard and native containment. */
+function safelyContainsActive(container: Element, candidate: unknown): boolean {
+  if (!isUsableActiveElement(candidate)) return false;
+  try {
+    return container.contains(candidate);
+  } catch {
+    return false;
+  }
+}
 
 /** How a timeline distributes its items along the main axis. */
 export type LyraTimelineScale = 'flow' | 'time';
@@ -694,13 +747,13 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
         readonly snapshot: ComposedFocusRepairSnapshot;
       }
     | undefined {
-    const active = this.ownerDocument.activeElement;
+    const active = safelyDeepActiveElement(this.ownerDocument);
     if (!active) return undefined;
     const focusedItem = this.timelineItems().find(
       (item) =>
         item === active ||
-        item.contains(active) ||
-        Boolean(item.shadowRoot?.activeElement)
+        safelyContainsActive(item, active) ||
+        safelyDeepActiveElement(item.shadowRoot) === active
     );
     if (!focusedItem) return undefined;
     const wasRepresentative = this.managedClusterRepresentatives.has(focusedItem);
@@ -718,7 +771,12 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       return undefined;
     }
     const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-    const snapshot = captureComposedFocusRepair(focusedItem, base);
+    let snapshot: ComposedFocusRepairSnapshot | null;
+    try {
+      snapshot = captureComposedFocusRepair(focusedItem, base);
+    } catch {
+      return undefined;
+    }
     if (!snapshot) return undefined;
     return {
       item: mode === 'cluster' ? nextRepresentative! : focusedItem,
@@ -747,7 +805,11 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
               '[part="cluster"]'
             ) ?? null
           : collectComposedFocusTargets(repair.item).elements[0] ?? base;
-      applyComposedFocusRepair(repair.snapshot, target);
+      try {
+        applyComposedFocusRepair(repair.snapshot, target);
+      } catch {
+        // Focus ownership changed into an unreadable partial DOM after capture.
+      }
     });
   }
 

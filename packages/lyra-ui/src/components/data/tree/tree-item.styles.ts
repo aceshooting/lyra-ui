@@ -78,6 +78,7 @@ export const styles = css`
        pattern as lr-code-block's, lr-json-viewer's and lr-trace-tree's own [part='toggle'].
        min-inline-size and min-block-size always win over a smaller explicit size, so the *visible*
        icon stays put via its own 1em SVG sizing while the clickable box floors out at 40px. */
+    font: inherit;
     inline-size: var(--lr-size-1-75rem);
     block-size: var(--lr-size-1-75rem);
     min-inline-size: var(--lr-icon-button-size);

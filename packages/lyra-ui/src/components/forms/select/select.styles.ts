@@ -309,6 +309,7 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     background: transparent;
     color: var(--lr-color-text-quiet);
+    font: inherit;
     cursor: pointer;
   }
   [part~="tag__remove-button"]:hover {
@@ -354,6 +355,7 @@ export const styles = css`
     border-radius: var(--lr-select-radius, var(--_lr-select-radius));
     background: none;
     color: var(--lr-color-text-quiet);
+    font: inherit;
     line-height: var(--lr-line-height-none);
     cursor: pointer;
   }

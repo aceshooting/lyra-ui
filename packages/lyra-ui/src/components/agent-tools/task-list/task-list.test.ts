@@ -96,10 +96,13 @@ it('drops malformed top-level and child identities while retaining valid neighbo
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('0 of 1 completed');
 });
 
-it('ignores grandchildren (nesting beyond one level) and warns once', async () => {
+it('uses one fixed development-only diagnostic for unsupported nesting without exposing task data', async () => {
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
   const originalWarn = console.warn;
-  const calls: unknown[][] = [];
-  console.warn = (...args: unknown[]) => calls.push(args);
+  const messages: string[] = [];
+  runtime.litIssuedWarnings = new Set();
+  console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
   try {
     const deep: TaskItem[] = [
       {
@@ -111,15 +114,52 @@ it('ignores grandchildren (nesting beyond one level) and warns once', async () =
             id: 'child',
             label: 'Child',
             status: 'running',
-            children: [{ id: 'grandchild', label: 'Grandchild', status: 'pending' }],
+            children: [{ id: 'private-grandchild-one', label: 'Grandchild', status: 'pending' }],
           },
         ],
       },
     ];
     const el = (await fixture(html`<lr-task-list .items=${deep}></lr-task-list>`)) as LyraTaskList;
-    expect((el.shadowRoot!.querySelector('[part="item"][data-id="grandchild"]')) == null).to.be.true;
-    expect(calls.some((args) => String(args[0]).includes('grandchild'))).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="item"][data-id="private-grandchild-one"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Tasks');
+
+    el.items = [
+      {
+        ...deep[0]!,
+        children: [
+          {
+            ...deep[0]!.children![0]!,
+            children: [{ id: 'private-grandchild-two', label: 'Grandchild', status: 'pending' }],
+          },
+        ],
+      },
+    ];
+    await el.updateComplete;
+    expect(messages).to.deep.equal([
+      '<lr-task-list>: task nesting deeper than one level is ignored.',
+    ]);
+    expect(runtime.litIssuedWarnings!.has('lyra-task-list-nesting-depth')).to.be.true;
+    expect(messages.join(' ')).to.not.contain('private-grandchild-one');
+    expect(messages.join(' ')).to.not.contain('private-grandchild-two');
+
+    messages.length = 0;
+    delete runtime.litIssuedWarnings;
+    el.items = [
+      {
+        ...deep[0]!,
+        children: [
+          {
+            ...deep[0]!.children![0]!,
+            children: [{ id: 'private-grandchild-three', label: 'Grandchild', status: 'pending' }],
+          },
+        ],
+      },
+    ];
+    await el.updateComplete;
+    expect(messages).to.deep.equal([]);
   } finally {
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
     console.warn = originalWarn;
   }
 });

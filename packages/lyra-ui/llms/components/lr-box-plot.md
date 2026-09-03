@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 12 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -48,8 +48,9 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting. The context-object formatter receives the
   family-wide `spoken` surface for the generated summary and `export` for CSV cells; the legacy
-  positional formatter continues to receive `table` for both compatibility paths. The
-  context-object formatter takes precedence
+  positional formatter receives `table` for the spoken/export compatibility paths, its normal
+  surface name for axis, tooltip, and table work, and no fallback for a `visual` context. The
+  context-object formatter takes precedence.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
@@ -57,8 +58,9 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
   `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
   table stays in the DOM in both states, so assistive technology never loses it, and the button
-  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
-  renders and behavior is identical to before.
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. A supplied
+  `slot="data-table"` follows this same disclosure state. Unset, nothing renders and behavior is
+  identical to before.
 
 **Methods:** `exportData('csv'|'png')` returns spreadsheet-safe summary rows or the current canvas
 PNG data URL. `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme
@@ -112,7 +114,8 @@ that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` 
 so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-pattern-step`
 (default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
-hover outline, `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
+hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color)`) sets
+its color. `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
 `lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather
 than inheriting the chart pair, since its stylesheet is not a re-export:

@@ -1,6 +1,11 @@
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+  sendWheel,
+} from "../../../../test/wtr-mouse.js";
 import "./data-grid.js";
 import type { LyraDataGrid } from "./data-grid.js";
 import type {
@@ -12,6 +17,7 @@ import type {
   DataGridState,
 } from "./data-grid-types.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import { registerLyraLocale } from "../../../internal/localization.js";
 import {
   aggregateValues,
   columnId,
@@ -65,6 +71,38 @@ interface DataGridTestAccess {
 
 function access<Row>(element: LyraDataGrid<Row>): DataGridTestAccess {
   return element as unknown as DataGridTestAccess;
+}
+
+interface DataGridMeasurementTestAccess {
+  measuredItemHeights: Map<string, number>;
+  measuredItemOffsetsDirty: boolean;
+  measurementLocale: string;
+  measurementDisplaySignature: string;
+  measurementRowHeight?: number;
+  lastMeasurementAnchor?: {
+    readonly itemKey: string;
+    readonly offset: number;
+  };
+  pendingMeasurementAnchor?: {
+    readonly itemKey: string;
+    readonly offset: number;
+  };
+  pendingVirtualScroll?: {
+    readonly itemKey: string;
+    readonly align: 'start' | 'center' | 'end' | 'nearest';
+  };
+  measurementUpdateQueued: boolean;
+  reconcileRowMeasurementCache(changed: Map<PropertyKey, unknown>): void;
+  correctMeasurementAnchor(): void;
+  alignPendingVirtualScroll(): void;
+  recordMeasuredBodyWidth(width: unknown): boolean;
+  measureRenderedItems(): void;
+}
+
+function measurementAccess<Row>(
+  element: LyraDataGrid<Row>
+): DataGridMeasurementTestAccess {
+  return element as unknown as DataGridMeasurementTestAccess;
 }
 
 const delay = (milliseconds: number): Promise<void> =>
@@ -2213,7 +2251,10 @@ it("resolves sizing and virtualization styles through the adopted owner window",
     element.sizeColumnsToFit();
     expect(element.getState().widths).to.deep.equal({ name: 290, team: 290 });
     element.scrollToIndex(90, { align: "start" });
-    expect(scrollTop).to.equal(1800);
+    // One-line rows retain the 20px estimate, while a wrapped measured row may legitimately add
+    // to a distant target's offset. The lower bound proves the adopted owner's 2rem estimate still
+    // participates without pinning variable-height measurement to one engine's line metrics.
+    expect(scrollTop).to.be.at.least(1800);
 
     maxHeight = "none";
     element.requestUpdate();
@@ -6662,6 +6703,39 @@ it("keeps virtualization active when optional child/detail/group capabilities ar
   expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.be.lessThan(100);
 });
 
+it('devirtualizes every row when an expanded detail is present in a 100+ row grid', async () => {
+  const manyRows: Person[] = Array.from({ length: 101 }, (_value, id) => ({
+    id,
+    name: `Person ${id}`,
+    team: id % 2 ? 'Compiler' : 'Runtime',
+    score: id,
+  }));
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Expanded details"
+      row-key="id"
+      style="--row-height: 40px; --max-height: 200px"
+      .rowDetail=${(row: Person) => `Details for ${row.name}`}
+      .expandedKeys=${[50]}
+      .columns=${columns}
+      .data=${manyRows}
+    ></lr-data-grid>
+  `);
+  const renderedRows = [
+    ...element.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[part~="row"][data-visible-index]'
+    ),
+  ];
+
+  expect(renderedRows).to.have.length(101);
+  expect(
+    renderedRows.map((row) => Number(row.dataset['visibleIndex']))
+  ).to.deep.equal(Array.from({ length: 101 }, (_value, index) => index));
+  expect(
+    element.shadowRoot!.querySelector('[part="row-detail"]')?.textContent
+  ).to.contain('Details for Person 50');
+});
+
 it("emits a frozen group expansion snapshot", async () => {
   const element = await dataGrid(html`
     <lr-data-grid
@@ -7216,6 +7290,1186 @@ describe("data-grid processing helpers", () => {
     ).to.equal("＝SUM(A1:A2)");
     expect(serialize(-5)).to.equal("-5");
   });
+});
+
+it('projects admitted column data descriptors once without invoking source accessors', async () => {
+  let accessorReads = 0;
+  const formatter = (value: unknown) => `formatted ${String(value)}`;
+  const hostileColumn = Object.create(null) as Record<string, unknown>;
+  Object.defineProperties(hostileColumn, {
+    id: { configurable: true, enumerable: true, value: 'name', writable: true },
+    field: { configurable: true, enumerable: true, value: 'name', writable: true },
+    formatter: { configurable: true, enumerable: true, value: formatter },
+    label: {
+      configurable: true,
+      enumerable: true,
+      get(): string {
+        accessorReads += 1;
+        return 'Accessor label';
+      },
+    },
+  });
+
+  const element = await dataGrid<Person>();
+  element.columns = [hostileColumn as unknown as DataGridColumn<Person>];
+  element.data = [rows[0]!];
+  await element.updateComplete;
+
+  expect(accessorReads, 'the projection must never execute a source getter').to.equal(0);
+  expect(element.columns[0]?.formatter).to.equal(formatter);
+  expect(element.shadowRoot!.textContent).to.contain('formatted Ada');
+
+  // A later source write cannot affect the cached projection that all render, sort, and export
+  // paths consume.
+  hostileColumn['field'] = 'team';
+  element.requestUpdate();
+  await element.updateComplete;
+  expect(element.shadowRoot!.textContent).to.contain('formatted Ada');
+  expect(accessorReads).to.equal(0);
+});
+
+it('keeps column projections own when Object.prototype supplies a poisoned formatter', async () => {
+  const original = Object.getOwnPropertyDescriptor(Object.prototype, 'formatter');
+  let inheritedFormatterCalls = 0;
+  const element = await dataGrid<Person>();
+  try {
+    Object.defineProperty(Object.prototype, 'formatter', {
+      configurable: true,
+      value() {
+        inheritedFormatterCalls += 1;
+        return 'prototype formatter must not run';
+      },
+    });
+    element.columns = [
+      { id: 'plain', field: 'name' },
+      {
+        id: 'own',
+        field: 'name',
+        formatter: (value) => `own formatter: ${String(value)}`,
+      },
+    ];
+    element.data = [rows[0]!];
+    await element.updateComplete;
+
+    expect(element.columns[0]?.formatter === undefined).to.equal(true);
+    expect(inheritedFormatterCalls).to.equal(0);
+    expect(element.shadowRoot!.textContent).to.contain('Ada');
+    expect(element.shadowRoot!.textContent).to.contain('own formatter: Ada');
+  } finally {
+    if (original) Object.defineProperty(Object.prototype, 'formatter', original);
+    else delete (Object.prototype as Record<string, unknown>)['formatter'];
+  }
+});
+
+it('retains a safe id while omitting an unsafe optional field and rejects an unsafe id', async () => {
+  let fieldReads = 0;
+  let idReads = 0;
+  const safeIdUnsafeField = Object.create(null) as Record<string, unknown>;
+  Object.defineProperties(safeIdUnsafeField, {
+    id: { configurable: true, enumerable: true, value: 'safe-id' },
+    label: { configurable: true, enumerable: true, value: 'Safe id' },
+    value: {
+      configurable: true,
+      enumerable: true,
+      value: (row: Person) => row.name,
+    },
+    field: {
+      configurable: true,
+      enumerable: true,
+      get(): string {
+        fieldReads += 1;
+        throw new Error('optional field getter must not run');
+      },
+    },
+  });
+  const unsafeId = Object.create(null) as Record<string, unknown>;
+  Object.defineProperties(unsafeId, {
+    field: { configurable: true, enumerable: true, value: 'name' },
+    id: {
+      configurable: true,
+      enumerable: true,
+      get(): string {
+        idReads += 1;
+        throw new Error('identity getter must reject the record without running');
+      },
+    },
+  });
+  const element = await dataGrid<Person>();
+  element.columns = [
+    safeIdUnsafeField as unknown as DataGridColumn<Person>,
+    unsafeId as unknown as DataGridColumn<Person>,
+    { id: 'later', field: 'team' },
+  ];
+  element.data = [rows[0]!];
+  await element.updateComplete;
+
+  expect(element.columns.map((column) => column.id)).to.deep.equal([
+    'safe-id',
+    'later',
+  ]);
+  expect(element.columns.map((column) => column.field ?? null)).to.deep.equal([
+    null,
+    'team',
+  ]);
+  expect(element.shadowRoot!.textContent).to.contain('Ada');
+  expect(fieldReads).to.equal(0);
+  expect(idReads).to.equal(0);
+});
+
+it('omits a malformed field behind a valid id before rendering can call it as a path', async () => {
+  const element = await dataGrid<Person>();
+  element.columns = [
+    {
+      id: 'malformed-field',
+      field: { not: 'a path' } as unknown as string,
+      label: 'Malformed field',
+    },
+    { id: 'later', field: 'name', label: 'Later valid column' },
+  ];
+  element.data = [rows[0]!];
+  await element.updateComplete;
+
+  expect(element.columns.map((column) => column.field ?? null)).to.deep.equal([
+    null,
+    'name',
+  ]);
+  expect(element.shadowRoot!.textContent).to.contain('Ada');
+});
+
+it('omits malformed display and aggregation fields without losing safe-id siblings', async () => {
+  const element = await dataGrid<Person>();
+  element.columns = [
+    {
+      id: 'malformed-display',
+      field: 'name',
+      label: Symbol('unsafe label') as unknown as string,
+      footer: Symbol('unsafe footer') as unknown as string,
+      aggregation: Symbol('unsafe aggregation') as unknown as 'count',
+    },
+    {
+      id: 'later',
+      field: 'team',
+      label: 'Later valid column',
+      footer: 'Teams',
+    },
+  ];
+  element.data = [rows[0]!];
+  await element.updateComplete;
+
+  const malformed = element.columns[0]!;
+  expect(malformed.id).to.equal('malformed-display');
+  expect(malformed.label === undefined).to.equal(true);
+  expect(malformed.footer === undefined).to.equal(true);
+  expect(malformed.aggregation === undefined).to.equal(true);
+  expect(element.columns.map((column) => column.id)).to.deep.equal([
+    'malformed-display',
+    'later',
+  ]);
+  expect(element.shadowRoot!.textContent).to.contain('Later valid column');
+  expect(element.shadowRoot!.textContent).to.contain('Teams');
+});
+
+it('reads hostile column arrays by bounded own indexes instead of their iterator', async () => {
+  const source: DataGridColumn<Person>[] = [
+    { id: 'first', field: 'name' },
+    { id: 'later', field: 'team' },
+  ];
+  let iteratorReads = 0;
+  Object.defineProperty(source, Symbol.iterator, {
+    configurable: true,
+    get() {
+      iteratorReads += 1;
+      throw new Error('column iterator must not run');
+    },
+  });
+  const element = await dataGrid<Person>();
+
+  expect(() => {
+    element.columns = source;
+  }).not.to.throw();
+  await element.updateComplete;
+  expect(element.columns.map((column) => column.id)).to.deep.equal([
+    'first',
+    'later',
+  ]);
+  expect(iteratorReads).to.equal(0);
+});
+
+it('skips a hostile column index without losing a later valid index', async () => {
+  const source: DataGridColumn<Person>[] = [
+    { id: 'first', field: 'name' },
+    { id: 'hostile', field: 'score' },
+    { id: 'later', field: 'team' },
+  ];
+  let indexReads = 0;
+  Object.defineProperty(source, '1', {
+    configurable: true,
+    enumerable: true,
+    get(): DataGridColumn<Person> {
+      indexReads += 1;
+      throw new Error('column index getter must not run');
+    },
+  });
+  const element = await dataGrid<Person>();
+
+  expect(() => {
+    element.columns = source;
+  }).not.to.throw();
+  await element.updateComplete;
+  expect(element.columns.map((column) => column.id)).to.deep.equal([
+    'first',
+    'later',
+  ]);
+  expect(indexReads).to.equal(0);
+});
+
+it('contains hostile proxy descriptors while preserving valid column neighbors', async () => {
+  const source: DataGridColumn<Person>[] = [
+    { id: 'first', field: 'name' },
+    { id: 'hostile', field: 'score' },
+    { id: 'later', field: 'team' },
+  ];
+  const hostile = new Proxy(source, {
+    getOwnPropertyDescriptor(target, property) {
+      if (property === '1') throw new Error('hostile column descriptor');
+      return Reflect.getOwnPropertyDescriptor(target, property);
+    },
+  });
+  const element = await dataGrid<Person>();
+
+  expect(() => {
+    element.columns = hostile;
+  }).not.to.throw();
+  await element.updateComplete;
+  expect(element.columns.map((column) => column.id)).to.deep.equal([
+    'first',
+    'later',
+  ]);
+});
+
+it('contains an unreadable column-array length without trusting a hostile iterator', async () => {
+  const source: DataGridColumn<Person>[] = [
+    { id: 'first', field: 'name' },
+    { id: 'later', field: 'team' },
+  ];
+  const hostile = new Proxy(source, {
+    getOwnPropertyDescriptor(target, property) {
+      if (property === 'length') throw new Error('hostile column length');
+      return Reflect.getOwnPropertyDescriptor(target, property);
+    },
+  });
+  const element = await dataGrid<Person>();
+
+  expect(() => {
+    element.columns = hostile;
+  }).not.to.throw();
+  await element.updateComplete;
+  expect(element.columns.length).to.equal(0);
+});
+
+it('localizes resize pixel values through .strings and the effective locale', async () => {
+  const locale = 'de-DE';
+  registerLyraLocale(locale, { resizeValuePixels: 'Breite {value} Punkte' });
+  const resizeColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name', width: 1234 },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Localized resize"
+      resizable
+      .strings=${{ resizeValuePixels: 'Custom width: {value}' }}
+      .columns=${resizeColumns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const handle = element.shadowRoot!.querySelector<HTMLElement>(
+    '[part="resize-handle"]'
+  )!;
+
+  expect(handle.getAttribute('aria-valuetext')).to.equal('Custom width: 1,234');
+
+  element.strings = {};
+  element.setAttribute('lang', locale);
+  await element.updateComplete;
+  expect(handle.getAttribute('aria-valuetext')).to.equal(
+    `Breite ${new Intl.NumberFormat(locale).format(1234)} Punkte`
+  );
+});
+
+it('uses the separate row, control, sortable-header, and page-size interaction tokens live', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Interaction tokens"
+      paginate
+      resizable
+      style="--transition-duration: 0s; --row-hover-background: rgb(1, 2, 3); --lr-data-grid-row-active-background: rgb(4, 5, 6); --lr-data-grid-control-hover-background: rgb(7, 8, 9); --lr-data-grid-control-active-background: rgb(10, 11, 12); --lr-data-grid-sortable-header-hover-background: rgb(13, 14, 15); --lr-data-grid-sortable-header-active-background: rgb(16, 17, 18); --lr-data-grid-page-size-active-background: rgb(19, 20, 21)"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const row = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"]')!;
+  const handle = element.shadowRoot!.querySelector<HTMLElement>(
+    '[part="resize-handle"]'
+  )!;
+  const sortableHeader = element.shadowRoot!.querySelector<HTMLElement>(
+    '[part~="header-cell"][data-sortable]'
+  )!;
+  const pageSize = element.shadowRoot!.querySelector<HTMLElement>(
+    '[part="page-size"]'
+  )!;
+
+  try {
+    await hoverUntilMatched(row, 'the data row never registered :hover');
+    await waitUntil(() => getComputedStyle(row).backgroundColor === 'rgb(1, 2, 3)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(row).backgroundColor === 'rgb(4, 5, 6)');
+    await sendMouse({ type: 'up' });
+
+    await hoverUntilMatched(handle, 'the resize control never registered :hover');
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(7, 8, 9)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(10, 11, 12)');
+    await sendMouse({ type: 'up' });
+
+    await hoverUntilMatched(sortableHeader, 'the sortable header never registered :hover');
+    await waitUntil(() => getComputedStyle(sortableHeader).backgroundColor === 'rgb(13, 14, 15)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(sortableHeader).backgroundColor === 'rgb(16, 17, 18)');
+    await sendMouse({ type: 'up' });
+
+    await hoverUntilMatched(pageSize, 'the page-size control never registered :hover');
+    await waitUntil(() => getComputedStyle(pageSize).backgroundColor === 'rgb(7, 8, 9)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(pageSize).backgroundColor === 'rgb(19, 20, 21)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
+it('retains the hover-strength fallback for a pressed page-size selector', async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Page-size active fallback"
+      paginate
+      style="--transition-duration: 0s; --accent-color: rgb(200, 0, 0); --lr-color-mix-hover: 10%; --lr-color-mix-active: 60%"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const pageSize = element.shadowRoot!.querySelector<HTMLElement>(
+    '[part="page-size"]'
+  )!;
+  const expected = document.createElement('div');
+  expected.style.background =
+    'color-mix(in srgb, var(--accent-color) var(--lr-color-mix-hover), transparent)';
+  element.shadowRoot!.append(expected);
+
+  try {
+    await hoverUntilMatched(pageSize, 'the page-size control never registered :hover');
+    await sendMouse({ type: 'down' });
+    await waitUntil(
+      () =>
+        getComputedStyle(pageSize).backgroundColor ===
+        getComputedStyle(expected).backgroundColor,
+      'the page-size control never retained its hover-strength fallback color'
+    );
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+    expected.remove();
+  }
+});
+
+it('keeps header and footer columns aligned after native wheel and programmatic body scrolling', async () => {
+  const wideColumns: DataGridColumn<Person>[] = [
+    { field: 'name', label: 'Name', width: 300, footer: 'Names' },
+    { field: 'team', label: 'Team', width: 300 },
+    { field: 'score', label: 'Score', width: 300 },
+  ];
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const element = await dataGrid(html`
+      <lr-data-grid
+        dir=${direction}
+        label="Wide ${direction} grid"
+        style="inline-size: 200px; --transition-duration: 0s"
+        .columns=${wideColumns}
+        .data=${rows}
+      ></lr-data-grid>
+    `);
+    const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const header = element.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    const footer = element.shadowRoot!.querySelector<HTMLElement>('[part="footer-row"]')!;
+    const columnIds = wideColumns.map((column) => column.field!);
+    const maximum = body.scrollWidth - body.clientWidth;
+    expect(maximum).to.be.greaterThan(0);
+
+    const logicalOffset = (): number =>
+      direction === 'rtl' ? -body.scrollLeft : body.scrollLeft;
+    const expectAligned = async (stage: string): Promise<void> => {
+      const pairs = columnIds.map((id) => {
+        const headerCell = header.querySelector<HTMLElement>(
+          `[data-column-id="${id}"]`
+        )!;
+        const bodyCell = body.querySelector<HTMLElement>(
+          `[part~="cell"][data-column-id="${id}"]`
+        )!;
+        const footerCell = footer.querySelector<HTMLElement>(
+          `[data-column-id="${id}"]`
+        )!;
+        return [headerCell, bodyCell, footerCell] as const;
+      });
+      const expected = `${direction === 'rtl' ? logicalOffset() : -logicalOffset()}px`;
+      await waitUntil(() => {
+        const synchronized =
+          header.style.getPropertyValue('--data-grid-scroll-translation') === expected &&
+          footer.style.getPropertyValue('--data-grid-scroll-translation') === expected;
+        return (
+          synchronized &&
+          pairs.every(([headerCell, bodyCell, footerCell]) => {
+            const bodyRect = bodyCell.getBoundingClientRect();
+            const headerRect = headerCell.getBoundingClientRect();
+            const footerRect = footerCell.getBoundingClientRect();
+            return (
+              Math.abs(headerRect.left - bodyRect.left) <= 1 &&
+              Math.abs(headerRect.right - bodyRect.right) <= 1 &&
+              Math.abs(headerRect.width - bodyRect.width) <= 1 &&
+              Math.abs(footerRect.left - bodyRect.left) <= 1 &&
+              Math.abs(footerRect.right - bodyRect.right) <= 1 &&
+              Math.abs(footerRect.width - bodyRect.width) <= 1
+            );
+          })
+        );
+      });
+      expect(header.style.getPropertyValue('--data-grid-scroll-translation')).to.equal(expected);
+      expect(footer.style.getPropertyValue('--data-grid-scroll-translation')).to.equal(expected);
+      expect(
+        pairs.every(([headerCell, bodyCell, footerCell]) => {
+          const bodyRect = bodyCell.getBoundingClientRect();
+          const headerRect = headerCell.getBoundingClientRect();
+          const footerRect = footerCell.getBoundingClientRect();
+          return (
+            Math.abs(headerRect.left - bodyRect.left) <= 1 &&
+            Math.abs(headerRect.right - bodyRect.right) <= 1 &&
+            Math.abs(headerRect.width - bodyRect.width) <= 1 &&
+            Math.abs(footerRect.left - bodyRect.left) <= 1 &&
+            Math.abs(footerRect.right - bodyRect.right) <= 1 &&
+            Math.abs(footerRect.width - bodyRect.width) <= 1
+          );
+        }),
+        `${direction} ${stage}`
+      ).to.equal(true);
+    };
+
+    await expectAligned('at logical start');
+    let sawTrustedWheel = false;
+    body.addEventListener('wheel', (event) => {
+      sawTrustedWheel ||= event.isTrusted;
+    });
+    try {
+      const rect = body.getBoundingClientRect();
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + Math.min(rect.height / 2, 20)),
+        ],
+      });
+      await sendWheel({
+        deltaX:
+          (direction === 'rtl' ? -1 : 1) * Math.max(1, Math.floor(maximum / 2)),
+      });
+      await waitUntil(
+        () => sawTrustedWheel && logicalOffset() > 0 && logicalOffset() < maximum,
+        `${direction} native wheel did not reach a middle horizontal offset`
+      );
+      await expectAligned('after a native horizontal wheel');
+
+      body.scrollTo({ left: direction === 'rtl' ? -maximum : maximum });
+      await waitUntil(
+        () => Math.abs(logicalOffset() - maximum) <= 1,
+        `${direction} programmatic scroll did not reach logical end`
+      );
+      await expectAligned('at programmatic logical end');
+
+      body.scrollTo({ left: 0 });
+      await waitUntil(
+        () => Math.abs(logicalOffset()) <= 1,
+        `${direction} programmatic scroll did not return to logical start`
+      );
+      await expectAligned('after returning to logical start');
+
+    } finally {
+      await resetMouse();
+    }
+    expect(getComputedStyle(body).overflowX).to.equal('auto');
+    expect(getComputedStyle(header).overflowX).to.not.equal('auto');
+    expect(getComputedStyle(footer).overflowX).to.not.equal('auto');
+  }
+});
+
+it('keeps pinned header and footer cells aligned to the body scrollport', async () => {
+  const pinnedColumns: DataGridColumn<Person>[] = [
+    {
+      id: 'start',
+      field: 'name',
+      label: 'Name',
+      width: 80,
+      footer: 'Names',
+      pinned: 'left',
+    },
+    { id: 'middle', field: 'team', label: 'Team', width: 600 },
+    {
+      id: 'end',
+      field: 'score',
+      label: 'Score',
+      width: 80,
+      footer: 'Scores',
+      pinned: 'right',
+    },
+  ];
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const element = await dataGrid(html`
+      <lr-data-grid
+        dir=${direction}
+        label="Pinned ${direction} grid"
+        style="inline-size: 220px; --transition-duration: 0s"
+        .columns=${pinnedColumns}
+        .data=${rows}
+      ></lr-data-grid>
+    `);
+    const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const header = element.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    const footer = element.shadowRoot!.querySelector<HTMLElement>('[part="footer-row"]')!;
+    const bodyCells = body.querySelectorAll<HTMLElement>('[part~="cell"]');
+    const headerStart = header.querySelector<HTMLElement>('[data-column-id="start"]')!;
+    const headerMiddle = header.querySelector<HTMLElement>('[data-column-id="middle"]')!;
+    const headerEnd = header.querySelector<HTMLElement>('[data-column-id="end"]')!;
+    const footerCells = footer.querySelectorAll<HTMLElement>('[part="footer-cell"]');
+    const footerStart = footerCells[0]!;
+    const footerMiddle = footerCells[1]!;
+    const footerEnd = footerCells[2]!;
+    const bodyStart = bodyCells[0]!;
+    const bodyMiddle = bodyCells[1]!;
+    const bodyEnd = bodyCells[2]!;
+    const maximum = body.scrollWidth - body.clientWidth;
+    expect(maximum).to.be.greaterThan(0);
+    const expectAligned = async (stage: string): Promise<void> => {
+      const pairs: readonly [HTMLElement, HTMLElement][] = [
+        [headerStart, bodyStart],
+        [footerStart, bodyStart],
+        [headerMiddle, bodyMiddle],
+        [footerMiddle, bodyMiddle],
+        [headerEnd, bodyEnd],
+        [footerEnd, bodyEnd],
+      ];
+      const aligned = () =>
+        pairs.every(([first, second]) => {
+          const firstRect = first.getBoundingClientRect();
+          const secondRect = second.getBoundingClientRect();
+          return (
+            Math.abs(firstRect.left - secondRect.left) <= 1 &&
+            Math.abs(firstRect.right - secondRect.right) <= 1 &&
+            Math.abs(firstRect.width - secondRect.width) <= 1
+          );
+        });
+      await waitUntil(aligned);
+      expect(aligned(), `${direction} ${stage}`).to.equal(true);
+    };
+
+    await expectAligned('at initial offset');
+
+    for (const requestedLogicalOffset of [
+      Math.floor(maximum / 2),
+      maximum,
+    ]) {
+      body.scrollLeft =
+        direction === 'rtl' ? -requestedLogicalOffset : requestedLogicalOffset;
+      body.dispatchEvent(new Event('scroll'));
+      await element.updateComplete;
+      await expectAligned(`at ${requestedLogicalOffset}px`);
+    }
+
+    element.columns = pinnedColumns.map((column) =>
+      column.id === 'middle' ? { ...column, width: 120 } : column
+    );
+    await element.updateComplete;
+    expect(Math.abs(body.scrollLeft)).to.be.lessThan(maximum);
+    await expectAligned('after a layout-driven scroll clamp');
+  }
+});
+
+it('renders middle and last alternating-height targets after scrollToIndex', async () => {
+  interface VariableRow {
+    readonly id: number;
+    readonly name: string;
+  }
+  const variableRows: VariableRow[] = Array.from({ length: 120 }, (_value, index) => ({
+    id: index,
+    name: `Row ${index}`,
+  }));
+  const element = document.createElement(
+    'lr-data-grid'
+  ) as unknown as LyraDataGrid<VariableRow>;
+  const variableColumns: DataGridColumn<VariableRow>[] = [
+    {
+      field: 'name',
+      label: 'Localized name',
+      width: 100,
+      formatter: (value, row) => {
+        const locale = element.getAttribute('lang') === 'de-DE' ? 'de-DE' : 'en-US';
+        const tall = locale === 'en-US' ? row.id % 2 === 0 : row.id % 2 !== 0;
+        const ordinal = typeof value === 'string' ? value : String(row.id);
+        const prefix =
+          locale === 'de-DE' ? 'Lokalisierte Zeile' : 'Localized row';
+        const text = tall
+          ? [
+              `${prefix} ${ordinal} one`,
+              `${prefix} ${ordinal} two`,
+              `${prefix} ${ordinal} three`,
+              `${prefix} ${ordinal} four`,
+            ].join('\n')
+          : `${prefix} ${ordinal}`;
+        return html`
+          <span
+            data-variable-locale=${locale}
+            data-variable-lines=${tall ? 'four' : 'one'}
+            style="display: block; line-height: 20px; white-space: pre"
+            >${text}</span
+          >
+        `;
+      },
+    },
+  ];
+  element.label = 'Measured variable rows';
+  element.setAttribute('lang', 'en-US');
+  element.setAttribute('row-key', 'id');
+  element.style.cssText =
+    'inline-size: 120px; --cell-padding: 0px; --row-height: 20px; --max-height: 100px';
+  element.columns = variableColumns;
+  element.data = variableRows;
+  document.body.append(element);
+  await element.updateComplete;
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const state = measurementAccess(element);
+  let stableTargetTop: number | undefined;
+  const keepsMiddleTargetPosition = (tolerance = 5): boolean => {
+    const target = element.shadowRoot!.querySelector<HTMLElement>(
+      '[part~="row"][data-visible-index="50"]'
+    );
+    return (
+      target !== null &&
+      Math.abs(
+        target.getBoundingClientRect().top -
+          body.getBoundingClientRect().top -
+          (stableTargetTop ?? Number.NaN)
+      ) <= tolerance
+    );
+  };
+  const keepsStableMiddleAnchor = (): boolean =>
+    state.lastMeasurementAnchor?.itemKey === 'row:number:50' &&
+    keepsMiddleTargetPosition();
+  const assertTargetVisible = async (
+    index: number,
+    align: 'center' | 'end'
+  ): Promise<void> => {
+    const before = body.scrollTop;
+    element.scrollToIndex(index, { align });
+    await waitUntil(() => {
+      const target = element.shadowRoot!.querySelector<HTMLElement>(
+        `[part~="row"][data-visible-index="${index}"]`
+      );
+      if (!target) return false;
+      const bodyRect = body.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const alignmentDelta =
+        align === 'center'
+          ? Math.abs(
+              (targetRect.top + targetRect.bottom) / 2 -
+                (bodyRect.top + bodyRect.bottom) / 2
+            )
+          : Math.abs(targetRect.bottom - bodyRect.bottom);
+      return (
+        body.scrollTop > before &&
+        targetRect.top >= bodyRect.top - 1 &&
+        targetRect.bottom <= bodyRect.bottom + 1 &&
+        alignmentDelta <= 1
+      );
+    }, `scrollToIndex(${index}) did not render its variable-height target in the viewport`);
+    const target = element.shadowRoot!.querySelector<HTMLElement>(
+      `[part~="row"][data-visible-index="${index}"]`
+    )!;
+    const bodyRect = body.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    expect(body.scrollTop).to.be.greaterThan(before);
+    expect(targetRect.top).to.be.at.least(bodyRect.top - 1);
+    expect(targetRect.bottom).to.be.at.most(bodyRect.bottom + 1);
+    const alignmentDelta =
+      align === 'center'
+        ? Math.abs(
+            (targetRect.top + targetRect.bottom) / 2 -
+              (bodyRect.top + bodyRect.bottom) / 2
+          )
+        : Math.abs(targetRect.bottom - bodyRect.bottom);
+    expect(alignmentDelta).to.be.at.most(1);
+  };
+
+  try {
+    element.scrollToIndex(50, { align: 'start' });
+    await waitUntil(() => {
+      const target = element.shadowRoot!.querySelector<HTMLElement>(
+        '[part~="row"][data-visible-index="50"]'
+      );
+      const label = target?.querySelector<HTMLElement>('[data-variable-locale]');
+      const anchor = state.lastMeasurementAnchor;
+      const targetTop = target?.getBoundingClientRect().top;
+      if (
+        label?.dataset['variableLocale'] === 'en-US' &&
+        label.dataset['variableLines'] === 'four' &&
+        (state.measuredItemHeights.get('row:number:50') ?? 0) > 60 &&
+        anchor?.itemKey === 'row:number:50' &&
+        typeof targetTop === 'number'
+      ) {
+        stableTargetTop = targetTop - body.getBoundingClientRect().top;
+        return true;
+      }
+      return false;
+    }, 'the English four-line stable-key row did not measure and align');
+
+    state.measuredItemHeights.set('locale-offscreen-stale-height', 80);
+    element.setAttribute('lang', 'de-DE');
+    await element.updateComplete;
+    await waitUntil(() => {
+      const first = element.shadowRoot!.querySelector<HTMLElement>(
+        '[part~="row"][data-visible-index="50"]'
+      );
+      const second = element.shadowRoot!.querySelector<HTMLElement>(
+        '[part~="row"][data-visible-index="51"]'
+      );
+      const firstLabel = first?.querySelector<HTMLElement>('[data-variable-locale]');
+      const secondLabel = second?.querySelector<HTMLElement>('[data-variable-locale]');
+      return (
+        state.measurementLocale === 'de-DE' &&
+        firstLabel?.dataset['variableLocale'] === 'de-DE' &&
+        firstLabel.dataset['variableLines'] === 'one' &&
+        secondLabel?.dataset['variableLocale'] === 'de-DE' &&
+        secondLabel.dataset['variableLines'] === 'four' &&
+        !state.measuredItemHeights.has('locale-offscreen-stale-height') &&
+        !state.measuredItemHeights.has('row:number:50') &&
+        (state.measuredItemHeights.get('row:number:51') ?? 0) > 60 &&
+        state.lastMeasurementAnchor?.itemKey === 'row:number:50' &&
+        Math.abs(
+          (first?.getBoundingClientRect().top ?? Number.NaN) -
+            body.getBoundingClientRect().top -
+            (stableTargetTop ?? Number.NaN)
+        ) <= 1
+      );
+    }, 'the German localized rows did not remeasure from their stable keys');
+
+    state.measuredItemHeights.set('selectable-offscreen-stale-height', 80);
+    element.selectable = 'multiple';
+    await element.updateComplete;
+    await waitUntil(() => {
+      const anchored = element.shadowRoot!.querySelector<HTMLElement>(
+        '[part~="row"][data-visible-index="50"]'
+      );
+      return (
+        !state.measuredItemHeights.has('selectable-offscreen-stale-height') &&
+        anchored?.querySelector('input[type="checkbox"]') !== null &&
+        keepsStableMiddleAnchor()
+      );
+    }, 'selectable did not invalidate measured variable heights without moving the anchor');
+
+    state.measuredItemHeights.set('columns-offscreen-stale-height', 80);
+    element.columns = variableColumns.map((column) => ({ ...column, width: 80 }));
+    await element.updateComplete;
+    await waitUntil(
+      () =>
+        !state.measuredItemHeights.has('columns-offscreen-stale-height') &&
+        keepsStableMiddleAnchor(),
+      'a public columns update did not invalidate measured rows and retain the middle anchor'
+    );
+
+    state.measuredItemHeights.set('structure-offscreen-stale-height', 80);
+    element.data = [...variableRows, { id: 120, name: 'Row 120' }];
+    await element.updateComplete;
+    await waitUntil(
+      () =>
+        !state.measuredItemHeights.has('structure-offscreen-stale-height') &&
+        keepsStableMiddleAnchor(),
+      'a public display-structure update did not invalidate measured rows and retain the middle anchor'
+    );
+
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const widthBeforeResize = body.clientWidth;
+    state.measuredItemHeights.set('width-offscreen-stale-height', 80);
+    element.style.setProperty('inline-size', '160px');
+    await waitUntil(
+      () =>
+        body.clientWidth !== widthBeforeResize &&
+        !state.measuredItemHeights.has('width-offscreen-stale-height') &&
+        keepsStableMiddleAnchor(),
+      'the measured-body ResizeObserver did not invalidate a real width change and retain the middle anchor'
+    );
+
+    await assertTargetVisible(60, 'center');
+    await assertTargetVisible(119, 'end');
+  } finally {
+    element.remove();
+  }
+});
+
+it('preserves a middle stable-key viewport anchor through column, locale, and structure cache invalidations', async () => {
+  interface MeasurementRow {
+    readonly id: number;
+    readonly name: string;
+  }
+  const measurementRows: MeasurementRow[] = Array.from(
+    { length: 120 },
+    (_value, index) => ({ id: index, name: `Row ${index}` })
+  );
+  const element = await dataGrid<MeasurementRow>(html`
+    <lr-data-grid
+      label="Middle anchor"
+      row-key="id"
+      style="--row-height: 20px"
+      .columns=${[{ field: 'name', label: 'Name' }] as DataGridColumn<MeasurementRow>[]}
+      .data=${measurementRows}
+    ></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  let scrollTop = 2510;
+  Object.defineProperty(body, 'scrollTop', {
+    configurable: true,
+    get: () => scrollTop,
+    set: (value: unknown) => {
+      scrollTop = Number(value);
+    },
+  });
+  const state = measurementAccess(element);
+  const seedMeasurements = (): void => {
+    state.measuredItemHeights.clear();
+    for (const row of measurementRows)
+      state.measuredItemHeights.set(
+        `row:number:${row.id}`,
+        row.id % 2 === 0 ? 20 : 80
+      );
+    state.measuredItemOffsetsDirty = true;
+    state.pendingMeasurementAnchor = undefined;
+    scrollTop = 2510;
+    body.dispatchEvent(new Event('scroll'));
+  };
+  const expectRestoredMiddleAnchor = (
+    invalidate: () => void
+  ): void => {
+    seedMeasurements();
+    invalidate();
+    expect(state.pendingMeasurementAnchor?.itemKey).to.equal('row:number:50');
+    expect(state.pendingMeasurementAnchor?.offset).to.equal(10);
+    state.correctMeasurementAnchor();
+    expect(scrollTop).to.equal(1010);
+  };
+
+  expectRestoredMiddleAnchor(() =>
+    state.reconcileRowMeasurementCache(new Map([['columns', undefined]]))
+  );
+  state.measurementLocale = 'en-US';
+  element.setAttribute('lang', 'de-DE');
+  expectRestoredMiddleAnchor(() => state.reconcileRowMeasurementCache(new Map()));
+  state.measurementDisplaySignature = 'stale display projection';
+  expectRestoredMiddleAnchor(() => state.reconcileRowMeasurementCache(new Map()));
+});
+
+it('captures a virtual scrollToIndex target before a same-task cache invalidation', async () => {
+  interface MeasurementRow {
+    readonly id: number;
+    readonly name: string;
+  }
+  const measurementRows: MeasurementRow[] = Array.from(
+    { length: 120 },
+    (_value, index) => ({ id: index, name: `Row ${index}` })
+  );
+  const element = await dataGrid<MeasurementRow>(html`
+    <lr-data-grid
+      label="Scroll anchor"
+      row-key="id"
+      style="--row-height: 20px; --max-height: 100px"
+      .columns=${[{ field: 'name', label: 'Name' }] as DataGridColumn<MeasurementRow>[]}
+      .data=${measurementRows}
+    ></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  let scrollTop = 10;
+  Object.defineProperty(body, 'clientHeight', {
+    configurable: true,
+    value: 100,
+  });
+  Object.defineProperty(body, 'scrollTop', {
+    configurable: true,
+    get: () => scrollTop,
+    set: (value: unknown) => {
+      scrollTop = Number(value);
+    },
+  });
+  Object.defineProperty(body, 'scrollTo', {
+    configurable: true,
+    value: (options: ScrollToOptions) => {
+      scrollTop = Number(options.top ?? 0);
+    },
+  });
+  const state = measurementAccess(element);
+  for (const row of measurementRows)
+    state.measuredItemHeights.set(
+      `row:number:${row.id}`,
+      row.id % 2 === 0 ? 20 : 80
+    );
+  state.measuredItemOffsetsDirty = true;
+  body.dispatchEvent(new Event('scroll'));
+
+  element.scrollToIndex(50, { align: 'start' });
+  expect(state.lastMeasurementAnchor?.itemKey).to.equal('row:number:50');
+  expect(state.lastMeasurementAnchor?.offset).to.equal(0);
+
+  state.reconcileRowMeasurementCache(new Map([['columns', undefined]]));
+  expect(state.pendingMeasurementAnchor?.itemKey).to.equal('row:number:50');
+});
+
+it('lets a native user scroll supersede pending virtual alignment and measurement correction', async () => {
+  interface MeasurementRow {
+    readonly id: number;
+    readonly name: string;
+  }
+  const measurementRows: MeasurementRow[] = Array.from(
+    { length: 120 },
+    (_value, index) => ({ id: index, name: `Row ${index}` })
+  );
+  const element = await dataGrid<MeasurementRow>(html`
+    <lr-data-grid
+      label="Manual virtual scroll"
+      row-key="id"
+      style="inline-size: 160px; --row-height: 20px; --max-height: 100px"
+      .columns=${[{ field: 'name', label: 'Name' }] as DataGridColumn<MeasurementRow>[]}
+      .data=${measurementRows}
+    ></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const state = measurementAccess(element);
+  let sawTrustedUserScroll = false;
+  let sawTrustedWheel = false;
+  let userTop: number | undefined;
+  let awaitingUserScroll = false;
+  body.addEventListener('scroll', (event) => {
+    sawTrustedUserScroll ||= event.isTrusted;
+    if (awaitingUserScroll && event.isTrusted) userTop = body.scrollTop;
+  });
+  body.addEventListener('wheel', (event) => {
+    sawTrustedWheel ||= event.isTrusted;
+  });
+
+  try {
+    element.scrollToIndex(70, { align: 'start' });
+    const targetAnchor = state.lastMeasurementAnchor;
+    expect(state.pendingVirtualScroll?.itemKey).to.equal('row:number:70');
+    expect(targetAnchor?.itemKey).to.equal('row:number:70');
+    // Hold the later reconciliation long enough for a real user input to arrive between the
+    // estimated jump and its forced target alignment.
+    state.pendingMeasurementAnchor = targetAnchor;
+    state.measurementUpdateQueued = true;
+    const commandTop = body.scrollTop;
+    await hoverUntilMatched(
+      body,
+      'the virtual scrollport never accepted the native wheel pointer'
+    );
+    awaitingUserScroll = true;
+    await sendWheel({
+      deltaX: 0,
+      deltaY: -Math.max(40, Math.floor(commandTop / 4)),
+    });
+    await waitUntil(
+      () =>
+        sawTrustedWheel &&
+        sawTrustedUserScroll &&
+        userTop !== undefined &&
+        Math.abs(userTop - commandTop) > 1,
+      'the native user wheel did not move the virtual scrollport'
+    );
+    awaitingUserScroll = false;
+
+    expect(state.pendingVirtualScroll).to.equal(undefined);
+    expect(state.pendingMeasurementAnchor?.itemKey).to.not.equal(
+      targetAnchor?.itemKey
+    );
+    const userAnchorKey = state.lastMeasurementAnchor?.itemKey;
+    expect(userAnchorKey).to.not.equal(targetAnchor?.itemKey);
+    state.measurementUpdateQueued = false;
+    state.correctMeasurementAnchor();
+    state.alignPendingVirtualScroll();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(state.lastMeasurementAnchor?.itemKey).to.equal(userAnchorKey);
+    expect(
+      Math.abs(body.scrollTop - commandTop),
+      'stale virtual reconciliation restored the original virtual command position',
+    ).to.be.greaterThan(1);
+  } finally {
+    state.measurementUpdateQueued = false;
+    await resetMouse();
+  }
+});
+
+it('invalidates offscreen measured heights when row-height metrics change', async () => {
+  const element = await dataGrid<Person>(html`
+    <lr-data-grid
+      label="Row metric invalidation"
+      style="--row-height: 20px"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const state = measurementAccess(element);
+  state.measurementRowHeight = 20;
+  state.measuredItemHeights.set('row:number:offscreen', 80);
+  element.style.setProperty('--row-height', '100px');
+
+  state.measureRenderedItems();
+
+  expect(state.measuredItemHeights.has('row:number:offscreen')).to.equal(false);
+});
+
+it('invalidates offscreen measured heights when inherited font metrics change', async () => {
+  const element = await dataGrid<Person>(html`
+    <lr-data-grid
+      label="Font metric invalidation"
+      style="--row-height: 20px; font-size: 12px"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const state = measurementAccess(element);
+  state.measuredItemHeights.set('font-metric-sentinel', 80);
+  element.style.setProperty('font-size', '24px');
+
+  state.measureRenderedItems();
+
+  expect(state.measuredItemHeights.has('font-metric-sentinel')).to.equal(false);
+});
+
+it('invalidates offscreen measured heights when root-relative cell padding changes', async () => {
+  const root = document.documentElement;
+  const previousFontSize = root.style.getPropertyValue('font-size');
+  const previousFontSizePriority = root.style.getPropertyPriority('font-size');
+  const rootMetric = '--data-grid-test-root-font-size';
+  const previousRootMetric = root.style.getPropertyValue(rootMetric);
+  const previousRootMetricPriority = root.style.getPropertyPriority(rootMetric);
+
+  try {
+    root.style.setProperty(rootMetric, '16px');
+    root.style.setProperty('font-size', `var(${rootMetric})`, 'important');
+    const element = await dataGrid<Person>(html`
+      <lr-data-grid
+        label="Root padding metric invalidation"
+        style="--row-height: 20px; font-size: 12px; --cell-padding: 1rem"
+        .columns=${columns}
+        .data=${rows}
+      ></lr-data-grid>
+    `);
+    const state = measurementAccess(element);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    state.measuredItemHeights.set('root-padding-sentinel', 80);
+
+    root.style.setProperty(rootMetric, '24px');
+    await waitUntil(
+      () => !state.measuredItemHeights.has('root-padding-sentinel'),
+      'the measured-row ResizeObserver did not invalidate root-relative padding metrics'
+    );
+  } finally {
+    if (previousFontSize)
+      root.style.setProperty(
+        'font-size',
+        previousFontSize,
+        previousFontSizePriority
+      );
+    else root.style.removeProperty('font-size');
+    if (previousRootMetric)
+      root.style.setProperty(
+        rootMetric,
+        previousRootMetric,
+        previousRootMetricPriority
+      );
+    else root.style.removeProperty(rootMetric);
+  }
+});
+
+it('invalidates stale measured heights when a reconnect observes a different body width', async () => {
+  const element = await dataGrid<Person>(html`
+    <lr-data-grid
+      label="Reconnect width"
+      style="inline-size: 320px"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  Object.defineProperty(body, 'clientWidth', {
+    configurable: true,
+    value: 320,
+  });
+  const state = measurementAccess(element);
+  state.recordMeasuredBodyWidth(320);
+  state.measuredItemHeights.set('stale-width-sentinel', 80);
+  try {
+    element.remove();
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 160,
+    });
+    document.body.append(element);
+    await element.updateComplete;
+
+    expect(state.measuredItemHeights.has('stale-width-sentinel')).to.equal(false);
+  } finally {
+    element.remove();
+  }
+});
+
+it('invalidates stale measured heights across a same-width reconnect', async () => {
+  const element = await dataGrid<Person>(html`
+    <lr-data-grid
+      label="Reconnect unchanged width"
+      style="inline-size: 320px"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  Object.defineProperty(body, 'clientWidth', {
+    configurable: true,
+    value: 320,
+  });
+  const state = measurementAccess(element);
+  state.recordMeasuredBodyWidth(320);
+  state.measuredItemHeights.set('same-width-stale-sentinel', 80);
+  try {
+    element.remove();
+    document.body.append(element);
+    await element.updateComplete;
+
+    expect(
+      state.measuredItemHeights.has('same-width-stale-sentinel')
+    ).to.equal(false);
+  } finally {
+    element.remove();
+  }
+});
+
+it('invalidates measured heights for every finite fractional body-width change', async () => {
+  const element = await dataGrid<Person>();
+  const state = measurementAccess(element);
+  state.recordMeasuredBodyWidth(100);
+  state.measuredItemHeights.set('fractional-width-sentinel', 80);
+
+  expect(state.recordMeasuredBodyWidth(100.25)).to.equal(true);
+  expect(state.measuredItemHeights.has('fractional-width-sentinel')).to.equal(false);
 });
 
 describe("explicitly empty host aria-label", () => {

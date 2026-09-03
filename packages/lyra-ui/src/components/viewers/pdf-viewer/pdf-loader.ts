@@ -1,4 +1,8 @@
 import { unwrapOptionalPeerDefault } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const PDF_JS_WARNING_KEY = 'lyra-pdf-viewer-pdfjs-unavailable';
+const PDF_JS_WARNING = '<lr-pdf-viewer> could not load its optional pdfjs-dist peer.';
 
 interface PdfRenderTaskApi {
   promise: Promise<void>;
@@ -141,11 +145,8 @@ export async function loadPdfJsDeps(
     if (!pdfjsLib) return null;
     configurePdfJsWorker(pdfjsLib, workerSrc, resolveWorkerModule);
     return pdfjsLib;
-  } catch (error) {
-    console.warn(
-      '<lr-pdf-viewer> needs the optional peer dependency `pdfjs-dist` to render PDF documents — install it with `pnpm add pdfjs-dist`:',
-      error,
-    );
+  } catch {
+    devWarnOnce(PDF_JS_WARNING_KEY, PDF_JS_WARNING);
     return null;
   }
 }

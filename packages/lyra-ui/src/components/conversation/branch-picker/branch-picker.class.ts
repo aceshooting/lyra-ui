@@ -84,6 +84,21 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
   private createToolbarAction(direction: 'previous' | 'next'): LyraToolbarAction {
     const host = this;
     const button = () => direction === 'previous' ? host.previousButtonEl : host.nextButtonEl;
+    let leasedButton: HTMLButtonElement | undefined;
+    let authoredTabIndex: string | null = null;
+    let lastManagedTabIndex: string | null = null;
+    let consumerOwnsTabIndex = false;
+    const releaseTabIndex = (): void => {
+      const target = leasedButton;
+      if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
+        if (authoredTabIndex === null) target.removeAttribute('tabindex');
+        else target.setAttribute('tabindex', authoredTabIndex);
+      }
+      leasedButton = undefined;
+      authoredTabIndex = null;
+      lastManagedTabIndex = null;
+      consumerOwnsTabIndex = false;
+    };
     return {
       id: direction,
       get disabled() {
@@ -94,8 +109,27 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
       },
       setTabIndex(tabIndex) {
         const target = button();
-        if (target) target.tabIndex = tabIndex;
+        if (!target) {
+          releaseTabIndex();
+          return;
+        }
+        if (leasedButton !== target) {
+          releaseTabIndex();
+          leasedButton = target;
+          authoredTabIndex = target.getAttribute('tabindex');
+        }
+        if (
+          consumerOwnsTabIndex ||
+          (lastManagedTabIndex !== null &&
+            target.getAttribute('tabindex') !== lastManagedTabIndex)
+        ) {
+          consumerOwnsTabIndex = true;
+          return;
+        }
+        target.tabIndex = tabIndex;
+        lastManagedTabIndex = target.getAttribute('tabindex');
       },
+      releaseTabIndex,
       matchesEventPath(path) {
         const target = button();
         return target !== undefined && path.includes(target);
@@ -103,7 +137,9 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     };
   }
 
-  /** Ordered logical actions exposed to an enclosing toolbar without exposing shadow nodes. */
+  /** Ordered logical actions exposed to an enclosing toolbar without exposing shadow nodes.
+   *  A parent releases its optional lease when this provider leaves, restoring an untouched
+   *  authored chevron tabindex without replacing a later consumer value. */
   getToolbarActions(): readonly LyraToolbarAction[] {
     return this.normalizedCount < 2
       ? []
@@ -161,13 +197,25 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
       this.liveRegion?.announce(this.formatPosition(formatter), { force: true });
     }
     if (changed.has('index') || changed.has('count')) {
+      if (this.normalizedCount < 2) this.releaseToolbarActions();
       this.emit('lr-toolbar-actions-change');
     }
   }
 
   override disconnectedCallback(): void {
     this.isMounting = true;
+    this.releaseToolbarActions();
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseToolbarActions();
+  }
+
+  private releaseToolbarActions(): void {
+    this.previousToolbarAction.releaseTabIndex?.();
+    this.nextToolbarAction.releaseTabIndex?.();
   }
 
   private formatPosition(formatter = getNumberFormat(this.effectiveLocale)): string {

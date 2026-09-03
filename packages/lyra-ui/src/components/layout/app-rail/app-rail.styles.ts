@@ -20,6 +20,7 @@ export const styles = css`
     display: none;
     align-items: center;
     justify-content: center;
+    font: inherit;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

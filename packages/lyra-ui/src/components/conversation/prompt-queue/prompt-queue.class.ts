@@ -5,6 +5,11 @@ import { repeat } from 'lit/directives/repeat.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './prompt-queue.styles.js';
@@ -19,6 +24,7 @@ export interface PromptQueueItem {
   value: string;
   attachments?: readonly DocumentRef[];
   createdAt?: number;
+  /** Opaque caller metadata preserved in proposed queue and send-now payloads. */
   metadata?: Record<string, unknown>;
 }
 
@@ -35,24 +41,190 @@ export interface LyraPromptQueueEventMap {
   'lr-send-now': CustomEvent<LyraEventDetailSnapshot<{ item: PromptQueueItem }>>;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+const MAX_PROJECTED_QUEUE_ITEMS = 10_000;
+const MAX_PROJECTED_QUEUE_ATTACHMENTS = 10_000;
+
+interface CanonicalPromptQueueAttachment {
+  readonly id: string;
+  readonly name: string;
+  readonly mimeType?: string;
+  readonly uri?: string;
+  readonly version?: string;
 }
 
-function uniqueQueueItems(source: readonly PromptQueueItem[] | undefined): PromptQueueItem[] {
-  const seen = new Set<string>();
-  const result: PromptQueueItem[] = [];
-  for (const item of Array.isArray(source) ? source : []) {
+/** An admitted row keeps its source only as an opaque identity. All later reads use copied data. */
+interface CanonicalPromptQueueItem {
+  readonly source: PromptQueueItem;
+  readonly id: string;
+  readonly value: string;
+  readonly attachments?: readonly CanonicalPromptQueueAttachment[];
+  readonly createdAt?: number;
+  readonly metadata?: unknown;
+}
+
+const EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS: readonly CanonicalPromptQueueItem[] = Object.freeze([]);
+
+function descriptorValue(value: object, property: PropertyKey): ReturnType<typeof getOwnDataDescriptor> {
+  return getOwnDataDescriptor(value, property);
+}
+
+function valueOfDescriptor(descriptor: ReturnType<typeof getOwnDataDescriptor>): unknown | undefined {
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    ? undefined
+    : descriptor.value;
+}
+
+function projectPromptQueueAttachment(value: unknown): CanonicalPromptQueueAttachment | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const idDescriptor = descriptorValue(value, 'id');
+    const nameDescriptor = descriptorValue(value, 'name');
+    const mimeTypeDescriptor = descriptorValue(value, 'mimeType');
+    const uriDescriptor = descriptorValue(value, 'uri');
+    const versionDescriptor = descriptorValue(value, 'version');
     if (
-      !isRecord(item) ||
-      typeof item['id'] !== 'string' ||
-      !item['id'].trim() ||
-      seen.has(item['id'])
-    ) continue;
-    seen.add(item['id']);
-    result.push(item as unknown as PromptQueueItem);
+      [idDescriptor, nameDescriptor, mimeTypeDescriptor, uriDescriptor, versionDescriptor]
+        .some((descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR)
+    ) return undefined;
+
+    const id = valueOfDescriptor(idDescriptor);
+    const name = valueOfDescriptor(nameDescriptor);
+    if (typeof id !== 'string' || id.trim().length === 0 || typeof name !== 'string') return undefined;
+
+    const mimeType = valueOfDescriptor(mimeTypeDescriptor);
+    const uri = valueOfDescriptor(uriDescriptor);
+    const version = valueOfDescriptor(versionDescriptor);
+    return Object.freeze({
+      id,
+      name,
+      ...(typeof mimeType === 'string' ? { mimeType } : {}),
+      ...(typeof uri === 'string' ? { uri } : {}),
+      ...(typeof version === 'string' ? { version } : {}),
+    });
+  } catch {
+    return undefined;
   }
-  return result;
+}
+
+function projectPromptQueueAttachments(value: unknown): readonly CanonicalPromptQueueAttachment[] | undefined {
+  try {
+    if (!Array.isArray(value)) return undefined;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    ) return undefined;
+
+    const attachments: CanonicalPromptQueueAttachment[] = [];
+    const length = Math.min(lengthDescriptor.value, MAX_PROJECTED_QUEUE_ATTACHMENTS);
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = descriptorValue(value, String(index));
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      ) continue;
+      const attachment = projectPromptQueueAttachment(descriptor.value);
+      if (attachment) attachments.push(attachment);
+    }
+    return Object.freeze(attachments);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectPromptQueueItem(value: unknown): CanonicalPromptQueueItem | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const idDescriptor = descriptorValue(value, 'id');
+    const valueDescriptor = descriptorValue(value, 'value');
+    const attachmentsDescriptor = descriptorValue(value, 'attachments');
+    const createdAtDescriptor = descriptorValue(value, 'createdAt');
+    const metadataDescriptor = descriptorValue(value, 'metadata');
+    if (
+      [idDescriptor, valueDescriptor, attachmentsDescriptor, createdAtDescriptor, metadataDescriptor]
+        .some((descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR)
+    ) return undefined;
+
+    const id = valueOfDescriptor(idDescriptor);
+    const prompt = valueOfDescriptor(valueDescriptor);
+    if (typeof id !== 'string' || id.trim().length === 0 || typeof prompt !== 'string') return undefined;
+
+    const attachmentsValue = valueOfDescriptor(attachmentsDescriptor);
+    const attachments = attachmentsDescriptor === MISSING_OWN_DATA_DESCRIPTOR || attachmentsValue === undefined
+      ? undefined
+      : projectPromptQueueAttachments(attachmentsValue);
+    const createdAt = valueOfDescriptor(createdAtDescriptor);
+    const metadata = valueOfDescriptor(metadataDescriptor);
+    return Object.freeze({
+      source: value as PromptQueueItem,
+      id,
+      value: prompt,
+      ...(attachments === undefined ? {} : { attachments }),
+      ...(typeof createdAt === 'number' && Number.isFinite(createdAt) ? { createdAt } : {}),
+      ...(metadata !== undefined ? { metadata } : {}),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectPromptQueueItems(value: unknown): readonly CanonicalPromptQueueItem[] {
+  try {
+    if (!Array.isArray(value)) return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    ) return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
+
+    const items: CanonicalPromptQueueItem[] = [];
+    const seen = new Set<string>();
+    const length = Math.min(lengthDescriptor.value, MAX_PROJECTED_QUEUE_ITEMS);
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = descriptorValue(value, String(index));
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      ) continue;
+      const item = projectPromptQueueItem(descriptor.value);
+      // Validation deliberately precedes identity reservation, so an invalid duplicate cannot
+      // hide a later valid row with the same public id.
+      if (!item || seen.has(item.id)) continue;
+      seen.add(item.id);
+      items.push(item);
+    }
+    return Object.freeze(items);
+  } catch {
+    return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
+  }
+}
+
+function toDocumentRef(attachment: CanonicalPromptQueueAttachment): DocumentRef {
+  return Object.freeze({
+    id: attachment.id,
+    name: attachment.name,
+    ...(attachment.mimeType === undefined ? {} : { mimeType: attachment.mimeType }),
+    ...(attachment.uri === undefined ? {} : { uri: attachment.uri }),
+    ...(attachment.version === undefined ? {} : { version: attachment.version }),
+  });
+}
+
+function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): PromptQueueItem {
+  return Object.freeze({
+    id: item.id,
+    value,
+    ...(item.attachments === undefined ? {} : {
+      attachments: Object.freeze(item.attachments.map(toDocumentRef)),
+    }),
+    ...(item.createdAt === undefined ? {} : { createdAt: item.createdAt }),
+    ...(item.metadata === undefined ? {} : { metadata: item.metadata as Record<string, unknown> }),
+  });
 }
 
 /**
@@ -64,8 +236,10 @@ function uniqueQueueItems(source: readonly PromptQueueItem[] | undefined): Promp
  * the nearest surviving row receives focus; an emptied queue focuses its stable region instead.
  * Controlled updates never steal focus when the removed row did not own it.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Public item sequences are bounded, frozen snapshots. Admitted item identities remain opaque only
+ * while a descriptor-safe projection copies the queue's display and proposal fields once; later
+ * rendering and events never reread the source row or its opaque metadata. Create a new collection
+ * and reassign it after changes; mutating an assigned array does not update the view.
  *
  * @customElement lr-prompt-queue
  * @event lr-queue-change - A proposed controlled queue update. `detail: { items, reason, itemId }`.
@@ -103,13 +277,26 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
+  /** Queue items may carry opaque host metadata. Keep each admitted source identity only while the
+   * canonical projection copies its closed row schema once, rather than deep-cloning unknown data. */
+  protected static override readonly identityCollectionProperties = Object.freeze(['items']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-queue-change',
     'lr-send-now',
   ]);
+  /** Queue metadata is opaque caller state. Preserve it through the frozen event envelope instead
+   * of recursively reflecting it after the canonical row projection has admitted it. */
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-send-now': Object.freeze(['item']),
+  });
+  protected static override readonly identityEventDetailCollectionItems = Object.freeze({
+    'lr-queue-change': Object.freeze(['items']),
+  });
 
+  /** Controlled queued prompts. Accessor-backed or malformed rows and attachments are omitted;
+   * duplicate nonblank item ids normalize first-wins after full row validation. */
   @property({ attribute: false }) items: readonly PromptQueueItem[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -123,8 +310,37 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     origin: Element;
   };
 
-  private get effectiveItems(): PromptQueueItem[] {
-    return uniqueQueueItems(this.items);
+  private readonly canonicalItemsBySource = new WeakMap<
+    object,
+    readonly CanonicalPromptQueueItem[]
+  >();
+
+  private canonicalItemsFor(source: unknown): readonly CanonicalPromptQueueItem[] {
+    if (
+      source === null ||
+      (typeof source !== 'object' && typeof source !== 'function')
+    )
+      return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
+    const cached = this.canonicalItemsBySource.get(source);
+    if (cached) return cached;
+    const result = projectPromptQueueItems(source);
+    this.canonicalItemsBySource.set(source, result);
+    return result;
+  }
+
+  /** Never reproject a prior retained collection: a caller may have made its opaque rows hostile
+   * after admission, while focused controlled-update recovery needs only its recorded identities. */
+  private cachedCanonicalItemsFor(
+    source: unknown
+  ): readonly CanonicalPromptQueueItem[] {
+    return source !== null &&
+      (typeof source === 'object' || typeof source === 'function')
+      ? this.canonicalItemsBySource.get(source) ?? EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS
+      : EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
+  }
+
+  private get effectiveItems(): readonly CanonicalPromptQueueItem[] {
+    return this.canonicalItemsFor(this.items);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -138,7 +354,9 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     const focusedId = focusedItem?.dataset['id'];
     if (!focusedId || !focusedControl) return;
 
-    const previousItems = uniqueQueueItems(changed.get('items') as PromptQueueItem[] | undefined);
+    const previousItems = changed.has('items')
+      ? this.cachedCanonicalItemsFor(changed.get('items'))
+      : EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
     const items = this.effectiveItems;
     const rowRemoved = changed.has('items') && !items.some((item) => item.id === focusedId);
     const editorRemoved = editorFocused && changed.has('editable') && !this.editable;
@@ -208,43 +426,52 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     this.emit('lr-queue-change', { items, reason, itemId });
   }
 
-  private edit(item: PromptQueueItem, value: string): void {
+  private edit(item: CanonicalPromptQueueItem, value: string): void {
     if (this.disabled || !this.editable) return;
     this.emitChange(
-      this.effectiveItems.map((candidate) => candidate.id === item.id ? { ...candidate, value } : { ...candidate }),
+      this.effectiveItems.map((candidate) => toPromptQueueItem(
+        candidate,
+        candidate.id === item.id ? value : candidate.value,
+      )),
       'edit',
       item.id,
     );
   }
 
-  private removeItem(item: PromptQueueItem): void {
+  private removeItem(item: CanonicalPromptQueueItem): void {
     if (this.disabled) return;
-    this.emitChange(this.effectiveItems.filter((candidate) => candidate.id !== item.id).map((candidate) => ({ ...candidate })), 'remove', item.id);
+    this.emitChange(
+      this.effectiveItems
+        .filter((candidate) => candidate.id !== item.id)
+        .map((candidate) => toPromptQueueItem(candidate)),
+      'remove',
+      item.id,
+    );
   }
 
-  private move(item: PromptQueueItem, offset: -1 | 1): void {
+  private move(item: CanonicalPromptQueueItem, offset: -1 | 1): void {
     if (this.disabled) return;
     const items = this.effectiveItems;
     const index = items.findIndex((candidate) => candidate.id === item.id);
     const target = index + offset;
     if (index < 0 || target < 0 || target >= items.length) return;
-    const next = items.map((candidate) => ({ ...candidate }));
+    const next = [...items];
     const [moved] = next.splice(index, 1);
     if (!moved) return;
     next.splice(target, 0, moved);
-    this.emitChange(next, 'reorder', item.id);
+    this.emitChange(next.map((candidate) => toPromptQueueItem(candidate)), 'reorder', item.id);
   }
 
-  private sendNow(item: PromptQueueItem): void {
+  private sendNow(item: CanonicalPromptQueueItem): void {
     if (this.disabled) return;
-    this.emit('lr-send-now', { item });
+    this.emit('lr-send-now', { item: toPromptQueueItem(item) });
   }
 
   private containNativeEvent = (event: Event): void => {
     event.stopPropagation();
   };
 
-  private renderItem(item: PromptQueueItem, index: number, itemCount: number): TemplateResult {
+  private renderItem(item: CanonicalPromptQueueItem, index: number, itemCount: number): TemplateResult {
     const formattedIndex = getNumberFormat(this.effectiveLocale).format(index + 1);
     const editorLabel = this.localize('promptQueueItemLabel', undefined, {
       index: formattedIndex,

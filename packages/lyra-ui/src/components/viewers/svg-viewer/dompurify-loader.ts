@@ -3,6 +3,10 @@ import {
   resolveOptionalPeerCapability,
   type HtmlSanitizer,
 } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const SVG_SANITIZER_WARNING_KEY = 'lyra-svg-viewer-sanitizer-unavailable';
+const SVG_SANITIZER_WARNING = '<lr-svg-viewer> could not load its optional dompurify peer.';
 
 let sanitizer: Promise<HtmlSanitizer | null> | undefined;
 
@@ -15,11 +19,8 @@ export async function loadSvgSanitizerDeps(
     // (matches docx-loader.ts/spreadsheet-loader.ts's identical dual-shape tolerance).
     const module = await importDompurify();
     return resolveOptionalPeerCapability(module, isHtmlSanitizer);
-  } catch (error) {
-    console.warn(
-      '<lr-svg-viewer> needs the optional peer dependency `dompurify` to sanitize rendered SVG markup — install it with `pnpm add dompurify`:',
-      error,
-    );
+  } catch {
+    devWarnOnce(SVG_SANITIZER_WARNING_KEY, SVG_SANITIZER_WARNING);
     return null;
   }
 }

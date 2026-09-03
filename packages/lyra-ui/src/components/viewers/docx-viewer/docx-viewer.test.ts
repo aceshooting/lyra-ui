@@ -229,6 +229,88 @@ describe('lr-docx-viewer', () => {
     }
   });
 
+  it('retains sanitized markup and bounded opaque diagnostics from a descriptor-safe conversion result', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    const opaqueCause = new Proxy(Object.create(null), {
+      get() {
+        throw new Error('a diagnostic cause must remain opaque');
+      },
+      ownKeys() {
+        throw new Error('a diagnostic cause must not be traversed');
+      },
+    });
+    const messageTarget: unknown[] = new Array(101);
+    Object.defineProperty(messageTarget, '0', {
+      configurable: true,
+      enumerable: true,
+      value: opaqueCause,
+      writable: true,
+    });
+    Object.defineProperty(messageTarget, '1', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        throw new Error('accessor-backed diagnostic entries are malformed');
+      },
+    });
+    Object.defineProperty(messageTarget, '2', {
+      configurable: true,
+      enumerable: true,
+      value: { type: 'warning', message: 'later valid diagnostic' },
+      writable: true,
+    });
+    let tailDescriptorReads = 0;
+    const messages = new Proxy(messageTarget, {
+      get() {
+        throw new Error('conversion messages must not be value-read');
+      },
+      getOwnPropertyDescriptor(target, key) {
+        if (key === '100') {
+          tailDescriptorReads += 1;
+          throw new Error('conversion diagnostics must stop before position 100');
+        }
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const converted = Object.create(null) as { value: string; messages: unknown[] };
+    Object.defineProperties(converted, {
+      value: {
+        configurable: true,
+        enumerable: true,
+        value: '<p>Ready despite malformed diagnostics.</p>',
+        writable: true,
+      },
+      messages: {
+        configurable: true,
+        enumerable: true,
+        value: messages,
+        writable: true,
+      },
+    });
+    useLibrary(el, {
+      mammoth: { convertToHtml: () => Promise.resolve(converted) },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const restore = stubFetch(BUFFER);
+    const diagnostics: unknown[] = [];
+    let renderErrors = 0;
+    el.addEventListener('lr-viewer-diagnostic', (event) => diagnostics.push(event.detail.diagnostic));
+    el.addEventListener('lr-render-error', () => { renderErrors += 1; });
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+
+      expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent)
+        .to.contain('Ready despite malformed diagnostics.');
+      expect(renderErrors).to.equal(0);
+      expect(diagnostics).to.have.lengthOf(2);
+      expect((diagnostics[0] as { cause: unknown }).cause).to.equal(opaqueCause);
+      expect(tailDescriptorReads).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
   it('rejects unsafe URLs without fetching and emits exactly one render error', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     let called = false;

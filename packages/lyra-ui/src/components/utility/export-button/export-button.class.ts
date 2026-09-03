@@ -10,6 +10,15 @@ import { nextId } from '../../../internal/a11y.js';
 import { buildCsv, downloadBlob, type LyraCsvColumn } from './csv.js';
 import { styles } from './export-button.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import {
+  activateNonmodalOverlay,
+  type OverlayHandle,
+} from '../../../internal/nonmodal-overlay-manager.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel } from '../../../internal/default-strings.generated.js';
@@ -30,6 +39,70 @@ export interface LyraExportFormatDescriptor {
 }
 
 export type LyraExportFormatOption = LyraExportFormat | LyraExportFormatDescriptor;
+
+const MAX_EXPORT_FORMATS = 10_000;
+
+function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction): void {
+  const ownerWindow = ownerDocument.defaultView;
+  if (ownerWindow) {
+    ownerWindow.queueMicrotask(callback);
+    return;
+  }
+  void Promise.resolve().then(callback);
+}
+
+function formatArrayLength(value: unknown): { source: object; length: number } | undefined {
+  try {
+    if (!Array.isArray(value)) return undefined;
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return undefined;
+    return { source: value, length: Math.min(length.value, MAX_EXPORT_FORMATS) };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Projects the fields that menu rendering and export events subsequently consume. */
+function projectExportFormat(value: unknown): LyraExportFormatOption | undefined {
+  if (value === 'csv' || value === 'json') return value;
+  if (value === null || typeof value !== 'object') return undefined;
+  const formatId = getOwnDataDescriptor(value, 'formatId');
+  const label = getOwnDataDescriptor(value, 'label');
+  if (
+    formatId === MISSING_OWN_DATA_DESCRIPTOR ||
+    formatId === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    label === MISSING_OWN_DATA_DESCRIPTOR ||
+    label === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof formatId.value !== 'string' ||
+    formatId.value.trim().length === 0 ||
+    typeof label.value !== 'string' ||
+    label.value.trim().length === 0
+  )
+    return undefined;
+  const description = getOwnDataDescriptor(value, 'description');
+  const extension = getOwnDataDescriptor(value, 'extension');
+  return Object.freeze({
+    formatId: formatId.value,
+    label: label.value,
+    ...(description !== MISSING_OWN_DATA_DESCRIPTOR &&
+    description !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+    typeof description.value === 'string'
+      ? { description: description.value }
+      : {}),
+    ...(extension !== MISSING_OWN_DATA_DESCRIPTOR &&
+    extension !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+    typeof extension.value === 'string'
+      ? { extension: extension.value }
+      : {}),
+  });
+}
 
 export interface LyraExportButtonEventMap {
   'lr-export': CustomEvent<{ readonly format: string }>;
@@ -124,24 +197,16 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   set formats(next: readonly LyraExportFormatOption[]) {
     const previous = this._formats;
-    const source = Array.isArray(next) ? next : [];
+    const source = formatArrayLength(next);
     const seen = new Set<string>();
     const formats: LyraExportFormatOption[] = [];
-    for (const format of source) {
-      if (
-        typeof format !== 'string' &&
-        (format === null || typeof format !== 'object')
-      )
-        continue;
-      const snapshot =
-        typeof format === 'string' ? format : Object.freeze({ ...format });
+    for (let index = 0; source && index < source.length; index += 1) {
+      const descriptor = getOwnDataDescriptor(source.source, String(index));
+      if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+      const snapshot = projectExportFormat(descriptor.value);
+      if (!snapshot) continue;
       const id = typeof snapshot === 'string' ? snapshot : snapshot.formatId;
       if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
-      if (
-        typeof snapshot !== 'string' &&
-        (typeof snapshot.label !== 'string' || snapshot.label.trim() === '')
-      )
-        continue;
       seen.add(id);
       formats.push(snapshot);
     }
@@ -167,8 +232,12 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   private readonly menuId = nextId('export-menu');
   private cleanup?: DeferredOperationHandle;
+  private overlay?: OverlayHandle;
   private menuPositioned = false;
   private pointerDocument?: Document;
+  private connectionGeneration = 0;
+  private connectedDocument?: Document;
+  private pendingDisconnectDocument?: Document;
   private _isFirstUpdate = true;
   private openVetoed = false;
   /** Which menu item to focus the next time `open` flips true; reset after use. */
@@ -177,16 +246,65 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   private forcedMenuClose?: 'invalid-open' | 'formats' | 'state';
   /** Tracks only the temporary focus-rescue tabindex this component added itself. */
   private injectedHostTabIndex = false;
+  private restoreFocusOnMenuClose = false;
+
+  override connectedCallback(): void {
+    const pendingDisconnectDocument = this.pendingDisconnectDocument;
+    this.pendingDisconnectDocument = undefined;
+    this.connectionGeneration += 1;
+    this.connectedDocument = this.ownerDocument;
+    super.connectedCallback();
+    if (pendingDisconnectDocument) {
+      if (pendingDisconnectDocument === this.ownerDocument) {
+        this.deactivateMenuOverlay(false);
+        this.restoreFocusOnMenuClose = false;
+        this.open = false;
+        return;
+      }
+      if (this.hasUpdated && this.open)
+        this.scheduleAfterUpdate(this.syncMenuOverlay, 'export-button-menu-overlay');
+      return;
+    }
+    if (this.hasUpdated && this.open)
+      this.scheduleAfterUpdate(this.syncMenuOverlay, 'export-button-menu-overlay');
+  }
 
   override disconnectedCallback(): void {
+    const generation = ++this.connectionGeneration;
+    const connectedDocument = this.connectedDocument;
+    const disconnectDocument = connectedDocument ?? this.ownerDocument;
+    this.pendingDisconnectDocument = disconnectDocument;
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
+    this.menuPositioned = false;
     this.unbindDocumentPointer();
-    this.open = false;
+    this.overlay?.suspend();
+    this.restoreFocusOnMenuClose = false;
+    queueDocumentMicrotask(disconnectDocument, () => {
+      if (
+        this.connectionGeneration !== generation ||
+        this.isConnected ||
+        this.pendingDisconnectDocument !== disconnectDocument
+      )
+        return;
+      this.pendingDisconnectDocument = undefined;
+      this.deactivateMenuOverlay(false);
+      this.restoreFocusOnMenuClose = false;
+      this.open = false;
+    });
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.unbindDocumentPointer();
+    this.overlay?.suspend();
   }
 
   private bindDocumentPointer(): void {
+    if (!this.isConnected) return;
     const owner = this.ownerDocument;
     if (this.pointerDocument === owner) return;
     this.unbindDocumentPointer();
@@ -200,7 +318,9 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   }
 
   private onDocPointer = (e: PointerEvent): void => {
-    if (!e.composedPath().includes(this)) this.closeMenu();
+    if (e.composedPath().includes(this)) return;
+    if (this.overlay?.isActive()) this.overlay.dismissBackdrop();
+    else this.closeMenu();
   };
 
   private openMenu(): void {
@@ -208,10 +328,71 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.open = true;
   }
 
-  private closeMenu(): void {
+  private closeMenu(restoreFocus = false): void {
     if (!this.open) return;
+    this.restoreFocusOnMenuClose ||= restoreFocus;
     this.open = false;
   }
+
+  private activateMenuOverlay(): void {
+    if (this.overlay?.isActive()) {
+      this.overlay.resume();
+      return;
+    }
+    this.overlay = activateNonmodalOverlay({
+      host: this,
+      panel: () => this.menuEl ?? null,
+      onEscape: () => this.closeMenu(true),
+      onBackdrop: () => this.closeMenu(),
+      onTab: () => this.closeMenu(),
+      restoreFocusTo: () => this.triggerEl ?? null,
+    });
+  }
+
+  private deactivateMenuOverlay(restoreFocus: boolean): void {
+    const overlay = this.overlay;
+    this.overlay = undefined;
+    overlay?.deactivate({ restoreFocus });
+    this.unbindDocumentPointer();
+  }
+
+  private syncMenuOverlay = (): void => {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.menuPositioned = false;
+    this.unbindDocumentPointer();
+    if (!this.open || !this.isConnected) {
+      const restoreFocus = this.restoreFocusOnMenuClose;
+      this.restoreFocusOnMenuClose = false;
+      this.deactivateMenuOverlay(restoreFocus);
+      return;
+    }
+    this.activateMenuOverlay();
+    this.bindDocumentPointer();
+    const anchor = this.triggerEl;
+    const menu = this.menuEl;
+    const ownerDocument = this.ownerDocument;
+    if (!anchor || !menu) return;
+    const placement = place(anchor, menu);
+    this.cleanup = placement;
+    void placement.ready.then((positioned) => {
+      if (
+        this.cleanup !== placement ||
+        !this.open ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      )
+        return;
+      if (!positioned) {
+        this.forcedMenuClose = 'state';
+        this.open = false;
+        return;
+      }
+      this.menuPositioned = true;
+      this.focusMenuItem(this.pendingMenuFocusIndex);
+      this.pendingMenuFocusIndex = 0;
+    });
+  };
 
   private menuItemEls(): HTMLButtonElement[] {
     return Array.from(this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="menu-item"]'));
@@ -235,15 +416,6 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape') {
-      if (this.open) {
-        e.preventDefault();
-        this.closeMenu();
-        this.triggerEl?.focus();
-      }
-      return;
-    }
-
     if (this.formats.length <= 1 || this.disabled || this.loading) return;
 
     const items = this.menuItemEls();
@@ -269,12 +441,6 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
           e.preventDefault();
           this.focusMenuItem(items.length - 1);
         }
-        break;
-      case 'Tab':
-        // No preventDefault -- native Tab navigation proceeds untouched, only
-        // the now-stale open menu closes (mirrors lr-menu's identical
-        // Tab handling).
-        this.closeMenu();
         break;
     }
   };
@@ -370,37 +536,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       (changed.has('open') || forcedMenuClose === 'formats' || forcedMenuClose === 'state') &&
       !this.openVetoed
     ) {
-      this.cleanup?.();
-      this.cleanup = undefined;
-      this.menuPositioned = false;
-      // Reacting to the `open` property itself (not just inside
-      // openMenu()) means this runs however `open` became true -- via
-      // openMenu()'s own click path, or a consumer/test setting
-      // `el.open = true` directly (valid API on a `reflect: true`
-      // property), which bypasses openMenu() entirely. Mirrors lr-menu/
-      // lr-select/lr-combobox, whose lr-show/lr-hide veto point likewise
-      // runs one step earlier, in willUpdate().
-      this.unbindDocumentPointer();
-      if (this.open) {
-        const anchor = this.triggerEl;
-        const menu = this.menuEl;
-        if (anchor && menu) {
-          const placement = place(anchor, menu);
-          this.cleanup = placement;
-          void placement.ready.then((positioned) => {
-            if (this.cleanup !== placement || !this.open || !this.isConnected) return;
-            if (!positioned) {
-              this.forcedMenuClose = 'state';
-              this.open = false;
-              return;
-            }
-            this.menuPositioned = true;
-            this.focusMenuItem(this.pendingMenuFocusIndex);
-            this.pendingMenuFocusIndex = 0;
-          });
-        }
-        this.bindDocumentPointer();
-      }
+      this.syncMenuOverlay();
+    } else if (this.openVetoed) {
+      // A vetoed close remains a live menu and keeps its existing overlay handle/return target.
+      this.restoreFocusOnMenuClose = false;
     }
     if (changed.has('formats') && this.formatsFocusSnapshot) {
       const { index, id } = this.formatsFocusSnapshot;

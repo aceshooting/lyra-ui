@@ -23,6 +23,19 @@ it('gives every toolbar button the shared minimum hit area', async () => {
   }
 });
 
+it('inherits the host font size into every built-in control and its 1em glyph', async () => {
+  const el = (await fixture(html`<lr-flow-controls style="font-size: 20px"></lr-flow-controls>`)) as LyraFlowControls;
+
+  for (const part of ['zoom-in', 'zoom-out', 'fit', 'lock'] as const) {
+    const control = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    const glyph = control.querySelector<SVGElement>('svg')!;
+
+    expect(getComputedStyle(control).fontSize, part).to.equal('20px');
+    expect(getComputedStyle(glyph).width, `${part} glyph width`).to.equal('20px');
+    expect(getComputedStyle(glyph).height, `${part} glyph height`).to.equal('20px');
+  }
+});
+
 it('disables every button when no canvas can be resolved', async () => {
   const el = (await fixture(html`<lr-flow-controls></lr-flow-controls>`)) as LyraFlowControls;
   expect((el.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement).disabled).to.be.true;

@@ -18,13 +18,14 @@
 
 A caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete
 inside a plain-text `<textarea>`/`<input>` the host owns. First-party invention (no Web Awesome
-equivalent). While open with a text-control `anchor`, the component atomically projects
-`role="combobox"` (unless the author supplied a role), `aria-expanded`, `aria-haspopup`, a
-resolvable controls element, and the active descendant. On platforms accepting cross-root ARIA
-element reflection, the host's own input keeps focus. Where the active-option reference is
-rejected, `focusActiveOption()` moves real focus into this component's shadow listbox so the focus
-owner and option share one tree scope. Every author ARIA value is restored on close, anchor
-replacement, disconnect, or adoption; a cross-root string IDREF is never left behind.
+equivalent). A textarea keeps its native textbox semantics while open and, after a consumed
+navigation key, `focusActiveOption()` moves real focus to the active option in the shadow listbox.
+A single-line text input retains its active-descendant element-reference route; only that route
+uses `syncActiveDescendant()`, which returns `false` for a textarea.
+Textarea ARIA/AOM values are restored on close, anchor replacement, disconnect, or adoption; a
+cross-root string IDREF is never left behind. Later localized result-count and active-position
+changes are announced once through the shared polite region; opening markup and unchanged state are
+silent.
 
 **Properties:**
 
@@ -66,9 +67,10 @@ replacement, disconnect, or adoption; a cross-root string IDREF is never left be
   `preventDefault()` when `filteredItems` is empty, letting the keystroke fall through to the
   host's own control unchanged. `Escape` closes with no selection. Returns `true` whenever the key
   was intercepted and `false` for keys the method does not recognize.
-- `syncActiveDescendant(control: HTMLElement): boolean` — clears any string
-  `aria-activedescendant`, then applies `ariaActiveDescendantElement` when the platform accepts the
-  cross-root reference. Returns whether that reference was accepted.
+- `syncActiveDescendant(control: HTMLElement): boolean` — applies
+  `ariaActiveDescendantElement` only for a retained single-line input route. For a textarea it
+  returns `false` without mutating `aria-activedescendant`; the managed textarea session clears that
+  value separately.
 - `focusActiveOption(options?: LyraMentionFocusOptions): Promise<boolean>` — same-tree fallback
   after a consumed navigation key when `syncActiveDescendant()` returns `false`. Focuses the active
   option, lets the popover handle subsequent navigation, and restores focus to `anchor` when the

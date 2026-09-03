@@ -37,3 +37,5 @@ are as described under `lr-format-number` above.
 
 Valid output is semantic `<time datetime="…">`. **Slots:** none — an unparseable `date` renders the
 empty string, with no fallback-content hook (unlike the three `lr-format-*` components above).
+Date input accepts primitive strings/numbers or a genuine `Date`; arbitrary objects are rejected
+without calling their conversion hooks.

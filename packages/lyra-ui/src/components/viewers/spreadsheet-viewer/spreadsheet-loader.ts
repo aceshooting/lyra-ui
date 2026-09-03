@@ -1,4 +1,8 @@
 import { unwrapOptionalPeerDefault } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const SPREADSHEET_WARNING_KEY = 'lyra-spreadsheet-viewer-xlsx-unavailable';
+const SPREADSHEET_WARNING = '<lr-spreadsheet-viewer> could not load its optional xlsx peer.';
 
 export interface SheetJsWorkbook {
   SheetNames: string[];
@@ -33,8 +37,8 @@ export async function loadSheetJs(
     if (isSheetJsApi(module)) return module;
     const candidate = unwrapOptionalPeerDefault(module);
     return isSheetJsApi(candidate) ? candidate : null;
-  } catch (error) {
-    console.warn('<lr-spreadsheet-viewer> needs the optional peer dependency `xlsx` to parse workbooks — install it with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`:', error);
+  } catch {
+    devWarnOnce(SPREADSHEET_WARNING_KEY, SPREADSHEET_WARNING);
     return null;
   }
 }

@@ -6,24 +6,72 @@ import "./accordion-item.js";
 import type { LyraDetails } from "./details.js";
 import type { LyraAccordion } from "./accordion.js";
 import type { LyraAccordionItem } from "./accordion-item.js";
-import { styles as detailsStyles } from "./details.styles.js";
 import { styles as accordionStyles } from "./accordion.styles.js";
 import { resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";
+
+function nativeDetailsOf(el: LyraDetails): HTMLDetailsElement {
+  return el.shadowRoot!.querySelector<HTMLDetailsElement>('details:not([part])')!;
+}
+
+function summaryOf(el: LyraDetails): HTMLElement {
+  return el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
+}
+
+function contentGateOf(el: LyraDetails): HTMLElement {
+  return el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!.parentElement!;
+}
+
+function afterMicrotask(): Promise<void> {
+  return new Promise((resolve) => queueMicrotask(resolve));
+}
+
+it('moves public wrapper parts to the outer disclosure container while keeping native details private', async () => {
+  const el = (await fixture(html`
+    <lr-details summary="Projects">
+      <button slot="header-actions" id="new-project" type="button">New project</button>
+      <p id="project-content">Project details</p>
+    </lr-details>
+  `)) as LyraDetails;
+  const root = el.shadowRoot!;
+  const base = root.querySelector<HTMLElement>('[part~="base"][part~="details"]');
+  const header = root.querySelector<HTMLElement>('[part="header"]');
+  const nativeDetails = root.querySelector<HTMLDetailsElement>('details:not([part])');
+  const summary = root.querySelector<HTMLElement>('[part="summary"]');
+  const actions = root.querySelector<HTMLElement>('[part~="header-actions"]');
+  const content = root.querySelector<HTMLElement>('[part="content"]');
+  const gate = content?.parentElement;
+
+  expect(base?.localName ?? null).to.equal('div');
+  expect(header?.parentElement === base).to.equal(true);
+  expect(nativeDetails?.parentElement === header).to.equal(true);
+  expect(nativeDetails?.children.length ?? -1).to.equal(1);
+  expect(nativeDetails?.childNodes.length ?? -1).to.equal(1);
+  expect(nativeDetails?.firstElementChild?.localName ?? null).to.equal('summary');
+  expect(summary?.parentElement === nativeDetails).to.equal(true);
+  expect(actions?.parentElement === header).to.equal(true);
+  expect(nativeDetails?.nextElementSibling === actions).to.equal(true);
+  expect(gate?.localName ?? null).to.equal('div');
+  expect(gate?.hasAttribute('part') ?? true).to.equal(false);
+  expect(summary?.getAttribute('aria-controls') ?? null).to.equal(gate?.id ?? null);
+
+  const controlsId = summary?.getAttribute('aria-controls') ?? null;
+  el.open = true;
+  await el.updateComplete;
+  el.open = false;
+  await el.updateComplete;
+  expect(summary?.getAttribute('aria-controls') ?? null).to.equal(controlsId);
+});
 
 it("renders a disclosure panel and reports its state", async () => {
   const el = (await fixture(
     html`<lr-details summary="More">Content</lr-details>`
   )) as LyraDetails;
-  const summary = el.shadowRoot!.querySelector(
-    '[part="summary"]'
-  ) as HTMLElement;
+  const summary = summaryOf(el);
   expect(summary.getAttribute("aria-expanded")).to.equal("false");
   el.open = true;
   await el.updateComplete;
-  expect(
-    (el.shadowRoot!.querySelector('[part~="base"]') as HTMLDetailsElement).open
-  ).to.be.true;
+  expect(nativeDetailsOf(el).open).to.be.true;
   expect(summary.getAttribute("aria-expanded")).to.equal("true");
   await expect(el).to.be.accessible();
 });
@@ -187,18 +235,19 @@ it('suppresses the localized "Details" fallback once rich content is slotted int
   expect(el.textContent?.trim()).to.equal("Custom LabelContent");
 });
 
-it("renders header actions inside the summary row while keeping them outside its toggle behavior", async () => {
+it("renders header actions as a summary-row sibling outside the native summary toggle", async () => {
   const el = (await fixture(html`
     <lr-details summary="Projects"
       ><button slot="header-actions" id="add">+</button>Content</lr-details
     >`)) as LyraDetails;
   const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
-  const slot = el.shadowRoot!.querySelector('slot[name="header-actions"]');
-  expect(slot, "a header-actions slot must exist in the summary row").to.exist;
+  const slot = el.shadowRoot!.querySelector<HTMLElement>('slot[name="header-actions"]');
+  expect(slot?.localName ?? null, "a header-actions slot must exist in the summary row").to.equal('slot');
   expect(
     summary.contains(slot),
-    "the header-actions slot must remain outside the native details-content subtree",
-  ).to.be.true;
+    "header actions must not become nested interactive summary content",
+  ).to.be.false;
+  expect(slot?.parentElement?.previousElementSibling?.localName ?? null).to.equal('details');
 });
 
 it("keeps collapsed header actions rendered, visible, and hit-testable", async () => {
@@ -271,6 +320,151 @@ it("hides the header-actions wrapper and reclaims its layout space when the slot
   expect(actions.hidden, "an unused header-actions wrapper must not claim visible layout space").to.be.true;
 });
 
+it('keeps dynamic header actions outside the summary name and toggles their wrapper with slot assignment', async () => {
+  const el = (await fixture(
+    html`<lr-details summary="Projects">Project body</lr-details>`
+  )) as LyraDetails;
+  const summary = summaryOf(el);
+  const actions = el.shadowRoot!.querySelector<HTMLElement>('[part~="header-actions"]')!;
+
+  expect(actions.hidden).to.equal(true);
+  expect(summary.textContent?.includes('New project')).to.equal(false);
+
+  const action = document.createElement('button');
+  action.id = 'dynamic-header-action';
+  action.slot = 'header-actions';
+  action.type = 'button';
+  action.textContent = 'New project';
+  el.append(action);
+  await el.updateComplete;
+  await afterMicrotask();
+
+  expect(actions.hidden).to.equal(false);
+  expect(summary.textContent?.includes('New project')).to.equal(false);
+  action.remove();
+  await el.updateComplete;
+  await afterMicrotask();
+  expect(actions.hidden).to.equal(true);
+});
+
+it('keeps header actions keyboard-operable and outside the disabled disclosure lifecycle', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="before-details" type="button">Before</button>
+      <lr-details summary="Projects" disabled>
+        <button id="disabled-header-action" slot="header-actions" type="button">New project</button>
+        Project body
+      </lr-details>
+      <button id="after-details" type="button">After</button>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraDetails>('lr-details')!;
+  const action = wrapper.querySelector<HTMLButtonElement>('#disabled-header-action')!;
+  let activations = 0;
+  let disclosureEvents = 0;
+  action.addEventListener('click', () => {
+    activations += 1;
+  });
+  for (const eventName of ['lr-show', 'lr-hide', 'lr-toggle']) {
+    el.addEventListener(eventName, () => {
+      disclosureEvents += 1;
+    });
+  }
+
+  expect(action.disabled).to.equal(false);
+  expect(action.checkVisibility({ checkVisibilityCSS: true, contentVisibilityAuto: true })).to.equal(true);
+  wrapper.querySelector<HTMLButtonElement>('#before-details')!.focus();
+  await sendKeys({ press: 'Tab' });
+  await waitUntil(
+    () => document.activeElement?.id === 'disabled-header-action',
+    'the enabled header action was not the next tab stop after a disabled disclosure summary'
+  );
+  await sendKeys({ press: 'Space' });
+  await waitUntil(
+    () => activations === 1,
+    'the enabled header action did not receive native keyboard activation'
+  );
+
+  expect(el.open).to.equal(false);
+  expect(disclosureEvents).to.equal(0);
+});
+
+it('places the summary before header actions in the ordinary keyboard order without adding the action to its name', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="before-summary" type="button">Before</button>
+      <lr-details summary="Projects">
+        <button id="ordered-header-action" slot="header-actions" type="button">New project</button>
+        <button id="closed-content-action" type="button">Hidden project action</button>
+      </lr-details>
+      <button id="after-summary" type="button">After</button>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraDetails>('lr-details')!;
+  const summary = summaryOf(el);
+  const action = wrapper.querySelector<HTMLButtonElement>('#ordered-header-action')!;
+  let actionClicks = 0;
+  action.addEventListener('click', () => {
+    actionClicks += 1;
+  });
+
+  wrapper.querySelector<HTMLButtonElement>('#before-summary')!.focus();
+  await sendKeys({ press: 'Tab' });
+  await waitUntil(
+    () => el.shadowRoot?.activeElement === summary,
+    'the native summary was not the first disclosure tab stop'
+  );
+  expect(summary.textContent?.includes('New project')).to.equal(false);
+  await sendKeys({ press: 'Tab' });
+  await waitUntil(
+    () => document.activeElement?.id === 'ordered-header-action',
+    'the header action did not follow the summary in tab order'
+  );
+  action.click();
+  await el.updateComplete;
+
+  expect(actionClicks).to.equal(1);
+  expect(el.open).to.equal(false);
+  await sendKeys({ press: 'Tab' });
+  await waitUntil(
+    () => document.activeElement?.id === 'after-summary',
+    'closed findable content became an unexpected sequential tab stop'
+  );
+});
+
+it('runs the disclosure lifecycle from native Enter and Space summary activation, including a veto', async () => {
+  const el = (await fixture(
+    html`<lr-details summary="Projects">Project body</lr-details>`
+  )) as LyraDetails;
+  const summary = summaryOf(el);
+  const events: string[] = [];
+  for (const eventName of ['lr-show', 'lr-toggle', 'lr-after-show']) {
+    el.addEventListener(eventName, () => {
+      events.push(eventName);
+    });
+  }
+
+  summary.focus();
+  await sendKeys({ press: 'Enter' });
+  await waitUntil(
+    () => events.includes('lr-after-show'),
+    'native Enter activation did not complete the disclosure lifecycle'
+  );
+  expect(events).to.deep.equal(['lr-show', 'lr-toggle', 'lr-after-show']);
+  expect(el.open).to.equal(true);
+
+  await el.hide();
+  el.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
+  summary.focus();
+  await sendKeys({ press: 'Space' });
+  await afterMicrotask();
+  await el.updateComplete;
+
+  expect(el.open).to.equal(false);
+  expect(nativeDetailsOf(el).open).to.equal(false);
+  expect(summary.getAttribute('aria-expanded')).to.equal('false');
+});
+
 it("exposes disabled to assistive tech via aria-disabled on the summary, rendered in both states", async () => {
   const el = (await fixture(
     html`<lr-details summary="More" disabled>Content</lr-details>`
@@ -291,12 +485,8 @@ it("blocks both pointer and synthesized keyboard activation while disabled", asy
   const el = (await fixture(
     html`<lr-details summary="More" disabled>Content</lr-details>`
   )) as LyraDetails;
-  const base = el.shadowRoot!.querySelector(
-    '[part~="base"]'
-  ) as HTMLDetailsElement;
-  const summary = el.shadowRoot!.querySelector(
-    '[part="summary"]'
-  ) as HTMLElement;
+  const base = nativeDetailsOf(el);
+  const summary = summaryOf(el);
 
   // A native <summary> synthesizes a click for Enter/Space activation, so exercising the click
   // path (which onClick guards with event.preventDefault()) covers the keyboard path too.
@@ -338,17 +528,7 @@ it("keeps disabled summary paint unchanged on hover and press", async () => {
   }
 });
 
-it("keeps the disclosure marker vertical under RTL in both states", () => {
-  const css = detailsStyles.cssText.replace(/\s+/g, " ");
-  expect(css).to.include(
-    ".icon-fallback { display: inline-flex; transform: rotate(90deg)"
-  );
-  expect(css).to.include(
-    ":host([open]) .icon-fallback { transform: rotate(-90deg)"
-  );
-});
-
-it('actually rotates the rendered chevron under a real dir="rtl" fixture instead of pointing sideways (getComputedStyle, not just source text)', async () => {
+it('rotates the rendered chevron vertically under a real dir="rtl" fixture in both states', async () => {
   function chevronAngleDeg(el: HTMLElement): number {
     const matrix = new DOMMatrixReadOnly(getComputedStyle(el).transform);
     return Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
@@ -379,6 +559,7 @@ it("contains an expanded long summary, content, and action in an exact 320px RTL
         <span slot="summary"
           >عنوانتفاصيلمحليطويلجداًبدونأيفرصةللفصلالتلقائي</span
         >
+        <button id="rtl-header-action" slot="header-actions" type="button">إضافة</button>
         <p>محتوىتفصيليمحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
         <button type="button">إجراءمحليطويلجداًبدونأيفرصةللفصلالتلقائي</button>
       </lr-details>
@@ -391,6 +572,7 @@ it("contains an expanded long summary, content, and action in an exact 320px RTL
     el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
   const content =
     el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+  const headerAction = el.querySelector<HTMLElement>('#rtl-header-action')!;
 
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
   expect(el.scrollWidth).to.be.at.most(el.clientWidth);
@@ -398,6 +580,10 @@ it("contains an expanded long summary, content, and action in an exact 320px RTL
   expect(summary.scrollWidth).to.be.at.most(summary.clientWidth);
   expect(content.scrollWidth).to.be.at.most(content.clientWidth);
   expect(getComputedStyle(base).direction).to.equal("rtl");
+  const baseRect = base.getBoundingClientRect();
+  const actionRect = headerAction.getBoundingClientRect();
+  expect(actionRect.left).to.be.at.least(baseRect.left - 1);
+  expect(actionRect.right).to.be.at.most(baseRect.right + 1);
 });
 
 it('renders a localized "Details" fallback from a .strings override when no summary/slot is supplied', async () => {
@@ -669,12 +855,8 @@ describe("unified show/hide lifecycle", () => {
     const el = (await fixture(
       html`<lr-details summary="More">Content</lr-details>`
     )) as LyraDetails;
-    const base = el.shadowRoot!.querySelector(
-      '[part~="base"]'
-    ) as HTMLDetailsElement;
-    const summary = el.shadowRoot!.querySelector(
-      '[part="summary"]'
-    ) as HTMLElement;
+    const base = nativeDetailsOf(el);
+    const summary = summaryOf(el);
     let toggles = 0;
     el.addEventListener("lr-toggle", () => toggles++);
     el.addEventListener("lr-show", (event) =>
@@ -696,12 +878,8 @@ describe("unified show/hide lifecycle", () => {
       html`<lr-details summary="More" open>Content</lr-details>`
     )) as LyraDetails;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector(
-      '[part~="base"]'
-    ) as HTMLDetailsElement;
-    const summary = el.shadowRoot!.querySelector(
-      '[part="summary"]'
-    ) as HTMLElement;
+    const base = nativeDetailsOf(el);
+    const summary = summaryOf(el);
     el.addEventListener("lr-hide", (event) =>
       (event as Event).preventDefault()
     );
@@ -718,12 +896,8 @@ describe("unified show/hide lifecycle", () => {
     const el = (await fixture(
       html`<lr-details summary="More">Content</lr-details>`
     )) as LyraDetails;
-    const base = el.shadowRoot!.querySelector(
-      '[part~="base"]'
-    ) as HTMLDetailsElement;
-    const summary = el.shadowRoot!.querySelector(
-      '[part="summary"]'
-    ) as HTMLElement;
+    const base = nativeDetailsOf(el);
+    const summary = summaryOf(el);
     let toggles = 0;
     el.addEventListener("lr-toggle", () => toggles++);
 
@@ -792,6 +966,281 @@ describe("unified show/hide lifecycle", () => {
     await el.updateComplete;
     expect(el.open).to.be.false;
     expect(fired).to.equal(0);
+  });
+});
+
+describe('findable closed-content gate', () => {
+  it('keeps hostile public content styling inside a private zero-size hidden-until-found gate', async () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      lr-details::part(content) {
+        display: block !important;
+        min-block-size: 240px !important;
+        margin-block: 48px !important;
+        padding-block: 72px !important;
+        background: rgb(1, 2, 3) !important;
+      }
+    `;
+    document.head.append(style);
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-details id="empty-details" summary="Projects"></lr-details>
+        <lr-details id="guarded-details" summary="Projects">
+          <button id="closed-content-target" type="button">Hidden project action</button>
+        </lr-details>
+      </div>
+    `);
+    const empty = wrapper.querySelector<LyraDetails>('#empty-details')!;
+    const guarded = wrapper.querySelector<LyraDetails>('#guarded-details')!;
+    const gate = contentGateOf(guarded);
+    const emptyBase = empty.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const guardedBase = guarded.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    try {
+      const gateStyle = getComputedStyle(gate);
+      const gateRect = gate.getBoundingClientRect();
+      expect(gate.getAttribute('hidden')).to.equal('until-found');
+      expect(gate.hidden).to.equal('until-found');
+      expect(gate.hasAttribute('inert')).to.equal(false);
+      expect(gate.hasAttribute('aria-hidden')).to.equal(false);
+      expect(gate.hasAttribute('part')).to.equal(false);
+      expect(gateStyle.display).to.equal('block');
+      expect(gateStyle.visibility).to.not.equal('hidden');
+      expect(gateRect.height).to.equal(0);
+      expect(guardedBase.getBoundingClientRect().height).to.be.closeTo(
+        emptyBase.getBoundingClientRect().height,
+        1
+      );
+      expect(
+        document.elementFromPoint(gateRect.left + 1, gateRect.top + 1)?.id ?? null
+      ).to.not.equal('closed-content-target');
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('opens synchronously through beforematch with the existing programmatic lifecycle', async () => {
+    const el = (await fixture(
+      html`<lr-details summary="Projects">Project body</lr-details>`
+    )) as LyraDetails;
+    const gate = contentGateOf(el);
+    const summary = summaryOf(el);
+    const order: string[] = [];
+    let toggleDetail: { open: boolean; source: string } | undefined;
+    el.addEventListener('lr-show', () => order.push('lr-show'));
+    el.addEventListener('lr-toggle', (event) => {
+      order.push('lr-toggle');
+      toggleDetail = (event as CustomEvent<{ open: boolean; source: string }>).detail;
+    });
+    el.addEventListener('lr-after-show', () => order.push('lr-after-show'));
+    const afterShow = oneEvent(el, 'lr-after-show');
+    const beforematch = new Event('beforematch');
+
+    gate.dispatchEvent(beforematch);
+
+    expect(beforematch.cancelable).to.equal(false);
+    expect(el.open).to.equal(true);
+    expect(nativeDetailsOf(el).open).to.equal(true);
+    expect(gate.hasAttribute('hidden')).to.equal(false);
+    expect(summary.getAttribute('aria-expanded')).to.equal('true');
+    await afterShow;
+    expect(order).to.deep.equal(['lr-show', 'lr-toggle', 'lr-after-show']);
+    expect(toggleDetail).to.deep.equal({
+      open: true,
+      source: 'programmatic',
+    });
+  });
+
+  it('uses an ordinary hidden attribute during a rejected beforematch, then safely rearms until-found', async () => {
+    const el = (await fixture(
+      html`<lr-details summary="Projects">Project body</lr-details>`
+    )) as LyraDetails;
+    const gate = contentGateOf(el);
+    el.addEventListener('lr-show', (event) => event.preventDefault());
+
+    gate.dispatchEvent(new Event('beforematch'));
+
+    expect(gate.getAttribute('hidden')).to.equal('');
+    expect(el.open).to.equal(false);
+    expect(nativeDetailsOf(el).open).to.equal(false);
+    await afterMicrotask();
+    expect(gate.getAttribute('hidden')).to.equal('until-found');
+  });
+
+  it('rearms a disabled disclosure after beforematch without emitting its show lifecycle', async () => {
+    const el = (await fixture(
+      html`<lr-details summary="Projects" disabled>Project body</lr-details>`
+    )) as LyraDetails;
+    const gate = contentGateOf(el);
+    let showEvents = 0;
+    el.addEventListener('lr-show', () => {
+      showEvents += 1;
+    });
+
+    gate.dispatchEvent(new Event('beforematch'));
+
+    expect(gate.getAttribute('hidden')).to.equal('');
+    expect(el.open).to.equal(false);
+    expect(showEvents).to.equal(0);
+    await afterMicrotask();
+    expect(gate.getAttribute('hidden')).to.equal('until-found');
+  });
+
+  it('rearms a peer-vetoed beforematch without changing either disclosure', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-details name="projects" summary="Open peer" open>Peer body</lr-details>
+        <lr-details name="projects" summary="Candidate">Candidate body</lr-details>
+      </div>
+    `);
+    const [peer, candidate] = [
+      ...wrapper.querySelectorAll<LyraDetails>('lr-details'),
+    ] as [LyraDetails, LyraDetails];
+    const gate = contentGateOf(candidate);
+    let candidateToggles = 0;
+    peer.addEventListener('lr-hide', (event) => event.preventDefault());
+    candidate.addEventListener('lr-toggle', () => {
+      candidateToggles += 1;
+    });
+
+    gate.dispatchEvent(new Event('beforematch'));
+
+    expect(gate.getAttribute('hidden')).to.equal('');
+    expect(peer.open).to.equal(true);
+    expect(candidate.open).to.equal(false);
+    expect(candidateToggles).to.equal(0);
+    await afterMicrotask();
+    expect(gate.getAttribute('hidden')).to.equal('until-found');
+  });
+
+  it('does not let a stale rejected-beforematch rearm overwrite a later accepted open', async () => {
+    const el = (await fixture(
+      html`<lr-details summary="Projects">Project body</lr-details>`
+    )) as LyraDetails;
+    const gate = contentGateOf(el);
+    let veto = true;
+    el.addEventListener('lr-show', (event) => {
+      if (veto) event.preventDefault();
+    });
+
+    gate.dispatchEvent(new Event('beforematch'));
+    expect(gate.getAttribute('hidden')).to.equal('');
+    veto = false;
+    const showing = el.show();
+    expect(el.open).to.equal(true);
+    expect(gate.hasAttribute('hidden')).to.equal(false);
+    await showing;
+    await afterMicrotask();
+
+    expect(gate.hasAttribute('hidden')).to.equal(false);
+    expect(summaryOf(el).getAttribute('aria-expanded')).to.equal('true');
+  });
+
+  it('rearms a rejected beforematch after a disconnect and reconnect before its microtask runs', async () => {
+    const staging = document.createElement('div');
+    document.body.append(staging);
+    const el = (await fixture(
+      html`<lr-details summary="Projects">Project body</lr-details>`
+    )) as LyraDetails;
+    const gate = contentGateOf(el);
+    const gateId = gate.id;
+    try {
+      el.addEventListener('lr-show', (event) => event.preventDefault());
+      gate.dispatchEvent(new Event('beforematch'));
+      expect(gate.getAttribute('hidden')).to.equal('');
+
+      // Move synchronously before the rejected handler's rearm microtask can run.
+      staging.append(el);
+      await el.updateComplete;
+      await afterMicrotask();
+
+      const currentGate = contentGateOf(el);
+      expect(currentGate.id).to.equal(gateId);
+      expect(currentGate.getAttribute('hidden')).to.equal('until-found');
+      expect(el.open).to.equal(false);
+    } finally {
+      el.remove();
+      staging.remove();
+    }
+  });
+
+  it('does not leak lr-after-show when a pending show is interrupted by a move', async () => {
+    const staging = document.createElement('div');
+    document.body.append(staging);
+    const el = (await fixture(
+      html`<lr-details summary="Projects" style="--show-duration:120ms">Project body</lr-details>`
+    )) as LyraDetails;
+    let afterShows = 0;
+    el.addEventListener('lr-after-show', () => {
+      afterShows += 1;
+    });
+    try {
+      const showing = el.show();
+      staging.append(el);
+      await showing;
+      await new Promise<void>((resolve) => setTimeout(resolve, 180));
+
+      expect(el.open).to.equal(true);
+      expect(afterShows).to.equal(0);
+    } finally {
+      el.remove();
+      staging.remove();
+    }
+  });
+
+  it('restores a divergent private native toggle after a veto', async () => {
+    const el = (await fixture(
+      html`<lr-details summary="Projects">Project body</lr-details>`
+    )) as LyraDetails;
+    const gate = contentGateOf(el);
+    const nativeDetails = nativeDetailsOf(el);
+    el.addEventListener('lr-show', (event) => event.preventDefault());
+
+    nativeDetails.open = true;
+    await waitUntil(
+      () => !nativeDetails.open,
+      'a vetoed direct native toggle left the private details element open'
+    );
+    await afterMicrotask();
+
+    expect(el.open).to.equal(false);
+    expect(gate.getAttribute('hidden')).to.equal('until-found');
+    expect(summaryOf(el).getAttribute('aria-expanded')).to.equal('false');
+  });
+
+  it('uses initial and hashchange fragment targets in default content without double-running after beforematch', async () => {
+    const originalUrl = window.location.href;
+    const targetId = `details-fragment-${Math.random().toString(36).slice(2)}`;
+    try {
+      window.history.replaceState(window.history.state, '', `#${targetId}`);
+      const el = (await fixture(html`
+        <lr-details summary="Projects">
+          <p id=${targetId}>Fragment target</p>
+        </lr-details>
+      `)) as LyraDetails;
+      await waitUntil(
+        () => el.open,
+        'initial fragment navigation did not reveal a default-slot descendant'
+      );
+      await el.hide();
+      let toggles = 0;
+      el.addEventListener('lr-toggle', () => {
+        toggles += 1;
+      });
+
+      window.location.hash = 'different-details-fragment';
+      window.location.hash = targetId;
+      await waitUntil(
+        () => el.open,
+        'hashchange navigation did not reveal a default-slot descendant'
+      );
+      contentGateOf(el).dispatchEvent(new Event('beforematch'));
+      await afterMicrotask();
+
+      expect(toggles).to.equal(1);
+      expect(el.open).to.equal(true);
+    } finally {
+      window.history.replaceState(window.history.state, '', originalUrl);
+    }
   });
 });
 
@@ -908,10 +1357,7 @@ describe("Web Awesome disclosure surface", () => {
     expect(one.open).to.be.false;
     expect(two.open).to.be.true;
     expect(other.open).to.be.true;
-    expect(
-      (two.shadowRoot!.querySelector('[part~="base"]') as HTMLDetailsElement)
-        .name
-    ).to.equal("faq");
+    expect(nativeDetailsOf(two).name).to.equal("faq");
   });
 
   it("reconciles a live name change with changed-disclosure-wins semantics", async () => {
@@ -1070,8 +1516,10 @@ describe("Web Awesome disclosure surface", () => {
     const summary = el.shadowRoot!.querySelector(
       '[part="summary"]'
     ) as HTMLElement;
+    const nativeDetails = nativeDetailsOf(el);
+    expect(nativeDetails.parentElement === header).to.equal(true);
     expect(
-      header.firstElementChild ===
+      summary.firstElementChild ===
         el.shadowRoot!.querySelector(".summary-content")
     ).to.equal(true);
     expect(getComputedStyle(icon).order).to.equal("-1");
@@ -1090,12 +1538,16 @@ describe("Web Awesome disclosure surface", () => {
     expect(el.open).to.be.false;
   });
 
-  it("is accessible with custom icons, grouping, and a populated open panel", async () => {
+  it("is accessible with custom icons, a sibling header action, grouping, and a populated open panel", async () => {
     const el = (await fixture(html`<lr-details name="faq" summary="Answer" open>
       <span slot="expand-icon" aria-hidden="true">+</span>
       <span slot="collapse-icon" aria-hidden="true">−</span>
-      The answer.
+      <button slot="header-actions" type="button">Copy answer</button>
+      <p>The answer.</p>
     </lr-details>`)) as LyraDetails;
+    expect(
+      el.shadowRoot!.querySelector('[part="summary"]')?.textContent?.includes('Copy answer') ?? true
+    ).to.equal(false);
     await expect(el).to.be.accessible();
   });
 });

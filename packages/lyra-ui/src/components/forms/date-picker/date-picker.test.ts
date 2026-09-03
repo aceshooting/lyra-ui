@@ -9,6 +9,7 @@ import {
   resolveFirstDayOfWeek,
 } from "./calendar-core.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
   const item = items[index];
@@ -1683,6 +1684,105 @@ it("shows a mask-image edge fade on a month's scroll region once it overflows, m
   expect(maskImage).to.contain("gradient");
 });
 
+it('uses distinct logical start, middle, and end masks in LTR and RTL', async () => {
+  const maskImage = (region: HTMLElement): string =>
+    getComputedStyle(region).getPropertyValue('mask-image') ||
+    getComputedStyle(region).getPropertyValue('-webkit-mask-image');
+  const setEdges = (
+    region: HTMLElement,
+    start: boolean,
+    end: boolean,
+  ): string => {
+    region.toggleAttribute('data-scroll-overflow', true);
+    region.toggleAttribute('data-scroll-start', start);
+    region.toggleAttribute('data-scroll-end', end);
+    return maskImage(region);
+  };
+
+  const ltr = (await fixture(html`
+    <div style="inline-size: 320px">
+      <lr-date-picker
+        size="xl"
+        value="2026-07-15"
+        style="inline-size: 100%; --lr-mask-opaque: rgb(1, 2, 3)"
+      ></lr-date-picker>
+    </div>
+  `)) as HTMLElement;
+  const rtl = (await fixture(html`
+    <div dir="rtl" style="inline-size: 320px">
+      <lr-date-picker
+        size="xl"
+        value="2026-07-15"
+        style="inline-size: 100%; --lr-mask-opaque: rgb(1, 2, 3)"
+      ></lr-date-picker>
+    </div>
+  `)) as HTMLElement;
+  const ltrRegion = ltr.querySelector<LyraDatePicker>('lr-date-picker')!
+    .shadowRoot!.querySelector<HTMLElement>('.calendar-scroll')!;
+  const rtlRegion = rtl.querySelector<LyraDatePicker>('lr-date-picker')!
+    .shadowRoot!.querySelector<HTMLElement>('.calendar-scroll')!;
+
+  const ltrStart = setEdges(ltrRegion, true, false);
+  const ltrMiddle = setEdges(ltrRegion, true, true);
+  const ltrEnd = setEdges(ltrRegion, false, true);
+  const rtlStart = setEdges(rtlRegion, true, false);
+  const rtlMiddle = setEdges(rtlRegion, true, true);
+  const rtlEnd = setEdges(rtlRegion, false, true);
+
+  expect(ltrStart, 'one obscured LTR start edge').to.not.equal(ltrMiddle);
+  expect(ltrEnd, 'one obscured LTR end edge').to.not.equal(ltrMiddle);
+  expect(ltrStart, 'the two LTR edge directions differ').to.not.equal(ltrEnd);
+  expect(rtlStart, 'one obscured RTL start edge').to.not.equal(rtlMiddle);
+  expect(rtlEnd, 'one obscured RTL end edge').to.not.equal(rtlMiddle);
+  expect(rtlStart, 'the two RTL edge directions differ').to.not.equal(rtlEnd);
+  expect(rtlStart, 'RTL swaps the logical start fade physically').to.equal(ltrEnd);
+  expect(rtlEnd, 'RTL swaps the logical end fade physically').to.equal(ltrStart);
+});
+
+it('removes every one-sided date-picker overflow mask under forced colors in both directions', async () => {
+  try {
+    await setForcedColors('active');
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const wrapper = (await fixture(html`
+        <div dir=${direction} style="inline-size: 320px">
+          <lr-date-picker size="xl" value="2026-07-15"></lr-date-picker>
+        </div>
+      `)) as HTMLElement;
+      const region = wrapper.querySelector<LyraDatePicker>('lr-date-picker')!
+        .shadowRoot!.querySelector<HTMLElement>('.calendar-scroll')!;
+      region.toggleAttribute('data-scroll-overflow', true);
+      region.toggleAttribute('data-scroll-end', true);
+      const mask =
+        getComputedStyle(region).getPropertyValue('mask-image') ||
+        getComputedStyle(region).getPropertyValue('-webkit-mask-image');
+      expect(mask, `${direction} forced-colors overflow mask`).to.equal('none');
+    }
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+it('keeps the selected preset background independent from its border and foreground hooks', async () => {
+  const el = (await fixture(html`
+    <lr-date-picker
+      mode="range"
+      value="2026-08-13/2026-08-19"
+      style="
+        --lr-date-picker-preset-selected-bg: rgb(1, 2, 3);
+        --lr-date-picker-preset-selected-border: rgb(4, 5, 6);
+        --lr-date-picker-preset-selected-color: rgb(7, 8, 9);
+      "
+    ></lr-date-picker>
+  `)) as LyraDatePicker;
+  el.presets = [{ label: 'Last week', start: '2026-08-13', end: '2026-08-19' }];
+  await el.updateComplete;
+
+  const preset = el.shadowRoot!.querySelector<HTMLElement>('[part~="preset-button"]')!;
+  expect(getComputedStyle(preset).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(preset).borderColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(preset).color).to.equal('rgb(7, 8, 9)');
+});
+
 it("lets the component-scoped disabled opacity override the shared fallback", async () => {
   const el = (await fixture(html`
     <lr-date-picker
@@ -2197,6 +2297,114 @@ describe("reviewed date-picker parity surface", () => {
       '[data-date="2026-07-16"]'
     ) as HTMLButtonElement;
     expect(ordinaryDay.disabled).to.equal(false);
+  });
+
+  it('uses native Date slots rather than an overridable getTime property', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-07-15"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    const guarded = new Date(2026, 6, 16);
+    Object.defineProperty(guarded, 'getTime', {
+      configurable: true,
+      get(): never {
+        throw new Error('component must use the native Date slot');
+      },
+    });
+
+    expect(() => {
+      el.valueAsDate = guarded;
+    }).to.not.throw();
+    expect(el.value).to.equal('2026-07-16');
+
+    el.mode = 'range';
+    expect(() => {
+      el.valueAsRange = { from: guarded, to: new Date(2026, 6, 20) };
+    }).to.not.throw();
+    expect(el.value).to.equal('2026-07-16/2026-07-20');
+
+    el.mode = 'single';
+    el.disabledDates = [guarded];
+    await el.updateComplete;
+    const disabled = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[data-date="2026-07-16"]',
+    )!;
+    expect(disabled.disabled).to.equal(true);
+  });
+
+  it('keeps a branded disabled-date value working before safely omitting a revoked disabledDates array', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-07-15"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    const guarded = new Date(2026, 6, 16);
+    Object.defineProperty(guarded, 'getTime', {
+      configurable: true,
+      get(): never {
+        throw new Error('component must use the native Date slot');
+      },
+    });
+
+    el.disabledDates = [guarded];
+    await el.updateComplete;
+    const day = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-date="2026-07-16"]')!;
+    expect(day.disabled).to.equal(true);
+
+    const { proxy: revoked, revoke } = Proxy.revocable(['2026-07-16'], {});
+    revoke();
+    el.disabledDates = revoked as unknown as typeof el.disabledDates;
+    await el.updateComplete;
+
+    expect(day.disabled).to.equal(false);
+  });
+
+  it('projects a live disabledDates proxy through descriptors, skips an unsafe entry, and retains a later valid date', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-07-15"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    const values: unknown[] = [];
+    Object.defineProperty(values, '0', {
+      configurable: true,
+      enumerable: true,
+      get(): never {
+        throw new Error('unsafe disabled-date entry');
+      },
+    });
+    values[1] = '2026-07-17';
+    const liveProxy = new Proxy(values, {
+      get(): never {
+        throw new Error('disabledDates must not use live array reads');
+      },
+    });
+
+    el.disabledDates = liveProxy as unknown as typeof el.disabledDates;
+    await el.updateComplete;
+
+    const unsafeDay = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-date="2026-07-16"]')!;
+    const retainedDay = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-date="2026-07-17"]')!;
+    expect(unsafeDay.disabled, 'the unsafe entry is omitted').to.equal(false);
+    expect(retainedDay.disabled, 'the later safe descriptor entry remains effective').to.equal(true);
+  });
+
+  it('contains a throwing shadow-root activeElement getter during view updates', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-07-15"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    const root = el.shadowRoot!;
+    const prior = Object.getOwnPropertyDescriptor(root, 'activeElement');
+    Object.defineProperty(root, 'activeElement', {
+      configurable: true,
+      get(): never {
+        throw new TypeError('hostile activeElement getter');
+      },
+    });
+    try {
+      el.view = 'months';
+      await el.updateComplete;
+      expect(el.view).to.equal('months');
+      expect(root.querySelector('[part~="view-item"]') != null).to.equal(true);
+    } finally {
+      if (prior) Object.defineProperty(root, 'activeElement', prior);
+      else delete (root as unknown as { activeElement?: unknown }).activeElement;
+    }
   });
 
   it("combines disabled dates, weekdays, predicates, range limits, and semantic day parts", async () => {
@@ -3278,6 +3486,93 @@ describe('range preset identity and open bounds', () => {
 
   const buttons = (el: LyraDatePicker): HTMLButtonElement[] =>
     Array.from(el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="preset-button"]'));
+
+  it('projects preset fields once from own data descriptors, skips unsafe siblings, and retains only source identity', async () => {
+    const target = {
+      label: 'Safe range',
+      start: '2026-08-13',
+      end: '2026-08-19',
+    };
+    let descriptorReads = 0;
+    const source = new Proxy(target, {
+      get(): never {
+        throw new Error('the source preset must not be read after projection');
+      },
+      getOwnPropertyDescriptor(value, key): PropertyDescriptor | undefined {
+        descriptorReads += 1;
+        return Reflect.getOwnPropertyDescriptor(value, key);
+      },
+    });
+    const unsafe = Object.defineProperty({}, 'label', {
+      enumerable: true,
+      get(): never {
+        throw new Error('unsafe preset accessor');
+      },
+    });
+    const el = await pickerWith([
+      unsafe,
+      source,
+    ]);
+
+    expect(buttons(el).map((button) => button.textContent?.trim())).to.deep.equal([
+      'Safe range',
+    ]);
+    expect(descriptorReads, 'one closed-field descriptor read per admitted preset field').to.equal(3);
+
+    target.label = 'Mutated after assignment';
+    el.today = '2026-08-15';
+    await el.updateComplete;
+    expect(buttons(el)[0]!.textContent?.trim()).to.equal('Safe range');
+
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+    expect(el.appliedPreset).to.equal(source);
+  });
+
+  it('omits a revoked preset proxy while retaining a later valid preset and its source identity', async () => {
+    const { proxy: revoked, revoke } = Proxy.revocable(
+      { label: 'Revoked preset', start: '2026-08-13', end: '2026-08-19' },
+      {},
+    );
+    revoke();
+    const source = { label: 'Safe preset', start: '2026-08-13', end: '2026-08-19' };
+
+    const el = await pickerWith([revoked, source]);
+
+    expect(buttons(el).map((button) => button.textContent?.trim())).to.deep.equal([
+      'Safe preset',
+    ]);
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+    expect(el.appliedPreset).to.equal(source);
+  });
+
+  it('admits a live preset-array proxy through bounded descriptors and retains its later valid source', async () => {
+    const values: unknown[] = [];
+    Object.defineProperty(values, '0', {
+      configurable: true,
+      enumerable: true,
+      get(): never {
+        throw new Error('unsafe preset entry');
+      },
+    });
+    const source = { label: 'Safe proxy preset', start: '2026-08-13', end: '2026-08-19' };
+    values[1] = source;
+    const liveProxy = new Proxy(values, {
+      get(): never {
+        throw new Error('preset projection must not iterate a live array proxy');
+      },
+    });
+
+    const el = await pickerWith(liveProxy as unknown as unknown[]);
+
+    expect(buttons(el).map((button) => button.textContent?.trim())).to.deep.equal([
+      'Safe proxy preset',
+    ]);
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+    expect(el.appliedPreset).to.equal(source);
+  });
 
   // "Last 7 days" has to stay RELATIVE across a reload, so a consumer must persist which preset was
   // applied, not the pair it froze to. Re-deriving it by string-matching the value is exactly the

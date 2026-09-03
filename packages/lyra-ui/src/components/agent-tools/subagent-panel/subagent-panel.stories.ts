@@ -1,10 +1,18 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
+import type { SubagentRun } from './subagent-panel.js';
 import './subagent-panel.js';
 
 const meta: Meta = { title: 'Agent Tools/Subagent Panel', component: 'lr-subagent-panel' };
 export default meta;
 type Story = StoryObj;
+
+const depth12Runs: SubagentRun[] = Array.from({ length: 13 }, (_, depth) => ({
+  id: `depth-${depth}`,
+  ...(depth > 0 ? { parentId: `depth-${depth - 1}` } : {}),
+  label: `Depth ${depth}`,
+  status: depth === 11 ? 'error' : depth === 12 ? 'waiting-approval' : 'done',
+}));
 
 export const NestedRuns: Story = {
   render: () => html`<lr-subagent-panel
@@ -46,6 +54,16 @@ export const Narrow320: Story = {
           },
         ]}
       ></lr-subagent-panel>
+    </div>
+  `,
+};
+
+/** Every supported visual indentation depth, with the longest badge plus both action variants. */
+export const Depth12Narrow: Story = {
+  name: 'Depth 12 narrow',
+  render: () => html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-subagent-panel selected-run-id="depth-12" .runs=${depth12Runs}></lr-subagent-panel>
     </div>
   `,
 };

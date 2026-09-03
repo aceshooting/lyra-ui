@@ -35,8 +35,10 @@ export const styles = css`
   }
   [part='actions'] { display: flex; }
   [part='cancel'], [part='retry'] { min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size); padding: var(--lr-space-xs); border: 0; border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; cursor: pointer; }
-  @container (max-inline-size: 319.98px) {
+  @container (max-inline-size: 20rem) {
     [part~='run'] { margin-inline-start: calc(var(--lr-subagent-depth, 0) * var(--lr-space-s)); }
+    [part='run-trigger'] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    [part='status'] { min-inline-size: 0; max-inline-size: 100%; }
     [part='run-row'] { grid-template-columns: 1fr; }
     [part='actions'] { border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border); }
   }

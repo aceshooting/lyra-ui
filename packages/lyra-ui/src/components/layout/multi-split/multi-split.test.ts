@@ -7,7 +7,10 @@ import {
 } from "@open-wc/testing";
 import { sendMouse } from '@web/test-runner-commands';
 import "./multi-split.js";
-import type { LyraMultiSplit } from "./multi-split.js";
+import type {
+  LyraMultiSplit,
+  LyraMultiSplitToggleDetail,
+} from './multi-split.js';
 import { styles } from "./multi-split.styles.js";
 
 function mockWidth(el: HTMLElement, width: number): void {
@@ -251,6 +254,30 @@ it("formats divider indices with the effective locale", async () => {
   const number = new Intl.NumberFormat("ar-EG");
   expect(label).to.include(number.format(1));
   expect(label).to.include(number.format(2));
+});
+
+it('localizes divider percent value text through a per-instance strings override', async () => {
+  const el = (await fixture(html`
+    <lr-multi-split .sizes=${[50, 50]}><div>A</div><div>B</div></lr-multi-split>
+  `)) as LyraMultiSplit;
+  el.strings = { resizeValuePercent: 'Split share {value}' };
+  await elementUpdated(el);
+
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  expect(divider.getAttribute('aria-valuenow')).to.equal('50');
+  expect(divider.getAttribute('aria-valuetext')).to.equal('Split share 50');
+});
+
+it('formats divider percent value text with the effective locale', async () => {
+  const el = (await fixture(html`
+    <lr-multi-split lang="ar-EG" .sizes=${[50, 50]}><div>A</div><div>B</div></lr-multi-split>
+  `)) as LyraMultiSplit;
+  await elementUpdated(el);
+
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  expect(divider.getAttribute('aria-valuetext')).to.include(
+    new Intl.NumberFormat('ar-EG').format(50),
+  );
 });
 
 it("resizes via keyboard on a divider and emits lr-resize", async () => {
@@ -3305,6 +3332,156 @@ it("transitions collapseState across both breakpoints (wide -> rail -> floating)
   }
 });
 
+it('orders a forced responsive drawer exit after collapse-change and ignores a toggle veto', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(html`
+      <lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+      ><div>A</div><div>B</div></lr-multi-split>
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300);
+    el.open = true;
+    await elementUpdated(el);
+
+    const sequence: Array<{
+      type: 'collapse' | 'toggle';
+      state?: string;
+      detail?: LyraMultiSplitToggleDetail;
+      cancelable?: boolean;
+      open: boolean;
+      defaultPrevented?: boolean;
+    }> = [];
+    el.addEventListener('lr-multi-split-collapse-change', (event) => {
+      sequence.push({
+        type: 'collapse',
+        state: (event as CustomEvent<{ state: string }>).detail.state,
+        open: el.open,
+      });
+    });
+    el.addEventListener('lr-toggle', (event) => {
+      event.preventDefault();
+      sequence.push({
+        type: 'toggle',
+        detail: (event as CustomEvent<LyraMultiSplitToggleDetail>).detail,
+        cancelable: event.cancelable,
+        open: el.open,
+        defaultPrevented: event.defaultPrevented,
+      });
+    });
+
+    fireCollapseResize(spy.callbacks[0]!, 800);
+    await elementUpdated(el);
+
+    expect(el.collapseState).to.equal('wide');
+    expect(el.open).to.be.false;
+    expect(sequence).to.deep.equal([
+      { type: 'collapse', state: 'wide', open: true },
+      {
+        type: 'toggle',
+        detail: { open: false },
+        cancelable: false,
+        open: false,
+        defaultPrevented: false,
+      },
+    ]);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('still emits one forced close when a collapse-change listener has already closed the drawer', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(html`
+      <lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+      ><div>A</div><div>B</div></lr-multi-split>
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300);
+    el.open = true;
+    await elementUpdated(el);
+
+    const sequence: Array<{
+      type: 'collapse' | 'toggle';
+      cancelable?: boolean;
+      detail?: LyraMultiSplitToggleDetail;
+      open: boolean;
+    }> = [];
+    el.addEventListener('lr-multi-split-collapse-change', () => {
+      sequence.push({ type: 'collapse', open: el.open });
+      el.open = false;
+    });
+    el.addEventListener('lr-toggle', (event) => {
+      sequence.push({
+        type: 'toggle',
+        detail: (event as CustomEvent<LyraMultiSplitToggleDetail>).detail,
+        cancelable: event.cancelable,
+        open: el.open,
+      });
+    });
+
+    fireCollapseResize(spy.callbacks[0]!, 800);
+    await elementUpdated(el);
+
+    expect(el.collapseState).to.equal('wide');
+    expect(el.open).to.be.false;
+    expect(sequence).to.deep.equal([
+      { type: 'collapse', open: true },
+      { type: 'toggle', detail: { open: false }, cancelable: false, open: false },
+    ]);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('keeps the drawer open when a collapse-change listener restores floating', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(html`
+      <lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+      ><div>A</div><div>B</div></lr-multi-split>
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300);
+    el.open = true;
+    await elementUpdated(el);
+
+    const toggles: Array<{
+      detail: LyraMultiSplitToggleDetail;
+      cancelable: boolean;
+      open: boolean;
+    }> = [];
+    el.addEventListener('lr-multi-split-collapse-change', (event) => {
+      if ((event as CustomEvent<{ state: string }>).detail.state === 'rail') {
+        el.collapseState = 'floating';
+      }
+    });
+    el.addEventListener('lr-toggle', (event) => {
+      toggles.push({
+        detail: (event as CustomEvent<LyraMultiSplitToggleDetail>).detail,
+        cancelable: event.cancelable,
+        open: el.open,
+      });
+    });
+
+    fireCollapseResize(spy.callbacks[0]!, 500);
+    await elementUpdated(el);
+
+    expect(el.collapseState).to.equal('floating');
+    expect(el.open).to.be.true;
+    expect(toggles).to.deep.equal([]);
+  } finally {
+    spy.restore();
+  }
+});
+
 it("fires lr-multi-split-collapse-change only on an actual collapseState transition, not on every resize callback", async () => {
   const spy = installResizeObserverSpy();
   try {
@@ -4029,7 +4206,7 @@ it("traps Tab focus within the floating pane while open, wrapping last->first an
   }
 });
 
-it("closes the floating drawer on Escape", async () => {
+it('proposes Escape dismissal before committing it and honors a veto', async () => {
   const spy = installResizeObserverSpy();
   try {
     // See the fixed-size comment above.
@@ -4046,7 +4223,34 @@ it("closes the floating drawer on Escape", async () => {
     el.open = true;
     await elementUpdated(el);
 
+    const proposals: Array<{
+      detail: LyraMultiSplitToggleDetail;
+      cancelable: boolean;
+      open: boolean;
+      defaultPrevented: boolean;
+    }> = [];
+    const veto = (event: Event): void => {
+      event.preventDefault();
+      proposals.push({
+        detail: (event as CustomEvent<LyraMultiSplitToggleDetail>).detail,
+        cancelable: event.cancelable,
+        open: el.open,
+        defaultPrevented: event.defaultPrevented,
+      });
+    };
+    el.addEventListener('lr-toggle', veto);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await elementUpdated(el);
+    expect(el.open).to.be.true;
+    expect(proposals).to.deep.equal([{
+      detail: { open: false },
+      cancelable: true,
+      open: true,
+      defaultPrevented: true,
+    }]);
+
+    el.removeEventListener('lr-toggle', veto);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await elementUpdated(el);
     expect(el.open).to.be.false;
   } finally {
@@ -4054,7 +4258,7 @@ it("closes the floating drawer on Escape", async () => {
   }
 });
 
-it("closes the floating drawer on backdrop click", async () => {
+it('routes backdrop dismissal through the same cancelable proposal and keeps direct writes silent', async () => {
   const spy = installResizeObserverSpy();
   try {
     // See the fixed-size comment above.
@@ -4071,9 +4275,154 @@ it("closes the floating drawer on backdrop click", async () => {
     el.open = true;
     await elementUpdated(el);
 
+    const proposals: Array<{
+      detail: LyraMultiSplitToggleDetail;
+      cancelable: boolean;
+      open: boolean;
+    }> = [];
+    el.addEventListener('lr-toggle', (event) => {
+      proposals.push({
+        detail: (event as CustomEvent<LyraMultiSplitToggleDetail>).detail,
+        cancelable: event.cancelable,
+        open: el.open,
+      });
+    });
     (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
     await elementUpdated(el);
     expect(el.open).to.be.false;
+    expect(proposals).to.deep.equal([{
+      detail: { open: false },
+      cancelable: true,
+      open: true,
+    }]);
+
+    el.open = true;
+    await elementUpdated(el);
+    el.open = false;
+    await elementUpdated(el);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await elementUpdated(el);
+    expect(proposals).to.have.lengthOf(1);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('does not overwrite a synchronous effective-collapse change during dismissal proposal', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+        ><div>A</div>
+        <div>B</div></lr-multi-split
+      >`
+    )) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300);
+    el.open = true;
+    await elementUpdated(el);
+
+    const sequence: Array<{
+      type: 'collapse' | 'toggle';
+      state?: string;
+      detail?: LyraMultiSplitToggleDetail;
+      cancelable?: boolean;
+      open: boolean;
+    }> = [];
+    el.addEventListener('lr-multi-split-collapse-change', (event) => {
+      sequence.push({
+        type: 'collapse',
+        state: (event as CustomEvent<{ state: string }>).detail.state,
+        open: el.open,
+      });
+    });
+    el.addEventListener('lr-toggle', (event) => {
+      sequence.push({
+        type: 'toggle',
+        detail: (event as CustomEvent<LyraMultiSplitToggleDetail>).detail,
+        cancelable: event.cancelable,
+        open: el.open,
+      });
+      if (event.cancelable) el.collapseState = 'rail';
+    });
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await elementUpdated(el);
+
+    expect(el.collapseState).to.equal('rail');
+    expect(el.open).to.be.false;
+    expect(sequence).to.deep.equal([
+      { type: 'toggle', detail: { open: false }, cancelable: true, open: true },
+      { type: 'collapse', state: 'rail', open: true },
+      { type: 'toggle', detail: { open: false }, cancelable: false, open: false },
+    ]);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('aborts dismissal when a toggle listener restores open in the same call stack', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(html`
+      <lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+      ><div>A</div><div>B</div></lr-multi-split>
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300);
+    el.open = true;
+    await elementUpdated(el);
+
+    let proposals = 0;
+    el.addEventListener('lr-toggle', (event) => {
+      if (!event.cancelable) return;
+      proposals += 1;
+      el.open = false;
+      el.open = true;
+    });
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await elementUpdated(el);
+
+    expect(proposals).to.equal(1);
+    expect(el.open).to.be.true;
+  } finally {
+    spy.restore();
+  }
+});
+
+it('aborts dismissal when a toggle listener restores the effective collapse state in the same call stack', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(html`
+      <lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+      ><div>A</div><div>B</div></lr-multi-split>
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300);
+    el.open = true;
+    await elementUpdated(el);
+
+    let proposals = 0;
+    el.addEventListener('lr-toggle', (event) => {
+      if (!event.cancelable) return;
+      proposals += 1;
+      el.collapse = 'none';
+      el.collapse = 'start';
+    });
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await elementUpdated(el);
+
+    expect(proposals).to.equal(1);
+    expect(el.collapseState).to.equal('floating');
+    expect(el.open).to.be.true;
   } finally {
     spy.restore();
   }

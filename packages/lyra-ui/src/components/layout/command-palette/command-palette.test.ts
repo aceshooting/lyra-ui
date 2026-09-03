@@ -19,6 +19,55 @@ it("provides hover feedback for enabled command rows", () => {
   );
 });
 
+it('rejects accessor-backed commands without invoking them while retaining source identity for selection', async () => {
+  let labelReads = 0;
+  const accessorBacked: Record<string, unknown> = {
+    commandId: 'accessor-backed',
+    onSelect: () => undefined,
+  };
+  Object.defineProperty(accessorBacked, 'label', {
+    enumerable: true,
+    get(): never {
+      labelReads += 1;
+      throw new Error('do not invoke command accessors');
+    },
+  });
+  const command = { commandId: 'safe', label: 'Safe command', onSelect: () => undefined };
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  el.commands = [
+    accessorBacked as unknown as import('./command-palette.js').LyraCommand,
+    command,
+  ];
+  el.openPalette();
+  await el.updateComplete;
+
+  expect(labelReads).to.equal(0);
+  const selected = oneEvent(el, 'lr-select');
+  (el.shadowRoot!.querySelector('[part="command"]') as HTMLButtonElement).click();
+  expect((await selected as CustomEvent).detail.command).to.equal(command);
+});
+
+it('inherits a 20px command action font and renders its 1em glyph at that size', async () => {
+  const el = (await fixture(html`
+    <lr-command-palette
+      style="font-size:20px"
+      .commands=${[{
+        commandId: 'font-proof',
+        label: 'Font proof',
+        icon: html`<span style="display:inline-block;inline-size:1em;block-size:1em"></span>`,
+      }]}
+    ></lr-command-palette>
+  `)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+
+  const action = el.shadowRoot!.querySelector('[part="command"]') as HTMLButtonElement;
+  const glyph = el.shadowRoot!.querySelector('[part="icon"] span') as HTMLElement;
+  expect(getComputedStyle(action).fontSize).to.equal('20px');
+  expect(parseFloat(getComputedStyle(glyph).inlineSize)).to.equal(20);
+  expect(parseFloat(getComputedStyle(glyph).blockSize)).to.equal(20);
+});
+
 it("keeps an explicitly empty aria-label distinct from an omitted one", async () => {
   const omitted = (await fixture(
     html`<lr-command-palette></lr-command-palette>`
@@ -1028,10 +1077,78 @@ it("renders the search-input's ::placeholder in the shared quiet-text token's co
   expect(getComputedStyle(input, "::placeholder").opacity).to.equal("1");
 });
 
-it("resets the native search-input cancel glyph instead of leaving the browser default", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(/\[part='input'\]::-webkit-search-cancel-button/);
-  expect(css).to.match(/\[part='input'\]::-webkit-search-decoration/);
+it("resets supported native search decorations without adding a Firefox-only control", async () => {
+  const el = (await fixture(
+    html`<lr-command-palette .commands=${[{ commandId: "search", label: "Search" }]}></lr-command-palette>`
+  )) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  if (!CSS.supports('selector(input::-webkit-search-cancel-button)')) {
+    // Firefox exposes no WebKit search pseudo-controls; the component keeps one native search
+    // input rather than appending a browser-specific clear button of its own.
+    expect(search.querySelectorAll("button").length).to.equal(0);
+    return;
+  }
+
+  // Chromium/WebKit do not consistently surface pseudo-element `appearance` through
+  // getComputedStyle(). Instead, prove the real native affordance is actionable when deliberately
+  // restored, then prove the component's rendered styling removes that exact hit target.
+  const nativeDecoration = document.createElement('style');
+  nativeDecoration.textContent = `
+    [part='input']::-webkit-search-cancel-button {
+      appearance: auto !important;
+      -webkit-appearance: searchfield-cancel-button !important;
+      display: block !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+  `;
+  el.shadowRoot!.append(nativeDecoration);
+  input.focus();
+  const rect = input.getBoundingClientRect();
+  try {
+    let cancelPosition: [number, number] | undefined;
+    for (let offset = 2; offset <= 48; offset += 2) {
+      input.value = 'clear me';
+      input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
+      );
+      const candidate: [number, number] = [
+        Math.round(rect.right - offset),
+        Math.round(rect.top + rect.height / 2),
+      ];
+      await sendMouse({ type: 'click', position: candidate });
+      if (input.value === '') {
+        cancelPosition = candidate;
+        break;
+      }
+    }
+    expect(
+      cancelPosition !== undefined,
+      'positive control exposes the native clear action'
+    ).to.equal(true);
+
+    input.value = 'keep me';
+    input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+    nativeDecoration.remove();
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+    await sendMouse({ type: 'click', position: cancelPosition! });
+    expect(
+      input.value,
+      'component styling removes the native clear action'
+    ).to.equal('keep me');
+  } finally {
+    nativeDecoration.remove();
+    await resetMouse();
+  }
 });
 
 it("shrinks a long, unbreakable command description instead of overflowing the dialog", async () => {

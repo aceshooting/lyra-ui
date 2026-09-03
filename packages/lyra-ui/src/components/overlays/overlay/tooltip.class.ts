@@ -28,6 +28,7 @@ import {
   type VirtualAnchor,
 } from '../../../internal/positioner-geometry.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import {
   omittedEmptyStringConverter,
@@ -66,6 +67,19 @@ const DEFAULT_DISTANCE = 8;
  * attach an open root during upgrade/initialization without polling forever when a legitimate
  * custom element intentionally remains in the light DOM. */
 const MAX_SHADOW_CONTENT_SCAN_FRAMES = 4;
+
+/** A partial DOM can report a structural lookalike from `activeElement`. The composed-parent walk
+ * behind `composedContains()` requires a native Element, so contain failed brand checks here. */
+function safelyComposedContains(container: Element, candidate: unknown): boolean {
+  try {
+    return (
+      (candidate as Partial<Node> | null)?.nodeType === 1 &&
+      composedContains(container, candidate as Element)
+    );
+  } catch {
+    return false;
+  }
+}
 
 /** One keyword of the space-separated `trigger` list. */
 export type LyraTooltipTrigger = 'hover' | 'focus' | 'click' | 'manual';
@@ -604,8 +618,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
 
   private shouldRestoreFocusAfterEscape(): boolean {
     if (this.virtualAnchor) return this.returnFocusTo !== undefined;
-    const active = this.ownerDocument.activeElement;
-    return active !== null && composedContains(this, active);
+    const active = activeElementIn(this.ownerDocument);
+    return safelyComposedContains(this, active);
   }
 
   private get requiresOverlayManager(): boolean {
@@ -929,8 +943,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     } catch {
       /* fall through to the focus check */
     }
-    const active = trigger.ownerDocument.activeElement;
-    return active !== null && composedContains(trigger, active);
+    const active = activeElementIn(trigger.ownerDocument);
+    return safelyComposedContains(trigger, active);
   }
 
   private adoptTrigger(next: HTMLElement | undefined): void {

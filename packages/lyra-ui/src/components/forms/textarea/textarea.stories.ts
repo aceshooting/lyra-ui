@@ -20,6 +20,26 @@ export const Default: Story = {
   `,
 };
 
+/** Complete form chrome, count, error text, and a long RTL value at the narrow allocation. */
+export const NarrowLongRtl: Story = {
+  name: 'Narrow long RTL',
+  render: () => html`
+    <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-textarea
+        label="ملخص الطلب"
+        hint="أضف السياق الذي يحتاجه القارئ التالي."
+        error-text="تحقق من اكتمال الملخص قبل الإرسال."
+        placeholder="اكتب الملخص المطوّل هنا…"
+        value="هذا ملخص عربي طويل يوضح السياق الكامل للطلب ويتضمن تفاصيل كافية لاختبار التفاف النص والعداد ورسالة التحقق داخل المساحة الضيقة."
+        rows="4"
+        maxlength="240"
+        with-count
+        required
+      ></lr-textarea>
+    </div>
+  `,
+};
+
 export const AutoResize: Story = {
   render: () => html`
     <lr-textarea

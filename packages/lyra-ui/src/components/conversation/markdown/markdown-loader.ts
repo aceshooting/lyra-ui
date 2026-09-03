@@ -3,6 +3,22 @@ import {
   resolveOptionalPeerCapability,
   type HtmlSanitizer,
 } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const MARKDOWN_PARSER_WARNING_KEY = 'lyra-markdown-marked-unavailable';
+const MARKDOWN_PARSER_WARNING =
+  '<lr-markdown>/<lr-markdown-core>: Markdown parsing is unavailable because the optional marked peer could not load. Content is rendered as plain text.';
+const MARKDOWN_SANITIZER_WARNING_KEY = 'lyra-markdown-dompurify-unavailable';
+const MARKDOWN_SANITIZER_WARNING =
+  '<lr-markdown>/<lr-markdown-core>: HTML sanitization is unavailable because the optional DOMPurify peer could not load. Content is rendered as plain text unless trusted HTML is explicitly selected.';
+
+function warnMarkdownParserUnavailable(): void {
+  devWarnOnce(MARKDOWN_PARSER_WARNING_KEY, MARKDOWN_PARSER_WARNING);
+}
+
+function warnMarkdownSanitizerUnavailable(): void {
+  devWarnOnce(MARKDOWN_SANITIZER_WARNING_KEY, MARKDOWN_SANITIZER_WARNING);
+}
 
 /**
  * The configurable parser capability exposed by both Markdown variants' `marked` getter.
@@ -144,7 +160,7 @@ let resolvedDeps: MarkdownDeps | undefined;
  * set `html-mode="trusted"` and doesn't need `dompurify` at all — degrades to
  * "that one half is missing" rather than failing outright. Exported (in
  * addition to the cached `loadMarkdownDeps()` below) so both failure paths —
- * and the real caught error each one logs — are directly testable without
+ * and their development diagnostics — are directly testable without
  * needing to actually uninstall either package.
  */
 export async function loadMarkdownAndSanitizer(
@@ -154,11 +170,8 @@ export async function loadMarkdownAndSanitizer(
   let marked: MarkedModule | undefined;
   try {
     marked = resolveOptionalPeerCapability(await importMarked(), isMarkedModule) ?? undefined;
-  } catch (err) {
-    console.warn(
-      '<lr-markdown> needs the optional peer dependency `marked` to parse Markdown — install it with `pnpm add marked`:',
-      err,
-    );
+  } catch {
+    warnMarkdownParserUnavailable();
   }
 
   let DOMPurify: HtmlSanitizer | undefined;
@@ -169,12 +182,8 @@ export async function loadMarkdownAndSanitizer(
     // relevant regression (sanitization would silently no-op). Mirrors email-loader.ts's and
     // calendar-loader.ts's identical `module.default ?? module` fallback.
     DOMPurify = resolveOptionalPeerCapability(await importDompurify(), isHtmlSanitizer) ?? undefined;
-  } catch (err) {
-    console.warn(
-      '<lr-markdown> needs the optional peer dependency `dompurify` to sanitize rendered HTML — install it ' +
-        'with `pnpm add dompurify`. Until then, content only renders when `html-mode="trusted"` is explicitly set:',
-      err,
-    );
+  } catch {
+    warnMarkdownSanitizerUnavailable();
   }
 
   return { marked, DOMPurify };

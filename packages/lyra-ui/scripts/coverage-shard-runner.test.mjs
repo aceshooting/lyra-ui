@@ -207,6 +207,45 @@ test('runs exactly the deterministic shard selection and writes its manifest bef
   }
 });
 
+test('runs and propagates the owner native verification outside coverage', async () => {
+  const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-native-scrollbar-'));
+  try {
+    const owner = ['src/components/data/data-grid/data-grid.test.ts'];
+    const nativeCalls = [];
+    const status = runCoverageShard(1, owner, {
+      coverageDirectory: fixture,
+      environment: { WTR_BROWSER: 'webkit', SENTINEL: 'preserved' },
+      packageDirectory: join(fixture, 'package'),
+      spawn: () => ({ status: 0 }),
+      runNativeScrollbarVerification: (files, options) => {
+        nativeCalls.push({ files, options });
+        return 7;
+      },
+    });
+
+    assert.equal(status, 7);
+    assert.equal(nativeCalls.length, 1);
+    assert.deepEqual(nativeCalls[0].files, owner);
+    assert.equal(nativeCalls[0].options.browser, 'webkit');
+    assert.equal(nativeCalls[0].options.environment.SENTINEL, 'preserved');
+
+    let ranNative = false;
+    const failed = runCoverageShard(1, owner, {
+      coverageDirectory: fixture,
+      packageDirectory: join(fixture, 'package'),
+      spawn: () => ({ status: 2 }),
+      runNativeScrollbarVerification: () => {
+        ranNative = true;
+        return 0;
+      },
+    });
+    assert.equal(failed, 2);
+    assert.equal(ranNative, false);
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
 test('validates deterministic, disjoint, exhaustive shard manifests', async () => {
   const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-manifests-'));
   try {

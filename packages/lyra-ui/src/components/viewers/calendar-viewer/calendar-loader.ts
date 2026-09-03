@@ -1,4 +1,8 @@
 import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const CALENDAR_ICAL_WARNING_KEY = 'lyra-calendar-viewer-ical-unavailable';
+const CALENDAR_ICAL_WARNING = '<lr-calendar-viewer> could not load its optional ical.js peer.';
 
 export interface IcalTimeApi {
   toJSDate(): Date;
@@ -48,11 +52,8 @@ export async function loadIcalDeps(
 ): Promise<IcalApi | null> {
   try {
     return resolveOptionalPeerCapability(await importIcal(), isIcalApi);
-  } catch (error) {
-    console.warn(
-      '<lr-calendar-viewer> needs the optional peer dependency `ical.js` to parse .ics calendars — install it with `pnpm add ical.js`:',
-      error,
-    );
+  } catch {
+    devWarnOnce(CALENDAR_ICAL_WARNING_KEY, CALENDAR_ICAL_WARNING);
     return null;
   }
 }

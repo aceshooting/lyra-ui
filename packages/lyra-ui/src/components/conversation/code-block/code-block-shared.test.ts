@@ -4,6 +4,7 @@ import {
   CodeBlockInteractionController,
   codeBlockActiveHighlightLineSet,
   codeBlockEventLine,
+  codeBlockLineHasFocus,
   codeBlockLineHighlightSet,
   codeBlockLineTransformer,
   parseHighlightLines,
@@ -12,6 +13,20 @@ import {
   scrollCodeBlockToAnchor,
 } from "./code-block-shared.js";
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
+
+type LitWarningRuntime = typeof globalThis & { litIssuedWarnings?: Set<string> };
+
+function breakActiveElement(root: DocumentOrShadowRoot): () => void {
+  Object.defineProperty(root, 'activeElement', {
+    configurable: true,
+    get(): never {
+      throw new Error('active-element getter failed');
+    },
+  });
+  return () => {
+    delete (root as unknown as Record<string, unknown>)['activeElement'];
+  };
+}
 
 describe("parseHighlightLines", () => {
   it("parses a single range", () => {
@@ -38,19 +53,35 @@ describe("parseHighlightLines", () => {
     ).to.deep.equal([1, 2, 3, 4]);
   });
 
-  it("ignores an invalid segment and warns, keeping the valid ones", () => {
-    const warn = console.warn;
-    let warned = false;
-    console.warn = () => {
-      warned = true;
-    };
+  it('uses one fixed, bounded development diagnostic without exposing highlight values', () => {
+    const runtime = globalThis as LitWarningRuntime;
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const originalWarn = console.warn;
+    const messages: string[] = [];
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
     try {
       expect(
-        [...parseHighlightLines("2,garbage,4")].sort((a, b) => a - b)
+        [...parseHighlightLines('2,private-highlight-value,4')].sort((a, b) => a - b)
       ).to.deep.equal([2, 4]);
-      expect(warned).to.be.true;
+      expect(
+        [...parseHighlightLines('2,private-highlight-value,4')].sort((a, b) => a - b)
+      ).to.deep.equal([2, 4]);
+      expect(messages).to.have.lengthOf(1);
+      expect(messages[0]).to.contain('highlight-lines');
+      const diagnostics = messages.join('\n');
+      expect(diagnostics).to.not.contain('private-highlight-value');
+
+      messages.length = 0;
+      delete runtime.litIssuedWarnings;
+      expect(
+        [...parseHighlightLines('2,private-highlight-value,4')].sort((a, b) => a - b)
+      ).to.deep.equal([2, 4]);
+      expect(messages).to.deep.equal([]);
     } finally {
-      console.warn = warn;
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+      console.warn = originalWarn;
     }
   });
 
@@ -411,6 +442,80 @@ describe("owner-realm line interactions", () => {
     } finally {
       host.remove();
       external.remove();
+    }
+  });
+
+  it('restores a replaced focused line when the owner document activeElement getter throws', () => {
+    const element = document.createElement('div');
+    const root = element.attachShadow({ mode: 'open' });
+    const host = Object.assign(element, { renderRoot: root });
+    const focusedLine = document.createElement('button');
+    focusedLine.dataset['line'] = '1';
+    focusedLine.setAttribute('part', 'line-button');
+    const replacement = focusedLine.cloneNode() as HTMLButtonElement;
+    root.append(focusedLine);
+    document.body.append(host);
+    let restore: (() => void) | undefined;
+    try {
+      focusedLine.focus();
+      focusedLine.remove();
+      root.append(replacement);
+      restore = breakActiveElement(host.ownerDocument);
+      let restored = false;
+      expect(() => {
+        restored = restoreCodeBlockLineFocus(host, 1);
+      }).to.not.throw();
+      expect(restored).to.equal(true);
+      expect(root.activeElement === replacement).to.equal(true);
+    } finally {
+      restore?.();
+      host.remove();
+    }
+  });
+
+  it('restores a replaced focused line when a partial owner document has no activeElement', () => {
+    const element = document.createElement('div');
+    const root = element.attachShadow({ mode: 'open' });
+    const host = Object.assign(element, { renderRoot: root });
+    const focusedLine = document.createElement('button');
+    focusedLine.dataset['line'] = '1';
+    focusedLine.setAttribute('part', 'line-button');
+    const replacement = focusedLine.cloneNode() as HTMLButtonElement;
+    root.append(focusedLine);
+    document.body.append(host);
+    try {
+      focusedLine.focus();
+      focusedLine.remove();
+      root.append(replacement);
+      Object.defineProperty(host, 'ownerDocument', {
+        configurable: true,
+        value: { body: document.body },
+      });
+      expect(restoreCodeBlockLineFocus(host, 1)).to.equal(true);
+      expect(root.activeElement === replacement).to.equal(true);
+    } finally {
+      delete (host as unknown as Record<string, unknown>)['ownerDocument'];
+      host.remove();
+    }
+  });
+
+  it('contains a throwing shadow-root activeElement getter during update focus checks', () => {
+    const element = document.createElement('div');
+    const root = element.attachShadow({ mode: 'open' });
+    const host = Object.assign(element, { renderRoot: root });
+    const line = document.createElement('button');
+    line.dataset['line'] = '1';
+    line.setAttribute('part', 'line-button');
+    root.append(line);
+    document.body.append(host);
+    const restore = breakActiveElement(root);
+    try {
+      expect(() => codeBlockLineHasFocus(host)).to.not.throw();
+      expect(codeBlockLineHasFocus(host)).to.equal(false);
+      expect(() => restoreCodeBlockLineFocus(host, 1)).to.not.throw();
+    } finally {
+      restore();
+      host.remove();
     }
   });
 

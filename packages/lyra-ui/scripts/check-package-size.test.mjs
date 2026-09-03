@@ -110,6 +110,60 @@ test('reports byte, file-count, and dangling-map regressions', () => {
   );
 });
 
+test('rejects packed fixture, test, and story paths without changing the ceilings', () => {
+  assert.deepEqual(
+    packageBudgetFindings(
+      {
+        packedBytes: 884,
+        unpackedBytes: 3_000,
+        fileCount: 26,
+        files: [
+          { path: 'dist/components/viewers/docx-viewer/fixtures/minimal-docx-fixture.d.ts' },
+          { path: 'dist/components/viewers/docx-viewer/fixtures/minimal-docx-fixture.js' },
+          { path: 'dist/components/viewers/ebook-viewer/fixtures/minimal-epub-fixture.d.ts' },
+          { path: 'dist/components/viewers/ebook-viewer/fixtures/minimal-epub-fixture.js' },
+          { path: 'dist/components/viewers/spreadsheet-viewer/fixtures/minimal-xlsx-fixture.d.ts' },
+          { path: 'dist/components/viewers/spreadsheet-viewer/fixtures/minimal-xlsx-fixture.js' },
+          { path: 'dist/components/forms/input/input.test.js' },
+          { path: 'dist/components/forms/input/input.stories.d.ts' },
+          { path: 'dist/components/forms/input/input.js' },
+          { path: 'dist/components/agent-tools/test-results/test-results.js' },
+          { path: 'dist/components/utility/storybook-link/storybook-link.js' },
+          { path: 'dist/components/viewers/fixtures-browser/fixtures-browser.js' },
+        ],
+      },
+      budgets,
+    ),
+    [
+      'published tarball contains 6 build-only fixture path(s)',
+      'published tarball contains 1 test path(s)',
+      'published tarball contains 1 story path(s)',
+    ],
+  );
+});
+
+test('normalizes Windows archive paths without matching plural fixture near-misses', () => {
+  assert.deepEqual(
+    packageBudgetFindings(
+      {
+        packedBytes: 884,
+        unpackedBytes: 3_000,
+        fileCount: 26,
+        files: [
+          {
+            path: 'dist\\components\\viewers\\spreadsheet-viewer\\fixtures\\minimal-xlsx-fixture.d.ts',
+          },
+          {
+            path: 'dist\\components\\viewers\\fixtures-browser\\fixtures-browser.d.ts',
+          },
+        ],
+      },
+      budgets,
+    ),
+    ['published tarball contains 1 build-only fixture path(s)'],
+  );
+});
+
 test('labels the measured packed exception instead of implying the 25% target passed', () => {
   const summary = formatPackageSummary(
     { packedBytes: 884, unpackedBytes: 3_000, fileCount: 26, files: [] },

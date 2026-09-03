@@ -27,6 +27,7 @@ export const styles = css`
   [part='toggle'] {
     /* Keep the glyph compact while giving the interactive box the shared
        minimum target size. */
+    font: inherit;
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
     min-inline-size: var(--lr-icon-button-size);

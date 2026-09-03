@@ -235,11 +235,18 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   }
 
   private emitChange(messages = this.messages, variables = this.variables): void {
+    this.emitNormalizedChange(this.uniqueMessages(messages), variables);
+  }
+
+  private emitNormalizedChange(
+    messages: readonly PromptStudioMessage[],
+    variables = this.variables,
+  ): void {
     // The proposal is a snapshot, mirroring requestMessageMove()'s identical cancelable-veto
     // pattern below: a listener may hold, persist, or alter its own copy without mutating the
     // component's accepted next state behind the veto point.
     const proposal: PromptStudioState = {
-      messages: this.uniqueMessages(messages).map((message) => ({ ...message })),
+      messages: messages.map((message) => ({ ...message })),
       variables: this.variableItems(variables).map((variable) => ({ ...variable })),
     };
     if (this.emit('lr-change', proposal, { cancelable: true }).defaultPrevented) return;
@@ -249,7 +256,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   private updateMessage(id: string, patch: Partial<PromptStudioMessage>): void {
     let found = false;
-    this.emitChange(this.uniqueMessages().map((message) => {
+    this.emitNormalizedChange(this.uniqueMessages().map((message) => {
       if (!found && message.id === id) {
         found = true;
         return { ...message, ...patch };
@@ -260,7 +267,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   private removeMessage(id: string): void {
     let removed = false;
-    this.emitChange(this.uniqueMessages().filter((message) => {
+    this.emitNormalizedChange(this.uniqueMessages().filter((message) => {
       if (!removed && message.id === id) {
         removed = true;
         return false;
@@ -279,7 +286,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
       id = `${base}-${suffix}`;
       suffix++;
     }
-    this.emitChange([...messages, { id, role: 'user', content: '' }]);
+    this.emitNormalizedChange([...messages, { id, role: 'user', content: '' }]);
   }
 
   private updateVariable(index: number, patch: Partial<PromptStudioVariable>): void {
@@ -331,7 +338,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
             ? 'move-message-up'
             : 'move-message-down';
     this.pendingMessageMoveFocus = { messageId, part };
-    this.emitChange(nextMessages);
+    this.emitNormalizedChange(nextMessages);
     this.scheduleAfterUpdate(() => this.restoreMessageMoveFocus(), 'prompt-studio-message-reorder-focus');
   }
 
@@ -374,7 +381,11 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   private onFocus = (): void => { this.emit('focus'); };
   private onBlur = (): void => { this.emit('blur'); };
 
-  private renderMessage = (message: PromptStudioMessage, index: number): TemplateResult => {
+  private renderMessage = (
+    message: PromptStudioMessage,
+    index: number,
+    messageCount: number,
+  ): TemplateResult => {
     const displayIndex = getNumberFormat(this.effectiveLocale).format(index + 1);
     const role = this.roleLabel(message.role);
     return html`<li part="message" data-message-id=${message.id}>
@@ -424,7 +435,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
               <button
                 part="move-message-down"
                 type="button"
-                ?disabled=${this.disabled || index === this.uniqueMessages().length - 1}
+                ?disabled=${this.disabled || index === messageCount - 1}
                 aria-label=${this.localize('moveDown')}
                 @click=${() => this.requestMessageMove(message.id, index, 1)}
               >
@@ -454,6 +465,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     const label = this.label || heading;
     const messages = this.uniqueMessages();
     const variables = this.variableItems();
+    const versions = this.uniqueVersions();
     return html`
       <section part="base" aria-label=${overallSemanticLabel(this, label) ?? nothing}>
         <header part="toolbar">
@@ -472,7 +484,11 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
         </header>
         <div part="editor">
           <section aria-label=${this.localize('promptStudioMessages')}>
-            <ol part="messages">${repeat(messages, (message) => message.id, this.renderMessage)}</ol>
+            <ol part="messages">${repeat(
+              messages,
+              (message) => message.id,
+              (message, index) => this.renderMessage(message, index, messages.length),
+            )}</ol>
             <button part="add-message" type="button" ?disabled=${this.disabled} @click=${this.addMessage}>
               ${this.localize('promptStudioAddMessage')}
             </button>
@@ -515,10 +531,10 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
                 </section>
               `
             : nothing}
-          ${this.uniqueVersions().length
+          ${versions.length
             ? html`
                 <nav part="versions" aria-label=${this.localize('promptStudioVersions')}>
-                  ${this.uniqueVersions().map(
+                  ${versions.map(
                     (version) => html`
                       <button
                         part="version"

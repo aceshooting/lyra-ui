@@ -52,6 +52,29 @@ export const MixedStatuses: Story = {
   render: () => html`<lr-test-results style="max-width:32rem" .suites=${mixedSuites}></lr-test-results>`,
 };
 
+export const LocalizedFailureDetailControl: Story = {
+  name: 'Localized failure-detail control name',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The failure-detail toggle joins its suite and test names through the per-instance localized separator.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-test-results
+      style="max-width:32rem"
+      .autoExpandFailures=${false}
+      .suites=${mixedSuites}
+      .strings=${{
+        accessibleLabelSeparator: ' / ',
+        testResultsExpandTest: 'Open {name}',
+      }}
+    ></lr-test-results>
+  `,
+};
+
 export const Empty: Story = {
   render: () => html`<lr-test-results></lr-test-results>`,
 };

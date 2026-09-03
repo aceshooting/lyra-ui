@@ -18,6 +18,12 @@ import {
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { eyeIcon } from '../../../internal/icons.js';
 import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
 import {
@@ -60,6 +66,66 @@ const SMALL_STEP = 1;
 const LARGE_STEP_MULTIPLIER = 10;
 /** The order the format toggle cycles through. */
 const FORMAT_CYCLE: LyraColorPickerFormat[] = ['hex', 'rgb', 'hsl', 'hsv'];
+const MAX_COLOR_PICKER_SWATCHES = 10_000;
+const EMPTY_COLOR_PICKER_SWATCHES: readonly LyraColorPickerSwatch[] = Object.freeze([]);
+
+function projectColorPickerSwatches(value: unknown): readonly LyraColorPickerSwatch[] {
+  try {
+    if (typeof value === 'string') {
+      return Object.freeze(
+        value
+          .split(';')
+          .slice(0, MAX_COLOR_PICKER_SWATCHES)
+          .flatMap((entry) => {
+            const color = entry.trim();
+            return color ? [Object.freeze({ color })] : [];
+          }),
+      );
+    }
+    if (!Array.isArray(value)) return EMPTY_COLOR_PICKER_SWATCHES;
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return EMPTY_COLOR_PICKER_SWATCHES;
+    const swatches: LyraColorPickerSwatch[] = [];
+    for (let index = 0; index < Math.min(length.value, MAX_COLOR_PICKER_SWATCHES); index += 1) {
+      const entry = getOwnDataDescriptor(value, String(index));
+      if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+      if (typeof entry.value === 'string') {
+        const color = entry.value.trim();
+        if (color) swatches.push(Object.freeze({ color }));
+        continue;
+      }
+      if (entry.value === null || typeof entry.value !== 'object' || Array.isArray(entry.value)) continue;
+      const color = getOwnDataDescriptor(entry.value, 'color');
+      const label = getOwnDataDescriptor(entry.value, 'label');
+      if (
+        color === MISSING_OWN_DATA_DESCRIPTOR ||
+        color === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof color.value !== 'string' ||
+        color.value.trim() === ''
+      )
+        continue;
+      const labelValue = label === MISSING_OWN_DATA_DESCRIPTOR || label === UNSAFE_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : typeof label.value === 'string' && label.value.trim()
+          ? label.value
+          : undefined;
+      swatches.push(Object.freeze({
+        color: color.value.trim(),
+        ...(labelValue === undefined ? {} : { label: labelValue }),
+      }));
+    }
+    return Object.freeze(swatches);
+  } catch {
+    return EMPTY_COLOR_PICKER_SWATCHES;
+  }
+}
 
 /** The subset of the EyeDropper API this component uses, feature-detected at connect. */
 interface EyeDropperLike {
@@ -575,7 +641,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   override blur(): void {
-    const active = this.shadowRoot?.activeElement;
+    const active = activeElementIn(this.shadowRoot);
     if (active && typeof (active as Partial<HTMLElement>).blur === 'function') {
       (active as HTMLElement).blur();
     }
@@ -650,24 +716,16 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     return changed;
   }
 
-  private normalizedSwatches(): LyraColorPickerSwatch[] {
-    const raw = this.swatches;
-    const entries: (string | LyraColorPickerSwatch)[] = Array.isArray(raw)
-      ? raw
-      : String(raw ?? '').split(';');
-    const result: LyraColorPickerSwatch[] = [];
-    for (const entry of entries) {
-      if (typeof entry === 'string') {
-        const color = entry.trim();
-        if (color) result.push({ color });
-      } else if (entry && typeof entry.color === 'string' && entry.color.trim()) {
-        const label = typeof entry.label === 'string' && entry.label.trim()
-          ? entry.label
-          : undefined;
-        result.push({ color: entry.color.trim(), ...(label === undefined ? {} : { label }) });
-      }
+  private swatchSource: unknown;
+  private projectedSwatches: readonly LyraColorPickerSwatch[] = EMPTY_COLOR_PICKER_SWATCHES;
+
+  private normalizedSwatches(): readonly LyraColorPickerSwatch[] {
+    const source = this.swatches;
+    if (source !== this.swatchSource) {
+      this.swatchSource = source;
+      this.projectedSwatches = projectColorPickerSwatches(source);
     }
-    return result;
+    return this.projectedSwatches;
   }
 
   // -------------------------------------------------------------------------
@@ -1152,7 +1210,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     </div>`;
   }
 
-  private renderSwatches(entries: LyraColorPickerSwatch[]): TemplateResult {
+  private renderSwatches(entries: readonly LyraColorPickerSwatch[]): TemplateResult {
     return html`<div part="swatches" role="group" aria-label=${this.localize('colorPickerSwatches')}>
       ${entries.map((entry) => {
         const parsed = parseColor(entry.color);

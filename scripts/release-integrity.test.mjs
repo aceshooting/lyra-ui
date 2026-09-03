@@ -1,7 +1,18 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -35,6 +46,664 @@ import { updateReadmeStatusLine } from './update-readme-status.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const sha = '0123456789abcdef0123456789abcdef01234567';
+
+function exactShellCommandCount(source, command) {
+  return source
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line === command).length;
+}
+
+function exactTopLevelShellCommandCount(source, command) {
+  return source.split('\n').filter((line) => line === command).length;
+}
+
+function exactTopLevelShellCommandIndex(source, command) {
+  return source.split('\n').findIndex((line) => line === command);
+}
+
+function localCiPrimaryBlock(source) {
+  const primaryStart = source.indexOf('\nrequire_primary_toolchain\n');
+  const platformStart = source.indexOf('\nif [[ "$RUN_PLATFORM" == "1" ]]', primaryStart + 1);
+  assert.ok(
+    primaryStart >= 0 && platformStart > primaryStart,
+    'local CI must expose one live top-level primary block before platform branches',
+  );
+  return source.slice(primaryStart + 1, platformStart);
+}
+
+function shellFunctionRange(source, startName, endName) {
+  const starts = [
+    source.indexOf(`\n${startName}() {`),
+    source.indexOf(`\n${startName}() (`),
+  ].filter((index) => index >= 0);
+  const ends = [
+    source.indexOf(`\n${endName}() {`, Math.min(...starts) + 1),
+    source.indexOf(`\n${endName}() (`, Math.min(...starts) + 1),
+  ].filter((index) => index >= 0);
+  const start = starts.length > 0 ? Math.min(...starts) : -1;
+  const end = ends.length > 0 ? Math.min(...ends) : -1;
+  assert.ok(start >= 0 && end > start, `expected ${startName} before ${endName}`);
+  return source.slice(start + 1, end);
+}
+
+function writeFakeNode(executablePath, version) {
+  mkdirSync(path.dirname(executablePath), { recursive: true });
+  writeFileSync(
+    executablePath,
+    `#!/usr/bin/env sh\nif [ "\${1:-}" = "-p" ]; then printf '%s\\n' '${version}'; else printf 'v%s\\n' '${version}'; fi\n`,
+  );
+  chmodSync(executablePath, 0o755);
+}
+
+/** The ambient shell may carry `CI_SH_NODE*_BIN`/`CI_SH_PNPM*_BIN` overrides (a host that drives
+ *  the platform matrix exports them). They preempt PATH/NVM resolution by design, so a fixture that
+ *  exercises that resolution must not inherit them. */
+function withoutToolchainOverrides(env) {
+  return Object.fromEntries(
+    Object.entries(env).filter(([key]) => !/^CI_SH_(?:NODE|PNPM)\d+_BIN$/u.test(key)),
+  );
+}
+
+function resolveNodeFromCiFixture({ root, major, pathDirectory, nvmDirectory }) {
+  const source = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+  const resolverSource = shellFunctionRange(source, 'resolve_command', 'run_with_toolchain');
+  const result = spawnSync(
+    'bash',
+    ['-c', `${resolverSource}\nresolve_node_for_version "$1"`, 'resolver-fixture', String(major)],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      env: {
+        ...withoutToolchainOverrides(process.env),
+        CI_SH_ROOT: root,
+        NVM_DIR: nvmDirectory,
+        PATH: `${pathDirectory}:/usr/bin:/bin`,
+      },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  return result.stdout.trim();
+}
+
+function resolveCommandFromCiFixture({ cwd, pathValue, requested, shellPrelude = '' }) {
+  const source = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+  const resolverSource = shellFunctionRange(source, 'resolve_command', 'run_with_toolchain');
+  return spawnSync(
+    'bash',
+    ['-c', `${resolverSource}\n${shellPrelude}\nresolve_command "$1"`, 'resolver-fixture', requested],
+    {
+      cwd,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: pathValue },
+    },
+  );
+}
+
+function linkOrCopyExecutable(source, target) {
+  try {
+    linkSync(source, target);
+  } catch {
+    copyFileSync(source, target);
+  }
+  chmodSync(target, 0o755);
+}
+
+function exerciseSelectedToolchain({ label, selectedNode }) {
+  const root = mkdtempSync(path.join(tmpdir(), `lyra-ci-${label}-toolchain-`));
+  try {
+    const overrideDirectory = path.join(root, `${label}-override-without-node`);
+    const selectedRuntimeDirectory = path.join(root, `${label}-selected-runtime`);
+    const selectedPnpmDirectory = path.join(root, `${label}-pnpm-without-node`);
+    const wrongNodeDirectory = path.join(root, 'wrong-node');
+    const transactionTemp = path.join(root, 'tmp');
+    mkdirSync(overrideDirectory, { recursive: true });
+    mkdirSync(selectedRuntimeDirectory, { recursive: true });
+    mkdirSync(selectedPnpmDirectory, { recursive: true });
+    mkdirSync(wrongNodeDirectory, { recursive: true });
+    mkdirSync(transactionTemp, { recursive: true });
+
+    const selectedRuntime = path.join(selectedRuntimeDirectory, `runtime-${label}`);
+    const wrongRuntime = path.join(wrongNodeDirectory, 'node');
+    linkOrCopyExecutable(selectedNode, selectedRuntime);
+    linkOrCopyExecutable(selectedNode, wrongRuntime);
+
+    const selectedOverride = path.join(overrideDirectory, `node-${label}`);
+    writeFileSync(
+      selectedOverride,
+      `#!/bin/sh\nexec ${JSON.stringify(selectedRuntime)} "$@"\n`,
+    );
+    chmodSync(selectedOverride, 0o755);
+
+    const selectedPnpm = path.join(selectedPnpmDirectory, `pnpm-${label}`);
+    writeFileSync(
+      selectedPnpm,
+      [
+        '#!/usr/bin/env node',
+        "const { spawnSync } = require('node:child_process');",
+        "const { writeFileSync } = require('node:fs');",
+        "const path = require('node:path');",
+        "const args = process.argv.slice(2).filter((argument) => !argument.startsWith('--config.script-shell='));",
+        'const mode = args[0];',
+        "const observation = () => ({ cwd: process.cwd(), execPath: process.execPath, selectedPathFirst: process.env.PATH.split(path.delimiter)[0] === process.env.CI_SH_SELECTED_TOOLCHAIN_DIR });",
+        "if (mode === '--nested') {",
+        '  process.stdout.write(JSON.stringify(observation()));',
+        "} else if (mode === '--failure') {",
+        '  process.exit(17);',
+        "} else if (mode === '--signal') {",
+        '  process.kill(process.ppid, args[1]);',
+        '  setTimeout(() => process.exit(91), 40);',
+        "} else if (mode === '--top-signal') {",
+        "  writeFileSync(process.env.LYRA_TEST_CHILD_PID_FILE, `${process.pid}\\n`);",
+        '  process.kill(Number(process.env.LYRA_TEST_TOP_PID), args[1]);',
+        '  setInterval(() => {}, 1000);',
+        "} else if (mode === '--repeated-top-term') {",
+        "  writeFileSync(process.env.LYRA_TEST_PROCESS_PID_FILE, JSON.stringify({ child: process.pid, worker: process.ppid }));",
+        '  let handledTerm = false;',
+        "  process.on('SIGTERM', () => {",
+        '    if (handledTerm) return;',
+        '    handledTerm = true;',
+        "    process.kill(Number(process.env.LYRA_TEST_TOP_PID), 'SIGTERM');",
+        '  });',
+        "  process.kill(Number(process.env.LYRA_TEST_TOP_PID), 'SIGTERM');",
+        '  setTimeout(() => {',
+        "    writeFileSync(process.env.LYRA_TEST_SIGNAL_SAFETY_FILE, 'fired\\n');",
+        '    process.exit(97);',
+        '  }, 3000);',
+        '  setInterval(() => {}, 1000);',
+        '} else {',
+        "  const lifecyclePath = `${process.env.LYRA_TEST_WRONG_NODE_DIR}${path.delimiter}${process.env.PATH}`;",
+        "  const nested = spawnSync('pnpm', ['--nested'], { cwd: process.env.LYRA_TEST_NESTED_CWD, encoding: 'utf8', env: { ...process.env, PATH: lifecyclePath } });",
+        "  if (nested.status !== 0) { process.stderr.write(nested.stderr); process.exit(nested.status ?? 1); }",
+        '  process.stdout.write(JSON.stringify({ ...observation(), nested: JSON.parse(nested.stdout) }));',
+        '}',
+        '',
+      ].join('\n'),
+    );
+    chmodSync(selectedPnpm, 0o755);
+    const ciSource = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+    const functionSource = shellFunctionRange(
+      ciSource,
+      'run_with_toolchain',
+      'validate_platform_toolchain',
+    );
+    const nestedCwd = path.join(root, 'nested/cwd');
+    mkdirSync(nestedCwd, { recursive: true });
+    const invoke = (...commandArgs) => spawnSync(
+      'bash',
+      [
+        '-c',
+        `${functionSource}\nCI_SH_ROOT="$1"\nrun_with_toolchain "$2" "$3" "\${@:4}"`,
+        'toolchain-fixture',
+        root,
+        selectedOverride,
+        selectedPnpm,
+        ...commandArgs,
+      ],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          LYRA_TEST_NESTED_CWD: nestedCwd,
+          LYRA_TEST_WRONG_NODE_DIR: wrongNodeDirectory,
+          PATH: `${wrongNodeDirectory}:/usr/bin:/bin`,
+          TMPDIR: path.relative(root, transactionTemp),
+        },
+      },
+    );
+
+    const result = invoke('--outer');
+    assert.equal(result.status, 0, result.stderr);
+    const observation = JSON.parse(result.stdout);
+    assert.deepEqual(
+      observation,
+      {
+        cwd: root,
+        execPath: selectedRuntime,
+        selectedPathFirst: true,
+        nested: {
+          cwd: nestedCwd,
+          execPath: selectedRuntime,
+          selectedPathFirst: true,
+        },
+      },
+      `${label} pnpm shebang and nested lifecycle must both use the selected Node process`,
+    );
+    assert.deepEqual(
+      readdirSync(transactionTemp),
+      [],
+      `${label} selected-node proxy must be cleaned after the command`,
+    );
+
+    const failure = invoke('--failure');
+    assert.equal(failure.status, 17, `${label} failure status must survive cleanup: ${failure.stderr}`);
+    assert.deepEqual(readdirSync(transactionTemp), [], `${label} failure must clean its proxy`);
+
+    for (const signal of ['SIGHUP', 'SIGINT', 'SIGTERM']) {
+      const signaled = invoke('--signal', signal);
+      assert.notEqual(signaled.status, 0, `${label} ${signal} must not report success`);
+      assert.deepEqual(
+        readdirSync(transactionTemp),
+        [],
+        `${label} ${signal} must clean its proxy through the trapped subshell`,
+      );
+    }
+
+    for (const [signal, expectedStatus] of [
+      ['SIGHUP', 129],
+      ['SIGINT', 130],
+      ['SIGTERM', 143],
+    ]) {
+      const childPidFile = path.join(root, `${signal}.child-pid`);
+      const signaled = spawnSync(
+        'bash',
+        [
+          '-c',
+          `${functionSource}\nCI_SH_ROOT="$1"\nexport LYRA_TEST_TOP_PID=$$\nrun_with_toolchain "$2" "$3" --top-signal "$4"`,
+          'top-level-toolchain-signal-fixture',
+          root,
+          selectedOverride,
+          selectedPnpm,
+          signal,
+        ],
+        {
+          cwd: root,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            LYRA_TEST_CHILD_PID_FILE: childPidFile,
+            PATH: `${wrongNodeDirectory}:/usr/bin:/bin`,
+            TMPDIR: path.relative(root, transactionTemp),
+          },
+          timeout: 5000,
+        },
+      );
+      assert.equal(
+        signaled.status,
+        expectedStatus,
+        `${label} ${signal} to the top-level shell must be forwarded:\n${signaled.stderr}`,
+      );
+      const selectedChildPid = readFileSync(childPidFile, 'utf8').trim();
+      const childProbe = spawnSync(
+        'bash',
+        ['-c', 'kill -0 "$1" 2>/dev/null', 'probe', selectedChildPid],
+      );
+      assert.notEqual(
+        childProbe.status,
+        0,
+        `${label} ${signal} must not leave selected child ${selectedChildPid} alive`,
+      );
+      assert.deepEqual(
+        readdirSync(transactionTemp),
+        [],
+        `${label} ${signal} to the top-level shell must clean its proxy`,
+      );
+    }
+
+    const repeatedTermPidFile = path.join(root, 'repeated-term-processes.json');
+    const repeatedTermSafetyFile = path.join(root, 'repeated-term-safety-fired');
+    const repeatedTerm = spawnSync(
+      'bash',
+      [
+        '-c',
+        `${functionSource}\nCI_SH_ROOT="$1"\nexport LYRA_TEST_TOP_PID=$$\nrun_with_toolchain "$2" "$3" --repeated-top-term`,
+        'repeated-top-level-toolchain-signal-fixture',
+        root,
+        selectedOverride,
+        selectedPnpm,
+      ],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          LYRA_TEST_PROCESS_PID_FILE: repeatedTermPidFile,
+          LYRA_TEST_SIGNAL_SAFETY_FILE: repeatedTermSafetyFile,
+          PATH: `${wrongNodeDirectory}:/usr/bin:/bin`,
+          TMPDIR: path.relative(root, transactionTemp),
+        },
+        timeout: 5000,
+      },
+    );
+    assert.equal(
+      repeatedTerm.status,
+      143,
+      `${label} repeated TERM must retain the outer signal status:\n${repeatedTerm.stderr}`,
+    );
+    assert.equal(repeatedTerm.signal, null, `${label} repeated TERM must stay trapped during teardown`);
+    assert.equal(
+      existsSync(repeatedTermSafetyFile),
+      false,
+      `${label} repeated TERM teardown must finish before the fixture safety timeout`,
+    );
+    const repeatedTermProcesses = JSON.parse(readFileSync(repeatedTermPidFile, 'utf8'));
+    for (const [processLabel, processPid] of Object.entries(repeatedTermProcesses)) {
+      const processProbe = spawnSync(
+        'bash',
+        ['-c', 'kill -0 "$1" 2>/dev/null', 'probe', String(processPid)],
+      );
+      assert.notEqual(
+        processProbe.status,
+        0,
+        `${label} repeated TERM must not leave selected ${processLabel} ${processPid} alive`,
+      );
+    }
+    assert.deepEqual(
+      readdirSync(transactionTemp),
+      [],
+      `${label} repeated TERM must clean its selected-node proxy`,
+    );
+
+    const cleanupSignalMarker = path.join(root, 'cleanup-signal-sent');
+    const cleanupSignalRm = path.join(wrongNodeDirectory, 'rm');
+    writeFileSync(
+      cleanupSignalRm,
+      [
+        '#!/bin/sh',
+        'if mkdir "$LYRA_TEST_RM_SIGNAL_MARKER" 2>/dev/null; then',
+        '  kill -TERM "$LYRA_TEST_TOP_PID"',
+        '  sleep 0.25',
+        'fi',
+        'exec /bin/rm "$@"',
+        '',
+      ].join('\n'),
+    );
+    chmodSync(cleanupSignalRm, 0o755);
+    const cleanupSignaled = spawnSync(
+      'bash',
+      [
+        '-c',
+        `${functionSource}\nCI_SH_ROOT="$1"\nexport LYRA_TEST_TOP_PID=$$\nrun_with_toolchain "$2" "$3" --nested`,
+        'top-level-cleanup-signal-fixture',
+        root,
+        selectedOverride,
+        selectedPnpm,
+      ],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          LYRA_TEST_RM_SIGNAL_MARKER: cleanupSignalMarker,
+          PATH: `${wrongNodeDirectory}:/usr/bin:/bin`,
+          TMPDIR: path.relative(root, transactionTemp),
+        },
+        timeout: 5000,
+      },
+    );
+    assert.equal(
+      cleanupSignaled.status,
+      143,
+      `${label} TERM during proxy cleanup must retain the outer signal status:\n${cleanupSignaled.stderr}`,
+    );
+    assert.deepEqual(
+      readdirSync(transactionTemp),
+      [],
+      `${label} TERM during cleanup must not strand its selected-node proxy`,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+function exerciseRealPnpmLifecycle(selectedNode) {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-ci-real-pnpm-lifecycle-'));
+  try {
+    const selectedRuntimeDirectory = path.join(root, 'selected-runtime');
+    const overrideDirectory = path.join(root, 'override-without-node');
+    const packageRoot = path.join(root, 'package');
+    const hostileBin = path.join(packageRoot, 'node_modules/.bin');
+    const transactionTemp = path.join(root, 'tmp');
+    for (const directory of [
+      selectedRuntimeDirectory,
+      overrideDirectory,
+      hostileBin,
+      transactionTemp,
+    ]) {
+      mkdirSync(directory, { recursive: true });
+    }
+
+    const selectedRuntime = path.join(selectedRuntimeDirectory, 'selected-runtime');
+    linkOrCopyExecutable(selectedNode, selectedRuntime);
+    const selectedOverride = path.join(overrideDirectory, 'node-selected');
+    writeFileSync(selectedOverride, `#!/bin/sh\nexec ${JSON.stringify(selectedRuntime)} "$@"\n`);
+    chmodSync(selectedOverride, 0o755);
+
+    const pnpmResolution = spawnSync('bash', ['-c', 'type -P -- pnpm'], {
+      encoding: 'utf8',
+      env: process.env,
+    });
+    assert.equal(pnpmResolution.status, 0, pnpmResolution.stderr);
+    const selectedPnpm = pnpmResolution.stdout.trim();
+    assert.ok(path.isAbsolute(selectedPnpm), 'real pnpm fixture requires one absolute executable');
+
+    writeFileSync(
+      path.join(packageRoot, 'package.json'),
+      `${JSON.stringify({
+        name: 'real-pnpm-lifecycle-fixture',
+        packageManager: 'pnpm@11.25.0',
+        private: true,
+        scripts: { probe: 'node probe.cjs && pnpm --version' },
+      }, null, 2)}\n`,
+    );
+    writeFileSync(
+      path.join(packageRoot, 'probe.cjs'),
+      [
+        "const path = require('node:path');",
+        'process.stdout.write(`${JSON.stringify({',
+        '  execPath: process.execPath,',
+        "  selectedPathFirst: process.env.PATH.split(path.delimiter)[0] === process.env.CI_SH_SELECTED_TOOLCHAIN_DIR,",
+        '})}\\n`);',
+        '',
+      ].join('\n'),
+    );
+    writeFileSync(path.join(hostileBin, 'node'), '#!/bin/sh\nprintf "HOSTILE-LOCAL-NODE\\n"\n');
+    writeFileSync(path.join(hostileBin, 'pnpm'), '#!/bin/sh\nprintf "LOCAL-PNPM-BYPASS\\n"\n');
+    chmodSync(path.join(hostileBin, 'node'), 0o755);
+    chmodSync(path.join(hostileBin, 'pnpm'), 0o755);
+
+    const ciSource = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+    const functionSource = shellFunctionRange(
+      ciSource,
+      'run_with_toolchain',
+      'validate_platform_toolchain',
+    );
+    const result = spawnSync(
+      'bash',
+      [
+        '-c',
+        `${functionSource}\nCI_SH_ROOT="$1"\nrun_with_toolchain "$2" "$3" --dir "$4" run probe`,
+        'real-pnpm-lifecycle-fixture',
+        root,
+        selectedOverride,
+        selectedPnpm,
+        packageRoot,
+      ],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: '/usr/bin:/bin',
+          TMPDIR: path.relative(root, transactionTemp),
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.doesNotMatch(result.stdout, /HOSTILE-LOCAL-NODE|LOCAL-PNPM-BYPASS/u);
+    const observationLine = result.stdout.split('\n').find((line) => line.startsWith('{'));
+    assert.ok(observationLine, `real lifecycle probe did not run:\n${result.stdout}`);
+    assert.deepEqual(JSON.parse(observationLine), {
+      execPath: selectedRuntime,
+      selectedPathFirst: true,
+    });
+    assert.match(result.stdout, /11\.25\.0/u);
+    assert.deepEqual(
+      readdirSync(transactionTemp).filter((entry) => entry.startsWith('lyra-ci-selected-node.')),
+      [],
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+function assertLocalPublicApiAggregate(source) {
+  const primary = localCiPrimaryBlock(source);
+  const predecessorCommands = [
+    'pnpm build',
+    'pnpm check:packed-consumer',
+    'node scripts/check-peer-compatibility.mjs',
+  ];
+  const predecessorIndexes = predecessorCommands.map((command) => {
+    assert.equal(
+      exactTopLevelShellCommandCount(primary, command),
+      1,
+      `the live primary block must run exactly one ${command}`,
+    );
+    return exactTopLevelShellCommandIndex(primary, command);
+  });
+
+  for (const packageName of ['@aceshooting/lyra-ui', '@aceshooting/lyra-flags']) {
+    const command = `pnpm --filter ${packageName} check:public-api`;
+    assert.equal(
+      exactShellCommandCount(source, command),
+      1,
+      `local CI must run exactly one ${packageName} public-API command`,
+    );
+    assert.equal(
+      exactTopLevelShellCommandCount(primary, command),
+      1,
+      `${packageName} public API must run in the live top-level primary block`,
+    );
+    const publicApiIndex = exactTopLevelShellCommandIndex(primary, command);
+    assert.ok(
+      predecessorIndexes.every((index) => index >= 0 && index < publicApiIndex),
+      `${packageName} public API must run after build, packed consumer, and peer profiles`,
+    );
+  }
+}
+
+function assertLocalPackedConsumerRouting(source) {
+  const toolchainStart = source.indexOf('\nvalidate_platform_toolchain()');
+  const platformFunctionStart = source.indexOf('\nrun_platform_matrix_leg()', toolchainStart + 1);
+  assert.ok(
+    toolchainStart >= 0 && platformFunctionStart > toolchainStart,
+    'local CI must expose validate_platform_toolchain before the platform leg',
+  );
+  const toolchainFunction = source.slice(toolchainStart, platformFunctionStart);
+  assert.equal(
+    exactShellCommandCount(toolchainFunction, '"$node_bin" scripts/check-node-version.mjs || return'),
+    1,
+    'platform toolchain validation must contain exactly one exact-Node invocation',
+  );
+  assert.match(
+    toolchainFunction,
+    /local manifest="package\.json"\n  \[\[ "\$node_version" == "20" \]\] && manifest="\.github\/ci-pnpm10\.json"/u,
+    'Node 20 must retain its separate package-manager authority',
+  );
+  const nodeBranch = /  if \[\[ "\$node_version" == "22" \]\]; then\n    "\$node_bin" scripts\/check-node-version\.mjs \|\| return\n  else\n([\s\S]*?)\n  fi\n\n  local expected_pnpm/u.exec(
+    toolchainFunction,
+  );
+  assert.ok(
+    nodeBranch,
+    'only the Node 22 branch may invoke the exact-patch checker',
+  );
+  assert.match(
+    nodeBranch[1],
+    /actual_node_major="\$\("\$node_bin" -p 'process\.versions\.node\.split\("\."\)\[0\]'\)"[\s\S]*?if \[\[ "\$actual_node_major" != "\$node_version" \]\]; then[\s\S]*?return 1/u,
+    'Node 20 must stay live behind its major-version validation instead of the Node 22 exact check',
+  );
+
+  const functionStart = source.indexOf('\nrun_platform_matrix_leg()');
+  const primaryStart = source.indexOf('\nrequire_primary_toolchain', functionStart + 1);
+  assert.ok(functionStart >= 0 && primaryStart > functionStart, 'local CI must expose a parseable platform leg');
+  const platformFunction = source.slice(functionStart, primaryStart);
+  const packedCalls = [
+    ...platformFunction.matchAll(
+      /run_with_toolchain "\$node_bin" "\$pnpm_bin" (check:packed-consumer(?::contracts)?) \|\| return/gu,
+    ),
+  ];
+  assert.deepEqual(
+    packedCalls.map((match) => match[1]),
+    ['check:packed-consumer:contracts'],
+    'the platform matrix must contain only the contracts-only packed call',
+  );
+  assert.match(
+    platformFunction,
+    /if \[\[ "\$node_version" == "20" && "\$browser" == "firefox" && "\$shard_index" == "1" && "\$shard_total" == "1" \]\]; then[\s\S]*?run_with_toolchain "\$node_bin" "\$pnpm_bin" build \|\| return[\s\S]*?run_with_toolchain "\$node_bin" "\$pnpm_bin" check:packed-consumer:contracts \|\| return[\s\S]*?\n  fi/u,
+    'only Node 20 / Firefox / shard 1-of-1 may run packed-consumer contracts after build',
+  );
+  assert.doesNotMatch(platformFunction, /check-peer-compatibility/u);
+
+  const primaryEnd = source.indexOf('\nif [[ "$RUN_PLATFORM" == "1" ]]', primaryStart);
+  assert.ok(primaryEnd > primaryStart, 'local CI must expose a parseable primary aggregate');
+  const primary = source.slice(primaryStart, primaryEnd);
+  assert.equal(exactShellCommandCount(primary, 'pnpm check:packed-consumer'), 1);
+  assert.equal(exactShellCommandCount(primary, 'pnpm check:packed-consumer:contracts'), 0);
+  assert.equal(
+    exactShellCommandCount(primary, 'node scripts/check-peer-compatibility.mjs'),
+    1,
+    'only the primary Node 22 packed flow must run all peer profiles',
+  );
+}
+
+function assertCanonicalRegenOrder(source) {
+  const expectedCommands = [
+    'pnpm --filter @aceshooting/lyra-ui package-metadata',
+    'pnpm --filter @aceshooting/lyra-ui default-string-slices',
+    'pnpm manifest',
+    'pnpm --filter @aceshooting/lyra-ui component-inventory',
+    'pnpm --filter @aceshooting/lyra-ui component-metadata',
+    'pnpm manifest',
+    'pnpm --filter @aceshooting/lyra-ui component-inventory',
+    'pnpm registrations',
+    'pnpm --filter @aceshooting/lyra-ui autoloader-manifest',
+    'pnpm --filter @aceshooting/lyra-ui events',
+    'pnpm --filter @aceshooting/lyra-ui framework-types',
+    'pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-palette.mjs',
+    'pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-chart-palette.mjs',
+    'pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.mjs',
+    'pnpm --filter @aceshooting/lyra-ui design-tokens',
+    'pnpm --filter @aceshooting/lyra-ui generate-editor-data',
+    'pnpm plugin:sync',
+    './package.sh',
+    'pnpm build',
+    'pnpm --filter @aceshooting/lyra-ui exec node scripts/check-bundle-size.mjs --write-stats',
+    'pnpm --filter @aceshooting/lyra-ui component-quality',
+    'pnpm --filter @aceshooting/lyra-ui check:component-quality:built',
+  ];
+  let cursor = -1;
+  for (const command of expectedCommands) {
+    const next = source.indexOf(`\n${command}\n`, cursor + 1);
+    assert.ok(next > cursor, `regen.sh must run in canonical order: ${command}`);
+    cursor = next;
+  }
+  const expectedCounts = new Map([
+    ['pnpm manifest', 2],
+    ['pnpm --filter @aceshooting/lyra-ui component-inventory', 2],
+  ]);
+  for (const command of expectedCommands) {
+    const expectedCount = expectedCounts.get(command) ?? 1;
+    assert.equal(
+      exactShellCommandCount(source, command),
+      expectedCount,
+      `regen.sh must run ${command} exactly ${expectedCount === 1 ? 'once' : `${expectedCount} times`}`,
+    );
+  }
+  const finalQualityCommand = expectedCommands.at(-1);
+  const finalQualityIndex = source.indexOf(`\n${finalQualityCommand}\n`);
+  const afterFinalQuality = source.slice(finalQualityIndex + finalQualityCommand.length + 2);
+  for (const command of expectedCommands.slice(0, -1)) {
+    assert.equal(
+      exactShellCommandCount(afterFinalQuality, command),
+      0,
+      `regen.sh may not run source writer ${command} after final component quality`,
+    );
+  }
+  assert.doesNotMatch(source, /pnpm --filter @aceshooting\/lyra-ui (?:run )?llms(?:\s|$)/mu);
+  assert.doesNotMatch(source, /--skip-build/u);
+}
 const successfulJobs = () =>
   REQUIRED_CI_JOBS.map((name, index) => ({
     id: index + 1,
@@ -263,6 +932,272 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
     workflow,
     /Run packed consumer at the supported Node floor[\s\S]*?pnpm build && pnpm check:packed-consumer:contracts/u,
     'Node 20 must retain every packed contract while avoiding a duplicate monolithic ATTW sweep'
+  );
+});
+
+test('local CI aggregates both workspace public-API authorities and fails if either disappears', () => {
+  const completeFixture = [
+    '',
+    'require_primary_toolchain',
+    'pnpm build',
+    'pnpm check:packed-consumer',
+    'node scripts/check-peer-compatibility.mjs',
+    'step "public API semver gate"',
+    'pnpm --filter @aceshooting/lyra-ui check:public-api',
+    'pnpm --filter @aceshooting/lyra-flags check:public-api',
+    'if [[ "$RUN_PLATFORM" == "1" ]]; then',
+    '  :',
+    'fi',
+    '',
+  ].join('\n');
+  assert.doesNotThrow(() => assertLocalPublicApiAggregate(completeFixture));
+  for (const packageName of ['@aceshooting/lyra-ui', '@aceshooting/lyra-flags']) {
+    assert.throws(
+      () => assertLocalPublicApiAggregate(
+        completeFixture.replace(`pnpm --filter ${packageName} check:public-api\n`, ''),
+      ),
+      new RegExp(`${packageName.replace('/', '\\/')} public-API command`, 'u'),
+    );
+  }
+
+  assertLocalPublicApiAggregate(
+    readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8'),
+  );
+});
+
+test('local CI reserves contracts-only packed coverage for Node 20 Firefox 1-of-1', () => {
+  assertLocalPackedConsumerRouting(
+    readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8'),
+  );
+});
+
+test('local CI resolves exact Node 22 authority ahead of wrong shims and newer installs while Node 20 stays newest-major', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-ci-node-resolver-'));
+  try {
+    const pathDirectory = path.join(root, 'bin');
+    const nvmDirectory = path.join(root, 'nvm');
+    writeFileSync(path.join(root, '.nvmrc'), '22.23.2\n');
+
+    const activeExact = path.join(pathDirectory, 'node');
+    const wrongShim = path.join(pathDirectory, 'node22');
+    const exactNvm = path.join(nvmDirectory, 'versions/node/v22.23.2/bin/node');
+    const newerNvm = path.join(nvmDirectory, 'versions/node/v22.24.0/bin/node');
+    const olderNode20 = path.join(nvmDirectory, 'versions/node/v20.18.3/bin/node');
+    const newerNode20 = path.join(nvmDirectory, 'versions/node/v20.19.6/bin/node');
+    writeFakeNode(activeExact, '22.23.2');
+    writeFakeNode(wrongShim, '22.23.1');
+    writeFakeNode(exactNvm, '22.23.2');
+    writeFakeNode(newerNvm, '22.24.0');
+    writeFakeNode(olderNode20, '20.18.3');
+    writeFakeNode(newerNode20, '20.19.6');
+
+    assert.equal(
+      resolveNodeFromCiFixture({ root, major: 22, pathDirectory, nvmDirectory }),
+      activeExact,
+      'Node 22 must select the active exact .nvmrc patch instead of a wrong node22 shim',
+    );
+    rmSync(activeExact);
+    writeFakeNode(activeExact, '22.23.0');
+    assert.equal(
+      resolveNodeFromCiFixture({ root, major: 22, pathDirectory, nvmDirectory }),
+      exactNvm,
+      'Node 22 must select the exact .nvmrc install instead of a newer Node 22 patch',
+    );
+    writeFileSync(path.join(root, '.nvmrc'), '22.23.2\r\n');
+    assert.equal(
+      resolveNodeFromCiFixture({ root, major: 22, pathDirectory, nvmDirectory }),
+      exactNvm,
+      'Node 22 must accept the same exact authority from a CRLF checkout',
+    );
+    assert.equal(
+      resolveNodeFromCiFixture({ root, major: 20, pathDirectory, nvmDirectory }),
+      newerNode20,
+      'the compatibility lane must retain newest-installed-patch selection for Node 20',
+    );
+    writeFileSync(
+      path.join(pathDirectory, 'sort'),
+      '#!/bin/sh\nif [ "${1:-}" = "-V" ]; then exit 64; fi\nexec /usr/bin/sort "$@"\n',
+    );
+    chmodSync(path.join(pathDirectory, 'sort'), 0o755);
+    assert.equal(
+      resolveNodeFromCiFixture({ root, major: 20, pathDirectory, nvmDirectory }),
+      newerNode20,
+      'the NVM fallback must select semver portably when stock sort has no -V option',
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('local CI resolves only regular external executables and always returns an absolute path', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-ci-external-command-'));
+  try {
+    const relativeBin = path.join(root, 'relative-bin');
+    const executable = path.join(relativeBin, 'fixture-command');
+    const executableDirectory = path.join(root, 'executable-directory');
+    mkdirSync(relativeBin);
+    mkdirSync(executableDirectory);
+    writeFileSync(executable, '#!/bin/sh\nexit 0\n');
+    chmodSync(executable, 0o755);
+    chmodSync(executableDirectory, 0o755);
+
+    const relativePathResult = resolveCommandFromCiFixture({
+      cwd: root,
+      pathValue: 'relative-bin:/usr/bin:/bin',
+      requested: 'fixture-command',
+    });
+    assert.equal(relativePathResult.status, 0, relativePathResult.stderr);
+    assert.equal(relativePathResult.stdout.trim(), executable);
+
+    const cwdPathResult = resolveCommandFromCiFixture({
+      cwd: root,
+      pathValue: '/usr/bin:/bin',
+      requested: './relative-bin/fixture-command',
+    });
+    assert.equal(cwdPathResult.status, 0, cwdPathResult.stderr);
+    assert.equal(cwdPathResult.stdout.trim(), executable);
+
+    for (const [label, result] of [
+      [
+        'shell function',
+        resolveCommandFromCiFixture({
+          cwd: root,
+          pathValue: '/usr/bin:/bin',
+          requested: 'fixture-command',
+          shellPrelude: 'fixture-command() { :; }',
+        }),
+      ],
+      [
+        'executable directory',
+        resolveCommandFromCiFixture({
+          cwd: root,
+          pathValue: '/usr/bin:/bin',
+          requested: './executable-directory',
+        }),
+      ],
+      [
+        'unresolved relative path',
+        resolveCommandFromCiFixture({
+          cwd: root,
+          pathValue: '/usr/bin:/bin',
+          requested: './missing-command',
+        }),
+      ],
+    ]) {
+      assert.equal(result.status, 0, `${label}: ${result.stderr}`);
+      assert.equal(result.stdout, '', `${label} must not resolve as an external executable`);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('local CI structure rejects Node-20-breaking toolchain guards and dead or platform-only public-API gates', () => {
+  const source = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+  const exactCheck = '    "$node_bin" scripts/check-node-version.mjs || return';
+  const unconditionalExactCheck = source
+    .replace(exactCheck, '    :')
+    .replace(
+      '  if [[ "$node_version" == "22" ]]; then',
+      `  "$node_bin" scripts/check-node-version.mjs || return\n  if [[ "$node_version" == "22" ]]; then`,
+    );
+  const deadNode20Manifest = source.replace(
+    '[[ "$node_version" == "20" ]] && manifest=".github/ci-pnpm10.json"',
+    '[[ "$node_version" == "19" ]] && manifest=".github/ci-pnpm10.json"',
+  );
+  const publicApiCommands =
+    'pnpm --filter @aceshooting/lyra-ui check:public-api\n' +
+    'pnpm --filter @aceshooting/lyra-flags check:public-api\n';
+  const platformOnlyPublicApi = source
+    .replace(publicApiCommands, '')
+    .replace(
+      'if [[ "$RUN_PLATFORM" == "1" ]]; then\n',
+      `if [[ "$RUN_PLATFORM" == "1" ]]; then\n  ${publicApiCommands.replaceAll('\n', '\n  ')}`,
+    );
+  const deadPublicApi = source
+    .replace(publicApiCommands, '')
+    .replace(
+      '\nrequire_primary_toolchain\n',
+      `\ndead_public_api_gate() {\n  ${publicApiCommands.replaceAll('\n', '\n  ')}}\n\nrequire_primary_toolchain\n`,
+    );
+
+  for (const [label, mutation] of [
+    ['unconditional exact-Node check', unconditionalExactCheck],
+    ['dead Node 20 manifest branch', deadNode20Manifest],
+    ['platform-only public API', platformOnlyPublicApi],
+    ['dead-function public API', deadPublicApi],
+  ]) {
+    assert.throws(
+      () => {
+        assertLocalPublicApiAggregate(mutation);
+        assertLocalPackedConsumerRouting(mutation);
+      },
+      undefined,
+      label,
+    );
+  }
+});
+
+test('regen fails closed on the exact toolchain before the canonical complete generator order', () => {
+  const regenScript = readFileSync(path.join(repoRoot, 'scripts/regen.sh'), 'utf8');
+  const argumentParsing = regenScript.indexOf('\nRUN_VISUAL=0');
+  assert.ok(argumentParsing > 0, 'regen.sh must retain parseable argument handling');
+  const guard = regenScript.slice(0, argumentParsing);
+  assert.match(guard, /\nnode scripts\/check-node-version\.mjs\n/u);
+  assert.match(guard, /require\("\.\/package\.json"\)\.packageManager/u);
+  assert.match(guard, /\^pnpm@\(\(\?:0\|\[1-9\]\\d\*\)/u);
+  assert.doesNotMatch(guard, /EXPECTED_PNPM_VERSION='\d/u);
+  assert.match(guard, /actual_pnpm_version="\$\(pnpm --version\)"/u);
+  assert.match(
+    guard,
+    /if \[\[ "\$actual_pnpm_version" != "\$expected_pnpm_version" \]\]; then[\s\S]*?exit 1[\s\S]*?\n  fi/u,
+  );
+  const versionReader = shellFunctionRange(
+    regenScript,
+    'read_expected_pnpm_version',
+    'verify_regen_pnpm',
+  );
+  const fixtureRoot = mkdtempSync(path.join(tmpdir(), 'lyra-regen-pnpm-authority-'));
+  try {
+    writeFileSync(
+      path.join(fixtureRoot, 'package.json'),
+      `${JSON.stringify({ packageManager: 'pnpm@9.8.7' })}\n`,
+    );
+    const derived = spawnSync(
+      'bash',
+      ['-c', `${versionReader}\nread_expected_pnpm_version`],
+      { cwd: fixtureRoot, encoding: 'utf8' },
+    );
+    assert.equal(derived.status, 0, derived.stderr);
+    assert.equal(derived.stdout, '9.8.7');
+    for (const packageManager of ['pnpm@9.8', 'npm@9.8.7', 'pnpm@09.8.7']) {
+      writeFileSync(
+        path.join(fixtureRoot, 'package.json'),
+        `${JSON.stringify({ packageManager })}\n`,
+      );
+      const malformed = spawnSync(
+        'bash',
+        ['-c', `${versionReader}\nread_expected_pnpm_version`],
+        { cwd: fixtureRoot, encoding: 'utf8' },
+      );
+      assert.notEqual(malformed.status, 0, packageManager);
+      assert.match(malformed.stderr, /must pin one exact pnpm patch/u);
+    }
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+  assertCanonicalRegenOrder(regenScript);
+
+  const finalQualityCommand =
+    'pnpm --filter @aceshooting/lyra-ui check:component-quality:built';
+  const duplicateLateWriter = regenScript.replace(
+    `${finalQualityCommand}\n`,
+    `${finalQualityCommand}\npnpm --filter @aceshooting/lyra-ui package-metadata\n`,
+  );
+  assert.throws(
+    () => assertCanonicalRegenOrder(duplicateLateWriter),
+    /exactly once|after final component quality/u,
+    'a duplicated source writer after final quality must fail the canonical-order authority',
   );
 });
 
@@ -1505,24 +2440,192 @@ test('checker self-tests and the strict test-tree type gate stay blocking', () =
   );
 });
 
-test('contributor docs follow the package-manager authority', () => {
-  const rootPackage = JSON.parse(
-    readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
+test('package peer floors remain independent from current development pins', () => {
+  const lyraPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8'),
   );
-  const packageManagerVersion = rootPackage.packageManager.replace(
-    /^pnpm@/u,
-    ''
+  const expectedFloors = {
+    'chart.js': '^4.0.1',
+    '@sgratzl/chartjs-chart-boxplot': '^4.0.0',
+    'chartjs-plugin-annotation': '^3.0.0',
+    'chartjs-plugin-zoom': '^2.0.0',
+    katex: '^0.18.4',
+    mammoth: '^1.12.1',
+  };
+
+  for (const [name, floor] of Object.entries(expectedFloors)) {
+    assert.equal(
+      lyraPackage.peerDependencies[name],
+      floor,
+      `${name} must retain its reviewed consumer floor`,
+    );
+    assert.equal(
+      lyraPackage.peerDependenciesMeta[name]?.optional,
+      true,
+      `${name} must remain an optional peer`,
+    );
+    assert.notEqual(
+      lyraPackage.devDependencies[name],
+      floor,
+      `${name} development pin must remain independently current`,
+    );
+  }
+  assert.equal(lyraPackage.peerDependencies['chartjs-plugin-datalabels'], '^2.2.0');
+  assert.equal(lyraPackage.peerDependencies.dompurify, '^3.4.14');
+  assert.equal(lyraPackage.peerDependencies.marked, '^18.0.11');
+  assert.equal(lyraPackage.peerDependencies['pdfjs-dist'], '^6.3.289');
+});
+
+test('upgrade protects managed peer floors before synchronizing package-manager prose and installing', () => {
+  const upgradeScript = readFileSync(path.join(repoRoot, 'scripts/upgrade.sh'), 'utf8');
+  const exactNodeIndex = upgradeScript.indexOf('\nnode scripts/check-node-version.mjs\n');
+  const firstNcuIndex = upgradeScript.indexOf('pnpm dlx npm-check-updates@latest');
+  const secondNcuIndex = upgradeScript.indexOf(
+    'pnpm dlx npm-check-updates@latest',
+    firstNcuIndex + 1,
   );
-  const guide = readFileSync(
-    path.join(repoRoot, 'docs/agents/ci-and-gates.md'),
+  const authorityGuardIndex = upgradeScript.indexOf(
+    'node scripts/check-peer-compatibility.mjs --check-managed-peer-rewrites',
+  );
+  const syncDocsIndex = upgradeScript.indexOf(
+    'node scripts/sync-package-manager-docs.mjs --write',
+  );
+  const installIndex = upgradeScript.indexOf('pnpm install --prod=false --no-frozen-lockfile');
+
+  assert.ok(exactNodeIndex >= 0, 'upgrade must fail closed on the exact Node authority');
+  assert.ok(secondNcuIndex > firstNcuIndex, 'upgrade must retain separate non-peer and peer NCU passes');
+  assert.ok(
+    authorityGuardIndex > secondNcuIndex,
+    'upgrade must inspect managed peer floors after the peer NCU pass',
+  );
+  assert.ok(
+    syncDocsIndex > authorityGuardIndex && syncDocsIndex < installIndex,
+    'upgrade must synchronize package-manager prose after both NCU passes and before install',
+  );
+  assert.ok(
+    upgradeScript.indexOf('node scripts/check-peer-compatibility.mjs --write-current-versions') > installIndex,
+    'upgrade must refresh the checked current-version authority only after the lockfile exists',
+  );
+});
+
+test('hosted peer qualification stays primary-only and quality jobs alone read the exact Node file', () => {
+  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  const qualityStart = workflow.indexOf('\n  build_and_coverage_quality:');
+  const ssrStart = workflow.indexOf('\n  build_and_coverage_ssr:', qualityStart + 1);
+  const contractStart = workflow.indexOf('\n  packed_consumer_contract:');
+  const attwStart = workflow.indexOf('\n  packed_consumer_attw:', contractStart + 1);
+  const platformStart = workflow.indexOf('\n  platform-contracts:');
+  assert.ok(qualityStart >= 0 && ssrStart > qualityStart, 'CI must expose the quality job boundary');
+  assert.ok(contractStart >= 0 && attwStart > contractStart, 'CI must expose the packed contract job');
+  assert.ok(platformStart >= 0, 'CI must expose the platform job');
+
+  const qualityJob = workflow.slice(qualityStart, ssrStart);
+  const contractJob = workflow.slice(contractStart, attwStart);
+  const platformJob = workflow.slice(platformStart);
+  assert.match(qualityJob, /node-version-file: \.nvmrc/u);
+  assert.doesNotMatch(qualityJob, /node-version: 22/u);
+  assert.equal(
+    (workflow.match(/node-version-file: \.nvmrc/gu) ?? []).length,
+    1,
+    'only the component-quality job may select the exact Node patch from .nvmrc',
+  );
+  assert.equal(
+    (contractJob.match(/node scripts\/check-peer-compatibility\.mjs/gu) ?? []).length,
+    1,
+    'the primary hosted packed-consumer contract job must run peer qualification exactly once',
+  );
+  assert.match(
+    contractJob,
+    /node-version: 22\.23\.2/u,
+    'the exact peer-profile checker must run under the checked-in Node patch, not a drifting Node 22 latest',
+  );
+  const chromiumProvisionIndex = contractJob.indexOf(
+    'pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium',
+  );
+  const peerQualificationIndex = contractJob.indexOf('node scripts/check-peer-compatibility.mjs');
+  assert.ok(
+    chromiumProvisionIndex >= 0 && chromiumProvisionIndex < peerQualificationIndex,
+    'the primary peer-profile runner must provision Chromium before it launches packed consumers',
+  );
+  assert.doesNotMatch(platformJob, /check-peer-compatibility/u);
+  assert.match(platformJob, /matrix\.node-version == 20/u);
+
+  const publishWorkflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/publish.yml'),
+    'utf8',
+  );
+  const protectedStart = publishWorkflow.indexOf('\n  publish:');
+  assert.ok(protectedStart >= 0, 'publish workflow must retain its protected signer job');
+  const protectedSigner = publishWorkflow.slice(protectedStart);
+  assert.doesNotMatch(protectedSigner, /actions\/checkout@|pnpm\/action-setup|pnpm install/u);
+  assert.match(protectedSigner, /actions\/attest@/u);
+  assert.match(protectedSigner, /npm publish "\$TARBALL" --access public/u);
+
+  const verificationWorkflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/release-verification.yml'),
+    'utf8',
+  );
+  assert.match(
+    verificationWorkflow,
+    /node-version: 22\.23\.2/u,
+    'the byte-compared tagged-source rebuild must use the exact checked-in Node patch',
+  );
+  assert.doesNotMatch(
+    verificationWorkflow,
+    /node-version: 22\s*$/mu,
+    'the byte-compared tagged-source rebuild must not drift with a floating Node 22 lane',
+  );
+  assert.match(
+    verificationWorkflow,
+    /name: verified-release-tarball[\s\S]*?retention-days: 14/u,
+    'the protected signer must consume the retained byte-verified artifact',
+  );
+});
+
+test('package-manager documentation has one explicit write/check synchronization authority', () => {
+  const synchronizer = readFileSync(
+    path.join(repoRoot, 'scripts/sync-package-manager-docs.mjs'),
     'utf8'
   );
+  for (const governedPath of [
+    'AGENTS.md',
+    'CONTRIBUTING.md',
+    'docs/agents/ci-and-gates.md',
+  ]) {
+    assert.ok(
+      synchronizer.includes(governedPath),
+      `${governedPath} must remain governed by the package-manager documentation synchronizer`
+    );
+  }
+  assert.match(synchronizer, /--write/u);
+  assert.match(synchronizer, /--check/u);
+});
 
-  assert.match(
-    guide,
-    new RegExp(`pnpm ${packageManagerVersion.replaceAll('.', '\\.')}`, 'u')
+test('static and local CI run the release-tooling self-tests and package-manager documentation check', () => {
+  const rootPackage = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const toolingCommand = rootPackage.scripts['check:release-tooling'];
+  assert.equal(
+    toolingCommand,
+    'node --test scripts/publish.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
+    'one root command must keep all release-tooling unit tests and synchronized package-manager prose together',
   );
-  assert.doesNotMatch(guide, /pnpm 11\.20\.0/u);
+
+  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  const staticStart = workflow.indexOf('\n  static-checks:');
+  const buildStart = workflow.indexOf('\n  build_and_coverage_build:', staticStart + 1);
+  assert.ok(staticStart >= 0 && buildStart > staticStart, 'CI must retain the static-checks job boundary');
+  assert.match(
+    workflow.slice(staticStart, buildStart),
+    /pnpm check:release-tooling/u,
+    'the static release gate must run the release-tooling command',
+  );
+
+  const localCi = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+  assert.match(
+    localCi,
+    /step "release tooling checks"\npnpm check:release-tooling/u,
+    'the local CI reproduction must run the same release-tooling command',
+  );
 });
 
 test('contributor docs derive the local platform modes from the runner and CI matrix', () => {
@@ -1761,12 +2864,8 @@ test('the authored provider-neutral AI import example compiles against the shipp
   }
 });
 
-test('local platform legs keep nested package-manager calls on their selected toolchain', () => {
+test('local platform legs execute pnpm shebangs and nested calls with the selected Node even when its override has no sibling node', () => {
   const ciScript = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
-  const pnpmProxy = readFileSync(
-    path.join(repoRoot, 'scripts/ci-bin/pnpm'),
-    'utf8'
-  );
   const runWithToolchain = ciScript.slice(
     ciScript.indexOf('run_with_toolchain()'),
     ciScript.indexOf(
@@ -1775,14 +2874,38 @@ test('local platform legs keep nested package-manager calls on their selected to
     )
   );
 
+  assert.match(runWithToolchain, /process\.execPath/u);
+  assert.match(runWithToolchain, /mktemp -d/u);
+  assert.match(runWithToolchain, /ln -s/u);
+  assert.match(runWithToolchain, /run_with_toolchain\(\) \{/u);
+  assert.match(runWithToolchain, /_run_with_toolchain_worker\(\) \{/u);
+  assert.match(runWithToolchain, /CI_SH_ACTIVE_TOOLCHAIN_PID/u);
+  assert.match(runWithToolchain, /kill -s "\$signal_name" -- "-\$selected_command_pid"/u);
+  assert.match(runWithToolchain, /trap .*EXIT/u);
+  for (const signal of ['HUP', 'INT', 'TERM']) {
+    assert.match(runWithToolchain, new RegExp(`trap .*${signal}`, 'u'));
+  }
+  assert.match(runWithToolchain, /PATH="\$selected_node_proxy_dir:\$PATH"/u);
+  assert.match(runWithToolchain, /CI_SH_SELECTED_TOOLCHAIN_DIR="\$selected_node_proxy_dir"/u);
   assert.match(
     runWithToolchain,
-    /PATH="\$CI_SH_ROOT\/scripts\/ci-bin:\$\(dirname "\$node_bin"\):\$PATH"/u
+    /PATH="\$CI_SH_SELECTED_TOOLCHAIN_DIR:\$PATH"/u,
+    'the nested pnpm wrapper must re-prepend the selected node/proxy directory',
   );
   assert.match(runWithToolchain, /CI_SH_SELECTED_PNPM_BIN="\$pnpm_bin"/u);
   assert.match(runWithToolchain, /npm_config_scripts_prepend_node_path=false/u);
-  assert.match(pnpmProxy, /"\$CI_SH_SELECTED_PNPM_BIN" "\$@"/u);
-  assert.match(pnpmProxy, /npm_config_manage_package_manager_versions=false/u);
+  assert.match(runWithToolchain, /--config\.script-shell=/u);
+
+  // Both matrix majors use the same launcher contract. These are executable
+  // fixtures, not source-only assertions: an intentionally wrong PATH `node`
+  // must be bypassed for the first pnpm shebang and its nested pnpm call.
+  for (const label of ['node20', 'node22']) {
+    exerciseSelectedToolchain({ label, selectedNode: process.execPath });
+  }
+});
+
+test('real pnpm lifecycle scripts keep the selected node and pnpm ahead of package-local bin shims', () => {
+  exerciseRealPnpmLifecycle(process.execPath);
 });
 
 test('policy-summary registration and authored docs match its actual composition', () => {

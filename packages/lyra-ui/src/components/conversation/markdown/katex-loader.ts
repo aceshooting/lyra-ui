@@ -1,4 +1,9 @@
 import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const KATEX_WARNING_KEY = 'lyra-markdown-katex-unavailable';
+const KATEX_WARNING =
+  '<lr-markdown>/<lr-markdown-core>: Math rendering is unavailable because the optional KaTeX peer could not load. TeX is rendered as literal text.';
 
 /** Re-exported under a component-scoped name -- what `<lr-markdown>`'s `math` option needs from
  *  the optional `katex` peer (`renderToString(tex, options)`). */
@@ -21,19 +26,16 @@ const KATEX_CACHE_GENERATION = Symbol.for('@aceshooting/lyra-ui/markdown-katex-c
 
 /**
  * Loads the optional peer dependency `katex`, used by `<lr-markdown>`'s `math` property to
- * render `$...$`/`$$...$$` TeX as MathML. Resolves `null` (with a one-time `console.warn`) if the
- * peer isn't installed -- rendering falls back to the literal, unparsed TeX source in that case,
- * a fully supported default rather than a degraded mode. Mirrors `dompurify-loader.ts`'s single-
- * optional-peer shape.
+ * render `$...$`/`$$...$$` TeX as MathML. Resolves `null` with a one-time development diagnostic
+ * if the peer isn't installed -- rendering falls back to the literal, unparsed TeX source in that
+ * case, a fully supported default rather than a degraded mode. Mirrors `dompurify-loader.ts`'s
+ * single-optional-peer shape.
  */
 export async function loadKatex(importKatex: () => Promise<unknown> = () => import('katex')): Promise<KatexApi | null> {
   try {
     return resolveOptionalPeerCapability(await importKatex(), isKatexApi);
-  } catch (error) {
-    console.warn(
-      '<lr-markdown> needs the optional peer dependency `katex` to render math (the `math` property is set) — install it with `pnpm add katex`:',
-      error,
-    );
+  } catch {
+    devWarnOnce(KATEX_WARNING_KEY, KATEX_WARNING);
     return null;
   }
 }

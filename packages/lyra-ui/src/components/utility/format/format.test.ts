@@ -775,3 +775,42 @@ it('treats an untyped null date assignment as the current instant', async () => 
     el.remove();
   }
 });
+
+it('accepts a foreign native Date while failing closed for forged Date lookalikes', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const foreignDate = new frame.contentWindow!.Date('2024-04-05T00:00:00.000Z');
+  const formatted = (await fixture(html`<lr-format-date locale="en-US"></lr-format-date>`)) as LyraFormatDate;
+  const relative = (await fixture(html`<lr-relative-time></lr-relative-time>`)) as LyraRelativeTime;
+  const forged = Object.create(Date.prototype);
+
+  try {
+    formatted.date = foreignDate;
+    await formatted.updateComplete;
+    expect(formatted.shadowRoot!.querySelector('time')!.dateTime).to.equal('2024-04-05T00:00:00.000Z');
+
+    (formatted as unknown as { date: unknown }).date = forged;
+    let formattedRejected = false;
+    try {
+      await formatted.updateComplete;
+    } catch {
+      formattedRejected = true;
+    }
+    expect(formattedRejected).to.equal(false);
+    expect(formatted.shadowRoot!.querySelector('time') === null).to.equal(true);
+
+    (relative as unknown as { date: unknown }).date = forged;
+    let relativeRejected = false;
+    try {
+      await relative.updateComplete;
+    } catch {
+      relativeRejected = true;
+    }
+    expect(relativeRejected).to.equal(false);
+    expect(relative.shadowRoot!.querySelector('time') === null).to.equal(true);
+  } finally {
+    formatted.remove();
+    relative.remove();
+    frame.remove();
+  }
+});

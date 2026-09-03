@@ -73,11 +73,17 @@ export const LocalizedWeekStart: Story = {
   `,
 };
 
-/** State paint hooks inherit from an application theme ancestor and remain independently adjustable. */
+/** Navigation, day, and agenda state paint hooks inherit from an application theme ancestor and remain independently adjustable. */
 export const StateThemeHooks: Story = {
   render: () => html`
     <div
       style="
+        --lr-calendar-nav-hover-bg: var(--lr-color-warning-quiet);
+        --lr-calendar-nav-active-bg: var(--lr-color-warning);
+        --lr-calendar-day-hover-bg: var(--lr-color-success-quiet);
+        --lr-calendar-day-active-bg: var(--lr-color-success);
+        --lr-calendar-agenda-event-hover-bg: var(--lr-color-danger-quiet);
+        --lr-calendar-agenda-event-active-bg: var(--lr-color-danger);
         --lr-calendar-day-selected-bg: var(--lr-color-success-quiet);
         --lr-calendar-day-outside-color: var(--lr-color-warning);
         --lr-calendar-day-outside-bg: var(--lr-color-warning-quiet);
@@ -85,6 +91,11 @@ export const StateThemeHooks: Story = {
       "
     >
       <lr-calendar view-date="2026-07-01" value="2026-07-15"></lr-calendar>
+      <lr-calendar
+        view="agenda"
+        view-date="2026-07-01"
+        .events=${[{ date: '2026-07-15', title: 'Agenda state hook' }]}
+      ></lr-calendar>
     </div>
   `,
 };

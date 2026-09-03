@@ -4,6 +4,25 @@ import './checkbox-group.js'; import '../checkbox/checkbox.js';
 const meta: Meta = { title: 'Checkbox Group', component: 'lr-checkbox-group', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
 export const Default: Story = { render: () => html`<lr-checkbox-group label="Topics" name="topics"><lr-checkbox value="news">News</lr-checkbox><lr-checkbox value="product">Product updates</lr-checkbox></lr-checkbox-group>` };
 
+/** Host-owned guidance is composed before the group fieldset's hint and required description. */
+export const ExternalDescription: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+      <p id="checkbox-group-external-description">Choose every topic you want to receive.</p>
+      <lr-checkbox-group
+        aria-describedby="checkbox-group-external-description"
+        label="Topics"
+        hint="You can change these preferences later."
+        name="topics"
+        required
+      >
+        <lr-checkbox value="news">News</lr-checkbox>
+        <lr-checkbox value="product">Product updates</lr-checkbox>
+      </lr-checkbox-group>
+    </div>
+  `,
+};
+
 export const NativeMethods: Story = {
   name: 'Native method semantics',
   parameters: {

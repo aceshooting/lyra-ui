@@ -1,6 +1,7 @@
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { isDateObject } from '../../../internal/dom-guards.js';
 import { styles } from './format.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import {
@@ -22,6 +23,23 @@ export type {
   LyraFormatDateText,
   LyraFormatDateTimeZoneName,
 } from './format-options.js';
+
+/** Resolves only primitive date sources or native Date internal slots. This intentionally avoids
+ * `new Date(object)`, which invokes caller-controlled conversion hooks on arbitrary objects. */
+function resolvedDate(value: unknown): Date | undefined {
+  if (value === null || value === undefined) return new Date();
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+  if (!isDateObject(value)) return undefined;
+  try {
+    const epoch = Date.prototype.getTime.call(value);
+    return Number.isFinite(epoch) ? new Date(epoch) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * `<lr-format-date>` — locale-aware `Intl.DateTimeFormat` output. Numeric `date` attributes are
@@ -56,11 +74,10 @@ export class LyraFormatDate extends LyraElement {
   @property({ attribute: 'hour-format' }) hourFormat: LyraFormatDateHour = 'auto';
 
   override render(): TemplateResult {
-    const source = this.date ?? new Date();
-    const value = source instanceof Date ? source : new Date(source);
+    const value = resolvedDate(this.date);
     const options = dateTimeFormatOptions(this);
     let text = '';
-    if (!Number.isNaN(value.getTime())) {
+    if (value) {
       try {
         text = getDateTimeFormat(this.effectiveLocale || undefined, options).format(value);
       } catch {
@@ -80,7 +97,9 @@ export class LyraFormatDate extends LyraElement {
         }
       }
     }
-    return text ? html`<time datetime=${value.toISOString()}>${text}</time>` : html`<slot></slot>`;
+    return text && value
+      ? html`<time datetime=${value.toISOString()}>${text}</time>`
+      : html`<slot></slot>`;
   }
 }
 declare global {

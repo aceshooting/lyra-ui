@@ -42,7 +42,7 @@ export const AsyncPersistenceHold: Story = {
     docs: {
       description: {
         story:
-          'This listener prevents `lr-feedback-submit`, placing the component in its reflected pending state without closing or announcing success. A real host calls `finalizePendingSubmit()` after persistence succeeds or `revertPendingSubmit()` after it fails.',
+          'This listener prevents `lr-feedback-submit`, placing the component in its reflected pending state without closing or announcing success. A real host retains the frozen detail’s `submissionId` and calls `finalizePendingSubmit(submissionId)` after persistence succeeds or `revertPendingSubmit(submissionId)` after it fails.',
       },
     },
   },
@@ -50,6 +50,19 @@ export const AsyncPersistenceHold: Story = {
     <lr-message-feedback
       .detail=${{ reasons: reasonsForStory, commentable: true }}
       @lr-feedback-submit=${(event: Event) => event.preventDefault()}
+    ></lr-message-feedback>
+  `,
+};
+
+/** The optional native textarea attributes apply only while the comment field is rendered. */
+export const NativeCommentTextarea: Story = {
+  render: () => html`
+    <lr-message-feedback
+      spellcheck="false"
+      autocapitalize="sentences"
+      autocorrect="off"
+      wrap="hard"
+      .detail=${{ commentable: true }}
     ></lr-message-feedback>
   `,
 };

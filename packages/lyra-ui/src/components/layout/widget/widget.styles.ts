@@ -299,6 +299,7 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text-quiet);
     border-radius: var(--lr-radius);
+    font: inherit;
     cursor: pointer;
     transition: transform var(--lr-transition-fast);
   }

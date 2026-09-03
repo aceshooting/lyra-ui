@@ -856,8 +856,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this.captureHostNameProvenance();
     const safeMax = this.safeMax;
     const safeValue = this.safeValue;
+    const label =
+      typeof this.label === 'string' && this.label.trim() === ''
+        ? ''
+        : this.label;
     const generatedLabel =
-      this.accessibleLabel || this.label || this.localize('rating');
+      this.accessibleLabel || label || this.localize('rating');
     this.syncingHostSemantics = true;
     try {
       this.setAttribute('role', 'slider');

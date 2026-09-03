@@ -26,6 +26,11 @@ import {
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings.generated.js';
@@ -68,26 +73,7 @@ export type RubricValue = Readonly<Record<string, number | string | readonly str
 
 const EMPTY_KEYS: readonly RubricKey[] = [];
 const EMPTY_VALUE: RubricValue = {};
-
-interface RuntimeRubricKeyInput {
-  key?: unknown;
-  type?: unknown;
-  label?: unknown;
-  description?: unknown;
-  required?: unknown;
-  min?: unknown;
-  max?: unknown;
-  step?: unknown;
-  options?: unknown;
-  multiple?: unknown;
-  placeholder?: unknown;
-}
-
-interface RuntimeRubricOptionInput {
-  value?: unknown;
-  label?: unknown;
-  description?: unknown;
-}
+const MAX_RUBRIC_COLLECTION_ENTRIES = 10_000;
 
 function cloneRubricValue(value: RubricValue): RubricValue {
   return Object.freeze(
@@ -97,62 +83,190 @@ function cloneRubricValue(value: RubricValue): RubricValue {
   );
 }
 
-function normalizeRubricKeys(next: readonly RubricKey[]): RubricKey[] {
-  if (!Array.isArray(next)) return [];
-  const seen = new Set<string>();
-  const normalized: RubricKey[] = [];
-  for (const candidate of next as readonly unknown[]) {
-    if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const raw = candidate as RuntimeRubricKeyInput;
-    const key = typeof raw.key === 'string' ? raw.key : '';
-    if (key.trim().length === 0 || seen.has(key)) continue;
-    seen.add(key);
+function projectRubricStringArray(value: unknown): readonly string[] | undefined {
+  try {
+    if (!Array.isArray(value)) return undefined;
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return undefined;
+    const values: string[] = [];
+    for (let index = 0; index < Math.min(length.value, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
+      const entry = getOwnDataDescriptor(value, String(index));
+      if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+      if (typeof entry.value === 'string') values.push(entry.value);
+    }
+    return Object.freeze(values);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectRubricOptions(value: unknown): readonly RubricKeyOption[] {
+  try {
+    if (!Array.isArray(value)) return Object.freeze([]);
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return Object.freeze([]);
+    const options: RubricKeyOption[] = [];
+    for (let index = 0; index < Math.min(length.value, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
+      const candidate = getOwnDataDescriptor(value, String(index));
+      if (
+        candidate === MISSING_OWN_DATA_DESCRIPTOR ||
+        candidate === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        candidate.value === null ||
+        typeof candidate.value !== 'object' ||
+        Array.isArray(candidate.value)
+      )
+        continue;
+      const optionValue = getOwnDataDescriptor(candidate.value, 'value');
+      const label = getOwnDataDescriptor(candidate.value, 'label');
+      const description = getOwnDataDescriptor(candidate.value, 'description');
+      if (
+        optionValue === MISSING_OWN_DATA_DESCRIPTOR ||
+        optionValue === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof optionValue.value !== 'string'
+      )
+        continue;
+      const labelValue = label === MISSING_OWN_DATA_DESCRIPTOR || label === UNSAFE_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : typeof label.value === 'string'
+          ? label.value
+          : undefined;
+      const descriptionValue = description === MISSING_OWN_DATA_DESCRIPTOR || description === UNSAFE_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : typeof description.value === 'string'
+          ? description.value
+          : undefined;
+      options.push(Object.freeze({
+        value: optionValue.value,
+        ...(labelValue === undefined ? {} : { label: labelValue }),
+        ...(descriptionValue === undefined ? {} : { description: descriptionValue }),
+      }));
+    }
+    return Object.freeze(options);
+  } catch {
+    return Object.freeze([]);
+  }
+}
+
+function projectRubricKey(candidate: unknown): RubricKey | undefined {
+  try {
+    if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) return undefined;
+    const key = getOwnDataDescriptor(candidate, 'key');
+    const type = getOwnDataDescriptor(candidate, 'type');
+    const label = getOwnDataDescriptor(candidate, 'label');
+    const description = getOwnDataDescriptor(candidate, 'description');
+    const required = getOwnDataDescriptor(candidate, 'required');
+    if (
+      key === MISSING_OWN_DATA_DESCRIPTOR ||
+      key === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      type === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      label === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      description === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      required === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof key.value !== 'string' ||
+      key.value.trim().length === 0
+    )
+      return undefined;
+    const typeValue = type === MISSING_OWN_DATA_DESCRIPTOR ? '' : type.value;
+    if (typeof typeValue !== 'string') return undefined;
+    const labelValue = label === MISSING_OWN_DATA_DESCRIPTOR ? undefined : label.value;
+    const descriptionValue = description === MISSING_OWN_DATA_DESCRIPTOR ? undefined : description.value;
+    const requiredValue = required === MISSING_OWN_DATA_DESCRIPTOR ? undefined : required.value;
     const common = {
-      key,
-      ...(typeof raw.label === 'string' ? { label: raw.label } : {}),
-      ...(typeof raw.description === 'string' ? { description: raw.description } : {}),
-      ...(typeof raw.required === 'boolean' ? { required: raw.required } : {}),
+      key: key.value,
+      ...(typeof labelValue === 'string' ? { label: labelValue } : {}),
+      ...(typeof descriptionValue === 'string' ? { description: descriptionValue } : {}),
+      ...(typeof requiredValue === 'boolean' ? { required: requiredValue } : {}),
     };
-    if (raw.type === 'score') {
-      normalized.push({
+    if (typeValue === 'score') {
+      const min = getOwnDataDescriptor(candidate, 'min');
+      const max = getOwnDataDescriptor(candidate, 'max');
+      const step = getOwnDataDescriptor(candidate, 'step');
+      if (
+        min === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        max === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        step === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
+        return undefined;
+      return Object.freeze({
         ...common,
         type: 'score',
-        ...(typeof raw.min === 'number' ? { min: raw.min } : {}),
-        ...(typeof raw.max === 'number' ? { max: raw.max } : {}),
-        ...(typeof raw.step === 'number' ? { step: raw.step } : {}),
+        ...(min !== MISSING_OWN_DATA_DESCRIPTOR && typeof min.value === 'number' ? { min: min.value } : {}),
+        ...(max !== MISSING_OWN_DATA_DESCRIPTOR && typeof max.value === 'number' ? { max: max.value } : {}),
+        ...(step !== MISSING_OWN_DATA_DESCRIPTOR && typeof step.value === 'number' ? { step: step.value } : {}),
       });
-    } else if (raw.type === 'category') {
-      const options = Array.isArray(raw.options)
-        ? raw.options.flatMap((option): RubricKeyOption[] => {
-            if (option === null || typeof option !== 'object' || Array.isArray(option)) return [];
-            const entry = option as RuntimeRubricOptionInput;
-            if (typeof entry.value !== 'string') return [];
-            return [{
-              value: entry.value,
-              ...(typeof entry.label === 'string' ? { label: entry.label } : {}),
-              ...(typeof entry.description === 'string' ? { description: entry.description } : {}),
-            }];
-          })
-        : [];
-      normalized.push({
+    }
+    if (typeValue === 'category') {
+      const options = getOwnDataDescriptor(candidate, 'options');
+      const multiple = getOwnDataDescriptor(candidate, 'multiple');
+      if (options === UNSAFE_OWN_DATA_DESCRIPTOR || multiple === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+      return Object.freeze({
         ...common,
         type: 'category',
-        options,
-        ...(typeof raw.multiple === 'boolean' ? { multiple: raw.multiple } : {}),
+        options: options === MISSING_OWN_DATA_DESCRIPTOR ? Object.freeze([]) : projectRubricOptions(options.value),
+        ...(multiple !== MISSING_OWN_DATA_DESCRIPTOR && typeof multiple.value === 'boolean'
+          ? { multiple: multiple.value }
+          : {}),
       });
-    } else if (raw.type === 'comment') {
-      normalized.push({
+    }
+    if (typeValue === 'comment') {
+      const placeholder = getOwnDataDescriptor(candidate, 'placeholder');
+      if (placeholder === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+      return Object.freeze({
         ...common,
         type: 'comment',
-        ...(typeof raw.placeholder === 'string' ? { placeholder: raw.placeholder } : {}),
+        ...(placeholder !== MISSING_OWN_DATA_DESCRIPTOR && typeof placeholder.value === 'string'
+          ? { placeholder: placeholder.value }
+          : {}),
       });
-    } else {
-      // Runtime callers can still violate the static discriminant. Preserve one defensive row so
-      // the visible unsupported-type fallback and invalid state remain fail-closed.
-      normalized.push({ ...common, type: String(raw.type ?? '') } as unknown as RubricKey);
     }
+    // Runtime callers can still violate the static discriminant. Preserve one defensive row so
+    // the visible unsupported-type fallback and invalid state remain fail-closed.
+    return Object.freeze({ ...common, type: typeValue } as unknown as RubricKey);
+  } catch {
+    return undefined;
   }
-  return normalized;
+}
+
+function normalizeRubricKeys(next: unknown): readonly RubricKey[] {
+  try {
+    if (!Array.isArray(next)) return EMPTY_KEYS;
+    const length = getOwnDataDescriptor(next, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return EMPTY_KEYS;
+    const seen = new Set<string>();
+    const normalized: RubricKey[] = [];
+    for (let index = 0; index < Math.min(length.value, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
+      const candidate = getOwnDataDescriptor(next, String(index));
+      if (candidate === MISSING_OWN_DATA_DESCRIPTOR || candidate === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+      const key = projectRubricKey(candidate.value);
+      if (!key || seen.has(key.key)) continue;
+      seen.add(key.key);
+      normalized.push(key);
+    }
+    return Object.freeze(normalized);
+  } catch {
+    return EMPTY_KEYS;
+  }
 }
 
 function scoreDomain(key: ScoreRubricKey): { min: number; max: number; step: number;
@@ -183,18 +297,14 @@ function canonicalScore(value: unknown, key: ScoreRubricKey): number | undefined
 
 function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): RubricValue {
   const source = value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
+    ? value
     : EMPTY_VALUE;
   const normalized: Record<string, number | string | readonly string[] | undefined> = {};
   for (const key of keys) {
-    let entry: unknown;
-    let hasEntry = false;
-    try {
-      hasEntry = Object.prototype.hasOwnProperty.call(source, key.key);
-      if (hasEntry) entry = source[key.key];
-    } catch {
-      continue;
-    }
+    const descriptor = getOwnDataDescriptor(source, key.key);
+    if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+    const hasEntry = descriptor !== MISSING_OWN_DATA_DESCRIPTOR;
+    const entry = descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
     if (key.type === 'score') {
       const { min, max } = scoreDomain(key);
       const score = canonicalScore(
@@ -206,12 +316,12 @@ function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): Rubri
       if (!hasEntry) continue;
       const allowed = (key.options ?? []).map((option) => option.value);
       if (key.multiple) {
-        if (!Array.isArray(entry)) continue;
+        const entries = projectRubricStringArray(entry);
+        if (!entries) continue;
         const remaining = new Map<string, number>();
         for (const option of allowed) remaining.set(option, (remaining.get(option) ?? 0) + 1);
         const selected: string[] = [];
-        for (const candidate of entry) {
-          if (typeof candidate !== 'string') continue;
+        for (const candidate of entries) {
           const count = remaining.get(candidate) ?? 0;
           if (count <= 0) continue;
           selected.push(candidate);

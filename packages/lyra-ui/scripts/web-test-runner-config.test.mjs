@@ -15,6 +15,7 @@ function runConfigInspection({
   port,
   concurrency,
   browser,
+  nativeScrollbar = false,
 } = {}) {
   const environment = { ...process.env };
   if (coverage) environment.WTR_COVERAGE = '1';
@@ -27,15 +28,29 @@ function runConfigInspection({
   else environment.WTR_CONCURRENCY = concurrency;
   if (browser === undefined) delete environment.WTR_BROWSER;
   else environment.WTR_BROWSER = browser;
+  if (nativeScrollbar) environment.WTR_NATIVE_SCROLLBAR = '1';
+  else delete environment.WTR_NATIVE_SCROLLBAR;
 
   const source = `
     import config from ${JSON.stringify(configUrl)};
+    const launch = config.browsers[0].launchOptions ?? {};
     process.stdout.write(JSON.stringify({
       coverage: config.coverage,
       concurrency: config.concurrency ?? null,
       port: config.port ?? null,
+      files: config.files,
       mediaCommand: config.plugins.some((plugin) => plugin.name === 'lyra-media-command'),
       keyCommand: config.plugins.some((plugin) => plugin.name === 'send-keys-command'),
+      nativeScrollbarMarker: config.testRunnerHtml('/runner.js').includes(
+        '__LYRA_WTR_NATIVE_SCROLLBAR__ = true',
+      ),
+      launch: {
+        args: launch.args ?? null,
+        ignoreDefaultArgs: launch.ignoreDefaultArgs ?? null,
+        headless: launch.headless ?? null,
+        firefoxUserPrefs: launch.firefoxUserPrefs ?? null,
+        webkitSoftwareGl: launch.env?.LIBGL_ALWAYS_SOFTWARE ?? null,
+      },
       ${coverageReportDir === undefined ? '' : `coverageDetails: {
         threshold: config.coverageConfig.threshold ?? null,
         reportDir: config.coverageConfig.reportDir,
@@ -50,7 +65,7 @@ function runConfigInspection({
   });
 }
 
-function inspectMouseCommandOrder(product = 'firefox') {
+function inspectMouseCommandOrder(product = 'firefox', nativeScrollbar = false) {
   const source = `
     import config from ${JSON.stringify(configUrl)};
     const calls = [];
@@ -61,6 +76,7 @@ function inspectMouseCommandOrder(product = 'firefox') {
         async click(x, y) { calls.push('click:' + x + ',' + y); },
         async down() { calls.push('down'); },
         async up({ button }) { calls.push('up:' + (button ?? 'default')); },
+        async wheel(deltaX, deltaY) { calls.push('wheel:' + deltaX + ',' + deltaY); },
       },
     };
     const plugin = config.plugins.find((candidate) => candidate.name === 'lyra-mouse-command');
@@ -88,15 +104,60 @@ function inspectMouseCommandOrder(product = 'firefox') {
     await plugin.executeCommand({ command: 'send-mouse', payload: { type: 'down' }, session });
     await plugin.executeCommand({ command: 'send-mouse', payload: { type: 'up' }, session });
     await plugin.executeCommand({ command: 'reset-mouse', session });
+    await plugin.executeCommand({
+      command: 'send-wheel',
+      payload: { deltaX: 12, deltaY: -34 },
+      session,
+    });
     process.stdout.write(JSON.stringify(calls));
   `;
   const result = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
     cwd: packageDirectory,
-    env: { ...process.env, WTR_BROWSER: 'firefox' },
+    env: (() => {
+      const environment = { ...process.env, WTR_BROWSER: 'firefox' };
+      if (nativeScrollbar) environment.WTR_NATIVE_SCROLLBAR = '1';
+      else delete environment.WTR_NATIVE_SCROLLBAR;
+      return environment;
+    })(),
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr || result.stdout);
   return JSON.parse(result.stdout);
+}
+
+function inspectInvalidWheelPayload() {
+  const source = `
+    import config from ${JSON.stringify(configUrl)};
+    const plugin = config.plugins.find((candidate) => candidate.name === 'lyra-mouse-command');
+    const page = {
+      async bringToFront() {},
+      mouse: { async wheel() {} },
+    };
+    const session = {
+      id: 'session-1',
+      browser: {
+        type: 'playwright',
+        product: 'chromium',
+        getPage() { return page; },
+      },
+    };
+    try {
+      await plugin.executeCommand({
+        command: 'send-wheel',
+        payload: { deltaX: 12 },
+        session,
+      });
+    } catch (error) {
+      process.stdout.write(error.message);
+    }
+  `;
+  const result = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
+    cwd: packageDirectory,
+    env: { ...process.env, WTR_BROWSER: 'chromium' },
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return result.stdout;
 }
 
 function inspectConfig(options) {
@@ -110,15 +171,33 @@ test('caps coverage browser sessions without changing ordinary test concurrency'
     coverage: true,
     concurrency: 1,
     port: null,
+    files: ['src/**/*.test.ts', '!src/**/*.native-scrollbar.test.ts'],
     mediaCommand: true,
     keyCommand: true,
+    nativeScrollbarMarker: false,
+    launch: {
+      args: ['--disable-dev-shm-usage'],
+      ignoreDefaultArgs: null,
+      headless: null,
+      firefoxUserPrefs: null,
+      webkitSoftwareGl: null,
+    },
   });
   assert.deepEqual(inspectConfig(), {
     coverage: false,
     concurrency: null,
     port: null,
+    files: ['src/**/*.test.ts', '!src/**/*.native-scrollbar.test.ts'],
     mediaCommand: true,
     keyCommand: true,
+    nativeScrollbarMarker: false,
+    launch: {
+      args: ['--disable-dev-shm-usage'],
+      ignoreDefaultArgs: null,
+      headless: null,
+      firefoxUserPrefs: null,
+      webkitSoftwareGl: null,
+    },
   });
 });
 
@@ -131,6 +210,46 @@ test('caps pointer-sensitive browser concurrency without increasing the low-core
   assert.equal(inspectConfig({ browser: 'webkit' }).concurrency, expectedConcurrency);
   assert.equal(inspectConfig({ browser: 'safari' }).concurrency, expectedConcurrency);
   assert.equal(inspectConfig({ browser: 'chromium' }).concurrency, null);
+});
+
+test('keeps native-scrollbar browser setup opt-in and engine-specific', () => {
+  const normalChromium = inspectConfig({ browser: 'chromium' });
+  assert.deepEqual(normalChromium.launch, {
+    args: ['--disable-dev-shm-usage'],
+    ignoreDefaultArgs: null,
+    headless: null,
+    firefoxUserPrefs: null,
+    webkitSoftwareGl: null,
+  });
+  assert.equal(normalChromium.nativeScrollbarMarker, false);
+
+  const nativeChromium = inspectConfig({ browser: 'chromium', nativeScrollbar: true });
+  assert.deepEqual(nativeChromium.launch, {
+    args: ['--disable-dev-shm-usage'],
+    ignoreDefaultArgs: ['--hide-scrollbars'],
+    headless: null,
+    firefoxUserPrefs: null,
+    webkitSoftwareGl: null,
+  });
+  assert.equal(nativeChromium.nativeScrollbarMarker, true);
+
+  const nativeFirefox = inspectConfig({ browser: 'firefox', nativeScrollbar: true });
+  assert.deepEqual(nativeFirefox.launch, {
+    args: null,
+    ignoreDefaultArgs: null,
+    firefoxUserPrefs: { 'widget.gtk.overlay-scrollbars.enabled': false },
+    headless: false,
+    webkitSoftwareGl: null,
+  });
+
+  const nativeWebKit = inspectConfig({ browser: 'webkit', nativeScrollbar: true });
+  assert.deepEqual(nativeWebKit.launch, {
+    args: null,
+    ignoreDefaultArgs: null,
+    headless: false,
+    firefoxUserPrefs: null,
+    webkitSoftwareGl: '1',
+  });
 });
 
 test('writes a shard raw report without applying the full-suite threshold early', () => {
@@ -185,10 +304,13 @@ test('foregrounds non-WebKit pointer commands without suspending sibling WebKit 
     'up:middle',
     'up:right',
     'move:0,0',
+    'page:session-1',
+    'front',
+    'wheel:12,-34',
   ];
   assert.deepEqual(inspectMouseCommandOrder(), foregroundOrder);
   assert.deepEqual(inspectMouseCommandOrder('chromium'), foregroundOrder);
-  assert.deepEqual(inspectMouseCommandOrder('webkit'), [
+  const webKitOrder = [
     'page:session-1',
     'move:12,34',
     'page:session-1',
@@ -202,7 +324,18 @@ test('foregrounds non-WebKit pointer commands without suspending sibling WebKit 
     'up:middle',
     'up:right',
     'move:0,0',
-  ]);
+    'page:session-1',
+    'wheel:12,-34',
+  ];
+  assert.deepEqual(inspectMouseCommandOrder('webkit'), webKitOrder);
+  assert.deepEqual(inspectMouseCommandOrder('webkit', true), webKitOrder);
+});
+
+test('dispatches native wheel commands and rejects malformed wheel payloads', () => {
+  assert.match(
+    inspectInvalidWheelPayload(),
+    /send-wheel command requires finite deltaX and deltaY values/iu,
+  );
 });
 
 test('gives every parallel browser lane a distinct explicit test-server port', () => {

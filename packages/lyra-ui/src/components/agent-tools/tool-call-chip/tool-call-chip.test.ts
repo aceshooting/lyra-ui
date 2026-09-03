@@ -338,6 +338,50 @@ describe('icon override precedence', () => {
 });
 
 describe('detail tooltip', () => {
+  it('treats an element with explicit slot="" as default-slot preview content', async () => {
+    const el = (await fixture(html`
+      <lr-tool-call-chip name="web_search">
+        <span id="explicit-default" slot="">Query: solar panel efficiency</span>
+        <span slot="icon">⌕</span>
+      </lr-tool-call-chip>
+    `)) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+
+    base.focus();
+    await el.updateComplete;
+
+    expect(tooltip.hidden).to.be.false;
+    const assigned = (tooltip.querySelector('slot') as HTMLSlotElement).assignedElements({ flatten: true });
+    expect(assigned.length).to.equal(1);
+    expect(assigned[0]!.id).to.equal('explicit-default');
+  });
+
+  it('tracks explicit default-slot mutations while continuing to exclude named-slot content', async () => {
+    const el = (await fixture(html`
+      <lr-tool-call-chip name="web_search"><span id="preview" slot="icon">⌕</span></lr-tool-call-chip>
+    `)) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    const preview = el.querySelector('#preview')!;
+
+    base.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.true;
+
+    preview.setAttribute('slot', '');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await el.updateComplete;
+    base.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.false;
+
+    preview.setAttribute('slot', 'icon');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.true;
+  });
+
   it('accepts bare noninteractive text as preview content without requiring a wrapper element', async () => {
     const el = (await fixture(
       html`<lr-tool-call-chip name="web_search">Query: solar panel efficiency</lr-tool-call-chip>`,

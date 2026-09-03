@@ -21,10 +21,45 @@ test('builds the complete retained-baseline/evidence plan without changing enrol
       axes.get(axisName)?.artifactPolicy === 'evidence-only',
   );
 
-  assert.equal(new Set(captures.map(({ story }) => story.id)).size, 85);
-  assert.equal(captures.length, 255);
-  assert.equal(evidenceOnly.length, 129);
-  assert.equal(captures.length - evidenceOnly.length, 126);
+  assert.equal(new Set(captures.map(({ story }) => story.id)).size, 93);
+  assert.equal(captures.length, 268);
+  assert.equal(evidenceOnly.length, 145);
+  assert.equal(captures.length - evidenceOnly.length, 123);
+});
+
+test('enrolls the exact required canaries on their intended visual axes', () => {
+  const captures = visualCapturePlan(manifest);
+  const axesByStory = new Map();
+  for (const { story, axisName } of captures) {
+    const axes = axesByStory.get(story.id) ?? [];
+    axes.push(axisName);
+    axesByStory.set(story.id, axes);
+  }
+
+  assert.deepEqual(
+    Object.fromEntries(
+      [
+        'resultcard-result-field--narrow-long-rtl',
+        'overlay-dropdown--narrow-long-rtl',
+        'textarea--narrow-long-rtl',
+        'observability-span-waterfall--narrow-edge-clamp',
+        'agent-tools-subagent-panel--depth-12-narrow',
+        'message-parts--narrow-error-retry',
+        'charts-chart--annotations-canary',
+        'charts-litechart--logarithmic-scale-canary',
+      ].map((storyId) => [storyId, axesByStory.get(storyId)?.sort()]),
+    ),
+    {
+      'resultcard-result-field--narrow-long-rtl': ['narrow'],
+      'overlay-dropdown--narrow-long-rtl': ['narrow'],
+      'textarea--narrow-long-rtl': ['narrow'],
+      'observability-span-waterfall--narrow-edge-clamp': ['narrow'],
+      'agent-tools-subagent-panel--depth-12-narrow': ['narrow'],
+      'message-parts--narrow-error-retry': ['narrow'],
+      'charts-chart--annotations-canary': ['dark', 'forced-colors', 'light', 'rtl'],
+      'charts-litechart--logarithmic-scale-canary': ['dark', 'light', 'rtl'],
+    },
+  );
 });
 
 test('creates deterministic, disjoint, exhaustive, balanced capture shards', () => {
@@ -33,7 +68,7 @@ test('creates deterministic, disjoint, exhaustive, balanced capture shards', () 
     shardVisualCaptures(captures, shardIndex, 3),
   );
 
-  assert.deepEqual(shards.map((shard) => shard.length), [85, 85, 85]);
+  assert.deepEqual(shards.map((shard) => shard.length), [90, 89, 89]);
   assert.equal(new Set(shards.flat().map(({ key }) => key)).size, captures.length);
   assert.deepEqual(
     shards.flat().map(({ key }) => key).sort(),

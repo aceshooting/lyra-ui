@@ -13,7 +13,6 @@
 #   ./scripts/regen.sh                 # regenerate all non-visual derived artifacts
 #   ./scripts/regen.sh --visual        # promote an already-reviewed candidate set (guarded)
 #   ./scripts/regen.sh --visual --filter <story-slug>   # scope promotion to one reviewed story
-#   ./scripts/regen.sh --skip-build    # reuse an already-fresh dist/ for built measurements
 #
 # Visual baselines are NOT promoted by default. `--visual` copies the exact hash-bound candidates
 # from a preceding normal harness run and refuses to act until manifest.json contains a real,
@@ -22,13 +21,35 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+node scripts/check-node-version.mjs
+
+read_expected_pnpm_version() {
+  node -e '
+    const value = require("./package.json").packageManager;
+    const match = /^pnpm@((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/.exec(String(value ?? ""));
+    if (!match) throw new Error(`package.json#packageManager must pin one exact pnpm patch; found ${JSON.stringify(value)}`);
+    process.stdout.write(match[1]);
+  '
+}
+
+verify_regen_pnpm() {
+  local expected_pnpm_version
+  local actual_pnpm_version
+  expected_pnpm_version="$(read_expected_pnpm_version)"
+  actual_pnpm_version="$(pnpm --version)"
+  if [[ "$actual_pnpm_version" != "$expected_pnpm_version" ]]; then
+    echo "regeneration requires exact pnpm $expected_pnpm_version; active pnpm is $actual_pnpm_version" >&2
+    exit 1
+  fi
+}
+
+verify_regen_pnpm
+
 RUN_VISUAL=0
-SKIP_BUILD=0
 VISUAL_FILTER=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --visual) RUN_VISUAL=1; shift ;;
-    --skip-build) SKIP_BUILD=1; shift ;;
     --filter)
       [[ $# -ge 2 ]] || { echo "--filter needs a value" >&2; exit 2; }
       VISUAL_FILTER=(--filter "$2")
@@ -42,37 +63,37 @@ step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 warn() { printf '\033[33m%s\033[0m\n' "$*"; }
 
 step "package metadata (src/internal/package-metadata.ts)"
-pnpm --filter @aceshooting/lyra-ui run package-metadata
+pnpm --filter @aceshooting/lyra-ui package-metadata
 
 step "default-string component slices"
-pnpm --filter @aceshooting/lyra-ui run default-string-slices
+pnpm --filter @aceshooting/lyra-ui default-string-slices
 
 step "initial manifest (custom-elements.json)"
 pnpm manifest
 
 step "component inventory from digest-pinned public upstream manifests"
-pnpm --filter @aceshooting/lyra-ui run component-inventory
+pnpm --filter @aceshooting/lyra-ui component-inventory
 
 step "component release metadata and source annotations"
-pnpm --filter @aceshooting/lyra-ui run component-metadata
+pnpm --filter @aceshooting/lyra-ui component-metadata
 
 step "final manifest after component metadata annotations"
 pnpm manifest
 
 step "final component inventory after the annotated manifest"
-pnpm --filter @aceshooting/lyra-ui run component-inventory
+pnpm --filter @aceshooting/lyra-ui component-inventory
 
 step "registration entries, root allowlist, tag aliases, and sideEffects"
 pnpm registrations
 
 step "autoloader manifest"
-pnpm --filter @aceshooting/lyra-ui run autoloader-manifest
+pnpm --filter @aceshooting/lyra-ui autoloader-manifest
 
 step "typed global event surface"
-pnpm --filter @aceshooting/lyra-ui run events
+pnpm --filter @aceshooting/lyra-ui events
 
 step "framework type surfaces"
-pnpm --filter @aceshooting/lyra-ui run framework-types
+pnpm --filter @aceshooting/lyra-ui framework-types
 
 step "semantic, chart, and terminal palette artifacts"
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-palette.mjs
@@ -80,30 +101,28 @@ pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-chart-palette.mjs
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.mjs
 
 step "design-token artifacts"
-pnpm --filter @aceshooting/lyra-ui run design-tokens
-
-if [[ "$SKIP_BUILD" != "1" ]]; then
-  step "pnpm build"
-  pnpm build
-fi
-
-step "component qualification and integration evidence"
-pnpm --filter @aceshooting/lyra-ui run component-quality
-
-step "measured bundle-size statistics (reviewed budgets are never generated)"
-pnpm --filter @aceshooting/lyra-ui exec node scripts/check-bundle-size.mjs --write-stats
+pnpm --filter @aceshooting/lyra-ui design-tokens
 
 step "editor data (vscode-html-data.json / vscode-css-data.json / web-types.json)"
-pnpm --filter @aceshooting/lyra-ui run generate-editor-data
-
-step "llms docs (llms-full.txt + llms/**)"
-pnpm --filter @aceshooting/lyra-ui run llms
+pnpm --filter @aceshooting/lyra-ui generate-editor-data
 
 step "Claude/Codex plugin manifest versions"
 pnpm plugin:sync
 
 step "plugin skill packages (generated API references + skills/*.skill)"
 ./package.sh
+
+step "pnpm build"
+pnpm build
+
+step "measured bundle-size statistics (reviewed budgets are never generated)"
+pnpm --filter @aceshooting/lyra-ui exec node scripts/check-bundle-size.mjs --write-stats
+
+step "component qualification and integration evidence"
+pnpm --filter @aceshooting/lyra-ui component-quality
+
+step "verify built component-quality evidence"
+pnpm --filter @aceshooting/lyra-ui check:component-quality:built
 
 step "Storybook + sitemap (storybook-static/, .storybook/sitemap.xml)"
 pnpm docs:build

@@ -8,6 +8,7 @@ import "../../media/av-player/av-player.js";
 import "../../retrieval/citation-badge/citation-badge.js";
 import type { CitationActivateDetail } from "../../retrieval/citation-badge/citation-badge.class.js";
 import type { AnchorResultDetail } from "./anchors.js";
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: "DocumentViewer",
@@ -41,6 +42,30 @@ export const FallbackToDocumentPreview: Story = {
       name="response.json"
       mime-type="application/json"
       src=${textDataUrl}
+    ></lr-document-viewer>
+  `,
+};
+
+export const DownloadStateHooks: Story = {
+  name: 'Themed download hover and pressed states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The dialog footer download link inherits `--lr-document-viewer-download-link-hover-bg` and `--lr-document-viewer-download-link-active-bg` independently from the viewer or an ancestor.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-document-viewer
+      style="
+        --lr-document-viewer-download-link-hover-bg: ${storyColor('success')};
+        --lr-document-viewer-download-link-active-bg: ${storyColor('danger')};
+      "
+      .open=${context.viewMode !== 'docs'}
+      name="quarterly-report.pdf"
+      mime-type="application/pdf"
+      src="https://example.com/files/quarterly-report.pdf"
     ></lr-document-viewer>
   `,
 };

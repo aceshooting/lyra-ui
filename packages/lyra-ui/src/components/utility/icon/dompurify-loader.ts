@@ -3,6 +3,10 @@ import {
   resolveOptionalPeerCapability,
   type HtmlSanitizer,
 } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const ICON_SANITIZER_WARNING_KEY = 'lyra-icon-sanitizer-unavailable';
+const ICON_SANITIZER_WARNING = '<lr-icon> could not load its optional dompurify peer.';
 
 let sanitizer: Promise<HtmlSanitizer | null> | undefined;
 
@@ -16,11 +20,8 @@ export async function loadIconSanitizerDeps(
     // barrier between fetched remote markup and the DOM into a silent no-op.
     const module = await importDompurify();
     return resolveOptionalPeerCapability(module, isHtmlSanitizer);
-  } catch (error) {
-    console.warn(
-      '<lr-icon> needs the optional peer dependency `dompurify` to sanitize fetched SVG markup — install it with `pnpm add dompurify`:',
-      error,
-    );
+  } catch {
+    devWarnOnce(ICON_SANITIZER_WARNING_KEY, ICON_SANITIZER_WARNING);
     return null;
   }
 }

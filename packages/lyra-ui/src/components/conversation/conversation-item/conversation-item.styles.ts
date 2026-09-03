@@ -182,6 +182,7 @@ export const styles = css`
   /* A row has real room (unlike a compact chip pill), so the rename button takes the full shared
      --lr-icon-button-size floor directly -- no capped/split-glyph compromise. */
   [part='rename-button'] {
+    font: inherit;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;

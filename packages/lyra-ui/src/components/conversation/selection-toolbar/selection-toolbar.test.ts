@@ -12,6 +12,28 @@ import type {
   SelectionActionDetail,
 } from "./selection-toolbar.class.js";
 
+interface SelectionToolbarVisualViewportStub {
+  readonly offsetLeft: number;
+  readonly offsetTop: number;
+  readonly width: number;
+  readonly height: number;
+  addEventListener(type: string, listener: EventListenerOrEventListenerObject): void;
+  removeEventListener(type: string, listener: EventListenerOrEventListenerObject): void;
+}
+
+function visualViewportStub(
+  magnitude: number,
+): SelectionToolbarVisualViewportStub {
+  return {
+    offsetLeft: magnitude,
+    offsetTop: magnitude,
+    width: magnitude,
+    height: magnitude,
+    addEventListener(): void {},
+    removeEventListener(): void {},
+  };
+}
+
 it("renders a named toolbar at a supplied selection rectangle", async () => {
   const rect = new DOMRect(20, 30, 100, 20);
   const el = (await fixture(html`<lr-selection-toolbar
@@ -208,14 +230,16 @@ it("uses visualViewport offsets and dimensions for LTR and RTL collision bounds"
       el.dir = direction;
       await el.updateComplete;
       runtime.updateToolbarPosition();
-      const desiredLeft = 910 - toolbar.offsetWidth / 2;
+      const inlineAnchor = Math.min(420, Math.max(100, 910));
+      const blockAnchor = Math.min(290, Math.max(50, 700));
+      const desiredLeft = inlineAnchor - toolbar.offsetWidth / 2;
       const positionedLeft =
         desiredLeft +
         Number.parseFloat(
           toolbar.style.getPropertyValue("--_lr-selection-toolbar-inline-shift")
         );
       const positionedTop =
-        700 -
+        blockAnchor -
         toolbar.offsetHeight +
         Number.parseFloat(
           toolbar.style.getPropertyValue("--_lr-selection-toolbar-block-shift")
@@ -250,18 +274,41 @@ it("keeps the historical 8px placement gap when the themeable hook is unset", as
   expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(8);
 });
 
-it("resolves a themeable placement gap for both the selection anchor and viewport collisions", async () => {
+it('uses the live --lr-space-s token when no public placement-gap override is valid', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-theme-space-s: 20px">
+      <lr-selection-toolbar
+        open
+        text="selected"
+        .rect=${new DOMRect(240, 200, 20, 20)}
+      ></lr-selection-toolbar>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-selection-toolbar') as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector(
+    '[part="toolbar"]'
+  ) as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+  await aTimeout(0);
+
+  expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(20);
+});
+
+it("lets a valid public placement gap override the live token for anchor and viewport collisions", async () => {
   const gap =
     1.5 *
     Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
-  const el = (await fixture(html`
-    <lr-selection-toolbar
-      open
-      text="selected"
-      style="--lr-selection-toolbar-placement-gap: 1.5rem"
-      .rect=${new DOMRect(240, 200, 20, 20)}
-    ></lr-selection-toolbar>
-  `)) as LyraSelectionToolbar;
+  const wrapper = await fixture(html`
+    <div style="--lr-theme-space-s: 20px">
+      <lr-selection-toolbar
+        open
+        text="selected"
+        style="--lr-selection-toolbar-placement-gap: 1.5rem"
+        .rect=${new DOMRect(240, 200, 20, 20)}
+      ></lr-selection-toolbar>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-selection-toolbar') as LyraSelectionToolbar;
   const toolbar = el.shadowRoot!.querySelector(
     '[part="toolbar"]'
   ) as HTMLElement;
@@ -301,22 +348,25 @@ it("inherits the placement gap hook from an ancestor", async () => {
   expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(20);
 });
 
-it("falls back to the historical placement gap for an unsupported CSS length", async () => {
-  const el = (await fixture(html`
-    <lr-selection-toolbar
-      open
-      text="selected"
-      style="--lr-selection-toolbar-placement-gap: calc(1rem + 2px)"
-      .rect=${new DOMRect(240, 200, 20, 20)}
-    ></lr-selection-toolbar>
-  `)) as LyraSelectionToolbar;
+it("uses the live token after an unsupported public placement gap", async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-theme-space-s: 20px">
+      <lr-selection-toolbar
+        open
+        text="selected"
+        style="--lr-selection-toolbar-placement-gap: calc(1rem + 2px)"
+        .rect=${new DOMRect(240, 200, 20, 20)}
+      ></lr-selection-toolbar>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-selection-toolbar') as LyraSelectionToolbar;
   const toolbar = el.shadowRoot!.querySelector(
     '[part="toolbar"]'
   ) as HTMLElement;
   await waitUntil(() => toolbar.hasAttribute("data-positioned"));
   await aTimeout(0);
 
-  expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(8);
+  expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(20);
 });
 
 it("clamps a negative placement gap at zero", async () => {
@@ -506,6 +556,217 @@ it("focuses the stable toolbar when the focused final action is removed", async 
   expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal(
     "toolbar"
   );
+});
+
+it('releases slotted tabindex leases on close without overwriting the authored baseline', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected" .actions=${[]}>
+      <button slot="actions" id="leased-selection-action" tabindex="7">
+        Leased action
+      </button>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const action = el.querySelector<HTMLButtonElement>('#leased-selection-action')!;
+  await waitUntil(() => action.tabIndex === 0);
+
+  el.open = false;
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(action.getAttribute('tabindex')).to.equal('7');
+});
+
+it('preserves a consumer takeover of a slotted tabindex lease through close, disconnect, and adoption', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected" .actions=${[]}>
+      <button slot="actions" id="taken-selection-action" tabindex="7">Action</button>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const action = el.querySelector<HTMLButtonElement>('#taken-selection-action')!;
+  await waitUntil(() => action.tabIndex === 0);
+
+  action.setAttribute('tabindex', '5');
+  el.open = false;
+  await el.updateComplete;
+  expect(action.getAttribute('tabindex')).to.equal('5');
+
+  el.open = true;
+  await el.updateComplete;
+  await waitUntil(() => action.tabIndex === 0);
+  el.remove();
+  expect(action.getAttribute('tabindex')).to.equal('5');
+
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(el));
+    await el.updateComplete;
+    expect(action.getAttribute('tabindex')).to.equal('5');
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('centers retained enlarged selection action hit floors', async () => {
+  const el = (await fixture(
+    html`<lr-selection-toolbar open text="selected"></lr-selection-toolbar>`,
+  )) as LyraSelectionToolbar;
+  const action = el.shadowRoot!.querySelector<HTMLElement>('[part~="action"]')!;
+  const style = getComputedStyle(action);
+
+  expect(style.alignItems).to.equal('center');
+  expect(style.justifyContent).to.equal('center');
+  expect(action.getBoundingClientRect().width).to.be.at.least(40);
+  expect(action.getBoundingClientRect().height).to.be.at.least(40);
+});
+
+it('keeps every placement value finite and intersects the owner viewport for extreme rects in LTR and RTL', async () => {
+  const el = (await fixture(
+    html`<lr-selection-toolbar open text="selected"></lr-selection-toolbar>`,
+  )) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+  const access = el as unknown as {
+    placementGapPx: () => number;
+    updateToolbarPosition: () => void;
+  };
+  const originalPlacementGap = access.placementGapPx;
+  access.placementGapPx = () => Number.MAX_VALUE;
+
+  try {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      for (const magnitude of [Number.MAX_VALUE, -Number.MAX_VALUE]) {
+        el.dir = direction;
+        el.rect = {
+          left: magnitude,
+          top: magnitude,
+          width: magnitude,
+          height: magnitude,
+        } as DOMRectReadOnly;
+        await el.updateComplete;
+        access.updateToolbarPosition();
+
+        for (const name of [
+          '--_lr-selection-toolbar-inline-start',
+          '--_lr-selection-toolbar-block-start',
+          '--_lr-selection-toolbar-inline-shift',
+          '--_lr-selection-toolbar-block-shift',
+          '--_lr-selection-toolbar-max-inline-size',
+          '--_lr-selection-toolbar-max-block-size',
+        ]) {
+          const value = toolbar.style.getPropertyValue(name);
+          expect(value).to.match(/^-?\d+(?:\.\d+)?px$/);
+          expect(Number.isFinite(Number.parseFloat(value))).to.be.true;
+        }
+        const positioned = toolbar.getBoundingClientRect();
+        expect(positioned.right).to.be.at.least(0);
+        expect(positioned.left).to.be.at.most(window.innerWidth);
+        expect(positioned.bottom).to.be.at.least(0);
+        expect(positioned.top).to.be.at.most(window.innerHeight);
+      }
+    }
+  } finally {
+    access.placementGapPx = originalPlacementGap;
+  }
+});
+
+it('saturates extreme owner viewport geometry before collision placement in LTR and RTL', async () => {
+  const el = (await fixture(
+    html`<lr-selection-toolbar open text="selected"></lr-selection-toolbar>`,
+  )) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+  const access = el as unknown as {
+    updateToolbarPosition(): void;
+    viewportBounds(view: Window): {
+      readonly left: number;
+      readonly top: number;
+      readonly right: number;
+      readonly bottom: number;
+      readonly layoutWidth: number;
+    };
+  };
+  const innerWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+  const innerHeight = Object.getOwnPropertyDescriptor(window, 'innerHeight');
+  const originalVisualViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+  const styleNames = [
+    '--_lr-selection-toolbar-inline-start',
+    '--_lr-selection-toolbar-block-start',
+    '--_lr-selection-toolbar-inline-shift',
+    '--_lr-selection-toolbar-block-shift',
+    '--_lr-selection-toolbar-max-inline-size',
+    '--_lr-selection-toolbar-max-block-size',
+  ];
+
+  try {
+    for (const magnitude of [Number.MAX_VALUE, -Number.MAX_VALUE]) {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: magnitude,
+      });
+      Object.defineProperty(window, 'innerHeight', {
+        configurable: true,
+        value: magnitude,
+      });
+      Object.defineProperty(window, 'visualViewport', {
+        configurable: true,
+        value: visualViewportStub(magnitude),
+      });
+
+      for (const direction of ['ltr', 'rtl'] as const) {
+        el.dir = direction;
+        el.rect = {
+          left: magnitude,
+          top: magnitude,
+          width: magnitude,
+          height: magnitude,
+        } as DOMRectReadOnly;
+        await el.updateComplete;
+        access.updateToolbarPosition();
+
+        const bounds = access.viewportBounds(window);
+        expect(Number.isFinite(bounds.left)).to.be.true;
+        expect(Number.isFinite(bounds.top)).to.be.true;
+        expect(Number.isFinite(bounds.right)).to.be.true;
+        expect(Number.isFinite(bounds.bottom)).to.be.true;
+        expect(Number.isFinite(bounds.layoutWidth)).to.be.true;
+
+        for (const name of styleNames) {
+          const value = toolbar.style.getPropertyValue(name);
+          expect(value.endsWith('px')).to.be.true;
+          expect(Number.isFinite(Number.parseFloat(value))).to.be.true;
+        }
+
+        const inlineStart = Number.parseFloat(
+          toolbar.style.getPropertyValue('--_lr-selection-toolbar-inline-start'),
+        );
+        const blockStart = Number.parseFloat(
+          toolbar.style.getPropertyValue('--_lr-selection-toolbar-block-start'),
+        );
+        const inlineShift = Number.parseFloat(
+          toolbar.style.getPropertyValue('--_lr-selection-toolbar-inline-shift'),
+        );
+        const blockShift = Number.parseFloat(
+          toolbar.style.getPropertyValue('--_lr-selection-toolbar-block-shift'),
+        );
+        const physicalInline =
+          direction === 'rtl' ? bounds.layoutWidth - inlineStart : inlineStart;
+        const left = physicalInline - toolbar.offsetWidth / 2 + inlineShift;
+        const top = blockStart - toolbar.offsetHeight + blockShift;
+
+        expect(left <= bounds.right && left + toolbar.offsetWidth >= bounds.left).to.be.true;
+        expect(top <= bounds.bottom && top + toolbar.offsetHeight >= bounds.top).to.be.true;
+      }
+    }
+  } finally {
+    if (innerWidth) Object.defineProperty(window, 'innerWidth', innerWidth);
+    else Reflect.deleteProperty(window, 'innerWidth');
+    if (innerHeight) Object.defineProperty(window, 'innerHeight', innerHeight);
+    else Reflect.deleteProperty(window, 'innerHeight');
+    if (originalVisualViewport) {
+      Object.defineProperty(window, 'visualViewport', originalVisualViewport);
+    }
+    else Reflect.deleteProperty(window, 'visualViewport');
+  }
 });
 
 it("does not steal a newer external focus destination while actions shrink", async () => {
@@ -1124,7 +1385,7 @@ it("does not mutate or focus stale roving buttons after adoption", async () => {
     await Promise.resolve();
 
     expect(controls.map((control) => control.tabIndex)).to.deep.equal([
-      0, -1, -1, -1,
+      0, 0, 0, 0,
     ]);
     expect(focusCalls).to.equal(0);
   } finally {
@@ -1276,11 +1537,11 @@ it("live-reconciles slotted action availability and clears stale roving stops", 
 
   first.disabled = true;
   await waitUntil(() => second.tabIndex === 0);
-  expect(first.tabIndex).to.equal(-1);
+  expect(first.getAttribute('tabindex')).to.equal(null);
   second.setAttribute("aria-disabled", "true");
-  await waitUntil(() => second.tabIndex === -1);
+  await waitUntil(() => second.getAttribute('tabindex') === null);
   expect(access.actionButtons()).to.have.lengthOf(0);
-  expect(second.tabIndex).to.equal(-1);
+  expect(second.getAttribute('tabindex')).to.equal(null);
 
   first.disabled = false;
   second.removeAttribute("aria-disabled");
@@ -1288,9 +1549,9 @@ it("live-reconciles slotted action availability and clears stale roving stops", 
   first.hidden = true;
   await waitUntil(() => second.tabIndex === 0);
   second.inert = true;
-  await waitUntil(() => second.tabIndex === -1);
+  await waitUntil(() => second.getAttribute('tabindex') === null);
   expect(access.actionButtons()).to.have.lengthOf(0);
-  expect(second.tabIndex).to.equal(-1);
+  expect(second.getAttribute('tabindex')).to.equal(null);
 
   promoted.setAttribute("tabindex", "-1");
   await waitUntil(() => promoted.tabIndex === 0);
@@ -1355,7 +1616,7 @@ it("repairs focused slotted action removal to the nearest survivor, then the too
 
   survivor.setAttribute("inert", "");
   await waitUntil(() => el.shadowRoot!.activeElement === toolbar);
-  expect(survivor.tabIndex).to.equal(-1);
+  expect(survivor.getAttribute('tabindex')).to.equal(null);
 });
 
 it("does not steal newer external focus during live slotted-action repair", async () => {
@@ -1445,7 +1706,7 @@ it("rebinds live slotted-action observation to the current realm after adoption"
     await waitUntil(() => second.tabIndex === 0);
 
     expect(observerConstructions).to.be.greaterThan(0);
-    expect(first.tabIndex).to.equal(-1);
+    expect(first.getAttribute('tabindex')).to.equal(null);
   } finally {
     frameWindow.MutationObserver = NativeObserver;
     el.remove();

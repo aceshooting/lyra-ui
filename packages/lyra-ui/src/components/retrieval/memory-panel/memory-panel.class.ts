@@ -2,7 +2,11 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { firstByRetrievalIdentity } from '../retrieval-identity.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraProvenance } from '../provenance-panel/provenance-panel.class.js';
@@ -45,9 +49,123 @@ export interface LyraMemoryItem {
 
 type MemoryScope = 'short-term' | 'long-term';
 
+const MAX_PROJECTED_MEMORY_ITEMS = 10_000;
+
+interface CanonicalMemoryItem {
+  /** The admitted input is retained only for the public add-event identity. */
+  readonly source: LyraMemoryItem;
+  readonly id: string;
+  readonly text: string;
+  readonly confidence?: number;
+  /** Opaque provenance is never reflected or reread after admission. */
+  readonly provenance?: LyraProvenance;
+}
+
+const EMPTY_CANONICAL_MEMORIES: readonly CanonicalMemoryItem[] = Object.freeze(
+  []
+);
+
+function descriptorValue(
+  value: object,
+  property: PropertyKey
+): ReturnType<typeof getOwnDataDescriptor> {
+  return getOwnDataDescriptor(value, property);
+}
+
+function valueOfDescriptor(
+  descriptor: ReturnType<typeof getOwnDataDescriptor>
+): unknown | undefined {
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    ? undefined
+    : descriptor.value;
+}
+
+function projectMemory(value: unknown): CanonicalMemoryItem | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+      return undefined;
+    const idDescriptor = descriptorValue(value, 'id');
+    const textDescriptor = descriptorValue(value, 'text');
+    const confidenceDescriptor = descriptorValue(value, 'confidence');
+    const provenanceDescriptor = descriptorValue(value, 'provenance');
+    if (
+      [
+        idDescriptor,
+        textDescriptor,
+        confidenceDescriptor,
+        provenanceDescriptor,
+      ].some((descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR)
+    )
+      return undefined;
+
+    const id = valueOfDescriptor(idDescriptor);
+    const text = valueOfDescriptor(textDescriptor);
+    if (
+      typeof id !== 'string' ||
+      id.trim().length === 0 ||
+      typeof text !== 'string' ||
+      text.trim().length === 0
+    )
+      return undefined;
+
+    const confidence = valueOfDescriptor(confidenceDescriptor);
+    const provenance = valueOfDescriptor(provenanceDescriptor);
+    return Object.freeze({
+      source: value as LyraMemoryItem,
+      id,
+      text,
+      ...(typeof confidence === 'number' && Number.isFinite(confidence)
+        ? { confidence }
+        : {}),
+      ...(provenance === undefined
+        ? {}
+        : { provenance: provenance as LyraProvenance }),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectMemories(value: unknown): readonly CanonicalMemoryItem[] {
+  try {
+    if (!Array.isArray(value)) return EMPTY_CANONICAL_MEMORIES;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    )
+      return EMPTY_CANONICAL_MEMORIES;
+
+    const memories: CanonicalMemoryItem[] = [];
+    const seen = new Set<string>();
+    const length = Math.min(lengthDescriptor.value, MAX_PROJECTED_MEMORY_ITEMS);
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = descriptorValue(value, String(index));
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
+        continue;
+      const memory = projectMemory(descriptor.value);
+      // Validation deliberately precedes identity reservation, so a malformed duplicate cannot
+      // hide a later valid row with the same public id.
+      if (!memory || seen.has(memory.id)) continue;
+      seen.add(memory.id);
+      memories.push(memory);
+    }
+    return Object.freeze(memories);
+  } catch {
+    return EMPTY_CANONICAL_MEMORIES;
+  }
+}
+
 interface ItemPending {
   kind: 'add' | 'remove';
-  item: LyraMemoryItem;
+  item: CanonicalMemoryItem;
   scope: MemoryScope;
 }
 
@@ -136,10 +254,13 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * header, only rendered while `longTerm` is non-empty) -- a bulk, more consequential action kept
  * distinct from the per-item `remove`.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
- * Blank memory ids and later duplicates within each scope are ignored before rendering, counts,
- * focus recovery, confirmation state, or actions. The first item for an id wins in that scope.
+ * Public collection sequences are bounded, frozen snapshots. Admitted memory source identities
+ * and provenance remain opaque while descriptor-safe projections copy display and action fields
+ * once; later rendering, event emission, and controlled-focus recovery never reread a source row.
+ * Create a new collection and reassign it after changes; mutating the assigned array does not
+ * update the view. Blank memory ids and later duplicates within each scope are ignored before
+ * rendering, counts, focus recovery, confirmation state, or actions. The first item for an id
+ * wins in that scope.
  *
  * @customElement lr-memory-panel
  * @event lr-add - A pending "add to long-term memory" action was approved. `detail: { memory }` --
@@ -225,11 +346,19 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     'longTerm',
     'types',
   ]);
+  /** Memory source records can contain opaque provenance retained for the public add event. */
+  protected static override readonly identityCollectionProperties =
+    Object.freeze(['shortTerm', 'longTerm']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-add',
   ]);
+  /** The admitted memory is opaque caller state inside the otherwise frozen add envelope. */
+  protected static override readonly identityEventDetailProperties =
+    Object.freeze({
+      'lr-add': Object.freeze(['memory']),
+    });
 
   /** Ephemeral, working-context items. Controlled and never mutated by this component. */
   @property({ attribute: false }) shortTerm: readonly LyraMemoryItem[] = [];
@@ -255,6 +384,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   @state() private pending: PendingAction | null = null;
 
   private readonly idBase = nextId('memory-panel');
+  private readonly canonicalMemoriesBySource = new WeakMap<
+    object,
+    readonly CanonicalMemoryItem[]
+  >();
   private pendingControlledFocus:
     | { scope: MemoryScope; index: number }
     | 'base'
@@ -264,8 +397,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     this.captureControlledFocus(changed);
-    if (!this.pending) return;
-    if (this.pending.kind === 'forget-all') {
+    const pending = this.pending;
+    if (!pending) return;
+    if (pending.kind === 'forget-all') {
       // The confirmation applies to the exact controlled collection the user saw. If the host
       // replaces that collection while the prompt is open, approving the stale prompt must not
       // authorize clearing newly supplied memories.
@@ -273,8 +407,17 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
       return;
     }
     if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
-    const items = this.memoriesForScope(this.pending.scope);
-    if (!items.includes(this.pending.item)) this.pending = null;
+    const items = this.memoriesForScope(pending.scope);
+    const current = items.find((item) => item.source === pending.item.source);
+    if (!current) {
+      this.pending = null;
+      return;
+    }
+    // Canonical wrappers belong to their outer controlled collection. A host can replace that
+    // collection while retaining the very same caller-owned memory object, so carry the pending
+    // decision onto the corresponding current wrapper without treating an equal-looking new
+    // object as the same row.
+    if (current !== pending.item) pending.item = current;
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -314,8 +457,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
         ),
       ];
       const oldIndex = oldRows.indexOf(row);
-      const previousItems = this.normalizeMemories(
-        (changed.get(property) as readonly LyraMemoryItem[] | undefined) ?? []
+      const previousItems = this.cachedCanonicalMemoriesFor(
+        changed.get(property)
       );
       const focusedItem = previousItems[oldIndex];
       const nextItems = this.memoriesForScope(scope);
@@ -366,31 +509,42 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     }
   }
 
-  private normalizeMemories(value: unknown): LyraMemoryItem[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(value) ? (value as readonly LyraMemoryItem[]) : [],
-      (memory) => memory.id
-    ).filter(
-      (memory) =>
-        typeof memory.text === 'string' && memory.text.trim().length > 0
-    );
+  private canonicalMemoriesFor(
+    source: unknown
+  ): readonly CanonicalMemoryItem[] {
+    if (source === null || typeof source !== 'object')
+      return EMPTY_CANONICAL_MEMORIES;
+    const cached = this.canonicalMemoriesBySource.get(source);
+    if (cached) return cached;
+    const memories = projectMemories(source);
+    this.canonicalMemoriesBySource.set(source, memories);
+    return memories;
   }
 
-  private get normalizedShortTerm(): LyraMemoryItem[] {
-    return this.normalizeMemories(this.shortTerm);
+  /** Never reproject a prior retained collection during controlled focus recovery. */
+  private cachedCanonicalMemoriesFor(
+    source: unknown
+  ): readonly CanonicalMemoryItem[] {
+    return source !== null && typeof source === 'object'
+      ? this.canonicalMemoriesBySource.get(source) ?? EMPTY_CANONICAL_MEMORIES
+      : EMPTY_CANONICAL_MEMORIES;
   }
 
-  private get normalizedLongTerm(): LyraMemoryItem[] {
-    return this.normalizeMemories(this.longTerm);
+  private get normalizedShortTerm(): readonly CanonicalMemoryItem[] {
+    return this.canonicalMemoriesFor(this.shortTerm);
   }
 
-  private memoriesForScope(scope: MemoryScope): LyraMemoryItem[] {
+  private get normalizedLongTerm(): readonly CanonicalMemoryItem[] {
+    return this.canonicalMemoriesFor(this.longTerm);
+  }
+
+  private memoriesForScope(scope: MemoryScope): readonly CanonicalMemoryItem[] {
     return scope === 'short-term'
       ? this.normalizedShortTerm
       : this.normalizedLongTerm;
   }
 
-  private itemKey(item: LyraMemoryItem, scope: MemoryScope): string {
+  private itemKey(item: CanonicalMemoryItem, scope: MemoryScope): string {
     return `${scope}\u0000${item.id}`;
   }
 
@@ -404,7 +558,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     return 'low';
   }
 
-  private toggleExpand(item: LyraMemoryItem, scope: MemoryScope): void {
+  private toggleExpand(item: CanonicalMemoryItem, scope: MemoryScope): void {
     const key = this.itemKey(item, scope);
     const next = new Set(this.expandedIds);
     const expanded = !next.has(key);
@@ -416,7 +570,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
 
   private startItemPending(
     kind: 'add' | 'remove',
-    item: LyraMemoryItem,
+    item: CanonicalMemoryItem,
     scope: MemoryScope
   ): void {
     this.pending = { kind, item, scope };
@@ -490,7 +644,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (index < 0) return;
     this.pending = null;
     if (approved) {
-      if (p.kind === 'add') this.emit('lr-add', { memory: p.item });
+      if (p.kind === 'add') this.emit('lr-add', { memory: p.item.source });
       else this.emit('lr-remove', { memoryId: p.item.id, scope: p.scope });
     }
     this.refocusItem(p.scope, index);
@@ -512,7 +666,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private renderConfidence(
-    item: LyraMemoryItem
+    item: CanonicalMemoryItem
   ): TemplateResult | typeof nothing {
     if (item.confidence == null) return nothing;
     const tier = this.tier(item.confidence);
@@ -544,7 +698,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private renderItem(
-    item: LyraMemoryItem,
+    item: CanonicalMemoryItem,
     scope: MemoryScope,
     index: number
   ): TemplateResult {
@@ -675,7 +829,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private renderSection(
     scope: MemoryScope,
     headingKey: string,
-    items: readonly LyraMemoryItem[]
+    items: readonly CanonicalMemoryItem[]
   ): TemplateResult {
     const headingId = `${this.idBase}-${scope}-heading`;
     return html`

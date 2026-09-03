@@ -30,9 +30,12 @@ description?: string; category?: string; keywords?: string[]; icon?: unknown; di
   first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable.
   A non-array value is treated as empty. Rows require nonblank string `type` and `label` values;
   malformed optional `description`, `category`, `keywords`, or `disabled` values omit only that row,
-  preserving later valid entries
+  preserving later valid entries. At most 10,000 positions are examined through own data
+  descriptors; accessor-backed rows are omitted without reserving later valid rows. The frozen
+  projection drives display while `lr-select.detail.item` retains the original admitted identity
 - `label?: string` — accessible name for the search field/listbox; omission uses the localized
-  palette label, while an explicit empty string stays empty
+  palette label. An omitted, empty, or whitespace-only value uses that fallback without changing
+  the raw property readback
 - `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
   reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
   behaving exactly like a plain Arrow press

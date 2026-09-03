@@ -2361,12 +2361,12 @@ it('adds a maplibregl.Marker per entry in markers', async function () {
 it('exposes every declarative marker as a named button and emits one immutable activation per pointer, Enter, or Space action', async () => {
   const { el } = await connectedMapWithoutMaplibre();
   const markerElement = document.createElement('div');
-  const authoredMarker = {
+  const authoredMarker = Object.freeze({
     id: ' station-a ',
-    lngLat: [6.13, 49.61] as const,
+    lngLat: Object.freeze([6.13, 49.61] as const),
     label: 'Station A',
     color: '#123456',
-  };
+  });
   const details: LyraMapMarkerActivationDetail[] = [];
   const events: CustomEvent<LyraMapMarkerActivationDetail>[] = [];
   el.addEventListener('lr-map-marker-activate', (event) => {
@@ -3795,6 +3795,35 @@ describe('incremental GeoJSON updates', () => {
     );
   });
 
+  it('falls back when geometry only spoofs a plain-record constructor', () => {
+    const forgedConstructor = function Object(): void {};
+    Object.setPrototypeOf(forgedConstructor.prototype, null);
+    const geometry = Object.create(forgedConstructor.prototype) as Record<string, unknown>;
+    geometry['type'] = 'Point';
+    geometry['coordinates'] = [0, 0];
+
+    expect(buildGeoJsonPropertyDiff(collection(1, geometry), collection(2, geometry))).to.equal(null);
+  });
+
+  it('falls back when geometry has a cycle instead of admitting an in-progress projection', () => {
+    const coordinates: unknown[] = [];
+    coordinates.push(coordinates);
+    const geometry = { type: 'Point', coordinates };
+
+    expect(buildGeoJsonPropertyDiff(collection(1, geometry), collection(2, geometry))).to.equal(null);
+  });
+
+  it('retains completed repeated geometry aliases for the incremental path', () => {
+    const beforePoint = [6.13, 49.61];
+    const afterPoint = [6.13, 49.61];
+    const before = { type: 'MultiPoint', coordinates: [beforePoint, beforePoint] };
+    const after = { type: 'MultiPoint', coordinates: [afterPoint, afterPoint] };
+
+    const diff = buildGeoJsonPropertyDiff(collection(1, before), collection(2, after));
+    expect(diff).to.not.equal(null);
+    expect(diff!.update[0]!.addOrUpdateProperties).to.deep.equal([{ key: 'value', value: 2 }]);
+  });
+
   it('refuses the fast path when a feature has no addressable id', () => {
     const withoutId = {
       type: 'FeatureCollection',
@@ -3889,8 +3918,6 @@ describe('incremental GeoJSON updates', () => {
         { type: 'Feature', id: 'b', geometry, properties: { value: 2 } },
       ],
     };
-    const applied = (el as unknown as { _appliedGeoJson: Map<string, unknown> })._appliedGeoJson;
-    applied.set('source', collection(1));
     const diffs: unknown[] = [];
     let replacements = 0;
     type PushGeoJsonSource = {
@@ -3909,6 +3936,9 @@ describe('incremental GeoJSON updates', () => {
       pushGeoJson: (source: PushGeoJsonSource, id: string, value: unknown) => void;
     }).pushGeoJson.bind(el);
 
+    push(source, 'source', collection(1));
+    replacements = 0;
+    diffs.length = 0;
     push(source, 'source', two);
     push(source, 'source', collection(1));
 
@@ -4716,5 +4746,425 @@ describe('dataLayers clustering and heatmap', () => {
     expect(ramp[3], 'the token ramp still starts at density zero').to.equal(0);
     expect(ramp[4]).to.equal('rgba(0, 0, 0, 0)');
     expect(ramp.length, 'a real multi-stop ramp').to.be.greaterThan(6);
+  });
+});
+
+describe('descriptor-safe map data projections', () => {
+  interface StubLayer {
+    id: string;
+    type: string;
+    source: string;
+    paint?: Record<string, unknown>;
+    layout?: Record<string, unknown>;
+    filter?: unknown;
+  }
+
+  function descriptorProxy<T extends object>(
+    target: T,
+    reads: Record<string, number>,
+  ): T {
+    return new Proxy(target, {
+      get(): never {
+        throw new Error('projected map records must not be read directly');
+      },
+      getOwnPropertyDescriptor(value, property): PropertyDescriptor | undefined {
+        const key = String(property);
+        reads[key] = (reads[key] ?? 0) + 1;
+        return Reflect.getOwnPropertyDescriptor(value, property);
+      },
+    });
+  }
+
+  function assertReadOnce(reads: Record<string, number>, keys: readonly string[]): void {
+    for (const key of keys) {
+      expect(reads[key], `${key} is projected once`).to.equal(1);
+    }
+  }
+
+  function installProjectionMap(el: LyraMap): {
+    sources: Map<string, Record<string, unknown>>;
+    layers: Map<string, StubLayer>;
+  } {
+    const sources = new Map<string, Record<string, unknown>>();
+    const layers = new Map<string, StubLayer>();
+    const map = {
+      getSource: (id: string) =>
+        sources.has(id)
+          ? {
+              setData: (data: unknown) => {
+                sources.get(id)!['data'] = data;
+              },
+              updateData: (diff: unknown) => {
+                sources.get(id)!['diff'] = diff;
+              },
+            }
+          : undefined,
+      addSource: (id: string, source: Record<string, unknown>) => {
+        sources.set(id, { ...source });
+      },
+      removeSource: (id: string) => {
+        sources.delete(id);
+      },
+      getLayer: (id: string) => layers.get(id),
+      addLayer: (layer: StubLayer) => {
+        layers.set(layer.id, { ...layer });
+      },
+      removeLayer: (id: string) => {
+        layers.delete(id);
+      },
+      setPaintProperty: (layerId: string, name: string, value: unknown) => {
+        const layer = layers.get(layerId);
+        if (!layer) throw new Error(`missing layer ${layerId}`);
+        layer.paint = { ...(layer.paint ?? {}), [name]: value };
+      },
+      getStyle: () => ({ glyphs: 'https://example.invalid/{range}.pbf', layers: [] }),
+    };
+    const privateMap = el as unknown as { _map: unknown; _styleLoaded: boolean };
+    privateMap._map = map;
+    privateMap._styleLoaded = true;
+    return { sources, layers };
+  }
+
+  it('skips hostile gradient stops by descriptor while retaining later valid stops in bounded order', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const stops: unknown[] = [];
+    Object.defineProperty(stops, '0', {
+      enumerable: true,
+      get(): never {
+        throw new Error('hostile gradient stop getter');
+      },
+    });
+    stops[1] = [50, '#6baed6'];
+    stops[2] = [100, '#08306b'];
+
+    el.legendGradient = stops as unknown as typeof el.legendGradient;
+    await el.updateComplete;
+
+    expect(el.legendGradient).to.deep.equal([
+      [50, '#6baed6'],
+      [100, '#08306b'],
+    ]);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="legend-gradient"]').length,
+    ).to.equal(1);
+  });
+
+  it('projects a choropleth once, retaining its opaque GeoJSON identity without direct source reads', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources, layers } = installProjectionMap(el);
+    const geojson = {
+      type: 'FeatureCollection',
+      features: [],
+    } as const;
+    const stopReads: Record<string, number> = {};
+    const stops = descriptorProxy(
+      [[0, '#000000'], [10, '#ffffff']] as unknown as { readonly [key: number]: unknown },
+      stopReads,
+    );
+    const reads: Record<string, number> = {};
+    const source = descriptorProxy(
+      {
+        sourceId: 'regions',
+        geojson,
+        field: 'score',
+        stops,
+        interpolation: 'step',
+        stepBaseColor: '#101010',
+      },
+      reads,
+    );
+
+    el.choropleth = source as unknown as typeof el.choropleth;
+    await el.updateComplete;
+
+    const sourceId = choroplethResourceId(el);
+    expect(sources.get(sourceId)!['data']).to.equal(geojson);
+    expect(layers.get(`${sourceId}-fill`)!.paint!['fill-color']).to.deep.equal([
+      'step',
+      ['get', 'score'],
+      '#101010',
+      0,
+      '#000000',
+      10,
+      '#ffffff',
+    ]);
+    assertReadOnce(reads, ['sourceId', 'geojson', 'field', 'stops', 'interpolation', 'stepBaseColor']);
+    assertReadOnce(stopReads, ['length', '0', '1']);
+  });
+
+  it('keeps an admitted hostile GeoJSON payload opaque after its descriptor-safe projection', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources } = installProjectionMap(el);
+    const geojsonReads: Record<string, number> = {};
+    const geojson = descriptorProxy(
+      {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            id: 'region',
+            geometry: null,
+            properties: { score: 1 },
+          },
+        ],
+      },
+      geojsonReads,
+    );
+    const reads: Record<string, number> = {};
+    const source = descriptorProxy(
+      {
+        sourceId: 'opaque-regions',
+        geojson,
+        field: 'score',
+        stops: [[0, '#000000'], [10, '#ffffff']],
+      },
+      reads,
+    );
+
+    el.choropleth = source as unknown as typeof el.choropleth;
+    await el.updateComplete;
+
+    expect(sources.get(choroplethResourceId(el))!['data']).to.equal(geojson);
+    assertReadOnce(reads, ['sourceId', 'geojson', 'field', 'stops']);
+    expect(geojsonReads['features'] ?? 0, 'the payload is never directly read').to.equal(1);
+    expect(geojsonReads['type'] ?? 0, 'the payload type is copied once').to.equal(1);
+
+    const nextGeojsonReads: Record<string, number> = {};
+    const nextGeojson = descriptorProxy(
+      {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            id: 'region',
+            geometry: null,
+            properties: { score: 2 },
+          },
+        ],
+      },
+      nextGeojsonReads,
+    );
+    const nextSource = descriptorProxy(
+      {
+        sourceId: 'opaque-regions',
+        geojson: nextGeojson,
+        field: 'score',
+        stops: [[0, '#000000'], [10, '#ffffff']],
+      },
+      {},
+    );
+
+    el.choropleth = nextSource as unknown as typeof el.choropleth;
+    await el.updateComplete;
+
+    expect(sources.get(choroplethResourceId(el))!['diff']).to.deep.equal({
+      update: [
+        {
+          id: 'region',
+          addOrUpdateProperties: [{ key: 'score', value: 2 }],
+          removeProperties: [],
+        },
+      ],
+    });
+    expect(nextGeojsonReads['features'] ?? 0, 'the update source is never directly read').to.equal(1);
+    expect(nextGeojsonReads['type'] ?? 0, 'the update type is copied once').to.equal(1);
+  });
+
+  it('keeps the oversized-property diagnostic when a feature cannot use the id-based diff', async () => {
+    const warningKey = 'lyra-map-untileable-property:choropleth:population';
+    (globalThis as unknown as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete(warningKey);
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+    try {
+      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      installProjectionMap(el);
+      el.choropleth = {
+        sourceId: 'unaddressable-diagnostic',
+        geojson: {
+          type: 'FeatureCollection',
+          features: [
+            {
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [0, 0] },
+              properties: { population: Number.MAX_SAFE_INTEGER + 1 },
+            },
+          ],
+        },
+        field: 'population',
+        stops: [[0, '#000000'], [1, '#ffffff']],
+      };
+      await el.updateComplete;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.some((warning) => warning.includes('population'))).to.be.true;
+  });
+
+  it('contains hostile nested layer branches, retains later first-valid duplicates, and keeps cluster and heatmap GeoJSON opaque', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources, layers } = installProjectionMap(el);
+    const clusterGeojson = { type: 'FeatureCollection', features: [] } as const;
+    const heatmapGeojson = { type: 'FeatureCollection', features: [] } as const;
+    const invalid = {
+      sourceId: 'pins',
+      get geojson(): never {
+        throw new Error('invalid duplicate must not reserve its source id');
+      },
+    };
+    const clusterReads: Record<string, number> = {};
+    const cluster = descriptorProxy(
+      {
+        radius: 36,
+        maxZoom: 12,
+        radiusSteps: [[0, 12], [10, 20]],
+        colorSteps: [[0, '#111111'], [10, '#222222']],
+        countFont: ['Inter'],
+      },
+      clusterReads,
+    );
+    const clusterReadsTopLevel: Record<string, number> = {};
+    const clustered = descriptorProxy(
+      {
+        sourceId: 'pins',
+        geojson: clusterGeojson,
+        cluster,
+      },
+      clusterReadsTopLevel,
+    );
+    const heatmapReads: Record<string, number> = {};
+    const heatmap = descriptorProxy(
+      {
+        weightField: 'magnitude',
+        weightRange: [0, 10],
+        stops: [[0, 'rgba(0, 0, 0, 0)'], [1, '#ff0000']],
+        radius: [[4, 12], [8, 24]],
+        intensity: 2,
+        opacity: 0.5,
+      },
+      heatmapReads,
+    );
+    const heatmapReadsTopLevel: Record<string, number> = {};
+    const heatmapped = descriptorProxy(
+      {
+        sourceId: 'density',
+        geojson: heatmapGeojson,
+        kind: 'heatmap',
+        heatmap,
+      },
+      heatmapReadsTopLevel,
+    );
+
+    el.dataLayers = [invalid, clustered, heatmapped] as unknown as typeof el.dataLayers;
+    await el.updateComplete;
+
+    const pinsId = dataLayerResourceId(el, 'pins');
+    const densityId = dataLayerResourceId(el, 'density');
+    expect(sources.get(pinsId)!['data']).to.equal(clusterGeojson);
+    expect(sources.get(pinsId)!['clusterRadius']).to.equal(36);
+    expect(sources.get(densityId)!['data']).to.equal(heatmapGeojson);
+    expect(layers.get(`${densityId}-heatmap`)!.paint!['heatmap-opacity']).to.equal(0.5);
+    expect([...sources.values()].map((source) => source['data'])).to.deep.equal([
+      clusterGeojson,
+      heatmapGeojson,
+    ]);
+    assertReadOnce(clusterReadsTopLevel, ['sourceId', 'geojson', 'cluster']);
+    assertReadOnce(clusterReads, ['radius', 'maxZoom', 'radiusSteps', 'colorSteps', 'countFont']);
+    assertReadOnce(heatmapReadsTopLevel, ['sourceId', 'geojson', 'kind', 'heatmap']);
+    assertReadOnce(heatmapReads, ['weightField', 'weightRange', 'stops', 'radius', 'intensity', 'opacity']);
+  });
+
+  it('retains a valid marker after a hostile duplicate and keeps unsafeHtml opaque for peer and activation paths', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const htmlValues: unknown[] = [];
+    class FakePopup {
+      setHTML(value: unknown): this {
+        htmlValues.push(value);
+        return this;
+      }
+
+      setText(): this {
+        return this;
+      }
+    }
+    class FakeMarker {
+      private popup: FakePopup | undefined;
+      readonly element = document.createElement('button');
+
+      setLngLat(): this {
+        return this;
+      }
+
+      setPopup(popup: FakePopup | undefined): this {
+        this.popup = popup;
+        return this;
+      }
+
+      getPopup(): FakePopup | undefined {
+        return this.popup;
+      }
+
+      getElement(): HTMLElement {
+        return this.element;
+      }
+
+      addTo(): this {
+        return this;
+      }
+
+      remove(): void {}
+    }
+    const privateMap = el as unknown as {
+      _map: unknown;
+      _maplibreModule: unknown;
+    };
+    privateMap._map = {};
+    privateMap._maplibreModule = { Marker: FakeMarker, Popup: FakePopup };
+    const invalid = {
+      id: 'station',
+      lngLat: [0, 0],
+      get label(): never {
+        throw new Error('hostile marker must not reserve a duplicate id');
+      },
+    };
+    let opaqueReflectionAttempts = 0;
+    const unsafeHtml = new Proxy(Object.create(null), {
+      ownKeys(): never {
+        opaqueReflectionAttempts += 1;
+        throw new Error('opaque unsafeHtml must not be reflected');
+      },
+    });
+    const reads: Record<string, number> = {};
+    const marker = descriptorProxy(
+      {
+        id: 'station',
+        lngLat: [6.13, 49.61],
+        label: 'Station',
+        unsafeHtml,
+      },
+      reads,
+    );
+
+    el.markers = [invalid, marker] as unknown as typeof el.markers;
+    await el.updateComplete;
+
+    const instances = (el as unknown as { _markerInstances: Map<string, unknown> })._markerInstances;
+    expect(instances.size).to.equal(1);
+    expect(htmlValues.length).to.equal(1);
+    expect(htmlValues[0]).to.equal(unsafeHtml);
+    assertReadOnce(reads, ['id', 'lngLat', 'label', 'unsafeHtml']);
+
+    const activationDetails: (LyraMapMarkerActivationDetail | null)[] = [];
+    el.addEventListener('lr-map-marker-activate', (event) => {
+      activationDetails.push(event.detail as LyraMapMarkerActivationDetail | null);
+    });
+    const markerInstance = [...instances.values()][0] as { getElement(): HTMLElement };
+    markerInstance.getElement().click();
+
+    expect(activationDetails).to.have.length(1);
+    expect(activationDetails[0]).to.not.equal(null);
+    expect(Object.isFrozen(activationDetails[0]!.marker)).to.be.true;
+    expect(activationDetails[0]!.marker.unsafeHtml).to.equal(unsafeHtml);
+    expect(opaqueReflectionAttempts).to.equal(0);
   });
 });

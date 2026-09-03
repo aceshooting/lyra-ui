@@ -1,5 +1,6 @@
 import { loadChartJs } from './chart-core-loader.js';
 import {
+  loadChartJsWithAnnotationResult,
   loadChartJsWithDataLabelsResult,
   loadChartJsWithZoomResult,
 } from './chart-feature-loader.js';
@@ -7,6 +8,7 @@ import {
 export interface LyraChartPreloadOptions {
   readonly zoom?: boolean;
   readonly dataLabels?: boolean;
+  readonly annotations?: boolean;
   readonly boxPlot?: boolean;
 }
 
@@ -14,6 +16,7 @@ export interface LyraChartPreloadResult {
   readonly core: boolean;
   readonly zoom?: boolean;
   readonly dataLabels?: boolean;
+  readonly annotations?: boolean;
   readonly boxPlot?: boolean;
 }
 
@@ -32,10 +35,11 @@ async function preloadBoxPlot(): Promise<boolean> {
 export async function preloadCharts(
   options: LyraChartPreloadOptions = {},
 ): Promise<LyraChartPreloadResult> {
-  const [core, zoom, dataLabels, boxPlot] = await Promise.all([
+  const [core, zoom, dataLabels, annotations, boxPlot] = await Promise.all([
     loadChartJs(),
     options.zoom ? loadChartJsWithZoomResult() : undefined,
     options.dataLabels ? loadChartJsWithDataLabelsResult() : undefined,
+    options.annotations ? loadChartJsWithAnnotationResult() : undefined,
     options.boxPlot
       ? (boxPlotPreload ??= preloadBoxPlot())
       : undefined,
@@ -44,6 +48,7 @@ export async function preloadCharts(
     core: core !== null,
     ...(options.zoom ? { zoom: zoom?.kind === 'available' } : {}),
     ...(options.dataLabels ? { dataLabels: dataLabels?.kind === 'available' } : {}),
+    ...(options.annotations ? { annotations: annotations?.kind === 'available' } : {}),
     ...(options.boxPlot ? { boxPlot } : {}),
   };
 }

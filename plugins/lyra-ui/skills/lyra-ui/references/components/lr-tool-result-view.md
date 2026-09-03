@@ -159,12 +159,11 @@ registerToolRenderer("run_query", {
   `registry` prop is set
 - `findToolRenderer(toolName: string, payload: unknown, registry?: ToolRendererRegistry):
 ToolRendererDefinition | undefined` — the dispatch function `<lr-tool-result-view>` calls
-  internally on every resolve; exposed for direct use/testing too
+  internally on every resolve; exposed for direct use too
 - `loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToolRendererDefinition>` — resolves `def`
   to a definition guaranteed to carry a real `render`, awaiting/unwrapping `def.load()` when present
   (or returning `def` unchanged otherwise)
-- `clearToolRenderers(): void` — test-only utility that empties the default registry and its
-  `load()` cache, so one test's `registerToolRenderer()` calls can't leak into the next
+- `clearToolRenderers(): void` — clears the default registry and its `load()` cache
 
 **Dispatch order** (`findToolRenderer`), exactly as `<lr-tool-result-view>`'s own `resolve()` uses
 it:

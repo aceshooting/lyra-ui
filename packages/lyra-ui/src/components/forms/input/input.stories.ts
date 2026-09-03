@@ -103,6 +103,20 @@ export const ValidationMessage: Story = {
   render: () => html`<lr-input type="email" label="Email" hint="We'll never share it." required></lr-input>`,
 };
 
+/** External guidance on the host is composed ahead of the input's owned hint and error text. */
+export const ExternalDescription: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+      <p id="input-external-description">Use the project name shown in your workspace header.</p>
+      <lr-input
+        aria-describedby="input-external-description"
+        label="Project name"
+        hint="This is visible to workspace members."
+      ></lr-input>
+    </div>
+  `,
+};
+
 /** Mirrored constructors expose callable validators for tooling that inspects intrinsic validity. */
 export const StaticValidators: Story = {
   render: () => {

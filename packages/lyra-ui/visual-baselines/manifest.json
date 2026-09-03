@@ -113,6 +113,13 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
+    {
+      "id": "textarea--narrow-long-rtl",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new 320px RTL long-value fixture is enrolled as automated evidence pending human visual review."
+    },
     { "id": "slider--default", "profile": "standard" },
     {
       "id": "combobox--default",
@@ -141,13 +148,25 @@
     { "id": "form-rating--default", "profile": "standard" },
     { "id": "dialog--open-initially", "profile": "standard" },
     { "id": "drawer--end", "profile": "standard" },
-    { "id": "feedback-alert--variants", "profile": "standard" },
+    {
+      "id": "feedback-alert--variants",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Current capture differs from its historical baseline only in the close button's glyph: the alert close control now inherits the host font (`font: inherit` in alert.styles.ts) instead of the user-agent button default, so the icon renders at the alert's own size. Intended source change; awaits human visual review before the tracked baseline is promoted."
+    },
     { "id": "feedback-callout--appearances", "profile": "standard" },
     {
       "id": "overlay-dropdown--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "Current capture differs from its historical baseline by a small (~0.34-0.36%) popup sizing/spacing shift with no corresponding change in menu/menu-item styles or dropdown.class.ts since the last baseline refresh (bd4ac0ac) -- root cause not established from source diff alone. Awaits human visual review."
+    },
+    {
+      "id": "overlay-dropdown--narrow-long-rtl",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new forced-open 320px RTL edge-positioned fixture is enrolled as automated evidence pending human visual review."
     },
     { "id": "overlay-popover--default", "profile": "standard" },
     {
@@ -186,6 +205,12 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
+    {
+      "id": "charts-litechart--logarithmic-scale-canary",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new deterministic logarithmic-scale fixture is enrolled as automated evidence pending human visual review."
+    },
     { "id": "charts-bar--default", "profile": "standard" },
     { "id": "charts-line--default", "profile": "standard" },
     {
@@ -223,6 +248,13 @@
       "id": "charts-chart--default",
       "profile": "forced-colors-chart",
       "forcedColorsProbe": "chart-encodings"
+    },
+    {
+      "id": "charts-chart--annotations-canary",
+      "profile": "forced-colors-chart",
+      "forcedColorsProbe": "chart-encodings",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new deterministic annotations fixture is enrolled as automated evidence pending human visual review."
     },
     { "id": "charts-pie--default", "profile": "forced-colors-chart" },
     { "id": "charts-doughnut--default", "profile": "standard" },
@@ -322,6 +354,34 @@
       "comparisonReason": "This new 320px long-label fixture is enrolled as automated evidence pending human visual review."
     },
     {
+      "id": "resultcard-result-field--narrow-long-rtl",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new 320px RTL long-result fixture is enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "observability-span-waterfall--narrow-edge-clamp",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new 320px RTL first-and-last edge-target fixture is enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "agent-tools-subagent-panel--depth-12-narrow",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new 320px RTL depth-zero-through-twelve fixture is enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "message-parts--narrow-error-retry",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new 320px RTL retryable error fixture is enrolled as automated evidence pending human visual review."
+    },
+    {
       "id": "navigation-tree-node--declarative",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
@@ -404,7 +464,7 @@
     "lr-bubble-chart": ["charts-bubble--default"],
     "lr-callout": ["feedback-callout--appearances"],
     "lr-card": ["card--outlined"],
-    "lr-chart": ["charts-chart--default"],
+    "lr-chart": ["charts-chart--default", "charts-chart--annotations-canary"],
     "lr-checkbox": ["checkbox--default"],
     "lr-chunk-inspector": ["chunk-inspector--default"],
     "lr-code-block": ["codeblock--default"],
@@ -419,7 +479,7 @@
     "lr-doughnut-chart": ["charts-doughnut--default"],
     "lr-docx-viewer": ["docxviewer--default"],
     "lr-drawer": ["drawer--end"],
-    "lr-dropdown": ["overlay-dropdown--default"],
+    "lr-dropdown": ["overlay-dropdown--default", "overlay-dropdown--narrow-long-rtl"],
     "lr-funnel": ["data-display-funnel--narrow-320"],
     "lr-gauge": ["gauge--radial"],
     "lr-graph": ["graph--default"],
@@ -429,9 +489,10 @@
     "lr-input": ["input--default"],
     "lr-json-viewer": ["jsonviewer--default"],
     "lr-line-chart": ["charts-line--default"],
-    "lr-lite-chart": ["charts-litechart--default"],
+    "lr-lite-chart": ["charts-litechart--default", "charts-litechart--logarithmic-scale-canary"],
     "lr-map": ["map--default"],
     "lr-markdown": ["markdown--default"],
+    "lr-message-parts": ["message-parts--narrow-error-retry"],
     "lr-menu": ["menu--standalone-mapped-menu"],
     "lr-menu-label": ["layout-menu-label--default"],
     "lr-native-time-input": ["input-native-time-input--default"],
@@ -458,17 +519,20 @@
     "lr-rating": ["form-rating--default"],
     "lr-responsive-panel": ["responsivepanel--forced-overlay-bottom-sheet"],
     "lr-retrieval-results": ["retrieval-results--default"],
+    "lr-result-field": ["resultcard-result-field--narrow-long-rtl"],
     "lr-scatter-chart": ["charts-scatter--default"],
     "lr-select": ["select--default"],
     "lr-slider": ["slider--default"],
     "lr-sparkline": ["data-sparkline--line"],
     "lr-multi-split": ["multi-split--default"],
     "lr-split-panel": ["layout-split-panel--default"],
+    "lr-span-waterfall": ["observability-span-waterfall--narrow-edge-clamp"],
+    "lr-subagent-panel": ["agent-tools-subagent-panel--depth-12-narrow"],
     "lr-switch": ["switch--default"],
     "lr-swatch-picker": ["swatch-picker--forced-colors-intrinsic"],
     "lr-tab-group": ["tabs--default", "tabs--element-model-long-content-narrow"],
     "lr-table": ["table--default"],
-    "lr-textarea": ["textarea--default"],
+    "lr-textarea": ["textarea--default", "textarea--narrow-long-rtl"],
     "lr-thread-list": ["threadlist--default"],
     "lr-toast": ["toast--triggers"],
     "lr-tool-approval-dialog": ["toolapprovaldialog--open-initially"],

@@ -32,12 +32,99 @@ describe('lr-span-waterfall', () => {
     expect(bars).to.deep.equal(['root', 'search', 'llm']);
   });
 
+  it('keeps opaque span sources while projecting every rendered field once and omitting hostile siblings', async () => {
+    let unsafeReads = 0;
+    const hostile = Object.create(null) as LyraSpan;
+    Object.defineProperties(hostile, {
+      id: {
+        configurable: true,
+        enumerable: true,
+        get: () => {
+          unsafeReads += 1;
+          throw new Error('span projection must not invoke source accessors');
+        },
+      },
+      startMs: { configurable: true, enumerable: true, value: 0 },
+    });
+    const source: LyraSpan = {
+      id: 'safe',
+      parentId: 'parent',
+      name: 'Safe span',
+      kind: 'tool',
+      startMs: 12,
+      endMs: 24,
+      status: 'success',
+      tokensIn: 4,
+      tokensOut: 8,
+      costText: '$0.01',
+      detail: 'Projected once',
+    };
+    Object.defineProperty(source, 'providerMetadata', {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        throw new Error('opaque provider metadata must not be projected');
+      },
+    });
+    const reads = new Map<string, number>();
+    const originalGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+    Object.getOwnPropertyDescriptor = ((target: object, key: PropertyKey) => {
+      if (target === source && typeof key === 'string') {
+        reads.set(key, (reads.get(key) ?? 0) + 1);
+      }
+      return originalGetOwnPropertyDescriptor.call(Object, target, key);
+    }) as typeof Object.getOwnPropertyDescriptor;
+    let el: LyraSpanWaterfall;
+    try {
+      el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${[hostile, source]}></lr-span-waterfall>`);
+      await el.updateComplete;
+    } finally {
+      Object.getOwnPropertyDescriptor = originalGetOwnPropertyDescriptor;
+    }
+
+    expect(unsafeReads).to.equal(0);
+    expect(el!.spans[1]).to.equal(source);
+    expect([...el!.shadowRoot!.querySelectorAll('[part="bar"]')].map((bar) => bar.getAttribute('data-id'))).to.deep.equal([
+      'safe',
+    ]);
+    for (const field of [
+      'id',
+      'parentId',
+      'name',
+      'kind',
+      'startMs',
+      'endMs',
+      'status',
+      'tokensIn',
+      'tokensOut',
+      'costText',
+      'detail',
+    ]) {
+      expect(reads.get(field), field).to.equal(1);
+    }
+    expect(reads.get('providerMetadata') ?? 0).to.equal(0);
+
+    let rereads = 0;
+    Object.defineProperty(source, 'name', {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        rereads += 1;
+        throw new Error('cached projection must not reread source rows');
+      },
+    });
+    el!.label = 'Safe trace';
+    await el!.updateComplete;
+    expect(rereads).to.equal(0);
+    expect(el!.shadowRoot!.querySelector('[data-id="safe"]') == null).to.equal(false);
+  });
+
   it('positions each bar from the shared time scale using inline-start/inline-size', async () => {
     const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`)) as LyraSpanWaterfall;
     await el.updateComplete;
     const bar = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
-    expect(bar.style.insetInlineStart).to.equal('2.5%');
-    expect(bar.style.inlineSize).to.equal('27.5%');
+    expect(bar.style.getPropertyValue('--_lr-span-waterfall-start')).to.equal('2.5%');
+    expect(bar.style.getPropertyValue('--_lr-span-waterfall-width')).to.equal('27.5%');
   });
 
   it('clips bars to viewStartMs/viewEndMs when set', async () => {
@@ -46,7 +133,7 @@ describe('lr-span-waterfall', () => {
     )) as LyraSpanWaterfall;
     await el.updateComplete;
     const bar = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
-    expect(bar.style.insetInlineStart).to.equal('0%');
+    expect(bar.style.getPropertyValue('--_lr-span-waterfall-start')).to.equal('0%');
   });
 
   it('normalizes a NaN viewStartMs/viewEndMs the same as unset (fits the whole trace)', async () => {
@@ -55,15 +142,15 @@ describe('lr-span-waterfall', () => {
     )) as LyraSpanWaterfall;
     await baseline.updateComplete;
     const expectedStart = (baseline.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement).style
-      .insetInlineStart;
+      .getPropertyValue('--_lr-span-waterfall-start');
 
     const el = (await fixture(
       html`<lr-span-waterfall .spans=${SPANS} .viewStartMs=${NaN} .viewEndMs=${NaN}></lr-span-waterfall>`,
     )) as LyraSpanWaterfall;
     await el.updateComplete;
     const bar = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
-    expect(bar.style.insetInlineStart).to.not.include('NaN');
-    expect(bar.style.insetInlineStart).to.equal(expectedStart);
+    expect(bar.style.getPropertyValue('--_lr-span-waterfall-start')).to.not.include('NaN');
+    expect(bar.style.getPropertyValue('--_lr-span-waterfall-start')).to.equal(expectedStart);
   });
 
   it('clamps a negative viewStartMs to 0 (trace-relative ms is never negative)', async () => {
@@ -74,8 +161,8 @@ describe('lr-span-waterfall', () => {
     // root spans startMs=0..endMs=400 -- the same as the clamped [0, 400] view window, so it
     // should fill the bar track completely.
     const bar = el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement;
-    expect(bar.style.insetInlineStart).to.equal('0%');
-    expect(bar.style.inlineSize).to.equal('100%');
+    expect(bar.style.getPropertyValue('--_lr-span-waterfall-start')).to.equal('0%');
+    expect(bar.style.getPropertyValue('--_lr-span-waterfall-width')).to.equal('100%');
   });
 
   it('widens an inverted/degenerate view window (viewEndMs <= viewStartMs) to a minimal span instead of a negative-width window', async () => {
@@ -86,9 +173,9 @@ describe('lr-span-waterfall', () => {
     const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as HTMLElement[];
     expect(bars.length).to.be.greaterThan(0);
     for (const bar of bars) {
-      expect(bar.style.inlineSize).to.not.include('NaN');
-      expect(bar.style.inlineSize).to.not.include('-');
-      expect(bar.style.insetInlineStart).to.not.include('NaN');
+      expect(bar.style.getPropertyValue('--_lr-span-waterfall-width')).to.not.include('NaN');
+      expect(bar.style.getPropertyValue('--_lr-span-waterfall-width')).to.not.include('-');
+      expect(bar.style.getPropertyValue('--_lr-span-waterfall-start')).to.not.include('NaN');
     }
   });
 
@@ -180,7 +267,7 @@ describe('lr-span-waterfall', () => {
     expect(el.shadowRoot!.querySelector('[data-id="early"]')!.getAttribute('tabindex')).to.equal('-1');
   });
 
-  it('keeps even a tiny-duration bar at or above the 24px WCAG 2.5.8 floor in both axes', async () => {
+  it('keeps even a tiny-duration bar at the shared 40px icon-button floor in both axes', async () => {
     const spans: LyraSpan[] = [
       { id: 'tiny', name: 'Tiny span', kind: 'tool', startMs: 10, endMs: 11, status: 'success' },
     ];
@@ -197,8 +284,46 @@ describe('lr-span-waterfall', () => {
     expect(bars.length).to.be.greaterThan(0);
     for (const bar of bars) {
       const rect = bar.getBoundingClientRect();
-      expect(rect.width, `${bar.dataset['id'] ?? ''} width`).to.be.at.least(24);
-      expect(rect.height, `${bar.dataset['id'] ?? ''} height`).to.be.at.least(24);
+      expect(rect.width, `${bar.dataset['id'] ?? ''} width`).to.be.at.least(40);
+      expect(rect.height, `${bar.dataset['id'] ?? ''} height`).to.be.at.least(40);
+    }
+  });
+
+  it('keeps 40px first and last targets inside a 320px track in LTR and RTL without changing activation', async () => {
+    for (const dir of ['ltr', 'rtl'] as const) {
+      const container = document.createElement('div');
+      container.dir = dir;
+      container.style.inlineSize = '320px';
+      document.body.append(container);
+      try {
+        const el = document.createElement('lr-span-waterfall') as LyraSpanWaterfall;
+        el.spans = [
+          { id: 'first', name: 'First', kind: 'tool', startMs: 0, endMs: 1, status: 'success' },
+          { id: 'last', name: 'Last', kind: 'tool', startMs: 999, endMs: 1000, status: 'success' },
+        ];
+        el.viewStartMs = 0;
+        el.viewEndMs = 1000;
+        container.append(el);
+        await el.updateComplete;
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+        for (const id of ['first', 'last']) {
+          const bar = el.shadowRoot!.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
+          const track = bar.parentElement as HTMLElement;
+          const barRect = bar.getBoundingClientRect();
+          const trackRect = track.getBoundingClientRect();
+          expect(barRect.width, `${dir} ${id} target width`).to.be.at.least(40);
+          expect(barRect.left, `${dir} ${id} left edge`).to.be.at.least(trackRect.left - 1);
+          expect(barRect.right, `${dir} ${id} right edge`).to.be.at.most(trackRect.right + 1);
+
+          const selected = oneEvent(el, 'lr-span-select');
+          bar.click();
+          const event = (await selected) as CustomEvent<{ spanId: string }>;
+          expect(event.detail).to.deep.equal({ spanId: id });
+        }
+      } finally {
+        container.remove();
+      }
     }
   });
 
@@ -549,6 +674,34 @@ it('announces when a live trace first crosses the bounded projection limit', asy
   await el.updateComplete;
 
   expect(sink.lastElementChild?.textContent).to.equal('Limited to 500 trace spans');
+});
+
+it('formats visible and announced projection limits in the effective numbering system', async () => {
+  const spans: LyraSpan[] = Array.from({ length: 501 }, (_, index) => ({
+    id: `span-${index}`,
+    name: `Span ${index}`,
+    kind: 'tool',
+    status: 'success',
+    startMs: index,
+    endMs: index + 1,
+  }));
+  const el = await fixture<LyraSpanWaterfall>(html`
+    <lr-span-waterfall
+      lang="ar-EG"
+      .spans=${spans.slice(0, 500)}
+      .strings=${{ spanProjectionLimit: 'Limited to {count} spans' }}
+    ></lr-span-waterfall>
+  `);
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  const before = sink.childElementCount;
+  const formatted = new Intl.NumberFormat('ar-EG').format(500);
+
+  el.spans = spans;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal(`Limited to ${formatted} spans`);
+  expect(sink.childElementCount).to.equal(before + 1);
+  expect(sink.lastElementChild?.textContent).to.equal(`Limited to ${formatted} spans`);
 });
 
 it('reserves an active span beyond the shared 500-row projection boundary', async () => {

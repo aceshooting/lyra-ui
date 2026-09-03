@@ -46,6 +46,11 @@ associated external label focuses the host-owned slider without changing its val
 property is visible label text, since a rating is a bare row of symbols with no field frame of its
 own; wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
 
+For the managed slider name only, an empty or whitespace-only `label` counts as absent and falls
+through to localized `rating`; the raw `label` property still reads exactly as assigned. An
+associated external label and an authored `aria-label`, including `aria-label=""`, keep their
+existing precedence and are never replaced by that fallback.
+
 **Static constructor API:** `LyraRating.validators` is the mirrored callable validator catalog.
 Each access returns a fresh `LyraFormValidator<LyraRating>[]`; its entry observes
 `required`/`disabled`/`readonly`/`value`/`max`, and `checkValidity(element)` projects the element's

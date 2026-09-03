@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { isDateObject } from '../../../internal/dom-guards.js';
 import { styles } from './format.styles.js';
 import { getRelativeTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration } from '../../../internal/numbers.js';
@@ -29,6 +30,22 @@ const DIVISORS: Record<LyraRelativeTimeUnit, number> = {
   second: 1,
 };
 const UNITS = Object.keys(DIVISORS) as LyraRelativeTimeUnit[];
+
+/** Reads native Date time slots directly, avoiding conversion hooks on arbitrary object input. */
+function resolvedDateEpoch(value: unknown): number | undefined {
+  if (value === null || value === undefined) return Date.now();
+  if (typeof value === 'string' || typeof value === 'number') {
+    const epoch = new Date(value).getTime();
+    return Number.isFinite(epoch) ? epoch : undefined;
+  }
+  if (!isDateObject(value)) return undefined;
+  try {
+    const epoch = Date.prototype.getTime.call(value);
+    return Number.isFinite(epoch) ? epoch : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * `<lr-relative-time>` — locale-aware relative time that can refresh automatically. Numeric
@@ -141,9 +158,8 @@ export class LyraRelativeTime extends LyraElement {
         value: number;
       }
     | undefined {
-    const source = this.date ?? new Date();
-    const target = source instanceof Date ? source.getTime() : new Date(source).getTime();
-    if (!Number.isFinite(target)) return undefined;
+    const target = resolvedDateEpoch(this.date);
+    if (target === undefined) return undefined;
     const seconds = (target - Date.now()) / 1000;
     const requestedUnit = this.unit === 'auto' || UNITS.includes(this.unit as LyraRelativeTimeUnit) ? this.unit : 'auto';
     const selected =

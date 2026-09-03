@@ -94,7 +94,11 @@ export const styles = css`
        default of "normal" has no single resolved px figure to measure rows against. */
     line-height: var(--lr-line-height-normal);
     padding-block: var(--lr-space-xs);
+    overflow-x: hidden;
     overflow-y: hidden;
+  }
+  [part='textarea'][wrap='off'] {
+    overflow-x: auto;
   }
   [part='textarea']::placeholder {
     color: var(--lr-color-text-quiet);

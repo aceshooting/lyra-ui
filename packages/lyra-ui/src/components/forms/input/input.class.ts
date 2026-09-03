@@ -25,6 +25,12 @@ import {
 } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
+  acquireAriaDescription,
+  acquireResolvedAriaRelationship,
+  type AriaDescriptionLease,
+  type ResolvedAriaRelationshipLease,
+} from '../../../internal/aria-controls.js';
+import {
   currentValidityValidator,
   type LyraFormValidator,
 } from '../form-validator.js';
@@ -97,8 +103,11 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * `type="date"`/`type="datetime-local"`/`type="search"`/`type="tel"`/`type="time"`/`type="url"`
  * forward straight through to the matching native input behavior, the same as `type="text"`.
  *
- * A host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;
- * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
+ * A host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property.
+ * A host `aria-describedby` is resolved onto that native input, ahead of its own hint/error/
+ * required descriptions, so externally-owned guidance remains valid across the shadow boundary.
+ * Host `aria-labelledby` is deliberately not projected: the native `<label>` already owns this
+ * control's visible label relationship.
  *
  * Forwards the full native selection/editing surface (`selectionStart`/`selectionEnd`,
  * `setSelectionRange()`, `setRangeText()`), the same as `<lr-textarea>`, in addition to
@@ -419,6 +428,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   private readonly slotPresence = new SlotPresenceController(this);
 
   @query('input') private inputEl?: HTMLInputElement;
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+  private requiredDescriptionLease?: AriaDescriptionLease;
+  private requiredDescriptionTarget?: HTMLInputElement;
 
   /** Id of the internal native `<input>` (and the `for` of its paired `<label>`), so a
    *  shadow-DOM-aware password manager keys its field detection off the same id the consumer put
@@ -437,6 +449,78 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     this.addEventListener('invalid', () => {
       this.touched = true;
     });
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // Lit does not schedule another render just because an already-rendered control reconnects.
+    // Recreate the host relationship lease here so its host/root observer belongs to this document.
+    if (this.hasUpdated) {
+      this.syncRequiredDescription();
+      this.syncExternalDescription();
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.releaseExternalDescription();
+    this.releaseRequiredDescription();
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    this.releaseRequiredDescription();
+    if (this.isConnected && this.hasUpdated) {
+      this.syncRequiredDescription();
+      this.syncExternalDescription();
+    }
+  }
+
+  /** Resolves host-owned descriptions onto the native input without copying labelledby. */
+  private syncExternalDescription(): void {
+    const target = this.inputEl ?? null;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (!this.externalDescriptionLease) {
+      this.externalDescriptionLease = acquireResolvedAriaRelationship(
+        this,
+        target,
+        'aria-describedby',
+      );
+      return;
+    }
+    this.externalDescriptionLease.update(target);
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
+  /** Owns only localized requiredness text; error and hint remain baseline descriptions. */
+  private syncRequiredDescription(): void {
+    const target = this.inputEl ?? null;
+    const description = this.renderRoot.querySelector<HTMLElement>('#input-required');
+    if (!this.required || !target || !description) {
+      this.releaseRequiredDescription();
+      return;
+    }
+    if (this.requiredDescriptionTarget !== target) {
+      this.releaseRequiredDescription();
+      this.requiredDescriptionTarget = target;
+      this.requiredDescriptionLease = acquireAriaDescription(target, [description]);
+      return;
+    }
+    this.requiredDescriptionLease?.update([description]);
+  }
+
+  private releaseRequiredDescription(): void {
+    this.requiredDescriptionLease?.release();
+    this.requiredDescriptionLease = undefined;
+    this.requiredDescriptionTarget = undefined;
   }
 
   override formResetCallback(): void {
@@ -706,6 +790,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     ) {
       this.updateValidity();
     }
+    this.syncRequiredDescription();
+    this.syncExternalDescription();
   }
 
   private onInput = (event: InputEvent): void => {
@@ -925,6 +1011,12 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
           ${this.hint || this.helpText}<slot name="hint"></slot
           ><slot name="help-text"></slot>
         </div>
+        <span
+          id="input-required"
+          class="sr-only"
+          data-required-description
+          ?hidden=${!this.required}
+        >${this.localize('fieldRequired')}</span>
       </div>
     `;
   }

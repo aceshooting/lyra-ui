@@ -569,26 +569,49 @@ describe("default cell composition", () => {
     expect(el.querySelectorAll('[cell-id="a"]').length).to.equal(1);
   });
 
-  it("warns and leaves a stale user-authored child unslotted when its cell-id matches no layout entry", async () => {
-    const originalWarn = console.warn;
-    let warning: unknown[] | undefined;
-    console.warn = (...args: unknown[]) => {
-      warning = args;
+  it("uses one fixed development-only diagnostic for unmatched authored cells without exposing cell ids", async () => {
+    const runtime = globalThis as typeof globalThis & {
+      litIssuedWarnings?: Set<string>;
     };
-    const el = (await fixture(
-      html`<lr-dashboard-grid
-        ><div cell-id="ghost">Gone</div></lr-dashboard-grid
-      >`
-    )) as LyraDashboardGrid;
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const originalWarn = console.warn;
+    const messages: string[] = [];
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => {
+      messages.push(args.map(String).join(" "));
+    };
     try {
+      const el = (await fixture(
+        html`<lr-dashboard-grid
+          ><div cell-id="private-ghost-one">Gone</div><div cell-id="private-ghost-two">Also gone</div></lr-dashboard-grid
+        >`
+      )) as LyraDashboardGrid;
       el.layout = twoCells();
       await el.updateComplete;
+      expect(el.querySelector('[cell-id="private-ghost-one"]')!.getAttribute("slot")).to.be
+        .null;
+      expect(el.querySelector('[cell-id="private-ghost-two"]')!.getAttribute("slot")).to.be
+        .null;
+      expect(messages).to.deep.equal([
+        "<lr-dashboard-grid>: an authored child has a cell-id that matches no layout entry and will not render.",
+      ]);
+      expect(runtime.litIssuedWarnings!.has("lyra-dashboard-grid-unmatched-authored-cell")).to.be.true;
+      expect(messages.join(" ")).to.not.contain("private-ghost-one");
+      expect(messages.join(" ")).to.not.contain("private-ghost-two");
+
+      messages.length = 0;
+      delete runtime.litIssuedWarnings;
+      const third = document.createElement("div");
+      third.setAttribute("cell-id", "private-ghost-three");
+      el.append(third);
+      await settleChildReconciliation(el);
+      expect(third.getAttribute("slot")).to.equal(null);
+      expect(messages).to.deep.equal([]);
     } finally {
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
       console.warn = originalWarn;
     }
-    expect(warning?.join(" ")).to.include('cell-id="ghost"');
-    expect(el.querySelector('[cell-id="ghost"]')!.getAttribute("slot")).to.be
-      .null;
   });
 
   it("removes a default cell once its layout entry disappears", async () => {

@@ -48,6 +48,12 @@ First-party invention (no Web Awesome equivalent).
   highlighting the diff. `Infinity` relaxes this line-count ceiling, but the fixed aggregate
   character and comparison-work ceilings remain in force.
 
+Grammar entries are read from own enumerable data fields into a bounded frozen map. A getter,
+unreadable field, non-enumerable field, or malformed proxy branch is skipped without preventing a
+later valid grammar from being used; grammar values themselves remain opaque to the component.
+Non-enumerable names do not consume language slots, but every inspected name counts toward the
+20,000 structural ceiling.
+
 **Events:**
 
 - `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — the frozen full

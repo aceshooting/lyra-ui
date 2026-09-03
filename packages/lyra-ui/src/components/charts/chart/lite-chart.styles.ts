@@ -219,6 +219,7 @@ export const styles = css`
     align-self: flex-start;
     font: inherit;
     font-size: var(--lr-font-size-xs);
+    min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

@@ -50,6 +50,11 @@ setting it to `0` removes the deadline.
 **Methods:** `start()`, `stop()`, and `cancel()` drive the capture lifecycle imperatively (mirroring
 the pointer/keyboard gestures).
 
+After permission is requested, only a still-active control in the same document may begin
+recording; otherwise any stream returned later is immediately stopped. In hold mode, a later held
+press in that document can take over one pending permission request, and a held press while
+stopping begins after the prior take ends. Only one capture runs at a time.
+
 **Slots:** `microphone-icon` replaces the default mic glyph. `recording-icon` replaces the default
 recording-state pulse glyph. Both are
 decorative inside the named trigger: their flattened content is inert and hidden from accessibility

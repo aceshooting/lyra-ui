@@ -104,6 +104,146 @@ it("renders a free-text input when allow-custom is set, even with a non-empty ca
   expect(el.shadowRoot!.querySelector('[part="trigger"]') === null).to.be.true;
 });
 
+it("reflects readonly and exposes literal readonly semantics on both picker modes", async () => {
+  const closed = (await fixture(
+    html`<lr-model-select readonly .catalog=${CATALOG}></lr-model-select>`
+  )) as LyraModelSelect;
+  const free = (await fixture(
+    html`<lr-model-select readonly allow-custom .catalog=${CATALOG}></lr-model-select>`
+  )) as LyraModelSelect;
+  const unset = (await fixture(
+    html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`
+  )) as LyraModelSelect;
+
+  expect(closed.readonly).to.equal(true);
+  expect(closed.getAttribute("readonly")).to.equal("");
+  expect(trigger(closed).getAttribute("aria-readonly")).to.equal("true");
+  expect(input(free).readOnly).to.equal(true);
+  expect(input(free).getAttribute("aria-readonly")).to.equal("true");
+  expect(unset.readonly).to.equal(false);
+  expect(unset.hasAttribute("readonly")).to.equal(false);
+  expect(trigger(unset).getAttribute("aria-readonly")).to.equal("false");
+
+  await expect(closed).to.be.accessible();
+  await expect(free).to.be.accessible();
+});
+
+it("keeps omitted readonly editable across both catalog modes", async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-model-select name="closed" .catalog=${CATALOG}></lr-model-select>
+      <lr-model-select name="free" allow-custom .catalog=${CATALOG}></lr-model-select>
+    </form>
+  `)) as HTMLFormElement;
+  const [closed, free] = Array.from(form.querySelectorAll("lr-model-select")) as LyraModelSelect[];
+  const closedChange = oneEvent(closed!, "lr-change");
+  trigger(closed!).click();
+  await closed!.updateComplete;
+  rows(closed!)[1]!.click();
+  expect((await closedChange).detail).to.deep.equal({ value: "mistral", inCatalog: true });
+
+  const editable = input(free!);
+  editable.focus();
+  editable.value = "custom-model";
+  editable.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  await free!.updateComplete;
+  const freeChange = oneEvent(free!, "lr-change");
+  editable.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+  );
+  expect((await freeChange).detail).to.deep.equal({ value: "custom-model", inCatalog: false });
+  expect(editable.readOnly).to.equal(false);
+  expect(new FormData(form).get("closed")).to.equal("mistral");
+  expect(new FormData(form).get("free")).to.equal("custom-model");
+});
+
+it("keeps readonly controls browseable while blocking user commits and preserving form/programmatic flows", async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-model-select
+        readonly
+        required
+        name="closed"
+        value="mistral"
+        .catalog=${CATALOG}
+      ></lr-model-select>
+      <lr-model-select
+        readonly
+        required
+        name="free"
+        value="mistral"
+        allow-custom
+        .catalog=${CATALOG}
+      ></lr-model-select>
+      <lr-model-select readonly required name="blank" .catalog=${CATALOG}></lr-model-select>
+    </form>
+  `)) as HTMLFormElement;
+  const [closed, free, blank] = Array.from(form.querySelectorAll("lr-model-select")) as LyraModelSelect[];
+  const closedChanges: Event[] = [];
+  const freeChanges: Event[] = [];
+  closed!.addEventListener("lr-change", (event) => closedChanges.push(event));
+  free!.addEventListener("lr-change", (event) => freeChanges.push(event));
+
+  expect(blank!.validity.valid).to.equal(true);
+  expect(new FormData(form).get("blank")).to.equal("");
+  expect(trigger(closed!).disabled).to.equal(false);
+  trigger(closed!).focus();
+  trigger(closed!).click();
+  await closed!.updateComplete;
+  const browse = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true });
+  trigger(closed!).dispatchEvent(browse);
+  await closed!.updateComplete;
+  expect(browse.defaultPrevented).to.equal(true);
+  expect(trigger(closed!).getAttribute("aria-activedescendant")).to.not.equal("");
+  rows(closed!)[2]!.click();
+  await closed!.updateComplete;
+  expect(closed!.value).to.equal("mistral");
+  expect(closed!.open).to.equal(true);
+  expect(closedChanges).to.deep.equal([]);
+
+  const native = input(free!);
+  native.focus();
+  native.select();
+  expect(native.selectionStart).to.equal(0);
+  expect(native.selectionEnd).to.equal("mistral".length);
+  const copy = new Event("copy", { bubbles: true, cancelable: true });
+  native.dispatchEvent(copy);
+  expect(copy.defaultPrevented).to.equal(false);
+  native.value = "";
+  native.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  await free!.updateComplete;
+  expect(native.value).to.equal("mistral");
+  const navigate = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true });
+  native.dispatchEvent(navigate);
+  await free!.updateComplete;
+  expect(navigate.defaultPrevented).to.equal(true);
+  const commit = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+  native.dispatchEvent(commit);
+  await free!.updateComplete;
+  expect(commit.defaultPrevented).to.equal(true);
+  expect(free!.value).to.equal("mistral");
+  expect(free!.open).to.equal(true);
+  expect(freeChanges).to.deep.equal([]);
+
+  closed!.value = "qwen2.5-coder";
+  free!.setRangeText("programmatic", 0, native.value.length, "select");
+  await Promise.all([closed!.updateComplete, free!.updateComplete]);
+  expect(new FormData(form).get("closed")).to.equal("qwen2.5-coder");
+  expect(free!.value).to.equal("programmatic");
+  expect(new FormData(form).get("free")).to.equal("programmatic");
+
+  form.reset();
+  await Promise.all([closed!.updateComplete, free!.updateComplete]);
+  expect(closed!.value).to.equal("mistral");
+  expect(free!.value).to.equal("mistral");
+  free!.remove();
+  form.append(free!);
+  await free!.updateComplete;
+  expect(free!.readonly).to.equal(true);
+  expect(input(free!).readOnly).to.equal(true);
+  expect(new FormData(form).get("free")).to.equal("mistral");
+});
+
 it("preserves owned focus when a catalog change replaces the closed trigger with free text", async () => {
   const el = (await fixture(
     html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`
@@ -391,6 +531,7 @@ it("closes the closed dropdown on Escape without changing the value", async () =
       key: "Escape",
       bubbles: true,
       cancelable: true,
+      composed: true,
     })
   );
   await el.updateComplete;
@@ -862,6 +1003,7 @@ it("reverts typed text back to the current value on Escape, without committing",
       key: "Escape",
       bubbles: true,
       cancelable: true,
+      composed: true,
     })
   );
   await el.updateComplete;
@@ -1886,6 +2028,54 @@ it("is accessible with a visible label set", async () => {
 
 // -- Accessibility -------------------------------------------------------
 
+it("keeps populated open listbox ownership, active descendants, focus, and axe semantics in both modes", async () => {
+  for (const allowCustom of [false, true]) {
+    const el = (await fixture(html`
+      <lr-model-select
+        label="Model"
+        ?allow-custom=${allowCustom}
+        .catalog=${CATALOG}
+        style="--lr-transition-fast: 0s"
+      ></lr-model-select>
+    `)) as LyraModelSelect;
+    const owner = allowCustom ? input(el) : trigger(el);
+    owner.focus();
+    el.open = true;
+    await el.updateComplete;
+    owner.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true })
+    );
+    await el.updateComplete;
+
+    const box = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+    const activeId = owner.getAttribute("aria-activedescendant");
+    const active = activeId
+      ? el.shadowRoot!.querySelector(`[id="${activeId}"]`) as HTMLElement | null
+      : null;
+    expect(owner.getAttribute("role")).to.equal("combobox");
+    expect(owner.getAttribute("aria-expanded")).to.equal("true");
+    expect(owner.getAttribute("aria-controls")).to.equal(box.id);
+    expect(box.getAttribute("role")).to.equal("listbox");
+    expect(rows(el).length).to.be.greaterThan(0);
+    expect(active?.getAttribute("role")).to.equal("option");
+    expect(active?.hasAttribute("data-active")).to.equal(true);
+    expect(el.shadowRoot!.activeElement === owner).to.equal(true);
+    await expect(el).to.be.accessible();
+
+    owner.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.shadowRoot!.activeElement === owner).to.equal(true);
+  }
+});
+
 it("is accessible (closed dropdown, default and open)", async () => {
   const el = (await fixture(
     html`<lr-model-select
@@ -2170,41 +2360,27 @@ describe("native event relays", () => {
   });
 });
 
-/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
- *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
- *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
- *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
-function renderedClamp(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = "";
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
+it("clamps the actual opened floating listbox through the shared popover viewport token in both modes", async () => {
+  const longCatalog = [`model-${"unbroken-identifier-".repeat(20)}`];
+  for (const allowCustom of [false, true]) {
+    const el = (await fixture(html`
+      <lr-model-select
+        ?allow-custom=${allowCustom}
+        .catalog=${longCatalog}
+        style="--lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
+      ></lr-model-select>
+    `)) as LyraModelSelect;
+    const owner = allowCustom ? input(el) : trigger(el);
+    owner.focus();
+    el.open = true;
+    await el.updateComplete;
+    const box = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+    await waitUntil(
+      () => box.style.getPropertyValue("--lr-positioner-available-inline-size") !== "",
+      "opened listbox did not receive live positioner geometry"
+    );
+    expect(box.getBoundingClientRect().width).to.be.at.most(200.5);
   }
-  const probe = document.createElement("span");
-  probe.style.display = "block";
-  probe.style.setProperty("--lr-popover-viewport-clamp", "10px");
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
-
-it("clamps its floating surface width through the shared popover-viewport-clamp token", async () => {
-  const el = (await fixture(
-    html`<lr-model-select></lr-model-select>`
-  )) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> })
-    .updateComplete;
-  expect(renderedClamp(el, "[part='listbox']")).to.equal("10px");
 });
 
 it("renders the combobox-input's placeholder in the live quiet-text token color", async () => {
@@ -3103,24 +3279,40 @@ describe("setCustomValidity()", () => {
 });
 
 it("forwards focus and blur to the semantic control in both rendering modes", async () => {
-  const el = (await fixture(html`
+  const closed = (await fixture(html`
     <lr-model-select
       label="Model"
-      .models=${CATALOG}
+      .catalog=${CATALOG}
       value="mistral"
     ></lr-model-select>
   `)) as LyraModelSelect;
-  await el.updateComplete;
-  el.focus();
-  expect(el.shadowRoot!.activeElement != null).to.equal(true);
-  el.blur();
-  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+  const free = (await fixture(html`
+    <lr-model-select
+      allow-custom
+      label="Model"
+      .catalog=${CATALOG}
+      value="mistral"
+    ></lr-model-select>
+  `)) as LyraModelSelect;
+  await Promise.all([closed.updateComplete, free.updateComplete]);
+
+  closed.focus();
+  expect(trigger(closed).getAttribute("role")).to.equal("combobox");
+  expect(closed.shadowRoot!.activeElement === trigger(closed)).to.equal(true);
+  closed.blur();
+  expect(closed.shadowRoot!.activeElement === null).to.equal(true);
+
+  free.focus();
+  expect(input(free).getAttribute("role")).to.equal("combobox");
+  expect(free.shadowRoot!.activeElement === input(free)).to.equal(true);
+  free.blur();
+  expect(free.shadowRoot!.activeElement === null).to.equal(true);
 
   const disabled = (await fixture(html`
     <lr-model-select
       label="Model"
       disabled
-      .models=${CATALOG}
+      .catalog=${CATALOG}
     ></lr-model-select>
   `)) as LyraModelSelect;
   await disabled.updateComplete;

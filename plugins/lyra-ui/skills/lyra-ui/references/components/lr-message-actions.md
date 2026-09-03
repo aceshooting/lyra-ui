@@ -41,19 +41,26 @@ intent events, so each built-in can occur at most once. `copyText: string = ''`
 (attribute `copy-text`) — required for the `copy` built-in to render at all. `feedbackRating:
 MessageFeedbackValue = null` (attribute `feedback-rating`) — forwarded to the embedded, thumbs-only
 `lr-message-feedback` (its `detail`/`detailFor` are never forwarded, so its detail panel never
-opens). `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
+opens). `feedbackPending: boolean` (read-only, nonreflecting) — true only while the current built-in
+feedback control awaits settlement; it has no `feedback-pending` attribute or change event.
+`revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
 the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus.
 `label: string = ''` — accessible name override for the toolbar. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — overrides the toolbar's computed accessible name, winning over
 `label` and the localized default; attribute-reflects from a host-level `aria-label`.
+
+**Methods:** `finalizePendingSubmit(submissionId: string): boolean` and
+`revertPendingSubmit(submissionId: string): boolean` settle only the current built-in feedback
+request. Both return `false` for blank, stale, mismatched, removed, or replaced requests.
 
 **Events:** `lr-regenerate`/`lr-edit` — a built-in was activated, `detail: null`. `lr-copy` —
 frozen `detail: { ok: true, text }`, emitted only after the embedded `lr-copy-button`'s clipboard
 write fulfills (bubbles/composed already, not re-emitted). A failed write surfaces generic
 `lr-error` (`detail: null`) plus `lr-copy-error` with frozen
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported' | 'denied' | 'failed'`.
-`lr-feedback-change`/`lr-feedback-submit` — bubble unchanged from the embedded,
-thumbs-only `lr-message-feedback`. A colliding event from an
+`lr-feedback-change`/`lr-feedback-submit` — bubble unchanged from the embedded, thumbs-only
+`lr-message-feedback`; the frozen submit detail includes its `submissionId`, which is the value to
+pass to either settlement method. A colliding event from an
 arbitrary slotted child is contained at that slot boundary rather than being mistaken for a
 built-in action.
 

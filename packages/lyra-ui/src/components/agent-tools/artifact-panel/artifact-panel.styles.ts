@@ -111,13 +111,13 @@ export const styles = css`
     cursor: pointer;
     border-radius: var(--lr-radius);
   }
-  [part='version-previous']:hover,
-  [part='version-next']:hover {
+  [part='version-previous']:hover:not(:disabled),
+  [part='version-next']:hover:not(:disabled) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
-  [part='version-previous']:active,
-  [part='version-next']:active {
+  [part='version-previous']:active:not(:disabled),
+  [part='version-next']:active:not(:disabled) {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='version-previous']:focus-visible,

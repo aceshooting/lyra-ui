@@ -1235,6 +1235,7 @@
       "fingerprint": "06a1983039e403e92042",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/agent-status-presentation.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -1254,6 +1255,7 @@
       "fingerprint": "9ddb85c11f0ac64e20e9",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/agent-status-presentation.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -1273,6 +1275,7 @@
       "fingerprint": "d23a6cdb9d903e02526e",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/agent-status-presentation.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -1292,6 +1295,7 @@
       "fingerprint": "44f4ae2158ede5e087de",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/agent-status-presentation.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -1311,6 +1315,7 @@
       "fingerprint": "647e039594445f8ee9bc",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/agent-status-presentation.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -1330,6 +1335,7 @@
       "fingerprint": "43fe644ebed2f2d0b115",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/agent-status-presentation.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -1349,6 +1355,7 @@
       "fingerprint": "cdb9c5e7cbc8fd980389",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/agent-status-presentation.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -1391,6 +1398,7 @@
       "fingerprint": "b7a3475fcbf596c3fe7c",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/approval-state.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -1410,6 +1418,7 @@
       "fingerprint": "72138b9937042191e8d0",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/approval-state.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -2050,6 +2059,7 @@
       "fingerprint": "ca073a419c171390ffd0",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/stack-trace/stack-trace-parse.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/stack-trace/stack-trace.ts",
         "src/components/lr-stack-trace.ts",
@@ -2072,6 +2082,7 @@
       "fingerprint": "aaa34b3f8d74e8af82c2",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/stack-trace/stack-trace-parse.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/stack-trace/stack-trace.ts",
         "src/components/lr-stack-trace.ts",
@@ -2094,6 +2105,7 @@
       "fingerprint": "e6e7de6af08c8768b7c3",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/stack-trace/stack-trace-parse.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/stack-trace/stack-trace.ts",
         "src/components/lr-stack-trace.ts",
@@ -2116,6 +2128,7 @@
       "fingerprint": "1b02b10026ad53778ab7",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/stack-trace/stack-trace-parse.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/stack-trace/stack-trace.ts",
         "src/components/lr-stack-trace.ts",
@@ -2138,6 +2151,7 @@
       "fingerprint": "39c594707ad195e3f622",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/stack-trace/stack-trace-parse.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/stack-trace/stack-trace.ts",
         "src/components/lr-stack-trace.ts",
@@ -2672,6 +2686,7 @@
       "fingerprint": "742435d1e8b276353638",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/trace-tree/span.ts",
         "src/components/agent-tools/agent-trace/agent-trace.class.ts",
         "src/components/agent-tools/agent-trace/agent-trace.ts",
         "src/components/agent-tools/index.ts",
@@ -2701,6 +2716,7 @@
       "fingerprint": "af59fb9d3f013ae24fdd",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/trace-tree/span.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/trace-tree/trace-tree.ts",
         "src/components/lr-trace-tree.ts",
@@ -2723,6 +2739,7 @@
       "fingerprint": "80bca7023703a8c5c84b",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/trace-tree/span.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/trace-tree/trace-tree.ts",
         "src/components/lr-trace-tree.ts",
@@ -2745,6 +2762,7 @@
       "fingerprint": "1ff1bab643613593114c",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/trace-tree/span.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/trace-tree/trace-tree.ts",
         "src/components/lr-trace-tree.ts",
@@ -2767,6 +2785,7 @@
       "fingerprint": "25dd8085569bfb5691c8",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/trace-tree/span.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/trace-tree/trace-tree.ts",
         "src/components/lr-trace-tree.ts",
@@ -3170,7 +3189,7 @@
       "module": "src/components/charts/chart/chart-preload.ts",
       "exportName": "LyraChartPreloadOptions",
       "kind": "interface",
-      "fingerprint": "14824b59c253d8dc95b6",
+      "fingerprint": "81c41330ebc9fa964d90",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart-preload.ts",
@@ -3190,7 +3209,7 @@
       "module": "src/components/charts/chart/chart-preload.ts",
       "exportName": "LyraChartPreloadResult",
       "kind": "interface",
-      "fingerprint": "fe9b2c68f0c1d8ceaa9b",
+      "fingerprint": "12af2ca5677d45429d02",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart-preload.ts",
@@ -3210,7 +3229,7 @@
       "module": "src/components/charts/chart/chart-preload.ts",
       "exportName": "preloadCharts",
       "kind": "function",
-      "fingerprint": "78b5495965b60d510b21",
+      "fingerprint": "c7b319e820577473a12e",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart-preload.ts",
@@ -3368,7 +3387,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartFormatterContext",
       "kind": "interface",
-      "fingerprint": "f725e7f7e4585e843be6",
+      "fingerprint": "492bc7b6b4853da4a384",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3580,6 +3599,25 @@
         "kind": "utility",
         "name": "components-charts-chart-lite-chart-contracts",
         "declaration": "LyraLiteChartTableCellContext"
+      }
+    },
+    {
+      "module": "src/components/conversation/chat-composer/chat-composer.class.ts",
+      "exportName": "normalizeChatComposerStatus",
+      "kind": "function",
+      "fingerprint": "38ea05d596d642c94be3",
+      "routes": [
+        "src/components/conversation/chat-composer/chat-composer.class.ts",
+        "src/components/conversation/chat-composer/chat-composer.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-chat-composer.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-chat-composer-chat-composer-contracts",
+        "declaration": "normalizeChatComposerStatus"
       }
     },
     {
@@ -4058,7 +4096,7 @@
       "module": "src/components/conversation/message-actions/toolbar-actions.ts",
       "exportName": "isLyraToolbarActionProvider",
       "kind": "function",
-      "fingerprint": "d357e96573cb8cac617b",
+      "fingerprint": "528958d3913dc9f8e6da",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4081,7 +4119,7 @@
       "module": "src/components/conversation/message-actions/toolbar-actions.ts",
       "exportName": "LyraToolbarAction",
       "kind": "interface",
-      "fingerprint": "5285bf043dd656192d20",
+      "fingerprint": "a1d9d1cc0b12472e31f6",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4104,7 +4142,7 @@
       "module": "src/components/conversation/message-actions/toolbar-actions.ts",
       "exportName": "LyraToolbarActionProvider",
       "kind": "interface",
-      "fingerprint": "cf53d74576359c700bad",
+      "fingerprint": "424c72da1a4eb8addd64",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4173,7 +4211,7 @@
       "module": "src/components/conversation/message-feedback/message-feedback.class.ts",
       "exportName": "MessageFeedbackSubmitDetail",
       "kind": "interface",
-      "fingerprint": "8041fa263f49e4d41f20",
+      "fingerprint": "f4be84c3530604e587f6",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4749,7 +4787,7 @@
       "module": "src/components/data/calendar/calendar.class.ts",
       "exportName": "CalendarEvent",
       "kind": "interface",
-      "fingerprint": "1613674a5fff1ae52215",
+      "fingerprint": "e98005de80d650bc270d",
       "routes": [
         "src/all.ts",
         "src/components/data/calendar/calendar.class.ts",
@@ -8422,6 +8460,29 @@
         "kind": "utility",
         "name": "components-layout-multi-split-multi-split-contracts",
         "declaration": "LyraMultiSplitResizeDetail"
+      }
+    },
+    {
+      "module": "src/components/layout/multi-split/multi-split.class.ts",
+      "exportName": "LyraMultiSplitToggleDetail",
+      "kind": "interface",
+      "fingerprint": "36816a7d6faa095748b5",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/index.ts",
+        "src/components/layout/multi-split/multi-split.class.ts",
+        "src/components/layout/multi-split/multi-split.ts",
+        "src/components/lr-multi-split.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-multi-split-multi-split-contracts",
+        "declaration": "LyraMultiSplitToggleDetail"
       }
     },
     {
@@ -13677,7 +13738,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "f33e2727f85c7c195f35",
+      "fingerprint": "baf1f1859cc8ebc38e7f",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14588,7 +14649,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "0c41213f81320cc740b5",
+      "fingerprint": "22fc3ceb57c88127008b",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -14729,7 +14790,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "dfa1d40f2b6f56fb1e9e",
+      "fingerprint": "2db243233a1ccc201952",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15278,7 +15339,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "6073b074822e6e3cca96",
+      "fingerprint": "e5f268c422c623d6fce5",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15713,7 +15774,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "c0e9d73f898b74a1f423",
+      "fingerprint": "8d7bb8d783d97b9115b4",
       "routes": [
         "src/vue.ts"
       ],

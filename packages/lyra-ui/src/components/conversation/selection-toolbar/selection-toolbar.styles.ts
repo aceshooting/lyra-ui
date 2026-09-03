@@ -56,6 +56,9 @@ export const styles = css`
   }
 
   [part~='action'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;

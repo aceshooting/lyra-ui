@@ -81,6 +81,31 @@ afterEach(() => {
   created.length = 0;
 });
 
+it('contains a throwing shadow-root activeElement getter while replacing groups', async () => {
+  const el = await connectEmojiPicker();
+  const root = el.shadowRoot!;
+  const prior = Object.getOwnPropertyDescriptor(root, 'activeElement');
+  let unavailable = true;
+  Object.defineProperty(root, 'activeElement', {
+    configurable: true,
+    get(): Element {
+      if (unavailable) throw new TypeError('active element unavailable');
+      return {} as Element;
+    },
+  });
+  try {
+    el.groups = [];
+    await el.updateComplete;
+    unavailable = false;
+    el.groups = [];
+    await el.updateComplete;
+    expect(el.groups).to.deep.equal([]);
+  } finally {
+    if (prior) Object.defineProperty(root, 'activeElement', prior);
+    else delete (root as unknown as { activeElement?: unknown }).activeElement;
+  }
+});
+
 /**
  * Creates a `<lr-emoji-picker>` with `loadGroups` overridden to `loadGroups` *before* the element
  * connects to `document.body` -- `connectedCallback()` kicks off the auto-load synchronously the

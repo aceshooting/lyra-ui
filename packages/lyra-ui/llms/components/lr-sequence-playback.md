@@ -93,8 +93,7 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
   `currentIndex` clamped into `[0, itemCount)`; fractional, negative, `NaN`, infinite, and oversized
   values cannot poison end conditions or the slider.
 - `interval-ms` is clamped to the 16ms floor and the browser's finite timer ceiling: a non-finite or
-  lower value ticks at 16ms, while an oversized value uses the timer ceiling. Each distinct invalid
-  value is warned once (deduplicated per value, not a single once-ever flag).
+  lower value ticks at 16ms, while an oversized value uses the timer ceiling.
 - Initial `playing` and `item-count` attributes are resolved together on the first update, so
   playback starts consistently regardless of their source order; an invalid final `itemCount <= 1`
   clears the reflected `playing` state.

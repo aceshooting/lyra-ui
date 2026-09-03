@@ -1,7 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './chip.js';
 import type { LyraChip } from './chip.js';
-import { styles } from './chip.styles.js';
 
 class ChipLabelForwardWrapper extends HTMLElement {
   constructor() {
@@ -1250,11 +1249,19 @@ describe('per-tier min-height and exact-height hatch', () => {
     expect(removeCs.borderRadius).to.equal('3px');
   });
 
-  it('keeps the radius default private and consumes the inheritable public hook at both surfaces', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/:host \{[^}]*--_lr-chip-radius: var\(--lr-radius\);/);
-    expect(css).to.match(/\[part='base'\] \{[^}]*border-radius: var\(--lr-chip-radius, var\(--_lr-chip-radius\)\);/);
-    expect(css).to.match(/\[part='remove-button'\] \{[^}]*border-radius: var\(--lr-chip-radius, var\(--_lr-chip-radius\)\);/);
+  it('carries an inherited radius hook to both rendered chip surfaces', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-chip-radius: 7px"><lr-chip removable>Tag</lr-chip></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-chip') as LyraChip;
+    const remove = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+
+    expect(getComputedStyle(base(el)).borderRadius).to.equal('7px');
+    expect(getComputedStyle(remove).borderRadius).to.equal('7px');
+    el.style.setProperty('--lr-chip-radius', '9px');
+    await el.updateComplete;
+    expect(getComputedStyle(base(el)).borderRadius).to.equal('9px');
+    expect(getComputedStyle(remove).borderRadius).to.equal('9px');
   });
 
   it('honors inherited and direct public chip hooks without shadowing either', async () => {

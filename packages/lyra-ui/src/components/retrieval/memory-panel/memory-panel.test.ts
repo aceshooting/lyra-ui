@@ -911,6 +911,91 @@ describe('lr-memory-panel', () => {
     );
   });
 
+  it('keeps one item confirmation when a new controlled collection retains the same source object', async () => {
+    const item: LyraMemoryItem = { id: 'same', text: 'Same memory' };
+    const el = (await fixture(
+      html`<lr-memory-panel .shortTerm=${[item]}></lr-memory-panel>`
+    )) as LyraMemoryPanel;
+    const initialRow = el.shadowRoot!.querySelector('[part="item"]')!;
+    (
+      initialRow.querySelector('[part="remove-button"]') as HTMLButtonElement
+    ).click();
+    await el.updateComplete;
+    await readyConfirmBar(initialRow);
+
+    // A controlled host commonly allocates a fresh outer array while retaining its row object.
+    // That is the same pending decision, rather than an attempt to authorize a replacement row.
+    el.shortTerm = [item];
+    await el.updateComplete;
+
+    const currentRow = el.shadowRoot!.querySelector('[part="item"]')!;
+    expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(
+      1
+    );
+    const confirmBar = await readyConfirmBar(currentRow);
+    const listener = oneEvent(el, 'lr-remove');
+    (
+      confirmBar.shadowRoot!.querySelector(
+        '[part="approve-button"]'
+      ) as HTMLButtonElement
+    ).click();
+    expect((await listener).detail).to.deep.equal({
+      memoryId: 'same',
+      scope: 'short-term',
+    });
+  });
+
+  it('keeps focus in a retained confirmation when the equivalent controlled replacement lands immediately', async () => {
+    const item: LyraMemoryItem = { id: 'same', text: 'Same memory' };
+    const el = (await fixture(
+      html`<lr-memory-panel .shortTerm=${[item]}></lr-memory-panel>`
+    )) as LyraMemoryPanel;
+    const row = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
+    const remove = row.querySelector(
+      '[part="remove-button"]'
+    ) as HTMLButtonElement;
+    remove.focus();
+    remove.click();
+    // The host can synchronously reflect an equivalent controlled collection before the child
+    // confirmation has completed its first update and received the promised safe-action focus.
+    el.shortTerm = [item];
+    await el.updateComplete;
+    const currentRow = el.shadowRoot!.querySelector(
+      '[part="item"]'
+    ) as HTMLElement;
+    const confirmBar = await readyConfirmBar(currentRow);
+    await settleFocus(el);
+
+    expect(composedContains(confirmBar, deepActiveElement(document))).to.be
+      .true;
+  });
+
+  it('cancels an item confirmation when a controlled collection replaces its source object', async () => {
+    const item: LyraMemoryItem = { id: 'same', text: 'Same memory' };
+    const el = (await fixture(
+      html`<lr-memory-panel .shortTerm=${[item]}></lr-memory-panel>`
+    )) as LyraMemoryPanel;
+    const row = el.shadowRoot!.querySelector('[part="item"]')!;
+    (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const staleConfirmBar = await readyConfirmBar(row);
+    const staleApprove = staleConfirmBar.shadowRoot!.querySelector(
+      '[part="approve-button"]'
+    ) as HTMLButtonElement;
+    let removed = false;
+    el.addEventListener('lr-remove', () => (removed = true));
+
+    // Equal display fields are not enough: this is a fresh source object controlled by the host.
+    el.shortTerm = [{ ...item }];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(
+      0
+    );
+    staleApprove.click();
+    expect(removed).to.be.false;
+  });
+
   it('rejects stale item approval in the same turn as a controlled collection replacement', async () => {
     const el = await populated();
     const row = el.shadowRoot!.querySelector('[part="item"][data-id="l2"]')!;
@@ -1134,7 +1219,12 @@ describe('lr-memory-panel', () => {
   it('renders expand-toggle, add-button, remove-button, and forget-all-button hover feedback', async () => {
     const el = await populated();
     el.style.setProperty('--lr-color-brand-quiet', 'rgb(1, 2, 3)');
-    const targets = ['expand-toggle', 'add-button', 'remove-button', 'forget-all-button'].map(
+    const targets = [
+      'expand-toggle',
+      'add-button',
+      'remove-button',
+      'forget-all-button',
+    ].map(
       (part) => el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!
     );
 
@@ -1150,9 +1240,12 @@ describe('lr-memory-panel', () => {
           ],
         });
         await waitUntil(
-          () => target.getAttribute('part') === 'expand-toggle'
-            ? getComputedStyle(target).textDecorationLine.includes('underline')
-            : getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)',
+          () =>
+            target.getAttribute('part') === 'expand-toggle'
+              ? getComputedStyle(target).textDecorationLine.includes(
+                  'underline'
+                )
+              : getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)',
           `${target.getAttribute('part')} never painted its hover feedback`
         );
       } finally {
@@ -1488,4 +1581,65 @@ it('omits blank and later duplicate memory ids before rows, counts, and actions'
     memoryId: 'same',
     scope: 'short-term',
   });
+});
+
+it('keeps admitted memory provenance opaque through the approved add event', async () => {
+  const provenance = {
+    entities: [{ id: 'entity', label: 'Opaque provenance', type: 'person' }],
+  };
+  const memory: LyraMemoryItem = {
+    id: 'opaque-memory',
+    text: 'The original memory identity must survive approval.',
+    provenance,
+  };
+  const el = await fixture<LyraMemoryPanel>(html`
+    <lr-memory-panel .shortTerm=${[memory]}></lr-memory-panel>
+  `);
+  const row = el.shadowRoot!.querySelector('[part="item"]')!;
+  (row.querySelector('[part="add-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  const confirm = await readyConfirmBar(row);
+
+  const added = oneEvent(el, 'lr-add');
+  (
+    confirm.shadowRoot!.querySelector(
+      '[part="approve-button"]'
+    ) as HTMLButtonElement
+  ).click();
+  const detail = (await added).detail.memory;
+  expect(detail === memory).to.equal(true);
+  expect(detail.provenance === provenance).to.equal(true);
+});
+
+it('uses the cached prior memory projection during controlled focus recovery', async () => {
+  const first: LyraMemoryItem = { id: 'first', text: 'First memory' };
+  const second: LyraMemoryItem = { id: 'second', text: 'Second memory' };
+  const el = await fixture<LyraMemoryPanel>(html`
+    <lr-memory-panel .shortTerm=${[first, second]}></lr-memory-panel>
+  `);
+  const secondRemove = el.shadowRoot!.querySelector(
+    '[part="item"][data-id="second"] [part="remove-button"]'
+  ) as HTMLButtonElement;
+  secondRemove.focus();
+
+  let idReads = 0;
+  Object.defineProperty(second, 'id', {
+    configurable: true,
+    enumerable: true,
+    get: () => {
+      idReads += 1;
+      throw new Error(
+        'prior memory sources must not be reread during focus recovery'
+      );
+    },
+  });
+  el.shortTerm = [first];
+  await settleFocus(el);
+
+  expect(idReads).to.equal(0);
+  expect(
+    el
+      .shadowRoot!.activeElement!.closest('[part="item"]')
+      ?.getAttribute('data-id')
+  ).to.equal('first');
 });

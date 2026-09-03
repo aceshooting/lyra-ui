@@ -52,6 +52,7 @@ export const styles = css`
   [part='fit'],
   [part='lock'] {
     display: inline-flex;
+    font: inherit;
     align-items: center;
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);

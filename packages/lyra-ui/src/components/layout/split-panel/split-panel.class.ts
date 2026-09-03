@@ -7,7 +7,7 @@ import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './split-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_resizeDivider } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_resizeDivider, LYRA_DEFAULT_resizeValuePercent } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -209,7 +209,8 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @csspart panel - Shared part on both pane wrappers.
  * @csspart start - The logical start pane.
  * @csspart end - The logical end pane.
- * @csspart divider - The draggable separator.
+ * @csspart divider - The draggable separator. Its numeric ARIA range remains percentages while
+ *   `aria-valuetext` reports the measured current percentage through the effective locale.
  * @cssprop [--divider-width=4px] - Visible divider thickness.
  * @cssprop [--divider-hit-area=12px] - Requested divider hit area; Lyra's minimum hit-area token remains the floor.
  * @cssprop [--min=0] - Minimum size of the primary pane, or the start pane when `primary` is unset.
@@ -232,6 +233,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     resizeDivider: LYRA_DEFAULT_resizeDivider,
+    resizeValuePercent: LYRA_DEFAULT_resizeValuePercent,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -599,7 +601,9 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     this.baseElement?.style.setProperty('--_lr-split-panel-start-position', `${startPosition}%`);
     if (this.dividerElement) {
       const bounds = this.ariaBounds;
-      this.dividerElement.setAttribute('aria-valuenow', String(Math.round(this.position)));
+      const position = Math.round(this.position);
+      this.dividerElement.setAttribute('aria-valuenow', String(position));
+      this.dividerElement.setAttribute('aria-valuetext', this.resizeValueText(position));
       this.dividerElement.setAttribute('aria-valuemin', String(Math.round(bounds.min)));
       this.dividerElement.setAttribute('aria-valuemax', String(Math.round(bounds.max)));
     }
@@ -878,6 +882,12 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     });
   }
 
+  private resizeValueText(position: number): string {
+    return this.localize('resizeValuePercent', undefined, {
+      value: getNumberFormat(this.effectiveLocale).format(Math.round(position)),
+    });
+  }
+
   private get ariaBounds(): { min: number; max: number } {
     if (this.availableSize <= 0) return { min: 0, max: 100 };
     const bounds = this.constraintBounds();
@@ -891,6 +901,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     const orientation = this.effectiveOrientation;
     const startPosition = finiteRange(this._startPosition, DEFAULT_POSITION, 0, 100);
     const ariaBounds = this.ariaBounds;
+    const position = Math.round(this.position);
     return html`
       <div
         part="base split-panel"
@@ -903,7 +914,8 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
           role="separator"
           aria-label=${this.separatorLabel}
           aria-orientation=${orientation === 'vertical' ? 'horizontal' : 'vertical'}
-          aria-valuenow=${String(Math.round(this.position))}
+          aria-valuenow=${String(position)}
+          aria-valuetext=${this.resizeValueText(position)}
           aria-valuemin=${String(Math.round(ariaBounds.min))}
           aria-valuemax=${String(Math.round(ariaBounds.max))}
           aria-disabled=${this.disabled ? 'true' : 'false'}

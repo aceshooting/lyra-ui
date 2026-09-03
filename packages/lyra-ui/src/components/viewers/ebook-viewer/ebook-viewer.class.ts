@@ -13,6 +13,11 @@ import {
 import { chevronIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { announceSearchResult } from '../../../internal/viewer-search.js';
 import {
@@ -28,12 +33,6 @@ import type {
 import {
   getEpubJs,
   type EpubBook,
-  type EpubContents,
-  type EpubLocation,
-  type EpubNavigationItem,
-  type EpubRendition,
-  type EpubSearchResult,
-  type EpubSpineItem,
 } from './ebook-loader.js';
 import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 import { styles } from './ebook-viewer.styles.js';
@@ -44,7 +43,7 @@ import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_QUERY_L
 import { boundedSelectionRects, boundedSelectionText } from '../../../internal/text-quote.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_previous, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -70,7 +69,372 @@ const MAX_TOC_ITEMS = 10_000;
 const MAX_TOC_DEPTH = 100;
 const MAX_SEARCH_MATCHES = 10_000;
 const MAX_SEARCH_SPINE_ITEMS = 1_000;
+const MAX_FIND_RESULTS = 10_000;
 const MAX_PAINTED_HIGHLIGHTS = 100;
+const MAX_PEER_PROTOTYPES = 100;
+
+interface SafeEpubBook {
+  readonly ready: Promise<void>;
+  readonly spine?: unknown;
+  readonly load?: (...args: unknown[]) => unknown;
+  getNavigation(): unknown;
+  renderTo(element: Element, options?: Record<string, unknown>): unknown;
+  destroy(): void;
+}
+
+interface SafeEpubAnnotations {
+  highlight(
+    cfi: string,
+    data: Record<string, unknown>,
+    callback?: (() => void) | undefined,
+    className?: string,
+    styles?: Record<string, unknown>,
+  ): unknown;
+  remove(cfi: string, type: string): void;
+}
+
+interface SafeEpubRendition {
+  readonly annotations: SafeEpubAnnotations;
+  display(target?: string): Promise<void>;
+  prev(): Promise<void>;
+  next(): Promise<void>;
+  on(
+    type: 'relocated' | 'selected',
+    callback: ((location: unknown) => void) | ((cfiRange: string, contents: unknown) => void),
+  ): void;
+}
+
+interface SafeEpubSpineItem {
+  load(request?: unknown): unknown;
+  find(query: string): unknown;
+  unload(): void;
+}
+
+interface FindResultProjection {
+  readonly matches: readonly EbookSearchMatch[];
+  readonly exact: boolean;
+}
+
+interface TocWorkBudget {
+  positions: number;
+  nodes: number;
+  readonly seen: WeakSet<object>;
+}
+
+function isObjectValue(value: unknown): value is object {
+  return value !== null && (typeof value === 'object' || typeof value === 'function');
+}
+
+function isArrayValue(value: unknown): value is readonly unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+/** Resolves an own/inherited data descriptor without invoking a peer getter. An accessor shadows
+ * farther prototypes just as normal property lookup would, but fails closed at the boundary. */
+function inheritedDataDescriptor(value: object, key: PropertyKey): PropertyDescriptor | undefined {
+  let current: object | null = value;
+  for (let depth = 0; current && depth < MAX_PEER_PROTOTYPES; depth += 1) {
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(current, key);
+    } catch {
+      return undefined;
+    }
+    if (descriptor) return 'value' in descriptor ? descriptor : undefined;
+    try {
+      current = Object.getPrototypeOf(current) as object | null;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+function inheritedDataValue(value: unknown, key: PropertyKey): unknown {
+  return isObjectValue(value) ? inheritedDataDescriptor(value, key)?.value : undefined;
+}
+
+function savedCallable(value: unknown, key: PropertyKey): ((...args: unknown[]) => unknown) | undefined {
+  if (!isObjectValue(value)) return undefined;
+  const candidate = inheritedDataDescriptor(value, key)?.value;
+  if (typeof candidate !== 'function') return undefined;
+  return (...args: unknown[]) => Reflect.apply(candidate, value, args);
+}
+
+function savedThenable(value: unknown): Promise<void> | undefined {
+  const then = savedCallable(value, 'then');
+  if (!then) return undefined;
+  return new Promise<void>((resolve, reject) => {
+    try {
+      // Deliberately discard the fulfillment value. Passing a hostile peer result straight to a
+      // native Promise resolver would assimilate it by reading `.then` before a descriptor-safe
+      // projection has a chance to inspect it.
+      then(() => resolve(), reject);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function taskFrom(call: (...args: unknown[]) => unknown, ...args: unknown[]): Promise<void> {
+  try {
+    return savedThenable(call(...args)) ?? Promise.resolve();
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+/** Awaits only a descriptor-validated thenable. The fulfillment is wrapped before resolving so a
+ * synchronous proxy/array result never reaches Promise assimilation, which would value-read its
+ * `.then` before the bounded descriptor projection can inspect it. */
+function awaitPeerResult(value: unknown): Promise<{ readonly value: unknown }> {
+  const then = savedCallable(value, 'then');
+  const wrap = (resolved: unknown): { readonly value: unknown } => Object.freeze({ value: resolved });
+  if (!then) return Promise.resolve(wrap(value));
+  return new Promise<{ readonly value: unknown }>((resolve, reject) => {
+    try {
+      then((resolved: unknown) => resolve(wrap(resolved)), reject);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+/** Captures mandatory book capabilities once, and captures optional navigation only after
+ * `ready` settles, when epub.js has finished loading its navigation document. */
+function normalizeBook(value: unknown): SafeEpubBook | undefined {
+  if (!isObjectValue(value)) return undefined;
+  const ready = savedThenable(inheritedDataValue(value, 'ready'));
+  const renderTo = savedCallable(value, 'renderTo');
+  const destroy = savedCallable(value, 'destroy');
+  if (!ready || !renderTo || !destroy) return undefined;
+  let navigationCaptured = false;
+  let navigation: unknown;
+  const getNavigation = (): unknown => {
+    if (!navigationCaptured) {
+      navigationCaptured = true;
+      navigation = inheritedDataValue(value, 'navigation');
+    }
+    return navigation;
+  };
+  const spine = inheritedDataValue(value, 'spine');
+  const load = savedCallable(value, 'load');
+  return Object.freeze({
+    ready,
+    ...(spine === undefined ? {} : { spine }),
+    ...(load === undefined ? {} : { load }),
+    getNavigation,
+    renderTo: (element: Element, options?: Record<string, unknown>) => renderTo(element, options),
+    destroy: () => { void destroy(); },
+  });
+}
+
+/** Captures the mandatory rendition/annotation capabilities once, before any callback is wired. */
+function normalizeRendition(value: unknown): SafeEpubRendition | undefined {
+  if (!isObjectValue(value)) return undefined;
+  const display = savedCallable(value, 'display');
+  const prev = savedCallable(value, 'prev');
+  const next = savedCallable(value, 'next');
+  const on = savedCallable(value, 'on');
+  const annotationsValue = inheritedDataValue(value, 'annotations');
+  const highlight = savedCallable(annotationsValue, 'highlight');
+  const remove = savedCallable(annotationsValue, 'remove');
+  if (!display || !prev || !next || !on || !highlight || !remove) return undefined;
+  return Object.freeze({
+    display: (target?: string) => taskFrom(display, target),
+    prev: () => taskFrom(prev),
+    next: () => taskFrom(next),
+    on: (
+      type: 'relocated' | 'selected',
+      callback: ((location: unknown) => void) | ((cfiRange: string, contents: unknown) => void),
+    ) => {
+      void on(type, callback);
+    },
+    annotations: Object.freeze({
+      highlight: (
+        cfi: string,
+        data: Record<string, unknown>,
+        callback?: (() => void) | undefined,
+        className?: string,
+        styles?: Record<string, unknown>,
+      ) => highlight(cfi, data, callback, className, styles),
+      remove: (cfi: string, type: string) => { void remove(cfi, type); },
+    }),
+  });
+}
+
+function normalizeSpineItem(value: unknown): SafeEpubSpineItem | undefined {
+  const load = savedCallable(value, 'load');
+  const find = savedCallable(value, 'find');
+  const unload = savedCallable(value, 'unload');
+  if (!load || !find || !unload) return undefined;
+  return Object.freeze({
+    load: (request?: unknown) => load(request),
+    find: (query: string) => find(query),
+    unload: () => { void unload(); },
+  });
+}
+
+function projectSpineItems(book: SafeEpubBook): { readonly items: readonly SafeEpubSpineItem[]; readonly exact: boolean } {
+  const spineItems = inheritedDataValue(book.spine, 'spineItems');
+  if (!isArrayValue(spineItems)) return Object.freeze({ items: Object.freeze([]), exact: spineItems === undefined });
+  const length = getOwnDataDescriptor(spineItems, 'length');
+  if (
+    length === MISSING_OWN_DATA_DESCRIPTOR
+    || length === UNSAFE_OWN_DATA_DESCRIPTOR
+    || typeof length.value !== 'number'
+    || !Number.isSafeInteger(length.value)
+    || length.value < 0
+  )
+    return Object.freeze({ items: Object.freeze([]), exact: false });
+  const items: SafeEpubSpineItem[] = [];
+  let exact = length.value <= MAX_SEARCH_SPINE_ITEMS;
+  const count = Math.min(length.value, MAX_SEARCH_SPINE_ITEMS);
+  for (let index = 0; index < count; index += 1) {
+    const descriptor = getOwnDataDescriptor(spineItems, String(index));
+    if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
+      exact = false;
+      continue;
+    }
+    const item = normalizeSpineItem(descriptor.value);
+    if (!item) {
+      exact = false;
+      continue;
+    }
+    items.push(item);
+  }
+  return Object.freeze({ items: Object.freeze(items), exact });
+}
+
+/** Projects one peer `find()` result prefix through own data descriptors. Invalid/holey/capped
+ * positions make an externally reported count inexact, but never discard a later valid sibling. */
+function projectFindResults(value: unknown, work: ViewerSearchWorkBudget): FindResultProjection {
+  if (!isArrayValue(value)) return Object.freeze({ matches: Object.freeze([]), exact: false });
+  const length = getOwnDataDescriptor(value, 'length');
+  if (
+    length === MISSING_OWN_DATA_DESCRIPTOR
+    || length === UNSAFE_OWN_DATA_DESCRIPTOR
+    || typeof length.value !== 'number'
+    || !Number.isSafeInteger(length.value)
+    || length.value < 0
+  )
+    return Object.freeze({ matches: Object.freeze([]), exact: false });
+  const matches: EbookSearchMatch[] = [];
+  let exact = length.value <= MAX_FIND_RESULTS;
+  const count = Math.min(length.value, MAX_FIND_RESULTS);
+  for (let index = 0; index < count; index += 1) {
+    const descriptor = getOwnDataDescriptor(value, String(index));
+    if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR || !isObjectValue(descriptor.value)) {
+      exact = false;
+      continue;
+    }
+    const cfi = getOwnDataDescriptor(descriptor.value, 'cfi');
+    const excerpt = getOwnDataDescriptor(descriptor.value, 'excerpt');
+    if (
+      cfi === MISSING_OWN_DATA_DESCRIPTOR
+      || cfi === UNSAFE_OWN_DATA_DESCRIPTOR
+      || typeof cfi.value !== 'string'
+    ) {
+      exact = false;
+      continue;
+    }
+    // Charge raw strings before trimming or retaining them. An over-budget CFI is skipped without
+    // draining the shared budget, so a later bounded sibling can still be used.
+    if (!work.canConsume(cfi.value) || !work.consume(cfi.value) || cfi.value.trim() === '') {
+      exact = false;
+      continue;
+    }
+    let excerptValue = '';
+    if (excerpt !== MISSING_OWN_DATA_DESCRIPTOR) {
+      if (excerpt === UNSAFE_OWN_DATA_DESCRIPTOR || typeof excerpt.value !== 'string') {
+        exact = false;
+      } else if (!work.canConsume(excerpt.value) || !work.consume(excerpt.value)) {
+        exact = false;
+      } else {
+        excerptValue = excerpt.value;
+      }
+    }
+    matches.push({
+      cfi: cfi.value,
+      excerpt: excerptValue,
+    });
+  }
+  return Object.freeze({ matches: Object.freeze(matches), exact });
+}
+
+function pushTocEntries(
+  value: unknown,
+  level: number,
+  budget: TocWorkBudget,
+  stack: Array<{ readonly value: unknown; readonly level: number }>,
+): void {
+  if (!isArrayValue(value) || budget.positions >= MAX_TOC_ITEMS) return;
+  const length = getOwnDataDescriptor(value, 'length');
+  if (
+    length === MISSING_OWN_DATA_DESCRIPTOR
+    || length === UNSAFE_OWN_DATA_DESCRIPTOR
+    || typeof length.value !== 'number'
+    || !Number.isSafeInteger(length.value)
+    || length.value < 0
+  )
+    return;
+  const count = Math.min(length.value, MAX_TOC_ITEMS - budget.positions);
+  for (let index = count - 1; index >= 0; index -= 1) {
+    budget.positions += 1;
+    const descriptor = getOwnDataDescriptor(value, String(index));
+    if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+    stack.push({ value: descriptor.value, level });
+  }
+}
+
+/** Bounded non-recursive navigation projection. Its single position/node budget covers every
+ * nested child list, so a deep/cyclic optional TOC cannot grow work beyond 10,000 observations. */
+function projectToc(value: unknown): readonly EbookTocItem[] {
+  const budget: TocWorkBudget = { positions: 0, nodes: 0, seen: new WeakSet() };
+  const stack: Array<{ readonly value: unknown; readonly level: number }> = [];
+  pushTocEntries(value, 1, budget, stack);
+  const items: EbookTocItem[] = [];
+  while (stack.length > 0 && budget.nodes < MAX_TOC_ITEMS) {
+    const current = stack.pop()!;
+    if (!isObjectValue(current.value) || budget.seen.has(current.value)) continue;
+    budget.seen.add(current.value);
+    budget.nodes += 1;
+    const href = getOwnDataDescriptor(current.value, 'href');
+    const id = getOwnDataDescriptor(current.value, 'id');
+    const label = getOwnDataDescriptor(current.value, 'label');
+    const children = getOwnDataDescriptor(current.value, 'subitems');
+    if (
+      href !== MISSING_OWN_DATA_DESCRIPTOR
+      && href !== UNSAFE_OWN_DATA_DESCRIPTOR
+      && typeof href.value === 'string'
+    ) {
+      const idValue = id !== MISSING_OWN_DATA_DESCRIPTOR
+        && id !== UNSAFE_OWN_DATA_DESCRIPTOR
+        && typeof id.value === 'string'
+        && id.value !== ''
+        ? id.value
+        : href.value;
+      const labelValue = label !== MISSING_OWN_DATA_DESCRIPTOR
+        && label !== UNSAFE_OWN_DATA_DESCRIPTOR
+        && typeof label.value === 'string'
+        ? label.value.trim()
+        : '';
+      items.push({ id: idValue, label: labelValue, href: href.value, level: current.level });
+    }
+    if (
+      current.level < MAX_TOC_DEPTH
+      && children !== MISSING_OWN_DATA_DESCRIPTOR
+      && children !== UNSAFE_OWN_DATA_DESCRIPTOR
+    ) {
+      pushTocEntries(children.value, current.level + 1, budget, stack);
+    }
+  }
+  return Object.freeze(items);
+}
 
 /** Tone -> the token (and its light-theme fallback) a painted `cfi` highlight resolves its `fill`
  *  from, mirroring `highlight-layer`'s own tone mapping. epub.js's `annotations.highlight()`
@@ -180,6 +544,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     open: LYRA_DEFAULT_open,
     popover: LYRA_DEFAULT_popover,
     previous: LYRA_DEFAULT_previous,
+    remove: LYRA_DEFAULT_remove,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
@@ -222,9 +587,10 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   @state() private searchActiveIndex = -1;
 
   private readonly mountRef: Ref<HTMLDivElement> = createRef();
-  private book?: EpubBook;
-  private rendition?: EpubRendition;
+  private book?: SafeEpubBook;
+  private rendition?: SafeEpubRendition;
   private generation = 0;
+  private failedGeneration = -1;
   private searchQuery = '';
   private lastSearchLocale = '';
   private searchGeneration = 0;
@@ -330,12 +696,46 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   private teardown(): void {
     const shouldEmitSearchReset = this.hasSearchState();
-    this.book?.destroy();
+    this.destroyBook(this.book);
     this.book = undefined;
     this.rendition = undefined;
     this.resetSearchState();
     this.paintedHighlightCfis = [];
     if (shouldEmitSearchReset && this.isConnected) this.emitSearchChange();
+  }
+
+  private destroyBook(book: SafeEpubBook | undefined): void {
+    try {
+      book?.destroy();
+    } catch {
+      // Teardown must not let an optional peer's cleanup failure strand the next load.
+    }
+  }
+
+  private isCurrentLoad(generation: number, ownerView: Window): boolean {
+    return this.isConnected
+      && generation === this.generation
+      && this.ownerDocument.defaultView === ownerView;
+  }
+
+  private isCurrentBookRendition(
+    generation: number,
+    ownerView: Window,
+    book: SafeEpubBook,
+    rendition: SafeEpubRendition,
+  ): boolean {
+    return this.isConnected
+      && generation === this.generation
+      && this.ownerDocument.defaultView === ownerView
+      && this.book === book
+      && this.rendition === rendition;
+  }
+
+  private failCurrentLoad(error: unknown, message = this.localize('ebookViewerLoadError')): void {
+    if (this.failedGeneration === this.generation) return;
+    this.failedGeneration = this.generation;
+    this.ebookState = { kind: 'error', message };
+    this.emit('lr-render-error', { error });
   }
 
   private hasSearchState(): boolean {
@@ -378,13 +778,15 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         }),
         getEpubJs(),
       ]);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (!this.isCurrentLoad(generation, fetchTarget.view)) return;
       await assertEpubArchiveWithinLimits(data, undefined, undefined, { signal });
-      if (!this.isConnected || generation !== this.generation) return;
+      if (!this.isCurrentLoad(generation, fetchTarget.view)) return;
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
-      this.ebookState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'ebookViewerLoadError') };
-      this.emit('lr-render-error', { error });
+      if (isAbortError(error) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
+      this.failCurrentLoad(
+        error,
+        this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'ebookViewerLoadError'),
+      );
       return;
     }
     if (!factory) {
@@ -396,40 +798,59 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.failWithLocalizedMessage(this.localize('ebookViewerLoadError'));
       return;
     }
-    let candidateBook: EpubBook | undefined;
+    let candidateBook: SafeEpubBook | undefined;
     try {
-      const book = factory(data);
+      const book = normalizeBook(factory(data));
+      if (!book) throw new Error('EPUB peer returned an unusable book.');
       candidateBook = book;
-      const rendition = book.renderTo(mount, { width: '100%', height: '100%' }) as EpubRendition;
+      const rendition = normalizeRendition(book.renderTo(mount, { width: '100%', height: '100%' }));
+      if (!rendition) throw new Error('EPUB peer returned an unusable rendition.');
       await book.ready;
-      if (!this.isConnected || generation !== this.generation) {
-        book.destroy();
+      if (!this.isCurrentLoad(generation, fetchTarget.view)) {
+        this.destroyBook(book);
+        candidateBook = undefined;
         return;
       }
+      book.getNavigation();
       await rendition.display(this.location || undefined);
-      if (!this.isConnected || generation !== this.generation) {
-        book.destroy();
+      if (!this.isCurrentLoad(generation, fetchTarget.view)) {
+        this.destroyBook(book);
+        candidateBook = undefined;
         return;
       }
-      rendition.on('relocated', (loc: EpubLocation) => {
-        const cfi = loc?.start?.cfi ?? '';
-        const href = loc?.start?.href ?? '';
+      rendition.on('relocated', (loc: unknown) => {
+        if (!this.isCurrentBookRendition(generation, fetchTarget.view, book, rendition)) return;
+        const start = inheritedDataValue(loc, 'start');
+        const cfi = inheritedDataValue(start, 'cfi');
+        const href = inheritedDataValue(start, 'href');
+        if (typeof cfi !== 'string' || cfi.trim() === '') return;
         if (!cfi || cfi === this.location) return;
         this.relocatedLocation = cfi;
         this.location = cfi;
-        this.emit('lr-location-change', { cfi, href });
+        this.emit('lr-location-change', { cfi, href: typeof href === 'string' ? href : '' });
       });
-      rendition.on('selected', (cfiRange: string, contents: EpubContents) => {
-        const selection = contents?.window?.getSelection?.();
-        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-        if (!range) return;
-        const text = boundedSelectionText(range);
-        if (!text) return;
-        const rects = this.translateSelectionRects(
-          boundedSelectionRects(range),
-          contents.window,
-        );
-        this.emit('lr-text-select', { text, anchor: { kind: 'cfi', cfi: cfiRange }, rects });
+      rendition.on('selected', (cfiRange: string, contents: unknown) => {
+        if (!this.isCurrentBookRendition(generation, fetchTarget.view, book, rendition) || typeof cfiRange !== 'string') return;
+        try {
+          const contentsWindow = inheritedDataValue(contents, 'window') as Window | undefined;
+          const getSelection = savedCallable(contentsWindow, 'getSelection');
+          const selection = getSelection?.();
+          const rangeCount = inheritedDataValue(selection, 'rangeCount');
+          const getRangeAt = savedCallable(selection, 'getRangeAt');
+          const range = typeof rangeCount === 'number' && rangeCount > 0 && getRangeAt
+            ? getRangeAt(0) as Range
+            : null;
+          if (!range) return;
+          const text = boundedSelectionText(range);
+          if (!text) return;
+          const rects = this.translateSelectionRects(
+            boundedSelectionRects(range),
+            contentsWindow,
+          );
+          this.emit('lr-text-select', { text, anchor: { kind: 'cfi', cfi: cfiRange }, rects });
+        } catch {
+          // A malformed optional selected-event payload cannot invalidate the loaded book.
+        }
       });
       this.book = book;
       this.rendition = rendition;
@@ -437,27 +858,30 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.ebookState = { kind: 'ready' };
       this.repaintAnnotations();
     } catch (error) {
-      candidateBook?.destroy();
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
-      this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
-      this.emit('lr-render-error', { error });
+      this.destroyBook(candidateBook);
+      if (isAbortError(error) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
+      this.failCurrentLoad(error);
     }
   }
 
   private failWithLocalizedMessage(message: string): void {
     const error = new LyraUserFacingError(message);
-    this.ebookState = { kind: 'error', message };
-    this.emit('lr-render-error', { error });
+    this.failCurrentLoad(error, message);
   }
 
-  private reportRenditionFailure(error: unknown, rendition: EpubRendition, generation: number): void {
+  private reportRenditionFailure(
+    error: unknown,
+    rendition: SafeEpubRendition,
+    generation: number,
+    ownerView = this.ownerDocument.defaultView,
+  ): void {
     if (
       !this.isConnected
       || generation !== this.generation
+      || this.ownerDocument.defaultView !== ownerView
       || rendition !== this.rendition
     ) return;
-    this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
-    this.emit('lr-render-error', { error });
+    this.failCurrentLoad(error);
   }
 
   /** Maps selection geometry from an epub.js chapter viewport through every containing iframe
@@ -541,12 +965,14 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     const rendition = this.rendition;
     if (!rendition) return;
     const generation = this.generation;
+    const ownerView = this.ownerDocument.defaultView;
+    if (!ownerView) return;
     try {
       void Promise.resolve(rendition.display(location)).catch((error: unknown) => {
-        this.reportRenditionFailure(error, rendition, generation);
+        this.reportRenditionFailure(error, rendition, generation, ownerView);
       });
     } catch (error) {
-      this.reportRenditionFailure(error, rendition, generation);
+      this.reportRenditionFailure(error, rendition, generation, ownerView);
     }
   }
 
@@ -554,13 +980,15 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     const rendition = this.rendition;
     if (!rendition) return;
     const generation = this.generation;
+    const ownerView = this.ownerDocument.defaultView;
+    if (!ownerView) return;
     try {
       const task = action === 'previous' ? rendition.prev() : rendition.next();
       void Promise.resolve(task).catch((error: unknown) => {
-        this.reportRenditionFailure(error, rendition, generation);
+        this.reportRenditionFailure(error, rendition, generation, ownerView);
       });
     } catch (error) {
-      this.reportRenditionFailure(error, rendition, generation);
+      this.reportRenditionFailure(error, rendition, generation, ownerView);
     }
   }
 
@@ -575,37 +1003,26 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  has none. Resolves `[]` before a book has loaded. */
   async getToc(): Promise<EbookTocItem[]> {
     const book = this.book;
-    if (!book) return [];
-    await book.ready;
-    if (this.book !== book) return [];
-    const items: EbookTocItem[] = [];
-    const seen = new WeakSet<object>();
-    const stack = (book.navigation?.toc ?? [])
-      .map((entry: EpubNavigationItem) => ({ entry, level: 1 }))
-      .reverse();
-    while (stack.length > 0 && items.length < MAX_TOC_ITEMS) {
-      const current = stack.pop()!;
-      const { entry, level } = current;
-      if (!entry || typeof entry !== 'object' || seen.has(entry)) continue;
-      seen.add(entry);
-      items.push({
-        id: entry.id || entry.href,
-        label: String(entry.label ?? '').trim(),
-        href: entry.href,
-        level,
-      });
-      if (level >= MAX_TOC_DEPTH || !Array.isArray(entry.subitems)) continue;
-      for (let index = entry.subitems.length - 1; index >= 0; index--) {
-        stack.push({ entry: entry.subitems[index]!, level: level + 1 });
-      }
+    const generation = this.generation;
+    const ownerView = this.ownerDocument.defaultView;
+    if (!book || !ownerView) return [];
+    try {
+      await book.ready;
+    } catch {
+      return [];
     }
-    return items;
+    if (!this.isCurrentLoad(generation, ownerView) || this.book !== book) return [];
+    return [...projectToc(inheritedDataValue(book.getNavigation(), 'toc'))];
   }
 
   // -- anchor-target: applyAnchor per kind ---------------------------------------------------------
 
   override async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
     const operation = ++this.anchorOperationGeneration;
+    const generation = this.generation;
+    const ownerView = this.ownerDocument.defaultView;
+    const book = this.book;
+    const rendition = this.rendition;
     try {
       // Deliberately the mixin's `performScrollToAnchor()`, not `super.scrollToAnchor()`: the
       // mixin's own `scrollToAnchor()` now wraps a throwing `applyAnchor()` in its OWN safety net
@@ -628,9 +1045,14 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       ).performScrollToAnchor;
       return await performScrollToAnchor.call(this, target);
     } catch (error) {
-      if (operation !== this.anchorOperationGeneration) return false;
-      const rendition = this.rendition;
-      if (rendition) this.reportRenditionFailure(error, rendition, this.generation);
+      if (
+        operation !== this.anchorOperationGeneration
+        || !ownerView
+        || !this.isCurrentLoad(generation, ownerView)
+        || this.book !== book
+        || this.rendition !== rendition
+      ) return false;
+      if (rendition) this.reportRenditionFailure(error, rendition, generation, ownerView);
       this.emit('lr-anchor-result', { found: false });
       return false;
     }
@@ -639,18 +1061,34 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     const rendition = this.rendition;
     const operation = this.anchorOperationGeneration;
-    if (!rendition) return false;
+    const generation = this.generation;
+    const ownerView = this.ownerDocument.defaultView;
+    if (!rendition || !ownerView) return false;
     if (anchor.kind === 'cfi') {
-      if (operation !== this.anchorOperationGeneration || rendition !== this.rendition) return false;
+      if (
+        operation !== this.anchorOperationGeneration
+        || !this.isCurrentLoad(generation, ownerView)
+        || rendition !== this.rendition
+      )
+        return false;
       await rendition.display(anchor.cfi);
-      return operation === this.anchorOperationGeneration && rendition === this.rendition;
+      return operation === this.anchorOperationGeneration
+        && this.isCurrentLoad(generation, ownerView)
+        && rendition === this.rendition;
     }
     if (anchor.kind === 'text-quote') {
       const cfi = await this.findTextQuoteCfi(anchor.quote);
       if (!cfi) return false;
-      if (operation !== this.anchorOperationGeneration || rendition !== this.rendition) return false;
+      if (
+        operation !== this.anchorOperationGeneration
+        || !this.isCurrentLoad(generation, ownerView)
+        || rendition !== this.rendition
+      )
+        return false;
       await rendition.display(cfi);
-      return operation === this.anchorOperationGeneration && rendition === this.rendition;
+      return operation === this.anchorOperationGeneration
+        && this.isCurrentLoad(generation, ownerView)
+        && rendition === this.rendition;
     }
     return false;
   }
@@ -661,31 +1099,35 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   private async findTextQuoteCfi(quote: string): Promise<string | null> {
     const book = this.book;
     const generation = this.generation;
+    const ownerView = this.ownerDocument.defaultView;
     const boundedQuery = boundedViewerSearchQuery(quote, this.effectiveLocale);
-    if (!book || !boundedQuery.accepted || !boundedQuery.needle) return null;
+    if (!book || !ownerView || !boundedQuery.accepted || !boundedQuery.needle) return null;
     const work = new ViewerSearchWorkBudget();
-    const spineItems: EpubSpineItem[] = book.spine?.spineItems ?? [];
-    const itemCount = Math.min(spineItems.length, MAX_SEARCH_SPINE_ITEMS);
-    for (let itemIndex = 0; itemIndex < itemCount; itemIndex++) {
-      const item = spineItems[itemIndex]!;
+    const spine = projectSpineItems(book);
+    for (const item of spine.items) {
       if (!work.consume('')) return null;
       let loaded = false;
       try {
-        await item.load(book.load?.bind(book));
+        await awaitPeerResult(item.load(book.load));
         loaded = true;
-        if (!this.isConnected || generation !== this.generation || this.book !== book) return null;
-        const results: EpubSearchResult[] = (await item.find(quote)) ?? [];
-        if (!this.isConnected || generation !== this.generation || this.book !== book) return null;
-        for (const result of results) {
+        if (!this.isCurrentLoad(generation, ownerView) || this.book !== book) return null;
+        const { value: rawResults } = await awaitPeerResult(item.find(quote));
+        const results = projectFindResults(rawResults, work);
+        if (!this.isCurrentLoad(generation, ownerView) || this.book !== book) return null;
+        for (const result of results.matches) {
           if (!work.consume('')) return null;
-          if (!result || typeof result.cfi !== 'string') continue;
-          if (!work.consume(result.cfi)) return null;
           return result.cfi;
         }
       } catch {
         continue;
       } finally {
-        if (loaded) item.unload();
+        if (loaded) {
+          try {
+            item.unload();
+          } catch {
+            // A malformed optional peer cleanup cannot invalidate an already-contained scan.
+          }
+        }
       }
     }
     return null;
@@ -698,11 +1140,15 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  `renderTo()`, so this also runs once right after a (re)load finishes. Highlights whose anchor
    *  isn't `cfi` aren't paintable against epub.js's own annotation API and are skipped. */
   private repaintHighlights(): void {
-    if (!this.rendition) return;
+    const rendition = this.rendition;
+    if (!rendition) return;
+    const book = this.book;
+    const generation = this.generation;
+    const ownerView = this.ownerDocument.defaultView;
     const work = new ViewerSearchWorkBudget();
     for (const cfi of this.paintedHighlightCfis) {
       if (!work.consume(cfi)) break;
-      this.rendition.annotations.remove(cfi, 'highlight');
+      rendition.annotations.remove(cfi, 'highlight');
     }
     this.paintedHighlightCfis = [];
     let painted = 0;
@@ -725,10 +1171,13 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         styles['stroke-width'] = '3';
         styles['stroke-dasharray'] = '2 1';
       }
-      this.rendition.annotations.highlight(
+      rendition.annotations.highlight(
         cfi,
         { id: highlight.id },
-        () => this.emit('lr-highlight-activate', { highlightId: highlight.id }),
+        () => {
+          if (!book || !ownerView || !this.isCurrentBookRendition(generation, ownerView, book, rendition)) return;
+          this.emit('lr-highlight-activate', { highlightId: highlight.id });
+        },
         active ? `lr-hl-${tone} lr-ebook-highlight-active` : `lr-hl-${tone}`,
         styles,
       );
@@ -776,6 +1225,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  `lr-search-change.detail.matchCountExact=false` identifies a ceiling-truncated return. */
   async search(query: string): Promise<number> {
     const generation = ++this.searchGeneration;
+    const ownerView = this.ownerDocument.defaultView;
     const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
     this.searchQuery = query;
     this.lastSearchLocale = this.effectiveLocale;
@@ -787,7 +1237,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.emitSearchChange();
       return 0;
     }
-    if (!this.book || !boundedQuery.needle) {
+    if (!this.book || !ownerView || !boundedQuery.needle) {
       this.searchMatches = [];
       this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
@@ -799,32 +1249,42 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     let matchCeilingExceeded = false;
     const book = this.book;
     const work = new ViewerSearchWorkBudget();
-    const spineItems: EpubSpineItem[] = book.spine?.spineItems ?? [];
-    const itemCount = Math.min(spineItems.length, MAX_SEARCH_SPINE_ITEMS);
-    if (spineItems.length > itemCount) matchCountExact = false;
-    for (let itemIndex = 0; itemIndex < itemCount; itemIndex++) {
-      const item = spineItems[itemIndex]!;
-      if (generation !== this.searchGeneration) return this.searchMatches.length;
+    const spine = projectSpineItems(book);
+    if (!spine.exact) matchCountExact = false;
+    for (const item of spine.items) {
+      if (
+        generation !== this.searchGeneration
+        || this.ownerDocument.defaultView !== ownerView
+        || !this.isConnected
+      )
+        return this.searchMatches.length;
       if (!work.consume('')) {
         matchCountExact = false;
         break;
       }
       let loaded = false;
       try {
-        await item.load(book.load?.bind(book));
+        await awaitPeerResult(item.load(book.load));
         loaded = true;
-        if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
-        const results: EpubSearchResult[] = (await item.find(query.trim())) ?? [];
-        if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
-        for (const r of results) {
+        if (
+          generation !== this.searchGeneration
+          || this.ownerDocument.defaultView !== ownerView
+          || !this.isConnected
+          || this.book !== book
+        )
+          return this.searchMatches.length;
+        const { value: rawResults } = await awaitPeerResult(item.find(query.trim()));
+        const results = projectFindResults(rawResults, work);
+        if (
+          generation !== this.searchGeneration
+          || this.ownerDocument.defaultView !== ownerView
+          || !this.isConnected
+          || this.book !== book
+        )
+          return this.searchMatches.length;
+        if (!results.exact) matchCountExact = false;
+        for (const r of results.matches) {
           if (!work.consume('')) {
-            matchCountExact = false;
-            matchCeilingExceeded = true;
-            break;
-          }
-          if (!r || typeof r.cfi !== 'string') continue;
-          const excerpt = typeof r.excerpt === 'string' ? r.excerpt : '';
-          if (!work.consume(r.cfi) || !work.consume(excerpt)) {
             matchCountExact = false;
             matchCeilingExceeded = true;
             break;
@@ -834,22 +1294,34 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
             matchCeilingExceeded = true;
             break;
           }
-          matches.push({ cfi: r.cfi, excerpt });
+          matches.push(r);
         }
       } catch {
         matchCountExact = false;
         continue;
       } finally {
-        if (loaded) item.unload();
+        if (loaded) {
+          try {
+            item.unload();
+          } catch {
+            matchCountExact = false;
+          }
+        }
       }
       if (matchCeilingExceeded) break;
     }
-    if (generation !== this.searchGeneration) return this.searchMatches.length;
+    if (
+      generation !== this.searchGeneration
+      || this.ownerDocument.defaultView !== ownerView
+      || !this.isConnected
+      || this.book !== book
+    )
+      return this.searchMatches.length;
     this.searchMatches = matches;
     this.searchMatchCountExact = matchCountExact;
     this.searchActiveIndex = matches.length > 0 ? 0 : -1;
     this.emitSearchChange();
-    if (this.searchActiveIndex >= 0) await this.showSearchMatch(this.searchActiveIndex, generation);
+    if (this.searchActiveIndex >= 0) await this.showSearchMatch(this.searchActiveIndex, generation, ownerView);
     return matches.length;
   }
 
@@ -886,24 +1358,44 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   }
 
   private clearSearchAnnotation(): void {
-    if (this.searchAnnotationCfi) this.rendition?.annotations.remove(this.searchAnnotationCfi, 'highlight');
+    const cfi = this.searchAnnotationCfi;
     this.searchAnnotationCfi = undefined;
+    const rendition = this.rendition;
+    const generation = this.generation;
+    const ownerView = this.ownerDocument.defaultView;
+    if (!cfi || !rendition || !ownerView) return;
+    try {
+      rendition.annotations.remove(cfi, 'highlight');
+    } catch (error) {
+      this.reportRenditionFailure(error, rendition, generation, ownerView);
+    }
   }
 
-  private async showSearchMatch(index: number, generation = this.searchGeneration): Promise<boolean> {
+  private async showSearchMatch(
+    index: number,
+    generation = this.searchGeneration,
+    ownerView = this.ownerDocument.defaultView,
+  ): Promise<boolean> {
     const match = this.searchMatches[index];
     const rendition = this.rendition;
     if (
       !match
       || !rendition
       || generation !== this.searchGeneration
+      || !ownerView
+      || !this.isConnected
+      || this.ownerDocument.defaultView !== ownerView
     ) return false;
     this.clearSearchAnnotation();
     try {
       await rendition.display(match.cfi);
     } catch (error) {
-      if (generation === this.searchGeneration && rendition === this.rendition) {
-        this.reportRenditionFailure(error, rendition, this.generation);
+      if (
+        generation === this.searchGeneration
+        && rendition === this.rendition
+        && this.ownerDocument.defaultView === ownerView
+      ) {
+        this.reportRenditionFailure(error, rendition, this.generation, ownerView);
       }
       return false;
     }
@@ -911,6 +1403,8 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       generation !== this.searchGeneration
       || rendition !== this.rendition
       || this.searchMatches[index] !== match
+      || !this.isConnected
+      || this.ownerDocument.defaultView !== ownerView
     ) return false;
     try {
       rendition.annotations.highlight(
@@ -921,7 +1415,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         this.resolveHighlightFill(SEARCH_MATCH_FILL_TOKEN),
       );
     } catch (error) {
-      this.reportRenditionFailure(error, rendition, this.generation);
+      this.reportRenditionFailure(error, rendition, this.generation, ownerView);
       return false;
     }
     this.searchAnnotationCfi = match.cfi;

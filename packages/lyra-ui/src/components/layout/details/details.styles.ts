@@ -13,10 +13,7 @@ export const styles = css`
     --_lr-details-font-size: var(--lr-form-control-font-size);
     --_lr-details-spacing: var(--lr-form-control-padding-inline);
   }
-  [part~="base"] {
-    /* Native details places every non-summary child in its generated details-content box. The
-       summary owns the complete header row, including non-toggling header actions, while content
-       follows in the native disclosure block below. */
+  [part~='base'] {
     border: var(--lr-border-width-thin) solid
       var(--lr-details-outlined-border-color, var(--lr-color-border));
     border-radius: var(--lr-details-radius, var(--lr-radius));
@@ -26,11 +23,11 @@ export const styles = css`
     font-size: var(--lr-details-font-size, var(--_lr-details-font-size));
     overflow: clip;
   }
-  :host([appearance="filled"]) [part~="base"] {
+  :host([appearance='filled']) [part~='base'] {
     border-color: var(--lr-details-filled-border-color, transparent);
     background: var(--lr-details-filled-bg, var(--lr-color-brand-quiet));
   }
-  :host([appearance="filled-outlined"]) [part~="base"] {
+  :host([appearance='filled-outlined']) [part~='base'] {
     border-color: var(
       --lr-details-filled-outlined-border-color,
       var(--lr-color-border)
@@ -40,12 +37,29 @@ export const styles = css`
       var(--lr-color-brand-quiet)
     );
   }
-  :host([appearance="plain"]) [part~="base"] {
+  :host([appearance='plain']) [part~='base'] {
     border-color: transparent;
     background: transparent;
   }
-  [part="summary"] {
+  [part='header'] {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--lr-details-gap, var(--lr-space-s));
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  .native-details {
     display: block;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='summary'] {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-details-gap, var(--lr-space-s));
+    min-block-size: var(--lr-icon-button-size);
     padding-block: var(
       --spacing,
       var(--lr-details-spacing, var(--_lr-details-spacing))
@@ -63,24 +77,19 @@ export const styles = css`
     overflow: clip;
     overflow-wrap: anywhere;
   }
-  [part="header"] {
-    display: flex;
-    align-items: center;
-    gap: var(--lr-details-gap, var(--lr-space-s));
-    min-inline-size: 0;
-  }
   .summary-content {
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  [part="summary"]::-webkit-details-marker {
+  [part='summary']::marker,
+  [part='summary']::-webkit-details-marker {
     display: none;
   }
-  :host(:not([disabled])) [part="summary"]:hover {
+  :host(:not([disabled])) [part='summary']:hover {
     background: var(--lr-details-summary-hover-bg, var(--lr-color-brand-quiet));
   }
-  :host(:not([disabled])) [part="summary"]:active {
+  :host(:not([disabled])) [part='summary']:active {
     background: var(
       --lr-details-summary-active-bg,
       color-mix(
@@ -90,17 +99,17 @@ export const styles = css`
       )
     );
   }
-  [part="summary"]:focus-visible {
+  [part='summary']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
-  [part~="icon"] {
+  [part~='icon'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
   }
-  :host([icon-placement="start"]) [part~="icon"] {
+  :host([icon-placement='start']) [part~='icon'] {
     order: -1;
   }
   .icon-fallback {
@@ -117,19 +126,36 @@ export const styles = css`
     inline-size: var(--lr-size-1rem);
     block-size: var(--lr-size-1rem);
   }
-  :host([disabled]) [part="summary"] {
+  :host([disabled]) [part='summary'] {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
-  [part~="header-actions"] {
-    flex: 0 0 auto;
+  [part~='header-actions'] {
     display: flex;
+    flex: 0 1 auto;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
-  [part~="header-actions"][hidden] {
-    display: none;
+  .content-gate:where([hidden='until-found']) {
+    /* This private, layout-contained block preserves find-in-page eligibility while keeping
+       consumer styling on the public content part from changing a closed disclosure's geometry. */
+    display: block;
+    box-sizing: border-box;
+    block-size: 0;
+    min-block-size: 0;
+    max-block-size: 0;
+    margin-block: 0;
+    margin-inline: 0;
+    border: 0;
+    padding-block: 0;
+    padding-inline: 0;
+    contain: layout;
+    overflow: clip;
+    pointer-events: none;
   }
-  [part="content"] {
+  [part='content'] {
     padding-block-end: var(
       --spacing,
       var(--lr-details-spacing, var(--_lr-details-spacing))

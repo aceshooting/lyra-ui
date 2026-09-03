@@ -4,6 +4,26 @@ import {
   ROOT_BARREL_OPTIONAL_PEER_TAGS,
   ROOT_BARREL_TAGS,
 } from './internal/root-registration-allowlist.js';
+import type {
+  AgentStatusPresentation,
+  AgentStatusValue,
+} from '@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js';
+import type {
+  ApprovalAction,
+  ApprovalDecision,
+} from '@aceshooting/lyra-ui/components/agent-tools/approval-state.js';
+import type {
+  StackFrame,
+  StackGroup,
+  StackTraceParseOptions,
+  StackTraceParseResult,
+} from '@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace-parse.js';
+import type {
+  LyraSpan,
+  LyraSpanKind,
+  LyraSpanProjection,
+  LyraSpanStatus,
+} from '@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js';
 
 type RealmImport = (specifier: string) => Promise<Record<string, unknown>>;
 type EntrypointImport = () => Promise<Record<string, unknown>>;
@@ -18,7 +38,30 @@ type PackageEntrypointImports = {
   importCsv: EntrypointImport;
   importUtilities: EntrypointImport;
   importPositioner: EntrypointImport;
+  importAgentStatusPresentation: EntrypointImport;
+  importApprovalState: EntrypointImport;
+  importStackTraceParse: EntrypointImport;
+  importTraceTreeSpan: EntrypointImport;
+  importWidgetDefaultRegistry: EntrypointImport;
 };
+
+type CuratedHelperTypeContracts = readonly [
+  AgentStatusPresentation,
+  AgentStatusValue,
+  ApprovalAction,
+  ApprovalDecision,
+  StackFrame,
+  StackGroup,
+  StackTraceParseOptions,
+  StackTraceParseResult,
+  LyraSpanKind,
+  LyraSpanStatus,
+  LyraSpan,
+  LyraSpanProjection,
+];
+
+const curatedHelperTypeContracts: CuratedHelperTypeContracts | undefined = undefined;
+void curatedHelperTypeContracts;
 
 const definedAmong = (registry: CustomElementRegistry, tags: readonly string[]): string[] =>
   tags.filter((tag) => registry.get(tag) !== undefined);
@@ -99,6 +142,11 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
     const helperEntry = await entrypoints.importCsv();
     const utilities = await entrypoints.importUtilities();
     const positioner = await entrypoints.importPositioner();
+    const agentStatusPresentation = await entrypoints.importAgentStatusPresentation();
+    const approvalState = await entrypoints.importApprovalState();
+    const stackTraceParse = await entrypoints.importStackTraceParse();
+    const traceTreeSpan = await entrypoints.importTraceTreeSpan();
+    const widgetDefaultRegistry = await entrypoints.importWidgetDefaultRegistry();
     expect(typeof localization['registerLyraLocale']).to.equal('function');
     expect(typeof localization['setLyraLocale']).to.equal('function');
     expect(typeof localization['resolveLyraString']).to.equal('function');
@@ -120,6 +168,26 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
     expect(typeof utilities['groupByRecency']).to.equal('function');
     expect(typeof utilities['LyraElement']).to.equal('function');
     expect(typeof positioner['place']).to.equal('function');
+    for (const name of [
+      'agentStatusKind',
+      'agentStatusLabel',
+      'agentStatusMessage',
+      'agentStatusVariant',
+      'isAgentStatusTerminal',
+      'isAgentStatusActive',
+    ]) {
+      expect(typeof agentStatusPresentation[name]).to.equal('function');
+    }
+    expect(typeof approvalState['approvalAction']).to.equal('function');
+    expect(typeof approvalState['approvalDecision']).to.equal('function');
+    expect(typeof stackTraceParse['parseStackTrace']).to.equal('function');
+    expect(Array.isArray(stackTraceParse['DEFAULT_INTERNAL_PATTERNS'])).to.be.true;
+    expect(typeof stackTraceParse['STACK_TRACE_LIMITS']).to.equal('object');
+    expect(typeof traceTreeSpan['MAX_RENDERED_LYRA_SPANS']).to.equal('number');
+    expect(typeof traceTreeSpan['normalizeLyraSpanKind']).to.equal('function');
+    expect(typeof traceTreeSpan['normalizeLyraSpanStatus']).to.equal('function');
+    expect(typeof traceTreeSpan['normalizeLyraSpans']).to.equal('function');
+    expect(typeof widgetDefaultRegistry['DEFAULT_WIDGET_TYPE_REGISTRY']).to.equal('object');
     expect(definedAmong(registry, packageTags).join(',')).to.equal('');
 
     // 2. A granular registration entry registers EXACTLY its own tag -- and registers the very

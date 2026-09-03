@@ -173,6 +173,67 @@ it('renders aria-invalid="false" (not omitted) on a native input until touched w
   expect(daysInput.getAttribute('aria-invalid')).to.equal('false');
 });
 
+it('renders the group owner aria-invalid explicitly only after interaction and never while barred', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset>
+        <lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  expect(base.getAttribute('aria-invalid')).to.equal('false');
+  expect(el.reportValidity()).to.equal(false);
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('true');
+
+  el.value = { city: 'Paris' };
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('false');
+
+  el.setCustomValidity('Rejected by the tool');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('true');
+
+  fieldset.disabled = true;
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('false');
+
+  fieldset.disabled = false;
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('true');
+
+  el.disabled = true;
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('false');
+
+  el.disabled = false;
+  el.setCustomValidity('');
+  el.value = {};
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('true');
+
+  form.reset();
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('false');
+});
+
+it('updates the group owner aria-invalid when reportValidity reveals an existing custom error', async () => {
+  const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form></lr-tool-param-form>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  el.setCustomValidity('Rejected by the tool.');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid'), 'the custom error starts pristine').to.equal('false');
+
+  expect(el.reportValidity()).to.equal(false);
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid'), 'reportValidity establishes interaction').to.equal('true');
+});
+
 it('falls back to schema default for a field missing from value, without mutating the value property', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
@@ -1810,7 +1871,7 @@ describe('bounded hostile input snapshots', () => {
     expect(el.validity.customError).to.equal(true);
   });
 
-  it('contains revoked and prototype-hostile nested values without invoking traps', () => {
+  it('contains revoked and prototype-hostile nested values without invoking traps or retaining them', () => {
     const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
     const revoked = Proxy.revocable({}, {});
     revoked.revoke();
@@ -1826,7 +1887,246 @@ describe('bounded hostile input snapshots', () => {
 
     expect(el.validity.customError).to.equal(true);
     expect(prototypeReads).to.equal(1);
-    expect(el.value).to.have.property('prototypeHostile', prototypeHostile);
+    expect(Object.hasOwn(el.value, 'revoked')).to.equal(false);
+    expect(Object.hasOwn(el.value, 'prototypeHostile')).to.equal(false);
+  });
+
+  it('rejects forged record prototypes while retaining null and foreign-realm records', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const foreignWindow = frame.contentWindow as Window & typeof globalThis;
+    const foreignRecord = foreignWindow.JSON.parse('{"retained":"foreign"}') as Record<string, unknown>;
+    const nullRecord: Record<string, unknown> = Object.create(null);
+    nullRecord['retained'] = 'null';
+
+    const forgedLayer: Record<string, unknown> = Object.create(Object.create(null));
+    forgedLayer['unsafe'] = 'forged layer';
+    const forgedConstructor = function Object(): void {};
+    Object.setPrototypeOf(forgedConstructor.prototype, null);
+    const constructorNameSpoof: Record<string, unknown> = Object.create(forgedConstructor.prototype);
+    constructorNameSpoof['unsafe'] = 'constructor-name spoof';
+
+    const form = (await fixture(html`
+      <form><lr-tool-param-form name="args"></lr-tool-param-form></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+    el.value = { foreignRecord, nullRecord, forgedLayer, constructorNameSpoof };
+    await el.updateComplete;
+
+    expect(el.value['foreignRecord']).to.deep.equal({ retained: 'foreign' });
+    expect(el.value['foreignRecord'] === foreignRecord).to.equal(false);
+    expect(el.value['nullRecord']).to.deep.equal({ retained: 'null' });
+    expect(Object.hasOwn(el.value, 'forgedLayer')).to.equal(false);
+    expect(Object.hasOwn(el.value, 'constructorNameSpoof')).to.equal(false);
+    expect(el.validity.customError).to.equal(true);
+    expect(new FormData(form).has('args')).to.equal(false);
+  });
+
+  it('omits forged-prototype schema fields and rejects forged schema properties records', async () => {
+    const forgedField = Object.defineProperty(Object.create(Object.create(null)), 'type', {
+      value: 'string',
+      enumerable: true,
+    }) as ToolParamFormProperty;
+    const forgedConstructor = function Object(): void {};
+    Object.setPrototypeOf(forgedConstructor.prototype, null);
+    const constructorNameSpoof = Object.defineProperty(
+      Object.create(forgedConstructor.prototype),
+      'type',
+      { value: 'string', enumerable: true },
+    ) as ToolParamFormProperty;
+
+    const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form></lr-tool-param-form>`);
+    el.schema = {
+      type: 'object',
+      properties: {
+        retained: { type: 'boolean' },
+        forgedField,
+        constructorNameSpoof,
+      },
+    };
+    await el.updateComplete;
+
+    expect(Object.keys(el.schema.properties)).to.deep.equal(['retained']);
+    expect(el.formError).to.equal('Schema properties must be a flat object.');
+
+    const forgedProperties: Record<string, ToolParamFormProperty> = Object.create(Object.create(null));
+    forgedProperties['city'] = { type: 'string' };
+    el.schema = { type: 'object', properties: forgedProperties };
+    await el.updateComplete;
+    expect(Object.keys(el.schema.properties)).to.deep.equal([]);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('detaches safe nested values while omitting unsafe branches without retaining caller identity', async () => {
+    class CallerOwnedValue {
+      note = 'initial';
+    }
+    const source = {
+      safe: { nested: { value: 'initial' } },
+      sparse: ['first', , 'third'],
+      callable: () => 'unsafe',
+      instance: new CallerOwnedValue(),
+    };
+    const form = (await fixture(html`
+      <form><lr-tool-param-form name="args"></lr-tool-param-form></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+
+    el.value = source;
+    source.safe.nested.value = 'mutated after assignment';
+    source.instance.note = 'mutated after assignment';
+    await el.updateComplete;
+
+    const safe = el.value['safe'] as { nested: { value: string } };
+    const sparse = el.value['sparse'] as unknown[];
+    expect(safe.nested.value).to.equal('initial');
+    expect((safe) === (source.safe)).to.equal(false);
+    expect(Object.hasOwn(el.value, 'callable')).to.equal(false);
+    expect(Object.hasOwn(el.value, 'instance')).to.equal(false);
+    expect(sparse.length).to.equal(3);
+    expect(Object.hasOwn(sparse, 1)).to.equal(false);
+    expect(el.validity.customError).to.equal(true);
+    expect(new FormData(form).has('args')).to.equal(false);
+  });
+
+  it('rolls back a failed proxy clone before retrying the same source at a later valid sibling', async () => {
+    let descriptorPasses = 0;
+    const source = new Proxy({ retained: 'later value' }, {
+      ownKeys(target) {
+        descriptorPasses += 1;
+        if (descriptorPasses === 1) throw new Error('first reflection denied');
+        return Reflect.ownKeys(target);
+      },
+    });
+    const form = (await fixture(html`
+      <form><lr-tool-param-form name="args"></lr-tool-param-form></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+
+    el.value = { failedFirst: source, retainedLater: source };
+    await el.updateComplete;
+
+    expect(Object.hasOwn(el.value, 'failedFirst')).to.equal(false);
+    expect(el.value['retainedLater']).to.deep.equal({ retained: 'later value' });
+    expect((el.value['retainedLater']) === (source)).to.equal(false);
+    expect(Object.isFrozen(el.value['retainedLater'] as object)).to.equal(true);
+    expect(el.formError).to.equal('Value must be JSON-serializable.');
+    expect(new FormData(form).has('args')).to.equal(false);
+  });
+
+  it('does not let unsafe entries consume a record budget before a later valid sibling', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    const unsafeBeforeValid: Record<string, unknown> = Object.create(null);
+    for (let index = 0; index < 10_000; index += 1) {
+      unsafeBeforeValid[`unsafe-${index}`] = () => 'unsafe';
+    }
+    unsafeBeforeValid['retained'] = { answer: 'safe' };
+
+    el.value = { unsafeBeforeValid };
+
+    const retained = (el.value['unsafeBeforeValid'] as Record<string, unknown>)['retained'];
+    expect(retained).to.deep.equal({ answer: 'safe' });
+    expect(Object.keys(el.value['unsafeBeforeValid'] as object)).to.deep.equal(['retained']);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('keeps a valid sibling after five full unsafe records without refunding inspection work', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    const records = Array.from({ length: 5 }, () => {
+      const record: Record<string, unknown> = Object.create(null);
+      for (let index = 0; index < 10_000; index += 1) record[`unsafe-${index}`] = () => 'unsafe';
+      return record;
+    });
+
+    el.value = {
+      first: records[0],
+      second: records[1],
+      third: records[2],
+      fourth: records[3],
+      fifth: records[4],
+      retained: { answer: 'safe' },
+    };
+
+    expect(el.value['retained']).to.deep.equal({ answer: 'safe' });
+    expect(Object.keys(el.value['first'] as object)).to.deep.equal([]);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('caps hostile record descriptor inspection before a tail can be materialized', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    const hostile: Record<string, unknown> = Object.create(null);
+    const unsafe = () => 'unsafe';
+    for (let index = 0; index < 100_001; index += 1) hostile[`unsafe-${index}`] = unsafe;
+    hostile['tail'] = { retained: 'unsafe tail' };
+
+    const originalDescriptor = Object.getOwnPropertyDescriptor;
+    const originalDescriptors = Object.getOwnPropertyDescriptors;
+    let inspected = 0;
+    let batchReads = 0;
+    Object.getOwnPropertyDescriptor = function <T>(value: T, key: PropertyKey) {
+      if ((value as unknown) === hostile) inspected += 1;
+      return originalDescriptor(value, key);
+    };
+    Object.getOwnPropertyDescriptors = function <T>(value: T) {
+      if ((value as unknown) === hostile) batchReads += 1;
+      return originalDescriptors(value);
+    };
+    try {
+      el.value = { hostile };
+    } finally {
+      Object.getOwnPropertyDescriptor = originalDescriptor;
+      Object.getOwnPropertyDescriptors = originalDescriptors;
+    }
+
+    expect(batchReads).to.equal(0);
+    expect(inspected).to.be.at.most(100_000);
+    expect(Object.hasOwn(el.value['hostile'] as object, 'tail')).to.equal(false);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('caps inspection across unsafe bounded arrays before a later tail can be materialized', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    const unsafe = () => 'unsafe';
+    const arrays = Array.from({ length: 11 }, () => Array.from({ length: 10_000 }, () => unsafe));
+    const source: Record<string, unknown> = Object.create(null);
+    for (let index = 0; index < arrays.length; index += 1) source[`array-${index}`] = arrays[index];
+    source['tail'] = { retained: 'unsafe tail' };
+
+    const sources = new Set<object>(arrays);
+    const originalDescriptor = Object.getOwnPropertyDescriptor;
+    let inspected = 0;
+    Object.getOwnPropertyDescriptor = function <T>(value: T, key: PropertyKey) {
+      if (sources.has(value as object)) inspected += 1;
+      return originalDescriptor(value, key);
+    };
+    try {
+      el.value = source;
+    } finally {
+      Object.getOwnPropertyDescriptor = originalDescriptor;
+    }
+
+    expect(inspected).to.be.at.most(100_000);
+    expect(Object.hasOwn(el.value, 'tail')).to.equal(false);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('rolls back unsafe node consumption across bounded arrays before retaining a later root sibling', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    const unsafe = () => 'unsafe';
+    const arrays = Array.from({ length: 5 }, () => Array.from({ length: 10_000 }, () => unsafe));
+
+    el.value = {
+      first: arrays[0],
+      second: arrays[1],
+      third: arrays[2],
+      fourth: arrays[3],
+      fifth: arrays[4],
+      retained: { answer: 'safe' },
+    };
+
+    expect(el.value['retained']).to.deep.equal({ answer: 'safe' });
+    expect((el.value['first'] as unknown[])).to.have.length(10_000);
+    expect(Object.hasOwn(el.value['first'] as object, 0)).to.equal(false);
+    expect(el.validity.customError).to.equal(true);
   });
 
   it('rejects array and primitive root values and descriptor-hostile schema roots', async () => {
@@ -1924,6 +2224,24 @@ describe('bounded hostile input snapshots', () => {
     expect(el.validity.customError).to.equal(true);
   });
 
+  it('keeps the supported prefix for a genuine array-entry limit while reporting the existing limit error', async () => {
+    const form = (await fixture(html`
+      <form><lr-tool-param-form name="args"></lr-tool-param-form></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+    const source = Array.from({ length: 10_001 }, (_, index) => index);
+
+    el.value = { source };
+    await el.updateComplete;
+
+    const retained = el.value['source'] as number[];
+    expect(retained).to.have.length(10_000);
+    expect(retained[0]).to.equal(0);
+    expect(retained[9_999]).to.equal(9_999);
+    expect(el.formError).to.equal('Value must be JSON-serializable.');
+    expect(new FormData(form).has('args')).to.equal(false);
+  });
+
   it('rejects accessor and throwing array descriptors without invoking consumer getters', () => {
     const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
     let getterCalls = 0;
@@ -1952,6 +2270,10 @@ describe('bounded hostile input snapshots', () => {
 
     el.value = { accessorArray, indexTrap, lengthTrap };
     expect(getterCalls).to.equal(0);
+    const retainedAccessorArray = el.value['accessorArray'] as unknown[];
+    expect(retainedAccessorArray).to.have.length(1);
+    expect(Object.hasOwn(retainedAccessorArray, 0)).to.equal(false);
+    expect(Object.hasOwn(el.value, 'lengthTrap')).to.equal(false);
     expect(el.validity.customError).to.equal(true);
   });
 
@@ -2006,5 +2328,48 @@ describe('bounded hostile input snapshots', () => {
       required: requiredWithIndexTrap,
     };
     expect(el.schema.required).to.deep.equal([]);
+  });
+
+  it('omits only malformed enum fields while retaining bounded string choices and rendered selects', async () => {
+    let accessorCalls = 0;
+    const accessorEnum: ToolParamFormProperty = { type: 'string' };
+    Object.defineProperty(accessorEnum, 'enum', {
+      enumerable: true,
+      get() {
+        accessorCalls += 1;
+        return ['unsafe'];
+      },
+    });
+    const sparseChoices = ['first', , 'third'] as unknown as readonly string[];
+    const schema = {
+      type: 'object' as const,
+      properties: {
+        nonArray: { type: 'string' as const, enum: 'impossible' as unknown as readonly string[] },
+        nonString: { type: 'string' as const, enum: ['safe', 7] as unknown as readonly string[] },
+        accessor: accessorEnum,
+        sparse: { type: 'string' as const, enum: sparseChoices },
+        bounded: {
+          type: 'string' as const,
+          enum: Array.from({ length: 501 }, (_, index) => `option-${index}`),
+        },
+        enabled: { type: 'boolean' as const },
+        undefinedEnum: { type: 'string' as const, enum: undefined },
+      },
+    } as FlatToolParamSchema;
+    const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
+    await el.updateComplete;
+
+    expect(accessorCalls).to.equal(0);
+    expect(Object.keys(el.schema.properties)).to.deep.equal(['sparse', 'bounded', 'enabled', 'undefinedEnum']);
+    expect(field(el, 'nonArray') === null).to.equal(true);
+    expect(field(el, 'nonString') === null).to.equal(true);
+    expect(field(el, 'accessor') === null).to.equal(true);
+    expect(Array.from(field(el, 'sparse').querySelectorAll('lr-option'), (option) => option.getAttribute('value')))
+      .to.deep.equal(['first', 'third']);
+    expect(field(el, 'bounded').querySelectorAll('lr-option')).to.have.length(500);
+    expect(field(el, 'enabled').querySelector('lr-select')).to.exist;
+    expect(Object.hasOwn(el.schema.properties['undefinedEnum']!, 'enum')).to.equal(true);
+    expect(el.schema.properties['undefinedEnum']!.enum).to.be.undefined;
+    expect(el.formError).to.equal('Schema properties must be a flat object.');
   });
 });

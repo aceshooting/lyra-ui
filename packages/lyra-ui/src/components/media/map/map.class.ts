@@ -3,6 +3,11 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -78,6 +83,62 @@ export type LyraMapLegendGradientStop = readonly [number, string];
 const MAX_MAP_LEGEND_GRADIENT_STOPS = 64;
 
 /**
+ * Array and record admission is deliberately separate from projection. A value can revoke between
+ * either operation, so every boundary reader is contained and later code only sees its canonical
+ * result rather than the caller-owned object.
+ */
+function isRuntimeArray(value: unknown): value is readonly unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+function isRuntimeRecord(value: unknown): value is object {
+  try {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+function boundedOwnArrayLength(value: unknown, limit: number): number | undefined {
+  if (!isRuntimeArray(value)) return undefined;
+  const descriptor = getOwnDataDescriptor(value, 'length');
+  if (
+    descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof descriptor.value !== 'number' ||
+    !Number.isSafeInteger(descriptor.value) ||
+    descriptor.value < 0
+  )
+    return undefined;
+  return Math.min(descriptor.value, limit);
+}
+
+function ownDataValue(
+  value: object,
+  property: PropertyKey,
+): ReturnType<typeof getOwnDataDescriptor> {
+  return getOwnDataDescriptor(value, property);
+}
+
+function isUnsafeDescriptor(
+  descriptor: ReturnType<typeof getOwnDataDescriptor>,
+): descriptor is typeof UNSAFE_OWN_DATA_DESCRIPTOR {
+  return descriptor === UNSAFE_OWN_DATA_DESCRIPTOR;
+}
+
+function optionalDescriptorValue(
+  descriptor: ReturnType<typeof getOwnDataDescriptor>,
+): unknown | undefined {
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)
+    ? undefined
+    : descriptor.value;
+}
+
+/**
  * Keeps only finite-value stops carrying a color CSS actually accepts, sorted ascending by value
  * and bounded. Returns an empty array when fewer than two usable stops survive: a one-stop
  * "gradient" is a flat block that describes nothing, so it falls back to rendering no bar at all
@@ -86,23 +147,43 @@ const MAX_MAP_LEGEND_GRADIENT_STOPS = 64;
 function normalizeMapLegendGradient(
   value: unknown,
 ): readonly (readonly [number, string])[] {
-  if (!Array.isArray(value)) return [];
-  const usable: (readonly [number, string])[] = [];
-  const scanCount = Math.min(value.length, MAX_MAP_LEGEND_GRADIENT_STOPS);
-  for (let index = 0; index < scanCount; index += 1) {
-    const stop: unknown = value[index];
-    if (!Array.isArray(stop) || stop.length < 2) continue;
-    const [rawValue, rawColor] = stop as [unknown, unknown];
-    if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) continue;
-    if (typeof rawColor !== 'string') continue;
-    const color = sanitizeCssColor(rawColor);
-    if (!color) continue;
-    usable.push([rawValue, color] as const);
+  try {
+    const scanCount = boundedOwnArrayLength(value, MAX_MAP_LEGEND_GRADIENT_STOPS);
+    if (scanCount === undefined) return [];
+    const usable: (readonly [number, string])[] = [];
+    for (let index = 0; index < scanCount; index += 1) {
+      const stopDescriptor = ownDataValue(value as object, String(index));
+      if (
+        stopDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        isUnsafeDescriptor(stopDescriptor)
+      )
+        continue;
+      const stop = stopDescriptor.value;
+      const stopLength = boundedOwnArrayLength(stop, 2);
+      if (stopLength === undefined || stopLength < 2) continue;
+      const valueDescriptor = ownDataValue(stop as object, '0');
+      const colorDescriptor = ownDataValue(stop as object, '1');
+      if (
+        valueDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        colorDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        isUnsafeDescriptor(valueDescriptor) ||
+        isUnsafeDescriptor(colorDescriptor) ||
+        typeof valueDescriptor.value !== 'number' ||
+        !Number.isFinite(valueDescriptor.value) ||
+        typeof colorDescriptor.value !== 'string'
+      )
+        continue;
+      const color = sanitizeCssColor(colorDescriptor.value);
+      if (!color) continue;
+      usable.push([valueDescriptor.value, color] as const);
+    }
+    if (usable.length < 2) return [];
+    return Object.freeze(
+      [...usable].sort((a, b) => a[0] - b[0]),
+    ) as readonly (readonly [number, string])[];
+  } catch {
+    return [];
   }
-  if (usable.length < 2) return [];
-  return Object.freeze(
-    [...usable].sort((a, b) => a[0] - b[0]),
-  ) as readonly (readonly [number, string])[];
 }
 
 /** Observable result of normalizing the latest `legend` assignment. */
@@ -545,36 +626,123 @@ function popupText(host: Element, markup: string): string {
   return (template.content.textContent ?? '').replace(/\s+/gu, ' ').trim();
 }
 
+function markerPopupText(host: Element, markup: unknown): string {
+  return typeof markup === 'string' && markup ? popupText(host, markup) : '';
+}
+
 /** Each entry becomes a source plus up to three GL layers (`fill`/`line`/`circle`) -- unbounded
  *  input would let a hostile/oversized `dataLayers` assignment synchronously add an unbounded
  *  number of sources/layers to the underlying map. First-N deterministic truncation, same
  *  rationale and pattern as `MAX_MAP_MARKERS` above. */
 const MAX_MAP_DATA_LAYERS = 100;
 
-function normalizedDataLayers(value: unknown): LyraMapGeoJsonDataLayer[] {
-  if (!Array.isArray(value)) return [];
-  const output: LyraMapGeoJsonDataLayer[] = [];
-  const seenSourceIds = new Set<string>();
-  const scanCount = Math.min(value.length, MAX_MAP_DATA_LAYERS);
-  for (let index = 0; index < scanCount; index++) {
-    const candidate = value[index];
-    try {
-      if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-      const rawSourceId = (candidate as { sourceId?: unknown }).sourceId;
-      if (typeof rawSourceId !== 'string') continue;
-      const sourceId = rawSourceId.trim();
-      if (sourceId.length === 0 || seenSourceIds.has(sourceId)) continue;
-      seenSourceIds.add(sourceId);
-      output.push(
-        rawSourceId === sourceId
-          ? candidate as LyraMapGeoJsonDataLayer
-          : { ...candidate, sourceId } as LyraMapGeoJsonDataLayer,
-      );
-    } catch {
-      // A malformed entry must not prevent later valid data layers from being applied.
-    }
+/** Immutable descriptor projection used exclusively after a layer reaches the map boundary. */
+interface CanonicalMapDataLayer {
+  readonly sourceId: string;
+  readonly geojson: Feature | FeatureCollection;
+  readonly geojsonProjection: CanonicalGeoJsonProjection;
+  readonly tone: LyraMapGeoJsonDataLayer['tone'];
+  readonly color: string | undefined;
+  readonly strokeColor: string | undefined;
+  readonly kind: LyraMapDataLayerKind;
+  readonly heatmap: CanonicalHeatmapOptions | undefined;
+  readonly cluster: NormalizedClusterOptions | undefined;
+}
+
+const EMPTY_CANONICAL_MAP_DATA_LAYERS: readonly CanonicalMapDataLayer[] = Object.freeze([]);
+
+function mapTone(value: unknown): LyraMapGeoJsonDataLayer['tone'] {
+  switch (value) {
+    case 'accent':
+    case 'success':
+    case 'warning':
+    case 'danger':
+    case 'neutral':
+      return value;
+    default:
+      return undefined;
   }
-  return output;
+}
+
+function projectMapDataLayer(value: unknown): CanonicalMapDataLayer | undefined {
+  try {
+    if (!isRuntimeRecord(value)) return undefined;
+    const sourceIdDescriptor = ownDataValue(value, 'sourceId');
+    const geojsonDescriptor = ownDataValue(value, 'geojson');
+    const toneDescriptor = ownDataValue(value, 'tone');
+    const colorDescriptor = ownDataValue(value, 'color');
+    const strokeColorDescriptor = ownDataValue(value, 'strokeColor');
+    const kindDescriptor = ownDataValue(value, 'kind');
+    const heatmapDescriptor = ownDataValue(value, 'heatmap');
+    const clusterDescriptor = ownDataValue(value, 'cluster');
+    if (
+      sourceIdDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      geojsonDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      isUnsafeDescriptor(sourceIdDescriptor) ||
+      isUnsafeDescriptor(geojsonDescriptor)
+    )
+      return undefined;
+
+    const sourceId = sourceIdDescriptor.value;
+    const geojson = geojsonDescriptor.value;
+    if (
+      typeof sourceId !== 'string' ||
+      sourceId.trim().length === 0 ||
+      !isRuntimeRecord(geojson)
+    )
+      return undefined;
+
+    const optionalValue = (
+      descriptor: ReturnType<typeof getOwnDataDescriptor>,
+    ): unknown | undefined =>
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)
+        ? undefined
+        : descriptor.value;
+    const tone = mapTone(optionalValue(toneDescriptor));
+    const colorValue = optionalValue(colorDescriptor);
+    const strokeColorValue = optionalValue(strokeColorDescriptor);
+    const kindValue = optionalValue(kindDescriptor);
+    const heatmapValue = optionalValue(heatmapDescriptor);
+    const clusterValue = optionalValue(clusterDescriptor);
+    const kind: LyraMapDataLayerKind = kindValue === 'heatmap' ? 'heatmap' : 'auto';
+    return Object.freeze({
+      sourceId: sourceId.trim(),
+      // GeoJSON is deliberately retained as one opaque identity. MapLibre owns its validation and
+      // may accept a runtime payload broader than this component's type declaration.
+      geojson: geojson as Feature | FeatureCollection,
+      geojsonProjection: projectGeoJson(geojson),
+      tone,
+      color: typeof colorValue === 'string' ? colorValue : undefined,
+      strokeColor: typeof strokeColorValue === 'string' ? strokeColorValue : undefined,
+      kind,
+      heatmap: kind === 'heatmap' ? projectHeatmapOptions(heatmapValue) : undefined,
+      cluster: kind === 'auto' ? normalizedClusterOptions(clusterValue) : undefined,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectMapDataLayers(value: unknown): readonly CanonicalMapDataLayer[] {
+  try {
+    const scanCount = boundedOwnArrayLength(value, MAX_MAP_DATA_LAYERS);
+    if (scanCount === undefined) return EMPTY_CANONICAL_MAP_DATA_LAYERS;
+    const output: CanonicalMapDataLayer[] = [];
+    const seenSourceIds = new Set<string>();
+    for (let index = 0; index < scanCount; index += 1) {
+      const descriptor = ownDataValue(value as object, String(index));
+      if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)) continue;
+      const layer = projectMapDataLayer(descriptor.value);
+      // Reserve a source id only after the full row is admitted. An invalid early duplicate can
+      // therefore never suppress a later valid row with the same business identity.
+      if (!layer || seenSourceIds.has(layer.sourceId)) continue;
+      seenSourceIds.add(layer.sourceId);
+      output.push(layer);
+    }
+    return output.length ? Object.freeze(output) : EMPTY_CANONICAL_MAP_DATA_LAYERS;
+  } catch {
+    return EMPTY_CANONICAL_MAP_DATA_LAYERS;
+  }
 }
 
 /**
@@ -616,20 +784,43 @@ function normalizedSteps<T>(
   value: unknown,
   isOutput: (candidate: unknown) => candidate is T,
   clampThreshold: (threshold: number) => number = (threshold) => threshold,
-): (readonly [number, T])[] {
-  if (!Array.isArray(value)) return [];
-  const usable: [number, T][] = [];
-  const scanCount = Math.min(value.length, MAX_MAP_STEP_STOPS);
-  for (let index = 0; index < scanCount; index += 1) {
-    const stop: unknown = value[index];
-    if (!Array.isArray(stop) || stop.length < 2) continue;
-    const [rawThreshold, rawOutput] = stop as [unknown, unknown];
-    if (typeof rawThreshold !== 'number' || !Number.isFinite(rawThreshold)) continue;
-    if (!isOutput(rawOutput)) continue;
-    usable.push([clampThreshold(rawThreshold), rawOutput]);
+): readonly (readonly [number, T])[] {
+  try {
+    const scanCount = boundedOwnArrayLength(value, MAX_MAP_STEP_STOPS);
+    if (scanCount === undefined) return Object.freeze([]);
+    const usable: [number, T][] = [];
+    for (let index = 0; index < scanCount; index += 1) {
+      const stopDescriptor = ownDataValue(value as object, String(index));
+      if (
+        stopDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        isUnsafeDescriptor(stopDescriptor)
+      )
+        continue;
+      const stop = stopDescriptor.value;
+      const stopLength = boundedOwnArrayLength(stop, 2);
+      if (stopLength === undefined || stopLength < 2) continue;
+      const thresholdDescriptor = ownDataValue(stop as object, '0');
+      const outputDescriptor = ownDataValue(stop as object, '1');
+      if (
+        thresholdDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        outputDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        isUnsafeDescriptor(thresholdDescriptor) ||
+        isUnsafeDescriptor(outputDescriptor) ||
+        typeof thresholdDescriptor.value !== 'number' ||
+        !Number.isFinite(thresholdDescriptor.value) ||
+        !isOutput(outputDescriptor.value)
+      )
+        continue;
+      usable.push([clampThreshold(thresholdDescriptor.value), outputDescriptor.value]);
+    }
+    usable.sort((a, b) => a[0] - b[0]);
+    const deduplicated = usable.filter(
+      (stop, index) => index === 0 || stop[0] > usable[index - 1]![0],
+    );
+    return Object.freeze(deduplicated.map((stop) => Object.freeze(stop) as readonly [number, T]));
+  } catch {
+    return Object.freeze([]);
   }
-  usable.sort((a, b) => a[0] - b[0]);
-  return usable.filter((stop, index) => index === 0 || stop[0] > usable[index - 1]![0]);
 }
 
 const isFiniteOutput = (candidate: unknown): candidate is number =>
@@ -702,30 +893,151 @@ interface NormalizedClusterOptions {
  * particular field, is what enables clustering.
  */
 function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | undefined {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const options = value as LyraMapClusterOptions;
-  const radiusSteps = normalizedSteps(options.radiusSteps, isFiniteOutput);
-  const fonts = Array.isArray(options.countFont)
-    ? options.countFont
-        .filter((font): font is string => typeof font === 'string' && font.trim().length > 0)
-        .slice(0, MAX_CLUSTER_COUNT_FONTS)
-    : [];
-  return {
-    radius: finiteRange(Number(options.radius), DEFAULT_CLUSTER_RADIUS, 1, 1_000),
-    maxZoom: finiteRange(Number(options.maxZoom), DEFAULT_CLUSTER_MAX_ZOOM, 0, 24),
-    radiusSteps: radiusSteps.length ? radiusSteps : DEFAULT_CLUSTER_RADIUS_STEPS,
-    colorSteps: normalizedSteps(options.colorSteps, isColorOutput),
-    countFont: fonts.length ? fonts : undefined,
-  };
+  try {
+    if (!isRuntimeRecord(value)) return undefined;
+    const radiusDescriptor = ownDataValue(value, 'radius');
+    const maxZoomDescriptor = ownDataValue(value, 'maxZoom');
+    const radiusStepsDescriptor = ownDataValue(value, 'radiusSteps');
+    const colorStepsDescriptor = ownDataValue(value, 'colorSteps');
+    const countFontDescriptor = ownDataValue(value, 'countFont');
+    const radiusValue = optionalDescriptorValue(radiusDescriptor);
+    const maxZoomValue = optionalDescriptorValue(maxZoomDescriptor);
+    const radiusSteps = normalizedSteps(
+      optionalDescriptorValue(radiusStepsDescriptor),
+      isFiniteOutput,
+    );
+    const colorSteps = normalizedSteps(optionalDescriptorValue(colorStepsDescriptor), isColorOutput);
+    const fonts = normalizedClusterFonts(optionalDescriptorValue(countFontDescriptor));
+    return Object.freeze({
+      radius: finiteRange(
+        typeof radiusValue === 'number' ? radiusValue : Number.NaN,
+        DEFAULT_CLUSTER_RADIUS,
+        1,
+        1_000,
+      ),
+      maxZoom: finiteRange(
+        typeof maxZoomValue === 'number' ? maxZoomValue : Number.NaN,
+        DEFAULT_CLUSTER_MAX_ZOOM,
+        0,
+        24,
+      ),
+      radiusSteps: radiusSteps.length ? radiusSteps : DEFAULT_CLUSTER_RADIUS_STEPS,
+      colorSteps,
+      countFont: fonts.length ? fonts : undefined,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizedClusterFonts(value: unknown): readonly string[] {
+  try {
+    const length = boundedOwnArrayLength(value, MAX_CLUSTER_COUNT_FONTS);
+    if (length === undefined) return Object.freeze([]);
+    const fonts: string[] = [];
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = ownDataValue(value as object, String(index));
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        isUnsafeDescriptor(descriptor) ||
+        typeof descriptor.value !== 'string' ||
+        descriptor.value.trim().length === 0
+      )
+        continue;
+      fonts.push(descriptor.value);
+    }
+    return Object.freeze(fonts);
+  } catch {
+    return Object.freeze([]);
+  }
+}
+
+/** Immutable heatmap fields copied once from an admitted layer branch. */
+interface CanonicalHeatmapOptions {
+  readonly weightField: string | undefined;
+  readonly weightRange: readonly [number, number] | undefined;
+  readonly stops: readonly (readonly [number, string])[];
+  readonly radius: number | readonly (readonly [number, number])[] | undefined;
+  readonly intensity: number | readonly (readonly [number, number])[] | undefined;
+  readonly opacity: number | undefined;
+}
+
+function projectedHeatmapRange(value: unknown): readonly [number, number] | undefined {
+  try {
+    const length = boundedOwnArrayLength(value, 2);
+    if (length === undefined || length < 2) return undefined;
+    const minDescriptor = ownDataValue(value as object, '0');
+    const maxDescriptor = ownDataValue(value as object, '1');
+    if (
+      minDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      maxDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      isUnsafeDescriptor(minDescriptor) ||
+      isUnsafeDescriptor(maxDescriptor) ||
+      typeof minDescriptor.value !== 'number' ||
+      typeof maxDescriptor.value !== 'number' ||
+      !Number.isFinite(minDescriptor.value) ||
+      !Number.isFinite(maxDescriptor.value)
+    )
+      return undefined;
+    return Object.freeze([minDescriptor.value, maxDescriptor.value] as const);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectedHeatmapZoomValue(
+  value: unknown,
+): number | readonly (readonly [number, number])[] | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (!isRuntimeArray(value)) return undefined;
+  return normalizedSteps(
+    value,
+    isFiniteOutput,
+    (zoom) => finiteRange(zoom, 0, 0, 24),
+  );
+}
+
+function projectHeatmapOptions(value: unknown): CanonicalHeatmapOptions | undefined {
+  try {
+    if (!isRuntimeRecord(value)) return undefined;
+    const weightFieldDescriptor = ownDataValue(value, 'weightField');
+    const weightRangeDescriptor = ownDataValue(value, 'weightRange');
+    const stopsDescriptor = ownDataValue(value, 'stops');
+    const radiusDescriptor = ownDataValue(value, 'radius');
+    const intensityDescriptor = ownDataValue(value, 'intensity');
+    const opacityDescriptor = ownDataValue(value, 'opacity');
+    const weightFieldValue = optionalDescriptorValue(weightFieldDescriptor);
+    const opacityValue = optionalDescriptorValue(opacityDescriptor);
+    return Object.freeze({
+      weightField:
+        typeof weightFieldValue === 'string' && weightFieldValue.trim().length > 0
+          ? weightFieldValue.trim()
+          : undefined,
+      weightRange: projectedHeatmapRange(optionalDescriptorValue(weightRangeDescriptor)),
+      stops: normalizedSteps(
+        optionalDescriptorValue(stopsDescriptor),
+        isColorOutput,
+        (density) => finiteRange(density, 0, 0, 1),
+      ),
+      radius: projectedHeatmapZoomValue(optionalDescriptorValue(radiusDescriptor)),
+      intensity: projectedHeatmapZoomValue(optionalDescriptorValue(intensityDescriptor)),
+      opacity:
+        typeof opacityValue === 'number' && Number.isFinite(opacityValue)
+          ? opacityValue
+          : undefined,
+    });
+  } catch {
+    return undefined;
+  }
 }
 
 /**
  * The rendering shape one entry asks for, as a comparable string. Two entries with the same shape
  * can reuse a source and its layers; a change means a full rebuild (see `_appliedDataLayerShapes`).
  */
-function dataLayerShape(layer: LyraMapGeoJsonDataLayer): string {
+function dataLayerShape(layer: CanonicalMapDataLayer): string {
   if (layer.kind === 'heatmap') return 'heatmap';
-  const cluster = normalizedClusterOptions(layer.cluster);
+  const cluster = layer.cluster;
   if (!cluster) return 'auto';
   return `cluster:${cluster.radius}:${cluster.maxZoom}:${cluster.countFont?.join(',') ?? ''}`;
 }
@@ -737,12 +1049,11 @@ function dataLayerShape(layer: LyraMapGeoJsonDataLayer): string {
  * With a `weightRange` the property is mapped onto the 0–1 domain MapLibre expects; without one the
  * raw value is passed through, which is only right for data already in that range.
  */
-function heatmapWeightExpression(options: LyraMapHeatmapOptions | undefined): unknown[] | undefined {
-  const field = typeof options?.weightField === 'string' ? options.weightField.trim() : '';
+function heatmapWeightExpression(options: CanonicalHeatmapOptions | undefined): unknown[] | undefined {
+  const field = options?.weightField ?? '';
   if (!field) return undefined;
-  const range = options?.weightRange;
-  const min = Array.isArray(range) ? Number(range[0]) : Number.NaN;
-  const max = Array.isArray(range) ? Number(range[1]) : Number.NaN;
+  const min = options?.weightRange?.[0] ?? Number.NaN;
+  const max = options?.weightRange?.[1] ?? Number.NaN;
   // Deliberately a finiteness test rather than a `finiteRange` clamp: a half-specified or inverted
   // range has no defensible substitute, and mapping the property onto the wrong domain would
   // silently saturate or flatten the whole surface. Passing the raw value through is honest.
@@ -756,17 +1067,15 @@ function heatmapWeightExpression(options: LyraMapHeatmapOptions | undefined): un
  * interpolation. Invalid arrays fall back to the established scalar default.
  */
 function heatmapZoomValue(
-  value: unknown,
+  value: number | readonly (readonly [number, number])[] | undefined,
   fallback: number,
   min: number,
   max: number,
 ): number | unknown[] {
-  if (!Array.isArray(value)) return finiteRange(Number(value), fallback, min, max);
-  const stops = normalizedSteps(
-    value,
-    isFiniteOutput,
-    (zoom) => finiteRange(zoom, 0, 0, 24),
-  ).map(
+  if (!isRuntimeArray(value)) {
+    return finiteRange(typeof value === 'number' ? value : Number.NaN, fallback, min, max);
+  }
+  const stops = value.map(
     ([zoom, output]) => [zoom, finiteRange(output, fallback, min, max)] as const,
   );
   if (stops.length === 0) return fallback;
@@ -774,6 +1083,166 @@ function heatmapZoomValue(
   const expression: unknown[] = ['interpolate', ['linear'], ['zoom']];
   for (const [zoom, output] of stops) expression.push(zoom, output);
   return expression;
+}
+
+/** The accepted, one-read subset of a caller-owned choropleth record. */
+interface CanonicalMapChoropleth {
+  readonly sourceId: string;
+  readonly geojson: FeatureCollection;
+  readonly geojsonProjection: CanonicalGeoJsonProjection;
+  readonly field: string;
+  readonly stops: readonly (readonly [number, string])[];
+  readonly interpolation: LyraMapChoroplethInterpolation;
+  readonly stepBaseColor: string | undefined;
+}
+
+function projectMapChoropleth(value: unknown): CanonicalMapChoropleth | undefined {
+  try {
+    if (!isRuntimeRecord(value)) return undefined;
+    const sourceIdDescriptor = ownDataValue(value, 'sourceId');
+    const geojsonDescriptor = ownDataValue(value, 'geojson');
+    const fieldDescriptor = ownDataValue(value, 'field');
+    const stopsDescriptor = ownDataValue(value, 'stops');
+    const interpolationDescriptor = ownDataValue(value, 'interpolation');
+    const stepBaseColorDescriptor = ownDataValue(value, 'stepBaseColor');
+    if (
+      sourceIdDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      geojsonDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      fieldDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      isUnsafeDescriptor(sourceIdDescriptor) ||
+      isUnsafeDescriptor(geojsonDescriptor) ||
+      isUnsafeDescriptor(fieldDescriptor)
+    )
+      return undefined;
+    const sourceId = sourceIdDescriptor.value;
+    const geojson = geojsonDescriptor.value;
+    const field = fieldDescriptor.value;
+    if (
+      typeof sourceId !== 'string' ||
+      sourceId.trim().length === 0 ||
+      !isRuntimeRecord(geojson) ||
+      typeof field !== 'string' ||
+      field.trim().length === 0
+    )
+      return undefined;
+    const interpolationValue = optionalDescriptorValue(interpolationDescriptor);
+    const stepBaseColorValue = optionalDescriptorValue(stepBaseColorDescriptor);
+    const interpolation: LyraMapChoroplethInterpolation =
+      interpolationValue === 'logarithmic' || interpolationValue === 'step'
+        ? interpolationValue
+        : 'linear';
+    return Object.freeze({
+      sourceId: sourceId.trim(),
+      geojson: geojson as FeatureCollection,
+      geojsonProjection: projectGeoJson(geojson),
+      field: field.trim(),
+      stops: normalizedSteps(optionalDescriptorValue(stopsDescriptor), isColorOutput),
+      interpolation,
+      stepBaseColor:
+        typeof stepBaseColorValue === 'string' && stepBaseColorValue.trim().length > 0
+          ? stepBaseColorValue
+          : undefined,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+/** The accepted map marker snapshot; `unsafeHtml` remains opaque after its own descriptor read. */
+interface CanonicalMapMarker {
+  readonly id: string | undefined;
+  readonly lngLat: readonly [number, number];
+  readonly color: string | undefined;
+  readonly label: string | undefined;
+  readonly unsafeHtml: unknown | undefined;
+}
+
+const EMPTY_CANONICAL_MAP_MARKERS: readonly CanonicalMapMarker[] = Object.freeze([]);
+const UNPROJECTED_MAP_VALUE = Symbol('unprojected-map-value');
+
+function projectMarkerLngLat(value: unknown): readonly [number, number] | undefined {
+  try {
+    const length = boundedOwnArrayLength(value, 2);
+    if (length === undefined || length < 2) return undefined;
+    const lngDescriptor = ownDataValue(value as object, '0');
+    const latDescriptor = ownDataValue(value as object, '1');
+    if (
+      lngDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      latDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      isUnsafeDescriptor(lngDescriptor) ||
+      isUnsafeDescriptor(latDescriptor) ||
+      typeof lngDescriptor.value !== 'number' ||
+      typeof latDescriptor.value !== 'number' ||
+      !Number.isFinite(lngDescriptor.value) ||
+      !Number.isFinite(latDescriptor.value) ||
+      latDescriptor.value < -90 ||
+      latDescriptor.value > 90
+    )
+      return undefined;
+    return Object.freeze([lngDescriptor.value, latDescriptor.value] as const);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectMapMarker(value: unknown): CanonicalMapMarker | undefined {
+  try {
+    if (!isRuntimeRecord(value)) return undefined;
+    const idDescriptor = ownDataValue(value, 'id');
+    const lngLatDescriptor = ownDataValue(value, 'lngLat');
+    const colorDescriptor = ownDataValue(value, 'color');
+    const labelDescriptor = ownDataValue(value, 'label');
+    const unsafeHtmlDescriptor = ownDataValue(value, 'unsafeHtml');
+    if (
+      lngLatDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      isUnsafeDescriptor(idDescriptor) ||
+      isUnsafeDescriptor(lngLatDescriptor) ||
+      isUnsafeDescriptor(colorDescriptor) ||
+      isUnsafeDescriptor(labelDescriptor) ||
+      isUnsafeDescriptor(unsafeHtmlDescriptor)
+    )
+      return undefined;
+    const lngLat = projectMarkerLngLat(lngLatDescriptor.value);
+    const idValue = optionalDescriptorValue(idDescriptor);
+    const labelValue = optionalDescriptorValue(labelDescriptor);
+    if (
+      !lngLat ||
+      (idValue !== undefined && typeof idValue !== 'string') ||
+      (typeof idValue === 'string' && idValue.trim().length === 0) ||
+      (labelValue !== undefined && typeof labelValue !== 'string')
+    )
+      return undefined;
+    const colorValue = optionalDescriptorValue(colorDescriptor);
+    return Object.freeze({
+      id: typeof idValue === 'string' ? idValue.trim() : undefined,
+      lngLat,
+      color: typeof colorValue === 'string' ? colorValue : undefined,
+      label: typeof labelValue === 'string' ? labelValue : undefined,
+      unsafeHtml: optionalDescriptorValue(unsafeHtmlDescriptor),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectMapMarkers(value: unknown): readonly CanonicalMapMarker[] {
+  try {
+    const scanCount = boundedOwnArrayLength(value, MAX_MAP_MARKERS);
+    if (scanCount === undefined) return EMPTY_CANONICAL_MAP_MARKERS;
+    const output: CanonicalMapMarker[] = [];
+    const explicitIds = new Set<string>();
+    for (let index = 0; index < scanCount; index += 1) {
+      const descriptor = ownDataValue(value as object, String(index));
+      if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)) continue;
+      const marker = projectMapMarker(descriptor.value);
+      if (!marker || (marker.id !== undefined && explicitIds.has(marker.id))) continue;
+      if (marker.id !== undefined) explicitIds.add(marker.id);
+      output.push(marker);
+    }
+    return output.length ? Object.freeze(output) : EMPTY_CANONICAL_MAP_MARKERS;
+  } catch {
+    return EMPTY_CANONICAL_MAP_MARKERS;
+  }
 }
 
 /** Peer-neutral subset of a MapLibre style accepted by `mapStyle`. */
@@ -911,42 +1380,356 @@ function resolvedLayerColor(
   return resolved || dataLayerColor(host, tone);
 }
 
-/** How many features one `warnOnUntileableProperties()` pass inspects. Every GeoJSON source is
- *  re-scanned on each apply, so this stays bounded for the same reason the rest of this component
- *  bounds consumer input: a diagnostic must not become the expensive part of a redraw. */
-const UNTILEABLE_SCAN_FEATURE_LIMIT = 10_000;
+/** Ceiling on the features one property-diff pass inspects, matching the untileable-property scan:
+ *  past it, falling back to a whole-source replace is cheaper than the comparison itself. */
+const GEOJSON_DIFF_FEATURE_LIMIT = 10_000;
+/** Maximum values traversed while proving retained GeoJSON geometry unchanged. */
+const GEOJSON_DIFF_VALUE_LIMIT = 50_000;
+/** Maximum recursive nesting admitted into the descriptor-safe GeoJSON comparison projection. */
+const GEOJSON_PROJECTION_DEPTH_LIMIT = 100;
+const INVALID_GEOJSON_PROJECTION_VALUE = Symbol('invalid-geojson-projection-value');
+const GEOJSON_FUNCTION_TO_STRING = Function.prototype.toString;
+const GEOJSON_OBJECT_CONSTRUCTOR_SOURCE = GEOJSON_FUNCTION_TO_STRING.call(Object);
+
+interface GeoJsonProjectionBudget {
+  remaining: number;
+  readonly seen: WeakMap<object, unknown>;
+  /** Values currently being projected; re-entry is a JSON-inexpressible cycle, not an alias. */
+  readonly active: WeakSet<object>;
+}
+
+interface CanonicalGeoJsonDiagnosticFeature {
+  readonly id: string | number | undefined;
+  readonly index: number;
+  /** Own enumerable data descriptors copied in source order; values stay opaque identities. */
+  readonly properties: ReadonlyMap<string, unknown>;
+}
+
+interface CanonicalGeoJsonFeature extends CanonicalGeoJsonDiagnosticFeature {
+  readonly id: string | number;
+  /** The peer-facing feature identity; no component code reads it after this projection. */
+  readonly feature: Feature;
+  readonly geometry: unknown;
+  readonly bbox: unknown;
+}
+
+interface CanonicalGeoJsonCollection {
+  readonly ordered: readonly CanonicalGeoJsonFeature[];
+  readonly byId: ReadonlyMap<string | number, CanonicalGeoJsonFeature>;
+}
+
+/** Descriptor metadata used internally; the original GeoJSON value remains peer-facing only. */
+interface CanonicalGeoJsonProjection {
+  readonly diagnostics: readonly CanonicalGeoJsonDiagnosticFeature[];
+  readonly collection: CanonicalGeoJsonCollection | undefined;
+}
+
+const EMPTY_CANONICAL_GEOJSON_PROJECTION: CanonicalGeoJsonProjection = Object.freeze({
+  diagnostics: Object.freeze([]),
+  collection: undefined,
+});
+const EMPTY_CANONICAL_GEOJSON_PROPERTIES: ReadonlyMap<string, unknown> = new Map();
+
+function spendGeoJsonProjectionWork(budget: GeoJsonProjectionBudget): boolean {
+  if (budget.remaining <= 0) return false;
+  budget.remaining -= 1;
+  return true;
+}
+
+function projectedGeoJsonOwnValue(
+  value: object,
+  key: PropertyKey,
+  budget: GeoJsonProjectionBudget,
+): unknown | typeof MISSING_OWN_DATA_DESCRIPTOR | typeof INVALID_GEOJSON_PROJECTION_VALUE {
+  if (!spendGeoJsonProjectionWork(budget)) return INVALID_GEOJSON_PROJECTION_VALUE;
+  const descriptor = ownDataValue(value, key);
+  if (isUnsafeDescriptor(descriptor)) return INVALID_GEOJSON_PROJECTION_VALUE;
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? descriptor : descriptor.value;
+}
+
+function isPlainGeoJsonRecord(value: object): boolean {
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === null) return true;
+    if (Object.getPrototypeOf(prototype) !== null) return false;
+    const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+    if (
+      !constructorDescriptor ||
+      !('value' in constructorDescriptor) ||
+      typeof constructorDescriptor.value !== 'function'
+    )
+      return false;
+    const constructor = constructorDescriptor.value;
+    const constructorPrototype = Object.getOwnPropertyDescriptor(constructor, 'prototype');
+    return Boolean(
+      constructorPrototype &&
+        'value' in constructorPrototype &&
+        constructorPrototype.value === prototype &&
+        GEOJSON_FUNCTION_TO_STRING.call(constructor) === GEOJSON_OBJECT_CONSTRUCTOR_SOURCE,
+    );
+  } catch {
+    return false;
+  }
+}
 
 /**
- * Warns once per (source, property) when a feature property carries an integer too large to be
- * tiled.
- *
- * maplibre-gl tiles every GeoJSON source through a worker into a protobuf vector tile, and a
- * property whose integer magnitude overflows a varint throws *inside that worker* -- "Given varint
- * doesn't fit into 10 bytes". That is not catchable by the consuming app and not a rejected
- * promise; it surfaces only as an opaque message on this component's own `error` handler, while
- * the rest of the layer still paints. A single bad feature in a large collection is therefore
- * invisible until someone walks the data by hand.
- *
- * The bound is `Number.MAX_SAFE_INTEGER`, which is stricter than the varint limit on purpose:
- * beyond it a JavaScript number has already lost integer identity, so a value that large is not
- * round-tripping through tiling intact under any encoding. Values that big belong in the
- * application beside the layer, not in the layer -- carry a reduced figure (a log, a bucket) in
- * the feature and keep the exact one in your own payload.
+ * Captures the JSON-shaped geometry/bbox data that the incremental diff needs, never the original
+ * object. Accessors, custom prototypes, cycles that cannot be represented, and exhausted work
+ * reject the fast path while leaving the peer-facing GeoJSON identity intact for `setData()`.
  */
-function warnOnUntileableProperties(geojson: unknown, sourceLabel: string): void {
-  const features = (geojson as { features?: unknown })?.features;
-  if (!Array.isArray(features)) return;
-  const limit = Math.min(features.length, UNTILEABLE_SCAN_FEATURE_LIMIT);
-  for (let index = 0; index < limit; index += 1) {
-    const feature = features[index] as
-      | { id?: unknown; properties?: Record<string, unknown> | null }
-      | undefined;
-    const properties = feature?.properties;
-    if (!properties || typeof properties !== 'object') continue;
-    for (const [key, value] of Object.entries(properties)) {
+function projectGeoJsonComparableValue(
+  value: unknown,
+  budget: GeoJsonProjectionBudget,
+  depth = 0,
+): unknown | typeof INVALID_GEOJSON_PROJECTION_VALUE {
+  if (!spendGeoJsonProjectionWork(budget) || depth > GEOJSON_PROJECTION_DEPTH_LIMIT)
+    return INVALID_GEOJSON_PROJECTION_VALUE;
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === 'boolean' ||
+    typeof value === 'string'
+  )
+    return value;
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : INVALID_GEOJSON_PROJECTION_VALUE;
+  if (typeof value !== 'object') return INVALID_GEOJSON_PROJECTION_VALUE;
+  if (budget.active.has(value)) return INVALID_GEOJSON_PROJECTION_VALUE;
+  const remembered = budget.seen.get(value);
+  if (remembered !== undefined) return remembered;
+
+  if (isRuntimeArray(value)) {
+    const length = projectedGeoJsonOwnValue(value, 'length', budget);
+    if (
+      length === INVALID_GEOJSON_PROJECTION_VALUE ||
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      typeof length !== 'number' ||
+      !Number.isSafeInteger(length) ||
+      length < 0 ||
+      length > budget.remaining
+    )
+      return INVALID_GEOJSON_PROJECTION_VALUE;
+    const output: unknown[] = new Array(length);
+    budget.seen.set(value, output);
+    budget.active.add(value);
+    let completed = false;
+    try {
+      for (let index = 0; index < length; index += 1) {
+        const entry = projectedGeoJsonOwnValue(value, String(index), budget);
+        if (entry === INVALID_GEOJSON_PROJECTION_VALUE) return entry;
+        if (entry === MISSING_OWN_DATA_DESCRIPTOR) continue;
+        const projected = projectGeoJsonComparableValue(entry, budget, depth + 1);
+        if (projected === INVALID_GEOJSON_PROJECTION_VALUE) return projected;
+        Object.defineProperty(output, index, {
+          value: projected,
+          enumerable: true,
+          configurable: false,
+          writable: false,
+        });
+      }
+      const frozen = Object.freeze(output);
+      completed = true;
+      return frozen;
+    } finally {
+      budget.active.delete(value);
+      if (!completed) budget.seen.delete(value);
+    }
+  }
+
+  if (!isPlainGeoJsonRecord(value)) return INVALID_GEOJSON_PROJECTION_VALUE;
+  const output = Object.create(null) as Record<string, unknown>;
+  budget.seen.set(value, output);
+  budget.active.add(value);
+  let completed = false;
+  try {
+    for (const key in value) {
+      const entry = projectedGeoJsonOwnValue(value, key, budget);
+      if (entry === INVALID_GEOJSON_PROJECTION_VALUE) return entry;
+      if (entry === MISSING_OWN_DATA_DESCRIPTOR) continue;
+      const projected = projectGeoJsonComparableValue(entry, budget, depth + 1);
+      if (projected === INVALID_GEOJSON_PROJECTION_VALUE) return projected;
+      Object.defineProperty(output, key, {
+        value: projected,
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      });
+    }
+    const frozen = Object.freeze(output);
+    completed = true;
+    return frozen;
+  } catch {
+    return INVALID_GEOJSON_PROJECTION_VALUE;
+  } finally {
+    budget.active.delete(value);
+    if (!completed) budget.seen.delete(value);
+  }
+}
+
+function projectGeoJsonProperties(
+  value: unknown,
+  budget: GeoJsonProjectionBudget,
+): ReadonlyMap<string, unknown> | undefined {
+  if (value === null || value === undefined) return EMPTY_CANONICAL_GEOJSON_PROPERTIES;
+  if (!isRuntimeRecord(value)) return undefined;
+  const output = new Map<string, unknown>();
+  try {
+    for (const key in value) {
+      const entry = projectedGeoJsonOwnValue(value, key, budget);
+      if (entry === INVALID_GEOJSON_PROJECTION_VALUE) return undefined;
+      if (entry === MISSING_OWN_DATA_DESCRIPTOR) continue;
+      output.set(key, entry);
+    }
+  } catch {
+    return undefined;
+  }
+  return output;
+}
+
+function projectGeoJsonFeature(
+  value: unknown,
+  index: number,
+  budget: GeoJsonProjectionBudget,
+): {
+  readonly diagnostic: CanonicalGeoJsonDiagnosticFeature;
+  readonly feature: CanonicalGeoJsonFeature | undefined;
+} | undefined {
+  if (!isRuntimeRecord(value)) return undefined;
+  const type = projectedGeoJsonOwnValue(value, 'type', budget);
+  const id = projectedGeoJsonOwnValue(value, 'id', budget);
+  const geometry = projectedGeoJsonOwnValue(value, 'geometry', budget);
+  const bbox = projectedGeoJsonOwnValue(value, 'bbox', budget);
+  const properties = projectedGeoJsonOwnValue(value, 'properties', budget);
+  if (properties === INVALID_GEOJSON_PROJECTION_VALUE) return undefined;
+  const projectedProperties = projectGeoJsonProperties(
+    properties === MISSING_OWN_DATA_DESCRIPTOR ? undefined : properties,
+    budget,
+  );
+  if (!projectedProperties) return undefined;
+  const diagnostic = Object.freeze({
+    id: typeof id === 'string' || typeof id === 'number' ? id : undefined,
+    index,
+    properties: projectedProperties,
+  });
+  if (
+    type === INVALID_GEOJSON_PROJECTION_VALUE ||
+    id === INVALID_GEOJSON_PROJECTION_VALUE ||
+    geometry === INVALID_GEOJSON_PROJECTION_VALUE ||
+    bbox === INVALID_GEOJSON_PROJECTION_VALUE ||
+    type !== 'Feature' ||
+    id === MISSING_OWN_DATA_DESCRIPTOR ||
+    (typeof id !== 'string' && typeof id !== 'number')
+  )
+    return Object.freeze({ diagnostic, feature: undefined });
+  const comparableGeometry = projectGeoJsonComparableValue(
+    geometry === MISSING_OWN_DATA_DESCRIPTOR ? undefined : geometry,
+    budget,
+  );
+  const comparableBbox = projectGeoJsonComparableValue(
+    bbox === MISSING_OWN_DATA_DESCRIPTOR ? undefined : bbox,
+    budget,
+  );
+  if (
+    comparableGeometry === INVALID_GEOJSON_PROJECTION_VALUE ||
+    comparableBbox === INVALID_GEOJSON_PROJECTION_VALUE
+  )
+    return Object.freeze({ diagnostic, feature: undefined });
+  return Object.freeze({
+    diagnostic,
+    feature: Object.freeze({
+      id,
+      index,
+      feature: value as Feature,
+      geometry: comparableGeometry,
+      bbox: comparableBbox,
+      properties: projectedProperties,
+    }),
+  });
+}
+
+/**
+ * Captures only the bounded descriptor metadata this component subsequently needs. The original
+ * GeoJSON value is deliberately absent from the result: callers retain it solely for MapLibre.
+ */
+function projectGeoJson(value: unknown): CanonicalGeoJsonProjection {
+  try {
+    if (!isRuntimeRecord(value)) return EMPTY_CANONICAL_GEOJSON_PROJECTION;
+    const budget: GeoJsonProjectionBudget = {
+      remaining: GEOJSON_DIFF_VALUE_LIMIT,
+      seen: new WeakMap(),
+      active: new WeakSet(),
+    };
+    const type = projectedGeoJsonOwnValue(value, 'type', budget);
+    const features = projectedGeoJsonOwnValue(value, 'features', budget);
+    if (
+      type !== 'FeatureCollection' ||
+      features === INVALID_GEOJSON_PROJECTION_VALUE ||
+      features === MISSING_OWN_DATA_DESCRIPTOR ||
+      !isRuntimeArray(features)
+    )
+      return EMPTY_CANONICAL_GEOJSON_PROJECTION;
+    const length = projectedGeoJsonOwnValue(features, 'length', budget);
+    if (
+      length === INVALID_GEOJSON_PROJECTION_VALUE ||
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      typeof length !== 'number' ||
+      !Number.isSafeInteger(length) ||
+      length < 0 ||
+      length > GEOJSON_DIFF_FEATURE_LIMIT
+    )
+      return EMPTY_CANONICAL_GEOJSON_PROJECTION;
+    const diagnostics: CanonicalGeoJsonDiagnosticFeature[] = [];
+    const ordered: CanonicalGeoJsonFeature[] = [];
+    const byId = new Map<string | number, CanonicalGeoJsonFeature>();
+    let collectionIsAddressable = true;
+    for (let index = 0; index < length; index += 1) {
+      const candidate = projectedGeoJsonOwnValue(features, String(index), budget);
+      if (
+        candidate === INVALID_GEOJSON_PROJECTION_VALUE ||
+        candidate === MISSING_OWN_DATA_DESCRIPTOR
+      ) {
+        collectionIsAddressable = false;
+        continue;
+      }
+      const projected = projectGeoJsonFeature(candidate, index, budget);
+      if (!projected) {
+        collectionIsAddressable = false;
+        continue;
+      }
+      diagnostics.push(projected.diagnostic);
+      const feature = projected.feature;
+      if (!feature || byId.has(feature.id)) {
+        collectionIsAddressable = false;
+        continue;
+      }
+      ordered.push(feature);
+      byId.set(feature.id, feature);
+    }
+    return Object.freeze({
+      diagnostics: Object.freeze(diagnostics),
+      collection:
+        collectionIsAddressable && ordered.length === length
+          ? Object.freeze({ ordered: Object.freeze(ordered), byId })
+          : undefined,
+    });
+  } catch {
+    return EMPTY_CANONICAL_GEOJSON_PROJECTION;
+  }
+}
+
+/**
+ * Warns once per (source, property) when the descriptor metadata for a feature property carries
+ * an integer too large to be tiled. The component never walks the peer-facing GeoJSON value here.
+ */
+function warnOnUntileableProperties(
+  projection: CanonicalGeoJsonProjection,
+  sourceLabel: string,
+): void {
+  for (const feature of projection.diagnostics) {
+    for (const [key, value] of feature.properties) {
       if (typeof value !== 'number' || !Number.isFinite(value)) continue;
       if (Math.abs(value) <= Number.MAX_SAFE_INTEGER) continue;
-      const identity = feature?.id ?? `index ${index}`;
+      const identity = feature.id ?? `index ${feature.index}`;
       devWarnOnce(
         `lyra-map-untileable-property:${sourceLabel}:${key}`,
         `<lr-map>: feature ${String(identity)} in "${sourceLabel}" carries ${key}=${value}, which is `
@@ -959,33 +1742,10 @@ function warnOnUntileableProperties(geojson: unknown, sourceLabel: string): void
   }
 }
 
-/** Ceiling on the features one property-diff pass inspects, matching the untileable-property scan:
- *  past it, falling back to a whole-source replace is cheaper than the comparison itself. */
-const GEOJSON_DIFF_FEATURE_LIMIT = 10_000;
-/** Maximum values traversed while proving retained GeoJSON geometry unchanged. */
-const GEOJSON_DIFF_VALUE_LIMIT = 50_000;
-
 interface GeoJsonValueComparison {
   remaining: number;
   readonly forward: WeakMap<object, object>;
   readonly reverse: WeakMap<object, object>;
-}
-
-function isPlainGeoJsonRecord(value: object): boolean {
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype === null) return true;
-    const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
-    return Boolean(
-      constructor &&
-        'value' in constructor &&
-        typeof constructor.value === 'function' &&
-        constructor.value.name === 'Object' &&
-        Object.getPrototypeOf(prototype) === null
-    );
-  } catch {
-    return false;
-  }
 }
 
 /** Bounded equality for the JSON data model GeoJSON geometry/bbox values are allowed to contain.
@@ -1056,56 +1816,6 @@ function sameGeoJsonSnapshots(previous: unknown, next: unknown): boolean {
   }
 }
 
-interface IndexedGeoJsonFeature {
-  readonly id: string | number;
-  readonly index: number;
-  readonly feature: Feature;
-  readonly geometry: unknown;
-  readonly bbox: unknown;
-  readonly properties: Record<string, unknown>;
-}
-
-interface IndexedGeoJsonCollection {
-  readonly ordered: readonly IndexedGeoJsonFeature[];
-  readonly byId: ReadonlyMap<string | number, IndexedGeoJsonFeature>;
-}
-
-function indexGeoJsonCollection(value: unknown): IndexedGeoJsonCollection | null {
-  try {
-    if ((value as { type?: unknown })?.type !== 'FeatureCollection') return null;
-    const features = (value as { features?: unknown })?.features;
-    if (!Array.isArray(features) || features.length > GEOJSON_DIFF_FEATURE_LIMIT) return null;
-    const ordered: IndexedGeoJsonFeature[] = [];
-    const byId = new Map<string | number, IndexedGeoJsonFeature>();
-    for (let index = 0; index < features.length; index += 1) {
-      const feature = features[index] as Record<string, unknown> | null | undefined;
-      if (!feature || Array.isArray(feature) || feature['type'] !== 'Feature') return null;
-      const id = feature['id'];
-      if ((typeof id !== 'string' && typeof id !== 'number') || byId.has(id)) return null;
-      const rawProperties = feature['properties'];
-      if (
-        rawProperties !== null &&
-        rawProperties !== undefined &&
-        (typeof rawProperties !== 'object' || Array.isArray(rawProperties))
-      )
-        return null;
-      const indexed = {
-        id,
-        index,
-        feature: feature as unknown as Feature,
-        geometry: feature['geometry'],
-        bbox: feature['bbox'],
-        properties: (rawProperties ?? {}) as Record<string, unknown>,
-      };
-      ordered.push(indexed);
-      byId.set(id, indexed);
-    }
-    return { ordered, byId };
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Builds a maplibre-gl `updateData()` diff when stable feature ids make the change addressable,
  * and returns `null` otherwise so the caller replaces the whole source instead. Property changes,
@@ -1116,22 +1826,21 @@ function indexGeoJsonCollection(value: unknown): IndexedGeoJsonCollection | null
  * few hundred milliseconds re-tiles every polygon each time, when all that changed were the values
  * driving the colour ramp.
  *
- * Geometry and bbox values must remain semantically unchanged. The component's ownership boundary
- * necessarily detaches them on every accepted assignment, so reference identity cannot establish
- * that fact; a bounded, accessor-free comparison verifies their JSON data graph instead. Any
- * uncertainty still falls back to `setData()`.
+ * Geometry and bbox values must remain semantically unchanged. A bounded, descriptor-safe
+ * projection captures their JSON data graph before comparison; any uncertainty falls back to
+ * `setData()` while leaving the original GeoJSON identity untouched for MapLibre.
  *
  * MapLibre applies removals before additions. To preserve the feature collection's observable
  * order, the longest next-order prefix already appearing in previous order stays in place; the
  * remaining suffix is removed and re-added in its exact next order. Appends and ordinary removals
  * therefore remain minimal, while a reorder changes only the suffix it invalidated.
  */
-export function buildGeoJsonPropertyDiff(
-  previous: unknown,
-  next: unknown
+function buildProjectedGeoJsonPropertyDiff(
+  previous: CanonicalGeoJsonProjection,
+  next: CanonicalGeoJsonProjection,
 ): MapLibreGeoJsonDiff | null {
-  const previousCollection = indexGeoJsonCollection(previous);
-  const nextCollection = indexGeoJsonCollection(next);
+  const previousCollection = previous.collection;
+  const nextCollection = next.collection;
   if (!previousCollection || !nextCollection) return null;
 
   const previousGeometry: unknown[] = [];
@@ -1170,12 +1879,12 @@ export function buildGeoJsonPropertyDiff(
     if (!retained.has(after.id)) continue;
     const before = previousCollection.byId.get(after.id)!;
     const addOrUpdateProperties: { key: string; value: unknown }[] = [];
-    for (const [key, value] of Object.entries(after.properties)) {
-      if (!Object.is(before.properties[key], value)) addOrUpdateProperties.push({ key, value });
+    for (const [key, value] of after.properties) {
+      if (!Object.is(before.properties.get(key), value)) {
+        addOrUpdateProperties.push({ key, value });
+      }
     }
-    const removeProperties = Object.keys(before.properties).filter(
-      (key) => !Object.hasOwn(after.properties, key)
-    );
+    const removeProperties = [...before.properties.keys()].filter((key) => !after.properties.has(key));
     if (addOrUpdateProperties.length === 0 && removeProperties.length === 0) continue;
     update.push({ id: after.id, addOrUpdateProperties, removeProperties });
   }
@@ -1185,6 +1894,13 @@ export function buildGeoJsonPropertyDiff(
     ...(add.length ? { add } : {}),
     update,
   };
+}
+
+export function buildGeoJsonPropertyDiff(
+  previous: unknown,
+  next: unknown,
+): MapLibreGeoJsonDiff | null {
+  return buildProjectedGeoJsonPropertyDiff(projectGeoJson(previous), projectGeoJson(next));
 }
 
 export interface LyraMapEventMap {
@@ -1230,8 +1946,12 @@ export interface LyraMapEventMap {
  * its backing MapLibre source and layers use collision-free component-owned
  * ids and must not be accessed through `map`.
  *
- * Collection-bearing inputs take bounded, recursively frozen snapshots synchronously. Mutate a
- * copy and reassign it to update the map; later changes to the assigned source are not observed.
+ * Collection-bearing control data is admitted through bounded, descriptor-safe projections whose
+ * retained configuration is frozen. Opaque `choropleth.geojson`, `dataLayers[].geojson`, and
+ * marker `unsafeHtml` values retain their original identity only at the MapLibre/Popup and
+ * immutable `lr-map-marker-activate` detail boundaries; the component does not inspect them
+ * again after admission. Reassign control input when its configuration changes rather than
+ * relying on mutation of its admitted projection.
  *
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
@@ -1306,12 +2026,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     'lr-map-click',
     'lr-map-marker-activate',
   ]);
-  /** `feature` is a maplibre-gl `queryRenderedFeatures()` result -- not a plain object the generic
-   *  event-detail snapshotter can structurally clone, so its identity is preserved instead of being
-   *  walked (which would otherwise silently collapse it to `undefined`). `lngLat` still gets the
-   *  normal detached-and-frozen snapshot treatment. */
+  /** MapLibre features and admitted marker snapshots carry opaque peer values that the generic
+   *  event-detail snapshotter must not walk. The marker is already a frozen canonical record; its
+   *  `unsafeHtml` value therefore reaches both Popup and activation consumers by identity. */
   protected static override readonly identityEventDetailProperties = Object.freeze({
     'lr-map-click': Object.freeze(['feature']),
+    'lr-map-marker-activate': Object.freeze(['marker']),
   });
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
@@ -1320,6 +2040,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     'choropleth',
     'markers',
     'dataLayers',
+  ]);
+  /** The retained raw values are opaque after their schema projections below admit them. */
+  protected static override readonly identityCollectionProperties = Object.freeze([
+    'markers',
+    'dataLayers',
+  ]);
+  protected static override readonly identityCollectionObjectProperties = Object.freeze([
+    'choropleth',
   ]);
 
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -1420,9 +2148,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Dev-mode-only: catches a gradient key whose value/color stops disagree with the layer it
    * claims to describe. Warning preserves explicit override behavior while making drift visible. */
   private warnOnLegendChoroplethMismatch(): void {
-    const layer = this.choropleth;
+    const layer = this.canonicalChoropleth;
     const legend = this.legendGradient;
-    if (!layer || legend.length === 0 || !Array.isArray(layer.stops) || layer.stops.length === 0) {
+    if (!layer || legend.length === 0 || layer.stops.length === 0) {
       return;
     }
     const sameLength = legend.length === layer.stops.length;
@@ -1431,7 +2159,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       legend.every(([legendValue, legendColor], index) => {
         const layerStop = layer.stops[index];
         return (
-          Array.isArray(layerStop) &&
+          layerStop !== undefined &&
           layerStop[0] === legendValue &&
           resolvedLayerColor(this, layerStop[1], undefined) ===
             resolvedLayerColor(this, legendColor, undefined)
@@ -1473,6 +2201,38 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * changes an entry that sets neither.
    */
   @property({ attribute: false }) dataLayers: readonly LyraMapGeoJsonDataLayer[] = [];
+
+  private _canonicalChoroplethSource: unknown = UNPROJECTED_MAP_VALUE;
+  private _canonicalChoropleth: CanonicalMapChoropleth | undefined;
+  private _canonicalDataLayersSource: unknown = UNPROJECTED_MAP_VALUE;
+  private _canonicalDataLayers: readonly CanonicalMapDataLayer[] = EMPTY_CANONICAL_MAP_DATA_LAYERS;
+  private _canonicalMarkersSource: unknown = UNPROJECTED_MAP_VALUE;
+  private _canonicalMarkers: readonly CanonicalMapMarker[] = EMPTY_CANONICAL_MAP_MARKERS;
+
+  /** A property assignment gets one descriptor projection; every subsequent map path uses it. */
+  private get canonicalChoropleth(): CanonicalMapChoropleth | undefined {
+    const source = this.choropleth;
+    if (Object.is(source, this._canonicalChoroplethSource)) return this._canonicalChoropleth;
+    this._canonicalChoroplethSource = source;
+    this._canonicalChoropleth = projectMapChoropleth(source);
+    return this._canonicalChoropleth;
+  }
+
+  private get canonicalDataLayers(): readonly CanonicalMapDataLayer[] {
+    const source = this.dataLayers;
+    if (Object.is(source, this._canonicalDataLayersSource)) return this._canonicalDataLayers;
+    this._canonicalDataLayersSource = source;
+    this._canonicalDataLayers = projectMapDataLayers(source);
+    return this._canonicalDataLayers;
+  }
+
+  private get canonicalMarkers(): readonly CanonicalMapMarker[] {
+    const source = this.markers;
+    if (Object.is(source, this._canonicalMarkersSource)) return this._canonicalMarkers;
+    this._canonicalMarkersSource = source;
+    this._canonicalMarkers = projectMapMarkers(source);
+    return this._canonicalMarkers;
+  }
 
   /** Accessible name for MapLibre's focusable canvas. A nonempty host `aria-label` remains the
    *  overall component name and is not cloned onto the nested focus owner; the canvas uses this
@@ -1535,7 +2295,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private _appliedDataLayerShapes = new Map<string, string>();
   /** Last GeoJSON applied per resolved source id, so an update can be diffed against it rather
    *  than replacing the whole source. Holds a reference, not a copy -- it is only ever compared. */
-  private _appliedGeoJson = new Map<string, unknown>();
+  private _appliedGeoJson = new Map<string, CanonicalGeoJsonProjection>();
   private _nextDataLayerId = 0;
   // Cached once connectedCallback's loadMaplibre().then() resolves, and always
   // set before `_map` itself is (see that closure) -- so any code path gated
@@ -1590,17 +2350,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private pushGeoJson(
     source: MapLibreGeoJsonSource,
     resolvedSourceId: string,
-    geojson: unknown
+    geojson: unknown,
+    projection: CanonicalGeoJsonProjection = projectGeoJson(geojson),
   ): void {
     const previous = this._appliedGeoJson.get(resolvedSourceId);
     const diff =
       typeof source.updateData === 'function' && previous !== undefined
-        ? buildGeoJsonPropertyDiff(previous, geojson)
+        ? buildProjectedGeoJsonPropertyDiff(previous, projection)
         : null;
     if (diff === null || typeof source.updateData !== 'function') source.setData(geojson);
     else if (diff.update.length > 0 || diff.add?.length || diff.remove?.length)
       source.updateData(diff);
-    this._appliedGeoJson.set(resolvedSourceId, geojson);
+    this._appliedGeoJson.set(resolvedSourceId, projection);
   }
 
   /** Normalized `maxBounds`, or `null` when unset or unusable. Rejects rather than clamps a
@@ -2038,8 +2799,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         );
       }
     } else if (this._styleLoaded && (changed.has('dataLayers') || changed.has('choropleth'))) {
-      const nextChoroplethSourceId = this.choropleth
-        ? this.resolveChoroplethSourceId(this.choropleth.sourceId)
+      const choropleth = this.canonicalChoropleth;
+      const nextChoroplethSourceId = choropleth
+        ? this.resolveChoroplethSourceId(choropleth.sourceId)
         : undefined;
       // Remove a choropleth that must move namespaces before mutating data layers. This ordering
       // also makes an atomic `choropleth = undefined; dataLayers = [{ same sourceId }]` update
@@ -2085,7 +2847,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this._map.setPaintProperty(this._appliedFillLayerId, 'fill-opacity', fillOpacity);
     }
     const dataLayersBySourceId = new Map(
-      normalizedDataLayers(this.dataLayers).map((layer) => [layer.sourceId, layer]),
+      this.canonicalDataLayers.map((layer) => [layer.sourceId, layer]),
     );
     for (const [publicSourceId, sourceId] of this._appliedDataLayerIds) {
       const dataLayer = dataLayersBySourceId.get(publicSourceId);
@@ -2099,24 +2861,25 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private applyChoropleth(): void {
     if (!this._map) return;
-    if (!this.choropleth) {
+    const choropleth = this.canonicalChoropleth;
+    if (!choropleth) {
       this.removeChoropleth();
       return;
     }
-    const { geojson, field, stops } = this.choropleth;
-    const sourceId = this.resolveChoroplethSourceId(this.choropleth.sourceId);
+    const { geojson, geojsonProjection, field, stops } = choropleth;
+    const sourceId = this.resolveChoroplethSourceId(choropleth.sourceId);
     const fillLayerId = `${sourceId}-fill`;
 
     if (this._appliedChoroplethSourceId && this._appliedChoroplethSourceId !== sourceId) {
       this.removeChoropleth();
     }
 
-    warnOnUntileableProperties(geojson, 'choropleth');
+    warnOnUntileableProperties(geojsonProjection, 'choropleth');
     const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
     if (existingSource) {
       // Re-apply the data even if the color expression below ends up skipped:
       // `geojson` may have changed even though `sourceId`/`stops` didn't.
-      this.pushGeoJson(existingSource, sourceId, geojson);
+      this.pushGeoJson(existingSource, sourceId, geojson, geojsonProjection);
     } else {
       // No `promoteId` -- maplibre-gl falls back to its own default id
       // resolution (the standard top-level GeoJSON `Feature.id`, when
@@ -2128,7 +2891,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // added later it should be driven by an explicit, documented
       // `LyraMapChoroplethLayer` option (e.g. `idField`), not a silent default.
       this._map.addSource(sourceId, { type: 'geojson', data: geojson });
-      this._appliedGeoJson.set(sourceId, geojson);
+      this._appliedGeoJson.set(sourceId, geojsonProjection);
     }
     this._appliedChoroplethSourceId = sourceId;
 
@@ -2150,10 +2913,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       ([value, color]) => [value, resolvedLayerColor(this, color, undefined)] as const,
     );
     let colorExpr: unknown[];
-    if (this.choropleth.interpolation === 'step') {
+    if (choropleth.interpolation === 'step') {
       const base =
-        typeof this.choropleth.stepBaseColor === 'string' && this.choropleth.stepBaseColor.trim()
-          ? resolvedLayerColor(this, this.choropleth.stepBaseColor, undefined)
+        choropleth.stepBaseColor
+          ? resolvedLayerColor(this, choropleth.stepBaseColor, undefined)
           : resolvedStops[0]![1];
       colorExpr = ['step', ['get', field], base];
       for (const [value, color] of resolvedStops) colorExpr.push(value, color);
@@ -2161,7 +2924,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // `stops` stay in the data's own units under either interpolation, so a consumer never has to
       // pre-transform values to log10 and then hand-relabel the legend back into real units.
       const interpolationExpr =
-        this.choropleth.interpolation === 'logarithmic'
+        choropleth.interpolation === 'logarithmic'
           ? ['exponential', CHOROPLETH_LOG_INTERPOLATION_BASE]
           : ['linear'];
       colorExpr = ['interpolate', interpolationExpr, ['get', field]];
@@ -2188,7 +2951,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * `lr-choropleth-shared`, so a single conditional prefix is not sufficient.
    */
   private resolveChoroplethSourceId(sourceId: string): string {
-    const dataSourceIds = new Set(normalizedDataLayers(this.dataLayers).map((layer) => layer.sourceId));
+    const dataSourceIds = new Set(this.canonicalDataLayers.map((layer) => layer.sourceId));
     let resolved = sourceId;
     while (dataSourceIds.has(resolved)) resolved = `lr-choropleth-${resolved}`;
     return resolved;
@@ -2219,13 +2982,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   private applyDataLayers(): void {
     if (!this._map) return;
-    const layers = normalizedDataLayers(this.dataLayers);
+    const layers = this.canonicalDataLayers;
     const nextIds = new Set(layers.map((layer) => layer.sourceId));
     for (const publicSourceId of this._appliedDataLayerIds.keys()) {
       if (!nextIds.has(publicSourceId)) this.removeDataLayer(publicSourceId);
     }
     for (const layer of layers) {
-      const { sourceId: publicSourceId, geojson } = layer;
+      const { sourceId: publicSourceId, geojson, geojsonProjection } = layer;
       const shape = dataLayerShape(layer);
       const appliedShape = this._appliedDataLayerShapes.get(publicSourceId);
       // A source's cluster options cannot be mutated after `addSource()`, and a kind change swaps
@@ -2233,11 +2996,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // `_appliedDataLayerShapes`). Every other update still reuses its source and layers.
       if (appliedShape !== undefined && appliedShape !== shape) this.removeDataLayer(publicSourceId);
       const sourceId = this.resolveDataLayerSourceId(publicSourceId);
-      warnOnUntileableProperties(geojson, publicSourceId);
-      const cluster = layer.kind === 'heatmap' ? undefined : normalizedClusterOptions(layer.cluster);
+      warnOnUntileableProperties(geojsonProjection, publicSourceId);
+      const cluster = layer.cluster;
       const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
       if (existingSource) {
-        this.pushGeoJson(existingSource, sourceId, geojson);
+        this.pushGeoJson(existingSource, sourceId, geojson, geojsonProjection);
       } else {
         this._map.addSource(sourceId, {
           type: 'geojson',
@@ -2250,7 +3013,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               }
             : {}),
         });
-        this._appliedGeoJson.set(sourceId, geojson);
+        this._appliedGeoJson.set(sourceId, geojsonProjection);
       }
       this.applyDataLayerRendering(sourceId, layer);
       this._appliedDataLayerIds.set(publicSourceId, sourceId);
@@ -2263,12 +3026,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * from source management above so a theme change can re-run exactly the paint half of it without
    * touching sources, data, or map geometry.
    */
-  private applyDataLayerRendering(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+  private applyDataLayerRendering(sourceId: string, layer: CanonicalMapDataLayer): void {
     if (layer.kind === 'heatmap') {
       this.applyHeatmapLayer(sourceId, layer);
       return;
     }
-    const cluster = normalizedClusterOptions(layer.cluster);
+    const cluster = layer.cluster;
     if (cluster) {
       this.applyClusterLayers(sourceId, layer, cluster);
       return;
@@ -2282,12 +3045,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * mutate map structure -- no `getLayer`, no `addLayer`, no source touch -- so that a retheme
    * cannot re-tile data or resurrect a layer a later reconciliation removed.
    */
-  private paintDataLayer(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+  private paintDataLayer(sourceId: string, layer: CanonicalMapDataLayer): void {
     if (layer.kind === 'heatmap') {
       this.paintHeatmapLayer(sourceId, layer);
       return;
     }
-    const cluster = normalizedClusterOptions(layer.cluster);
+    const cluster = layer.cluster;
     if (cluster) {
       this.paintClusterLayers(sourceId, layer, cluster);
       return;
@@ -2296,7 +3059,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   /** The pre-existing geometry split: polygons filled, lines/outlines stroked, points circled. */
-  private applyGeometryLayers(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+  private applyGeometryLayers(sourceId: string, layer: CanonicalMapDataLayer): void {
     if (!this._map) return;
     const tone = layer.tone;
     const color = resolvedLayerColor(this, layer.color, tone);
@@ -2335,7 +3098,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   /** Paint-only half of `applyGeometryLayers`. See `paintDataLayer` for why the halves are split. */
-  private paintGeometryLayers(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+  private paintGeometryLayers(sourceId: string, layer: CanonicalMapDataLayer): void {
     if (!this._map) return;
     const tone = layer.tone;
     const color = resolvedLayerColor(this, layer.color, tone);
@@ -2358,7 +3121,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * Shared by both halves of the apply/paint split so the two can never resolve differently.
    */
   private clusterColorExpression(
-    layer: LyraMapGeoJsonDataLayer,
+    layer: CanonicalMapDataLayer,
     cluster: NormalizedClusterOptions,
   ): unknown[] | string {
     const tone = layer.tone;
@@ -2380,7 +3143,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   private applyClusterLayers(
     sourceId: string,
-    layer: LyraMapGeoJsonDataLayer,
+    layer: CanonicalMapDataLayer,
     cluster: NormalizedClusterOptions,
   ): void {
     if (!this._map) return;
@@ -2439,7 +3202,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Paint-only half of `applyClusterLayers`. */
   private paintClusterLayers(
     sourceId: string,
-    layer: LyraMapGeoJsonDataLayer,
+    layer: CanonicalMapDataLayer,
     cluster: NormalizedClusterOptions,
   ): void {
     if (!this._map) return;
@@ -2466,7 +3229,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   /** The single `heatmap` layer `kind: 'heatmap'` renders, in place of the geometry split. */
-  private applyHeatmapLayer(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+  private applyHeatmapLayer(sourceId: string, layer: CanonicalMapDataLayer): void {
     if (!this._map) return;
     const heatmapId = `${sourceId}-heatmap`;
     const options = layer.heatmap;
@@ -2474,7 +3237,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const color = this.heatmapColorExpression(layer);
     const radius = heatmapZoomValue(options?.radius, DEFAULT_HEATMAP_RADIUS, 1, 200);
     const intensity = heatmapZoomValue(options?.intensity, DEFAULT_HEATMAP_INTENSITY, 0, 100);
-    const opacity = finiteRange(Number(options?.opacity), 1, 0, 1);
+    const opacity = finiteRange(options?.opacity ?? Number.NaN, 1, 0, 1);
     if (!this._map.getLayer(heatmapId)) {
       this._map.addLayer({
         id: heatmapId,
@@ -2494,7 +3257,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   /** Paint-only half of `applyHeatmapLayer`. */
-  private paintHeatmapLayer(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+  private paintHeatmapLayer(sourceId: string, layer: CanonicalMapDataLayer): void {
     if (!this._map) return;
     const heatmapId = `${sourceId}-heatmap`;
     // `?? 1` rather than a skip: an update that DROPS `weightField` has to put the layer back on
@@ -2519,7 +3282,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._map.setPaintProperty(
       heatmapId,
       'heatmap-opacity',
-      finiteRange(Number(layer.heatmap?.opacity), 1, 0, 1),
+      finiteRange(layer.heatmap?.opacity ?? Number.NaN, 1, 0, 1),
     );
   }
 
@@ -2533,11 +3296,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * "transparent to hot". The token ramp takes over only when the result still cannot interpolate --
    * a lone stop AT density 0, which describes a flat colour rather than a gradient.
    */
-  private heatmapColorExpression(layer: LyraMapGeoJsonDataLayer): unknown[] {
+  private heatmapColorExpression(layer: CanonicalMapDataLayer): unknown[] {
     const tone = layer.tone;
-    const authored = normalizedSteps(layer.heatmap?.stops, isColorOutput, (threshold) =>
-      finiteRange(threshold, 0, 0, 1),
-    ).map(([density, color]) => [density, resolvedLayerColor(this, color, tone)] as const);
+    const authored = (layer.heatmap?.stops ?? []).map(
+      ([density, color]) => [density, resolvedLayerColor(this, color, tone)] as const,
+    );
     const authoredRamp = withTransparentFloor(authored);
     const ramp =
       authoredRamp.length >= 2
@@ -2618,24 +3381,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `_markerInstances` entry. An occurrence index (reset per render, per
     // coordinate) makes same-coordinate id-less markers distinct while
     // staying stable/consistent across re-renders as long as their relative
-    // order in `this.markers` doesn't change.
+    // order in the accepted marker sequence doesn't change.
     const coordCounts = new Map<string, number>();
     const explicitIds = new Set<string>();
-    // First-N deterministic truncation -- see `MAX_MAP_MARKERS` above.
-    const markers = Array.isArray(this.markers) ? this.markers.slice(0, MAX_MAP_MARKERS) : [];
-    for (const candidate of markers) {
-      const lngLat = this.validMarkerLngLat(candidate);
-      if (!lngLat) continue;
-      const rawLabel = (candidate as { label?: unknown }).label;
-      if (rawLabel !== undefined && typeof rawLabel !== 'string') continue;
-      const m = candidate as LyraMapMarker;
-      const rawId: unknown = m.id;
+    for (const m of this.canonicalMarkers) {
+      const lngLat = m.lngLat;
+      const mapLngLat: [number, number] = [lngLat[0], lngLat[1]];
       let key: string;
       let id: string | undefined;
-      if (rawId !== undefined) {
-        if (typeof rawId !== 'string') continue;
-        id = rawId.trim();
-        if (id.length === 0 || explicitIds.has(id)) continue;
+      if (m.id !== undefined) {
+        id = m.id;
+        if (explicitIds.has(id)) continue;
         explicitIds.add(id);
         key = `id:${id}`;
       } else {
@@ -2662,10 +3418,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         existing = undefined;
       }
       if (!existing) {
-        const marker = new mod.Marker(markerColor ? { color: markerColor } : undefined).setLngLat(lngLat);
+        const marker = new mod.Marker(markerColor ? { color: markerColor } : undefined).setLngLat(mapLngLat);
         if (m.unsafeHtml || m.label) {
           const popup = new mod.Popup({ offset: 12 });
-          if (m.unsafeHtml) popup.setHTML(m.unsafeHtml);
+          if (m.unsafeHtml) popup.setHTML(m.unsafeHtml as string);
           else if (m.label) popup.setText(m.label);
           marker.setPopup(popup);
           this.configurePopupSemantics(key, marker, popup);
@@ -2674,12 +3430,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this._markerInstances.set(key, marker);
         this._markerColors.set(key, markerColor);
       } else {
-        existing.setLngLat(lngLat);
+        existing.setLngLat(mapLngLat);
         const popup = existing.getPopup();
         if (m.unsafeHtml) {
-          if (popup) popup.setHTML(m.unsafeHtml);
+          if (popup) popup.setHTML(m.unsafeHtml as string);
           else {
-            const nextPopup = new mod.Popup({ offset: 12 }).setHTML(m.unsafeHtml);
+            const nextPopup = new mod.Popup({ offset: 12 }).setHTML(m.unsafeHtml as string);
             existing.setPopup(nextPopup);
             this.configurePopupSemantics(key, existing, nextPopup);
           }
@@ -2694,7 +3450,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           existing.setPopup(undefined);
         }
       }
-      const markerLabel = m.label?.trim() || (m.unsafeHtml ? popupText(this, m.unsafeHtml) : '');
+      const markerLabel = m.label?.trim() || markerPopupText(this, m.unsafeHtml);
       this._markerLabels.set(key, markerLabel || undefined);
       const markerElement = (this._markerInstances.get(key) as { getElement?: () => HTMLElement } | undefined)
         ?.getElement?.();
@@ -2706,7 +3462,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this.configureMarkerInteraction(markerElement, {
           id,
           lngLat,
-          marker: m,
+          marker: m as LyraMapMarker,
         });
         const popup = currentMarker?.getPopup();
         if (popup && currentMarker) {
@@ -2742,7 +3498,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     markerElement.setAttribute('role', 'button');
     markerElement.tabIndex = 0;
     const markerLabel = activation.marker.label?.trim()
-      || (activation.marker.unsafeHtml ? popupText(this, activation.marker.unsafeHtml) : '');
+      || markerPopupText(this, activation.marker.unsafeHtml);
     markerElement.setAttribute('aria-label', markerLabel || this.localize('map'));
     markerElement.setAttribute('lang', this.effectiveLocale);
     if (this.configuredMarkerElements.has(markerElement)) return;
@@ -2776,24 +3532,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private get effectiveMapLabel(): string {
     return this.getAttribute('aria-label') === '' ? '' : (this.label || this.localize('map'));
-  }
-
-  private validMarkerLngLat(candidate: unknown): [number, number] | null {
-    if (!candidate || typeof candidate !== 'object') return null;
-    const lngLat = (candidate as { lngLat?: unknown }).lngLat;
-    if (!Array.isArray(lngLat) || lngLat.length < 2) return null;
-    const [lng, lat] = lngLat;
-    if (
-      typeof lng !== 'number' ||
-      typeof lat !== 'number' ||
-      !Number.isFinite(lng) ||
-      !Number.isFinite(lat) ||
-      lat < -90 ||
-      lat > 90
-    ) {
-      return null;
-    }
-    return [lng, lat];
   }
 
   private popupId(key: string): string {
@@ -2992,7 +3730,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (stops.length < 2) return nothing;
     const lo = stops[0]!;
     const hi = stops[stops.length - 1]!;
-    const image = choroplethLegendGradientImage(stops, this.choropleth?.interpolation);
+    const image = choroplethLegendGradientImage(stops, this.canonicalChoropleth?.interpolation);
     return html`<div class="legend-gradient">
       <span part="legend-lo">${this.legendGradientLoLabel ?? this.formatCount(lo[0])}</span>
       <span

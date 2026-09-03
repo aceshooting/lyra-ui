@@ -17,12 +17,13 @@ export const styles = css`
      bites when there IS slack. */
   [part~='nav'] { display: flex; justify-content: center; align-items: center; gap: var(--lr-space-xs); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
   /* Both navigation buttons expose the shared nav part plus a purpose-specific part. */
-  button[part~='nav'], [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; }
+  button[part~='nav'], [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; font: inherit; }
   button[part~='nav'] { padding-inline: var(--lr-space-s); border-radius: var(--lr-radius); }
-  button[part~='nav']:hover, [part='agenda-event']:hover { background: var(--lr-color-brand-quiet); }
+  [part='nav-glyph'] { font-size: var(--lr-size-1em); }
+  button[part~='nav']:hover { background: var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)); }
   /* Pressed: the hovered fill carried further toward --lr-color-mix-partner, which follows the
      text colour, so the step shows in either theme instead of relying on a fixed lighten. */
-  button[part~='nav']:active, [part='agenda-event']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  button[part~='nav']:active { background: var(--lr-calendar-nav-active-bg, color-mix(in oklab, var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
   button[part~='nav']:focus-visible, [part='agenda-event']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
@@ -42,10 +43,10 @@ export const styles = css`
      feedback over whichever static fill it carries instead of being masked by it. Mirrors
      env-list.styles.ts's [aria-pressed='true']-before-:active fix for the same masking shape. */
   [part='day']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='day']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-calendar-day-active-bg, color-mix(in oklab, var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   /* Last of the equal-specificity day rules, so the ring wins on a focused today cell -- the one
      day carrying an outline of its own. The negative outline-offset keeps the ring inside the
@@ -84,6 +85,8 @@ export const styles = css`
   }
   [part='agenda'] { display: grid; gap: var(--lr-space-s); }
   [part='agenda-event'] { padding: var(--lr-space-s); border: 0; border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--_lr-calendar-agenda-event-background, var(--lr-color-surface)); color: var(--_lr-calendar-agenda-event-foreground, var(--lr-color-text)); font: inherit; text-align: start; cursor: pointer; }
+  [part='agenda-event']:hover { background: var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)); }
+  [part='agenda-event']:active { background: var(--lr-calendar-agenda-event-active-bg, color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
   @container (max-inline-size: 28rem) { [part='day'] { min-block-size: var(--lr-calendar-day-min-block-size-narrow, var(--lr-size-4rem)); } [part='event'] { font-size: var(--lr-font-size-xs); } }
   :host(:dir(rtl)) [part='nav-glyph'] { transform: scaleX(-1); }
 

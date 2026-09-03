@@ -2,14 +2,27 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './dialog.js';
 import '../../forms/input/input.js';
 import type { LyraDialog } from './dialog.js';
-import { styles } from './dialog.styles.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
 
-it('includes safe-area insets in the fixed dialog frame', () => {
-  expect(styles.cssText).to.include('var(--lr-safe-area-top)');
-  expect(styles.cssText).to.include('var(--lr-safe-area-bottom)');
-  expect(styles.cssText).to.include('var(--lr-safe-area-inline-start)');
-  expect(styles.cssText).to.include('var(--lr-safe-area-inline-end)');
+it('resolves safe-area insets on the fixed dialog frame', async () => {
+  const el = (await fixture(html`
+    <lr-dialog
+      open
+      label="Untitled"
+      style="--lr-space-l: 4px; --lr-safe-area-top: 11px; --lr-safe-area-bottom: 12px; --lr-safe-area-inline-start: 13px; --lr-safe-area-inline-end: 14px; --lr-duration-base: 0ms"
+      >Body</lr-dialog
+    >
+  `)) as LyraDialog;
+  try {
+    await el.updateComplete;
+    const computed = getComputedStyle(el);
+    expect(computed.paddingBlockStart).to.equal('11px');
+    expect(computed.paddingBlockEnd).to.equal('12px');
+    expect(computed.paddingInlineStart).to.equal('13px');
+    expect(computed.paddingInlineEnd).to.equal('14px');
+  } finally {
+    await el.close('api');
+  }
 });
 
 it('never schedules a post-update reschedule when a dialog autofocuses a control that a sibling render then disables', async () => {
@@ -706,6 +719,23 @@ it('renders the mapped visible label and close affordance by default', async () 
   expect(el.shadowRoot!.querySelector('[part="header"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part~="heading"]')?.textContent).to.equal('Untitled');
   expect(el.shadowRoot!.querySelector('[part~="close-button"]')).to.exist;
+});
+
+it('inherits a 20px host font at the close control and its 1em glyph', async () => {
+  const el = (await fixture(html`
+    <lr-dialog open label="Untitled" style="font-size: 20px; --lr-duration-base: 0ms">Body</lr-dialog>
+  `)) as LyraDialog;
+  try {
+    await el.updateComplete;
+    const close = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLButtonElement;
+    const glyph = close.querySelector('svg') as SVGElement;
+
+    expect(getComputedStyle(close).fontSize).to.equal('20px');
+    expect(getComputedStyle(glyph).width).to.equal('20px');
+    expect(getComputedStyle(glyph).height).to.equal('20px');
+  } finally {
+    await el.close('api');
+  }
 });
 
 it('renders a per-instance .strings override in the close button accessible name', async () => {

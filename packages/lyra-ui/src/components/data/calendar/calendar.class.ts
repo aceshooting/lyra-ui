@@ -14,7 +14,11 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './calendar.styles.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
-import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity.js';
+import {
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+  getOwnDataDescriptor,
+} from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_calendarEmpty, LYRA_DEFAULT_calendarLabel, LYRA_DEFAULT_calendarNextMonth, LYRA_DEFAULT_calendarPreviousMonth } from '../../../internal/default-strings.generated.js';
@@ -23,13 +27,99 @@ import { LYRA_DEFAULT_calendarEmpty, LYRA_DEFAULT_calendarLabel, LYRA_DEFAULT_ca
 
 export interface CalendarEvent {
   readonly id?: string;
-  readonly date: string;
+  readonly date: string | number | Date;
   readonly title: string;
   readonly color?: string;
   readonly data?: unknown;
 }
 export interface LyraCalendarEventMap { 'lr-date-select': CustomEvent<{ date: string }>; 'lr-event-select': CustomEvent<{ event: CalendarEvent }>; 'lr-view-change': CustomEvent<{ viewDate: string }>; }
 const monthStart = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1);
+
+interface CanonicalCalendarEvent {
+  readonly color?: string;
+  readonly date: string;
+  readonly source: CalendarEvent;
+  readonly title: string;
+}
+
+const canonicalEventSnapshots = new WeakMap<
+  readonly unknown[],
+  readonly CanonicalCalendarEvent[]
+>();
+
+function normalizeCalendarEventDate(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const date = parseISO(value);
+    return date ? formatISO(date) : undefined;
+  }
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : formatISO(date);
+  }
+  if (value === null || typeof value !== 'object') return undefined;
+  try {
+    const epoch = Date.prototype.getTime.call(value);
+    if (!Number.isFinite(epoch)) return undefined;
+    return formatISO(new Date(epoch));
+  } catch {
+    return undefined;
+  }
+}
+
+function isSafeNonArrayObject(value: unknown): value is object {
+  if (value === null || typeof value !== 'object') return false;
+  try {
+    return !Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+/** Copies only fields rendered by the calendar; the original event stays opaque and is emitted by identity. */
+function projectCalendarEvent(value: unknown): CanonicalCalendarEvent | undefined {
+  if (!isSafeNonArrayObject(value)) return undefined;
+  const date = getOwnDataDescriptor(value, 'date');
+  const title = getOwnDataDescriptor(value, 'title');
+  const color = getOwnDataDescriptor(value, 'color');
+  if (
+    date === MISSING_OWN_DATA_DESCRIPTOR ||
+    date === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    title === MISSING_OWN_DATA_DESCRIPTOR ||
+    title === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof title.value !== 'string' ||
+    title.value.trim().length === 0
+  )
+    return undefined;
+  const normalizedDate = normalizeCalendarEventDate(date.value);
+  if (!normalizedDate) return undefined;
+  return Object.freeze({
+    source: value as CalendarEvent,
+    date: normalizedDate,
+    title: title.value,
+    color:
+      color === MISSING_OWN_DATA_DESCRIPTOR ||
+      color === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof color.value !== 'string'
+        ? undefined
+        : color.value,
+  });
+}
+
+function canonicalCalendarEvents(
+  values: readonly unknown[]
+): readonly CanonicalCalendarEvent[] {
+  const cached = canonicalEventSnapshots.get(values);
+  if (cached) return cached;
+  const projected: CanonicalCalendarEvent[] = [];
+  for (const value of values) {
+    const event = projectCalendarEvent(value);
+    if (event) projected.push(event);
+  }
+  const snapshot = Object.freeze(projected);
+  canonicalEventSnapshots.set(values, snapshot);
+  return snapshot;
+}
 
 /** The two display modes `view` accepts. */
 export type CalendarView = 'month' | 'agenda';
@@ -45,8 +135,10 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * keyboard users can activate individual events without switching views.
  * Agenda view renders the same events as full-width buttons.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Public collection properties take bounded, detached readonly sequences. Calendar-only fields
+ * are projected from own data descriptors once per assignment; `lr-event-select` retains the
+ * caller's original event identity. Create a new collection and reassign it after changes;
+ * mutating the assigned array does not update the view.
  *
  * `firstDayOfWeek` defaults to `'auto'`, deriving the week start from `effectiveLocale` (via the
  * shared `resolveFirstDayOfWeek()` contract also used by `lr-date-picker`/`lr-date-input`), and
@@ -73,6 +165,12 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * @csspart event - Event marker.
  * @csspart agenda - Agenda list.
  * @csspart agenda-event - One focusable event button in agenda view (`view="agenda"` only).
+ * @cssprop [--lr-calendar-nav-hover-bg=var(--lr-color-brand-quiet)] - Month-navigation hover background.
+ * @cssprop [--lr-calendar-nav-active-bg=color-mix(in oklab, var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Month-navigation pressed background.
+ * @cssprop [--lr-calendar-day-hover-bg=var(--lr-color-brand-quiet)] - Day hover background.
+ * @cssprop [--lr-calendar-day-active-bg=color-mix(in oklab, var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Day pressed background.
+ * @cssprop [--lr-calendar-agenda-event-hover-bg=var(--lr-color-brand-quiet)] - Agenda-event hover background.
+ * @cssprop [--lr-calendar-agenda-event-active-bg=color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Agenda-event pressed background.
  * @cssprop [--lr-calendar-day-min-block-size=var(--lr-size-6rem)] - Minimum block size of a day cell.
  * @cssprop [--lr-calendar-day-min-block-size-narrow=var(--lr-size-4rem)] - Minimum block size of a day cell once the host is narrower than 28rem.
  * @cssprop [--lr-calendar-day-selected-bg=var(--lr-color-brand-quiet)] - Background of a selected day cell, decoupled from the shared token also driving the nav-button/agenda-event hover background.
@@ -132,16 +230,12 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   }
   private changeMonth(delta: number): void { const next = new Date(this.viewStart.getFullYear(), this.viewStart.getMonth() + delta, 1); this.viewDate = formatISO(next); this.emit('lr-view-change', { viewDate: this.viewDate }); }
   private selectDate(date: string): void { this.value = date; this.focusedDate = date; this.emit('lr-date-select', { date }); }
-  /** Invalid rows are omitted without cloning so `lr-event-select` retains caller identity. */
-  private get effectiveEvents(): readonly CalendarEvent[] {
-    return this.events.filter((event): event is CalendarEvent =>
-      isRecord(event)
-      && typeof event.date === 'string'
-      && isNonBlankIdentity(event.title)
-    );
+  /** Invalid rows are omitted; all later rendering uses the descriptor-safe projection. */
+  private get effectiveEvents(): readonly CanonicalCalendarEvent[] {
+    return canonicalCalendarEvents(this.events);
   }
   /** `events` bucketed by ISO date, built once per render — the month grid reads events for each of its 42 day cells and re-renders on every roving-focus arrow-key move, so a per-cell linear scan of `events` would cost O(cells × events) per keystroke. */
-  private bucketEventsByDate(events: readonly CalendarEvent[]): Map<string, CalendarEvent[]> { const buckets = new Map<string, CalendarEvent[]>(); for (const event of events) { const bucket = buckets.get(event.date); if (bucket) bucket.push(event); else buckets.set(event.date, [event]); } return buckets; }
+  private bucketEventsByDate(events: readonly CanonicalCalendarEvent[]): Map<string, CanonicalCalendarEvent[]> { const buckets = new Map<string, CanonicalCalendarEvent[]>(); for (const event of events) { const bucket = buckets.get(event.date); if (bucket) bucket.push(event); else buckets.set(event.date, [event]); } return buckets; }
   private weeks(): Date[][] { const start = this.viewStart; return monthMatrix(start.getFullYear(), start.getMonth(), this.normalizedFirstDayOfWeek); }
   /** The first and last date actually rendered by the current 6×7 grid — wider than the
    *  visible month itself (leading/trailing days from adjacent months fill out the fixed
@@ -181,7 +275,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     const rawAnchorDate = parseISO(rawAnchor);
     const anchor = rawAnchorDate && rawAnchorDate >= gridFirst && rawAnchorDate <= gridLast ? rawAnchor : formatISO(start);
     return html`<section aria-label=${label}><header part="header navigation"><button part="nav previous-button" type="button" aria-label=${this.localize('calendarPreviousMonth')} @click=${() => this.changeMonth(-1)}><span part="nav-glyph" aria-hidden="true">‹</span></button><span part="title">${monthTitle}</span><button part="nav next-button" type="button" aria-label=${this.localize('calendarNextMonth')} @click=${() => this.changeMonth(1)}><span part="nav-glyph" aria-hidden="true">›</span></button></header>
-      ${this.view === 'agenda' ? html`<div part="agenda">${agenda.length ? agenda.map((event) => { const date = parseISO(event.date); const bg = event.color ? sanitizeCssColor(event.color) : undefined; return html`<button part="agenda-event" type="button" style=${styleMap(bg ? { '--_lr-calendar-agenda-event-background': bg, '--_lr-calendar-agenda-event-foreground': 'var(--lr-color-on-brand)' } : {})} @click=${() => this.emit('lr-event-select', { event })}><strong>${date ? agendaDateFmt.format(date) : event.date}</strong> ${event.title}</button>`; }) : html`<p>${this.localize('calendarEmpty')}</p>`}</div>` : html`<div part="weekdays">${this.weekdays().map((day) => html`<span part="weekday">${day}</span>`)}</div><div part="grid" role="grid" aria-label=${monthTitle}>${weeks.map((week) => html`<div part="week" role="row">${week.map((date) => { const dateIso = formatISO(date); const dayEvents = eventsByDate?.get(dateIso) ?? []; return html`<div part="day" role="gridcell" data-date=${dateIso} data-outside=${date.getMonth() !== start.getMonth() ? 'true' : 'false'} data-today=${dateIso === today ? 'true' : 'false'} data-selected=${dateIso === this.value ? 'true' : 'false'} aria-selected=${dateIso === this.value ? 'true' : 'false'} aria-label=${dayLabelFmt.format(date)} tabindex=${dateIso === anchor ? '0' : '-1'} @click=${(event: MouseEvent) => { if (event.target === event.currentTarget || (event.target as HTMLElement).getAttribute('part') === 'date') this.selectDate(dateIso); }} @keydown=${(event: KeyboardEvent) => { if (event.target === event.currentTarget) this.onDayKeyDown(event, date); }}><span part="date">${dayNumberFmt.format(date.getDate())}</span>${dayEvents.map((item) => { const bg = item.color ? sanitizeCssColor(item.color) : undefined; return html`<button part="event" type="button" style=${styleMap(bg ? { backgroundColor: bg } : {})} @click=${(event: Event) => { event.stopPropagation(); this.emit('lr-event-select', { event: item }); }}>${item.title}</button>`; })}</div>`; })}</div>`)}</div>`}</section>`;
+      ${this.view === 'agenda' ? html`<div part="agenda">${agenda.length ? agenda.map((event) => { const date = parseISO(event.date); const bg = event.color ? sanitizeCssColor(event.color) : undefined; return html`<button part="agenda-event" type="button" style=${styleMap(bg ? { '--_lr-calendar-agenda-event-background': bg, '--_lr-calendar-agenda-event-foreground': 'var(--lr-color-on-brand)' } : {})} @click=${() => this.emit('lr-event-select', { event: event.source })}><strong>${date ? agendaDateFmt.format(date) : event.date}</strong> ${event.title}</button>`; }) : html`<p>${this.localize('calendarEmpty')}</p>`}</div>` : html`<div part="weekdays">${this.weekdays().map((day) => html`<span part="weekday">${day}</span>`)}</div><div part="grid" role="grid" aria-label=${monthTitle}>${weeks.map((week) => html`<div part="week" role="row">${week.map((date) => { const dateIso = formatISO(date); const dayEvents = eventsByDate?.get(dateIso) ?? []; return html`<div part="day" role="gridcell" data-date=${dateIso} data-outside=${date.getMonth() !== start.getMonth() ? 'true' : 'false'} data-today=${dateIso === today ? 'true' : 'false'} data-selected=${dateIso === this.value ? 'true' : 'false'} aria-selected=${dateIso === this.value ? 'true' : 'false'} aria-label=${dayLabelFmt.format(date)} tabindex=${dateIso === anchor ? '0' : '-1'} @click=${(event: MouseEvent) => { if (event.target === event.currentTarget || (event.target as HTMLElement).getAttribute('part') === 'date') this.selectDate(dateIso); }} @keydown=${(event: KeyboardEvent) => { if (event.target === event.currentTarget) this.onDayKeyDown(event, date); }}><span part="date">${dayNumberFmt.format(date.getDate())}</span>${dayEvents.map((item) => { const bg = item.color ? sanitizeCssColor(item.color) : undefined; return html`<button part="event" type="button" style=${styleMap(bg ? { backgroundColor: bg } : {})} @click=${(event: Event) => { event.stopPropagation(); this.emit('lr-event-select', { event: item.source }); }}>${item.title}</button>`; })}</div>`; })}</div>`)}</div>`}</section>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-calendar': LyraCalendar; } }

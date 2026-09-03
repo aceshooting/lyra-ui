@@ -23,6 +23,50 @@ it('renders with default orientation="vertical" and role="list" on [part="base"]
   expect(base.getAttribute('role')).to.equal('list');
 });
 
+describe('hostile focus ownership', () => {
+  it('contains a throwing owner activeElement getter while preparing cluster focus repair', async () => {
+    const el = (await fixture(html`<lr-timeline><lr-timeline-item></lr-timeline-item></lr-timeline>`)) as LyraTimeline;
+    const prior = Object.getOwnPropertyDescriptor(document, 'activeElement');
+    const item = el.querySelector('lr-timeline-item') as HTMLElement;
+    const itemRoot = item.shadowRoot!;
+    const itemActivePrior = Object.getOwnPropertyDescriptor(itemRoot, 'activeElement');
+    const nestedFocus = document.createElement('button');
+    itemRoot.append(nestedFocus);
+    let unavailable = true;
+    Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get(): Element {
+        if (unavailable) throw new TypeError('active element unavailable');
+        return { nodeType: 1 } as Element;
+      },
+    });
+    try {
+      const internals = el as unknown as {
+        captureClusterFocusRepair(clusters: readonly unknown[]): unknown;
+      };
+      expect(internals.captureClusterFocusRepair([])).to.equal(undefined);
+      unavailable = false;
+      Object.defineProperty(itemRoot, 'activeElement', {
+        configurable: true,
+        get(): Element {
+          return nestedFocus;
+        },
+      });
+      expect(
+        internals.captureClusterFocusRepair([{ offset: 0, items: [item] }])
+      ).to.equal(undefined);
+    } finally {
+      if (prior) Object.defineProperty(document, 'activeElement', prior);
+      else delete (document as unknown as { activeElement?: unknown }).activeElement;
+      if (itemActivePrior)
+        Object.defineProperty(itemRoot, 'activeElement', itemActivePrior);
+      else
+        delete (itemRoot as unknown as { activeElement?: unknown }).activeElement;
+      nestedFocus.remove();
+    }
+  });
+});
+
 it('orientation="horizontal" reflects the attribute', async () => {
   const el = (await fixture(html`<lr-timeline orientation="horizontal"></lr-timeline>`)) as LyraTimeline;
   expect(el.getAttribute('orientation')).to.equal('horizontal');

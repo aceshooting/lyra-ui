@@ -495,3 +495,30 @@ export const StickyGroups: Story = {
     `;
   },
 };
+
+/** Group-toggle and row-action hover/pressed colors remain independently themeable while action
+ * glyphs inherit the row's text sizing. */
+export const InteractionStateHooks: Story = {
+  render: () => html`
+    <div
+      style="
+        block-size: 400px;
+        inline-size: 320px;
+        border: var(--lr-border-width-thin) solid var(--lr-color-border);
+        --lr-thread-list-group-toggle-hover-bg: var(--lr-color-warning-quiet);
+        --lr-thread-list-group-toggle-hover-color: var(--lr-color-warning);
+        --lr-thread-list-group-toggle-active-bg: var(--lr-color-warning);
+        --lr-thread-list-group-toggle-active-color: var(--lr-color-on-warning);
+        --lr-thread-list-row-action-hover-bg: var(--lr-color-success-quiet);
+        --lr-thread-list-row-action-hover-color: var(--lr-color-success);
+        --lr-thread-list-row-action-active-bg: var(--lr-color-success);
+        --lr-thread-list-row-action-active-color: var(--lr-color-on-success);
+      "
+    >
+      <lr-thread-list
+        .threads=${threads}
+        .rowActions=${['pin', 'archive', 'delete']}
+      ></lr-thread-list>
+    </div>
+  `,
+};

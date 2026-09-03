@@ -162,7 +162,82 @@ it('does not mount heavy result views until an entry is disclosed', async () => 
   expect(el.shadowRoot!.querySelectorAll('lr-tool-result-view')).to.have.lengthOf(0);
 });
 
-it('owns entry records once at assignment and avoids re-reading source proxies on disclosure', async () => {
+it('projects accepted entries once, omits accessors, and retains opaque args, result, and source identities', async () => {
+  let unsafeReads = 0;
+  const accessorBacked = Object.create(null) as ToolTimelineEntry;
+  Object.defineProperties(accessorBacked, {
+    id: {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        unsafeReads += 1;
+        throw new Error('tool timeline projection must not invoke source accessors');
+      },
+    },
+    name: { configurable: true, enumerable: true, value: 'Unsafe' },
+    args: { configurable: true, enumerable: true, value: {} },
+    status: { configurable: true, enumerable: true, value: 'success' },
+  });
+  const args = { query: 'opaque' };
+  const result = { rows: ['opaque'] };
+  const source = makeEntry({ id: 'safe', name: 'Safe', args, result });
+  const reads = new Map<string, number>();
+  const originalGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+  Object.getOwnPropertyDescriptor = ((target: object, key: PropertyKey) => {
+    if (target === source && typeof key === 'string') {
+      reads.set(key, (reads.get(key) ?? 0) + 1);
+    }
+    return originalGetOwnPropertyDescriptor.call(Object, target, key);
+  }) as typeof Object.getOwnPropertyDescriptor;
+  let el: LyraToolTimeline;
+  try {
+    el = await fixture<LyraToolTimeline>(html`
+      <lr-tool-timeline .entries=${[accessorBacked, source]}></lr-tool-timeline>
+    `);
+  } finally {
+    Object.getOwnPropertyDescriptor = originalGetOwnPropertyDescriptor;
+  }
+  await el!.updateComplete;
+  expect(unsafeReads).to.equal(0);
+  expect(entriesEl(el!).map((row) => chipIn(row).callId)).to.deep.equal(['safe']);
+  expect(el!.entries[1] === source).to.equal(true);
+  const view = resultViewIn(await openEntry(el!));
+  expect(view.args === args).to.equal(true);
+  expect(view.result === result).to.equal(true);
+
+  let sourceReads = 0;
+  Object.defineProperty(source, 'name', {
+    configurable: true,
+    get: () => {
+      sourceReads += 1;
+      throw new Error('admitted entries must stay opaque after projection');
+    },
+  });
+  el!.approvalEditable = false;
+  await el!.updateComplete;
+  expect(sourceReads).to.equal(0);
+  expect(chipIn(entriesEl(el!)[0]).name).to.equal('Safe');
+  for (const field of [
+    'id',
+    'name',
+    'args',
+    'status',
+    'result',
+    'error',
+    'sourceKey',
+    'icon',
+    'startedAt',
+    'endedAt',
+    'retryCount',
+    'redactedFields',
+    'needsApproval',
+    'approved',
+  ]) {
+    expect(reads.get(field), field).to.equal(1);
+  }
+});
+
+it('defers opaque payload traversal until disclosure and does not re-read it afterwards', async () => {
   let ownKeyReads = 0;
   const args = new Proxy({ secret: 'hidden', visible: 'ok' }, {
     ownKeys(target) {
@@ -175,7 +250,7 @@ it('owns entry records once at assignment and avoids re-reading source proxies o
     <lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>
   `);
 
-  expect(ownKeyReads).to.equal(1);
+  expect(ownKeyReads).to.equal(0);
   expect(el.shadowRoot!.querySelector('lr-tool-result-view') === null).to.be.true;
   expect(resultViewIn(await openEntry(el)).args).to.deep.equal({ secret: 'Value hidden', visible: 'ok' });
   const readsAfterOpen = ownKeyReads;

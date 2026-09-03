@@ -104,12 +104,28 @@ export const styles = css`
     cursor: pointer;
   }
   lr-virtual-list::part(group-toggle):hover {
-    background: var(--lr-color-surface-raised);
-    color: var(--lr-color-text);
+    background: var(
+      --lr-thread-list-group-toggle-hover-bg,
+      var(--lr-color-surface-raised)
+    );
+    color: var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text));
   }
   lr-virtual-list::part(group-toggle):active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    color: var(--lr-color-text);
+    background: var(
+      --lr-thread-list-group-toggle-active-bg,
+      color-mix(
+        in oklab,
+        var(
+          --lr-thread-list-group-toggle-hover-bg,
+          var(--lr-color-surface-raised)
+        ),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    color: var(
+      --lr-thread-list-group-toggle-active-color,
+      var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text))
+    );
   }
   lr-virtual-list::part(group-toggle):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -156,15 +172,32 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     background: transparent;
     color: var(--lr-color-text-quiet);
+    font: inherit;
     cursor: pointer;
   }
   lr-virtual-list::part(row-action):hover {
-    background: var(--lr-color-surface-raised);
-    color: var(--lr-color-text);
+    background: var(
+      --lr-thread-list-row-action-hover-bg,
+      var(--lr-color-surface-raised)
+    );
+    color: var(--lr-thread-list-row-action-hover-color, var(--lr-color-text));
   }
   lr-virtual-list::part(row-action):active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    color: var(--lr-color-text);
+    background: var(
+      --lr-thread-list-row-action-active-bg,
+      color-mix(
+        in oklab,
+        var(
+          --lr-thread-list-row-action-hover-bg,
+          var(--lr-color-surface-raised)
+        ),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    color: var(
+      --lr-thread-list-row-action-active-color,
+      var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))
+    );
   }
   lr-virtual-list::part(row-action):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

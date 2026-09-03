@@ -36,37 +36,39 @@ export const styles = css`
   }
   [part='table'] {
     inline-size: 100%;
+    font: inherit;
   }
-  [part='name-cell'],
-  [part='sync-cell'],
-  [part='health-cell'] {
+  [part='table']::part(name-cell),
+  [part='table']::part(sync-cell),
+  [part='table']::part(health-cell) {
     display: flex;
     flex-direction: column;
     gap: var(--lr-size-0-125rem);
   }
-  [part='source-name'] {
+  [part='table']::part(source-name) {
     font-weight: var(--lr-font-weight-medium);
     color: var(--lr-color-text);
   }
-  [part='source-type'],
-  [part='sync-timestamp'],
-  [part='document-count'] {
+  [part='table']::part(source-type),
+  [part='table']::part(sync-timestamp),
+  [part='table']::part(document-count) {
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  [part='sync-error'] {
+  [part='table']::part(sync-error) {
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-danger);
   }
-  [part='sync-cell'] lr-badge,
-  [part='health-cell'] lr-badge {
+  [part='table']::part(sync-badge),
+  [part='table']::part(health-badge) {
     align-self: flex-start;
   }
-  [part='actions-menu'] {
+  [part='table']::part(actions-menu) {
     display: flex;
     justify-content: flex-end;
+    font: inherit;
   }
-  [part='actions-trigger'] {
+  [part='table']::part(actions-trigger) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -79,20 +81,18 @@ export const styles = css`
     background: none;
     color: var(--lr-color-text-quiet);
     cursor: pointer;
+    font: inherit;
   }
-  [part='actions-trigger']:hover {
+  [part='table']::part(actions-trigger):hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
     color: var(--lr-color-text);
   }
-  [part='actions-trigger']:active {
+  [part='table']::part(actions-trigger):active {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
     color: var(--lr-color-text);
   }
-  [part='actions-trigger']:focus-visible {
+  [part='table']::part(actions-trigger):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
-  }
-  [part='actions-trigger'] svg {
-    display: block;
   }
 `;

@@ -94,7 +94,8 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   the live host cascade before passing the expression to MapLibre's WebGL renderer.
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
 [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
-  trimmed and must be nonempty, and the first marker for an explicit ID wins. Markers are reconciled
+  trimmed and must be nonempty, and the first successfully admitted marker for an explicit ID wins.
+  A malformed earlier row does not reserve that ID. Markers are reconciled
   by that explicit ID (falling back
   to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
   when `id` is omitted) so an unchanged marker isn't torn down and recreated on every `markers`
@@ -120,7 +121,8 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
 GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
 'danger' | 'neutral'; color?: string; strokeColor?: string; kind?: LyraMapDataLayerKind;
 heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` is trimmed and must be nonempty; the first layer for a
-  `sourceId` wins and blank or later duplicate records are ignored. Each retained entry adds one
+  `sourceId` that is successfully admitted wins; blank, malformed, and later duplicate records are
+  ignored without reserving an identity for a valid later sibling. Each retained entry adds one
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
   matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`).
@@ -143,6 +145,10 @@ heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` 
   when stable feature IDs make a safe diff possible, otherwise `setData()`), one that's dropped has
   its private source/layers removed, and a genuinely new `sourceId` gets new resources — nothing
   leaks on removal, style change, or disconnect.
+
+  The component snapshots the configuration it reads. It passes `choropleth.geojson` and
+  `dataLayers[].geojson` through to MapLibre; assign a new `choropleth`, `dataLayers`, or `markers`
+  value after changing configuration, because mutating an assigned value is not observed.
 
   `cluster` and `kind` (both new in 12.0.0) opt one entry out of that three-layer geometry split.
   **Both are strictly additive: an entry that sets neither renders exactly what it rendered before,
@@ -216,9 +222,9 @@ expensive on an animated one. When every feature has a unique `string`/`number` 
 features keep semantically unchanged geometry/bbox values, the component emits MapLibre's
 incremental `updateData()` for property changes, additions, removals, and order changes. The exact
 next order is preserved: an unchanged prefix stays in place and only the invalidated suffix is
-removed and re-added. Lyra's immutable ownership boundary detaches GeoJSON assignments, so geometry
-reference identity cannot survive between frames; a bounded, accessor-free comparison verifies the
-JSON geometry graph instead. A missing/duplicate ID, changed geometry, exceeded bound, or uncertain
+removed and re-added. Lyra snapshots control and projection data while retaining opaque GeoJSON
+identity at the MapLibre boundary; a bounded, accessor-free comparison verifies the JSON geometry
+graph instead. A missing/duplicate ID, changed geometry, exceeded bound, or uncertain
 comparison falls back to `setData()` with no change in rendered behaviour. Peers without
 `updateData()` always take the old path.
 
@@ -272,6 +278,10 @@ is MapLibre's `point_count`/`point_count_abbreviated`/`cluster_id` properties, w
 zoom-to-cluster handler reads. The count label is deliberately not hit-tested (it sits exactly on
 the circle already queried and would only make the label the topmost hit), and a `kind: 'heatmap'`
 layer is never queried at all — MapLibre returns no features for a rendered density surface
+
+The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
+original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
+markup as described above.
 
 **Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even

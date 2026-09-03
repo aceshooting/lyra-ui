@@ -4,7 +4,7 @@ import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
-import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
@@ -335,10 +335,11 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   }
   set groups(value: readonly EmojiPickerGroup[]) {
     const old = this._groups;
-    const focused = this.shadowRoot?.activeElement as HTMLElement | null;
-    const focusedIndex = Number(focused?.dataset['index']);
+    const focused = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const focusedIndex = Number(focused?.dataset?.['index']);
     this.pendingGridFocus =
-      focused?.getAttribute('part')?.split(/\s+/).includes('emoji') && Number.isInteger(focusedIndex)
+      typeof focused?.getAttribute === 'function' &&
+      focused.getAttribute('part')?.split(/\s+/).includes('emoji') && Number.isInteger(focusedIndex)
         ? { item: this.focusedGridItem ?? this.flatItems[focusedIndex], index: focusedIndex }
         : undefined;
     this.groupsWereSet = true;

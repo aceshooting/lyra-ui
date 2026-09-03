@@ -18,6 +18,7 @@ import {
   type HighlightHandle,
 } from '../../../internal/text-highlights.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
@@ -38,6 +39,7 @@ import {
   hitTestHighlightRanges,
   HIGHLIGHT_CACHE_MAX,
   internalLinkHrefFrom,
+  markdownAnchorFromTarget,
   markdownHighlightConfigChanged,
   markdownLanguageSetChanged,
   markdownMathPeerError,
@@ -63,6 +65,40 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+const HIGHLIGHT_FAILURE_WARNING_KEY = 'lyra-markdown-highlight-failed';
+const HIGHLIGHT_FAILURE_WARNING =
+  '<lr-markdown>/<lr-markdown-core>: Syntax highlighting could not complete. Code is rendered as plain text.';
+
+function keyboardHighlightIdFrom(
+  ranges: readonly ResolvedHighlightRange[],
+  event: MouseEvent
+): string | null {
+  const coordinateLess =
+    event.clientX === 0 &&
+    event.clientY === 0 &&
+    event.screenX === 0 &&
+    event.screenY === 0;
+  // A keyboard-originated activation carries no pointing-device coordinates. Some engines retain
+  // a nonzero click count for it, so recognize both the conventional detail=0 and coordinate-less
+  // forms rather than treating keyboard activation as an ordinary off-highlight click.
+  if (event.detail !== 0 && !coordinateLess) return null;
+  const anchor = event.composedPath().find(
+    (target): target is HTMLAnchorElement => markdownAnchorFromTarget(target) !== undefined,
+  );
+  if (!anchor) return null;
+  for (let index = ranges.length - 1; index >= 0; index--) {
+    const range = ranges[index];
+    if (!range) continue;
+    try {
+      if (range.range.intersectsNode(anchor)) return range.id;
+    } catch {
+      // A stale range can be detached after content changes between a keyboard event's target
+      // resolution and its handler. It cannot activate a highlight in that state.
+    }
+  }
+  return null;
+}
 
 // Deliberately not tagged internal -- see MarkdownVariantContext's note below. This is the event
 // map of LyraMarkdownRuntimeElement, the un-exported base the public MarkdownRuntimeBase extends;
@@ -409,7 +445,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
     try {
       await processPendingHighlights(work, tokenizeOne);
-    } catch (error) {
+    } catch {
       // tokenizePendingHighlight()'s own layers (loadShikiHighlighter()/loadShikiHighlighterCore()'s
       // load-time capability validation, shikiHasLoadedLanguage()'s tolerant check,
       // tokenizeMarkdownHighlight()'s own try/catch) already absorb every failure mode they know
@@ -420,7 +456,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       // fallback. Without this catch, `void this.highlightPending(...)`'s fire-and-forget call in
       // `renderMarkdown()` would leave an unhandled rejection AND skip the `renderMarkdown()` call
       // below, silently withholding every other already-tokenized block's highlighted output too.
-      console.warn('<lr-markdown>/<lr-markdown-core> failed to tokenize a pending highlight:', error);
+      devWarnOnce(HIGHLIGHT_FAILURE_WARNING_KEY, HIGHLIGHT_FAILURE_WARNING);
     } finally {
       for (const { key } of work) this.inFlightHighlightKeys.delete(key);
     }
@@ -557,19 +593,15 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   }
 
   private readonly onContentClick = (event: MouseEvent): void => {
+    const href = internalLinkHrefFrom(event, this.internalLinkPrefix);
+    if (href !== null) event.preventDefault();
     const highlightId = hitTestHighlightRanges(
       this.resolvedHighlightRanges,
       event.clientX,
       event.clientY
-    );
-    if (highlightId) {
-      this.emit('lr-highlight-activate', { highlightId });
-      return;
-    }
-    const href = internalLinkHrefFrom(event, this.internalLinkPrefix);
-    if (href === null) return;
-    event.preventDefault();
-    this.emit('lr-link-click', { href });
+    ) ?? keyboardHighlightIdFrom(this.resolvedHighlightRanges, event);
+    if (highlightId) this.emit('lr-highlight-activate', { highlightId });
+    if (href !== null) this.emit('lr-link-click', { href });
   };
 
   override render(): TemplateResult {

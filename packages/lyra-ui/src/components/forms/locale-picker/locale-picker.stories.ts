@@ -106,6 +106,23 @@ export const RequiredInForm: Story = {
   `,
 };
 
+export const LocalizedInvalidOpen: Story = {
+  name: 'Localized required error (open)',
+  render: () => html`
+    <lr-locale-picker
+      open
+      required
+      label="Langue"
+      error-text="Choisissez une langue."
+      .strings=${{
+        localePickerLabel: 'Langue',
+        localePickerRequired: 'Choisissez une langue.',
+      }}
+      .locales=${['fr', 'de']}
+    ></lr-locale-picker>
+  `,
+};
+
 /** Narrow-allocation evidence: rows reflow inside a 320px panel/dialog/split-pane rather than
  *  overflowing it. */
 export const Narrow: Story = {

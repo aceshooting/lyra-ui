@@ -140,6 +140,7 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text-quiet);
     border-radius: var(--lr-radius);
+    font: inherit;
     cursor: pointer;
   }
   /* Once header-actions has claimed the auto margin, a second one on the close button would push

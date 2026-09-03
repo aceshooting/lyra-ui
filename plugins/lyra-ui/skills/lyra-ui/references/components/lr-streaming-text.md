@@ -77,9 +77,8 @@ property and therefore never requests `katex` itself.
 ```
 
 Token-by-token streaming can update `content` far faster than a human can usefully perceive a
-re-render, so updates funnel through `Announcer` (`../../internal/announcer.js`), reused here
-purely as a generic "coalesce rapid calls, flush the latest" timing primitive — with none of that
-class's usual DOM/ARIA plumbing. Within any `coalesce-ms` window, only the _last_ `content` value
+re-render, so updates use a shared coalescing timer. Within any `coalesce-ms` window, only the
+_last_ `content` value
 assigned actually reaches the rendered DOM. Two cases always bypass the throttle and flush
 immediately: the very first `content` assignment after mount, and any transition of `streaming`
 between `true` and `false` in _either_ direction — so the final chunk of a finished stream can

@@ -26,6 +26,7 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
+    font: inherit;
     border: var(--lr-border-width-thin) solid transparent;
     border-radius: var(--lr-radius);
     background: transparent;

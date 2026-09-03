@@ -916,6 +916,40 @@ it('localizes the separator name, honors host aria-label, and exposes value stat
   expect(divider(labelled).getAttribute('aria-disabled')).to.equal('false');
 });
 
+it('updates the localized percentage when ResizeObserver synchronizes a primary pane that retains pixels', async () => {
+  const observer = installResizeObserverStub();
+  try {
+    const element = (await fixture(html`
+      <lr-split-panel
+        lang="ar-EG"
+        primary="start"
+        position-in-pixels="100"
+        style="inline-size: 400px; block-size: 100px"
+        .strings=${{ resizeValuePercent: 'النسبة {value} بالمئة' }}
+      ></lr-split-panel>
+    `)) as LyraSplitPanel;
+
+    const handle = divider(element);
+    expect(element.positionInPixels).to.be.closeTo(100, 1);
+    expect(handle.getAttribute('aria-valuenow')).to.equal('25');
+    expect(handle.getAttribute('aria-valuetext')).to.equal(
+      `النسبة ${new Intl.NumberFormat('ar-EG').format(25)} بالمئة`,
+    );
+
+    element.style.inlineSize = '600px';
+    observer.callbacks[0]!([], {} as ResizeObserver);
+
+    expect(element.position).to.be.closeTo(100 / 6, 0.5);
+    expect(element.positionInPixels).to.be.closeTo(100, 1);
+    expect(handle.getAttribute('aria-valuenow')).to.equal('17');
+    expect(handle.getAttribute('aria-valuetext')).to.equal(
+      `النسبة ${new Intl.NumberFormat('ar-EG').format(17)} بالمئة`,
+    );
+  } finally {
+    observer.restore();
+  }
+});
+
 it('guards non-finite numeric inputs before they reach layout or snap math', async () => {
   const element = (await fixture(html`
     <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,9 +21,11 @@ Responsive month calendar with event markers and an agenda view.
 **Properties:**
 
 - `events: CalendarEvent[] = []` (attribute: false) — `{ readonly id?, readonly date, readonly
-title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is
-  sanitized before being used as the marker background. The former ignored `start`/`end` fields
-  are not part of the contract; use one event per displayed date
+title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` string, finite epoch
+  milliseconds, or a valid `Date`, then normalizes to the displayed ISO day. Invalid date/title rows
+  are omitted; `lr-event-select.detail.event` remains the original admitted object. `color` is
+  sanitized before use as the marker background. The former ignored `start`/`end` fields are not
+  part of the contract; use one event per displayed date
 - `value: string = ''` — the selected ISO date
 - `viewDate: string` (attribute `view-date`, defaults to the 1st of the current month) — the visible
   month; an unparseable value falls back to the current month
@@ -65,6 +67,10 @@ and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, ap
 day's background; `--lr-calendar-day-outside-color` (default `var(--lr-color-text-quiet)`) and
 `--lr-calendar-day-outside-bg` (default `var(--lr-color-surface)`) for adjacent-month days; and
 `--lr-calendar-day-today-outline-color` (default `var(--lr-color-brand)`) for today's outline.
+`--lr-calendar-nav-hover-bg`, `--lr-calendar-nav-active-bg`, `--lr-calendar-day-hover-bg`,
+`--lr-calendar-day-active-bg`, `--lr-calendar-agenda-event-hover-bg`, and
+`--lr-calendar-agenda-event-active-bg` independently theme navigation, day, and agenda-event
+hover/pressed states through inheritable inline fallbacks.
 These state hooks use inline fallbacks at their paint rules, so an application theme can set them
 on an ancestor. They keep persistent selection, outside-month chrome, and today's outline
 independent from shared tokens that also drive unrelated component states.

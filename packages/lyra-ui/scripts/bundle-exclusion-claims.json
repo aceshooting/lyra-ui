@@ -1,5 +1,9 @@
 {
-  "$comment": "Documented lean-entry dependency exclusions verified from real peer-inclusive esbuild metafiles. includedOptionalPeers removes only those peers from the ordinary external list; forbiddenInputs are normalized metafile path fragments. widget-renderer.class.js's `registry` property defaults to the built-in `DEFAULT_WIDGET_TYPE_REGISTRY` (see its own JSDoc), so `default-registry.js` -- a pure data module (tag-name + prop-allowlist literals via createWidgetTypeRegistry(), no component-class imports) -- is a legitimate, cheap, always-bundled input and was removed from this list; the 8 actual widget-type component classes it maps to (card/badge/button/stat/result-card/result-field/markdown/media-card) are populated separately by the side-effectful widget-renderer.ts registration entry, not by default-registry.ts, so those forbiddenInputs entries remain accurate.",
+  "$comment": "Documented lean-entry dependency exclusions verified from real peer-inclusive esbuild metafiles. includedOptionalPeers removes only those peers from the ordinary external list; forbiddenInputs are normalized metafile path fragments. tool-param-form.js intentionally registers the select and option controls it renders, but not the unused checkbox family. widget-renderer.class.js's `registry` property defaults to the built-in `DEFAULT_WIDGET_TYPE_REGISTRY` (see its own JSDoc), so `default-registry.js` -- a pure data module (tag-name + prop-allowlist literals via createWidgetTypeRegistry(), no component-class imports) -- is a legitimate, cheap, always-bundled input and was removed from this list; the 8 actual widget-type component classes it maps to (card/badge/button/stat/result-card/result-field/markdown/media-card) are populated separately by the side-effectful widget-renderer.ts registration entry, not by default-registry.ts, so those forbiddenInputs entries remain accurate.",
+  "dist/components/agent-tools/tool-param-form/tool-param-form.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": ["components/forms/checkbox/"]
+  },
   "dist/components/conversation/code-block/code-block-core.js": {
     "includedOptionalPeers": ["shiki"],
     "forbiddenInputs": ["node_modules/@shikijs/langs/dist/"]
@@ -19,6 +23,22 @@
       "components/agent-tools/result-card/result-field.class.js",
       "components/conversation/markdown/markdown.class.js",
       "components/media/media-card/media-card.class.js"
+    ]
+  },
+  "dist/components/forms/locale-picker/locale-picker.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/overlay-manager.js",
+      "internal/rendered-state.js",
+      "internal/scroll-lock.js"
+    ]
+  },
+  "dist/components/utility/export-button/export-button.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/overlay-manager.js",
+      "internal/rendered-state.js",
+      "internal/scroll-lock.js"
     ]
   }
 }

@@ -186,6 +186,32 @@ it('drops malformed run identities while retaining valid neighboring runs', asyn
   expect(rows[0]!.textContent).to.contain('Good');
 });
 
+it('uses normalized valid rows for the localized empty state and recovers for a later valid sibling', async () => {
+  const invalidRuns = [
+    null,
+    { label: 'Missing id', status: 'running' },
+    { id: 42, label: 'Numeric id', status: 'done' },
+  ] as unknown as SubagentRun[];
+  const el = await fixture<LyraSubagentPanel>(html`
+    <lr-subagent-panel
+      .runs=${invalidRuns}
+      .strings=${{ subagentPanelEmpty: 'No valid agent runs' }}
+    ></lr-subagent-panel>
+  `);
+
+  const empty = el.shadowRoot!.querySelector<HTMLElement>('lr-empty');
+  expect((empty) != null).to.equal(true);
+  expect(empty!.getAttribute('heading')).to.equal('No valid agent runs');
+  expect(el.shadowRoot!.querySelectorAll('[part~="run"]').length).to.equal(0);
+  await expect(el).shadowDom.to.be.accessible();
+
+  el.runs = [...invalidRuns, { id: 'valid', label: 'Valid later run', status: 'done' }];
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('lr-empty')) === null).to.equal(true);
+  expect(el.shadowRoot!.querySelectorAll('[part~="run"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[data-run-id="valid"]')!.textContent).to.contain('Valid later run');
+});
+
 it('applies per-instance localized strings', async () => {
   const el = (await fixture(html`<lr-subagent-panel
     .runs=${runs}
@@ -229,6 +255,62 @@ it('iteratively bounds a deeply nested hierarchy without overflowing the stack',
   );
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.getAttribute('role')).to.equal(null);
   expect(sinkTexts(), 'a hierarchy that mounts already truncated is not a live change').to.deep.equal([]);
+});
+
+it('keeps depth-12 status actions reachable at the inclusive 320px compact boundary in LTR and RTL', async () => {
+  const originalRootSize = document.documentElement.style.fontSize;
+  document.documentElement.style.fontSize = '16px';
+  try {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      for (const { status, actionPart } of [
+        { status: 'waiting-approval', actionPart: 'cancel' },
+        { status: 'error', actionPart: 'retry' },
+      ] as const) {
+        const deepRuns: SubagentRun[] = Array.from({ length: 13 }, (_, index) => ({
+          id: `depth-${index}`,
+          ...(index === 0 ? {} : { parentId: `depth-${index - 1}` }),
+          label: 'Longest reachable agent task title with translated words',
+          status,
+          task: 'Longest reachable task description with translated words',
+          model: 'Longest model identifier',
+        }));
+        const wrapper = await fixture<HTMLElement>(html`
+          <div dir=${direction} style="inline-size: 320px">
+            <lr-subagent-panel
+              style="inline-size: 100%; --lr-space-s: 8px; --lr-space-l: 24px"
+              .runs=${deepRuns}
+              .strings=${{
+                agentRunStatusWaitingApproval: 'Waiting for a very long approval decision',
+                statusError: 'A very long task failure status',
+                subagentPanelRetry: 'Retry this longest reachable subagent action',
+              }}
+            ></lr-subagent-panel>
+          </div>
+        `);
+        const el = wrapper.querySelector('lr-subagent-panel') as LyraSubagentPanel;
+        await el.updateComplete;
+        const hostRect = el.getBoundingClientRect();
+        const deepest = el.shadowRoot!.querySelector<HTMLElement>('[data-run-id="depth-12"]')!;
+        const statusElement = deepest.querySelector<HTMLElement>('[part="status"]')!;
+        const action = deepest.querySelector<HTMLButtonElement>(`[part="${actionPart}"]`)!;
+        const deepestRect = deepest.getBoundingClientRect();
+        const statusRect = statusElement.getBoundingClientRect();
+        const actionRect = action.getBoundingClientRect();
+
+        expect(getComputedStyle(deepest).marginInlineStart).to.equal('96px');
+        expect(statusRect.width).to.be.greaterThan(0);
+        expect(actionRect.width).to.be.greaterThan(0);
+        expect(deepestRect.left).to.be.at.least(hostRect.left);
+        expect(deepestRect.right).to.be.at.most(hostRect.right);
+        for (const rect of [statusRect, actionRect]) {
+          expect(rect.left).to.be.at.least(hostRect.left);
+          expect(rect.right).to.be.at.most(hostRect.right);
+        }
+      }
+    }
+  } finally {
+    document.documentElement.style.fontSize = originalRootSize;
+  }
 });
 
 it('announces a newly reached run ceiling through the shared light-DOM sink', async () => {

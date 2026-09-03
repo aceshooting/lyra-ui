@@ -16,6 +16,26 @@ const reasons = [
   { id: "unhelpful", label: "Not helpful" },
 ];
 
+function expectFeedbackSubmission(
+  detail: {
+    readonly rating: unknown;
+    readonly reasonIds: readonly string[];
+    readonly comment: unknown;
+    readonly submissionId: unknown;
+  },
+  expected: {
+    readonly rating: unknown;
+    readonly reasonIds: readonly string[];
+    readonly comment: unknown;
+  }
+): void {
+  expect(detail.rating).to.equal(expected.rating);
+  expect(detail.reasonIds).to.deep.equal(expected.reasonIds);
+  expect(detail.comment).to.equal(expected.comment);
+  expect(typeof detail.submissionId).to.equal('string');
+  expect((detail.submissionId as string).trim().length).to.be.greaterThan(0);
+}
+
 it('defaults to rating=null, no detail configuration, detailFor="down", and not pending', async () => {
   const el = (await fixture(
     html`<lr-message-feedback></lr-message-feedback>`
@@ -48,6 +68,348 @@ it("localizes thumb accessible names with the built-in English fallback and via 
   expect(down.getAttribute("aria-label")).to.equal("Mauvaise réponse");
 });
 
+it('projects only descriptor-safe feedback reason rows without invoking hostile accessors', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback></lr-message-feedback>`
+  )) as LyraMessageFeedback;
+  let hostileReads = 0;
+  const hostile = {};
+  Object.defineProperty(hostile, 'id', {
+    get(): never {
+      hostileReads += 1;
+      throw new Error('reason id getter must not run');
+    },
+  });
+  Object.defineProperty(el, 'detail', {
+    configurable: true,
+    value: {
+      reasons: [hostile, { id: 'usable', label: 'Usable reason' }],
+    },
+  });
+
+  const reasons = (
+    el as unknown as {
+      readonly detailReasons: readonly { readonly id: string; readonly label: string }[];
+    }
+  ).detailReasons;
+
+  expect(hostileReads).to.equal(0);
+  expect(reasons).to.deep.equal([{ id: 'usable', label: 'Usable reason' }]);
+  expect(Object.isFrozen(reasons)).to.be.true;
+  expect(Object.isFrozen(reasons[0]!)).to.be.true;
+});
+
+it('forwards exact native comment-textarea assistance and wrapping state only while it exists', async () => {
+  const el = (await fixture(html`
+    <lr-message-feedback
+      spellcheck="false"
+      autocapitalize="sentences"
+      autocorrect="off"
+      wrap="hard"
+      .detail=${{ commentable: true }}
+    ></lr-message-feedback>
+  `)) as LyraMessageFeedback;
+  const down = el.shadowRoot!.querySelector(
+    '[part="down-button"]'
+  ) as HTMLButtonElement;
+  down.click();
+  await el.updateComplete;
+  const textarea = el.shadowRoot!.querySelector(
+    '[part="comment"]'
+  ) as HTMLTextAreaElement;
+
+  expect(el.spellcheck).to.be.false;
+  expect(el.autocapitalize).to.equal('sentences');
+  expect(el.autocorrect).to.be.false;
+  expect(el.wrap).to.equal('hard');
+  expect(textarea.spellcheck).to.be.false;
+  expect(textarea.getAttribute('autocapitalize')).to.equal('sentences');
+  expect(textarea.getAttribute('autocorrect')).to.equal('off');
+  expect(textarea.wrap).to.equal('hard');
+
+  el.spellcheck = true;
+  el.autocapitalize = '';
+  el.autocorrect = 'false';
+  el.wrap = 'off';
+  await el.updateComplete;
+  expect(textarea.spellcheck).to.be.true;
+  expect(textarea.hasAttribute('autocapitalize')).to.be.false;
+  expect(textarea.getAttribute('autocorrect')).to.equal('off');
+  expect(textarea.wrap).to.equal('off');
+
+  el.removeAttribute('spellcheck');
+  el.removeAttribute('autocapitalize');
+  el.removeAttribute('autocorrect');
+  el.removeAttribute('wrap');
+  await el.updateComplete;
+  expect(el.spellcheck).to.be.true;
+  expect(el.autocapitalize).to.equal('');
+  expect(el.autocorrect).to.be.true;
+  expect(el.wrap).to.equal('soft');
+  expect(textarea.spellcheck).to.be.true;
+  expect(textarea.hasAttribute('autocapitalize')).to.be.false;
+  expect(textarea.hasAttribute('autocorrect')).to.be.false;
+  expect(textarea.wrap).to.equal('soft');
+
+  el.detail = { reasons };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="comment"]') === null).to.be.true;
+});
+
+it('uses frozen, nonblank, never-reused submission ids and queues the first synchronous settlement', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback></lr-message-feedback>`
+  )) as LyraMessageFeedback;
+  const up = el.shadowRoot!.querySelector(
+    '[part="up-button"]'
+  ) as HTMLButtonElement;
+  const down = el.shadowRoot!.querySelector(
+    '[part="down-button"]'
+  ) as HTMLButtonElement;
+  const details: Array<{
+    readonly submissionId?: unknown;
+    readonly reasonIds: readonly string[];
+  }> = [];
+  let firstFinalize = false;
+  let secondSettlement = true;
+  el.addEventListener('lr-feedback-submit', (event) => {
+    const detail = (event as CustomEvent<{
+      readonly submissionId?: unknown;
+      readonly reasonIds: readonly string[];
+    }>).detail;
+    details.push(detail);
+    event.preventDefault();
+    firstFinalize = el.finalizePendingSubmit(detail.submissionId as string);
+    secondSettlement = el.revertPendingSubmit(detail.submissionId as string);
+  });
+
+  up.click();
+  down.click();
+
+  expect(details).to.have.length(2);
+  expect(typeof details[0]!.submissionId).to.equal('string');
+  expect((details[0]!.submissionId as string).trim().length).to.be.greaterThan(0);
+  expect(details[1]!.submissionId).to.not.equal(details[0]!.submissionId);
+  expect(Object.isFrozen(details[0])).to.be.true;
+  expect(Object.isFrozen(details[0]!.reasonIds)).to.be.true;
+  expect(firstFinalize).to.be.true;
+  expect(secondSettlement).to.be.false;
+  expect(el.pending).to.be.false;
+});
+
+it('invalidates a pending transaction before a same-dispatch controlled write can settle it', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback></lr-message-feedback>`
+  )) as LyraMessageFeedback;
+  let settlement = true;
+  el.addEventListener('lr-feedback-submit', (event) => {
+    const submissionId = (event as CustomEvent<{ readonly submissionId?: string }>).detail
+      .submissionId;
+    event.preventDefault();
+    el.rating = null;
+    settlement = el.finalizePendingSubmit(submissionId);
+  });
+
+  (
+    el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement
+  ).click();
+
+  expect(settlement).to.be.false;
+  expect(el.pending).to.be.false;
+  expect(el.rating).to.equal(null);
+});
+
+it('auto-finalizes an uncanceled submission only after listeners observe its live transaction', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  let pendingDuringDispatch = false;
+  let submissionId = '';
+  el.addEventListener('lr-feedback-submit', (event) => {
+    pendingDuringDispatch = el.pending;
+    submissionId = (event as CustomEvent<{ readonly submissionId: string }>).detail
+      .submissionId;
+  });
+
+  (el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement).click();
+
+  expect(pendingDuringDispatch).to.be.true;
+  expect(el.pending).to.be.false;
+  expect(el.finalizePendingSubmit(submissionId)).to.be.false;
+  expect(el.revertPendingSubmit(submissionId)).to.be.false;
+});
+
+it('rejects stale, wrong, duplicate, and legacy no-argument settlements after a later transaction', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  const submissions: string[] = [];
+  el.addEventListener('lr-feedback-submit', (event) => {
+    event.preventDefault();
+    submissions.push(
+      (event as CustomEvent<{ readonly submissionId: string }>).detail.submissionId,
+    );
+  });
+  const up = el.shadowRoot!.querySelector(
+    '[part="up-button"]',
+  ) as HTMLButtonElement;
+
+  up.click();
+  const first = submissions[0]!;
+  expect(el.finalizePendingSubmit('wrong')).to.be.false;
+  expect(el.revertPendingSubmit(first)).to.be.true;
+  await el.updateComplete;
+
+  up.click();
+  const second = submissions[1]!;
+  expect(el.finalizePendingSubmit()).to.be.false;
+  expect(el.finalizePendingSubmit(first)).to.be.false;
+  expect(el.revertPendingSubmit('wrong')).to.be.false;
+  expect(el.finalizePendingSubmit(second)).to.be.true;
+  expect(el.finalizePendingSubmit(second)).to.be.false;
+});
+
+it('compare-restores feedback thumb tab stops without overwriting a consumer takeover', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  const up = el.shadowRoot!.querySelector(
+    '[part="up-button"]',
+  ) as HTMLButtonElement;
+  const action = el.getToolbarActions()[0]!;
+  up.setAttribute('tabindex', '7');
+  action.setTabIndex(-1);
+  action.releaseTabIndex?.();
+  expect(up.getAttribute('tabindex')).to.equal('7');
+
+  action.setTabIndex(-1);
+  up.setAttribute('tabindex', '5');
+  action.releaseTabIndex?.();
+  expect(up.getAttribute('tabindex')).to.equal('5');
+
+  action.setTabIndex(-1);
+  el.remove();
+  expect(up.getAttribute('tabindex')).to.equal('5');
+});
+
+it('invalidates a held transaction synchronously for controlled ownership changes but not strings or disabled', async () => {
+  const beginHeldSubmission = async (): Promise<{
+    readonly element: LyraMessageFeedback;
+    readonly submissionId: string;
+  }> => {
+    const element = (await fixture(
+      html`<lr-message-feedback></lr-message-feedback>`,
+    )) as LyraMessageFeedback;
+    let submissionId = '';
+    element.addEventListener('lr-feedback-submit', (event) => {
+      event.preventDefault();
+      submissionId = (
+        event as CustomEvent<{ readonly submissionId: string }>
+      ).detail.submissionId;
+    });
+    (
+      element.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement
+    ).click();
+    expect(element.pending).to.be.true;
+    return { element, submissionId };
+  };
+
+  for (const change of [
+    (element: LyraMessageFeedback) => {
+      element.rating = null;
+    },
+    (element: LyraMessageFeedback) => {
+      element.detail = { commentable: true };
+    },
+    (element: LyraMessageFeedback) => {
+      element.detailFor = 'both';
+    },
+    (element: LyraMessageFeedback) => {
+      element.pending = false;
+    },
+  ]) {
+    const { element, submissionId } = await beginHeldSubmission();
+    change(element);
+    expect(element.pending).to.be.false;
+    expect(element.finalizePendingSubmit(submissionId)).to.be.false;
+  }
+
+  const { element, submissionId } = await beginHeldSubmission();
+  element.strings = { feedbackPositive: 'Positive' };
+  element.disabled = true;
+  expect(element.pending).to.be.true;
+  expect(element.finalizePendingSubmit(submissionId)).to.be.true;
+});
+
+it('retires a held id across removal, reconnect, and adoption', async () => {
+  const wrapper = await fixture(html`<div><button id="outside">Outside</button></div>`);
+  const el = document.createElement('lr-message-feedback') as LyraMessageFeedback;
+  wrapper.append(el);
+  await el.updateComplete;
+  let submissionId = '';
+  el.addEventListener('lr-feedback-submit', (event) => {
+    event.preventDefault();
+    submissionId = (event as CustomEvent<{ readonly submissionId: string }>).detail
+      .submissionId;
+  });
+  (
+    el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement
+  ).click();
+  expect(el.pending).to.be.true;
+
+  el.remove();
+  expect(el.pending).to.be.false;
+  wrapper.append(el);
+  await el.updateComplete;
+  expect(el.finalizePendingSubmit(submissionId)).to.be.false;
+
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(el));
+    await el.updateComplete;
+    expect(el.revertPendingSubmit(submissionId)).to.be.false;
+
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('does not move focus after a finalized transaction is removed before its continuation', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-message-feedback .detail=${{ commentable: true }}></lr-message-feedback>
+      <button id="feedback-focus-outside">Outside</button>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-message-feedback') as LyraMessageFeedback;
+  const outside = wrapper.querySelector<HTMLButtonElement>(
+    '#feedback-focus-outside',
+  )!;
+  let submissionId = '';
+  el.addEventListener('lr-feedback-submit', (event) => {
+    event.preventDefault();
+    submissionId = (event as CustomEvent<{ readonly submissionId: string }>).detail
+      .submissionId;
+  });
+  (
+    el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement
+  ).click();
+  await el.updateComplete;
+  (
+    el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement
+  ).click();
+  expect(el.pending).to.be.true;
+
+  expect(el.finalizePendingSubmit(submissionId)).to.be.true;
+  el.remove();
+  outside.focus();
+  await aTimeout(0);
+
+  expect(document.activeElement === outside).to.be.true;
+});
+
 describe("thumbs-only (no detail configuration)", () => {
   it("toggles rating and emits one terminal submit on click, with no panel ever rendered", async () => {
     const el = (await fixture(
@@ -61,7 +423,7 @@ describe("thumbs-only (no detail configuration)", () => {
     const firstSubmit = oneEvent(el, "lr-feedback-submit");
     up.click();
     expect((await first).detail).to.deep.equal({ rating: "up" });
-    expect((await firstSubmit).detail).to.deep.equal({
+    expectFeedbackSubmission((await firstSubmit).detail, {
       rating: "up",
       reasonIds: [],
       comment: "",
@@ -73,7 +435,7 @@ describe("thumbs-only (no detail configuration)", () => {
     const secondSubmit = oneEvent(el, "lr-feedback-submit");
     up.click(); // re-activating the pressed thumb clears it
     expect((await second).detail).to.deep.equal({ rating: null });
-    expect((await secondSubmit).detail).to.deep.equal({
+    expectFeedbackSubmission((await secondSubmit).detail, {
       rating: null,
       reasonIds: [],
       comment: "",
@@ -100,14 +462,16 @@ describe("thumbs-only (no detail configuration)", () => {
     expect(el.pending).to.be.true;
     expect(el.rating).to.equal("up");
 
-    el.revertPendingSubmit();
+    const firstSubmissionId = submissions[0]!.detail.submissionId as string;
+    expect(el.revertPendingSubmit(firstSubmissionId)).to.be.true;
     await el.updateComplete;
     expect(el.pending).to.be.false;
     expect(el.rating).to.equal(null);
 
     up.click();
     expect(el.pending).to.be.true;
-    el.finalizePendingSubmit();
+    const secondSubmissionId = submissions[1]!.detail.submissionId as string;
+    expect(el.finalizePendingSubmit(secondSubmissionId)).to.be.true;
     await el.updateComplete;
     expect(el.pending).to.be.false;
     expect(el.rating).to.equal("up");
@@ -225,7 +589,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
       ) as HTMLButtonElement
     ).click();
     const ev = await submitPromise;
-    expect(ev.detail).to.deep.equal({
+    expectFeedbackSubmission(ev.detail, {
       rating: "down",
       reasonIds: ["wrong"],
       comment: "",
@@ -258,7 +622,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
       ) as HTMLButtonElement
     ).click();
     const ev = await submitPromise;
-    expect(ev.detail).to.deep.equal({
+    expectFeedbackSubmission(ev.detail, {
       rating: "down",
       reasonIds: [],
       comment: "too slow",
@@ -283,8 +647,10 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     textarea.dispatchEvent(new Event("input"));
 
     let submitCancelable = false;
+    let submissionId = '';
     el.addEventListener("lr-feedback-submit", (event) => {
       submitCancelable = event.cancelable;
+      submissionId = (event as CustomEvent<{ readonly submissionId: string }>).detail.submissionId;
       event.preventDefault();
     });
     const submit = el.shadowRoot!.querySelector(
@@ -305,7 +671,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
         .shadowRoot!.querySelector('[part="region"]')!.textContent ?? "";
     expect(liveText()).to.equal("");
 
-    el.revertPendingSubmit();
+    expect(el.revertPendingSubmit(submissionId)).to.be.true;
     await el.updateComplete;
     expect(el.pending).to.equal(false);
     expect(
@@ -317,7 +683,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     submit.click();
     await el.updateComplete;
     expect(el.pending).to.equal(true);
-    el.finalizePendingSubmit();
+    expect(el.finalizePendingSubmit(submissionId)).to.be.true;
     await el.updateComplete;
     await aTimeout(20);
     expect(el.pending).to.equal(false);
@@ -909,6 +1275,24 @@ it("gives the up/down thumb buttons the shared minimum hit area", async () => {
   expect(getComputedStyle(up).minBlockSize).to.equal("40px");
   expect(getComputedStyle(down).minInlineSize).to.equal("40px");
   expect(getComputedStyle(down).minBlockSize).to.equal("40px");
+});
+
+it('inherits a 20px host font for both thumbs and their one-em glyphs', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback style="font-size: 20px"></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  const buttons = [
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="up-button"]')!,
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="down-button"]')!,
+  ];
+
+  for (const button of buttons) {
+    expect(getComputedStyle(button).fontSize).to.equal('20px');
+    expect(getComputedStyle(button.querySelector('svg')!).width).to.equal('20px');
+    const rect = button.getBoundingClientRect();
+    expect(rect.width).to.be.at.least(40);
+    expect(rect.height).to.be.at.least(40);
+  }
 });
 
 /** Resolve a declaration value (var()s, color-mix() and all) for `property` inside the component's

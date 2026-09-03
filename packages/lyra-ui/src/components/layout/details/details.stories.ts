@@ -33,6 +33,18 @@ export const Disabled: StoryObj = {
   `,
 };
 
+/** Header actions are ordinary sibling controls, so they retain their own name, keyboard stop,
+ *  and activation even when the disclosure trigger is disabled. */
+export const HeaderActions: StoryObj = {
+  name: 'Sibling header actions',
+  render: () => html`
+    <lr-details summary="Project settings">
+      <button slot="header-actions" type="button">Add member</button>
+      Invite collaborators and choose their project roles.
+    </lr-details>
+  `,
+};
+
 export const GroupedWithCustomIcons: StoryObj = {
   name: 'Named group, appearance, and custom icons',
   parameters: {
@@ -133,7 +145,7 @@ export const NarrowRtlLongContent: StoryObj = {
     docs: {
       description: {
         story:
-          'An exact 320px RTL allocation keeps an expanded long localized summary, content block, and action inside the disclosure surface.',
+          'An exact 320px RTL allocation keeps an expanded long localized summary, sibling header action, and content block inside the disclosure surface.',
       },
     },
   },
@@ -144,6 +156,7 @@ export const NarrowRtlLongContent: StoryObj = {
     >
       <lr-details open>
         <span slot="summary">عنوانتفاصيلمحليطويلجداًبدونأيفرصةللفصلالتلقائي</span>
+        <button slot="header-actions" type="button">إضافة</button>
         <p>محتوىتفصيليمحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
         <button type="button">إجراءمحليطويلجداًبدونأيفرصةللفصلالتلقائي</button>
       </lr-details>

@@ -6,6 +6,22 @@ const meta: Meta = { title: 'Input/Number input', component: 'lr-number-input', 
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-number-input label="Quantity" value="2" min="0" max="10"></lr-number-input>` };
 
+/** Host-owned guidance is resolved onto the inherited native input. */
+export const ExternalDescription: StoryObj = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-20rem)">
+      <p id="number-input-external-description">Enter the quantity approved for this order.</p>
+      <lr-number-input
+        aria-describedby="number-input-external-description"
+        label="Quantity"
+        value="2"
+        min="0"
+        max="10"
+      ></lr-number-input>
+    </div>
+  `,
+};
+
 /** Both stepper spellings plus the increment/decrement icon slots. */
 export const StepperVariants: StoryObj = {
   render: () => html`

@@ -7,9 +7,10 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { styles } from './dock-panel.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Which edge of the panel's own container it's docked to. `'start'`/`'end'`
@@ -117,8 +118,9 @@ interface DragState {
  *   `collapsed` state).
  * @csspart base - The panel root.
  * @csspart content - The wrapper around the default slot; hidden while `collapsed`.
- * @csspart handle - The draggable resize handle on the panel's inner edge. Only rendered when
- *   `resizable` and not `collapsed`.
+ * @csspart handle - The draggable resize handle on the panel's inner edge. Its numeric ARIA range
+ *   remains in CSS pixels while `aria-valuetext` reports the current extent through the effective
+ *   locale. Only rendered when `resizable` and not `collapsed`.
  * @csspart collapse-toggle - The collapse/expand toggle button. Only rendered when `collapsible`.
  * @cssprop [--lr-dock-panel-collapsed-size=var(--lr-icon-button-size)] - The extent the panel
  *   keeps along its resize axis while `collapsed` -- enough to still host the toggle button that
@@ -144,6 +146,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     dockPanelCollapse: LYRA_DEFAULT_dockPanelCollapse,
     dockPanelExpand: LYRA_DEFAULT_dockPanelExpand,
     dockPanelResize: LYRA_DEFAULT_dockPanelResize,
+    resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -324,6 +327,12 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   private currentSizePx(): number {
     const rect = this.getBoundingClientRect();
     return this.axis === 'inline' ? rect.width : rect.height;
+  }
+
+  private resizeValueText(sizePx: number): string {
+    return this.localize('resizeValuePixels', undefined, {
+      value: getNumberFormat(this.effectiveLocale).format(Math.round(sizePx)),
+    });
   }
 
   private reconcileLiveExtent(): void {
@@ -584,6 +593,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       aria-label=${this.localize('dockPanelResize')}
       aria-orientation=${this.axis === 'inline' ? 'vertical' : 'horizontal'}
       aria-valuenow=${Math.round(nowPx)}
+      aria-valuetext=${this.resizeValueText(nowPx)}
       aria-valuemin=${Math.round(minPx)}
       aria-valuemax=${Math.round(maxPx)}
       tabindex="0"

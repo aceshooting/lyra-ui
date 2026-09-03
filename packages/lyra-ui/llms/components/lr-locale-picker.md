@@ -96,6 +96,12 @@ raises `customError` and blocks submission, `''` restores the picker's own compu
 required picker with nothing committed goes back to `valueMissing`. It survives every
 `value`/`required` change and a form reset. `getForm()` returns the browser-resolved owning form.
 
+The open list is a nonmodal overlay: only its topmost owner handles Escape and outside pointer
+dismissal; Escape restores the trigger, while Tab keeps ordinary document navigation. Disconnect or
+cross-document adoption closes it. A required, uncommitted value recomputes its intrinsic localized
+message when `.strings` or the effective locale changes; an author custom-validity message retains
+priority until cleared.
+
 **Slots:** `label`, `hint`, `error`.
 
 **CSS parts:** `form-control`, `form-control-label`, `trigger`,

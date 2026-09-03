@@ -74,3 +74,22 @@ export const CompactInsideExistingChrome: Story = {
     </div>
   `,
 };
+
+export const SurfaceAndInteractionTokens: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The terminal surface also supplies inverse ANSI text with no explicit background. Hover and press the toolbar or a regular output line to inspect the independently inherited interaction hooks.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-terminal
+      style="max-width:40rem;--lr-terminal-surface-color:var(--lr-color-surface);--lr-terminal-toolbar-button-hover-bg:var(--lr-color-success-quiet);--lr-terminal-toolbar-button-active-bg:var(--lr-color-success);--lr-terminal-line-hover-bg:var(--lr-color-warning-quiet);--lr-terminal-line-active-bg:var(--lr-color-warning)"
+      .content=${'\x1b[7mInverse ANSI fallback uses the terminal surface.\x1b[0m\nHover or press this ordinary output line.'}
+      copyable
+      downloadable
+    ></lr-terminal>
+  `,
+};

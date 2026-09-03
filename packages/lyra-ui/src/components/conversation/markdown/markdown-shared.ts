@@ -13,6 +13,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { finiteInteger } from '../../../internal/numbers.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import {
   createTextQuoteIndex,
@@ -36,7 +37,9 @@ import {
   getMarkdownDepsIfLoaded,
   type LyraMarkedParser,
   type MarkdownDeps,
+  type MarkedParserContext,
   type MarkedModule,
+  type MarkedRenderer,
 } from './markdown-loader.js';
 import { getKatex, type KatexApi } from './katex-loader.js';
 
@@ -378,6 +381,46 @@ export interface ParseMarkdownOptions {
   headingTreeOut: MarkdownHeadingItem[];
 }
 
+const MARKDOWN_SANITIZER_WARNING_KEY = 'lyra-markdown-dompurify-unavailable';
+const MARKDOWN_SANITIZER_WARNING =
+  '<lr-markdown>/<lr-markdown-core>: HTML sanitization is unavailable because the optional DOMPurify peer could not load. Content is rendered as plain text unless trusted HTML is explicitly selected.';
+
+function warnMarkdownSanitizerUnavailable(): void {
+  devWarnOnce(MARKDOWN_SANITIZER_WARNING_KEY, MARKDOWN_SANITIZER_WARNING);
+}
+
+interface MarkdownRendererOverrides extends Partial<MarkedRenderer> {
+  listitem(
+    this: MarkedParserContext,
+    token: { tokens: unknown[]; task?: boolean },
+  ): string;
+  checkbox(this: MarkedParserContext, token: { checked: boolean }): string;
+}
+
+function taskItemCheckboxLabel(
+  context: MarkedParserContext,
+  tokens: readonly unknown[],
+): string | null {
+  for (const candidate of tokens) {
+    if (typeof candidate !== 'object' || candidate === null) continue;
+    const token = candidate as { type?: unknown; tokens?: unknown };
+    if (
+      (token.type !== 'text' && token.type !== 'paragraph')
+      || !Array.isArray(token.tokens)
+    ) continue;
+    const inlineTokens = token.tokens.filter((inline) => {
+      if (typeof inline !== 'object' || inline === null) return true;
+      return (inline as { type?: unknown }).type !== 'checkbox';
+    });
+    const label = context.parser
+      .parseInline(inlineTokens, context.parser.textRenderer)
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (label) return label;
+  }
+  return null;
+}
+
 /**
  * Parses `options.content` into sanitizer-ready HTML via a fresh `marked` renderer, mirroring
  * `<lr-markdown>`'s original `parseMarkdown()` (now shared verbatim with `<lr-markdown-core>`).
@@ -412,6 +455,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
   const slugger = new Slugger();
   const activeHighlightKeys = new Set<string>();
   const pendingHighlightKeys = new Set(options.pendingKeys.map(({ key }) => key));
+  const taskItemCheckboxLabels: Array<string | null> = [];
   let hadMathFallback = false;
   const instance = new marked.Marked();
   if (mathOption) {
@@ -470,6 +514,23 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         const tag = ordered ? 'ol' : 'ul';
         const startAttr = ordered && start !== 1 ? ` start='${start}'` : '';
         return `<${tag} part='list'${startAttr}>\n${body}</${tag}>\n`;
+      },
+      listitem(token) {
+        const label = token.task === true
+          ? taskItemCheckboxLabel(this, token.tokens)
+          : null;
+        taskItemCheckboxLabels.push(label);
+        try {
+          return `<li>${this.parser.parse(token.tokens)}</li>\n`;
+        } finally {
+          taskItemCheckboxLabels.pop();
+        }
+      },
+      checkbox(token) {
+        const label = taskItemCheckboxLabels.at(-1);
+        const checked = token.checked ? ` checked=''` : '';
+        const labelAttr = label ? ` aria-label='${escapeHtml(label)}'` : '';
+        return `<input${checked} disabled='' type='checkbox'${labelAttr}> `;
       },
       code(token) {
         const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
@@ -558,7 +619,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
       html(token) {
         return escapeHtmlOption ? escapeHtml(token.text) : token.text;
       },
-    },
+    } as MarkdownRendererOverrides,
   });
   // Both Markdown variants expose a shared configurable parser, but this function still creates a
   // fresh internal instance so its renderer closures always capture current component properties.
@@ -863,7 +924,8 @@ export interface RenderMarkdownOptions {
  * event, so this stays a pure function of its inputs.
  *
  * Rendering never ships unsanitized or broken markup silently: a missing/throwing `marked`, or a
- * missing `dompurify` in `sanitize` mode both fall back to plain text plus `lr-render-error`.
+ * missing/throwing `dompurify` in `sanitize` mode both fall back to plain text plus
+ * `lr-render-error`.
  */
 export function renderMarkdownDocument(options: RenderMarkdownOptions): MarkdownRenderOutcome {
   const { deps, tag } = options;
@@ -908,7 +970,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
         'dependency failed to load — refusing to render unsanitized HTML. Install it with `pnpm add ' +
         'dompurify`, or set html-mode="trusted" to explicitly opt out of sanitization.',
     );
-    console.warn(error.message);
+    warnMarkdownSanitizerUnavailable();
     return { status: 'fallback', error, headingTree };
   }
 
@@ -921,14 +983,24 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
   // default allowlist. `annotation-xml` is deliberately never added: KaTeX's own MathML output
   // never emits it, and DOMPurify already treats it as a namespace-switching element worth
   // keeping stripped.
-  const sanitized = deps.DOMPurify.sanitize(rawHtml, {
-    ADD_ATTR: ['target'],
-    FORBID_ATTR: ['style'],
-    ...(options.math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
-  }) as string;
+  let sanitized: string;
+  try {
+    const result = deps.DOMPurify.sanitize(rawHtml, {
+      ADD_ATTR: ['target'],
+      FORBID_ATTR: ['style'],
+      ...(options.math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
+    });
+    if (typeof result !== 'string') {
+      throw new TypeError('The HTML sanitizer returned non-string markup.');
+    }
+    sanitized = restoreMarkdownHighlightStyles(result);
+  } catch (error) {
+    warnMarkdownSanitizerUnavailable();
+    return { status: 'fallback', error, headingTree };
+  }
   return {
     status: 'rendered',
-    html: restoreMarkdownHighlightStyles(sanitized),
+    html: sanitized,
     headingTree,
     mathFailed,
     pendingKeys,
@@ -1134,6 +1206,39 @@ export function hitTestHighlightRanges(ranges: readonly ResolvedHighlightRange[]
 
 // -- rendering ------------------------------------------------------------------------------------
 
+const nativeElementGetAttribute =
+  typeof Element === 'undefined' ? undefined : Element.prototype.getAttribute;
+const nativeAnchorHref =
+  typeof HTMLAnchorElement === 'undefined'
+    ? undefined
+    : Object.getOwnPropertyDescriptor(HTMLAnchorElement.prototype, 'href')?.get;
+
+/** Returns a genuine HTML anchor from a composed-path entry, rejecting hostile and structural
+ * lookalikes without relying on ambient-realm `instanceof` checks. The captured native calls
+ * brand-check foreign and adopted elements without trusting candidate-owned realm metadata. */
+export function markdownAnchorFromTarget(target: unknown): HTMLAnchorElement | undefined {
+  if ((typeof target !== 'object' && typeof target !== 'function') || target === null) {
+    return undefined;
+  }
+  if (!nativeElementGetAttribute || !nativeAnchorHref) return undefined;
+  try {
+    nativeElementGetAttribute.call(target as Element, 'data-lr-brand-probe');
+    nativeAnchorHref.call(target as HTMLAnchorElement);
+    return target as HTMLAnchorElement;
+  } catch {
+    return undefined;
+  }
+}
+
+function nativeAnchorAttribute(anchor: HTMLAnchorElement, name: string): string | undefined {
+  try {
+    const value = nativeElementGetAttribute?.call(anchor, name);
+    return typeof value === 'string' ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** The `href` of the rendered link a click landed on, when `internal-link-prefix` claims it --
  *  `null` for every other click, including one on an ordinary external link.
  *
@@ -1143,21 +1248,10 @@ export function hitTestHighlightRanges(ranges: readonly ResolvedHighlightRange[]
 export function internalLinkHrefFrom(e: MouseEvent, prefix: string): string | null {
   if (!prefix) return null;
   const anchor = e.composedPath().find(
-    (
-      target,
-    ): target is EventTarget & {
-      localName: string;
-      getAttribute(name: string): string | null;
-    } =>
-      typeof target === 'object' &&
-      target !== null &&
-      'localName' in target &&
-      target.localName === 'a' &&
-      'getAttribute' in target &&
-      typeof target.getAttribute === 'function',
+    (target): target is HTMLAnchorElement => markdownAnchorFromTarget(target) !== undefined,
   );
   if (!anchor) return null;
-  const href = anchor.getAttribute('href') ?? '';
+  const href = nativeAnchorAttribute(anchor, 'href') ?? '';
   return href.startsWith(prefix) ? href : null;
 }
 

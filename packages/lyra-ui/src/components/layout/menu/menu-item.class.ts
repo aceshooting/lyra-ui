@@ -26,6 +26,7 @@ import {
   type SubmenuPanel,
 } from './menu-shared.js';
 import { styles } from './menu-item.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export type MenuItemType = 'normal' | 'checkbox';
 export type MenuItemVariant = 'default' | 'danger';
@@ -439,7 +440,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       // target or retain focus.
       if (changed.has('disabled') || changed.has('loading')) {
         this.tabIndex = -1;
-        if (this.ownerDocument?.activeElement === this) this.blur();
+        if (activeElementIn(this.ownerDocument) === this) this.blur();
       }
     }
     if (changed.has('disabled') || changed.has('loading')) {

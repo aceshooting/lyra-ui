@@ -123,12 +123,12 @@ value to complete the update.
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).
 
-Caps: depth 32, 5,000 nodes, 100 visited props per node, and 100 unique warning keys plus one
-deterministic suppression warning. The current document/registry generation deduplicates warnings;
-binding-state-only re-resolution stays quiet, while replacing the root or registry releases prior
-keys. Exported deterministic `nodeKey`/`nodePath` identity drives reconciliation. One bounded input
-snapshot is shared by traversal, identity validation, pointer resolution, and rendering, so getters
-beyond an admitted cap are never dereferenced.
+For predictable rendering, documents are limited to depth 32, 5,000 nodes, and 100 properties per
+node. Content beyond those size limits is omitted or truncated; malformed documents fail closed,
+clearing prior output and emitting `lr-render-error`. `document` is captured when assigned, so
+mutate a copy and assign it to update; `bindingState` updates bindings without changing that
+captured document or registry. Exported deterministic `nodeKey`/`nodePath` identity drives
+reconciliation.
 
 ```ts
 import { html } from "lit";
@@ -157,10 +157,10 @@ const view = html`<lr-widget-renderer
 ```
 
 For a controlled binding, use a per-instance registry and apply the event's requested value back to
-`bindingState` (this one-field example binds `/name`). This is also the lean registration route: it imports
-the side-effect-free renderer class, defines only `lr-widget-renderer`, and imports only the mapped
-input registration. Do not import `widget-renderer.js` on this route; that entry intentionally
-installs the full default registry.
+`bindingState` (this one-field example binds `/name`). The direct class route supplies the
+default type mappings but defines only `lr-widget-renderer`; register every mapped custom element
+you use yourself. The normal `widget-renderer.js` entry also registers the eight default mapped
+elements, so do not import it on this route.
 
 ```html
 <lr-widget-renderer id="bound-widget"></lr-widget-renderer>
@@ -200,6 +200,5 @@ renderer.addEventListener("lr-widget-state-change", (event) => {
 
 **Optional peer deps:** none new — the normal registration entry directly imports the eight mapped
 components (`markdown` keeps its own `marked`/`dompurify` optional-peer fallback). The manual class
-route above is the verified lean path: its real peer-inclusive esbuild metafile excludes
-`default-registry.js` and all eight default mapped class modules, while the consumer explicitly
-imports only the component registrations its per-instance registry maps.
+route supplies the same default type mappings while leaving component registration under the
+consumer's control.

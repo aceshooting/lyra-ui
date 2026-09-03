@@ -107,6 +107,30 @@ export const GenericDownloadFallback: Story = {
   `,
 };
 
+export const DownloadStateHooks: Story = {
+  name: 'Generic download fallback — themed hover and pressed states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The download link inherits `--lr-document-preview-download-link-hover-bg` and `--lr-document-preview-download-link-active-bg` independently, so a page-level theme can retint pointer states without changing the resting brand fill.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-document-preview
+      style="
+        max-width: 24rem;
+        --lr-document-preview-download-link-hover-bg: ${storyColor('success')};
+        --lr-document-preview-download-link-active-bg: ${storyColor('danger')};
+      "
+      src="https://example.com/files/quarterly-report.pdf"
+      mime-type="application/pdf"
+      filename="quarterly-report.pdf"
+    ></lr-document-preview>
+  `,
+};
+
 export const ShellOwnedDownloadAction: Story = {
   name: 'Unsupported format — composing shell owns download',
   parameters: {

@@ -44,12 +44,15 @@ export const ResizableColumns: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Drag a separator, or focus it and use ArrowLeft/ArrowRight (10px), Shift+Arrow (50px), Home, and End.',
+        story:
+          'Drag a separator, or focus it and use ArrowLeft/ArrowRight (10px), Shift+Arrow (50px), Home, and End. The numeric ARIA range stays in CSS pixels while the current value is localized for assistive technology.',
       },
     },
   },
   render: () => html`
     <lr-table
+      lang="ar-EG"
+      .strings=${{ resizeValuePixels: 'العرض {value} بكسل' }}
       .columns=${[
         { ...columns[0]!, width: '192px', minWidth: '128px', maxWidth: '320px', resizable: true },
         { ...columns[1]!, resizable: true },
@@ -577,6 +580,7 @@ const expandableExpandedKeys = new Set<string | number>();
 
 function renderExpandableRows(): unknown {
   return html`<lr-table
+    style="font-family: monospace; --lr-font-size-md-sm: 20px"
     .columns=${detailColumns}
     .rows=${detailRows}
     .rowKey=${(r: DetailRow) => r.id}
@@ -602,6 +606,14 @@ const detailColumns: TableColumn<DetailRow>[] = [
 ];
 
 export const ExpandableRows: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The row-expand control inherits table typography, so its 1em chevron scales together with the surrounding table text.',
+      },
+    },
+  },
   render: () => html`<div>${renderExpandableRows()}</div>`,
 };
 

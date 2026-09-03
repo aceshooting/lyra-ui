@@ -108,7 +108,7 @@ export const styles = css`
   [part='table'] {
     inline-size: 100%;
     border-collapse: collapse;
-    font-size: var(--lr-font-size-md-sm);
+    font: inherit;
   }
   /* Resolved in table.class.ts as a floor: 'fixed' when the layout property asks, when a column
      carries a declared or resized width, or during a resize gesture. Kept off
@@ -367,6 +367,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    font: inherit;
     border: none;
     background: none;
     padding: var(--lr-space-xs);

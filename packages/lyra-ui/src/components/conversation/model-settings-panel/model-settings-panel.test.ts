@@ -208,6 +208,178 @@ it('re-clamps temperature to a narrowed step grid when temperatureStep changes',
   expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal(String(el.temperature));
 });
 
+it('keeps snap-then-final-clamp temperature values aligned through assignments, child events, and domain re-clamping', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel
+      .temperature=${0}
+      .temperatureMin=${0}
+      .temperatureMax=${1}
+      .temperatureStep=${0.7}
+    ></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  const child = slider(el);
+
+  const expectParity = async (value: number): Promise<void> => {
+    await el.updateComplete;
+    await child.updateComplete;
+    expect(el.temperature).to.equal(value);
+    expect(child.valueAsNumber).to.equal(value);
+  };
+
+  // The upper endpoint is deliberately not on the 0.7 grid. Snap the raw
+  // value first, then retain that endpoint in the final clamp.
+  el.temperature = 1.1;
+  await expectParity(1);
+
+  child.dispatchEvent(new CustomEvent('lr-input', {
+    bubbles: true,
+    composed: true,
+    detail: { value: 1.1 },
+  }));
+  await expectParity(1);
+
+  const changed = oneEvent(el, 'lr-change');
+  child.dispatchEvent(new CustomEvent('lr-change', {
+    bubbles: true,
+    composed: true,
+    detail: { value: 1.1 },
+  }));
+  expect((await changed as CustomEvent<ModelSettingsChangeDetail>).detail.temperature).to.equal(1);
+  await expectParity(1);
+
+  el.temperatureMax = 1.2;
+  await expectParity(0.7);
+  el.temperature = 1.1;
+  await expectParity(1.2);
+  el.temperatureMax = 1;
+  await expectParity(1);
+});
+
+it('keeps reversed, non-finite, subnormal, and extreme assignments, child events, and re-clamps aligned with the nested slider', async () => {
+  const vectors: ReadonlyArray<{
+    name: string;
+    temperature: number;
+    min: number;
+    max: number;
+    step: number;
+    expected: number;
+    tolerance?: number;
+    reclamp: (element: LyraModelSettingsPanel) => void;
+    reclamped: number;
+    reclampedTolerance?: number;
+  }> = [
+    {
+      name: 'reversed bounds',
+      temperature: 1.1,
+      min: 1,
+      max: 0,
+      step: 0.7,
+      expected: 1,
+      reclamp: (element) => {
+        element.temperatureMin = 0.5;
+      },
+      reclamped: 0.5,
+    },
+    {
+      name: 'non-finite temperature',
+      temperature: Number.POSITIVE_INFINITY,
+      min: 0,
+      max: 1,
+      step: 0.7,
+      expected: 0,
+      reclamp: (element) => {
+        element.temperatureMin = 0.2;
+      },
+      reclamped: 0.2,
+    },
+    {
+      name: 'subnormal endpoint',
+      temperature: 1,
+      min: 0,
+      max: Number.MIN_VALUE,
+      step: Number.MIN_VALUE,
+      expected: Number.MIN_VALUE,
+      reclamp: (element) => {
+        element.temperatureMax = 0;
+      },
+      reclamped: 0,
+    },
+    {
+      name: 'fractional low anchor',
+      temperature: 0.17,
+      min: 0.07,
+      max: 1,
+      step: 0.1,
+      expected: 0.17,
+      reclamp: (element) => {
+        element.temperatureMax = 0.6;
+      },
+      reclamped: 0.17,
+    },
+    {
+      name: 'extreme precision',
+      temperature: 5e293,
+      min: 0,
+      max: 1e300,
+      step: 5e-15,
+      expected: 5e293,
+      tolerance: 1e280,
+      reclamp: (element) => {
+        element.temperatureMax = 1e292;
+      },
+      reclamped: 1e292,
+      reclampedTolerance: 1e278,
+    },
+  ];
+
+  const assertValue = (actual: number, expected: number, tolerance: number | undefined, message: string): void => {
+    if (tolerance === undefined) expect(actual, message).to.equal(expected);
+    else expect(actual, message).to.be.closeTo(expected, tolerance);
+  };
+
+  for (const vector of vectors) {
+    const el = (await fixture(html`
+      <lr-model-settings-panel
+        .temperature=${0}
+        .temperatureMin=${vector.min}
+        .temperatureMax=${vector.max}
+        .temperatureStep=${vector.step}
+      ></lr-model-settings-panel>
+    `)) as LyraModelSettingsPanel;
+    const child = slider(el);
+
+    const assertParity = async (value: number, tolerance: number | undefined, phase: string): Promise<void> => {
+      await el.updateComplete;
+      await child.updateComplete;
+      assertValue(el.temperature, value, tolerance, `${vector.name} panel ${phase}`);
+      assertValue(child.valueAsNumber, value, tolerance, `${vector.name} slider ${phase}`);
+    };
+
+    el.temperature = vector.temperature;
+    await assertParity(vector.expected, vector.tolerance, 'assignment');
+
+    child.dispatchEvent(new CustomEvent('lr-input', {
+      bubbles: true,
+      composed: true,
+      detail: { value: vector.temperature },
+    }));
+    await assertParity(vector.expected, vector.tolerance, 'input event');
+
+    const changed = oneEvent(el, 'lr-change');
+    child.dispatchEvent(new CustomEvent('lr-change', {
+      bubbles: true,
+      composed: true,
+      detail: { value: vector.temperature },
+    }));
+    const change = await changed as CustomEvent<ModelSettingsChangeDetail>;
+    assertValue(change.detail.temperature, vector.expected, vector.tolerance, `${vector.name} change event`);
+    await assertParity(vector.expected, vector.tolerance, 'change event');
+
+    vector.reclamp(el);
+    await assertParity(vector.reclamped, vector.reclampedTolerance, 're-clamp');
+  }
+});
+
 it('normalizes direct out-of-range and non-finite temperature assignments to the rendered slider value', async () => {
   const el = (await fixture(
     html`<lr-model-settings-panel temperature-min="0" temperature-max="2"></lr-model-settings-panel>`,
@@ -283,10 +455,19 @@ it('bounds huge finite visible values while retaining the exact accessible value
   const child = slider(el);
   await child.updateComplete;
   const thumb = child.shadowRoot!.querySelector('[part~="thumb"]')!;
+  const formatter = child.valueFormatter;
 
   expect(readout.textContent!.length).to.be.lessThan(24);
   expect(readout.textContent).to.match(/E|e/);
+  expect(formatter).to.be.a('function');
   expect(thumb.getAttribute('aria-valuenow')).to.equal(String(1e308));
+  expect(thumb.getAttribute('aria-valuetext')).to.equal(readout.textContent);
+  expect(thumb.getAttribute('aria-valuetext')).to.not.equal(thumb.getAttribute('aria-valuenow'));
+
+  el.model = 'another-model';
+  await el.updateComplete;
+  await child.updateComplete;
+  expect(child.valueFormatter).to.equal(formatter);
   expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
 });
 

@@ -31,6 +31,37 @@ describe('lr-agent-trace', () => {
     expect(el.hiddenKinds).to.deep.equal([]);
   });
 
+  it('retains and reuses the one-read shared span projection without re-reading admitted source rows', async () => {
+    const source: LyraSpan = {
+      id: 'safe',
+      name: 'Safe span',
+      kind: 'tool',
+      startMs: 0,
+      status: 'success',
+    };
+    const el = await fixture<LyraAgentTrace>(html`
+      <lr-agent-trace .spans=${[source]}></lr-agent-trace>
+    `);
+    await el.updateComplete;
+    expect(el.spans[0] === source).to.equal(true);
+    const tree = el.shadowRoot!.querySelector<LyraTraceTree>('lr-trace-tree')!;
+    expect(tree.shadowRoot!.querySelector('[part="row"]')?.getAttribute('data-id')).to.equal('safe');
+
+    let sourceReads = 0;
+    Object.defineProperty(source, 'name', {
+      configurable: true,
+      get: () => {
+        sourceReads += 1;
+        throw new Error('admitted span sources must stay opaque after projection');
+      },
+    });
+    el.label = 'Trace';
+    await el.updateComplete;
+
+    expect(sourceReads).to.equal(0);
+    expect(tree.shadowRoot!.querySelector('[part="row"]')?.getAttribute('data-id')).to.equal('safe');
+  });
+
   it('renders through the composed lr-trace-tree, passing spans/activeSpanId/label straight through', async () => {
     const el = (await fixture(
       html`<lr-agent-trace .spans=${SPANS} active-span-id="llm" label="My trace"></lr-agent-trace>`,
@@ -136,6 +167,32 @@ describe('lr-agent-trace', () => {
     const ev = await listener;
     expect(ev.detail.hiddenKinds).to.deep.equal(['tool']);
     expect(rawEvents).to.equal(0);
+  });
+
+  it('contains the child visibility proposal without canceling its eventual commit', async () => {
+    const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
+    const toolItem = [...legend.shadowRoot!.querySelectorAll('[part~="item"]')].find((item) =>
+      item.textContent!.includes('Tool'),
+    ) as HTMLButtonElement;
+    let leakedProposals = 0;
+    let childProposals = 0;
+    let childCommits = 0;
+    let wrapperCommits = 0;
+    el.addEventListener('lr-before-visibility-change', () => leakedProposals += 1);
+    legend.addEventListener('lr-before-visibility-change', () => childProposals += 1);
+    legend.addEventListener('lr-visibility-change', () => childCommits += 1);
+    el.addEventListener('lr-span-visibility-change', () => wrapperCommits += 1);
+
+    toolItem.click();
+    await el.updateComplete;
+
+    expect(leakedProposals).to.equal(0);
+    expect(childProposals).to.equal(1);
+    expect(childCommits).to.equal(1);
+    expect(wrapperCommits).to.equal(1);
+    expect(el.hiddenKinds).to.deep.equal(['tool']);
   });
 
   it('renders one handoff quick-jump entry per visible agent-kind span, composing lr-handoff-divider', async () => {

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 16 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -117,7 +117,10 @@ property).
 - `formatter?: LyraChartFormatter` (attribute: false) — the family-wide context-object formatter:
   `({ value, surface, datasetIndex?, index?, label?, seriesLabel?, statistic? }) => string`.
   `surface` identifies `visual`, `spoken`, `export`, `tick`, `tooltip`, `legend`, or `table`.
-  It takes precedence over the legacy positional `valueFormatter` where both are supplied.
+  `statistic`, when present for a structured datum or stack total, is one of `x`, `y`, `r`,
+  `min`, `q1`, `median`, `q3`, `max`, or `total`. It takes precedence over the legacy positional
+  `valueFormatter` where both are supplied. The legacy callback remains a visual/table compatibility
+  hook; use `formatter` when a generated spoken value or CSV cell must use the same unit text.
 - `area: boolean = false` — chart-wide default for whether line-type series fill the region under
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
@@ -172,8 +175,10 @@ property).
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
   `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
   table stays in the DOM in both states, so assistive technology never loses it, and the button
-  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
-  renders and behavior is identical to before.
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Until the
+  reader activates it, the disclosure follows `showDataTable`; afterwards the reader's selected
+  state remains authoritative for that mounted chart. A supplied `slot="data-table"` follows this
+  same disclosure state. Unset, nothing renders and behavior is identical to before.
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
@@ -328,7 +333,8 @@ plot in narrow containers;
 declaration on a DOM element (the outline is painted by the stylesheet, not by Chart.js), so it is
 consumed directly with no `getComputedStyle` bridging; it is an inline `var()` fallback at the point
 of use, so it can be set on the element or any ancestor, and left unset the outline is exactly the
-`--lr-border-width-thin` it always was.
+`--lr-border-width-thin` it always was. `--lr-chart-canvas-hover-outline-color` (default
+`var(--lr-chart-grid-color)`) independently controls that outline's color.
 
 `--lr-chart-pattern-step` (default `var(--lr-space-2xs)`) is the tile size of the texture painted on
 `[part="legend-swatch"]` while `forced-colors: active` matches — the legend half of the non-colour

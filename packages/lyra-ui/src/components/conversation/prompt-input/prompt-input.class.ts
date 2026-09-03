@@ -16,6 +16,7 @@ import {
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { normalizeCatalog } from '../../../internal/catalog-picker.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
 import type {
@@ -30,6 +31,7 @@ import type {
   LyraMentionPopover,
   LyraMentionSelectDetail,
 } from '../../utility/mention-popover/mention-popover.class.js';
+import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type {
   ChatComposerSelectionDirection,
   ChatComposerStatus,
@@ -53,7 +55,7 @@ export type { LyraVoiceCatalogEntry } from '../voice-picker/voice-picker.class.j
 import { styles } from './prompt-input.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptInputControls, LYRA_DEFAULT_promptInputLabel, LYRA_DEFAULT_promptInputSources } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptInputControls, LYRA_DEFAULT_promptInputLabel, LYRA_DEFAULT_promptInputSources } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraPromptSuggestion extends LyraMentionItem {
@@ -178,6 +180,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
     promptInputAttachments: LYRA_DEFAULT_promptInputAttachments,
     promptInputControls: LYRA_DEFAULT_promptInputControls,
     promptInputLabel: LYRA_DEFAULT_promptInputLabel,
@@ -204,7 +207,14 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     'lr-queue-change',
     'lr-send-now',
   ]);
-
+  /** Prompt-queue metadata is opaque caller state; retain it while freezing the forwarding
+   * envelope instead of recursively reflecting a detail the child has already canonicalized. */
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-send-now': Object.freeze(['item']),
+  });
+  protected static override readonly identityEventDetailCollectionItems = Object.freeze({
+    'lr-queue-change': Object.freeze(['items']),
+  });
   private suggestionCaretGeneration = 0;
   private _value = '';
   @property()
@@ -217,7 +227,17 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     this.suggestionCaretGeneration += 1;
     this.requestUpdate('value', old);
   }
-  @property() status: ChatComposerStatus = 'idle';
+  private statusValue: ChatComposerStatus = 'idle';
+  /** Forwarded composer state. Invalid input reads as the safe idle state without rewriting this host's attribute. */
+  @property()
+  get status(): ChatComposerStatus {
+    return this.statusValue;
+  }
+  set status(value: ChatComposerStatus) {
+    const previous = this.statusValue;
+    this.statusValue = normalizeChatComposerStatus(value);
+    this.requestUpdate('status', previous);
+  }
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true, attribute: 'readonly' }) readOnly =
@@ -401,11 +421,11 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener('focusout', this.onCompositeFocusOut);
+    this.addEventListener('keydown', this.onCompositeKeyDown, true);
   }
 
   override disconnectedCallback(): void {
-    this.removeEventListener('focusout', this.onCompositeFocusOut);
+    this.removeEventListener('keydown', this.onCompositeKeyDown, true);
     this.suggestionCaretGeneration += 1;
     this.closeSuggestions();
     super.disconnectedCallback();
@@ -417,10 +437,6 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     if (popover && this.suggestionAnchor) {
       popover.anchor = this.suggestionAnchor;
     }
-    this.syncSuggestionAria();
-    void popover?.updateComplete.then(() => {
-      if (this.suggestionPopover === popover) this.syncSuggestionAria();
-    });
   }
 
   private suggestions(): readonly LyraPromptSuggestion[] {
@@ -476,6 +492,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return;
     const popover = this.suggestionPopover;
     if (
       this.disabled ||
@@ -489,11 +506,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         event.key === 'ArrowDown' || event.key === 'ArrowUp';
       const generation = ++this.suggestionNavigationGeneration;
       void popover.updateComplete.then(async () => {
-        const reflected = this.syncSuggestionAria();
-        const focused = deepActiveElementIn(this.ownerDocument);
         if (
           shouldMoveFocus &&
-          !reflected &&
           generation === this.suggestionNavigationGeneration &&
           this.isConnected &&
           !this.disabled &&
@@ -501,12 +515,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
           this.suggestionPopover === popover &&
           this.activeSuggestion &&
           popover.open &&
-          focused !== null &&
-          composedContains(this, focused)
+          this.suggestionFocusIsOwned(popover)
         ) {
           await popover.focusActiveOption({
             ownsFocus: () => {
-              const current = deepActiveElementIn(this.ownerDocument);
               return (
                 generation === this.suggestionNavigationGeneration &&
                 this.isConnected &&
@@ -515,8 +527,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
                 this.suggestionPopover === popover &&
                 this.activeSuggestion !== null &&
                 popover.open &&
-                current !== null &&
-                composedContains(this, current)
+                this.suggestionFocusIsOwned(popover)
               );
             },
           });
@@ -525,14 +536,41 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     }
   }
 
+  /** A suggestion session owns only its textarea and its own popup, never sibling prompt controls. */
+  private suggestionFocusIsOwned(
+    popover: LyraMentionPopover,
+    focused: Element | null = deepActiveElementIn(this.ownerDocument),
+  ): boolean {
+    return (
+      focused === this.composer?.input ||
+      // A section-level focus event retargets the composed textarea to this host. This is a
+      // narrow alias for the textarea, not containment of the composer or prompt tree.
+      focused === this.composer ||
+      (focused !== null && composedContains(popover, focused))
+    );
+  }
+
   private closeSuggestions(): void {
     this.suggestionNavigationGeneration += 1;
     this.activeSuggestion = null;
     this.suggestionAnchor = undefined;
-    this.syncSuggestionAria();
   }
 
-  private onCompositeFocusOut = (): void => {
+  private onCompositeKeyDown = (event: KeyboardEvent): void => {
+    if (event.composedPath()[0] === this.composer?.input) this.onKeyDown(event);
+  };
+
+  private onCompositeFocusOut = (event: FocusEvent): void => {
+    const popover = this.suggestionPopover;
+    if (!popover || !this.activeSuggestion || !popover.open) return;
+    // The guard is deliberately realm-neutral for adopted prompt trees. `suggestionFocusIsOwned`
+    // handles the single retargeted composer-host alias without admitting its sibling controls.
+    const relatedTarget = isHtmlElement(event.relatedTarget) ? event.relatedTarget : null;
+    if (!this.suggestionFocusIsOwned(popover, relatedTarget)) {
+      // Invalidate a pending Arrow transfer before its updateComplete continuation can move
+      // focus into the popup. The microtask below still permits textarea-to-popup handoff.
+      this.suggestionNavigationGeneration += 1;
+    }
     const generation = this.suggestionNavigationGeneration;
     queueMicrotask(() => {
       if (
@@ -540,8 +578,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         generation !== this.suggestionNavigationGeneration
       )
         return;
-      const focused = deepActiveElementIn(this.ownerDocument);
-      if (!focused || !composedContains(this, focused)) this.closeSuggestions();
+      const currentPopover = this.suggestionPopover;
+      if (!currentPopover || !this.suggestionFocusIsOwned(currentPopover)) this.closeSuggestions();
     });
   };
 
@@ -597,21 +635,6 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     relayNativeEvent(this, event);
   };
 
-  private syncSuggestionAria(): boolean {
-    const input = this.composer?.input;
-    const popover = this.suggestionPopover;
-    if (!input) return false;
-    // Neither aria-controls nor aria-activedescendant string IDREFs can cross
-    // from the composer's shadow root into the mention popover's shadow root.
-    // The popover uses element reflection when the platform accepts that
-    // cross-root reference and otherwise fails closed so keyboard navigation
-    // can transfer real focus into the popover's own tree.
-    input.removeAttribute('aria-controls');
-    if (popover) return popover.syncActiveDescendant(input);
-    input.removeAttribute('aria-activedescendant');
-    return false;
-  }
-
   private onSuggestionSelect(
     event: CustomEvent<LyraMentionSelectDetail>
   ): void {
@@ -648,7 +671,6 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       ) {
         composer?.setSelectionRange(nextCaret, nextCaret);
       }
-      this.syncSuggestionAria();
     });
   }
 
@@ -819,6 +841,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       @change=${this.onNativeChange}
       @focus=${this.onNativeFocus}
       @blur=${this.onNativeBlur}
+      @focusout=${this.onCompositeFocusOut}
     >
       ${queue.length
         ? html`<lr-prompt-queue
@@ -858,7 +881,6 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         @lr-change=${this.onChange}
         @lr-submit=${this.onSubmit}
         @lr-stop=${this.onStop}
-        @keydown=${this.onKeyDown}
       >
         <span slot="start" part="start">
           <slot name="start">${this.renderDefaultAttachmentTrigger()}</slot>

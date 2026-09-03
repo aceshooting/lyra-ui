@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import { seriesPalette, type LyraChartSeries } from './chart.js';
+import { seriesPalette, type LyraChartAnnotation, type LyraChartSeries } from './chart.js';
 
 const meta: Meta = {
   title: 'Charts/Chart',
@@ -447,6 +447,50 @@ export const DataTableDisclosure: Story = {
       .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
       .datasets=${[{ label: 'Revenue', data: [12, 19, 14, 22] }]}
       style="max-inline-size: 32rem;"
+    ></lr-chart>
+  `,
+};
+
+const annotationCanarySeries: LyraChartSeries[] = [
+  { label: 'Response latency (ms)', data: [18, 32, 55, 82] },
+];
+
+const annotationCanaryAnnotations: LyraChartAnnotation[] = [
+  { value: 60, label: 'Service target: 60 ms', tone: 'success' },
+  { from: 0, to: 24, label: 'Fast response band', tone: 'neutral' },
+];
+
+/** Deterministic annotation data with a visible data table and expected-threshold statement. */
+export const AnnotationsCanary: Story = {
+  name: 'Annotations canary',
+  render: () => html`
+    <div style="inline-size: 22rem; max-inline-size: 100%;">
+      <lr-chart
+        aria-label="Response latency annotations"
+        type="line"
+        height="16rem"
+        without-animation
+        show-data-table
+        .labels=${['Baseline', 'Warning', 'Elevated', 'Breach']}
+        .datasets=${annotationCanarySeries}
+        .annotations=${annotationCanaryAnnotations}
+      ></lr-chart>
+      <p>Expected: a 60 ms target line and a 0–24 ms fast-response band.</p>
+    </div>
+  `,
+};
+
+/** Hover the canvas to see the public hover-outline color on the rendered canvas surface. */
+export const HoverOutlineToken: Story = {
+  name: 'Hover outline token',
+  render: () => html`
+    <lr-chart
+      aria-label="Hover outline token demonstration"
+      type="line"
+      height="16rem"
+      style="inline-size: 22rem; max-inline-size: 100%; --lr-chart-canvas-hover-outline-color: var(--lr-color-success); --lr-chart-canvas-hover-outline-width: var(--lr-border-width-thick);"
+      .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+      .datasets=${[{ label: 'Revenue', data: [12, 19, 14, 22] }]}
     ></lr-chart>
   `,
 };

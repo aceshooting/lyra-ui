@@ -69,15 +69,27 @@ export const styles = css`
 
   [part="bar-track"] {
     position: relative;
-    /* 1.5rem (24px), not a duration-scaled height -- [part='bar'] is the sole click/keyboard
-       target for lr-span-select and must clear the WCAG 2.5.8 24px minimum target size however
-       thin a given bar's duration would otherwise render it. */
-    block-size: var(--lr-size-1-5rem);
+    /* The bar is the sole click/keyboard target for lr-span-select. Give its track the shared
+       icon-button block size so the required two-axis target floor remains contained. */
+    block-size: var(--lr-icon-button-size);
   }
   [part="bar"] {
     position: absolute;
     inset-block: 0;
-    min-inline-size: var(--lr-size-1-5rem);
+    /* A narrow time slice still needs the shared icon-button target, but using min-inline-size
+       alone lets an endpoint target widen past the track. Size first, cap it to the track, then
+       clamp the logical start against that actual size so the same rule mirrors under RTL. */
+    --_lr-span-waterfall-target-width: min(
+      100%,
+      max(var(--_lr-span-waterfall-width), var(--lr-icon-button-size))
+    );
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    inline-size: var(--_lr-span-waterfall-target-width);
+    inset-inline-start: min(
+      var(--_lr-span-waterfall-start),
+      calc(100% - var(--_lr-span-waterfall-target-width))
+    );
     border: none;
     border-radius: var(--lr-radius-xs);
     padding: 0;

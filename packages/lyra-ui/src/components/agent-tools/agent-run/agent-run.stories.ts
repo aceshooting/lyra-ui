@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { createRef, ref } from 'lit/directives/ref.js';
 import './agent-run.js';
 import '../tool-call-chip/tool-call-chip.js';
 import '../../conversation/markdown/markdown.js';
@@ -196,25 +197,24 @@ export const Empty: Story = {
 export const Live: Story = {
   name: 'Live demo — cancel/retry wired up',
   render: () => {
-    function wire(root: HTMLElement): void {
-      const el = root.querySelector('lr-agent-run')!;
-      if (el.hasAttribute('data-wired')) return;
-      el.setAttribute('data-wired', '');
-      const log = root.querySelector('[data-log]')!;
-      el.addEventListener('lr-cancel', () => {
-        log.textContent = 'lr-cancel fired';
-      });
-      el.addEventListener('lr-run-retry', (e) => {
-        log.textContent = `lr-run-retry fired, attempt ${(e as CustomEvent).detail.attempt}`;
-      });
-    }
+    const logRef = createRef<HTMLElement>();
+    const onCancel = (): void => {
+      if (logRef.value) logRef.value.textContent = 'lr-cancel fired';
+    };
+    const onRetry = (event: Event): void => {
+      if (logRef.value) {
+        logRef.value.textContent = `lr-run-retry fired, attempt ${(event as CustomEvent<{ attempt: number }>).detail.attempt}`;
+      }
+    };
     return html`
-      <div
-        style="display:flex; flex-direction:column; gap:0.75rem; align-items:flex-start; max-width: 40rem;"
-        @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
-      >
-        <lr-agent-run .run=${{ ...runningRun, status: { kind: 'error' } }} style="width: 100%;"></lr-agent-run>
-        <p data-log style="margin: 0; font-size: 0.8125rem; color: var(--lr-color-text-quiet);">
+      <div style="display:flex; flex-direction:column; gap:0.75rem; align-items:flex-start; max-width: 40rem;">
+        <lr-agent-run
+          .run=${{ ...runningRun, status: { kind: 'error' } }}
+          style="width: 100%;"
+          @lr-cancel=${onCancel}
+          @lr-run-retry=${onRetry}
+        ></lr-agent-run>
+        <p ${ref(logRef)} data-log style="margin: 0; font-size: 0.8125rem; color: var(--lr-color-text-quiet);">
           Click Retry to see the emitted event detail here.
         </p>
       </div>

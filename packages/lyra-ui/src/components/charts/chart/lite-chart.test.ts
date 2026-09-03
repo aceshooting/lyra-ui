@@ -42,6 +42,21 @@ it('renders hover feedback for keyboard-focusable bars and points', async () => 
   }
 });
 
+it('does not acquire the canvas-only chart hover-outline token', async () => {
+  const el = await mount(html`
+    <lr-lite-chart
+      style="--lr-chart-canvas-hover-outline-width: 9px; --lr-chart-canvas-hover-outline-color: rgb(1, 2, 3);"
+      .labels=${['A']}
+      .datasets=${[{ label: 'Revenue', data: [1] }]}
+    ></lr-lite-chart>
+  `);
+  const mark = el.shadowRoot!.querySelector<SVGGraphicsElement>('[part="bar"]')!;
+
+  expect(el.shadowRoot!.querySelector('[part="canvas"]') === null).to.be.true;
+  expect(getComputedStyle(mark).outlineStyle).to.equal('none');
+  expect(getComputedStyle(mark).outlineColor).to.not.equal('rgb(1, 2, 3)');
+});
+
 describe('lite chart family-contract regressions', () => {
   it('drops dataset entries without array data while retaining a valid rendered sibling', async () => {
     const datasets = [
@@ -2587,6 +2602,39 @@ describe('selectedIndices', () => {
     expect(bars.map((bar) => bar.tagName.toLowerCase())).to.deep.equal(['path', 'path']);
     expect(bars.map((bar) => bar.getAttribute('aria-pressed'))).to.deep.equal(['false', 'true']);
   });
+
+  it('scans the complete bounded selectedIndices snapshot so a sampled tail row remains selected', async () => {
+    const lastSourceIndex = 1_000;
+    const el = await mount(html`
+      <lr-lite-chart
+        type="bar"
+        .labels=${Array.from({ length: lastSourceIndex + 1 }, (_, index) => `L${index}`)}
+        .datasets=${[{ label: 'S', data: Array.from({ length: lastSourceIndex + 1 }, (_, index) => index) }]}
+        .selectedIndices=${[...Array.from({ length: 1_000 }, () => -1), lastSourceIndex]}
+      ></lr-lite-chart>
+    `);
+
+    const tail = el.shadowRoot!.querySelector<SVGElement>(`[part="bar"][data-index="${lastSourceIndex}"]`);
+    expect(tail !== null, 'the endpoint remains in the sampled visual set').to.be.true;
+    if (!tail) throw new Error('the endpoint remains in the sampled visual set');
+    expect(tail.hasAttribute('data-selected'), 'a selected tail source index is not lost at array position 1,000').to.be.true;
+  });
+
+  it('does not scan beyond the 10,000-entry selectedIndices snapshot budget', async () => {
+    const lastSourceIndex = 1_000;
+    const el = await mount(html`
+      <lr-lite-chart
+        type="bar"
+        .labels=${Array.from({ length: lastSourceIndex + 1 }, (_, index) => `L${index}`)}
+        .datasets=${[{ label: 'S', data: Array.from({ length: lastSourceIndex + 1 }, (_, index) => index) }]}
+        .selectedIndices=${[...Array.from({ length: 10_000 }, () => -1), lastSourceIndex]}
+      ></lr-lite-chart>
+    `);
+
+    const tail = el.shadowRoot!.querySelector<SVGElement>(`[part="bar"][data-index="${lastSourceIndex}"]`)!;
+    expect(el.selectedIndices).to.have.length(10_000);
+    expect(tail.hasAttribute('data-selected')).to.be.false;
+  });
 });
 
 // --- ResizeObserver entry without contentBoxSize (falls back to getBoundingClientRect) --------
@@ -3907,6 +3955,21 @@ describe('data-table disclosure', () => {
     expect(button.getAttribute('aria-controls')).to.equal(wrapper(el).id);
   });
 
+  it('keeps a short localized disclosure label at the token hit-area width', async () => {
+    const el = await liteChartWith(html`<lr-lite-chart
+      data-table-toggle
+      style="--lr-icon-button-size: 64px"
+      .strings=${{ chartData: 'i' }}
+    ></lr-lite-chart>`);
+    const button = toggle(el);
+
+    expect(button !== null, 'the disclosure renders').to.equal(true);
+    if (!button) throw new Error('Expected a data-table disclosure button');
+    expect(button.textContent?.trim()).to.equal('i');
+    button.style.justifySelf = 'start';
+    expect(button.getBoundingClientRect().width).to.be.at.least(64);
+  });
+
   it('reveals the table on activation and keeps it in the DOM throughout', async () => {
     const el = await liteChartWith(html`<lr-lite-chart data-table-toggle></lr-lite-chart>`);
     expect(el.shadowRoot!.querySelector('table'), 'present while collapsed').to.exist;
@@ -3916,6 +3979,43 @@ describe('data-table disclosure', () => {
     expect(toggle(el)!.getAttribute('aria-expanded')).to.equal('true');
     expect(wrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
     expect(el.shadowRoot!.querySelector('table'), 'never left the DOM').to.exist;
+  });
+
+  it('reveals the existing single-series data list through the same disclosure state', async () => {
+    const el = await mount(html`<lr-lite-chart
+      data-table-toggle
+      .labels=${['Q1', 'Q2']}
+      .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+    ></lr-lite-chart>`);
+    const list = el.shadowRoot!.querySelector<HTMLElement>('[part="data-list"]')!;
+
+    expect(list.classList.contains('sr-only')).to.be.true;
+    toggle(el)!.click();
+    await el.updateComplete;
+    expect(list.classList.contains('sr-only')).to.be.false;
+  });
+
+  it('synchronizes a slotted data alternative with the disclosure state', async () => {
+    const el = await liteChartWith(html`
+      <lr-lite-chart data-table-toggle>
+        <table slot="data-table">
+          <caption>Custom data</caption>
+          <tbody><tr><td>Revenue</td></tr></tbody>
+        </table>
+      </lr-lite-chart>
+    `);
+    const custom = el.querySelector<HTMLTableElement>('table[slot="data-table"]')!;
+
+    expect(wrapper(el).hasAttribute('data-visually-hidden')).to.be.true;
+    expect(wrapper(el).getBoundingClientRect().height).to.equal(1);
+    expect(custom.textContent).to.contain('Revenue');
+
+    toggle(el)!.click();
+    await el.updateComplete;
+
+    expect(toggle(el)!.getAttribute('aria-expanded')).to.equal('true');
+    expect(wrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
+    expect(wrapper(el).getBoundingClientRect().height).to.be.greaterThan(1);
   });
 
   it('starts expanded when show-data-table is set alongside the toggle', async () => {

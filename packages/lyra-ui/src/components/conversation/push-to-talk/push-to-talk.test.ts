@@ -19,7 +19,9 @@ import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 class FakeTrack {
   stopped = false;
+  stopCalls = 0;
   stop(): void {
+    this.stopCalls++;
     this.stopped = true;
   }
 }
@@ -133,6 +135,41 @@ function stubDeferredCapture(): {
     },
     resolve: () => resolveFn(),
     stream,
+  };
+}
+
+/** A queue of browser-owned permission promises. Keeping every stream visible lets the lifecycle
+ * tests prove that a stale settlement is stopped, rather than merely observing a state change. */
+function stubControlledCaptures(owner: Window = window): {
+  restore: () => void;
+  requestCount: () => number;
+  resolve: (index: number) => void;
+  reject: (index: number, error: Error) => void;
+  streamAt: (index: number) => FakeStream;
+} {
+  const originalGetUserMedia = owner.navigator.mediaDevices.getUserMedia;
+  const runtime = owner as unknown as { MediaRecorder: typeof MediaRecorder };
+  const originalMediaRecorder = runtime.MediaRecorder;
+  const requests: Array<{
+    stream: FakeStream;
+    resolve: (stream: MediaStream) => void;
+    reject: (error: Error) => void;
+  }> = [];
+  owner.navigator.mediaDevices.getUserMedia = (() =>
+    new Promise<MediaStream>((resolve, reject) => {
+      const stream = new FakeStream();
+      requests.push({ stream, resolve, reject });
+    })) as typeof navigator.mediaDevices.getUserMedia;
+  runtime.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
+  return {
+    restore: () => {
+      owner.navigator.mediaDevices.getUserMedia = originalGetUserMedia;
+      runtime.MediaRecorder = originalMediaRecorder;
+    },
+    requestCount: () => requests.length,
+    resolve: (index: number) => requests[index]!.resolve(requests[index]!.stream as unknown as MediaStream),
+    reject: (index: number, error: Error) => requests[index]!.reject(error),
+    streamAt: (index: number) => requests[index]!.stream,
   };
 }
 
@@ -712,21 +749,199 @@ describe("owner-window capture runtime", () => {
       await el.updateComplete;
       expect(el.state).to.equal("requesting");
 
+      let cancellations = 0;
+      el.addEventListener("lr-record-cancel", () => cancellations++);
       frameDocument.adoptNode(el);
       frameDocument.body.append(el);
-      const canceled = oneEvent(el, "lr-record-cancel");
       resolvePermission(stream as unknown as MediaStream);
 
       expect(await startPromise).to.be.false;
-      await canceled;
+      await aTimeout(20);
       expect(el.state).to.equal("idle");
       expect(stream.getTracks()[0]?.stopped).to.be.true;
       expect(frameRecorderCreations).to.equal(0);
+      expect(cancellations).to.equal(0);
     } finally {
       el?.remove();
       navigator.mediaDevices.getUserMedia = originalGetUserMedia;
       window.MediaRecorder = originalMediaRecorder;
       frameRuntime.MediaRecorder = originalFrameRecorder;
+      iframe.remove();
+    }
+  });
+
+  it('keeps a new adopted-owner B request authoritative while stale A settles or rejects', async () => {
+    const mainCapture = stubControlledCaptures();
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow!;
+    const frameDocument = iframe.contentDocument!;
+    const frameCapture = stubControlledCaptures(frameWindow);
+    let el: LyraPushToTalk | undefined;
+    try {
+      el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+      let starts = 0;
+      let stops = 0;
+      let cancels = 0;
+      let errors = 0;
+      el.addEventListener('lr-record-start', () => starts++);
+      el.addEventListener('lr-record-stop', () => stops++);
+      el.addEventListener('lr-record-cancel', () => cancels++);
+      el.addEventListener('lr-record-error', () => errors++);
+
+      trigger(el).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 151 }));
+      await el.updateComplete;
+      expect(mainCapture.requestCount()).to.equal(1);
+
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      const adoptedTrigger = trigger(el);
+      adoptedTrigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 152 }));
+      await el.updateComplete;
+
+      expect(frameCapture.requestCount()).to.equal(1);
+      expect(el.state).to.equal('requesting');
+
+      mainCapture.resolve(0);
+      await aTimeout(20);
+      expect(mainCapture.streamAt(0).getTracks()[0]?.stopped).to.equal(true);
+      expect(el.state).to.equal('requesting');
+      expect(starts).to.equal(0);
+      expect(cancels).to.equal(0);
+      expect(errors).to.equal(0);
+
+      const started = oneEvent(el, 'lr-record-start');
+      frameCapture.resolve(0);
+      await started;
+      expect(el.state).to.equal('recording');
+      expect(starts).to.equal(1);
+
+      const stopped = oneEvent(el, 'lr-record-stop');
+      adoptedTrigger.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 152 }));
+      await stopped;
+      expect(el.state).to.equal('idle');
+      expect(stops).to.equal(1);
+      expect(cancels).to.equal(0);
+      expect(errors).to.equal(0);
+      expect(frameCapture.streamAt(0).getTracks()[0]?.stopped).to.equal(true);
+    } finally {
+      el?.remove();
+      mainCapture.restore();
+      frameCapture.restore();
+      iframe.remove();
+    }
+  });
+
+  it('ignores a stale adopted-owner A rejection while B remains pending', async () => {
+    const mainCapture = stubControlledCaptures();
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow!;
+    const frameDocument = iframe.contentDocument!;
+    const frameCapture = stubControlledCaptures(frameWindow);
+    let el: LyraPushToTalk | undefined;
+    try {
+      el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+      let cancels = 0;
+      let errors = 0;
+      el.addEventListener('lr-record-cancel', () => cancels++);
+      el.addEventListener('lr-record-error', () => errors++);
+
+      trigger(el).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 161 }));
+      await el.updateComplete;
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      const adoptedTrigger = trigger(el);
+      adoptedTrigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 162 }));
+      await el.updateComplete;
+
+      mainCapture.reject(0, new Error('old realm rejection'));
+      await aTimeout(20);
+      expect(el.state).to.equal('requesting');
+      expect(cancels).to.equal(0);
+      expect(errors).to.equal(0);
+
+      const started = oneEvent(el, 'lr-record-start');
+      frameCapture.resolve(0);
+      await started;
+      expect(el.state).to.equal('recording');
+
+      const stopped = oneEvent(el, 'lr-record-stop');
+      adoptedTrigger.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 162 }));
+      await stopped;
+      expect(cancels).to.equal(0);
+      expect(errors).to.equal(0);
+      expect(frameCapture.streamAt(0).getTracks()[0]?.stopped).to.equal(true);
+    } finally {
+      el?.remove();
+      mainCapture.restore();
+      frameCapture.restore();
+      iframe.remove();
+    }
+  });
+
+  it('retires an active adopted-owner A before B starts, without an old terminal event', async () => {
+    const mainCapture = stubControlledCaptures();
+    window.MediaRecorder = DelayedStopMediaRecorder as unknown as typeof MediaRecorder;
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow!;
+    const frameDocument = iframe.contentDocument!;
+    const frameCapture = stubControlledCaptures(frameWindow);
+    let el: LyraPushToTalk | undefined;
+    try {
+      el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+      let starts = 0;
+      let stops = 0;
+      let cancels = 0;
+      let errors = 0;
+      el.addEventListener('lr-record-start', () => starts++);
+      el.addEventListener('lr-record-stop', () => stops++);
+      el.addEventListener('lr-record-cancel', () => cancels++);
+      el.addEventListener('lr-record-error', () => errors++);
+
+      const firstStarted = oneEvent(el, 'lr-record-start');
+      trigger(el).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 201 }));
+      await el.updateComplete;
+      mainCapture.resolve(0);
+      await firstStarted;
+
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      const adoptedTrigger = trigger(el);
+      adoptedTrigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 202 }));
+      await waitUntil(
+        () => frameCapture.requestCount() === 1 && el!.state === 'requesting',
+        'the held B press did not wait for old-realm recorder cleanup'
+      );
+
+      expect(mainCapture.streamAt(0).getTracks()[0]?.stopCalls).to.equal(1);
+      expect(starts).to.equal(1);
+      expect(stops).to.equal(0);
+      expect(cancels).to.equal(0);
+      expect(errors).to.equal(0);
+
+      const secondStarted = oneEvent(el, 'lr-record-start');
+      frameCapture.resolve(0);
+      await secondStarted;
+      expect(el.state).to.equal('recording');
+      expect(starts).to.equal(2);
+
+      const secondStopped = oneEvent(el, 'lr-record-stop');
+      adoptedTrigger.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 202 }));
+      await secondStopped;
+      expect(el.state).to.equal('idle');
+      expect(stops).to.equal(1);
+      expect(cancels).to.equal(0);
+      expect(errors).to.equal(0);
+      expect(frameCapture.streamAt(0).getTracks()[0]?.stopCalls).to.equal(1);
+    } finally {
+      el?.remove();
+      DelayedStopMediaRecorder.last = undefined;
+      mainCapture.restore();
+      frameCapture.restore();
       iframe.remove();
     }
   });
@@ -893,6 +1108,196 @@ describe("hold mode", () => {
     }
   });
 
+  it('adopts one pending pointer permission request from released A to held B, then stops exactly B’s take', async () => {
+    const capture = stubControlledCaptures();
+    try {
+      const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+      const button = trigger(el);
+      const states: string[] = [];
+      let starts = 0;
+      let stops = 0;
+      let cancels = 0;
+      let errors = 0;
+      el.addEventListener('lr-record-state-change', event =>
+        states.push((event as CustomEvent<{ state: string }>).detail.state)
+      );
+      el.addEventListener('lr-record-start', () => starts++);
+      el.addEventListener('lr-record-stop', () => stops++);
+      el.addEventListener('lr-record-cancel', () => cancels++);
+      el.addEventListener('lr-record-error', () => errors++);
+
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 101 }));
+      await el.updateComplete;
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 101 }));
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 102 }));
+
+      expect(capture.requestCount()).to.equal(1);
+      expect(el.state).to.equal('requesting');
+      const started = oneEvent(el, 'lr-record-start');
+      capture.resolve(0);
+      await started;
+
+      expect(el.state).to.equal('recording');
+      expect(starts).to.equal(1);
+      expect(stops).to.equal(0);
+      expect(cancels).to.equal(0);
+      expect(errors).to.equal(0);
+      expect(capture.streamAt(0).getTracks()[0]?.stopped).to.equal(false);
+
+      const stopped = oneEvent(el, 'lr-record-stop');
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 102 }));
+      await stopped;
+
+      expect(el.state).to.equal('idle');
+      expect(starts).to.equal(1);
+      expect(stops).to.equal(1);
+      expect(cancels).to.equal(0);
+      expect(errors).to.equal(0);
+      expect(states).to.deep.equal(['requesting', 'recording', 'idle']);
+      expect(capture.streamAt(0).getTracks()[0]?.stopped).to.equal(true);
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it('adopts one pending keyboard permission request from released A to held B', async () => {
+    const capture = stubControlledCaptures();
+    try {
+      const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+      const button = trigger(el);
+      let starts = 0;
+      let stops = 0;
+      let cancels = 0;
+      el.addEventListener('lr-record-start', () => starts++);
+      el.addEventListener('lr-record-stop', () => stops++);
+      el.addEventListener('lr-record-cancel', () => cancels++);
+
+      button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await el.updateComplete;
+      button.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+      button.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+
+      expect(capture.requestCount()).to.equal(1);
+      const started = oneEvent(el, 'lr-record-start');
+      capture.resolve(0);
+      await started;
+      expect(el.state).to.equal('recording');
+      expect(starts).to.equal(1);
+      expect(cancels).to.equal(0);
+
+      const stopped = oneEvent(el, 'lr-record-stop');
+      button.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true }));
+      await stopped;
+      expect(el.state).to.equal('idle');
+      expect(stops).to.equal(1);
+      expect(cancels).to.equal(0);
+      expect(capture.streamAt(0).getTracks()[0]?.stopped).to.equal(true);
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it('stops an adopted pending stream when B releases before permission resolves', async () => {
+    const capture = stubControlledCaptures();
+    try {
+      const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+      const button = trigger(el);
+      let starts = 0;
+      let stops = 0;
+      let cancels = 0;
+      let errors = 0;
+      el.addEventListener('lr-record-start', () => starts++);
+      el.addEventListener('lr-record-stop', () => stops++);
+      el.addEventListener('lr-record-cancel', () => cancels++);
+      el.addEventListener('lr-record-error', () => errors++);
+
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 111 }));
+      await el.updateComplete;
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 111 }));
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 112 }));
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 112 }));
+
+      const cancelled = oneEvent(el, 'lr-record-cancel');
+      capture.resolve(0);
+      await cancelled;
+
+      expect(el.state).to.equal('idle');
+      expect(starts).to.equal(0);
+      expect(stops).to.equal(0);
+      expect(cancels).to.equal(1);
+      expect(errors).to.equal(0);
+      expect(capture.streamAt(0).getTracks()[0]?.stopped).to.equal(true);
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it('lets a re-pressed C hold adopt the same pending request after B released first', async () => {
+    const capture = stubControlledCaptures();
+    try {
+      const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+      const button = trigger(el);
+      let starts = 0;
+      let stops = 0;
+      let cancels = 0;
+      el.addEventListener('lr-record-start', () => starts++);
+      el.addEventListener('lr-record-stop', () => stops++);
+      el.addEventListener('lr-record-cancel', () => cancels++);
+
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 141 }));
+      await el.updateComplete;
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 141 }));
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 142 }));
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 142 }));
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 143 }));
+
+      expect(capture.requestCount()).to.equal(1);
+      const started = oneEvent(el, 'lr-record-start');
+      capture.resolve(0);
+      await started;
+      expect(el.state).to.equal('recording');
+      expect(starts).to.equal(1);
+      expect(cancels).to.equal(0);
+
+      const stopped = oneEvent(el, 'lr-record-stop');
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 143 }));
+      await stopped;
+      expect(stops).to.equal(1);
+      expect(cancels).to.equal(0);
+      expect(capture.streamAt(0).getTracks()[0]?.stopCalls).to.equal(1);
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it('reports a rejected adopted pending permission request for the current B intent', async () => {
+    const capture = stubControlledCaptures();
+    try {
+      const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+      const button = trigger(el);
+      let starts = 0;
+      let cancels = 0;
+      let errors = 0;
+      el.addEventListener('lr-record-start', () => starts++);
+      el.addEventListener('lr-record-cancel', () => cancels++);
+      el.addEventListener('lr-record-error', () => errors++);
+
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 121 }));
+      await el.updateComplete;
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 121 }));
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 122 }));
+      capture.reject(0, new Error('permission prompt failed'));
+      await waitUntil(() => el.state === 'error', 'the current B intent did not receive the rejection');
+
+      expect(capture.requestCount()).to.equal(1);
+      expect(starts).to.equal(0);
+      expect(cancels).to.equal(0);
+      expect(errors).to.equal(1);
+    } finally {
+      capture.restore();
+    }
+  });
+
   it("releases the initiating hold when mode changes before pending permission resolves", async () => {
     const { restore, resolve, stream } = stubDeferredCapture();
     try {
@@ -1006,6 +1411,55 @@ describe("hold mode", () => {
       navigator.mediaDevices.getUserMedia = originalGetUserMedia;
       window.MediaRecorder = originalMediaRecorder;
       DelayedStopMediaRecorder.last = undefined;
+    }
+  });
+
+  it('queues a held B pointer press until A’s asynchronous recorder stop has completed', async () => {
+    const capture = stubControlledCaptures();
+    window.MediaRecorder = DelayedStopMediaRecorder as unknown as typeof MediaRecorder;
+    try {
+      const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+      const button = trigger(el);
+      let starts = 0;
+      let stops = 0;
+      let cancels = 0;
+      el.addEventListener('lr-record-start', () => starts++);
+      el.addEventListener('lr-record-stop', () => stops++);
+      el.addEventListener('lr-record-cancel', () => cancels++);
+
+      const firstStarted = oneEvent(el, 'lr-record-start');
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 131 }));
+      await el.updateComplete;
+      capture.resolve(0);
+      await firstStarted;
+
+      const firstStopped = oneEvent(el, 'lr-record-stop');
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 131 }));
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 132 }));
+      await firstStopped;
+      await waitUntil(
+        () => capture.requestCount() === 2 && el.state === 'requesting',
+        'the held B press was not queued after A requested recorder stop'
+      );
+
+      const secondStarted = oneEvent(el, 'lr-record-start');
+      capture.resolve(1);
+      await secondStarted;
+      expect(starts).to.equal(2);
+      expect(stops).to.equal(1);
+      expect(cancels).to.equal(0);
+      expect(capture.streamAt(0).getTracks()[0]?.stopCalls).to.equal(1);
+
+      const secondStopped = oneEvent(el, 'lr-record-stop');
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 132 }));
+      await secondStopped;
+      expect(el.state).to.equal('idle');
+      expect(stops).to.equal(2);
+      expect(cancels).to.equal(0);
+      expect(capture.streamAt(1).getTracks()[0]?.stopCalls).to.equal(1);
+    } finally {
+      DelayedStopMediaRecorder.last = undefined;
+      capture.restore();
     }
   });
 
@@ -1257,6 +1711,39 @@ it("disabling an active recording cancels it and stops the granted track", async
   }
 });
 
+it('disabling an actively held pointer take cancels it once instead of turning the release into a stop', async () => {
+  const capture = stubControlledCaptures();
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+    const button = trigger(el);
+    let starts = 0;
+    let stops = 0;
+    let cancels = 0;
+    let errors = 0;
+    el.addEventListener('lr-record-start', () => starts++);
+    el.addEventListener('lr-record-stop', () => stops++);
+    el.addEventListener('lr-record-cancel', () => cancels++);
+    el.addEventListener('lr-record-error', () => errors++);
+
+    const started = oneEvent(el, 'lr-record-start');
+    button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 171 }));
+    await el.updateComplete;
+    capture.resolve(0);
+    await started;
+
+    el.disabled = true;
+    await el.updateComplete;
+    expect(el.state).to.equal('idle');
+    expect(starts).to.equal(1);
+    expect(stops).to.equal(0);
+    expect(cancels).to.equal(1);
+    expect(errors).to.equal(0);
+    expect(capture.streamAt(0).getTracks()[0]?.stopCalls).to.equal(1);
+  } finally {
+    capture.restore();
+  }
+});
+
 it("rechecks disabled after pending permission resolves and stops the newly granted track", async () => {
   const deferred = stubDeferredCapture();
   try {
@@ -1276,6 +1763,66 @@ it("rechecks disabled after pending permission resolves and stops the newly gran
     expect(deferred.stream.getTracks()[0]?.stopped).to.be.true;
   } finally {
     deferred.restore();
+  }
+});
+
+it('treats a disabled pending permission rejection as one cancellation, never an error', async () => {
+  const capture = stubControlledCaptures();
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+    const button = trigger(el);
+    let starts = 0;
+    let cancels = 0;
+    let errors = 0;
+    el.addEventListener('lr-record-start', () => starts++);
+    el.addEventListener('lr-record-cancel', () => cancels++);
+    el.addEventListener('lr-record-error', () => errors++);
+
+    button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 181 }));
+    await el.updateComplete;
+    el.disabled = true;
+    await el.updateComplete;
+    capture.reject(0, new Error('permission rejected after disablement'));
+    await aTimeout(20);
+
+    expect(el.state).to.equal('idle');
+    expect(starts).to.equal(0);
+    expect(cancels).to.equal(1);
+    expect(errors).to.equal(0);
+  } finally {
+    capture.restore();
+  }
+});
+
+it('stops a detached pending stream without delivering a stale terminal event', async () => {
+  const capture = stubControlledCaptures();
+  let el: LyraPushToTalk | undefined;
+  try {
+    el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+    let starts = 0;
+    let stops = 0;
+    let cancels = 0;
+    let errors = 0;
+    el.addEventListener('lr-record-start', () => starts++);
+    el.addEventListener('lr-record-stop', () => stops++);
+    el.addEventListener('lr-record-cancel', () => cancels++);
+    el.addEventListener('lr-record-error', () => errors++);
+
+    trigger(el).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 191 }));
+    await el.updateComplete;
+    el.remove();
+    capture.resolve(0);
+    await aTimeout(20);
+
+    expect(el.state).to.equal('idle');
+    expect(starts).to.equal(0);
+    expect(stops).to.equal(0);
+    expect(cancels).to.equal(0);
+    expect(errors).to.equal(0);
+    expect(capture.streamAt(0).getTracks()[0]?.stopCalls).to.equal(1);
+  } finally {
+    el?.remove();
+    capture.restore();
   }
 });
 
@@ -1748,6 +2295,22 @@ it("keeps an undersized public size override above the shared icon-button hit fl
   const rect = trigger(el).getBoundingClientRect();
   expect(rect.width).to.be.at.least(44);
   expect(rect.height).to.be.at.least(44);
+});
+
+it('inherits a 20px host font onto the live native trigger and its default 1em glyph', async () => {
+  const el = await fixture<LyraPushToTalk>(html`
+    <lr-push-to-talk style="font-size: 20px"></lr-push-to-talk>
+  `);
+  const button = trigger(el);
+  const glyph = button.querySelector<SVGElement>('svg')!;
+
+  expect(getComputedStyle(el).fontSize).to.equal('20px');
+  expect(getComputedStyle(button).fontSize).to.equal('20px');
+  expect(glyph.getAttribute('width')).to.equal('1em');
+  expect(glyph.getAttribute('height')).to.equal('1em');
+  expect(getComputedStyle(glyph).fontSize).to.equal('20px');
+  expect(getComputedStyle(glyph).width).to.equal('20px');
+  expect(getComputedStyle(glyph).height).to.equal('20px');
 });
 
 it("makes interactive icon-slot content decorative and unfocusable inside the trigger", async () => {

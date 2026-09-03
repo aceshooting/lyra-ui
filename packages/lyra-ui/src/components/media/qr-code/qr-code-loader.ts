@@ -1,4 +1,8 @@
 import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
+const QR_CODE_PEER_WARNING_KEY = 'lyra-qr-code-peer-unavailable';
+const QR_CODE_PEER_WARNING = '<lr-qr-code> could not load its optional qrcode peer.';
 
 /** Opaque `qrcode` (soldair/node-qrcode) surface kept optional for core-package consumers --
  *  narrowed by an application that installs the peer to that peer's own types. */
@@ -27,11 +31,8 @@ export async function loadQrCode(
   try {
     const module = await importQrCode();
     return resolveOptionalPeerCapability(module, isQrCodeApi);
-  } catch (error) {
-    console.warn(
-      '<lr-qr-code> needs the optional peer dependency `qrcode` to render QR codes — install it with `pnpm add qrcode`:',
-      error,
-    );
+  } catch {
+    devWarnOnce(QR_CODE_PEER_WARNING_KEY, QR_CODE_PEER_WARNING);
     return null;
   }
 }

@@ -92,6 +92,48 @@ it('tracks flattened forwarded text and actionability through mutation, reassign
   expect(popup(el).getAttribute('role')).to.equal('tooltip');
 });
 
+it('contains a throwing owner activeElement getter while deciding Escape focus restoration', async () => {
+  const el = (await fixture(html`<lr-tooltip manual>Tip</lr-tooltip>`)) as LyraTooltip;
+  const prior = Object.getOwnPropertyDescriptor(document, 'activeElement');
+  let unavailable = true;
+  Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get(): Element {
+        if (unavailable) throw new TypeError('active element unavailable');
+        return { nodeType: 1 } as Element;
+      },
+  });
+  try {
+    const internals = el as unknown as { shouldRestoreFocusAfterEscape(): boolean };
+    expect(internals.shouldRestoreFocusAfterEscape()).to.equal(false);
+    unavailable = false;
+    expect(internals.shouldRestoreFocusAfterEscape()).to.equal(false);
+  } finally {
+    if (prior) Object.defineProperty(document, 'activeElement', prior);
+    else delete (document as unknown as { activeElement?: unknown }).activeElement;
+  }
+});
+
+it('contains a structural activeElement lookalike while deciding whether a trigger holds focus', async () => {
+  const el = (await fixture(html`<lr-tooltip manual>Tip</lr-tooltip>`)) as LyraTooltip;
+  const prior = Object.getOwnPropertyDescriptor(document, 'activeElement');
+  Object.defineProperty(document, 'activeElement', {
+    configurable: true,
+    get(): Element {
+      return { nodeType: 1 } as Element;
+    },
+  });
+  try {
+    const internals = el as unknown as {
+      isTriggerHeld(trigger: HTMLElement): boolean;
+    };
+    expect(internals.isTriggerHeld(document.createElement('button'))).to.equal(false);
+  } finally {
+    if (prior) Object.defineProperty(document, 'activeElement', prior);
+    else delete (document as unknown as { activeElement?: unknown }).activeElement;
+  }
+});
+
 it('gives an explicitly empty host aria-label presence precedence without disabling unlabeled fallbacks', async () => {
   const explicitEmpty = (await fixture(html`
     <lr-tooltip manual aria-label="">

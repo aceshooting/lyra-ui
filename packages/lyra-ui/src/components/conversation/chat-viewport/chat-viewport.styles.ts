@@ -89,6 +89,7 @@ export const styles = css`
     background: var(--lr-color-border);
   }
   [part='jump-pill'] {
+    font: inherit;
     position: absolute;
     inset-block-end: var(--lr-space-m);
     inset-inline-start: 50%;

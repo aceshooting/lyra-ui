@@ -63,6 +63,13 @@ registerToolRenderer('broken_renderer', {
   },
 });
 
+registerToolRenderer('reported_application_failure', {
+  render: (_result, _args, context) => {
+    context?.reportStatus('error');
+    return html`<p>The tool completed, but reported an application-level error.</p>`;
+  },
+});
+
 const meta: Meta = {
   title: 'ToolResultView',
   component: 'lr-tool-result-view',
@@ -175,6 +182,25 @@ export const RenderErrorFallsBackToJson: Story = {
       .result=${{ this: 'still renders, via the fallback' }}
       @lr-render-error=${(e: CustomEvent<{ toolName: string; error: unknown }>) =>
         console.warn('lr-render-error', e.detail)}
+    ></lr-tool-result-view>
+  `,
+};
+
+export const RendererReportedStatus: Story = {
+  name: 'Renderer-reported non-throwing status',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A renderer can report a non-throwing outcome while retaining its own UI. This instance reflects `status="error"` instead of falling back to the JSON viewer.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tool-result-view
+      tool-name="reported_application_failure"
+      .result=${{ code: 'upstream_unavailable' }}
+      style="display:block;max-width:24rem;"
     ></lr-tool-result-view>
   `,
 };

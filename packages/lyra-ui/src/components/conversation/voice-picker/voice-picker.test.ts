@@ -1,5 +1,6 @@
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendKeys, sendMouse } from '@web/test-runner-commands';
+import { hoverUntilMatched } from '../../../../test/wtr-mouse.js';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 import { styles } from './voice-picker.styles.js';
@@ -68,6 +69,24 @@ function resolvedColor(el: LyraVoicePicker, value: string): string {
   return color;
 }
 
+function relativeLuminance(color: string): number {
+  const channels = color.match(/[\d.]+/gu)?.slice(0, 3).map(Number);
+  if (!channels || channels.length !== 3) throw new Error(`Unparseable computed color: ${color}`);
+  const [red, green, blue] = channels.map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  return red! * 0.2126 + green! * 0.7152 + blue! * 0.0722;
+}
+
+function contrastRatio(foreground: string, background: string): number {
+  const [lighter, darker] = [relativeLuminance(foreground), relativeLuminance(background)]
+    .sort((left, right) => right - left);
+  return (lighter! + 0.05) / (darker! + 0.05);
+}
+
 /** Polls until `read()` satisfies `until`, or throws once `timeoutMs` elapses -- same idiom as
  *  internal/positioner.test.ts's/lr-menu's identical helper, for waiting out place()'s async
  *  computePosition. */
@@ -112,6 +131,151 @@ it('renders a free-text input when catalog is empty/undefined or allow-custom is
     html`<lr-voice-picker allow-custom .catalog=${CATALOG}></lr-voice-picker>`
   )) as LyraVoicePicker;
   expect(input(el2) != null).to.equal(true);
+});
+
+it('reflects readonly and exposes literal readonly semantics on both picker modes', async () => {
+  const closed = (await fixture(
+    html`<lr-voice-picker readonly .catalog=${CATALOG}></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  const free = (await fixture(
+    html`<lr-voice-picker readonly allow-custom .catalog=${CATALOG}></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  const unset = (await fixture(
+    html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+
+  expect(closed.readonly).to.equal(true);
+  expect(closed.getAttribute('readonly')).to.equal('');
+  expect(trigger(closed).getAttribute('aria-readonly')).to.equal('true');
+  expect(input(free).readOnly).to.equal(true);
+  expect(input(free).getAttribute('aria-readonly')).to.equal('true');
+  expect(unset.readonly).to.equal(false);
+  expect(unset.hasAttribute('readonly')).to.equal(false);
+  expect(trigger(unset).getAttribute('aria-readonly')).to.equal('false');
+
+  await expect(closed).to.be.accessible();
+  await expect(free).to.be.accessible();
+});
+
+it('keeps omitted readonly editable across both catalog modes', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-voice-picker name="closed" .catalog=${CATALOG}></lr-voice-picker>
+      <lr-voice-picker name="free" allow-custom .catalog=${CATALOG}></lr-voice-picker>
+    </form>
+  `)) as HTMLFormElement;
+  const [closed, free] = Array.from(form.querySelectorAll('lr-voice-picker')) as LyraVoicePicker[];
+  const closedChange = oneEvent(closed!, 'lr-change');
+  trigger(closed!).click();
+  await closed!.updateComplete;
+  rows(closed!)[1]!.click();
+  expect((await closedChange).detail).to.deep.equal({ value: 'verse', inCatalog: true });
+
+  const editable = input(free!);
+  editable.focus();
+  editable.value = 'custom-voice';
+  editable.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await free!.updateComplete;
+  const freeChange = oneEvent(free!, 'lr-change');
+  editable.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+  );
+  expect((await freeChange).detail).to.deep.equal({ value: 'custom-voice', inCatalog: false });
+  expect(editable.readOnly).to.equal(false);
+  expect(new FormData(form).get('closed')).to.equal('verse');
+  expect(new FormData(form).get('free')).to.equal('custom-voice');
+});
+
+it('keeps readonly controls browseable while blocking user commits and preserving previews/form/programmatic flows', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-voice-picker
+        readonly
+        required
+        name="closed"
+        value="aria"
+        .catalog=${PREVIEW_CATALOG}
+      ></lr-voice-picker>
+      <lr-voice-picker
+        readonly
+        required
+        name="free"
+        value="aria"
+        allow-custom
+        .catalog=${PREVIEW_CATALOG}
+      ></lr-voice-picker>
+      <lr-voice-picker readonly required name="blank" .catalog=${PREVIEW_CATALOG}></lr-voice-picker>
+    </form>
+  `)) as HTMLFormElement;
+  const [closed, free, blank] = Array.from(form.querySelectorAll('lr-voice-picker')) as LyraVoicePicker[];
+  const closedChanges: Event[] = [];
+  const freeChanges: Event[] = [];
+  closed!.addEventListener('lr-change', (event) => closedChanges.push(event));
+  free!.addEventListener('lr-change', (event) => freeChanges.push(event));
+
+  expect(blank!.validity.valid).to.equal(true);
+  expect(new FormData(form).get('blank')).to.equal('');
+  expect(trigger(closed!).disabled).to.equal(false);
+  trigger(closed!).focus();
+  trigger(closed!).click();
+  await closed!.updateComplete;
+  const browse = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+  trigger(closed!).dispatchEvent(browse);
+  await closed!.updateComplete;
+  expect(browse.defaultPrevented).to.equal(true);
+  expect(trigger(closed!).getAttribute('aria-activedescendant')).to.not.equal('');
+  rows(closed!)[2]!.click();
+  await closed!.updateComplete;
+  expect(closed!.value).to.equal('aria');
+  expect(closed!.open).to.equal(true);
+  expect(closedChanges).to.deep.equal([]);
+  expect(previewButton(closed!).disabled).to.equal(false);
+  closed!.addEventListener('lr-preview-request', (event) => event.preventDefault(), { once: true });
+  const previewRequest = oneEvent(closed!, 'lr-preview-request');
+  previewButton(closed!).click();
+  expect((await previewRequest).detail).to.deep.equal({ voiceId: 'aria', previewUrl: SILENT_AUDIO_DATA_URL });
+
+  const native = input(free!);
+  native.focus();
+  native.select();
+  expect(native.selectionStart).to.equal(0);
+  expect(native.selectionEnd).to.equal('aria'.length);
+  const copy = new Event('copy', { bubbles: true, cancelable: true });
+  native.dispatchEvent(copy);
+  expect(copy.defaultPrevented).to.equal(false);
+  native.value = '';
+  native.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await free!.updateComplete;
+  expect(native.value).to.equal('Aria');
+  const navigate = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+  native.dispatchEvent(navigate);
+  await free!.updateComplete;
+  expect(navigate.defaultPrevented).to.equal(true);
+  const commit = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  native.dispatchEvent(commit);
+  await free!.updateComplete;
+  expect(commit.defaultPrevented).to.equal(true);
+  expect(free!.value).to.equal('aria');
+  expect(free!.open).to.equal(true);
+  expect(freeChanges).to.deep.equal([]);
+
+  closed!.value = 'nova';
+  free!.setRangeText('programmatic', 0, native.value.length, 'select');
+  await Promise.all([closed!.updateComplete, free!.updateComplete]);
+  expect(new FormData(form).get('closed')).to.equal('nova');
+  expect(free!.value).to.equal('programmatic');
+  expect(new FormData(form).get('free')).to.equal('programmatic');
+
+  form.reset();
+  await Promise.all([closed!.updateComplete, free!.updateComplete]);
+  expect(closed!.value).to.equal('aria');
+  expect(free!.value).to.equal('aria');
+  free!.remove();
+  form.append(free!);
+  await free!.updateComplete;
+  expect(free!.readonly).to.equal(true);
+  expect(input(free!).readOnly).to.equal(true);
+  expect(new FormData(form).get('free')).to.equal('aria');
 });
 
 it('keeps focus and pristine invalid semantics through live mode changes', async () => {
@@ -1047,7 +1211,7 @@ it('retires a row preview when closing hides it while no option is keyboard-acti
     ariaPreview.click();
     await waitUntil(() => changes.length === 1, 'the row preview never started');
     trigger(el).dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true, composed: true }),
     );
     await el.updateComplete;
 
@@ -1386,6 +1550,58 @@ it('is accessible in free-text mode', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('keeps populated open listbox ownership, active descendants, focus, previews, and axe semantics in both modes', async () => {
+  for (const allowCustom of [false, true]) {
+    const el = (await fixture(html`
+      <lr-voice-picker
+        label="Voice"
+        ?allow-custom=${allowCustom}
+        .catalog=${OBJECT_CATALOG}
+        style="--lr-transition-fast: 0s"
+      ></lr-voice-picker>
+    `)) as LyraVoicePicker;
+    const owner = allowCustom ? input(el) : trigger(el);
+    owner.focus();
+    el.open = true;
+    await el.updateComplete;
+    owner.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+
+    const box = listbox(el);
+    const activeId = owner.getAttribute('aria-activedescendant');
+    const active = activeId
+      ? el.shadowRoot!.querySelector(`[id="${activeId}"]`) as HTMLElement | null
+      : null;
+    const rowPreview = rows(el)[0]!.querySelector<HTMLElement>('[part="option-preview"]');
+    expect(owner.getAttribute('role')).to.equal('combobox');
+    expect(owner.getAttribute('aria-expanded')).to.equal('true');
+    expect(owner.getAttribute('aria-controls')).to.equal(box.id);
+    expect(box.getAttribute('role')).to.equal('listbox');
+    expect(rows(el).length).to.be.greaterThan(0);
+    expect(active?.getAttribute('role')).to.equal('option');
+    expect(active?.hasAttribute('data-active')).to.equal(true);
+    expect(el.shadowRoot!.activeElement === owner).to.equal(true);
+    expect(previewButton(el).getAttribute('aria-label')).to.not.equal('');
+    expect(rowPreview?.tabIndex).to.equal(-1);
+    expect(rowPreview?.getAttribute('aria-hidden')).to.equal('true');
+    await expect(el).to.be.accessible();
+
+    owner.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.shadowRoot!.activeElement === owner).to.equal(true);
+  }
+});
+
 // -- Localization --------------------------------------------------------
 
 it('localizes the fallback accessible name and preview labels via this.localize()', async () => {
@@ -1678,6 +1894,10 @@ it('checkValidity/reportValidity delegate to the internal ElementInternals', asy
   expect(el.reportValidity()).to.be.false;
   el.value = 'alloy';
   expect(el.reportValidity()).to.be.true;
+  // Firefox anchors its native validation bubble to the reported control and keeps that panel
+  // painted after the fixture is gone until focus moves. It sits exactly where a later test's
+  // open listbox renders and swallows the synthesized pointer, so close it with this test.
+  el.blur();
 });
 
 // -- Free-text Enter commit (commitFreeText) --------------------------------
@@ -2156,38 +2376,27 @@ it('omits the autocomplete attribute entirely when autocomplete is cleared', asy
   expect(input(el).hasAttribute('autocomplete')).to.be.false;
 });
 
-/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
- *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
- *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
- *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
-function renderedClamp(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = '';
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
+it('clamps the actual opened floating listbox through the shared popover viewport token in both modes', async () => {
+  const longCatalog = [`voice-${'unbroken-identifier-'.repeat(20)}`];
+  for (const allowCustom of [false, true]) {
+    const el = (await fixture(html`
+      <lr-voice-picker
+        ?allow-custom=${allowCustom}
+        .catalog=${longCatalog}
+        style="--lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
+      ></lr-voice-picker>
+    `)) as LyraVoicePicker;
+    const owner = allowCustom ? input(el) : trigger(el);
+    owner.focus();
+    el.open = true;
+    await el.updateComplete;
+    const box = listbox(el);
+    await waitUntil(
+      () => box.style.getPropertyValue('--lr-positioner-available-inline-size') !== '',
+      'opened listbox did not receive live positioner geometry',
+    );
+    expect(box.getBoundingClientRect().width).to.be.at.most(200.5);
   }
-  const probe = document.createElement('span');
-  probe.style.display = 'block';
-  probe.style.setProperty('--lr-popover-viewport-clamp', '10px');
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
-
-it('clamps its floating surface width through the shared popover-viewport-clamp token', async () => {
-  const el = (await fixture(html`<lr-voice-picker></lr-voice-picker>`)) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
-  expect(renderedClamp(el, "[part='listbox']")).to.equal('10px');
 });
 
 it("colors the combobox-input's placeholder text instead of leaving the UA default", async () => {
@@ -2206,27 +2415,70 @@ it("colors the combobox-input's placeholder text instead of leaving the UA defau
 
 // -- Hover feedback (mouse users get the same 'this is clickable' cue keyboard focus gives) ------
 
+it('keeps active option metadata above the AA contrast floor in both themes and modes', async () => {
+  for (const theme of ['light', 'dark']) {
+    for (const allowCustom of [false, true]) {
+      const el = (await fixture(html`
+        <lr-voice-picker
+          data-lr-theme=${theme}
+          ?allow-custom=${allowCustom}
+          .catalog=${OBJECT_CATALOG}
+          style="--lr-transition-fast: 0s"
+        ></lr-voice-picker>
+      `)) as LyraVoicePicker;
+      const owner = allowCustom ? input(el) : trigger(el);
+      owner.focus();
+      el.open = true;
+      await el.updateComplete;
+      owner.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }),
+      );
+      await el.updateComplete;
+      const active = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
+      const metadata = active?.querySelector<HTMLElement>('[part="option-meta"]');
+      expect(metadata).to.not.equal(null);
+      expect(
+        contrastRatio(getComputedStyle(metadata!).color, getComputedStyle(active!).backgroundColor),
+        `${theme} ${allowCustom ? 'free' : 'closed'} active metadata contrast`,
+      ).to.be.at.least(4.5);
+    }
+  }
+});
+
+it('inherits live host typography into the standalone preview action and its 1em glyph', async () => {
+  const el = (await fixture(html`
+    <lr-voice-picker
+      value="aria"
+      style="font: 20px/1 monospace"
+      .catalog=${OBJECT_CATALOG}
+    ></lr-voice-picker>
+  `)) as LyraVoicePicker;
+  const preview = previewButton(el);
+  const glyph = preview.querySelector<SVGElement>('svg')!;
+
+  expect(getComputedStyle(preview).fontSize).to.equal('20px');
+  expect(getComputedStyle(preview).fontFamily).to.equal(getComputedStyle(el).fontFamily);
+  expect(getComputedStyle(glyph).width).to.equal('20px');
+  expect(getComputedStyle(glyph).height).to.equal('20px');
+});
+
 it('renders hover treatment on the trigger and standalone preview button', async () => {
   const el = await fixture<LyraVoicePicker>(html`
     <lr-voice-picker
       value="aria"
-      style="--lr-color-brand: rgb(1, 2, 3); --lr-color-brand-quiet: rgb(4, 5, 6)"
+      style="--lr-color-brand: rgb(1, 2, 3); --lr-voice-picker-preview-hover-bg: rgb(4, 5, 6); --lr-voice-picker-preview-hover-color: rgb(7, 8, 9)"
       .catalog=${OBJECT_CATALOG}
     ></lr-voice-picker>
   `);
   const targets = [
     { element: trigger(el), property: 'borderTopColor', expected: 'rgb(1, 2, 3)' },
     { element: previewButton(el), property: 'backgroundColor', expected: 'rgb(4, 5, 6)' },
+    { element: previewButton(el), property: 'color', expected: 'rgb(7, 8, 9)' },
   ] as const;
 
   for (const { element, property, expected } of targets) {
-    element.scrollIntoView({ block: 'center' });
-    const rect = element.getBoundingClientRect();
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
+      await hoverUntilMatched(element, `${element.getAttribute('part')} never registered :hover`);
       await waitUntil(
         () => getComputedStyle(element)[property] === expected,
         `${element.getAttribute('part')} never painted its hover treatment`,
@@ -2234,6 +2486,30 @@ it('renders hover treatment on the trigger and standalone preview button', async
     } finally {
       await resetMouse();
     }
+  }
+});
+
+it('uses the same preview hover tokens on the visible row action', async () => {
+  const el = (await fixture(html`
+    <lr-voice-picker
+      value="aria"
+      style="--lr-transition-fast: 0s; --lr-voice-picker-preview-hover-bg: rgb(4, 5, 6); --lr-voice-picker-preview-hover-color: rgb(7, 8, 9)"
+      .catalog=${OBJECT_CATALOG}
+    ></lr-voice-picker>
+  `)) as LyraVoicePicker;
+  el.open = true;
+  await el.updateComplete;
+  const rowPreview = rows(el)[0]!.querySelector<HTMLElement>('[part="option-preview"]')!;
+  try {
+    await hoverUntilMatched(rowPreview, 'row preview never registered :hover');
+    await waitUntil(
+      () =>
+        getComputedStyle(rowPreview).backgroundColor === 'rgb(4, 5, 6)' &&
+        getComputedStyle(rowPreview).color === 'rgb(7, 8, 9)',
+      'row preview never painted its configured hover tokens',
+    );
+  } finally {
+    await resetMouse();
   }
 });
 
@@ -2261,6 +2537,7 @@ describe('closed-dropdown keyboard contract', () => {
       key,
       bubbles: true,
       cancelable: true,
+      composed: true,
     });
     trigger(el).dispatchEvent(event);
     await el.updateComplete;
@@ -2357,6 +2634,7 @@ describe('free-text keyboard contract', () => {
       key,
       bubbles: true,
       cancelable: true,
+      composed: true,
     });
     input(el).dispatchEvent(event);
     await el.updateComplete;

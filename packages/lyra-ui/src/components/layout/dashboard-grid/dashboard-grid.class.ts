@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { tag } from '../../../internal/prefix.js';
 import { isAccessibilityVisible, srOnly } from '../../../internal/a11y.js';
 import {
@@ -57,6 +58,9 @@ interface WidgetRendererEl extends HTMLElement {
 
 const INTERACTIVE_DESCENDANT_SELECTOR =
   'button, a[href], area[href], input, select, textarea, summary, label, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="slider"], [role="spinbutton"], [role="textbox"], [role="combobox"], [role="option"], [role="menuitem"], [tabindex]:not([part="cell"])';
+const UNMATCHED_AUTHORED_CELL_WARNING_KEY = 'lyra-dashboard-grid-unmatched-authored-cell';
+const UNMATCHED_AUTHORED_CELL_WARNING =
+  '<lr-dashboard-grid>: an authored child has a cell-id that matches no layout entry and will not render.';
 
 interface CellDragState {
   pointerId: number;
@@ -568,9 +572,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
           this.warnedUnmatchedCells.add(child);
           // Keep unmatched authored content intact; without a corresponding named slot it remains
           // undisplayed, while its original slot value is available again on disconnect/retarget.
-          console.warn(
-            `<lr-dashboard-grid> a child with cell-id="${cellId}" matches no entry in \`layout\`; it will not render.`
-          );
+          devWarnOnce(UNMATCHED_AUTHORED_CELL_WARNING_KEY, UNMATCHED_AUTHORED_CELL_WARNING);
         }
       }
     }

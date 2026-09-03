@@ -7,6 +7,11 @@ import {
   activateOverlay,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { styles } from './command-palette.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -22,9 +27,11 @@ import { LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYR
 const COMMAND_ROW_HEIGHT = 48;
 const GROUP_ROW_HEIGHT = 32;
 const RESULT_OVERSCAN_ROWS = 6;
+const MAX_COMMAND_PALETTE_COMMANDS = 10_000;
+const MAX_COMMAND_PALETTE_KEYWORDS = 10_000;
 
 interface CommandResultRow {
-  command: LyraCommand;
+  command: CanonicalCommand;
   index: number;
   top: number;
   groupIndex: number;
@@ -80,6 +87,145 @@ export interface LyraCommand {
    *  `LyraSegmentedItem.icon` precedent -- not restricted to a square icon-only shape). */
   icon?: unknown;
   onSelect?: () => void;
+}
+
+/** The one-read view used after a command crosses the public identity boundary. The original
+ * source survives solely for the documented event/callback identity contract and is never read
+ * again by search, virtual rows, focus repair, or activation. */
+interface CanonicalCommand {
+  readonly source: LyraCommand;
+  readonly commandId: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly group?: string;
+  readonly shortcut?: string;
+  readonly keywords: readonly string[];
+  readonly disabled: boolean;
+  readonly icon?: unknown;
+  readonly onSelect?: () => void;
+}
+
+const EMPTY_CANONICAL_COMMANDS: readonly CanonicalCommand[] = Object.freeze([]);
+
+function projectCommandKeywords(value: unknown): readonly string[] | undefined {
+  try {
+    if (!Array.isArray(value)) return undefined;
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return undefined;
+    const keywords: string[] = [];
+    for (let index = 0; index < Math.min(length.value, MAX_COMMAND_PALETTE_KEYWORDS); index += 1) {
+      const entry = getOwnDataDescriptor(value, String(index));
+      if (
+        entry === MISSING_OWN_DATA_DESCRIPTOR ||
+        entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof entry.value !== 'string'
+      )
+        return undefined;
+      keywords.push(entry.value);
+    }
+    return Object.freeze(keywords);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectCommand(candidate: unknown): CanonicalCommand | undefined {
+  try {
+    if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) return undefined;
+    const commandId = getOwnDataDescriptor(candidate, 'commandId');
+    const label = getOwnDataDescriptor(candidate, 'label');
+    const description = getOwnDataDescriptor(candidate, 'description');
+    const group = getOwnDataDescriptor(candidate, 'group');
+    const shortcut = getOwnDataDescriptor(candidate, 'shortcut');
+    const keywords = getOwnDataDescriptor(candidate, 'keywords');
+    const disabled = getOwnDataDescriptor(candidate, 'disabled');
+    const icon = getOwnDataDescriptor(candidate, 'icon');
+    const onSelect = getOwnDataDescriptor(candidate, 'onSelect');
+    if (
+      commandId === MISSING_OWN_DATA_DESCRIPTOR ||
+      commandId === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      label === MISSING_OWN_DATA_DESCRIPTOR ||
+      label === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      description === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      group === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      shortcut === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      keywords === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      disabled === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      icon === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      onSelect === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof commandId.value !== 'string' ||
+      commandId.value.trim() === '' ||
+      typeof label.value !== 'string' ||
+      label.value.trim() === ''
+    )
+      return undefined;
+    const descriptionValue = description === MISSING_OWN_DATA_DESCRIPTOR ? undefined : description.value;
+    const groupValue = group === MISSING_OWN_DATA_DESCRIPTOR ? undefined : group.value;
+    const shortcutValue = shortcut === MISSING_OWN_DATA_DESCRIPTOR ? undefined : shortcut.value;
+    const keywordsValue = keywords === MISSING_OWN_DATA_DESCRIPTOR ? undefined : keywords.value;
+    const disabledValue = disabled === MISSING_OWN_DATA_DESCRIPTOR ? undefined : disabled.value;
+    const iconValue = icon === MISSING_OWN_DATA_DESCRIPTOR ? undefined : icon.value;
+    const onSelectValue = onSelect === MISSING_OWN_DATA_DESCRIPTOR ? undefined : onSelect.value;
+    if (
+      (descriptionValue !== undefined && typeof descriptionValue !== 'string') ||
+      (groupValue !== undefined && typeof groupValue !== 'string') ||
+      (shortcutValue !== undefined && typeof shortcutValue !== 'string') ||
+      (disabledValue !== undefined && typeof disabledValue !== 'boolean') ||
+      (onSelectValue !== undefined && typeof onSelectValue !== 'function')
+    )
+      return undefined;
+    const keywordValues = keywordsValue === undefined ? Object.freeze([]) : projectCommandKeywords(keywordsValue);
+    if (!keywordValues) return undefined;
+    return Object.freeze({
+      source: candidate as LyraCommand,
+      commandId: commandId.value,
+      label: label.value,
+      ...(descriptionValue === undefined ? {} : { description: descriptionValue }),
+      ...(groupValue === undefined ? {} : { group: groupValue }),
+      ...(shortcutValue === undefined ? {} : { shortcut: shortcutValue }),
+      keywords: keywordValues,
+      disabled: disabledValue ?? false,
+      ...(iconValue === undefined ? {} : { icon: iconValue }),
+      ...(onSelectValue === undefined ? {} : { onSelect: onSelectValue as () => void }),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectCommands(value: unknown): readonly CanonicalCommand[] {
+  try {
+    if (!Array.isArray(value)) return EMPTY_CANONICAL_COMMANDS;
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return EMPTY_CANONICAL_COMMANDS;
+    const commands: CanonicalCommand[] = [];
+    const seen = new Set<string>();
+    for (let index = 0; index < Math.min(length.value, MAX_COMMAND_PALETTE_COMMANDS); index += 1) {
+      const entry = getOwnDataDescriptor(value, String(index));
+      if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+      const command = projectCommand(entry.value);
+      if (!command || seen.has(command.commandId)) continue;
+      seen.add(command.commandId);
+      commands.push(command);
+    }
+    return Object.freeze(commands);
+  } catch {
+    return EMPTY_CANONICAL_COMMANDS;
+  }
 }
 export interface LyraCommandPaletteEventMap {
   'lr-select': CustomEvent<Readonly<{ command: LyraCommand }>>;
@@ -206,20 +352,19 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private listScrollFrame?: number;
   /** Window that owns listeners, observers, and animation frames for the current connection. */
   private runtimeWindow?: Window;
-  /** The `commands` array `haystacks` was built from -- reference-keyed memo, since `commands`
+  /** The canonical command view `haystacks` was built from -- reference-keyed memo, since `commands`
    *  only ever changes by reassignment (it's `attribute: false`; in-place mutation wouldn't
    *  trigger a re-render either). */
-  private haystacksFor?: readonly LyraCommand[];
+  private haystacksFor?: readonly CanonicalCommand[];
   private haystacksLocale = '';
   private haystacks: string[] = [];
-  private filteredForCommands?: readonly LyraCommand[];
+  private filteredForCommands?: readonly CanonicalCommand[];
   private filteredForQuery = '';
   private filteredForLocale = '';
-  private filteredRows: LyraCommand[] = [];
+  private filteredRows: CanonicalCommand[] = [];
   private normalizedForCommands?: readonly LyraCommand[];
-  private normalizedRows: LyraCommand[] = [];
-  private normalizedCommandIds = new Map<LyraCommand, string>();
-  private resultModelFor?: readonly LyraCommand[];
+  private normalizedRows: readonly CanonicalCommand[] = EMPTY_CANONICAL_COMMANDS;
+  private resultModelFor?: readonly CanonicalCommand[];
   private resultModelRowPitch?: number;
   private resultModelGroupPitch?: number;
   private resultModelCache?: CommandResultModel;
@@ -228,33 +373,10 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   /** Canonical command collection consumed by search, focus, rendering, and activation. Keeping
    *  the first valid occurrence makes duplicate handling deterministic while retaining caller
    *  object identity in `lr-select` and `onSelect`. */
-  private get effectiveCommands(): readonly LyraCommand[] {
+  private get effectiveCommands(): readonly CanonicalCommand[] {
     if (this.normalizedForCommands !== this.commands) {
       this.normalizedForCommands = this.commands;
-      const seen = new Set<string>();
-      this.normalizedRows = [];
-      this.normalizedCommandIds = new Map();
-      for (const command of this.commands ?? []) {
-        let commandId: unknown;
-        let label: unknown;
-        try {
-          commandId = command?.commandId;
-          label = command?.label;
-        } catch {
-          continue;
-        }
-        if (
-          typeof commandId !== 'string' ||
-          commandId.trim() === '' ||
-          typeof label !== 'string' ||
-          label.trim() === '' ||
-          seen.has(commandId)
-        )
-          continue;
-        seen.add(commandId);
-        this.normalizedRows.push(command);
-        this.normalizedCommandIds.set(command, commandId);
-      }
+      this.normalizedRows = projectCommands(this.commands);
     }
     return this.normalizedRows;
   }
@@ -269,24 +391,16 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     if (this.haystacksFor !== commands || this.haystacksLocale !== locale) {
       this.haystacksFor = commands;
       this.haystacksLocale = locale;
-      this.haystacks = commands.map((command) => {
-        let keywords: unknown;
-        try {
-          keywords = command.keywords;
-        } catch {
-          keywords = [];
-        }
-        return [
+      this.haystacks = commands.map((command) =>
+        [
           command.label,
           command.description ?? '',
           command.group ?? '',
-          ...(Array.isArray(keywords)
-            ? keywords.filter((keyword): keyword is string => typeof keyword === 'string')
-            : []),
+          ...command.keywords,
         ]
           .join(' ')
-          .toLocaleLowerCase(locale);
-      });
+          .toLocaleLowerCase(locale)
+      );
     }
     return this.haystacks;
   }
@@ -304,7 +418,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     const rows = this.filtered;
     let nextIndex = this.activeCommandId
       ? rows.findIndex(
-          (command) => this.normalizedCommandIds.get(command) === this.activeCommandId
+          (command) => command.commandId === this.activeCommandId
         )
       : -1;
     if (nextIndex < 0 || rows[nextIndex]?.disabled) {
@@ -317,7 +431,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     }
     this.activeIndex = nextIndex;
     this.activeCommandId =
-      nextIndex >= 0 ? this.normalizedCommandIds.get(rows[nextIndex]!) : undefined;
+      nextIndex >= 0 ? rows[nextIndex]!.commandId : undefined;
   }
 
   // Runs after render so the manager can resolve the rendered [part="dialog"] panel -- mirrors
@@ -599,7 +713,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.openPalette();
   };
 
-  private get filtered(): LyraCommand[] {
+  private get filtered(): CanonicalCommand[] {
     const locale = this.effectiveLocale;
     const query = this.queryText.trim().toLocaleLowerCase(locale);
     const commands = this.effectiveCommands;
@@ -623,25 +737,25 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     return this.filteredRows;
   }
 
-  private select(command: LyraCommand): void {
+  private select(command: CanonicalCommand): void {
     if (command.disabled) return;
-    this.emit('lr-select', { command });
+    this.emit('lr-select', { command: command.source });
     command.onSelect?.();
     this.close();
   }
   /** First enabled index at or past `from`, walking in `step` direction; -1 when every row that
    *  way is disabled (callers then keep the current index, preserving clamp-at-the-ends arrow
    *  behavior). Keeps the active option off disabled rows so Enter always has a live target. */
-  private seekEnabled(rows: LyraCommand[], from: number, step: 1 | -1): number {
+  private seekEnabled(rows: readonly CanonicalCommand[], from: number, step: 1 | -1): number {
     for (let index = from; index >= 0 && index < rows.length; index += step)
       if (!rows[index]!.disabled) return index;
     return -1;
   }
 
-  private setActiveIndex(rows: LyraCommand[], index: number): void {
+  private setActiveIndex(rows: readonly CanonicalCommand[], index: number): void {
     this.activeIndex = index;
     this.activeCommandId =
-      index >= 0 ? this.normalizedCommandIds.get(rows[index]!) : undefined;
+      index >= 0 ? rows[index]!.commandId : undefined;
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {

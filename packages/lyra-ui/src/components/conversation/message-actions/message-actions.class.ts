@@ -10,6 +10,11 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import '../../utility/copy-button/copy-button.class.js';
 import '../message-feedback/message-feedback.class.js';
 
@@ -32,6 +37,7 @@ import {
   type LyraToolbarActionProvider,
 } from './toolbar-actions.js';
 import type {
+  LyraMessageFeedback,
   MessageFeedbackSubmitDetail,
   MessageFeedbackValue,
 } from '../message-feedback/message-feedback.class.js';
@@ -52,6 +58,138 @@ const MESSAGE_ACTION_CONTROLS: readonly MessageActionControl[] = [
 interface ManagedToolbarAction {
   owner: Element;
   action: LyraToolbarAction;
+  /** Opaque source identity used only to detect a provider action replacement. */
+  source: object;
+}
+
+interface ProjectedToolbarAction {
+  readonly action: LyraToolbarAction;
+  readonly source: object;
+}
+
+interface DirectToolbarAction extends LyraToolbarAction {
+  hasAuthoredTabIndex(): boolean;
+}
+
+interface DisabledProjection {
+  readonly valid: boolean;
+  readonly disabled: boolean;
+}
+
+const MAX_TOOLBAR_ACTIONS = 100;
+const MAX_DESCRIPTOR_PROTOTYPES = 100;
+
+function isObjectValue(value: unknown): value is object {
+  return value !== null && (typeof value === 'object' || typeof value === 'function');
+}
+
+/** Resolves an own/inherited descriptor without invoking an accessor. An encountered accessor
+ * deliberately shadows farther prototypes, matching ordinary property lookup while failing closed. */
+function inheritedDescriptor(
+  value: object,
+  key: PropertyKey,
+): PropertyDescriptor | undefined {
+  let current: object | null = value;
+  for (let depth = 0; current && depth < MAX_DESCRIPTOR_PROTOTYPES; depth += 1) {
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(current, key);
+    } catch {
+      return undefined;
+    }
+    if (descriptor) return descriptor;
+    try {
+      current = Object.getPrototypeOf(current) as object | null;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+function dataCallable(value: object, key: PropertyKey): Function | undefined {
+  const descriptor = inheritedDescriptor(value, key);
+  return descriptor && 'value' in descriptor && typeof descriptor.value === 'function'
+    ? descriptor.value
+    : undefined;
+}
+
+function dataValue(value: object, key: PropertyKey): unknown {
+  const descriptor = inheritedDescriptor(value, key);
+  return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+}
+
+function projectDisabled(value: object): DisabledProjection {
+  const descriptor = inheritedDescriptor(value, 'disabled');
+  if (!descriptor) return { valid: true, disabled: false };
+  if ('value' in descriptor) {
+    return { valid: true, disabled: descriptor.value === true };
+  }
+  if (typeof descriptor.get !== 'function') return { valid: false, disabled: true };
+  try {
+    return {
+      valid: true,
+      disabled: Reflect.apply(descriptor.get, value, []) === true,
+    };
+  } catch {
+    return { valid: false, disabled: true };
+  }
+}
+
+function projectToolbarAction(value: unknown): ProjectedToolbarAction | undefined {
+  if (!isObjectValue(value)) return undefined;
+  const id = dataValue(value, 'id');
+  const focus = dataCallable(value, 'focus');
+  const setTabIndex = dataCallable(value, 'setTabIndex');
+  const matchesEventPath = dataCallable(value, 'matchesEventPath');
+  const releaseTabIndex = dataCallable(value, 'releaseTabIndex');
+  const disabled = projectDisabled(value);
+  if (
+    typeof id !== 'string' ||
+    id.trim().length === 0 ||
+    !focus ||
+    !setTabIndex ||
+    !matchesEventPath ||
+    !disabled.valid
+  )
+    return undefined;
+  const action: LyraToolbarAction = {
+    id,
+    disabled: disabled.disabled,
+    focus(options) {
+      try {
+        Reflect.apply(focus, value, [options]);
+      } catch {
+        // A hostile provider action cannot strand later controls.
+      }
+    },
+    setTabIndex(tabIndex) {
+      try {
+        Reflect.apply(setTabIndex, value, [tabIndex]);
+      } catch {
+        // A hostile provider action cannot strand later controls.
+      }
+    },
+    ...(releaseTabIndex
+      ? {
+          releaseTabIndex() {
+            try {
+              Reflect.apply(releaseTabIndex, value, []);
+            } catch {
+              // One failed optional release cannot strand a later action.
+            }
+          },
+        }
+      : {}),
+    matchesEventPath(path) {
+      try {
+        return Reflect.apply(matchesEventPath, value, [path]) === true;
+      } catch {
+        return false;
+      }
+    },
+  };
+  return { source: value, action };
 }
 
 export interface LyraMessageActionsEventMap {
@@ -101,6 +239,8 @@ function editIcon(): SVGTemplateResult {
  * `LyraToolbarActionProvider` protocol, which keeps implementation nodes private while exposing
  * ordered focus/tab-stop operations and stable action IDs. Both feedback thumbs and both branch
  * controls therefore remain independent arrow-key stops without parent shadow-root inspection.
+ * When a managed action leaves the toolbar, its optional `releaseTabIndex()` restores an untouched
+ * authored tab stop; a consumer change made after toolbar management always remains authoritative.
  * Providers notify availability/order changes with `lr-toolbar-actions-change`; plain authored
  * actions are observed in light DOM. A former stop is cleared, and if it held focus, focus moves to
  * the nearest survivor or the stable toolbar without overriding a newer external focus move.
@@ -128,7 +268,9 @@ function editIcon(): SVGTemplateResult {
  *   `lr-message-feedback`. `detail: { rating }`. A colliding event from a slotted custom child is
  *   contained at the slot boundary and remains observable directly on that child.
  * @event lr-feedback-submit - The built-in feedback control's terminal cancelable persistence
- *   request, including thumbs-only choices. Slotted collisions are contained at the slot boundary.
+ *   request, including thumbs-only choices. Its frozen detail includes a nonblank `submissionId`;
+ *   when prevented, pass that exact ID to `finalizePendingSubmit()` or
+ *   `revertPendingSubmit()` on this wrapper. Slotted collisions are contained at the slot boundary.
  * @csspart base - The toolbar (`role="toolbar"`).
  * @csspart copy-button - The embedded `lr-copy-button`.
  * @csspart regenerate-button - The built-in regenerate icon button.
@@ -185,6 +327,38 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   @property({ attribute: 'feedback-rating' })
   feedbackRating: MessageFeedbackValue = null;
 
+  /** Whether this component's current built-in feedback child is awaiting a persistence settle.
+   *  This is a nonreflecting read-through; no `feedback-pending` attribute or change event exists. */
+  get feedbackPending(): boolean {
+    return this.currentBuiltInFeedback()?.pending === true;
+  }
+
+  /** Settles only the currently rendered built-in feedback transaction identified by `submissionId`.
+   *  A removed, replaced, stale, or mismatched child fails closed. */
+  finalizePendingSubmit(submissionId: string): boolean {
+    const feedback = this.currentBuiltInFeedback();
+    return (
+      typeof submissionId === 'string' &&
+      submissionId.trim().length > 0 &&
+      feedback !== undefined
+        ? feedback.finalizePendingSubmit(submissionId)
+        : false
+    );
+  }
+
+  /** Reverts only the currently rendered built-in feedback transaction identified by `submissionId`.
+   *  A removed, replaced, stale, or mismatched child fails closed. */
+  revertPendingSubmit(submissionId: string): boolean {
+    const feedback = this.currentBuiltInFeedback();
+    return (
+      typeof submissionId === 'string' &&
+      submissionId.trim().length > 0 &&
+      feedback !== undefined
+        ? feedback.revertPendingSubmit(submissionId)
+        : false
+    );
+  }
+
   /** Visually hides the bar until the enclosing message is hovered or any control inside has focus. */
   @property({
     type: Boolean,
@@ -213,15 +387,28 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   private stopSyncGeneration = 0;
   private stopObserver?: MutationObserver;
   private managedStops: ManagedToolbarAction[] = [];
-  private authoredTabIndex = new WeakMap<Element, string | null>();
-  private directActions = new WeakMap<Element, LyraToolbarAction>();
+  private directActions = new WeakMap<Element, DirectToolbarAction>();
   private nextDirectActionId = 0;
   private focusedStop?: {
     index: number;
     owner: Element;
     id: string;
+    source: object;
     repair: ComposedFocusRepairSnapshot;
   };
+
+  private currentBuiltInFeedback(): LyraMessageFeedback | undefined {
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    const feedback = base?.querySelector<LyraMessageFeedback>(
+      'lr-message-feedback[part~="feedback"]',
+    );
+    return feedback &&
+      feedback.parentElement === base &&
+      feedback.getRootNode() === this.renderRoot &&
+      feedback.isConnected
+      ? feedback
+      : undefined;
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -235,6 +422,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     this.stopSyncGeneration++;
     this.stopObserver?.disconnect();
     this.stopObserver = undefined;
+    this.releaseManagedStops();
     this.focusedStop = undefined;
     this.unbindHoverTarget();
     this.removeEventListener('focusin', this.onFocusIn);
@@ -247,6 +435,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     this.stopSyncGeneration++;
     this.stopObserver?.disconnect();
     this.stopObserver = undefined;
+    this.releaseManagedStops();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -327,7 +516,13 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       const stop = stops[index];
       this.focusedStop =
         stop && repair
-          ? { index, owner: stop.owner, id: stop.action.id, repair }
+          ? {
+              index,
+              owner: stop.owner,
+              id: stop.action.id,
+              source: stop.source,
+              repair,
+            }
           : undefined;
     } else {
       this.focusedStop = undefined;
@@ -361,7 +556,11 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     left: ManagedToolbarAction,
     right: ManagedToolbarAction
   ): boolean {
-    return left.owner === right.owner && left.action.id === right.action.id;
+    return (
+      left.owner === right.owner &&
+      left.source === right.source &&
+      left.action.id === right.action.id
+    );
   }
 
   private isAvailable(action: LyraToolbarAction): boolean {
@@ -372,14 +571,26 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     }
   }
 
-  private directActionFor(element: Element): LyraToolbarAction {
+  private directActionFor(element: Element): DirectToolbarAction {
     let action = this.directActions.get(element);
     if (action) return action;
-    if (!this.authoredTabIndex.has(element)) {
-      this.authoredTabIndex.set(element, element.getAttribute('tabindex'));
-    }
     const target = element as HTMLElement;
     const id = `direct-${++this.nextDirectActionId}`;
+    let leasedTarget: HTMLElement | undefined;
+    let leasedAuthoredTabIndex: string | null = null;
+    let lastManagedTabIndex: string | null = null;
+    let consumerOwnsTabIndex = false;
+    const releaseTabIndex = (): void => {
+      const leased = leasedTarget;
+      if (leased && leased.getAttribute('tabindex') === lastManagedTabIndex) {
+        if (leasedAuthoredTabIndex === null) leased.removeAttribute('tabindex');
+        else leased.setAttribute('tabindex', leasedAuthoredTabIndex);
+      }
+      leasedTarget = undefined;
+      leasedAuthoredTabIndex = null;
+      lastManagedTabIndex = null;
+      consumerOwnsTabIndex = false;
+    };
     action = {
       id,
       get disabled() {
@@ -389,7 +600,32 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         target.focus(options);
       },
       setTabIndex(tabIndex) {
+        if (leasedTarget !== target) {
+          releaseTabIndex();
+          leasedTarget = target;
+          leasedAuthoredTabIndex = target.getAttribute('tabindex');
+        }
+        if (
+          consumerOwnsTabIndex ||
+          (lastManagedTabIndex !== null &&
+            target.getAttribute('tabindex') !== lastManagedTabIndex)
+        ) {
+          consumerOwnsTabIndex = true;
+          return;
+        }
         target.tabIndex = tabIndex;
+        lastManagedTabIndex = target.getAttribute('tabindex');
+      },
+      releaseTabIndex,
+      hasAuthoredTabIndex() {
+        if (leasedTarget !== target) return target.hasAttribute('tabindex');
+        if (
+          lastManagedTabIndex !== null &&
+          target.getAttribute('tabindex') === lastManagedTabIndex
+        ) {
+          return leasedAuthoredTabIndex !== null;
+        }
+        return target.hasAttribute('tabindex');
       },
       matchesEventPath(path) {
         return path.includes(element);
@@ -405,26 +641,45 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       owner: Element,
       provider: LyraToolbarActionProvider
     ): void => {
-      let provided: readonly LyraToolbarAction[];
+      const getToolbarActions = dataCallable(provider, 'getToolbarActions');
+      if (!getToolbarActions) return;
+      let provided: unknown;
       try {
-        provided = provider.getToolbarActions();
+        provided = Reflect.apply(getToolbarActions, provider, []);
       } catch {
         return;
       }
+      let isArray = false;
+      try {
+        isArray = Array.isArray(provided);
+      } catch {
+        return;
+      }
+      if (!isArray) return;
+      const length = getOwnDataDescriptor(provided as object, 'length');
+      if (
+        length === MISSING_OWN_DATA_DESCRIPTOR ||
+        length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof length.value !== 'number' ||
+        !Number.isSafeInteger(length.value) ||
+        length.value < 0
+      )
+        return;
       const seen = new Set<string>();
-      for (const action of Array.from(provided).slice(0, 100)) {
+      const inspected = Math.min(length.value, MAX_TOOLBAR_ACTIONS);
+      for (let index = 0; index < inspected; index += 1) {
+        const candidate = getOwnDataDescriptor(provided as object, String(index));
         if (
-          !action ||
-          typeof action.id !== 'string' ||
-          action.id.trim().length === 0 ||
-          seen.has(action.id) ||
-          typeof action.focus !== 'function' ||
-          typeof action.setTabIndex !== 'function' ||
-          typeof action.matchesEventPath !== 'function'
+          candidate === MISSING_OWN_DATA_DESCRIPTOR ||
+          candidate === UNSAFE_OWN_DATA_DESCRIPTOR
         )
           continue;
-        seen.add(action.id);
-        if (this.isAvailable(action)) actions.push({ owner, action });
+        const projected = projectToolbarAction(candidate.value);
+        if (!projected || seen.has(projected.action.id)) continue;
+        seen.add(projected.action.id);
+        if (this.isAvailable(projected.action)) {
+          actions.push({ owner, ...projected });
+        }
       }
     };
     const visit = (element: Element): void => {
@@ -432,12 +687,15 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         addProvider(element, element);
         return;
       }
-      const authoredTabIndex = this.authoredTabIndex.has(element)
-        ? this.authoredTabIndex.get(element)
-        : element.getAttribute('tabindex');
-      if (isSemanticActionElement(element) || authoredTabIndex !== null) {
+      const knownAction = this.directActions.get(element);
+      if (
+        isSemanticActionElement(element) ||
+        (knownAction?.hasAuthoredTabIndex() ?? element.hasAttribute('tabindex'))
+      ) {
         const action = this.directActionFor(element);
-        if (this.isAvailable(action)) actions.push({ owner: element, action });
+        if (this.isAvailable(action)) {
+          actions.push({ owner: element, action, source: action });
+        }
         return;
       }
       for (const child of element.children) visit(child);
@@ -454,7 +712,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     this.stopObserver?.disconnect();
     for (const previous of this.managedStops) {
       if (!stops.some((stop) => this.sameAction(stop, previous)))
-        previous.action.setTabIndex(-1);
+        this.releaseManagedStop(previous);
     }
     const preferredIndex = preferred
       ? stops.findIndex((stop) => this.sameAction(stop, preferred))
@@ -466,10 +724,30 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         ? preferredIndex
         : Math.min(Math.max(0, index), stops.length - 1);
     stops.forEach(({ action }, stopIndex) => {
-      action.setTabIndex(stopIndex === this.activeStopIndex ? 0 : -1);
+      try {
+        action.setTabIndex(stopIndex === this.activeStopIndex ? 0 : -1);
+      } catch {
+        // A third-party action may still throw despite its descriptor-safe projection.
+      }
     });
     this.managedStops = stops;
     this.observeStopChanges();
+  }
+
+  private releaseManagedStop(stop: ManagedToolbarAction): void {
+    try {
+      stop.action.releaseTabIndex?.();
+    } catch {
+      // A throwing optional release cannot strand another managed stop.
+    }
+    if (this.directActions.get(stop.owner) === stop.action) {
+      this.directActions.delete(stop.owner);
+    }
+  }
+
+  private releaseManagedStops(): void {
+    for (const stop of this.managedStops) this.releaseManagedStop(stop);
+    this.managedStops = [];
   }
 
   private observeStopChanges(): void {
@@ -507,12 +785,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   }
 
   private onStopMutations = (records: MutationRecord[]): void => {
-    for (const record of records) {
-      if (record.type !== 'attributes' || record.attributeName !== 'tabindex')
-        continue;
-      const target = record.target as Element;
-      this.authoredTabIndex.set(target, target.getAttribute('tabindex'));
-    }
+    void records;
     void this.reconcileStopsAfterChildren();
   };
 
@@ -537,7 +810,9 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     const retainedIndex = focused
       ? stops.findIndex(
           (stop) =>
-            stop.owner === focused.owner && stop.action.id === focused.id
+            stop.owner === focused.owner &&
+            stop.source === focused.source &&
+            stop.action.id === focused.id
         )
       : -1;
     const targetIndex =

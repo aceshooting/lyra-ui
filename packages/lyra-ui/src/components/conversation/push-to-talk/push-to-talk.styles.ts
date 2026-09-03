@@ -13,6 +13,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part='trigger'] {
+    font: inherit;
     display: inline-flex;
     align-items: center;
     justify-content: center;

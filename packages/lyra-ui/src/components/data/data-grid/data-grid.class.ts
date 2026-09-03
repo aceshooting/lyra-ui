@@ -5,6 +5,11 @@ import { styleMap } from 'lit/directives/style-map.js';
 import type { ComplexAttributeConverter } from 'lit';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
+import {
   getNumberFormat,
   resolveIntlLocale,
 } from '../../../internal/intl-cache.js';
@@ -66,7 +71,7 @@ import type {
 } from './data-grid-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export * from './data-grid-types.js';
@@ -102,14 +107,192 @@ interface DataDisplayGroup<Row> {
 
 type DisplayItem<Row> = DataDisplayRow<Row> | DataDisplayGroup<Row>;
 
+interface DataGridViewportAnchor {
+  readonly itemKey: string;
+  readonly offset: number;
+}
+
+/** A virtual target is re-aligned only after its newly rendered measurements have settled. */
+interface PendingVirtualScroll {
+  readonly itemKey: string;
+  readonly align: NonNullable<DataGridScrollOptions['align']> | 'nearest';
+}
+
+/** A typed, stable DOM/cache key. `row:1` and `group:1` must never share a measured height. */
+function displayItemKey<Row>(item: DisplayItem<Row>): string {
+  return item.kind === 'group'
+    ? `group:${item.key.length}:${item.key}`
+    : `row:${typeof item.key}:${String(item.key)}`;
+}
+
+const DATA_GRID_COLUMN_PROPERTIES = [
+  'id',
+  'field',
+  'label',
+  'align',
+  'width',
+  'minWidth',
+  'maxWidth',
+  'flex',
+  'formatter',
+  'value',
+  'sortable',
+  'sortFn',
+  'comparator',
+  'sortDescFirst',
+  'sortUndefined',
+  'searchable',
+  'filterable',
+  'filterType',
+  'filterFn',
+  'hidden',
+  'hideable',
+  'resizable',
+  'movable',
+  'pinnable',
+  'pinned',
+  'footer',
+  'aggregation',
+  'aggregatedFormatter',
+] as const satisfies readonly (keyof DataGridColumn<unknown>)[];
+
+const DATA_GRID_COLUMN_CALLBACK_PROPERTIES = new Set<string>([
+  'formatter',
+  'value',
+  'comparator',
+  'filterFn',
+  'aggregatedFormatter',
+]);
+
+const DATA_GRID_SORT_ALGORITHMS = new Set<string>([
+  'alphanumeric',
+  'alphanumericCaseSensitive',
+  'text',
+  'textCaseSensitive',
+  'datetime',
+  'basic',
+]);
+
+const DATA_GRID_FILTER_TYPES = new Set<string>([
+  'text',
+  'equals',
+  'number-range',
+  'date-range',
+  'set',
+  'includes-any',
+  'includes-all',
+]);
+
+const DATA_GRID_AGGREGATIONS = new Set<string>([
+  'sum',
+  'min',
+  'max',
+  'mean',
+  'median',
+  'count',
+  'unique',
+  'uniqueCount',
+  'extent',
+]);
+
+type DataGridColumnProperty = (typeof DATA_GRID_COLUMN_PROPERTIES)[number];
+
+/** Returns whether an admitted own data value can reach every later column use safely. */
+function isSafeColumnPropertyValue(
+  property: DataGridColumnProperty,
+  value: unknown
+): boolean {
+  if (value === undefined) return true;
+  if (DATA_GRID_COLUMN_CALLBACK_PROPERTIES.has(property))
+    return typeof value === 'function';
+  switch (property) {
+    case 'id':
+    case 'field':
+    case 'label':
+      return typeof value === 'string';
+    case 'width':
+    case 'minWidth':
+    case 'maxWidth':
+    case 'flex':
+      return typeof value === 'number' && Number.isFinite(value);
+    case 'sortable':
+    case 'sortDescFirst':
+    case 'searchable':
+    case 'filterable':
+    case 'hidden':
+    case 'hideable':
+    case 'resizable':
+    case 'movable':
+    case 'pinnable':
+      return typeof value === 'boolean';
+    case 'align':
+      return (
+        value === 'left' ||
+        value === 'center' ||
+        value === 'right' ||
+        value === 'start' ||
+        value === 'end'
+      );
+    case 'sortFn':
+      return typeof value === 'string' && DATA_GRID_SORT_ALGORITHMS.has(value);
+    case 'sortUndefined':
+      return (
+        value === 'first' || value === 'last' || value === 1 || value === -1
+      );
+    case 'filterType':
+      return typeof value === 'string' && DATA_GRID_FILTER_TYPES.has(value);
+    case 'pinned':
+      return (
+        value === false ||
+        value === 'left' ||
+        value === 'right' ||
+        value === 'start' ||
+        value === 'end'
+      );
+    case 'footer':
+      return typeof value === 'string' || typeof value === 'function';
+    case 'aggregation':
+      return (
+        typeof value === 'function' ||
+        (typeof value === 'string' && DATA_GRID_AGGREGATIONS.has(value))
+      );
+    default:
+      return false;
+  }
+}
+
 function snapshotColumns<Row>(
   value: readonly DataGridColumn<Row>[],
   occurrenceId: (column: object) => string
 ): readonly DataGridColumn<Row>[] {
-  if (!Array.isArray(value)) return Object.freeze([]);
   const output: DataGridColumn<Row>[] = [];
   const seen = new Set<string>();
-  for (const column of value) {
+  let length = 0;
+  try {
+    if (!Array.isArray(value)) return Object.freeze(output);
+    const descriptor = getOwnDataDescriptor(value, 'length');
+    const sourceLength =
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : descriptor.value;
+    if (
+      typeof sourceLength === 'number' &&
+      Number.isSafeInteger(sourceLength) &&
+      sourceLength >= 0
+    )
+      length = Math.min(sourceLength, MAX_DATA_GRID_COLUMN_ENTRIES);
+  } catch {
+    return Object.freeze(output);
+  }
+  for (let index = 0; index < length; index += 1) {
+    const candidate = getOwnDataDescriptor(value, String(index));
+    if (
+      candidate === MISSING_OWN_DATA_DESCRIPTOR ||
+      candidate === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    const column = candidate.value;
     try {
       if (
         column === null ||
@@ -117,37 +300,61 @@ function snapshotColumns<Row>(
         Array.isArray(column)
       )
         continue;
-      const hasId = Object.prototype.hasOwnProperty.call(column, 'id');
-      const hasField = Object.prototype.hasOwnProperty.call(column, 'field');
-      const authoredId = hasId ? (column as { readonly id?: unknown }).id : undefined;
-      const authoredField = hasField
-        ? (column as { readonly field?: unknown }).field
-        : undefined;
+      const descriptors = new Map<
+        DataGridColumnProperty,
+        ReturnType<typeof getOwnDataDescriptor>
+      >();
+      for (const property of DATA_GRID_COLUMN_PROPERTIES)
+        descriptors.set(property, getOwnDataDescriptor(column, property));
+      const idDescriptor =
+        descriptors.get('id') ?? MISSING_OWN_DATA_DESCRIPTOR;
+      const fieldDescriptor =
+        descriptors.get('field') ?? MISSING_OWN_DATA_DESCRIPTOR;
+      // An unsafe id can poison the first-wins identity. A safe id is sufficient on its own,
+      // however, so an unsafe optional field is omitted from the projection.
+      if (idDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+      const hasId = idDescriptor !== MISSING_OWN_DATA_DESCRIPTOR;
+      const authoredId = hasId ? idDescriptor.value : undefined;
+      const hasSafeId =
+        typeof authoredId === 'string' && authoredId.trim() !== '';
+      if (hasId && authoredId !== undefined && !hasSafeId) continue;
+      const hasField = fieldDescriptor !== MISSING_OWN_DATA_DESCRIPTOR;
+      const authoredField =
+        fieldDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR || !hasField
+          ? undefined
+          : fieldDescriptor.value;
+      const hasSafeField =
+        typeof authoredField === 'string' && authoredField.trim() !== '';
       if (
-        (hasId &&
-          authoredId !== undefined &&
-          (typeof authoredId !== 'string' || authoredId.trim() === '')) ||
-        (!hasId &&
-          hasField &&
-          authoredField !== undefined &&
-          (typeof authoredField !== 'string' || authoredField.trim() === ''))
+        !hasSafeId &&
+        (fieldDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+          (hasField && authoredField !== undefined && !hasSafeField))
       )
         continue;
       const identity =
-        typeof authoredId === 'string'
+        hasSafeId
           ? authoredId
-          : typeof authoredField === 'string'
+          : hasSafeField
             ? authoredField
             : occurrenceId(column);
       if (seen.has(identity)) continue;
       seen.add(identity);
-      const snapshot = {
-        ...column,
-        ...(authoredId === undefined && authoredField === undefined
-          ? { id: identity }
-          : {}),
-      };
-      output.push(Object.freeze(snapshot));
+      const snapshot = Object.create(null) as Record<string, unknown>;
+      for (const property of DATA_GRID_COLUMN_PROPERTIES) {
+        const descriptor = descriptors.get(property);
+        if (
+          descriptor === undefined ||
+          descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+          descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+        )
+          continue;
+        if (property === 'field' && !hasSafeField) continue;
+        if (!isSafeColumnPropertyValue(property, descriptor.value)) continue;
+        snapshot[property] = descriptor.value;
+      }
+      if (authoredId === undefined && authoredField === undefined)
+        snapshot['id'] = identity;
+      output.push(Object.freeze(snapshot) as DataGridColumn<Row>);
     } catch {
       // Keep later valid definitions when a hostile record/getter fails.
     }
@@ -176,6 +383,7 @@ const VIRTUALIZATION_THRESHOLD = 80;
 const VIRTUAL_OVERSCAN = 5;
 const DATA_GRID_TREE_NODE_LIMIT = 10_000;
 const DATA_GRID_TREE_DEPTH_LIMIT = 64;
+const MAX_DATA_GRID_COLUMN_ENTRIES = 10_000;
 const DATA_GRID_DRAG_TYPE = 'application/x-lyra-data-grid-column';
 
 function frozenArray<Value>(values: Iterable<Value>): readonly Value[] {
@@ -404,7 +612,8 @@ function normalizedGroupBy(
  * @event lr-sort-change - Fired after a user changes sorting.
  * @event focus - Native focus relayed once from the toolbar search or active column-filter input.
  * @event blur - Native blur relayed once from the toolbar search or active column-filter input.
- * @csspart body - Scrollable body viewport.
+ * @csspart body - The sole vertical and horizontal scroll viewport; header and footer columns
+ *   mirror its logical inline position.
  * @csspart cell - A data cell.
  * @csspart column-menu - A per-column menu.
  * @csspart column-menu-button - A per-column menu trigger.
@@ -474,6 +683,12 @@ function normalizedGroupBy(
  * @cssprop [--header-text-color=var(--lr-color-text)] - Header foreground.
  * @cssprop [--indent-size=var(--lr-size-1-25rem)] - Tree-level indentation.
  * @cssprop [--max-height=var(--lr-size-30rem)] - Scroll viewport maximum height; `none` renders all.
+ * @cssprop --lr-data-grid-control-active-background - Pressed background for grid controls.
+ * @cssprop --lr-data-grid-control-hover-background - Hovered background for grid controls.
+ * @cssprop --lr-data-grid-page-size-active-background - Pressed page-size selector background.
+ * @cssprop --lr-data-grid-row-active-background - Pressed data-row background.
+ * @cssprop --lr-data-grid-sortable-header-active-background - Pressed sortable-header background.
+ * @cssprop --lr-data-grid-sortable-header-hover-background - Hovered sortable-header background.
  * @cssprop [--row-height=var(--lr-size-3-5rem)] - Estimated and minimum row height.
  * @cssprop --row-hover-background - Hovered-row background.
  * @cssprop [--selected-background=var(--lr-color-brand-quiet)] - Selected-row background.
@@ -511,6 +726,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     paginationLastPage: LYRA_DEFAULT_paginationLastPage,
     previous: LYRA_DEFAULT_previous,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
+    resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
@@ -844,10 +1060,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   @state() private activeColumnMenu: string | null = null;
   @state() private liveText = '';
   @state() private bodyScrollTop = 0;
+  /** Logical distance from the body's inline start; header/footer translate it into their physical
+   * direction so `[part="body"]` remains the sole horizontal viewport in both writing modes. */
+  @state() private bodyScrollInlineOffset = 0;
   @state() private viewportHeight = 0;
   @state() private focusedRow = -1;
   @state() private focusedColumn = 0;
   @state() private dragGhost = '';
+  @state() private activeResizeColumn: string | undefined;
 
   @query('[part="body"]') private bodyElement?: HTMLElement;
 
@@ -862,6 +1082,37 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private managedOverlayOwner: string | null = null;
   private lastSelectedIndex = -1;
   private isMounting = true;
+  /** Measured whole-display-item block sizes, keyed by stable row/group identity rather than a
+   * transient virtual index. Unmeasured items retain `resolvedRowHeight` as their bounded estimate. */
+  private readonly measuredItemHeights = new Map<string, number>();
+  private measuredItemOffsets: readonly number[] = Object.freeze([0]);
+  private measuredItemOffsetSignature = '';
+  private measuredItemOffsetEstimate = 0;
+  private measuredItemOffsetsDirty = true;
+  private measurementLocale = '';
+  private measurementDisplaySignature = '';
+  private measurementRowHeight: number | undefined;
+  private measurementFontSignature = '';
+  /** The last stable item at the viewport's leading edge, retained across projections that can
+   * reorder or remeasure rows before the next render reconciles their physical offsets. */
+  private lastMeasurementAnchor?: DataGridViewportAnchor;
+  private measuredBodyWidth: number | undefined;
+  /** Width reserved by a vertical body scrollbar at logical inline end. Header/footer live outside
+   * that scrollport, so their inline-end pins need the same inset to share its visible edge. */
+  private bodyScrollbarInlineEndGutter = 0;
+  private rowMeasurementObserver?: ResizeObserver;
+  private rowMeasurementObserverOwner?: Window;
+  private rowMeasurementObserverBody?: HTMLElement;
+  private readonly observedMeasurementElements = new Map<HTMLElement, string>();
+  private measurementUpdateQueued = false;
+  private measurementScrollSyncQueued = false;
+  private bodyScrollStateSyncQueued = false;
+  /** A component-issued vertical scroll that must not be mistaken for intervening user intent. */
+  private expectedBodyScroll?: {
+    readonly body: HTMLElement;
+    readonly top: number;
+  };
+  private pendingVirtualScroll?: PendingVirtualScroll;
   /** Handle on the shared light-DOM live region announcements actually go through -- a region
    *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
    *  outright), so `[part="live-region"]` is only an `aria-hidden` mirror. */
@@ -875,6 +1126,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       document: this.ownerDocument,
       source: this,
     });
+    // A reconnect can reuse already-rendered rows without scheduling a Lit update. Rebind the
+    // owner-realm observer here so variable-height measurements do not silently stop after moving
+    // the grid between containers/documents.
+    if (this.hasUpdated) {
+      this.syncMeasuredBodyWidth();
+      this.syncBodyScrollState();
+      this.syncRowMeasurementObserver();
+      this.correctMeasurementAnchor();
+      this.measureRenderedItems();
+    }
     if (this.dataSource) this.scheduleServerRequest(false);
   }
 
@@ -891,14 +1152,31 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (this.resizeSession?.moved)
       this.restoreResizeSession(this.resizeSession, false);
     this.resizeSession = undefined;
+    this.activeResizeColumn = undefined;
     this.activeFilterColumn = null;
     this.activeColumnMenu = null;
     this.columnsMenuOpen = false;
     this.dragGhost = '';
     this.columnDragSession = undefined;
+    this.pendingVirtualScroll = undefined;
+    this.expectedBodyScroll = undefined;
+    this.resetRowMeasurementObserver();
     this.sink?.release();
     this.sink = undefined;
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.expectedBodyScroll = undefined;
+    this.resetRowMeasurementObserver();
+    if (this.isConnected && this.hasUpdated) {
+      this.syncMeasuredBodyWidth();
+      this.syncBodyScrollState();
+      this.syncRowMeasurementObserver();
+      this.correctMeasurementAnchor();
+      this.measureRenderedItems();
+    }
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -927,6 +1205,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     ) {
       const session = this.resizeSession;
       this.resizeSession = undefined;
+      this.activeResizeColumn = undefined;
       if (session.moved) this.restoreResizeSession(session, true);
     }
     if (
@@ -938,6 +1217,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.dragGhost = '';
     }
     if (changed.has('columns')) this.handleColumnsChange();
+    this.reconcileRowMeasurementCache(changed);
 
     if (
       !this.usesServerData &&
@@ -1024,6 +1304,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.scheduleServerRequest(delayed);
     }
     this.syncManagedOverlay();
+    this.syncMeasuredBodyWidth();
+    this.queueBodyScrollStateSync();
+    this.syncRowMeasurementObserver();
+    this.correctMeasurementAnchor();
+    this.measureRenderedItems();
+    this.alignPendingVirtualScroll();
     this.isMounting = false;
   }
 
@@ -1693,6 +1979,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   /** Scrolls the requested processed-row index into the virtual viewport. */
   scrollToIndex(index: number, options: DataGridScrollOptions = {}): void {
+    this.pendingVirtualScroll = undefined;
+    // An explicit navigation command is newer than a measurement anchor captured before it.
+    // Keep ordinary reconciliation anchored, but never let that stale correction reset this jump.
+    this.pendingMeasurementAnchor = undefined;
     const rows = this.getVisibleRows();
     if (rows.length === 0) return;
     const requestedIndex = finiteInteger(index, 0, 0, rows.length - 1);
@@ -1703,26 +1993,54 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       requestedRow,
       sourceIndex ?? requestedIndex
     );
-    const target = this.displayItems.findIndex(
+    const items = this.displayItems;
+    const target = items.findIndex(
       (item) =>
         item.kind === 'row' &&
         (item.row === requestedRow || keysEqual(item.key, requestedKey))
     );
     if (target < 0) return;
+    const body = this.bodyElement;
+    if (!body) return;
+    if (this.recordMeasurementRowHeight() && this.invalidateRowMeasurements())
+      this.queueMeasurementUpdate();
     const rendered = this.renderRoot?.querySelector<HTMLElement>(
       `[part~="row"][data-visible-index="${target}"]`
     );
+    const rowHeight = this.displayItemHeight(target, items);
+    const rowTop = this.displayItemOffset(target, items);
+    const currentTop = finiteRange(body.scrollTop, this.bodyScrollTop, 0);
+    const viewportHeight = finiteRange(body.clientHeight, 0, 0);
+    const alignment = options.align ?? (rendered ? 'nearest' : 'start');
+    let top = rowTop;
+    if (alignment === 'center') top -= (viewportHeight - rowHeight) / 2;
+    else if (alignment === 'end') top -= viewportHeight - rowHeight;
+    else if (alignment === 'nearest') {
+      const rowBottom = rowTop + rowHeight;
+      if (rowTop >= currentTop && rowBottom <= currentTop + viewportHeight)
+        top = currentTop;
+      else if (rowTop < currentTop) top = rowTop;
+      else top = rowBottom - viewportHeight;
+    }
+    const maximumTop = Math.max(
+      0,
+      this.displayItemOffset(items.length, items) - viewportHeight
+    );
+    top = finiteRange(top, 0, 0, maximumTop);
+    this.lastMeasurementAnchor = this.measurementAnchorAtOffset(top, items);
     if (rendered) {
       rendered.scrollIntoView({ block: options.align ?? 'nearest' });
       return;
     }
-    const body = this.bodyElement;
-    if (!body) return;
-    const rowHeight = this.resolvedRowHeight;
-    let top = target * rowHeight;
-    if (options.align === 'center') top -= (body.clientHeight - rowHeight) / 2;
-    else if (options.align === 'end') top -= body.clientHeight - rowHeight;
-    body.scrollTo({ top: Math.max(0, top) });
+    const targetItem = items[target];
+    if (targetItem)
+      this.pendingVirtualScroll = Object.freeze({
+        itemKey: displayItemKey(targetItem),
+        align: alignment,
+      });
+    this.expectedBodyScroll = Object.freeze({ body, top });
+    this.bodyScrollTop = top;
+    body.scrollTo({ top });
   }
 
   /** Applies known fields from a partial serialized view state. */
@@ -2343,6 +2661,494 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return result;
   }
 
+  private measurementSignature(items: readonly DisplayItem<Row>[]): string {
+    return items
+      .map((item) => {
+        const key = displayItemKey(item);
+        return `${key.length}:${key}`;
+      })
+      .join('|');
+  }
+
+  private invalidateRowMeasurements(): boolean {
+    const anchor = this.lastMeasurementAnchor ?? this.captureMeasurementAnchor();
+    if (this.measuredItemHeights.size === 0) {
+      this.measuredItemOffsetsDirty = true;
+      return false;
+    }
+    if (anchor) this.pendingMeasurementAnchor = anchor;
+    this.measuredItemHeights.clear();
+    this.measuredItemOffsetsDirty = true;
+    return true;
+  }
+
+  /** Clears estimates whenever a change can alter a row's physical block size. Pure scrolling is
+   * deliberately absent: cache entries are keyed by stable display identity and survive a row
+   * leaving/re-entering the virtual window. */
+  // Untyped PropertyValues includes the private reactive width and visibility maps, which are
+  // intentionally omitted from keyof this but can change wrapping and row height.
+  private reconcileRowMeasurementCache(changed: PropertyValues): void {
+    const items = this.displayItems;
+    const signature = this.measurementSignature(items);
+    const locale = this.effectiveLocale;
+    const changedGeometry = [
+      'columns',
+      'columnOrder',
+      'columnVisibility',
+      'columnWidths',
+      'data',
+      'filters',
+      'searchTerm',
+      'sort',
+      'expandedKeys',
+      'groupBy',
+      'page',
+      'pageSize',
+      'paginate',
+      'childRows',
+      'rowDetail',
+      'rowClass',
+      'selectable',
+      'strings',
+    ].some((property) => changed.has(property));
+    const localeChanged =
+      this.measurementLocale !== '' && this.measurementLocale !== locale;
+    const structureChanged =
+      this.measurementDisplaySignature !== '' &&
+      this.measurementDisplaySignature !== signature;
+    const rowHeightChanged = this.recordMeasurementRowHeight();
+    if (changedGeometry || localeChanged || structureChanged || rowHeightChanged)
+      this.invalidateRowMeasurements();
+    this.measurementLocale = locale;
+    this.measurementDisplaySignature = signature;
+  }
+
+  /** Detects CSS-token/font metric changes even when no public reactive property changed. */
+  private recordMeasurementRowHeight(): boolean {
+    const height = this.resolvedRowHeight;
+    const previous = this.measurementRowHeight;
+    const fontSignature = this.currentMeasurementFontSignature();
+    const fontChanged =
+      this.measurementFontSignature !== '' &&
+      this.measurementFontSignature !== fontSignature;
+    this.measurementRowHeight = height;
+    this.measurementFontSignature = fontSignature;
+    return (previous !== undefined && previous !== height) || fontChanged;
+  }
+
+  private currentMeasurementFontSignature(): string {
+    // Server-side and partial DOM hosts expose no owner document at all, so the
+    // connection check has to run before the document is dereferenced.
+    if (!this.isConnected) return '';
+    const owner = this.ownerDocument?.defaultView;
+    if (!owner || typeof owner.getComputedStyle !== 'function') return '';
+    try {
+      const style = owner.getComputedStyle(this);
+      const cell = this.renderRoot?.querySelector<HTMLElement>(
+        '[part~="cell"], [part~="header-cell"], [part="group-value"]'
+      );
+      const cellStyle = cell ? owner.getComputedStyle(cell) : undefined;
+      const cellPadding = cellStyle
+        ? [
+            cellStyle.paddingBlockStart,
+            cellStyle.paddingBlockEnd,
+            cellStyle.paddingInlineStart,
+            cellStyle.paddingInlineEnd,
+          ].join(',')
+        : this.computedToken('--cell-padding', '--_lr-data-grid-cell-padding');
+      return [
+        style.fontFamily,
+        style.fontSize,
+        style.fontStretch,
+        style.fontStyle,
+        style.fontWeight,
+        style.letterSpacing,
+        style.lineHeight,
+        style.wordSpacing,
+        cellPadding,
+      ].join('\u0000');
+    } catch {
+      return '';
+    }
+  }
+
+  private recordMeasuredBodyWidth(width: unknown): boolean {
+    if (typeof width !== 'number' || !Number.isFinite(width) || width < 0)
+      return false;
+    const previous = this.measuredBodyWidth;
+    this.measuredBodyWidth = width;
+    if (previous === undefined || previous === width)
+      return false;
+    this.invalidateRowMeasurements();
+    return true;
+  }
+
+  private syncMeasuredBodyWidth(): void {
+    const body = this.bodyElement;
+    if (!body) return;
+    this.syncBodyScrollbarInlineEndGutter(body);
+    if (this.recordMeasuredBodyWidth(body.clientWidth))
+      this.queueMeasurementUpdate();
+  }
+
+  /** Mirrors the body's actual vertical-scrollbar reservation onto outer end-pinned tracks without
+   * scheduling a nested Lit update from `updated()`. */
+  private syncBodyScrollbarInlineEndGutter(body: HTMLElement): void {
+    const scrollbarGutter = finiteRange(
+      body.offsetWidth - body.clientWidth,
+      0,
+      0
+    );
+    if (this.bodyScrollbarInlineEndGutter === scrollbarGutter) return;
+    this.bodyScrollbarInlineEndGutter = scrollbarGutter;
+    const value = `${scrollbarGutter}px`;
+    this.renderRoot
+      .querySelectorAll<HTMLElement>('[part="header"], [part="footer-row"]')
+      .forEach((element) =>
+        element.style.setProperty('--data-grid-body-inline-end-gutter', value)
+      );
+  }
+
+  /** ResizeObserver and `updated()` may both discover a changed height in one render. Coalesce a
+   * follow-up pass outside Lit's lifecycle so a measurement cannot recursively schedule updates. */
+  private queueMeasurementUpdate(): void {
+    if (this.measurementUpdateQueued) return;
+    this.measurementUpdateQueued = true;
+    const owner = this.ownerDocument.defaultView;
+    const schedule = owner?.queueMicrotask?.bind(owner) ?? queueMicrotask;
+    schedule(() => {
+      this.measurementUpdateQueued = false;
+      if (this.isConnected) this.requestUpdate();
+    });
+  }
+
+  private queueMeasuredScrollTop(body: HTMLElement): void {
+    if (this.measurementScrollSyncQueued) return;
+    this.measurementScrollSyncQueued = true;
+    const owner = body.ownerDocument.defaultView;
+    const schedule = owner?.queueMicrotask?.bind(owner) ?? queueMicrotask;
+    schedule(() => {
+      this.measurementScrollSyncQueued = false;
+      if (!this.isConnected || this.bodyElement !== body) return;
+      const next = finiteRange(body.scrollTop, this.bodyScrollTop, 0);
+      if (this.bodyScrollTop !== next) this.bodyScrollTop = next;
+      this.lastMeasurementAnchor = this.captureMeasurementAnchor();
+    });
+  }
+
+  /** Reads layout-clamped scroll state after Lit commits without scheduling a nested update. */
+  private queueBodyScrollStateSync(): void {
+    if (this.bodyScrollStateSyncQueued) return;
+    this.bodyScrollStateSyncQueued = true;
+    const owner = this.ownerDocument.defaultView;
+    const schedule = owner?.queueMicrotask?.bind(owner) ?? queueMicrotask;
+    schedule(() => {
+      this.bodyScrollStateSyncQueued = false;
+      if (this.isConnected) this.syncBodyScrollState();
+    });
+  }
+
+  private resetRowMeasurementObserver(): void {
+    this.rowMeasurementObserver?.disconnect();
+    this.rowMeasurementObserver = undefined;
+    this.rowMeasurementObserverOwner = undefined;
+    this.rowMeasurementObserverBody = undefined;
+    this.observedMeasurementElements.clear();
+    // A realm/container reset can change wrapping even when the body has the same CSS pixel
+    // width (for example, a new document's fonts or inherited theme). Preserve the last stable
+    // item as a pending restoration target, but never reuse measurements across that boundary.
+    const invalidated = this.invalidateRowMeasurements();
+    this.lastMeasurementAnchor = undefined;
+    if (invalidated && this.isConnected) this.queueMeasurementUpdate();
+  }
+
+  private syncRowMeasurementObserver(): void {
+    const body = this.bodyElement;
+    const owner = body?.ownerDocument.defaultView;
+    if (!body || !owner || !this.isConnected || !owner.ResizeObserver) {
+      this.resetRowMeasurementObserver();
+      return;
+    }
+    if (
+      this.rowMeasurementObserverOwner !== owner ||
+      this.rowMeasurementObserverBody !== body ||
+      !this.rowMeasurementObserver
+    ) {
+      this.resetRowMeasurementObserver();
+      const observer = new owner.ResizeObserver((entries) => {
+        if (
+          this.rowMeasurementObserver !== observer ||
+          this.rowMeasurementObserverOwner !== owner ||
+          this.rowMeasurementObserverBody !== body ||
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== owner
+        )
+          return;
+        this.syncBodyScrollState(body);
+        for (const entry of entries) {
+          if (entry.target !== body) continue;
+          this.syncBodyScrollbarInlineEndGutter(body);
+          const width =
+            entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+          if (this.recordMeasuredBodyWidth(width)) {
+            this.queueMeasurementUpdate();
+            return;
+          }
+        }
+        this.measureRenderedItems();
+      });
+      this.rowMeasurementObserver = observer;
+      this.rowMeasurementObserverOwner = owner;
+      this.rowMeasurementObserverBody = body;
+      observer.observe(body);
+    }
+    const observer = this.rowMeasurementObserver;
+    if (!observer) return;
+    const current = new Map<HTMLElement, string>();
+    this.renderRoot
+      .querySelectorAll<HTMLElement>(
+        '[data-virtual-item-key], [data-virtual-item-detail-for]'
+      )
+      .forEach((element) => {
+        const key =
+          element.dataset['virtualItemKey'] ??
+          element.dataset['virtualItemDetailFor'];
+        if (key) current.set(element, key);
+      });
+    for (const element of this.observedMeasurementElements.keys()) {
+      if (!current.has(element)) {
+        observer.unobserve(element);
+        this.observedMeasurementElements.delete(element);
+      }
+    }
+    for (const [element, key] of current) {
+      if (this.observedMeasurementElements.get(element) === key) continue;
+      if (this.observedMeasurementElements.has(element)) observer.unobserve(element);
+      this.observedMeasurementElements.set(element, key);
+      observer.observe(element);
+    }
+  }
+
+  private displayItemOffsets(
+    items: readonly DisplayItem<Row>[]
+  ): readonly number[] {
+    const signature = this.measurementSignature(items);
+    const estimate = this.resolvedRowHeight;
+    if (
+      !this.measuredItemOffsetsDirty &&
+      this.measuredItemOffsetSignature === signature &&
+      this.measuredItemOffsetEstimate === estimate
+    )
+      return this.measuredItemOffsets;
+    const offsets = new Array<number>(items.length + 1);
+    offsets[0] = 0;
+    for (let index = 0; index < items.length; index += 1) {
+      const measured = this.measuredItemHeights.get(
+        displayItemKey(items[index]!)
+      );
+      const height = finiteRange(
+        measured ?? estimate,
+        estimate,
+        1,
+        Number.MAX_SAFE_INTEGER
+      );
+      offsets[index + 1] = Math.min(
+        Number.MAX_SAFE_INTEGER,
+        offsets[index]! + height
+      );
+    }
+    this.measuredItemOffsets = Object.freeze(offsets);
+    this.measuredItemOffsetSignature = signature;
+    this.measuredItemOffsetEstimate = estimate;
+    this.measuredItemOffsetsDirty = false;
+    return this.measuredItemOffsets;
+  }
+
+  private displayItemOffset(
+    index: number,
+    items: readonly DisplayItem<Row>[]
+  ): number {
+    const offsets = this.displayItemOffsets(items);
+    const clamped = finiteInteger(index, 0, 0, items.length);
+    return offsets[clamped] ?? 0;
+  }
+
+  private displayItemHeight(
+    index: number,
+    items: readonly DisplayItem<Row>[]
+  ): number {
+    const offsets = this.displayItemOffsets(items);
+    if (index < 0 || index >= items.length) return 0;
+    return Math.max(0, (offsets[index + 1] ?? 0) - (offsets[index] ?? 0));
+  }
+
+  private displayItemIndexAtOffset(
+    offset: number,
+    items: readonly DisplayItem<Row>[]
+  ): number {
+    if (items.length === 0) return -1;
+    const target = finiteRange(offset, 0, 0, Number.MAX_SAFE_INTEGER);
+    const offsets = this.displayItemOffsets(items);
+    let low = 0;
+    let high = items.length - 1;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      if ((offsets[middle + 1] ?? 0) <= target) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  }
+
+  private captureMeasurementAnchor(): DataGridViewportAnchor | undefined {
+    const body = this.bodyElement;
+    const items = this.displayItems;
+    if (!body || items.length === 0) return undefined;
+    const scrollTop = finiteRange(body.scrollTop, this.bodyScrollTop, 0);
+    return this.measurementAnchorAtOffset(scrollTop, items);
+  }
+
+  private measurementAnchorAtOffset(
+    scrollTop: number,
+    items: readonly DisplayItem<Row>[]
+  ): DataGridViewportAnchor | undefined {
+    if (items.length === 0) return undefined;
+    const index = this.displayItemIndexAtOffset(scrollTop, items);
+    const item = items[index];
+    if (!item) return undefined;
+    const offset = Math.max(0, scrollTop - this.displayItemOffset(index, items));
+    const height = this.displayItemHeight(index, items);
+    // A viewport can begin in the final divider pixel of a tall measured row. If invalidation then
+    // falls back to a shorter estimate, preserving that large intra-row offset skips past the next
+    // visible item. Anchor the next stable identity at zero instead, which preserves the content
+    // actually leading the viewport across the measurement reset.
+    if (index + 1 < items.length && height > 1 && offset >= height - 1) {
+      const next = items[index + 1]!;
+      return Object.freeze({ itemKey: displayItemKey(next), offset: 0 });
+    }
+    return Object.freeze({
+      itemKey: displayItemKey(item),
+      offset,
+    });
+  }
+
+  private pendingMeasurementAnchor?: DataGridViewportAnchor;
+
+  private correctMeasurementAnchor(): void {
+    const anchor = this.pendingMeasurementAnchor;
+    const body = this.bodyElement;
+    if (!anchor || !body) return;
+    const items = this.displayItems;
+    const index = items.findIndex(
+      (item) => displayItemKey(item) === anchor.itemKey
+    );
+    this.pendingMeasurementAnchor = undefined;
+    if (index < 0) {
+      this.lastMeasurementAnchor = undefined;
+      return;
+    }
+    const next = Math.max(
+      0,
+      this.displayItemOffset(index, items) + anchor.offset
+    );
+    this.expectedBodyScroll = Object.freeze({ body, top: next });
+    body.scrollTop = next;
+    this.lastMeasurementAnchor = anchor;
+    this.queueMeasuredScrollTop(body);
+  }
+
+  private measureRenderedItems(): void {
+    const rowHeightChanged = this.recordMeasurementRowHeight();
+    if (rowHeightChanged) this.invalidateRowMeasurements();
+    const grouped = new Map<string, HTMLElement[]>();
+    this.renderRoot
+      .querySelectorAll<HTMLElement>(
+        '[data-virtual-item-key], [data-virtual-item-detail-for]'
+      )
+      .forEach((element) => {
+        const key =
+          element.dataset['virtualItemKey'] ??
+          element.dataset['virtualItemDetailFor'];
+        if (!key) return;
+        const entries = grouped.get(key) ?? [];
+        entries.push(element);
+        grouped.set(key, entries);
+      });
+    if (grouped.size === 0) {
+      if (rowHeightChanged) this.queueMeasurementUpdate();
+      return;
+    }
+    const anchor = this.captureMeasurementAnchor();
+    let changed = false;
+    for (const [key, elements] of grouped) {
+      let height = 0;
+      let measurable = true;
+      for (const element of elements) {
+        let next: number;
+        try {
+          next = element.getBoundingClientRect().height;
+        } catch {
+          measurable = false;
+          break;
+        }
+        if (!Number.isFinite(next) || next <= 0) {
+          measurable = false;
+          break;
+        }
+        height += next;
+      }
+      if (!measurable || !Number.isFinite(height) || height <= 0) continue;
+      const previous = this.measuredItemHeights.get(key);
+      const estimate = this.resolvedRowHeight;
+      // A one-pixel row divider is not content height. Keeping that fixed border out of the cache
+      // preserves the authored estimate for ordinary one-line rows while still capturing real
+      // wrapping/detail growth.
+      if (Math.abs(estimate - height) <= 1) {
+        if (previous !== undefined) {
+          this.measuredItemHeights.delete(key);
+          changed = true;
+        }
+        continue;
+      }
+      if (previous !== undefined && Math.abs(previous - height) <= 1)
+        continue;
+      this.measuredItemHeights.set(key, height);
+      changed = true;
+    }
+    if (!changed) {
+      if (rowHeightChanged) this.queueMeasurementUpdate();
+      return;
+    }
+    this.measuredItemOffsetsDirty = true;
+    if (anchor && this.pendingMeasurementAnchor === undefined)
+      this.pendingMeasurementAnchor = anchor;
+    this.queueMeasurementUpdate();
+  }
+
+  /** Replays a virtual scroll command only after its target's measured offsets are stable. */
+  private alignPendingVirtualScroll(): void {
+    const pending = this.pendingVirtualScroll;
+    if (
+      !pending ||
+      this.measurementUpdateQueued ||
+      this.pendingMeasurementAnchor !== undefined
+    )
+      return;
+    const exists = this.displayItems.some(
+      (item) => displayItemKey(item) === pending.itemKey
+    );
+    if (!exists) {
+      this.pendingVirtualScroll = undefined;
+      return;
+    }
+    const target = [...this.renderRoot.querySelectorAll<HTMLElement>(
+      '[part~="row"][data-virtual-item-key]'
+    )].find((element) => element.dataset['virtualItemKey'] === pending.itemKey);
+    if (!target) return;
+    this.pendingVirtualScroll = undefined;
+    target.scrollIntoView({ block: pending.align });
+    this.queueBodyScrollStateSync();
+  }
+
   private get resolvedRowHeight(): number {
     const raw = this.computedToken(
       '--row-height',
@@ -2353,6 +3159,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   private get virtualWindow(): {
     items: DisplayItem<Row>[];
+    allItems: DisplayItem<Row>[];
     start: number;
     end: number;
   } {
@@ -2369,21 +3176,17 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       expandedDetails ||
       this.computedToken('--max-height', '--_lr-data-grid-max-height') ===
         'none';
-    if (disable) return { items, start: 0, end: items.length };
+    if (disable) return { items, allItems: items, start: 0, end: items.length };
     const height = this.resolvedRowHeight;
-    const visibleCount = Math.max(
-      1,
-      Math.ceil((this.viewportHeight || height * 10) / height)
+    const viewport = Math.max(height, this.viewportHeight || height * 10);
+    const firstVisible = this.displayItemIndexAtOffset(this.bodyScrollTop, items);
+    const lastVisible = this.displayItemIndexAtOffset(
+      this.bodyScrollTop + viewport,
+      items
     );
-    const start = Math.min(
-      Math.max(0, items.length - visibleCount),
-      Math.max(0, Math.floor(this.bodyScrollTop / height) - VIRTUAL_OVERSCAN)
-    );
-    const end = Math.min(
-      items.length,
-      start + visibleCount + VIRTUAL_OVERSCAN * 2
-    );
-    return { items: items.slice(start, end), start, end };
+    const start = Math.max(0, firstVisible - VIRTUAL_OVERSCAN);
+    const end = Math.min(items.length, lastVisible + VIRTUAL_OVERSCAN + 1);
+    return { items: items.slice(start, end), allItems: items, start, end };
   }
 
   private get gridTemplate(): string {
@@ -2413,6 +3216,18 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return columns.length > 0
       ? columns.join(' ')
       : 'minmax(var(--lr-size-7rem), 1fr)';
+  }
+
+  /** Physical header/footer translation derived from the body's normalized logical inline offset. */
+  private get bodyScrollTranslation(): string {
+    const logical = finiteRange(
+      this.bodyScrollInlineOffset,
+      0,
+      0,
+      Number.MAX_SAFE_INTEGER
+    );
+    const physical = this.effectiveDirection === 'rtl' ? logical : -logical;
+    return `${physical}px`;
   }
 
   private columnStyle(
@@ -2551,18 +3366,68 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     );
   }
 
-  private onBodyScroll(event: Event): void {
-    const target = event.currentTarget as
-      | (Element & { scrollTop?: unknown; clientHeight?: unknown })
+  /** Reads the authoritative body position after native scrolling or a layout-driven clamp. */
+  private syncBodyScrollState(source: unknown = this.bodyElement): void {
+    const target = source as
+      | (Element & {
+          scrollTop?: unknown;
+          scrollLeft?: unknown;
+          scrollWidth?: unknown;
+          clientHeight?: unknown;
+          clientWidth?: unknown;
+        })
       | null;
     if (
       !isElementValue(target) ||
       typeof target.scrollTop !== 'number' ||
-      typeof target.clientHeight !== 'number'
+      typeof target.clientHeight !== 'number' ||
+      typeof target.scrollLeft !== 'number'
     )
       return;
-    this.bodyScrollTop = target.scrollTop;
-    this.viewportHeight = target.clientHeight;
+    this.bodyScrollTop = finiteRange(target.scrollTop, this.bodyScrollTop, 0);
+    this.viewportHeight = finiteRange(target.clientHeight, this.viewportHeight, 0);
+    const inlineExtent =
+      typeof target.scrollWidth === 'number' &&
+      typeof target.clientWidth === 'number' &&
+      Number.isFinite(target.scrollWidth) &&
+      Number.isFinite(target.clientWidth)
+        ? Math.max(0, target.scrollWidth - target.clientWidth)
+        : Number.MAX_SAFE_INTEGER;
+    // CSSOM View normalizes RTL scrollLeft from 0 at logical inline start down to a negative
+    // extent at logical inline end. Store one positive logical distance, then render the physical
+    // translation once for the non-scrolling header/footer rows.
+    this.bodyScrollInlineOffset = finiteRange(
+      this.effectiveDirection === 'rtl' ? -target.scrollLeft : target.scrollLeft,
+      0,
+      0,
+      inlineExtent
+    );
+  }
+
+  private onBodyScroll(event: Event): void {
+    const body = event.currentTarget;
+    this.syncBodyScrollState(body);
+    const expected = this.expectedBodyScroll;
+    if (
+      expected &&
+      expected.body === body &&
+      Math.abs(
+        finiteRange(
+          (body as HTMLElement).scrollTop,
+          this.bodyScrollTop,
+          0
+        ) - expected.top
+      ) <= 1
+    ) {
+      this.expectedBodyScroll = undefined;
+    } else {
+      this.expectedBodyScroll = undefined;
+      // A native scroll between an estimated jump and later measurement reconciliation is newer
+      // user intent. Neither a stale stable-key anchor nor a deferred target may pull it back.
+      this.pendingMeasurementAnchor = undefined;
+      this.pendingVirtualScroll = undefined;
+    }
+    this.lastMeasurementAnchor = this.captureMeasurementAnchor();
   }
 
   private onCellClick(
@@ -2862,6 +3727,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       moved: false,
       direction: this.effectiveDirection,
     };
+    this.activeResizeColumn = id;
     try {
       (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
     } catch {
@@ -2875,6 +3741,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (!session || event.pointerId !== session.pointerId) return;
     if (!this.columnCanResize(session.columnId)) {
       this.resizeSession = undefined;
+      this.activeResizeColumn = undefined;
       if (session.moved) this.restoreResizeSession(session, true);
       return;
     }
@@ -2892,6 +3759,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const session = this.resizeSession;
     if (!session || event.pointerId !== session.pointerId) return undefined;
     this.resizeSession = undefined;
+    this.activeResizeColumn = undefined;
     try {
       (event.currentTarget as HTMLElement).releasePointerCapture?.(
         event.pointerId
@@ -2981,7 +3849,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (this.focusedRow >= 0) {
       const selector = `[role="gridcell"][data-row-position="${this.focusedRow}"]`;
       if (!this.renderRoot.querySelector(selector)) {
-        const top = this.focusedRow * this.resolvedRowHeight;
+        const top = this.displayItemOffset(
+          this.focusedRow,
+          this.displayItems
+        );
         pendingScrollTop = top;
         this.bodyScrollTop = top;
         if (this.bodyElement) this.bodyElement.scrollTop = top;
@@ -3346,7 +4217,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       <div
         part="header"
         role="row"
-        style=${styleMap({ '--data-grid-columns': this.gridTemplate })}
+        style=${styleMap({
+          '--data-grid-columns': this.gridTemplate,
+          '--data-grid-scroll-translation': this.bodyScrollTranslation,
+          '--data-grid-body-inline-end-gutter': `${this.bodyScrollbarInlineEndGutter}px`,
+        })}
       >
         ${this.renderSelectAllHeader()}
         ${this.visibleColumns.length === 0 && !this.selectionEnabled
@@ -3442,6 +4317,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                 ? html`
                     <span
                       part="resize-handle"
+                      ?data-resizing=${this.activeResizeColumn === id}
                       role="separator"
                       aria-orientation="vertical"
                       aria-label=${this.localize('resizeColumn', undefined, {
@@ -3450,6 +4326,15 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                       aria-valuemin=${resizeBounds.minimum}
                       aria-valuemax=${resizeBounds.maximum}
                       aria-valuenow=${resizeValue}
+                      aria-valuetext=${this.localize(
+                        'resizeValuePixels',
+                        undefined,
+                        {
+                          value: getNumberFormat(this.effectiveLocale).format(
+                            resizeValue
+                          ),
+                        }
+                      )}
                       tabindex="0"
                       @pointerdown=${(event: PointerEvent) =>
                         this.onResizeStart(event, id)}
@@ -3545,6 +4430,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             : 'false'
           : nothing}
         data-visible-index=${rowPosition}
+        data-virtual-item-key=${displayItemKey(item)}
         style=${styleMap({ '--data-grid-columns': this.gridTemplate })}
       >
         ${this.selectionEnabled
@@ -3611,7 +4497,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       </div>
       ${expanded && this.rowDetail
         ? html`
-            <div role="row" aria-rowindex=${ariaRowIndex + 1}>
+            <div
+              role="row"
+              aria-rowindex=${ariaRowIndex + 1}
+              data-virtual-item-detail-for=${displayItemKey(item)}
+            >
               <div
                 part="row-detail"
                 role="gridcell"
@@ -3647,6 +4537,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         aria-rowindex=${ariaRowIndex}
         aria-level=${item.depth + 1}
         aria-expanded=${expanded ? 'true' : 'false'}
+        data-virtual-item-key=${displayItemKey(item)}
         style=${styleMap({ '--data-grid-columns': this.gridTemplate })}
       >
         <div
@@ -3753,8 +4644,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       `;
     }
     const window = this.virtualWindow;
-    const height = this.resolvedRowHeight;
-    const allItems = this.displayItems;
+    const allItems = window.allItems;
     let ariaRowIndex =
       2 +
       window.start +
@@ -3770,15 +4660,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       ${window.start > 0
         ? html`<div
             aria-hidden="true"
-            style=${styleMap({ height: `${window.start * height}px` })}
+            style=${styleMap({
+              height: `${this.displayItemOffset(window.start, allItems)}px`,
+            })}
           ></div>`
         : nothing}
       ${repeat(
         window.items,
-        (item) =>
-          item.kind === 'group'
-            ? item.key
-            : `row:${typeof item.key}:${item.key}`,
+        (item) => displayItemKey(item),
         (item, localIndex) => {
           const rowPosition = window.start + localIndex;
           const currentAriaRowIndex = ariaRowIndex;
@@ -3799,7 +4688,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             <div
               aria-hidden="true"
               style=${styleMap({
-                height: `${(allItems.length - window.end) * height}px`,
+                height: `${Math.max(
+                  0,
+                  this.displayItemOffset(allItems.length, allItems) -
+                    this.displayItemOffset(window.end, allItems)
+                )}px`,
               })}
             ></div>
           `
@@ -3818,14 +4711,24 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         <div
           part="footer-row"
           role="row"
-          style=${styleMap({ '--data-grid-columns': this.gridTemplate })}
+          style=${styleMap({
+            '--data-grid-columns': this.gridTemplate,
+            '--data-grid-scroll-translation': this.bodyScrollTranslation,
+            '--data-grid-body-inline-end-gutter': `${this.bodyScrollbarInlineEndGutter}px`,
+          })}
         >
           ${this.selectionEnabled
             ? html`<div part="footer-cell" role="gridcell"></div>`
             : nothing}
           ${this.visibleColumns.map(
-            ({ column }) => html`
-              <div part="footer-cell" role="gridcell">
+            ({ column, id }) => html`
+              <div
+                part="footer-cell"
+                role="gridcell"
+                data-column-id=${id}
+                data-pin=${normalizePinSide(this.getColumnPin(id)) || nothing}
+                style=${styleMap(this.columnStyle(column, id))}
+              >
                 ${typeof column.footer === 'function'
                   ? column.footer(rows)
                   : column.footer ?? nothing}

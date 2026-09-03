@@ -202,6 +202,17 @@ export const Disabled: Story = {
   `,
 };
 
+/** `readonly` keeps the control focusable and its catalog browseable, while user edits and option
+ * commits stay locked. Application code can still update the selected value. */
+export const Readonly: Story = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-24rem)">
+      <lr-model-select readonly value="mistral" .catalog=${OLLAMA_CATALOG}></lr-model-select>
+      <lr-model-select readonly allow-custom value="mistral" .catalog=${OLLAMA_CATALOG}></lr-model-select>
+    </div>
+  `,
+};
+
 /** `required` blocks a containing form from submitting while empty. */
 export const RequiredInForm: Story = {
   render: () => html`

@@ -40,8 +40,11 @@ export const styles = css`
   }
 
   [part='sources-summary'] {
+    display: flex;
+    align-items: center;
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs) var(--lr-space-s);
+    text-align: start;
     cursor: pointer;
   }
 

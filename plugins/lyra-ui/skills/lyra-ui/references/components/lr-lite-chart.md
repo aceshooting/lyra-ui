@@ -76,7 +76,8 @@ passthrough). Not a subclass of `LyraChart`.
   more here than on `lr-chart`: this component exists to avoid the Chart.js peers, so without it an
   app that chose it for exactly that reason had to either hand-roll a `<details>` around a
   duplicated table or adopt `lr-chart` and pull in Chart.js for a button — the cheap component
-  stuck with the expensive workaround. Unset, nothing renders and behavior is unchanged.
+  stuck with the expensive workaround. A supplied `slot="data-table"` follows the same disclosure
+  state. Unset, nothing renders and behavior is unchanged.
   Themeable via `--lr-lite-chart-data-table-toggle-hover-bg` (default
   `var(--lr-color-brand-quiet)`) and `--lr-lite-chart-data-table-toggle-active-bg` (default: that
   hover colour mixed by `--lr-color-mix-active`).
@@ -152,10 +153,12 @@ passthrough). Not a subclass of `LyraChart`.
   equivalent for the full charts.
 - `withoutValueAxis: boolean = false` (attribute `without-value-axis`) — suppresses gridlines and
   value-axis tick labels; x-axis category labels remain.
-- `selectedIndices: readonly number[] = []` (attribute: false) — applies to every interactive data mark for
-  both `type="bar"` and `type="line"`: matching bars and line points receive `data-selected` and
-  explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`. For a multi-series
-  chart, the category index selects the matching mark in every dataset. Empty is the default.
+- `selectedIndices: readonly number[] = []` (attribute: false) — names **source category indices**,
+  not positions in the sampled SVG output. Finite integer entries whose source rows are represented
+  in the bounded rendered sample select matching bars and line points, which receive
+  `data-selected` and explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`.
+  For a multi-series chart, a selected source category selects the matching rendered mark in every
+  dataset. Empty is the default.
   Style the built-in highlight through `--lr-lite-chart-selected-outline-color` and
   `--lr-lite-chart-selected-outline-width`. Note
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts

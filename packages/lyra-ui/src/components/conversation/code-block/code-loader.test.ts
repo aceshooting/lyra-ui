@@ -1,8 +1,14 @@
 import { expect } from "@open-wc/testing";
 import jsonGrammar from "shiki/langs/json.mjs";
-import { loadShikiHighlighter, loadShikiLanguage } from "./code-loader.js";
-import { loadShikiHighlighterCore } from "./shiki-types.js";
-import type { ShikiHighlighter } from "./shiki-types.js";
+import {
+  __setShikiModuleLoaderForTesting,
+  loadShikiHighlighter,
+  loadShikiLanguage,
+} from "./code-loader.js";
+import {
+  loadShikiHighlighterCore,
+} from "./shiki-types.js";
+import type { ShikiHighlighter, ShikiLanguageInput } from "./shiki-types.js";
 
 function loadedThemes(highlighter: ShikiHighlighter): string[] {
   if (!('getLoadedThemes' in highlighter) || typeof highlighter.getLoadedThemes !== 'function') {
@@ -13,6 +19,17 @@ function loadedThemes(highlighter: ShikiHighlighter): string[] {
     throw new TypeError('Expected Shiki to return string theme ids.');
   }
   return themes;
+}
+
+function throwingLanguages(message: string): Record<string, ShikiLanguageInput> {
+  const languages = {} as Record<string, ShikiLanguageInput>;
+  Object.defineProperty(languages, 'private-core-loader-value', {
+    enumerable: true,
+    get(): never {
+      throw new Error(message);
+    },
+  });
+  return languages;
 }
 
 /**
@@ -163,5 +180,67 @@ describe("loadShikiHighlighterCore", () => {
     const a = await loadShikiHighlighterCore(languages);
     const b = await loadShikiHighlighterCore(languages);
     expect(a).to.equal(b);
+  });
+
+  it('uses one fixed development-only diagnostic for a failed core loader without exposing its error', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const originalWarn = console.warn;
+    const messages: string[] = [];
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+    try {
+      const languages = throwingLanguages('private-core-loader-error');
+      expect(await loadShikiHighlighterCore(languages)).to.equal(null);
+      expect(await loadShikiHighlighterCore(languages)).to.equal(null);
+      expect(messages).to.have.lengthOf(1);
+      expect(messages[0]).to.contain('syntax highlighting');
+      expect(messages[0]).to.not.contain('private-core-loader-error');
+      expect(messages[0]).to.not.contain('private-core-loader-value');
+
+      messages.length = 0;
+      delete runtime.litIssuedWarnings;
+      expect(
+        await loadShikiHighlighterCore(
+          throwingLanguages('private-core-loader-error')
+        )
+      ).to.equal(null);
+      expect(messages).to.deep.equal([]);
+    } finally {
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+      console.warn = originalWarn;
+    }
+  });
+});
+
+describe('loadShikiHighlighter diagnostics', () => {
+  it('uses one fixed development-only diagnostic for a failed optional peer without exposing its error', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const originalWarn = console.warn;
+    const messages: string[] = [];
+    const failingLoader = () => Promise.reject(new Error('private-full-loader-error'));
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+    __setShikiModuleLoaderForTesting(failingLoader);
+    try {
+      expect(await loadShikiHighlighter()).to.equal(null);
+      expect(await loadShikiHighlighter()).to.equal(null);
+      expect(messages).to.have.lengthOf(1);
+      expect(messages[0]).to.contain('syntax highlighting');
+      expect(messages[0]).to.not.contain('private-full-loader-error');
+
+      messages.length = 0;
+      delete runtime.litIssuedWarnings;
+      __setShikiModuleLoaderForTesting(failingLoader);
+      expect(await loadShikiHighlighter()).to.equal(null);
+      expect(messages).to.deep.equal([]);
+    } finally {
+      __setShikiModuleLoaderForTesting(undefined);
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+      console.warn = originalWarn;
+    }
   });
 });

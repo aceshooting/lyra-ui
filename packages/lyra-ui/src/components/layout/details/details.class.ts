@@ -1,6 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -21,6 +21,7 @@ export type LyraDetailsAppearance = Exclude<LyraAppearance, 'accent'>;
 export type LyraDetailsIconPlacement = 'start' | 'end';
 /** How an accepted disclosure transition began. */
 export type LyraDetailsToggleSource = 'user' | 'programmatic' | 'peer';
+type ContentGateMode = 'open' | 'until-found' | 'ordinary-hidden';
 /** Payload emitted with `lr-toggle` after an accepted disclosure transition renders. */
 export interface LyraDetailsToggleDetail {
   open: boolean;
@@ -52,9 +53,9 @@ export interface LyraDetailsEventMap {
  * @slot summary - Summary content. Takes priority over `summary` when any light-DOM child
  *   carries `slot="summary"` — the fallback localized "Details" text only appears when neither
  *   is set.
- * @slot header-actions - Extra controls rendered in the summary row (e.g. a trailing "add"
- *   button). Activating the wrapper or an interactive slotted descendant does not toggle the
- *   panel.
+ * @slot header-actions - Extra controls rendered as a sibling of the native summary in the
+ *   complete header row (e.g. a trailing "add" button). They remain enabled and do not toggle
+ *   the panel, including while the disclosure itself is disabled.
  * @slot expand-icon - Icon shown while the panel is closed.
  * @slot collapse-icon - Icon shown while the panel is open.
  * @slot - Panel content.
@@ -67,14 +68,15 @@ export interface LyraDetailsEventMap {
  *   named disclosure closes this panel. Kept alongside the four events above because it is the
  *   single event that reports which way the panel went, which `<lr-accordion>` uses to close the
  *   siblings of a newly-opened panel.
- * @csspart base - Compatibility name for the native details wrapper; use `details`.
- * @csspart details - The native details wrapper. It is the same node as `base`.
- * @csspart header - The summary-row layout wrapper.
+ * @csspart base - Compatibility name for the outer disclosure container; use `details`.
+ * @csspart details - The outer disclosure container. It is the same node as `base`.
+ * @csspart header - The complete row containing the native summary and any header actions.
  * @csspart summary - The summary control.
  * @csspart icon - The expand/collapse icon wrapper.
  * @csspart summary-icon - Shoelace-compatible alias for `icon`; both names are on the same node.
- * @csspart header-actions - The wrapper around the `header-actions` slot.
- * @csspart content - The panel content.
+ * @csspart header-actions - The wrapper around the `header-actions` slot, following the private
+ *   native details element in `header`.
+ * @csspart content - The panel content inside a private findable closed-state gate.
  * @cssprop [--lr-details-font-size=var(--lr-form-control-font-size)] - Text size of the summary
  *   and the panel. Its private default follows the library's shared size ladder; an inherited or
  *   direct public value remains authoritative.
@@ -122,6 +124,11 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     '[part~="base"]'
   );
   private _open = false;
+  private readonly contentId = nextId('details-content');
+  private contentGateMode: ContentGateMode = 'until-found';
+  private contentGateGeneration = 0;
+  private fragmentListenerWindow?: Window;
+  private fragmentNavigationGeneration = 0;
 
   /** Whether the panel is expanded. Assigning it runs the full `lr-show`/`lr-hide` lifecycle and
    *  can be vetoed the same way, so the property, the reflected attribute and `show()`/`hide()`
@@ -202,6 +209,10 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // A rejected beforematch briefly uses ordinary `hidden` until its microtask rearms
+    // findability. Reconnection invalidates that microtask, so the live gate must normalize here.
+    this.setContentGateMode(this._open ? 'open' : 'until-found');
+    this.armFragmentNavigation();
     if (!this.hasUpdated || !this._open) return;
     queueMicrotask(() => {
       if (this.isConnected && this._open) this.closeNamedPeers();
@@ -212,7 +223,17 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     // A pending after-event must not announce a transition the detached element is no longer
     // part of.
     this.disclosureMotion.cancel();
+    this.disarmFragmentNavigation();
+    this.contentGateGeneration += 1;
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.disarmFragmentNavigation();
+    this.contentGateGeneration += 1;
+    this.setContentGateMode(this._open ? 'open' : 'until-found');
+    if (this.isConnected) this.armFragmentNavigation();
   }
 
   override firstUpdated(changed: PropertyValues): void {
@@ -231,17 +252,28 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   protected async showWithSource(
     source: LyraDetailsToggleSource
   ): Promise<void> {
-    if (this._open || this.disabled) return;
+    if (!this.beginShow()) return;
+    await this.settleTransition('lr-after-show', source);
+  }
+
+  private beginShow(): boolean {
+    if (this._open) return false;
+    if (this.disabled) {
+      // A caller may have toggled the private native element directly. Restore every owned
+      // representation before returning so disabled never leaves it visually or semantically open.
+      this.syncOpenAttribute();
+      return false;
+    }
     if (this.emit('lr-show', null, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
-      return;
+      return false;
     }
     if (!this.closeNamedPeers()) {
       this.syncOpenAttribute();
-      return;
+      return false;
     }
     this.applyOpenState(true);
-    await this.settleTransition('lr-after-show', source);
+    return true;
   }
 
   /** Collapse the panel. The promise resolves after `lr-after-hide`; vetoed requests resolve
@@ -290,6 +322,10 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   private applyOpenState(next: boolean): void {
     const old = this._open;
     this._open = next;
+    this.contentGateGeneration += 1;
+    this.setContentGateMode(next ? 'open' : 'until-found');
+    this.syncNativeDetailsState();
+    this.syncSummaryState();
     this.requestUpdate('open', old);
   }
 
@@ -297,6 +333,143 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
    *  reflects properties it saw change. */
   private syncOpenAttribute(): void {
     this.toggleAttribute('open', this._open);
+    this.contentGateGeneration += 1;
+    this.setContentGateMode(this._open ? 'open' : 'until-found');
+    this.syncNativeDetailsState();
+    this.syncSummaryState();
+  }
+
+  private get nativeDetails(): HTMLDetailsElement | null {
+    return this.renderRoot?.querySelector<HTMLDetailsElement>('details') ?? null;
+  }
+
+  private get summaryElement(): HTMLElement | null {
+    return this.renderRoot?.querySelector<HTMLElement>('[part="summary"]') ?? null;
+  }
+
+  private get contentGate(): HTMLElement | null {
+    return (
+      this.renderRoot?.querySelector<HTMLElement>('[part="content"]')?.parentElement ?? null
+    );
+  }
+
+  private setContentGateMode(
+    mode: ContentGateMode,
+    gate = this.contentGate
+  ): void {
+    this.contentGateMode = mode;
+    if (!gate) return;
+    if (mode === 'open') gate.removeAttribute('hidden');
+    else gate.setAttribute('hidden', mode === 'until-found' ? 'until-found' : '');
+  }
+
+  private syncNativeDetailsState(): void {
+    const nativeDetails = this.nativeDetails;
+    if (nativeDetails && nativeDetails.open !== this._open) {
+      nativeDetails.open = this._open;
+    }
+  }
+
+  private syncSummaryState(): void {
+    this.summaryElement?.setAttribute(
+      'aria-expanded',
+      this._open ? 'true' : 'false'
+    );
+  }
+
+  private rearmContentGate(gate: HTMLElement): void {
+    const generation = ++this.contentGateGeneration;
+    this.setContentGateMode('ordinary-hidden', gate);
+    queueMicrotask(() => {
+      if (
+        generation !== this.contentGateGeneration ||
+        !this.isConnected ||
+        this._open ||
+        gate !== this.contentGate
+      ) {
+        return;
+      }
+      this.setContentGateMode('until-found', gate);
+      this.requestUpdate();
+    });
+  }
+
+  private onBeforeMatch = (event: Event): void => {
+    const gate = event.currentTarget as HTMLElement;
+    if (this._open) {
+      this.setContentGateMode('open', gate);
+      return;
+    }
+    if (this.beginShow()) {
+      void this.settleTransition('lr-after-show', 'programmatic');
+      return;
+    }
+    // beforematch itself cannot be vetoed. An ordinary hidden attribute is the synchronous
+    // closed fallback that survives the UA's pending reveal until this generation can re-arm
+    // findability in the next microtask.
+    this.rearmContentGate(gate);
+  };
+
+  private armFragmentNavigation(): void {
+    const view = this.ownerDocument.defaultView;
+    if (!view) return;
+    if (this.fragmentListenerWindow !== view) {
+      this.disarmFragmentNavigation();
+      this.fragmentListenerWindow = view;
+      view.addEventListener('hashchange', this.onHashChange);
+    }
+    this.queueFragmentReveal();
+  }
+
+  private disarmFragmentNavigation(): void {
+    this.fragmentNavigationGeneration += 1;
+    this.fragmentListenerWindow?.removeEventListener('hashchange', this.onHashChange);
+    this.fragmentListenerWindow = undefined;
+  }
+
+  private onHashChange = (): void => {
+    this.revealFragmentTarget();
+  };
+
+  private queueFragmentReveal(): void {
+    const generation = ++this.fragmentNavigationGeneration;
+    queueMicrotask(() => {
+      if (
+        generation !== this.fragmentNavigationGeneration ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== this.fragmentListenerWindow
+      ) {
+        return;
+      }
+      this.revealFragmentTarget();
+    });
+  }
+
+  private revealFragmentTarget(): void {
+    if (this._open) return;
+    const hash = this.ownerDocument.defaultView?.location.hash;
+    if (!hash || hash.length < 2) return;
+    let targetId: string;
+    try {
+      targetId = decodeURIComponent(hash.slice(1));
+    } catch {
+      return;
+    }
+    const target = this.ownerDocument.getElementById(targetId);
+    if (!target || !this.isDefaultContentTarget(target)) return;
+    void this.showWithSource('programmatic');
+  }
+
+  private isDefaultContentTarget(target: Element): boolean {
+    if (target === this || !this.contains(target)) return false;
+    let topLevel = target;
+    while (topLevel.parentElement && topLevel.parentElement !== this) {
+      topLevel = topLevel.parentElement;
+    }
+    return (
+      topLevel.parentElement === this &&
+      (topLevel.getAttribute('slot') ?? '') === ''
+    );
   }
 
   private async settleTransition(
@@ -365,10 +538,6 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   private onToggle = (event: Event): void => {
     const details = event.currentTarget as HTMLDetailsElement;
     if (details.open === this._open) return;
-    if (this.disabled && details.open) {
-      details.open = false;
-      return;
-    }
     if (details.open) void this.show();
     else void this.hide();
   };
@@ -385,42 +554,57 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       0;
   };
   override render(): TemplateResult {
-    return html`<details
-      part="base details"
-      .open=${this.open}
-      name=${this.name || nothing}
-      @toggle=${this.onToggle}
-    >
-      <summary
-        part="summary"
-        aria-label=${hostAriaLabel(this) ?? nothing}
-        aria-expanded=${this.open ? 'true' : 'false'}
-        aria-disabled=${this.disabled ? 'true' : 'false'}
-        tabindex=${this.disabled ? '-1' : nothing}
-        @click=${this.onClick}
-      >
-        <span part="header">
-          <span class="summary-content"
-            >${this.hasSummarySlot || this.summary
-              ? ''
-              : this.localize('details')}<slot
-              name="summary"
-              @slotchange=${this.onSummarySlotChange}
-              >${this.summary}</slot
-            ></span
-          >
-          <span part="header-actions" ?hidden=${!this.hasHeaderActionsSlot}>
-            <slot name="header-actions" @slotchange=${this.onHeaderActionsSlotChange}></slot>
-          </span>
-          <span part="icon summary-icon" aria-hidden="true" inert>
-            <slot name=${this.open ? 'collapse-icon' : 'expand-icon'}
-              ><span class="icon-fallback">${chevronIcon()}</span></slot
-            >
-          </span>
-        </span>
-      </summary>
-      <div part="content"><slot></slot></div>
-    </details>`;
+    const gateHidden =
+      this.contentGateMode === 'open'
+        ? nothing
+        : this.contentGateMode === 'until-found'
+          ? 'until-found'
+          : '';
+    return html`
+      <div part="base details">
+        <div part="header">
+          <details
+            class="native-details"
+            .open=${this.open}
+            name=${this.name || nothing}
+            @toggle=${this.onToggle}
+          ><summary
+              part="summary"
+              aria-controls=${this.contentId}
+              aria-label=${hostAriaLabel(this) ?? nothing}
+              aria-expanded=${this.open ? 'true' : 'false'}
+              aria-disabled=${this.disabled ? 'true' : 'false'}
+              tabindex=${this.disabled ? '-1' : nothing}
+              @click=${this.onClick}
+            ><span class="summary-content"
+                >${this.hasSummarySlot || this.summary
+                  ? ''
+                  : this.localize('details')}<slot
+                  name="summary"
+                  @slotchange=${this.onSummarySlotChange}
+                  >${this.summary}</slot
+                ></span
+              ><span part="icon summary-icon" aria-hidden="true" inert
+                ><slot name=${this.open ? 'collapse-icon' : 'expand-icon'}
+                  ><span class="icon-fallback">${chevronIcon()}</span></slot
+                ></span
+              ></summary
+            ></details
+          ><span part="header-actions" ?hidden=${!this.hasHeaderActionsSlot}
+            ><slot
+              name="header-actions"
+              @slotchange=${this.onHeaderActionsSlotChange}
+            ></slot
+          ></span>
+        </div>
+        <div
+          class="content-gate"
+          id=${this.contentId}
+          hidden=${gateHidden}
+          @beforematch=${this.onBeforeMatch}
+        ><div part="content"><slot></slot></div></div>
+      </div>
+    `;
   }
 }
 declare global {

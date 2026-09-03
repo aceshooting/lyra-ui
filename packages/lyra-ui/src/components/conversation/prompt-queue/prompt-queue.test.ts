@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import type { DocumentRef } from "../../../ai/types.js";
 import "./prompt-queue.js";
 import type {
   LyraPromptQueue,
@@ -20,6 +21,38 @@ it("renders an editable ordered queue", async () => {
   expect(
     el.shadowRoot!.querySelector('[part="list"]')?.getAttribute("role")
   ).to.equal("list");
+});
+
+it("centers every action target within its retained enlarged hit floor", async () => {
+  const el = (await fixture(
+    html`<lr-prompt-queue .items=${[items[0]!]}></lr-prompt-queue>`
+  )) as LyraPromptQueue;
+  const actions = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="action"]'),
+  ];
+  expect(actions).to.have.lengthOf(4);
+
+  for (const action of actions) {
+    await (action as HTMLElement & { updateComplete?: Promise<unknown> })
+      .updateComplete;
+    const target =
+      action.shadowRoot?.querySelector<HTMLElement>('[part~="base"]');
+    expect(target === null).to.equal(false);
+    if (!target) continue;
+    const floor = action.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+
+    expect(
+      Math.abs(
+        targetRect.left + targetRect.width / 2 - (floor.left + floor.width / 2)
+      )
+    ).to.be.at.most(1);
+    expect(
+      Math.abs(
+        targetRect.top + targetRect.height / 2 - (floor.top + floor.height / 2)
+      )
+    ).to.be.at.most(1);
+  }
 });
 
 it("keeps the visible heading separate from an assistive-only region name", async () => {
@@ -117,6 +150,281 @@ it("uses first-wins unique nonempty item ids before rendering and mutation", asy
       }
     ).value
   ).to.equal("Fine");
+});
+
+it("projects prompt and attachment data through own descriptors once, preserving opaque metadata and admitting the first valid duplicate", async () => {
+  let unsafeReads = 0;
+  const hostile = Object.create(null);
+  Object.defineProperty(hostile, "id", {
+    configurable: true,
+    enumerable: true,
+    get(): never {
+      unsafeReads += 1;
+      throw new Error("prompt projection must not invoke source accessors");
+    },
+  });
+  const invalidFirstDuplicate = Object.create(null);
+  Object.defineProperties(invalidFirstDuplicate, {
+    id: { configurable: true, enumerable: true, value: "same" },
+    value: {
+      configurable: true,
+      enumerable: true,
+      get(): never {
+        unsafeReads += 1;
+        throw new Error("invalid duplicate value must not reserve its id");
+      },
+    },
+  });
+  const opaqueMetadata = () => "retained without inspection";
+  const metadata = { opaqueMetadata };
+  Object.defineProperty(metadata, "unrelated", {
+    configurable: true,
+    enumerable: true,
+    get(): never {
+      unsafeReads += 1;
+      throw new Error("opaque metadata must not be inspected");
+    },
+  });
+  const hostileAttachment = Object.create(null);
+  Object.defineProperties(hostileAttachment, {
+    id: { configurable: true, enumerable: true, value: "hostile-report" },
+    name: {
+      configurable: true,
+      enumerable: true,
+      get(): never {
+        unsafeReads += 1;
+        throw new Error(
+          "attachment projection must not invoke source accessors"
+        );
+      },
+    },
+  });
+  const attachment: DocumentRef = {
+    id: "report",
+    name: "annual-report.pdf",
+    mimeType: "application/pdf",
+    uri: "https://example.test/report.pdf",
+    version: "v1",
+  };
+  Object.defineProperty(attachment, "unrelated", {
+    configurable: true,
+    enumerable: true,
+    get(): never {
+      unsafeReads += 1;
+      throw new Error("attachment projection must not inspect unknown fields");
+    },
+  });
+  const source: PromptQueueItem = {
+    id: "same",
+    value: "First valid prompt",
+    attachments: [hostileAttachment as DocumentRef, attachment],
+    createdAt: 42,
+    metadata,
+  };
+  Object.defineProperty(source, "unrelated", {
+    configurable: true,
+    enumerable: true,
+    get(): never {
+      unsafeReads += 1;
+      throw new Error("prompt projection must not inspect unknown fields");
+    },
+  });
+  const sourceReads = new Map<string, number>();
+  const attachmentReads = new Map<string, number>();
+  const originalGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+  Object.getOwnPropertyDescriptor = ((target: object, key: PropertyKey) => {
+    if (target === source && typeof key === "string") {
+      sourceReads.set(key, (sourceReads.get(key) ?? 0) + 1);
+    }
+    if (target === attachment && typeof key === "string") {
+      attachmentReads.set(key, (attachmentReads.get(key) ?? 0) + 1);
+    }
+    return originalGetOwnPropertyDescriptor.call(Object, target, key);
+  }) as typeof Object.getOwnPropertyDescriptor;
+  let el: LyraPromptQueue;
+  try {
+    el = (await fixture(html`
+      <lr-prompt-queue
+        .items=${[
+          hostile,
+          invalidFirstDuplicate,
+          source,
+          { id: "same", value: "Later duplicate" },
+        ] as unknown as PromptQueueItem[]}
+      ></lr-prompt-queue>
+    `)) as LyraPromptQueue;
+    await el.updateComplete;
+  } finally {
+    Object.getOwnPropertyDescriptor = originalGetOwnPropertyDescriptor;
+  }
+
+  expect(unsafeReads).to.equal(0);
+  expect(el!.items[2] === source).to.equal(true);
+  expect(el!.shadowRoot!.querySelectorAll('[part~="item"]')).to.have.lengthOf(
+    1
+  );
+  expect(
+    (
+      el!.shadowRoot!.querySelector("lr-textarea") as HTMLElement & {
+        value: string;
+      }
+    ).value
+  ).to.equal("First valid prompt");
+  expect(
+    el!.shadowRoot!.querySelector('[part="attachment"]')?.textContent?.trim()
+  ).to.equal("annual-report.pdf");
+  for (const field of ["id", "value", "attachments", "createdAt", "metadata"]) {
+    expect(sourceReads.get(field), field).to.equal(1);
+  }
+  expect(sourceReads.get("unrelated") ?? 0).to.equal(0);
+  for (const field of ["id", "name", "mimeType", "uri", "version"]) {
+    expect(attachmentReads.get(field), field).to.equal(1);
+  }
+  expect(attachmentReads.get("unrelated") ?? 0).to.equal(0);
+
+  Object.defineProperty(source, "value", {
+    configurable: true,
+    enumerable: true,
+    get(): never {
+      unsafeReads += 1;
+      throw new Error("a cached projection must not reread the source");
+    },
+  });
+  el!.label = "Canonical queue";
+  await el!.updateComplete;
+  const sent = oneEvent(el!, "lr-send-now");
+  el!.shadowRoot!.querySelector<HTMLElement>('[data-action="send"]')!.click();
+  const detail = (await sent) as CustomEvent<{ item: PromptQueueItem }>;
+
+  expect(unsafeReads).to.equal(0);
+  expect(detail.detail.item.value).to.equal("First valid prompt");
+  expect(detail.detail.item.createdAt).to.equal(42);
+  expect(
+    detail.detail.item.attachments?.map((candidate) => candidate.id)
+  ).to.deep.equal(["report"]);
+  expect(
+    detail.detail.item.attachments?.map((candidate) => candidate.mimeType)
+  ).to.deep.equal(["application/pdf"]);
+  expect(
+    detail.detail.item.attachments?.map((candidate) => candidate.uri)
+  ).to.deep.equal(["https://example.test/report.pdf"]);
+  expect(
+    detail.detail.item.attachments?.map((candidate) => candidate.version)
+  ).to.deep.equal(["v1"]);
+  expect(detail.detail.item.metadata?.["opaqueMetadata"]).to.equal(
+    opaqueMetadata
+  );
+});
+
+it("keeps opaque metadata by identity without reflecting it through direct queue events", async () => {
+  const plainMetadata = { source: "plain" };
+  let metadataReflections = 0;
+  const hostileMetadata = new Proxy(
+    { source: "hostile" },
+    {
+      ownKeys(): never[] {
+        metadataReflections += 1;
+        throw new Error("event snapshots must not reflect opaque metadata");
+      },
+    }
+  );
+  const el = (await fixture(html`
+    <lr-prompt-queue
+      .items=${[
+        { id: "plain", value: "Plain metadata", metadata: plainMetadata },
+        {
+          id: "hostile",
+          value: "Hostile metadata",
+          metadata: hostileMetadata,
+        },
+      ]}
+    ></lr-prompt-queue>
+  `)) as LyraPromptQueue;
+
+  const sent = oneEvent(el, "lr-send-now");
+  el.shadowRoot!
+    .querySelector<HTMLElement>('[data-id="hostile"] [data-action="send"]')!
+    .click();
+  const sentEvent = (await sent) as CustomEvent<
+    { item: PromptQueueItem } | null
+  >;
+  expect(sentEvent.detail === null).to.equal(false);
+  if (sentEvent.detail === null) return;
+  expect(sentEvent.detail.item.metadata === hostileMetadata).to.equal(true);
+
+  const changed = oneEvent(el, "lr-queue-change");
+  el.shadowRoot!
+    .querySelector<HTMLElement>('[data-id="hostile"] lr-textarea')!
+    .dispatchEvent(
+      new CustomEvent("lr-input", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "Updated hostile metadata" },
+      })
+    );
+  const changedEvent = (await changed) as CustomEvent<
+    PromptQueueChangeDetail | null
+  >;
+  expect(changedEvent.detail === null).to.equal(false);
+  if (changedEvent.detail === null) return;
+  expect(changedEvent.detail.items[0]?.metadata === plainMetadata).to.equal(
+    true
+  );
+  expect(changedEvent.detail.items[1]?.metadata === hostileMetadata).to.equal(
+    true
+  );
+  expect(metadataReflections).to.equal(0);
+});
+
+it("reuses the admitted previous projection during a focused controlled removal", async () => {
+  let oldSourceDescriptorReads = 0;
+  let rejectOldSourceReads = false;
+  const source = new Proxy(
+    { id: "first", value: "First prompt" },
+    {
+      getOwnPropertyDescriptor(target, key): PropertyDescriptor | undefined {
+        oldSourceDescriptorReads += 1;
+        if (rejectOldSourceReads) {
+          throw new Error("a prior controlled row must not be reprojected");
+        }
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    }
+  ) as PromptQueueItem;
+  const el = (await fixture(html`
+    <lr-prompt-queue
+      .items=${[source, { id: "second", value: "Second prompt" }]}
+    ></lr-prompt-queue>
+  `)) as LyraPromptQueue;
+  await el.updateComplete;
+
+  const remove = el.shadowRoot!.querySelector<HTMLElement>(
+    '[data-id="first"] [data-action="remove"]'
+  )!;
+  remove.focus();
+  oldSourceDescriptorReads = 0;
+  el.addEventListener(
+    "lr-queue-change",
+    (event) => {
+      rejectOldSourceReads = true;
+      el.items = (event as CustomEvent<PromptQueueChangeDetail>).detail.items;
+    },
+    { once: true }
+  );
+  remove.click();
+  await el.updateComplete;
+
+  expect(oldSourceDescriptorReads).to.equal(0);
+  expect(
+    (el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute(
+      "data-action"
+    )
+  ).to.equal("remove");
+  expect(
+    (el.shadowRoot!.activeElement as HTMLElement | null)
+      ?.closest("[data-id]")
+      ?.getAttribute("data-id")
+  ).to.equal("second");
 });
 
 it("drops malformed item identities while retaining a valid neighboring prompt", async () => {

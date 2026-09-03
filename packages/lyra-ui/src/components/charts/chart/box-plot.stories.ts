@@ -228,3 +228,23 @@ export const DataTableDisclosure: Story = {
     ></lr-box-plot>
   `,
 };
+
+/** The box plot inherits the chart canvas hover-outline token without introducing a box-only alias. */
+export const CanvasHoverOutline: Story = {
+  name: 'Canvas hover outline',
+  render: () => html`
+    <lr-box-plot
+      style="--lr-chart-canvas-hover-outline-color: var(--lr-color-brand); max-inline-size: 32rem;"
+      .labels=${['K=2', 'K=3']}
+      .datasets=${[
+        {
+          label: 'Loss',
+          data: [
+            { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+            { min: 2, q1: 3, median: 4, q3: 5, max: 6 },
+          ],
+        },
+      ]}
+    ></lr-box-plot>
+  `,
+};

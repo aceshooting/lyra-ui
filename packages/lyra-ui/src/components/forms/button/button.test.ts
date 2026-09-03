@@ -1,16 +1,9 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./button.js";
 import type { LyraButton } from "./button.class.js";
-import { styles } from "./button.styles.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
-
-const normalizedStyles = () =>
-  styles.cssText
-    .replace(/"/g, "'")
-    .replace(/\s+/g, " ")
-    .replace(/\(\s+/g, "(")
-    .replace(/\s+\)/g, ")");
+import { sendKeys } from "@web/test-runner-commands";
 
 describe("lr-button", () => {
   it("emits a cancelable lr-invalid alias and forwards its veto to the native invalid event", async () => {
@@ -414,23 +407,43 @@ describe("lr-button", () => {
     expect(getComputedStyle(spinner).animationDuration).to.equal("2.4s");
   });
 
-  it("keeps the label space while loading and centers the spinner", () => {
-    const css = normalizedStyles();
-    expect(css).to.match(
-      /:host\(\[loading\]\) \[part='label'\][^}]*opacity: 0/
+  it("keeps the rendered label space while loading and centers the spinner", async () => {
+    const el = (await fixture(
+      html`<lr-button loading style="inline-size: 180px">Save</lr-button>`
+    )) as LyraButton;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+    const spinner = el.shadowRoot!.querySelector<HTMLElement>('[part="spinner"]')!;
+    const baseRect = base.getBoundingClientRect();
+    const spinnerRect = spinner.getBoundingClientRect();
+
+    expect(getComputedStyle(label).opacity).to.equal("0");
+    expect(spinnerRect.width).to.be.closeTo(base.clientWidth, 1);
+    expect(spinnerRect.height).to.be.closeTo(base.clientHeight, 1);
+    expect(spinnerRect.left + spinnerRect.width / 2).to.be.closeTo(
+      baseRect.left + baseRect.width / 2,
+      1
     );
-    expect(css).to.match(/\[part='spinner'\][^}]*position: absolute/);
-    expect(css).to.match(/\[part='spinner'\][^}]*inset: 0/);
+    expect(spinnerRect.top + spinnerRect.height / 2).to.be.closeTo(
+      baseRect.top + baseRect.height / 2,
+      1
+    );
   });
 
-  it("uses a strong border for outlined buttons", () => {
-    const css = normalizedStyles();
-    expect(css).to.include(
-      "border-color: var(--lr-button-outlined-border, var(--_lr-button-outlined-border));"
-    );
-    expect(css).to.include(
-      "--_lr-button-outlined-border: var(--lr-color-border-strong);"
-    );
+  it("uses the strong outlined border default while honoring the public border hook", async () => {
+    const el = (await fixture(html`
+      <lr-button
+        appearance="outlined"
+        style="--lr-color-border-strong: rgb(4, 5, 6); --lr-button-border: rgb(7, 8, 9)"
+        >Save</lr-button
+      >
+    `)) as LyraButton;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+
+    expect(getComputedStyle(base).borderTopColor).to.equal("rgb(4, 5, 6)");
+    el.style.setProperty("--lr-button-outlined-border", "rgb(1, 2, 3)");
+    await el.updateComplete;
+    expect(getComputedStyle(base).borderTopColor).to.equal("rgb(1, 2, 3)");
   });
 
   it('supports appearance="quiet": muted border/text tokens, transparent until hover', async () => {
@@ -488,23 +501,6 @@ describe("lr-button", () => {
     );
   });
 
-  it('ships a default :hover/:active treatment on [part~="base"], disabled under reduced motion', () => {
-    const css = normalizedStyles();
-    // The hover/press COLOURS are asserted as rendered results in the hover-and-press-feedback
-    // block below -- a stylesheet-text match cannot tell a fill that moves from one that resolves
-    // to the page surface, which is exactly how the quiet hover shipped broken. What is left here
-    // is the reduced-motion contract, which is a media-query shape rather than a colour.
-    // The :not() argument is a selector LIST (`:disabled` for the <button> path, the anchor
-    // path's aria-disabled attribute alongside it), so the shape match stays tolerant of what
-    // else is excluded and pins only the reduced-motion contract itself.
-    expect(css).to.match(
-      /\[part~='base'\]:not\([^)]*:disabled[^)]*\):active\s*\{[^}]*transform:\s*scale\(/
-    );
-    expect(css).to.match(
-      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part~='base'\]:not\([^)]*:disabled[^)]*\):active\s*\{[^}]*transform:\s*none[^}]*\}[^]*\}/
-    );
-  });
-
   it("withdraws the rendered active transform under reduced motion", async () => {
     try {
       await setReducedMotion("no-preference");
@@ -514,15 +510,8 @@ describe("lr-button", () => {
       const target = el.shadowRoot!.querySelector<HTMLElement>(
         '[part~="base"]'
       )!;
-      const rect = target.getBoundingClientRect();
       await resetMouse();
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+      await hoverUntilMatched(target, "button never received the pointer hover state");
       await sendMouse({ type: "down" });
       await waitUntil(
         () => getComputedStyle(target).transform !== "none",
@@ -690,15 +679,7 @@ describe("lr-button", () => {
     }
   });
 
-  it("propagates a consumer width from the host to the internal button", () => {
-    const css = normalizedStyles();
-    expect(css).to.include(
-      "inline-size: var(--lr-button-width, var(--_lr-button-width));"
-    );
-    expect(css).to.include("--_lr-button-width: 100%;");
-  });
-
-  it("honors inherited theme hooks while direct-host values remain authoritative", async () => {
+  it("propagates inherited consumer width to the rendered button while direct-host values remain authoritative", async () => {
     const wrapper = await fixture(html`
       <div
         style="--lr-button-width: 180px; --lr-button-min-height: 61px; --lr-button-radius: 9px; --lr-button-fill: rgb(1, 2, 3);"
@@ -792,16 +773,28 @@ describe("lr-button", () => {
     expect(getComputedStyle(base).fontSize).to.equal("21px");
   });
 
-  it('declares the underline offset and keeps a focus-visible outline for appearance="link"', () => {
-    const css = normalizedStyles();
-    expect(css).to.match(
-      /:host\(\[appearance='link'\]\) \[part~='base'\][^}]*text-decoration: underline/
-    );
-    expect(css).to.match(
-      /:host\(\[appearance='link'\]\) \[part~='base'\][^}]*text-underline-offset: var\(--lr-size-0-15rem\)/
-    );
-    // The generic focus-visible rule still applies to the link appearance (it is not overridden).
-    expect(css).to.match(/\[part~='base'\]:focus-visible\s*\{[^}]*outline:/);
+  it('renders the link underline offset and focus-visible outline through their public tokens', async () => {
+    const el = (await fixture(html`
+      <lr-button
+        appearance="link"
+        style="--lr-size-0-15rem: 5px; --lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(4, 5, 6); --lr-focus-ring-offset: 2px"
+        >Retry</lr-button
+      >
+    `)) as LyraButton;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+
+    expect(getComputedStyle(base).textDecorationLine).to.include("underline");
+    expect(getComputedStyle(base).textUnderlineOffset).to.equal("5px");
+    await sendKeys({ press: "Tab" });
+    base.focus();
+    await waitUntil(() => {
+      const computed = getComputedStyle(base);
+      return (
+        computed.outlineWidth === "3px" &&
+        computed.outlineColor === "rgb(4, 5, 6)" &&
+        computed.outlineOffset === "2px"
+      );
+    }, "link focus-visible outline did not resolve its tokens");
   });
 
   it("is accessible as an inline link", async () => {
@@ -936,30 +929,6 @@ describe("lr-button", () => {
       expect(cs.fontSize).to.equal("11px");
     });
 
-    it('takes every tier\'s geometry from the shared ladder, with no per-tier rule on [part~="base"]', () => {
-      const css = normalizedStyles();
-      // The knobs read the ladder rather than restating a scale of their own.
-      expect(css).to.match(
-        /:host \{[^}]*--_lr-button-padding-block: var\(--lr-form-control-padding-block\);[^}]*--_lr-button-padding-inline: var\(--lr-form-control-padding-inline\);[^}]*--_lr-button-font-size: var\(--lr-form-control-font-size\);/
-      );
-      expect(
-        css,
-        "no tier may restate a padding or font-size value of its own"
-      ).to.not.match(
-        /:host\(\[size='[^']+'\]\)[^{]*\{[^}]*--lr-button-(?:padding|font-size)/
-      );
-      expect(css).to.match(
-        /\[part~='base'\] \{[^}]*padding-inline: var\(--lr-button-padding-inline, var\(--_lr-button-padding-inline\)\);[^}]*padding-block: var\(--lr-button-padding-block, var\(--_lr-button-padding-block\)\);/
-      );
-      // A per-tier rule may only re-assign a cssprop -- never declare a property on the part.
-      for (const size of ["2xs", "xs", "s", "l", "xl"]) {
-        expect(
-          css,
-          `size=${size} must not restyle [part~='base'] directly`
-        ).to.not.include(`:host([size='${size}']) [part~='base']`);
-      }
-    });
-
     it('keeps appearance="link" winning over the geometry knobs (zero padding, inherited font)', async () => {
       const wrapper = (await fixture(html`
         <div style="font-size: 21px;">
@@ -1034,17 +1003,22 @@ describe("lr-button", () => {
       expect(getComputedStyle(base(xsEl)).borderTopLeftRadius).to.equal("2px");
     });
 
-    it("leaves --lr-button-height genuinely undeclared so its var() fallback arm can fire", () => {
-      const css = normalizedStyles();
-      // A declared value -- even `auto` -- is a *defined* value that wins, so the fallback arm
-      // would never run and every tier's floor would be dead code (see select.styles.ts:37-49).
-      expect(
-        css,
-        "--lr-button-height must never be declared, only read"
-      ).to.not.match(/--lr-button-height:/);
-      expect(css).to.match(
-        /\[part~='base'\] \{[^}]*min-block-size: var\(--lr-button-height, var\(--lr-button-min-height, var\(--_lr-button-min-height\)\)\);[^}]*block-size: var\(--lr-button-height, auto\);/
-      );
+    it("uses the min-height fallback until --lr-button-height is explicitly pinned", async () => {
+      const el = (await fixture(
+        html`<lr-button style="--lr-button-min-height: 61px">Go</lr-button>`
+      )) as LyraButton;
+      const control = base(el);
+
+      expect(getComputedStyle(control).minBlockSize).to.equal("61px");
+      expect(getComputedStyle(control).blockSize).to.equal("61px");
+      el.style.setProperty("--lr-button-height", "44px");
+      await el.updateComplete;
+      expect(getComputedStyle(control).minBlockSize).to.equal("44px");
+      expect(getComputedStyle(control).blockSize).to.equal("44px");
+      el.style.removeProperty("--lr-button-height");
+      await el.updateComplete;
+      expect(getComputedStyle(control).minBlockSize).to.equal("61px");
+      expect(getComputedStyle(control).blockSize).to.equal("61px");
     });
 
     it('leaves appearance="link" unaffected by a pinned --lr-button-height', async () => {
@@ -1178,14 +1152,6 @@ describe("lr-button", () => {
       ) as HTMLElement;
       expect(getComputedStyle(base).backgroundColor).to.equal(
         "rgb(12, 34, 56)"
-      );
-    });
-
-    it("keeps a private outlined-fill default beside the border default and consumes the public hook first", () => {
-      const css = normalizedStyles();
-      expect(css).to.include("--_lr-button-outlined-fill: transparent;");
-      expect(css).to.match(
-        /:host\(\[appearance='outlined'\]\) \[part~='base'\] \{[^}]*background: var\(--lr-button-outlined-fill, var\(--_lr-button-outlined-fill\)\);/
       );
     });
 

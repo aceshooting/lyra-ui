@@ -10,7 +10,11 @@ import { fileURLToPath } from 'node:url';
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 
 export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
+  'src/components/agent-tools/agent-status-presentation.ts',
+  'src/components/agent-tools/approval-state.ts',
+  'src/components/agent-tools/stack-trace/stack-trace-parse.ts',
   'src/components/agent-tools/tool-result-view/registry.ts',
+  'src/components/agent-tools/trace-tree/span.ts',
   'src/components/charts/chart/chart-colors.ts',
   'src/components/charts/chart/chart-core-loader.ts',
   'src/components/charts/chart/chart-feature-loader.ts',
@@ -18,6 +22,7 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/conversation/code-block/code-loader.ts',
   'src/components/conversation/markdown/markdown-loader.ts',
   'src/components/conversation/message-actions/toolbar-actions.ts',
+  'src/components/conversation/widget-renderer/default-registry.ts',
   'src/components/conversation/widget-renderer/resolve.ts',
   'src/components/conversation/widget-renderer/registry.ts',
   // Curated for the same reason `pptx-loader.ts` below is: the docs already PROMISE this exact
@@ -337,6 +342,10 @@ export function closeWildcardPackageExports(currentExports, componentExports, ut
   };
 
   for (const [key, value] of Object.entries(currentExports)) {
+    // Export-map keys are consumer-visible specifiers, while `./dist/...` belongs only on the
+    // target side. Drop a seeded literal dist key instead of preserving an accidental deep-import
+    // contract forever.
+    if (key === './dist' || key.startsWith('./dist/')) continue;
     if (key === './components/*' || key.startsWith('./components/')) {
       insertComponents();
       continue;
@@ -379,6 +388,11 @@ export function checkPackageExports(packageDir = defaultPackageDir) {
   // real, resolvable target here means the wildcard subpath was reopened.
   if (Object.hasOwn(current, './utilities/*') && current['./utilities/*'] !== null) {
     findings.push('package.json still exposes ./utilities/*');
+  }
+  for (const key of Object.keys(current)) {
+    if (key === './dist' || key.startsWith('./dist/')) {
+      findings.push(`package.json exposes forbidden literal dist key ${key}`);
+    }
   }
   if (JSON.stringify(current) !== JSON.stringify(expected.exports)) {
     findings.push('package.json#exports is stale');

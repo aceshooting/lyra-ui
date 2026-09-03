@@ -50,6 +50,37 @@ export const Default: Story = {
   },
 };
 
+export const ControlledVisibility: Story = {
+  render: () => {
+    const proposeVisibility = (event: CustomEvent<{ hiddenTypes: string[] }>) => {
+      const legend = event.currentTarget as HTMLElement;
+      const root = legend.parentElement;
+      const allow = root?.querySelector<HTMLInputElement>('[data-allow-visibility]');
+      const feedback = root?.querySelector<HTMLElement>('[data-controlled-visibility-feedback]');
+      if (!allow?.checked) {
+        event.preventDefault();
+        if (feedback) feedback.textContent = 'Change vetoed before it was applied.';
+        return;
+      }
+      if (feedback) feedback.textContent = `Accepted hidden types: ${event.detail.hiddenTypes.join(', ') || 'none'}`;
+    };
+    return html`
+      <div>
+        <label>
+          <input data-allow-visibility type="checkbox" />
+          Allow visibility changes
+        </label>
+        <lr-graph-legend
+          .types=${types()}
+          .counts=${{ person: 12, org: 4, place: 7 }}
+          @lr-before-visibility-change=${proposeVisibility}
+        ></lr-graph-legend>
+        <p data-controlled-visibility-feedback>Changes are currently blocked.</p>
+      </div>
+    `;
+  },
+};
+
 export const WithHiddenType: Story = {
   render: () =>
     html`<lr-graph-legend

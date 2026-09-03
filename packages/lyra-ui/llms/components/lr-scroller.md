@@ -31,11 +31,11 @@ well as full-width layouts.
 - `scrollStep: number = 0` (attribute `scroll-step`) — custom step; zero uses 80% of the viewport
 - `label: string = ''` — accessible region name; a host `aria-label` is used when set
 
-**Events:** `lr-scroll` with `scrollStart`, `scrollEnd`, `scrollLeft`, and `scrollTop` in the
-detail object. Scroll-driven emissions are coalesced through one `requestAnimationFrame` tick, so a
-fling that fires dozens of native `scroll` events produces at most one `lr-scroll` per frame — the
-same contract `lr-virtual-list`'s identically-named event carries, so the two are interchangeable
-for scroll-linked layout work.
+**Events:** `lr-scroll` has detail `{ scrollStart, scrollEnd, scrollLeft, scrollTop }`.
+Scroll-driven emissions are coalesced through one `requestAnimationFrame` tick, so a fling that
+fires dozens of native `scroll` events produces at most one `lr-scroll` per frame. This is the
+scroller's own event shape, not `lr-virtual-list`'s `lr-virtual-scroll` event
+(`{ scrollTop, viewportHeight }`).
 
 **Slots:** default scrollable content.
 

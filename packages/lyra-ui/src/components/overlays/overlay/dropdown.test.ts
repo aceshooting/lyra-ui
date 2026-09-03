@@ -26,6 +26,57 @@ async function basic(extra = ''): Promise<LyraDropdown> {
   `) as Promise<LyraDropdown>;
 }
 
+it('keeps dropdown rendering and lifecycle available when attachInternals throws', async () => {
+  const prototype = LyraDropdown.prototype as unknown as object;
+  const original = Object.getOwnPropertyDescriptor(prototype, 'attachInternals');
+  let calls = 0;
+  let receiverWasDropdown = false;
+  Object.defineProperty(prototype, 'attachInternals', {
+    configurable: true,
+    value(this: HTMLElement): ElementInternals {
+      calls += 1;
+      receiverWasDropdown = this instanceof LyraDropdown;
+      throw new Error('partial DOM attachInternals callable');
+    },
+  });
+  let el!: LyraDropdown;
+  try {
+    el = new LyraDropdown();
+  } finally {
+    if (original) Object.defineProperty(prototype, 'attachInternals', original);
+    else delete (prototype as { attachInternals?: unknown }).attachInternals;
+  }
+
+  expect(calls).to.equal(1);
+  expect(receiverWasDropdown).to.equal(true);
+  el.style.setProperty('--show-duration', '0ms');
+  el.style.setProperty('--hide-duration', '0ms');
+  const button = document.createElement('button');
+  button.slot = 'trigger';
+  button.textContent = 'Actions';
+  const item = document.createElement('lr-dropdown-item');
+  item.textContent = 'Rename';
+  el.append(button, item);
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(el.getMenu()?.localName).to.equal('lr-menu');
+
+    await el.show();
+    expect(el.open).to.equal(true);
+    expect(el.hasAttribute('open')).to.equal(true);
+    expect(el.shadowRoot?.querySelector('[part~="popup"]')?.hasAttribute('data-hidden')).to.equal(
+      false,
+    );
+
+    await el.hide({ focusTrigger: false });
+    expect(el.open).to.equal(false);
+    expect(el.hasAttribute('open')).to.equal(false);
+  } finally {
+    el.remove();
+  }
+});
+
 it('keeps menu and trigger imperative helpers inert on a hydration-shaped pre-render root', () => {
   const el = document.createElement('lr-dropdown') as LyraDropdown;
   const hydrationState = el as unknown as {

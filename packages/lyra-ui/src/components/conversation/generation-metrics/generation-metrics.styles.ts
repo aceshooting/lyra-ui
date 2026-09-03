@@ -6,6 +6,7 @@ export const styles = css`
     min-inline-size: 0;
     vertical-align: middle;
     max-inline-size: 100%;
+    font-size: var(--lr-font-size-sm);
   }
 
   [part='base'] {
@@ -13,7 +14,7 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     max-inline-size: 100%;
-    font-size: var(--lr-font-size-sm);
+    font: inherit;
     line-height: var(--lr-line-height-snug);
     color: var(--lr-color-text-quiet);
   }
@@ -44,6 +45,7 @@ export const styles = css`
   }
 
   [part='stop-button'] {
+    font: inherit;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;

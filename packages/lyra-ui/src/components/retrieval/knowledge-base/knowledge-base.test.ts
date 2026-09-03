@@ -1,4 +1,10 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from '../../../../test/wtr-mouse.js';
 import './knowledge-base.js';
 import type { LyraKnowledgeBase, KnowledgeSource } from './knowledge-base.js';
 import type { LyraTable } from '../../data/table/table.class.js';
@@ -96,6 +102,11 @@ describe('lr-knowledge-base', () => {
     expect(
       explicitEmpty.shadowRoot!.querySelector('[part="heading"]')!.textContent
     ).to.equal('');
+    // The visible heading honors the explicit empty string, but the nested grid must never be
+    // left without an accessible name, so its label falls back to the localized default.
+    expect(
+      explicitEmpty.shadowRoot!.querySelector<LyraTable>('lr-table')!.accessibleLabel
+    ).to.equal('Knowledge base');
   });
 
   it('renders the default localized heading, and `label` overrides it', async () => {
@@ -573,4 +584,163 @@ it('renders every remaining status vocabulary and safely normalizes timestamps a
   expect(el.shadowRoot!.querySelector('[part="summary"]') === null).to.equal(
     true
   );
+});
+
+it('forwards every documented table part and renders the actual nested action trigger states', async function () {
+  this.timeout(20000);
+  const parts = [
+    'name-cell',
+    'source-name',
+    'source-type',
+    'sync-cell',
+    'sync-badge',
+    'sync-timestamp',
+    'sync-error',
+    'health-cell',
+    'health-badge',
+    'document-count',
+    'permission-badge',
+    'actions-menu',
+    'actions-trigger',
+  ];
+  const sheet = document.createElement('style');
+  sheet.textContent = parts
+    .map(
+      (part) =>
+        `lr-knowledge-base.part-probe::part(${part}) { outline-color: rgb(1, 2, 3); }`
+    )
+    .join('\n');
+  const stateSheet = document.createElement('style');
+  stateSheet.textContent = `
+    lr-knowledge-base.part-probe::part(actions-trigger) {
+      --lr-color-text: rgb(1, 2, 3);
+      --lr-color-text-quiet: rgb(4, 5, 6);
+      --lr-color-mix-partner: rgb(7, 8, 9);
+      --lr-color-mix-active: 100%;
+      --lr-focus-ring-width: 3px;
+      --lr-focus-ring-color: rgb(10, 11, 12);
+      --lr-focus-ring-offset: 2px;
+    }
+  `;
+  document.head.append(sheet);
+  try {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <button type="button">Before knowledge base</button>
+        <lr-knowledge-base
+          class="part-probe"
+          label="Part probe"
+          style="font-size: 20px"
+          .sources=${sources}
+        ></lr-knowledge-base>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-knowledge-base') as LyraKnowledgeBase;
+    const keyboardStart = wrapper.querySelector('button') as HTMLButtonElement;
+    const table = tableEl(el);
+    await table.updateComplete;
+
+    // This is deliberately an external consumer stylesheet: every assertion below starts at the
+    // outer host and proves that its documented forwarded name reaches a rendered table child.
+    for (const part of parts) {
+      const target = table.shadowRoot!.querySelector<HTMLElement>(
+        `[part="${part}"]`
+      );
+      expect(target != null).to.equal(true);
+      expect(getComputedStyle(target!).outlineColor).to.equal('rgb(1, 2, 3)');
+    }
+
+    // The generic external probe must not mask the component's own focus outline below.
+    sheet.remove();
+    document.head.append(stateSheet);
+
+    const trigger = table.shadowRoot!.querySelector<HTMLElement>(
+      '[part="actions-trigger"]'
+    )!;
+    const glyph = trigger.querySelector<SVGElement>('svg')!;
+    const style = getComputedStyle(trigger);
+    const rect = trigger.getBoundingClientRect();
+    expect(parseFloat(style.minInlineSize) >= 40).to.equal(true);
+    expect(parseFloat(style.minBlockSize) >= 40).to.equal(true);
+    expect(rect.width >= 40).to.equal(true);
+    expect(rect.height >= 40).to.equal(true);
+    expect(style.cursor).to.equal('pointer');
+    expect(style.fontSize).to.equal('20px');
+    expect(glyph.getAttribute('width')).to.equal('1em');
+    expect(glyph.getAttribute('height')).to.equal('1em');
+    expect(getComputedStyle(glyph).fontSize).to.equal('20px');
+    expect(getComputedStyle(glyph).width).to.equal('20px');
+    expect(getComputedStyle(glyph).height).to.equal('20px');
+
+    const restingBackground = style.backgroundColor;
+    expect(style.color).to.equal('rgb(4, 5, 6)');
+    let pointerDown = false;
+    try {
+      await hoverUntilMatched(
+        trigger,
+        'the real nested action trigger never registered :hover'
+      );
+      await waitUntil(
+        () => {
+          const hovered = getComputedStyle(trigger);
+          return (
+            hovered.color === 'rgb(1, 2, 3)' &&
+            hovered.backgroundColor !== restingBackground
+          );
+        },
+        'the real nested action trigger never painted its hover color and background',
+        { timeout: 2000 }
+      );
+
+      const hoverBackground = getComputedStyle(trigger).backgroundColor;
+      await sendMouse({ type: 'down' });
+      pointerDown = true;
+      await waitUntil(
+        () => {
+          const active = getComputedStyle(trigger);
+          return (
+            trigger.matches(':active') &&
+            active.color === 'rgb(1, 2, 3)' &&
+            active.backgroundColor !== hoverBackground
+          );
+        },
+        'the real nested action trigger never painted its pressed color and background',
+        { timeout: 2000 }
+      );
+    } finally {
+      if (pointerDown) await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+
+    const dropdown = dropdownFor(el, 0);
+    await dropdown.updateComplete;
+    if (dropdown.open) await dropdown.hide({ focusTrigger: false });
+
+    keyboardStart.focus();
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      await sendKeys({ press: 'Tab' });
+      if (table.shadowRoot!.activeElement === trigger) break;
+    }
+    expect(
+      table.shadowRoot!.activeElement === trigger,
+      'Tab must reach the real nested action trigger'
+    ).to.equal(true);
+    await waitUntil(
+      () => {
+        const focused = getComputedStyle(trigger);
+        return (
+          trigger.matches(':focus-visible') &&
+          focused.outlineStyle === 'solid' &&
+          focused.outlineWidth === '3px' &&
+          focused.outlineColor === 'rgb(10, 11, 12)' &&
+          focused.outlineOffset === '2px'
+        );
+      },
+      'the real nested action trigger never painted its keyboard focus-visible outline',
+      { timeout: 2000 }
+    );
+  } finally {
+    sheet.remove();
+    stateSheet.remove();
+  }
 });

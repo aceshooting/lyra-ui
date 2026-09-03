@@ -282,7 +282,9 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   private hasPreviewNodes(nodes: readonly Node[]): boolean {
     return nodes.some((node) => {
       if (node.nodeType === 3) return Boolean(node.textContent?.trim());
-      return node.nodeType === 1 && !(node as Element).hasAttribute('slot');
+      if (node.nodeType !== 1) return false;
+      const slotName = (node as Element).getAttribute('slot');
+      return slotName === null || slotName === '';
     });
   }
 

@@ -1,13 +1,17 @@
-import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
+import { nextId, srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.class.js';
 import { styles } from './node-palette.styles.js';
@@ -33,11 +37,181 @@ export interface LyraPaletteItem {
   disabled?: boolean;
 }
 
-const EMPTY_PALETTE_ITEMS: readonly LyraPaletteItem[] = Object.freeze([]);
+const MAX_PALETTE_KEYWORDS = 10_000;
+const MAX_PALETTE_ITEMS = 10_000;
+
+/** The safe, once-read values the component is permitted to use after admitting an item. The
+ * retained source object is intentionally opaque: it exists solely for documented identity-based
+ * focus/reorder/event contracts and is never read after projection. */
+interface CanonicalPaletteItem {
+  readonly source: LyraPaletteItem;
+  readonly sourceIndex: number;
+  readonly type: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly category?: string;
+  readonly keywords: readonly string[];
+  readonly icon?: unknown;
+  readonly disabled: boolean;
+}
+
+const EMPTY_CANONICAL_PALETTE_ITEMS: readonly CanonicalPaletteItem[] =
+  Object.freeze([]);
+
+function descriptorValue(
+  value: object,
+  property: PropertyKey
+): ReturnType<typeof getOwnDataDescriptor> {
+  return getOwnDataDescriptor(value, property);
+}
+
+function projectKeywords(value: unknown): readonly string[] | undefined {
+  try {
+    if (!Array.isArray(value)) return undefined;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0 ||
+      lengthDescriptor.value > MAX_PALETTE_KEYWORDS
+    )
+      return undefined;
+
+    const keywords: string[] = [];
+    const length = Math.min(lengthDescriptor.value, MAX_PALETTE_KEYWORDS);
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = descriptorValue(value, String(index));
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof descriptor.value !== 'string'
+      )
+        return undefined;
+      keywords.push(descriptor.value);
+    }
+    return Object.freeze(keywords);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectPaletteItem(
+  candidate: unknown,
+  sourceIndex: number
+): CanonicalPaletteItem | undefined {
+  try {
+    if (
+      candidate === null ||
+      typeof candidate !== 'object' ||
+      Array.isArray(candidate)
+    )
+      return undefined;
+    const typeDescriptor = descriptorValue(candidate, 'type');
+    const labelDescriptor = descriptorValue(candidate, 'label');
+    const descriptionDescriptor = descriptorValue(candidate, 'description');
+    const categoryDescriptor = descriptorValue(candidate, 'category');
+    const keywordsDescriptor = descriptorValue(candidate, 'keywords');
+    const iconDescriptor = descriptorValue(candidate, 'icon');
+    const disabledDescriptor = descriptorValue(candidate, 'disabled');
+    if (
+      typeDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      typeDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      labelDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      labelDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      descriptionDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      categoryDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      keywordsDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      iconDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      disabledDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof typeDescriptor.value !== 'string' ||
+      typeDescriptor.value.trim() === '' ||
+      typeof labelDescriptor.value !== 'string' ||
+      labelDescriptor.value.trim() === ''
+    )
+      return undefined;
+
+    const description =
+      descriptionDescriptor === MISSING_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : descriptionDescriptor.value;
+    const category =
+      categoryDescriptor === MISSING_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : categoryDescriptor.value;
+    const keywordsValue =
+      keywordsDescriptor === MISSING_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : keywordsDescriptor.value;
+    const icon =
+      iconDescriptor === MISSING_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : iconDescriptor.value;
+    const disabled =
+      disabledDescriptor === MISSING_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : disabledDescriptor.value;
+    if (
+      (description !== undefined && typeof description !== 'string') ||
+      (category !== undefined && typeof category !== 'string') ||
+      (disabled !== undefined && typeof disabled !== 'boolean')
+    )
+      return undefined;
+    const keywords =
+      keywordsValue === undefined ? Object.freeze([]) : projectKeywords(keywordsValue);
+    if (!keywords) return undefined;
+
+    return Object.freeze({
+      source: candidate as LyraPaletteItem,
+      sourceIndex,
+      type: typeDescriptor.value,
+      label: labelDescriptor.value,
+      description,
+      category,
+      keywords,
+      icon,
+      disabled: disabled ?? false,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectPaletteItems(value: unknown): readonly CanonicalPaletteItem[] {
+  try {
+    if (!Array.isArray(value)) return EMPTY_CANONICAL_PALETTE_ITEMS;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    )
+      return EMPTY_CANONICAL_PALETTE_ITEMS;
+
+    const items: CanonicalPaletteItem[] = [];
+    const length = Math.min(lengthDescriptor.value, MAX_PALETTE_ITEMS);
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = descriptorValue(value, String(index));
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
+        continue;
+      const item = projectPaletteItem(descriptor.value, index);
+      if (item) items.push(item);
+    }
+    return Object.freeze(items);
+  } catch {
+    return EMPTY_CANONICAL_PALETTE_ITEMS;
+  }
+}
 
 export interface LyraNodePaletteEventMap {
   'lr-palette-place': CustomEvent<{ type: string }>;
-  'lr-select': CustomEvent<LyraEventDetailSnapshot<{ item: LyraPaletteItem }>>;
+  'lr-select': CustomEvent<Readonly<{ item: LyraPaletteItem }>>;
   /** A keyboard reorder *request*, only while `reorderable`. `fromIndex`/`toIndex` index into the
    *  host's own `items` array, so applying it is a plain splice; `category` names the group the
    *  move stayed inside (`null` for the ungrouped bucket). This component never reorders `items`
@@ -68,14 +242,17 @@ export interface LyraNodePaletteEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Each rendered item is projected once from its own data descriptors. Accessor-backed or malformed
+ * rows are omitted, while an admitted source object's identity remains available only for focus,
+ * reorder, and `lr-select` contracts.
  *
  * @customElement lr-node-palette
  * @slot header - Content above the search field (e.g. a heading or tabs).
  * @slot footer - Content below the list.
  * @event lr-palette-place - An item was placed (pointer click or Enter/Space — the click/keyboard
  *   alternative to dragging). `detail: { type }`.
- * @event lr-select - Emitted alongside `lr-palette-place` on both gestures, carrying the full
- *   item. `detail: { item }`.
+ * @event lr-select - Emitted alongside `lr-palette-place` on both gestures, carrying the original
+ *   admitted item object. `detail: { item }`.
  * @event lr-reorder - `detail: { type, category, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown
  *   on the focused item requests moving it past its neighbour **inside its own category group**, so
  *   a reorder can never turn into a recategorization. `fromIndex`/`toIndex` index into `items`
@@ -126,17 +303,20 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
    *  `commands` exception for the same reasons. */
   protected static override readonly identityCollectionProperties =
     Object.freeze(['items']);
+  protected static override readonly identityEventDetailProperties =
+    Object.freeze({ 'lr-select': Object.freeze(['item']) });
 
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-select',
   ]);
 
-  /** Node templates available for filtering, activation, dragging, and optional reordering. */
+  /** Node templates available for filtering, activation, dragging, and optional reordering.
+   * Accessor-backed or malformed rows are omitted; accepted fields are read once from own data
+   * descriptors while the original item object stays available for documented identity contracts. */
   @property({ attribute: false }) items: readonly LyraPaletteItem[] = [];
-  /** Accessible name for the palette; omitted uses the localized default. An explicit empty
-   *  string is used as-is (see `render()`'s `listLabel` for how it interacts with a host
-   *  `aria-label`). */
+  /** Accessible name for the actual listbox; omitted, empty, or whitespace-only values use the
+   * localized default while the public property's raw readback remains unchanged. */
   @property() label?: string;
   /**
    * Opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard reordering (see the class doc). Defaults to
@@ -144,8 +324,9 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
    * a plain Arrow press.
    */
   @property({ type: Boolean, reflect: true }) reorderable = false;
-  /** JS-only accessible-name override for the listbox. A markup `aria-label` names the component
-   *  as a whole, so it is not cloned onto the inner listbox. */
+  /** JS-only accessible-name override for the listbox. Setting this property does not reflect a
+   * host `aria-label`; an authored host attribute, including `aria-label=""`, names only the
+   * component and leaves the listbox to `label` or its localized fallback. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private queryText = '';
@@ -166,32 +347,46 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
    *  `<lr-chat-message>`/`<lr-branch-picker>`'s identical `isMounting` gate. */
   private isMounting = true;
 
-  // `filtered`/`categorized`/`rovingList` are each memoized off the inputs they actually read
-  // (`items` reference + folded query + locale for `filtered`; the `filtered` array reference
+  // `canonicalItems`/`filtered`/`categorized`/`rovingList` are each memoized off the inputs they
+  // actually read (`items` reference for `canonicalItems`; canonical items + folded query + locale
+  // for `filtered`; the `filtered` array reference
   // itself for `categorized`/`rovingList`, which are always called with `this.filtered`). Within
   // a single Lit update cycle those inputs never change between willUpdate()/render()/updated(),
   // so the second and third call each cycle are cache hits instead of full re-scans -- see
   // `lastRenderedRovingList` below for the keydown-handler side of this (no per-keystroke
   // recomputation at all).
+  private canonicalItemsCache: {
+    items: unknown;
+    result: readonly CanonicalPaletteItem[];
+  } | null = null;
   private filteredCache: {
-    items: readonly LyraPaletteItem[];
+    items: readonly CanonicalPaletteItem[];
     query: string;
     locale: string;
-    result: readonly LyraPaletteItem[];
+    result: readonly CanonicalPaletteItem[];
   } | null = null;
   private categorizedCache: {
-    filtered: readonly LyraPaletteItem[];
-    result: { category: string | null; items: LyraPaletteItem[] }[];
+    filtered: readonly CanonicalPaletteItem[];
+    result: { category: string | null; items: CanonicalPaletteItem[] }[];
   } | null = null;
   private rovingListCache: {
-    filtered: readonly LyraPaletteItem[];
-    result: LyraPaletteItem[];
+    filtered: readonly CanonicalPaletteItem[];
+    result: CanonicalPaletteItem[];
   } | null = null;
 
-  private get filtered(): readonly LyraPaletteItem[] {
+  private get canonicalItems(): readonly CanonicalPaletteItem[] {
+    const items = this.items;
+    const cache = this.canonicalItemsCache;
+    if (cache && cache.items === items) return cache.result;
+    const result = projectPaletteItems(items);
+    this.canonicalItemsCache = { items, result };
+    return result;
+  }
+
+  private get filtered(): readonly CanonicalPaletteItem[] {
     const locale = this.effectiveLocale;
     const q = this.queryText.trim().toLocaleLowerCase(locale);
-    const items = Array.isArray(this.items) ? this.items : EMPTY_PALETTE_ITEMS;
+    const items = this.canonicalItems;
     const cache = this.filteredCache;
     if (
       cache &&
@@ -201,53 +396,28 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     ) {
       return cache.result;
     }
-    const result: LyraPaletteItem[] = [];
+    const result: CanonicalPaletteItem[] = [];
     for (const item of items) {
-      try {
-        const label = item?.label;
-        const type = item?.type;
-        const category = item?.category;
-        const description = item?.description;
-        const keywords = item?.keywords;
-        const disabled = item?.disabled;
-        if (
-          typeof type !== 'string' ||
-          type.trim() === '' ||
-          typeof label !== 'string' ||
-          label.trim() === '' ||
-          (category !== undefined && typeof category !== 'string') ||
-          (description !== undefined && typeof description !== 'string') ||
-          (keywords !== undefined &&
-            (!Array.isArray(keywords) ||
-              keywords.some((keyword) => typeof keyword !== 'string'))) ||
-          (disabled !== undefined && typeof disabled !== 'boolean')
-        ) {
-          continue;
-        }
-        if (
-          q &&
-          ![label, category ?? '', ...(keywords ?? [])]
-            .join(' ')
-            .toLocaleLowerCase(locale)
-            .includes(q)
-        ) {
-          continue;
-        }
-        result.push(item);
-      } catch {
-        // A malformed row is omitted without hiding later valid node templates.
-      }
+      if (
+        q &&
+        ![item.label, item.category ?? '', ...item.keywords]
+          .join(' ')
+          .toLocaleLowerCase(locale)
+          .includes(q)
+      )
+        continue;
+      result.push(item);
     }
     this.filteredCache = { items, query: q, locale, result };
     return result;
   }
 
   private categorized(
-    filtered: readonly LyraPaletteItem[]
-  ): { category: string | null; items: LyraPaletteItem[] }[] {
+    filtered: readonly CanonicalPaletteItem[]
+  ): { category: string | null; items: CanonicalPaletteItem[] }[] {
     const cache = this.categorizedCache;
     if (cache && cache.filtered === filtered) return cache.result;
-    const groups = new Map<string | null, LyraPaletteItem[]>();
+    const groups = new Map<string | null, CanonicalPaletteItem[]>();
     for (const item of filtered) {
       const key = item.category ?? null;
       if (!groups.has(key)) groups.set(key, []);
@@ -261,7 +431,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     return result;
   }
 
-  private rovingList(filtered = this.filtered): LyraPaletteItem[] {
+  private rovingList(filtered = this.filtered): CanonicalPaletteItem[] {
     const cache = this.rovingListCache;
     if (cache && cache.filtered === filtered) return cache.result;
     const result = this.categorized(filtered)
@@ -272,7 +442,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   /** Enabled items in the order represented by the currently committed item elements. */
-  private lastRenderedRovingList: LyraPaletteItem[] = [];
+  private lastRenderedRovingList: CanonicalPaletteItem[] = [];
   private pendingFocusIndex: number | null = null;
 
   private itemElements(): HTMLElement[] {
@@ -283,23 +453,26 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     ) as HTMLElement[];
   }
 
-  private occurrenceAt(items: LyraPaletteItem[], index: number): number {
-    const item = items[index];
+  private occurrenceAt(
+    items: readonly CanonicalPaletteItem[],
+    index: number
+  ): number {
+    const item = items[index]?.source;
     let occurrence = 0;
     for (let i = 0; i < index; i++) {
-      if (items[i] === item) occurrence++;
+      if (items[i]?.source === item) occurrence++;
     }
     return occurrence;
   }
 
   private indexOfOccurrence(
-    items: LyraPaletteItem[],
+    items: readonly CanonicalPaletteItem[],
     item: LyraPaletteItem,
     occurrence: number
   ): number {
     let seen = 0;
     for (let index = 0; index < items.length; index++) {
-      if (items[index] !== item) continue;
+      if (items[index]?.source !== item) continue;
       if (seen === occurrence) return index;
       seen++;
     }
@@ -358,7 +531,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       const occurrence = this.occurrenceAt(previous, referenceIndex);
       const preservedIndex = this.indexOfOccurrence(
         next,
-        previousItem,
+        previousItem.source,
         occurrence
       );
       nextIndex =
@@ -377,7 +550,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         const nextOccurrence = this.occurrenceAt(next, nextIndex);
         const survivingOldIndex = this.indexOfOccurrence(
           previous,
-          nextItem,
+          nextItem.source,
           nextOccurrence
         );
         const survivingOldElement = oldElements[survivingOldIndex];
@@ -454,7 +627,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   private onItemKeyDown(
     e: KeyboardEvent,
     rovingIndex: number,
-    item: LyraPaletteItem
+    item: CanonicalPaletteItem
   ): void {
     // Same rationale as onFieldKeyDown above: reuse the list already built for the last render
     // instead of recomputing it on every arrow-key press.
@@ -502,7 +675,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   /** The rendered items of one category group, disabled entries included: a reorder moves the
    *  focused item past the neighbour a user can actually see, which is not the same list the
    *  roving-tabindex order walks. */
-  private groupItemsFor(category: string | null): LyraPaletteItem[] {
+  private groupItemsFor(category: string | null): CanonicalPaletteItem[] {
     return (
       this.categorized(this.filtered).find(
         (group) => group.category === category
@@ -512,21 +685,29 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   private pendingReorder?: {
     item: LyraPaletteItem;
+    itemOccurrence: number;
     category: string | null;
     neighbor: LyraPaletteItem;
+    neighborOccurrence: number;
     wasBefore: boolean;
   };
 
-  private requestReorder(item: LyraPaletteItem, delta: 1 | -1): void {
+  private requestReorder(item: CanonicalPaletteItem, delta: 1 | -1): void {
     const category = item.category ?? null;
     const group = this.groupItemsFor(category);
     const position = group.indexOf(item);
     const neighbor = position < 0 ? undefined : group[position + delta];
     if (!neighbor) return; // already at the group's own boundary -- a move here would recategorize
-    const fromIndex = this.items.indexOf(item);
-    const toIndex = this.items.indexOf(neighbor);
-    if (fromIndex < 0 || toIndex < 0) return;
-    this.pendingReorder = { item, category, neighbor, wasBefore: delta === 1 };
+    const fromIndex = item.sourceIndex;
+    const toIndex = neighbor.sourceIndex;
+    this.pendingReorder = {
+      item: item.source,
+      itemOccurrence: this.occurrenceAt(group, position),
+      category,
+      neighbor: neighbor.source,
+      neighborOccurrence: this.occurrenceAt(group, position + delta),
+      wasBefore: delta === 1,
+    };
     this.emit('lr-reorder', { type: item.type, category, fromIndex, toIndex });
   }
 
@@ -538,8 +719,16 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     const pending = this.pendingReorder;
     if (!pending) return;
     const group = this.groupItemsFor(pending.category);
-    const position = group.indexOf(pending.item);
-    const neighborPosition = group.indexOf(pending.neighbor);
+    const position = this.indexOfOccurrence(
+      group,
+      pending.item,
+      pending.itemOccurrence
+    );
+    const neighborPosition = this.indexOfOccurrence(
+      group,
+      pending.neighbor,
+      pending.neighborOccurrence
+    );
     if (position < 0 || neighborPosition < 0) {
       this.pendingReorder = undefined;
       return;
@@ -561,13 +750,13 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     );
   }
 
-  private place(item: LyraPaletteItem): void {
+  private place(item: CanonicalPaletteItem): void {
     if (item.disabled) return;
     this.emit('lr-palette-place', { type: item.type });
-    this.emit('lr-select', { item });
+    this.emit('lr-select', { item: item.source });
   }
 
-  private onItemDragStart(e: DragEvent, item: LyraPaletteItem): void {
+  private onItemDragStart(e: DragEvent, item: CanonicalPaletteItem): void {
     if (item.disabled || !e.dataTransfer) return;
     e.dataTransfer.setData(
       FLOW_PALETTE_MIME_TYPE,
@@ -578,7 +767,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   private itemTemplate(
-    item: LyraPaletteItem,
+    item: CanonicalPaletteItem,
     rovingIndex: number
   ): TemplateResult {
     return html`<div
@@ -614,14 +803,16 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     const filtered = this.filtered;
     const groups = this.categorized(filtered);
     let nextRovingIndex = 0;
-    const hostLabel = hostAriaLabel(this);
-    const listLabel =
-      hostLabel === null
-        ? this.accessibleLabel ??
-          (this.label == null ? this.localize('nodePaletteLabel') : this.label)
-        : this.label != null && this.label !== hostLabel
+    const componentLabel =
+      typeof this.label === 'string' && this.label.trim() !== ''
         ? this.label
         : this.localize('nodePaletteLabel');
+    const listLabel =
+      !this.hasAttribute('aria-label') &&
+      typeof this.accessibleLabel === 'string' &&
+      this.accessibleLabel.trim() !== ''
+        ? this.accessibleLabel
+        : componentLabel;
     return html`<div part="base">
       <slot name="header"></slot>
       <input

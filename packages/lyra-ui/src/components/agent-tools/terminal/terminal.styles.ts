@@ -9,7 +9,7 @@ export const styles = css`
     flex-direction: column;
     border: var(--lr-size-1px) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-terminal-surface-color, var(--lr-color-surface-raised));
     overflow: hidden;
   }
   /* Chrome escape -- the shared frame="plain" treatment, matching lr-result-card, lr-stack-trace,
@@ -50,13 +50,14 @@ export const styles = css`
   }
   [part='copy-button']:hover,
   [part='download-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet));
   }
-  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
-     which follows the text colour -- a distinctly deeper step in both light and dark themes. */
+  /* Pressed is the toolbar hover tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner, which follows the text colour -- a distinctly deeper step in both
+     light and dark themes. */
   [part='copy-button']:active,
   [part='download-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-terminal-toolbar-button-active-bg, color-mix(in oklab, var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='copy-button']:focus-visible,
   [part='download-button']:focus-visible {
@@ -88,16 +89,17 @@ export const styles = css`
   /* Only an interactive (highlight-owning) line carries tabindex="0" -- renderLine() in
      terminal.class.ts -- so :focus-visible below needs no extra scoping. :hover cannot be scoped
      the same way: every line shares one part name and ::part() forbids a trailing attribute
-     selector, so this is a plain pointer preview across all lines. Reuses --lr-color-brand-quiet,
-     the toolbar buttons' hover fill; the semantic aliases below reassert their own tone. */
+     selector, so this is a plain pointer preview across all lines. Semantic aliases below
+     reassert their own tone. */
   lr-virtual-list::part(line):hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet));
   }
-  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
-     as for [part='copy-button']/[part='download-button'] above: a highlight-owning line is a real
-     activatable target (renderLine() wires @click/@keydown), not a hover-only preview. */
+  /* Pressed is the line hover tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner, as for [part='copy-button']/[part='download-button'] above: a
+     highlight-owning line is a real activatable target (renderLine() wires @click/@keydown), not a
+     hover-only preview. */
   lr-virtual-list::part(line):active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-terminal-line-active-bg, color-mix(in oklab, var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   /* State-specific parts keep semantic highlights intact through hover/press, and give a consumer
      a semantic part to override deliberately. */

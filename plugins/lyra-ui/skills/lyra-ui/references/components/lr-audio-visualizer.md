@@ -28,10 +28,11 @@ wired to a WebAudio `AnalyserNode`; `level: number | null = null` — a pre-comp
 hosts that already have one (e.g. `lr-push-to-talk`'s `lr-level` detail); `state: 'idle' |
 'listening' | 'thinking' | 'speaking' = 'idle'` (reflected) — drives the signal-less ambient
 animation and per-state coloring; `mode: AudioVisualizerMode = 'bars'` (`'bars' | 'waveform'`,
-reflected); `barCount: number = 5` (attribute `bar-count`); `gain: number = 1` — multiplier applied
-to the resolved amplitude; `label: string =
-''` — accessible-name override. Invalid `state` or `mode` attribute/property writes normalize to
-`idle` and `bars` respectively.
+reflected); `barCount: number = 5` (attribute `bar-count`, normalized to an integer in `[1, 64]`);
+`gain: number = 1` — multiplier applied to the resolved amplitude, with a non-finite value treated
+as `1`; `label: string = ''` — accessible-name override. `level` is clamped to `[0, 1]`; after gain,
+waveform and bar values are clamped to `[-1, 1]` and `[0, 1]` respectively. Invalid `state` or
+`mode` attribute/property writes normalize to `idle` and `bars` respectively.
 
 **Methods:** `refreshTheme()` re-reads themeable custom properties after a runtime theme change (the
 canvas resolves token values at paint time and cannot inherit `var()` directly). Canvas-bound
@@ -44,8 +45,10 @@ or empty `MediaStream` tears down the prior analyser transaction immediately and
 
 **Slots:** none.
 
-**CSS parts:** `base` (the root wrapper) and `canvas` (the drawing surface, `aria-hidden`; the host
-itself carries `role="img"` and the accessible name).
+**CSS parts:** `base` (the root wrapper) and `canvas` (the drawing surface, `aria-hidden`). The host
+supplies `role="img"` only while an author has not supplied a role; an authored role is preserved,
+and removing it restores `img`. If observation cannot be established, it draws eagerly; otherwise
+it waits for a valid observer entry and pauses offscreen.
 
 **Themeable custom properties:** `--lr-audio-visualizer-color` (default `var(--lr-color-brand)` —
 active bar/waveform color), `--lr-audio-visualizer-quiet-color` (default

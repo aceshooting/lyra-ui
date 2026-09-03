@@ -11,7 +11,7 @@ import { styles } from './span-waterfall.styles.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -88,8 +88,10 @@ export interface LyraSpanWaterfallEventMap {
  * in start order, status-toned bars (Langfuse timeline / Temporal
  * event-history style).
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Public collection properties take bounded readonly snapshots. `spans` keeps admitted item
+ * identities only long enough for the shared descriptor-safe projection to copy its closed
+ * display schema; later rendering never re-reads an admitted source row. Create a new collection
+ * and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-span-waterfall
  * @event lr-span-select - `detail: { spanId }` — a bar/row was activated (click, Enter, Space).
@@ -100,8 +102,9 @@ export interface LyraSpanWaterfallEventMap {
  * @csspart row - One span's row.
  * @csspart name - The span's name (the row's name gutter).
  * @csspart bar-track - The bar's positioning track.
- * @csspart bar - The interactive, focusable status-toned bar (`role` via `<button>`), with a
- *   24px minimum target in both axes even when its duration would paint more narrowly.
+ * @csspart bar - The interactive, focusable status-toned bar (`role` via `<button>`), with the
+ *   shared `--lr-icon-button-size` minimum target in both axes even when its duration would paint
+ *   more narrowly.
  * @csspart meta - Secondary row info (status/duration), shown inline under 480px.
  * @csspart status-text - The visible status label.
  * @csspart duration - The formatted duration text.
@@ -155,10 +158,16 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     statusPending: LYRA_DEFAULT_statusPending,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
+    tokensIn: LYRA_DEFAULT_tokensIn,
+    tokensOut: LYRA_DEFAULT_tokensOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['spans']);
+  /** Span sources can carry opaque provider metadata; the shared normalizer copies only its closed
+   * display schema once, so cloning each whole source record would both lose opaque identity and
+   * create an unsafe second traversal. */
+  protected static override readonly identityCollectionProperties = Object.freeze(['spans']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -271,6 +280,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
           unitDisplay: 'short',
           maximumFractionDigits: 1,
         }).format(milliseconds / 1000);
+  }
+
+  private projectionLimitText(): string {
+    return this.localize('spanProjectionLimit', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_LYRA_SPANS),
+    });
   }
 
   private focusRow(span: LyraSpan | undefined): void {
@@ -389,9 +404,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       }
     }
     if (this.limitAnnouncementInitialized && this.sortedCacheTruncated && !this.previouslyTruncated) {
-      this.limitAnnouncementSink?.announce(this.localize('spanProjectionLimit', undefined, {
-        count: MAX_RENDERED_LYRA_SPANS,
-      }));
+      this.limitAnnouncementSink?.announce(this.projectionLimitText());
     }
     this.limitAnnouncementInitialized = true;
     this.previouslyTruncated = this.sortedCacheTruncated;
@@ -446,7 +459,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
             tabindex=${tabbable ? '0' : '-1'}
             aria-current=${isActive ? 'true' : 'false'}
             aria-label=${fragments.join(this.localize('accessibleLabelSeparator'))}
-            style=${`inset-inline-start:${startPct}%;inline-size:${widthPct}%`}
+            style=${`--_lr-span-waterfall-start:${startPct}%;--_lr-span-waterfall-width:${widthPct}%`}
             @click=${() => this.selectRow(span.id)}
             @focus=${() => {
               this.focusedId = span.id;
@@ -478,9 +491,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
           : rows.map((span, index) => this.renderRow(span, view, index + 1, rows.length, firstId))}
       </div>
       ${this.sortedCacheTruncated
-        ? html`<p part="limit" role="note">${this.localize('spanProjectionLimit', undefined, {
-            count: MAX_RENDERED_LYRA_SPANS,
-          })}</p>`
+        ? html`<p part="limit" role="note">${this.projectionLimitText()}</p>`
         : nothing}
       <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;

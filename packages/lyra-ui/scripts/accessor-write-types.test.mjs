@@ -389,6 +389,8 @@ test('fresh no-write CEM retains reviewed runtime and public-document subclass c
   ]) {
     assert.equal(member(tagName, 'type')?.default, `'${type}'`, `${tagName}.type default`);
   }
+  assert.equal(member('lr-chart', 'plugins')?.default, '[]', 'lr-chart.plugins default');
+  assert.equal(attribute('lr-chart', 'plugins')?.default, '[]', 'lr-chart[plugins] default');
   for (const [tagName, name, type, expected] of [
     ['lr-badge', 'variant', 'BadgeVariant', ['neutral', 'brand', 'success', 'warning', 'danger', 'primary']],
     ['lr-badge', 'size', 'BadgeSize', ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large']],

@@ -78,6 +78,9 @@ focus move.
   they have no effect in closed-dropdown mode
 - `name: string = ''` (reflected)
 - `disabled: boolean = false` (reflected)
+- `readonly: boolean = false` (reflected) — prevents user typing and catalog
+  commits while retaining focus, popup navigation, selection/copy, submission/reset, and programmatic
+  writes.
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `open: boolean = false` (reflected)
 - `size: LyraSize = 'm'` (reflected) — visual size on the library-wide ladder: `2xs`/`xs`/`s`/`m`/
@@ -177,8 +180,8 @@ every labelled control in the library uses, so `--lr-form-control-required-conte
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it here
 exactly as they do on `lr-input` (see `llms/shared.md` → "The required-field marker"). With no visible label there
 is nothing to mark and no stray glyph is rendered. Correspondingly, while the picker is barred from
-constraint validation — its own `disabled`, or an ancestor `<fieldset disabled>`; this control has no
-`readonly` — it reports no violation and publishes neither `:state(invalid)` nor
+constraint validation — its own `disabled` or `readonly`, or an ancestor `<fieldset disabled>` — it
+reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`, matching native `:invalid`. `required`/`optional` keep publishing.
 
 **CSS parts:** `form-control` (the complete label, control, hint, error, and listbox frame),

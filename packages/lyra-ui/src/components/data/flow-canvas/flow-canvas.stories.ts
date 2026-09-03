@@ -38,6 +38,48 @@ export const Default: Story = {
   `,
 };
 
+export const DynamicAuthoredCardLease: Story = {
+  name: 'Dynamic authored-card matching',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A direct child with `node-id` is projected into that node’s named slot. Changing its id live retargets the card; an unmatched id restores the child’s authored slot and leaves it undisplayed without affecting named companions.',
+      },
+    },
+  },
+  render: () => {
+    const retargetCard = (event: Event): void => {
+      const control = event.currentTarget as HTMLButtonElement;
+      const targetNodeId = control.dataset['nodeId'];
+      const scope = control.closest<HTMLElement>('[data-authored-card-story]');
+      const card = scope?.querySelector<HTMLElement>('[data-authored-card]');
+      const output = scope?.querySelector<HTMLOutputElement>('output');
+      if (!targetNodeId || !card || !output) return;
+      card.setAttribute('node-id', targetNodeId);
+      output.textContent = targetNodeId === 'missing'
+        ? 'The unmatched card is not rendered.'
+        : `The card now renders in ${targetNodeId}.`;
+    };
+    return html`
+      <div data-authored-card-story style="display:grid;gap:var(--lr-space-s)">
+        <div style="display:flex;flex-wrap:wrap;gap:var(--lr-space-xs)">
+          <button type="button" data-node-id="fetch" @click=${retargetCard}>Match Fetch</button>
+          <button type="button" data-node-id="summarize" @click=${retargetCard}>Match Summarize</button>
+          <button type="button" data-node-id="missing" @click=${retargetCard}>Make unmatched</button>
+        </div>
+        <lr-flow-canvas style="width:100%;height:24rem" .nodes=${nodes} .edges=${edges}>
+          <div node-id="fetch" slot="consumer-card-slot" data-authored-card>
+            Consumer-authored card
+          </div>
+          <lr-flow-controls slot="bottom-end" orientation="horizontal"></lr-flow-controls>
+        </lr-flow-canvas>
+        <output aria-live="polite">The card renders in fetch.</output>
+      </div>
+    `;
+  },
+};
+
 export const Editable: Story = {
   render: () => html`
     <lr-flow-canvas

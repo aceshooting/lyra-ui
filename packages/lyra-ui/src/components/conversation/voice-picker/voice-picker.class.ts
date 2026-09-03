@@ -161,6 +161,9 @@ export interface LyraVoicePickerEventMap {
  * In free-text mode, `input` and the native selection/range-editing APIs expose the editable
  * combobox text. `setRangeText()` synchronizes `value`, form data, and validity without emitting
  * user-input events. These APIs are no-ops in closed-dropdown mode and before render.
+ * `readonly` keeps both combobox owners focusable and browseable while blocking user typing and
+ * catalog commits; selection/copy, voice previews, form submission/reset, and programmatic writes
+ * remain available.
  * Catalog assignments become bounded, clone-owned, frozen snapshots. Create and reassign a new
  * catalog array after changing its rows; mutating an assigned source does not update the picker.
  *
@@ -235,8 +238,10 @@ export interface LyraVoicePickerEventMap {
  *   of a synthetic stale-value option row.
  * @cssprop [--lr-voice-picker-option-synthetic-font-style=italic] - Font style of a synthetic
  *   stale-value option label.
- * @cssprop [--lr-voice-picker-preview-hover-bg=var(--lr-color-brand-quiet)] - Preview hover fill.
- * @cssprop [--lr-voice-picker-preview-hover-color=var(--lr-color-brand)] - Preview hover icon.
+ * @cssprop [--lr-voice-picker-preview-hover-bg=var(--lr-color-brand-quiet)] - Shared hover/press
+ *   fill for the standalone and row preview actions.
+ * @cssprop [--lr-voice-picker-preview-hover-color=var(--lr-color-brand)] - Shared hover/press
+ *   icon color for the standalone and row preview actions.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  *   other quoted string (`' (required)'`, a localized word) to replace it.
@@ -306,6 +311,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
+  /** Keeps user edits and catalog commits from changing `value` while retaining focus, popup
+   *  navigation, selection/copy, previews, form submission, reset, and programmatic writes. */
+  @property({ type: Boolean, reflect: true }) readonly: boolean = false;
   /** Whether to render preview affordances at all. */
   @property({ reflect: true, converter: trueDefaultBooleanConverter }) preview = true;
   /** Visible label text. The `label` slot appends custom label content to the same native label. */
@@ -359,6 +367,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private readonly catalogPicker = new CatalogPickerController<LyraVoiceCatalogEntry>(this, {
     catalog: () => this.catalog,
     allowCustom: () => this.allowCustom,
+    isReadonly: () => this.readonly,
     locale: () => this.effectiveLocale,
     searchableFields: (entry) => [
       entry.id,
@@ -611,8 +620,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
 
   /**
-   * Shared with every other form control: own `disabled` and a `<fieldset disabled>` ancestor bar
-   * constraint validation (this picker has no `readonly` of its own). A barred control matches
+   * Shared with every other form control: own `disabled`/`readonly` and a `<fieldset disabled>`
+   * ancestor bar constraint validation. A barred control matches
    * neither `:valid` nor `:invalid` natively, so leaving `valueMissing` raised on a disabled
    * required picker is what painted it red under the documented `:state(user-invalid)` rule.
    */
@@ -750,7 +759,13 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     super.updated(changed);
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     this.catalogPicker.updated(reposition);
-    if (changed.has('required') || changed.has('touched') || changed.has('value')) {
+    if (
+      changed.has('required') ||
+      changed.has('readonly') ||
+      changed.has('touched') ||
+      changed.has('value')
+    ) {
+      if (changed.has('readonly')) this.updateValidity();
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
     // Unconditional, unlike the data-invalid reflection above: it also has to run on the FIRST
@@ -1106,6 +1121,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
           aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.placeholder || this.localize('voice'))}
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
+          aria-readonly=${this.readonly ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
           ?disabled=${this.effectiveDisabled}
           @click=${this.onTriggerClick}
@@ -1151,6 +1167,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
             aria-autocomplete="list"
             aria-describedby=${describedBy || nothing}
             aria-required=${this.required ? 'true' : 'false'}
+            aria-readonly=${this.readonly ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             autocomplete=${this.autocomplete || nothing}
             spellcheck=${this.spellcheck}
@@ -1159,6 +1176,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
             .value=${this.open ? this.query : this.labelFor(this.value)}
+            .readOnly=${this.readonly}
             placeholder=${this.placeholder}
             ?disabled=${this.effectiveDisabled}
             @input=${this.onInput}

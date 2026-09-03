@@ -587,6 +587,21 @@ it('is accessible while open with body and footer content', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('inherits the host font size into both header icon controls and their 1em glyphs', async () => {
+  const el = (await fixture(
+    html`<lr-tool-result-dialog open style="font-size: 20px"></lr-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+
+  for (const part of ['maximize-button', 'close-button'] as const) {
+    const control = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    const glyph = control.querySelector<SVGElement>('svg')!;
+
+    expect(getComputedStyle(control).fontSize, part).to.equal('20px');
+    expect(getComputedStyle(glyph).width, `${part} glyph width`).to.equal('20px');
+    expect(getComputedStyle(glyph).height, `${part} glyph height`).to.equal('20px');
+  }
+});
+
 it('localizes the tool-name fallback, status label, and maximize/restore button via this.localize()', async () => {
   const el = (await fixture(
     html`<lr-tool-result-dialog

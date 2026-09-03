@@ -16,20 +16,31 @@ describe('loadKatex', () => {
     expect(result).to.equal(fakeKatex);
   });
 
-  it('resolves null and warns when the optional peer fails to load', async () => {
-    const error = new Error('not installed');
+  it('uses a fixed, bounded development diagnostic when the optional peer fails and stays silent in production', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
     const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
-    let result: Awaited<ReturnType<typeof loadKatex>>;
+    const messages: string[] = [];
+    const error = new Error('private katex loader failure');
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
     try {
-      result = await loadKatex(() => Promise.reject(error));
+      expect(await loadKatex(() => Promise.reject(error))).to.equal(null);
+      expect(await loadKatex(() => Promise.reject(error))).to.equal(null);
+      expect(messages).to.deep.equal([
+        '<lr-markdown>/<lr-markdown-core>: Math rendering is unavailable because the optional KaTeX peer could not load. TeX is rendered as literal text.',
+      ]);
+      expect(messages.join(' ')).to.not.contain(error.message);
+
+      messages.length = 0;
+      delete runtime.litIssuedWarnings;
+      expect(await loadKatex(() => Promise.reject(error))).to.equal(null);
+      expect(messages).to.deep.equal([]);
     } finally {
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
       console.warn = originalWarn;
     }
-    expect(result).to.equal(null);
-    expect(calls).to.have.lengthOf(1);
-    expect(calls.flat()).to.contain(error);
   });
 
   it('caches the resolved module across calls', async () => {

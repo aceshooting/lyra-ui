@@ -75,7 +75,7 @@ export const styles = css`
      variant below; only the visible glyph shrinks for [inline], on the separate
      [part='close-icon'] child, centered by this button's flex layout. Mirrors lr-swatch-picker's
      [part='swatch'] and [part='swatch-fill'] split. */
-  [part='close-button'] { display: inline-flex; grid-column: 3; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: 0; border-radius: var(--lr-radius-pill); background: transparent; color: inherit; cursor: pointer; }
+  [part='close-button'] { display: inline-flex; grid-column: 3; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: 0; border-radius: var(--lr-radius-pill); background: transparent; color: inherit; font: inherit; cursor: pointer; }
   [part='close-button']:where(:hover) { background: var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg)); }
   [part='close-button']:where(:active) { background: color-mix(in oklab, var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg)), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='close-button']:where(:focus-visible) { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }

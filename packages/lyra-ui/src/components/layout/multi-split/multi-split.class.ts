@@ -1,5 +1,5 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyDeclaration, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -23,7 +23,7 @@ import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './multi-split.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_resizeDivider } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_resizeDivider, LYRA_DEFAULT_resizeValuePercent } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const KEYBOARD_STEP = 2;
@@ -149,6 +149,10 @@ export interface LyraMultiSplitCollapseChangeDetail {
   readonly state: LyraMultiSplitCollapseState;
 }
 
+export interface LyraMultiSplitToggleDetail {
+  readonly open: boolean;
+}
+
 export interface LyraMultiSplitResizeDetail {
   readonly sizes: readonly number[];
 }
@@ -161,6 +165,7 @@ export interface LyraMultiSplitEventMap {
   'lr-resize-request': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
   'lr-resize': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
   'lr-multi-split-collapse-change': CustomEvent<LyraMultiSplitCollapseChangeDetail>;
+  'lr-toggle': CustomEvent<LyraMultiSplitToggleDetail>;
   'lr-multi-split-constraints-invalid': CustomEvent<LyraMultiSplitConstraintIssueDetail>;
   'lr-multi-split-orientation-change': CustomEvent<LyraMultiSplitOrientationChangeDetail>;
 }
@@ -215,7 +220,7 @@ export interface LyraMultiSplitEventMap {
  * visually hidden — instead of the always-visible overlay card this state
  * rendered before `open` existed. Setting `open = true` reveals it as a
  * focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a
- * backdrop click set `open` back to `false`. Every sibling pane behind the drawer is inert for the
+ * backdrop click proposes a cancelable close before changing `open`. Every sibling pane behind the drawer is inert for the
  * same interval, while the floating pane is the shared overlay manager's modal root. `open` is preserved (not reset)
  * while `collapseState` isn't `'floating'`, but no drawer chrome renders
  * until it is again — except that leaving `'floating'` while `open` is
@@ -240,6 +245,11 @@ export interface LyraMultiSplitEventMap {
  *   Forced writes while no eligible collapsing pane exists are inert and do
  *   not fire. Not fired for a redundant reassignment to the state already in
  *   effect.
+ * @event lr-toggle - An Escape/backdrop request to close the floating drawer, or the forced close
+ *   when an effective collapse transition leaves `'floating'` while open. `detail:
+ *   LyraMultiSplitToggleDetail`. Escape/backdrop proposals are cancelable and fire before `open`
+ *   changes; the forced responsive close is non-cancelable and fires after `open` is false. Direct
+ *   `open` writes and no-op dismissals do not emit this event.
  * @event lr-multi-split-constraints-invalid - `detail: LyraMultiSplitConstraintIssueDetail`,
  *   fired once when the configured panel minimums/maximums cannot describe a
  *   layout that fits the track. The splitter rejects that infeasible set for
@@ -268,12 +278,18 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     resizeDivider: LYRA_DEFAULT_resizeDivider,
+    resizeValuePercent: LYRA_DEFAULT_resizeValuePercent,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['sizes', 'defaultSizes', 'panelConstraints']);
 
   static override styles = [LyraElement.styles, styles];
+  // A proposal listener can restore a value before it returns. Count writes rather than comparing
+  // only final snapshots so a synchronous reentrant state change still aborts the proposal.
+  private toggleProposalDepth = 0;
+  private toggleProposalMutationVersion = 0;
+  private forcedCloseVersion = 0;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-resize-request',
     'lr-resize',
@@ -804,10 +820,64 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     if (previous === next) return;
     this.endDragGestures();
     this.requestUpdate('collapseState', previous);
+    const forceClose = previous === 'floating' && next !== 'floating' && this.open;
+    const forcedCloseVersion = this.forcedCloseVersion;
     if (shouldEmit) {
       this.emit('lr-multi-split-collapse-change', { state: next });
     }
-    if (next !== 'floating' && this.open) this.open = false;
+    if (
+      forceClose &&
+      this.forcedCloseVersion === forcedCloseVersion &&
+      this.collapseState !== 'floating'
+    ) {
+      this.setOpen(false, { force: true });
+    }
+  }
+
+  private setOpen(next: boolean, options?: { force?: boolean }): void {
+    if (options?.force) {
+      this.open = next;
+      this.forcedCloseVersion += 1;
+      this.emit('lr-toggle', { open: next });
+      return;
+    }
+    if (this.open === next) return;
+    const collapseState = this.collapseState;
+    const open = this.open;
+    const mutationVersion = this.toggleProposalMutationVersion;
+    this.toggleProposalDepth += 1;
+    try {
+      const event = this.emit('lr-toggle', { open: next }, { cancelable: true });
+      if (
+        event.defaultPrevented ||
+        this.toggleProposalMutationVersion !== mutationVersion ||
+        this.collapseState !== collapseState ||
+        this.open !== open
+      ) {
+        return;
+      }
+    } finally {
+      this.toggleProposalDepth -= 1;
+    }
+    this.open = next;
+  }
+
+  override requestUpdate(
+    name?: PropertyKey,
+    oldValue?: unknown,
+    options?: PropertyDeclaration,
+  ): void {
+    if (
+      this.toggleProposalDepth > 0 &&
+      (
+        (name === 'open' && oldValue !== this.open) ||
+        (name === 'collapse' && oldValue !== this.collapse) ||
+        (name === 'collapseState' && oldValue !== this.collapseState)
+      )
+    ) {
+      this.toggleProposalMutationVersion += 1;
+    }
+    super.requestUpdate(name, oldValue, options);
   }
 
   private setRequestedCollapseState(
@@ -1743,8 +1813,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       host: this,
       panel: () => this.floatingPanelEl,
       modalRoot: () => this.floatingPanelEl,
-      onEscape: () => (this.open = false),
-      onBackdrop: () => (this.open = false),
+      onEscape: () => this.setOpen(false),
+      onBackdrop: () => this.setOpen(false),
       lockScroll: true,
       suspendWhenUnrendered: true,
     });
@@ -2182,6 +2252,11 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
           ? 'horizontal'
           : 'vertical'}
         aria-valuenow=${Math.round(this.sizes[i] ?? 0)}
+        aria-valuetext=${this.localize('resizeValuePercent', undefined, {
+          value: getNumberFormat(this.effectiveLocale).format(
+            Math.round(this.sizes[i] ?? 0),
+          ),
+        })}
         aria-valuemin=${Math.round(valueMin)}
         aria-valuemax=${Math.round(valueMax)}
         aria-disabled=${disabled ? 'true' : 'false'}

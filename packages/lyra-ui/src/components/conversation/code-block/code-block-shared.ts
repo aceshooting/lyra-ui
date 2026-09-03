@@ -19,6 +19,8 @@
 
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -45,6 +47,10 @@ import type {
   TextSelectRect,
 } from '../../viewers/document-viewer/anchors.js';
 import { resolveIsDarkTheme } from './shiki-dark-theme.js';
+
+const INVALID_HIGHLIGHT_LINES_WARNING_KEY = 'lyra-code-block-invalid-highlight-lines';
+const INVALID_HIGHLIGHT_LINES_WARNING =
+  '<lr-code-block> and <lr-code-block-core>: invalid highlight-lines entries are ignored; use one-based line numbers or ranges such as `3-5,7`.';
 
 /** Matches `LyraElement.localize()`'s signature so either component's bound
  *  method can be passed straight through. */
@@ -91,8 +97,8 @@ function codeBlockBodyLabel(
  * Parses a `highlight-lines` attribute value (e.g. `"3-5,7"`) into the set of one-based line
  * numbers it addresses: comma-separated segments, each either a single line number or an
  * inclusive range, whitespace around commas/dashes tolerated, a reversed range (`"5-3"`)
- * normalized to ascending order. An invalid segment is skipped (with a `console.warn`) rather
- * than throwing or discarding the otherwise-valid segments around it.
+ * normalized to ascending order. An invalid segment is skipped rather than throwing or discarding
+ * the otherwise-valid segments around it.
  */
 function addBoundedLineRange(
   lines: Set<number>,
@@ -134,7 +140,7 @@ export interface CodeBlockLineFocusHost extends HTMLElement {
 /** Whether real focus currently sits on one of the rendered roving line controls. */
 export function codeBlockLineHasFocus(host: CodeBlockLineFocusHost): boolean {
   return (
-    host.shadowRoot?.activeElement?.matches(
+    activeElementIn(host.shadowRoot)?.matches(
       '[data-line][part~="line-button"]'
     ) ?? false
   );
@@ -146,11 +152,11 @@ export function restoreCodeBlockLineFocus(
   host: CodeBlockLineFocusHost,
   line: number
 ): boolean {
-  const shadowActive = host.shadowRoot?.activeElement;
+  const shadowActive = activeElementIn(host.shadowRoot);
   if (shadowActive)
     return shadowActive.matches('[data-line][part~="line-button"]');
 
-  const documentActive = host.ownerDocument.activeElement;
+  const documentActive = activeElementIn(host.ownerDocument);
   if (
     documentActive &&
     documentActive !== host.ownerDocument.body &&
@@ -162,7 +168,7 @@ export function restoreCodeBlockLineFocus(
     `[data-line="${line}"][part~="line-button"]`
   );
   target?.focus();
-  return host.shadowRoot?.activeElement === target;
+  return activeElementIn(host.shadowRoot) === target;
 }
 
 /** The merged set of one-based line numbers to emphasize: the `highlight-lines` spec plus the
@@ -504,7 +510,10 @@ export function parseHighlightLines(
       addBoundedLineRange(lines, Number(single[1]), Number(single[1]), maxLine);
       continue;
     }
-    console.warn(`highlight-lines: ignored invalid segment "${segment}"`);
+    devWarnOnce(
+      INVALID_HIGHLIGHT_LINES_WARNING_KEY,
+      INVALID_HIGHLIGHT_LINES_WARNING
+    );
   }
   return lines;
 }

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraMultiSplitToggleDetail } from './multi-split.class.js';
 
 const meta: Meta = {
   title: 'Multi Split',
@@ -20,6 +21,14 @@ type Story = StoryObj;
 function capMultiSplitResize(event: Event): void {
   const request = event as CustomEvent<{ sizes: number[] }>;
   if (request.detail.sizes[0]! > 65) request.preventDefault();
+}
+
+function logMultiSplitToggle(event: Event): void {
+  const toggle = event as CustomEvent<LyraMultiSplitToggleDetail>;
+  console.info('lr-toggle', {
+    open: toggle.detail.open,
+    cancelable: toggle.cancelable,
+  });
 }
 
 export const Default: Story = {
@@ -191,6 +200,32 @@ export const ResponsiveCollapse: Story = {
         </div>
       </lr-multi-split>
     </div>
+  `,
+};
+
+export const FloatingDrawerDismissal: Story = {
+  name: 'Cancelable floating drawer dismissal',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Escape and the backdrop propose a cancelable `lr-toggle` before closing this floating drawer. Moving the effective collapse state away from floating instead forces a noncancelable close after its collapse-change event.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-multi-split
+      collapse="start"
+      collapse-state="floating"
+      .open=${true}
+      style="height: 12rem; border: 1px solid var(--lr-color-border)"
+      @lr-toggle=${logMultiSplitToggle}
+    >
+      <div style="padding: 0.5rem; background: var(--lr-color-brand-quiet)">
+        Floating drawer — press Escape or click the backdrop to propose dismissal.
+      </div>
+      <div style="padding: 0.5rem">Main content behind the drawer</div>
+    </lr-multi-split>
   `,
 };
 

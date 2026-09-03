@@ -261,6 +261,22 @@ it("gives compact header controls the shared minimum hit area", async () => {
   expect(getComputedStyle(copy).minBlockSize).to.equal("40px");
 });
 
+it('inherits live host font size into the collapse toggle and its 1em glyph', async () => {
+  const el = (await fixture(
+    html`<lr-code-block
+      collapsible
+      style="font: 20px/1 monospace"
+      .code=${jsSample}
+    ></lr-code-block>`
+  )) as LyraCodeBlock;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  const glyph = toggle.querySelector<SVGElement>('svg')!;
+
+  expect(getComputedStyle(toggle).fontSize).to.equal('20px');
+  expect(getComputedStyle(glyph).width).to.equal('20px');
+  expect(getComputedStyle(glyph).height).to.equal('20px');
+});
+
 describe("shiki highlighting (real peer)", () => {
   it("shows a loading skeleton and aria-busy while shiki loads for a set language, then swaps to highlighted output", async function () {
     this.timeout(35_000);
@@ -351,7 +367,9 @@ describe("shiki highlighting (real peer)", () => {
   it("re-highlights when code changes for an already-loaded language", async () => {
     const el = (await fixture(
       html`<lr-code-block
+        collapsible
         language="javascript"
+        .strings=${{ collapseCode: 'Réduire le code' }}
         .code=${jsSample}
       ></lr-code-block>`
     )) as LyraCodeBlock;
@@ -615,7 +633,9 @@ describe("fallback matrix (reaching into private state to exercise both paths de
   it("falls back to plain text when the shiki peer failed to load, even though language is set", async () => {
     const el = (await fixture(
       html`<lr-code-block
+        collapsible
         language="javascript"
+        .strings=${{ collapseCode: 'Réduire le code' }}
         .code=${jsSample}
       ></lr-code-block>`
     )) as LyraCodeBlock;
@@ -635,6 +655,9 @@ describe("fallback matrix (reaching into private state to exercise both paths de
     expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(
       jsSample
     );
+    expect(
+      el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-label')
+    ).to.equal('Réduire le code');
   });
 
   it("falls back to plain text for an unrecognized language even though the highlighter loaded fine", async () => {

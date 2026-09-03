@@ -68,6 +68,12 @@ resolved keyboard action was activated.
 content. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call.
 
+Mammoth's conversion result is usable only when it has own-data `value: string` and an own-data
+`messages` array; an unusable primary result is terminal. From a usable result, the first 100
+message positions are considered, malformed entries are omitted, and valid opaque causes are
+retained in their diagnostics. Sanitized document content remains visible while those non-fatal
+diagnostics are emitted.
+
 **CSS parts:** `base`, `body`, `content`, `spinner`, `error`, `highlight` (a painted `text-quote`
 highlight), `highlight-actions` (keyboard-accessible actions for resolved highlights),
 `highlight-action` (one native highlight activation button), `search-match` (a painted in-document

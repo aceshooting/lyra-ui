@@ -50,6 +50,50 @@ it('renders messages, resolves variables in preview, and exposes versions', asyn
   expect(el.shadowRoot!.querySelector('[data-version-id="v1"]')).to.exist;
 });
 
+it('normalizes a large message collection once per render while retaining keyed row output', async () => {
+  const largeMessages: PromptStudioMessage[] = Array.from({ length: 1_000 }, (_, index) => ({
+    id: `message-${index}`,
+    role: 'user',
+    content: `Message ${index}`,
+  }));
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio reorderable .messages=${largeMessages}></lr-prompt-studio>
+  `);
+  const firstBefore = el.shadowRoot!.querySelector<HTMLElement>('[data-message-id="message-0"]')!;
+  const seam = el as unknown as { uniqueMessages: () => PromptStudioMessage[] };
+  const inherited = seam.uniqueMessages;
+  let normalizations = 0;
+  seam.uniqueMessages = () => {
+    normalizations += 1;
+    return inherited.call(el);
+  };
+  try {
+    el.heading = 'Updated heading';
+    await el.updateComplete;
+
+    expect(normalizations).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="message"]').length).to.equal(1_000);
+    const firstAfter = el.shadowRoot!.querySelector<HTMLElement>('[data-message-id="message-0"]')!;
+    expect((firstAfter) === (firstBefore)).to.equal(true);
+    expect(firstAfter.querySelector<HTMLTextAreaElement>('[part="message-content"]')!.value).to.equal('Message 0');
+
+    normalizations = 0;
+    const reordered = oneEvent(el, 'lr-message-reorder');
+    firstAfter.querySelector<HTMLButtonElement>('[part="move-message-down"]')!.click();
+    await reordered;
+    await el.updateComplete;
+
+    // One normalization validates the accepted reorder and one supplies its following render;
+    // neither the change proposal nor individual rows may rescan the full collection.
+    expect(normalizations).to.equal(2);
+    const moved = el.shadowRoot!.querySelector<HTMLElement>('[data-message-id="message-0"]')!;
+    expect((moved) === (firstBefore)).to.equal(true);
+    expect(moved.querySelector<HTMLTextAreaElement>('[part="message-content"]')!.value).to.equal('Message 0');
+  } finally {
+    Reflect.deleteProperty(seam, 'uniqueMessages');
+  }
+});
+
 it('emits lr-save with the current public studio state', async () => {
   const el = await fixture<LyraPromptStudio>(html`
     <lr-prompt-studio

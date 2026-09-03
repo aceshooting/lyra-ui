@@ -72,6 +72,22 @@ export const ReadOnly: Story = {
   render: () => html`<lr-knowledge-base style="max-width:56rem" .sources=${sources} hide-create></lr-knowledge-base>`,
 };
 
+export const ActionTriggerTheming: Story = {
+  name: 'Action trigger theming',
+  render: () => html`
+    <style>
+      lr-knowledge-base.action-trigger-theming::part(actions-trigger) {
+        color: var(--lr-color-brand);
+      }
+    </style>
+    <lr-knowledge-base
+      class="action-trigger-theming"
+      style="max-width:56rem; font-family:var(--lr-font-mono)"
+      .sources=${sources}
+    ></lr-knowledge-base>
+  `,
+};
+
 export const Empty: Story = {
   render: () => html`<lr-knowledge-base style="max-width:56rem"></lr-knowledge-base>`,
 };

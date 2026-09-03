@@ -1,8 +1,29 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
-import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type PropertyDeclaration,
+  type PropertyValues,
+  type SVGTemplateResult,
+  type TemplateResult,
+} from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
+import {
+  autocorrectConverter,
+  declaredDefaultConverter,
+  normalizeAutocorrect,
+  omittedEmptyStringConverter,
+  trueDefaultSpellcheckConverter,
+} from '../../../internal/converters.js';
+import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './message-feedback.styles.js';
 import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
@@ -26,10 +47,15 @@ export interface MessageFeedbackDetailConfiguration {
   readonly commentable?: boolean;
 }
 
+/** Native `<textarea wrap>` values accepted by the optional comment field. */
+export type MessageFeedbackWrap = LyraTextWrap;
+
 export interface MessageFeedbackSubmitDetail {
   rating: MessageFeedbackValue;
   reasonIds: string[];
   comment: string;
+  /** Opaque, nonblank correlation identity for this one feedback persistence transaction. */
+  readonly submissionId: string;
 }
 
 export interface LyraMessageFeedbackEventMap {
@@ -70,6 +96,111 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
   `;
 }
 
+const MAX_PROJECTED_FEEDBACK_REASONS = 10_000;
+
+interface FeedbackDetailProjection {
+  readonly reasons: readonly MessageFeedbackReason[];
+  readonly commentable: boolean;
+}
+
+const EMPTY_FEEDBACK_DETAIL_PROJECTION: FeedbackDetailProjection = Object.freeze({
+  reasons: Object.freeze([]),
+  commentable: false,
+});
+
+function isObjectValue(value: unknown): value is object {
+  return value !== null && (typeof value === 'object' || typeof value === 'function');
+}
+
+function isArrayValue(value: unknown): value is readonly unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Admits only own-data reason fields and copies their later-used values once. The shared ownership
+ * boundary protects the outer collection, but schema projection still must not re-read a retained
+ * row: it may be an opaque object with accessor-backed fields after a caller bypasses TypeScript.
+ */
+function projectFeedbackDetail(detail: unknown): FeedbackDetailProjection {
+  if (!isObjectValue(detail)) return EMPTY_FEEDBACK_DETAIL_PROJECTION;
+  const reasonsDescriptor = getOwnDataDescriptor(detail, 'reasons');
+  const commentableDescriptor = getOwnDataDescriptor(detail, 'commentable');
+  const commentable =
+    commentableDescriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
+    commentableDescriptor !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+    commentableDescriptor.value === true;
+  const reasonsValue =
+    reasonsDescriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
+    reasonsDescriptor !== UNSAFE_OWN_DATA_DESCRIPTOR
+      ? reasonsDescriptor.value
+      : undefined;
+  if (!isArrayValue(reasonsValue)) {
+    return commentable
+      ? Object.freeze({ reasons: Object.freeze([]), commentable })
+      : EMPTY_FEEDBACK_DETAIL_PROJECTION;
+  }
+  const lengthDescriptor = getOwnDataDescriptor(reasonsValue, 'length');
+  if (
+    lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+    lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof lengthDescriptor.value !== 'number' ||
+    !Number.isSafeInteger(lengthDescriptor.value) ||
+    lengthDescriptor.value < 0
+  ) {
+    return commentable
+      ? Object.freeze({ reasons: Object.freeze([]), commentable })
+      : EMPTY_FEEDBACK_DETAIL_PROJECTION;
+  }
+  const reasons: MessageFeedbackReason[] = [];
+  const seen = new Set<string>();
+  const length = Math.min(lengthDescriptor.value, MAX_PROJECTED_FEEDBACK_REASONS);
+  for (let index = 0; index < length; index += 1) {
+    const rowDescriptor = getOwnDataDescriptor(reasonsValue, String(index));
+    if (
+      rowDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      rowDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      !isObjectValue(rowDescriptor.value)
+    )
+      continue;
+    const row = rowDescriptor.value;
+    const idDescriptor = getOwnDataDescriptor(row, 'id');
+    const labelDescriptor = getOwnDataDescriptor(row, 'label');
+    if (
+      idDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      idDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      labelDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      labelDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof idDescriptor.value !== 'string' ||
+      typeof labelDescriptor.value !== 'string'
+    )
+      continue;
+    const id = idDescriptor.value;
+    const label = labelDescriptor.value;
+    if (id.trim().length === 0 || seen.has(id)) continue;
+    seen.add(id);
+    reasons.push(Object.freeze({ id, label }));
+  }
+  return Object.freeze({ reasons: Object.freeze(reasons), commentable });
+}
+
+type PendingSubmissionSettlement = 'finalize' | 'revert';
+
+interface PendingMessageFeedbackSubmission {
+  readonly submissionId: string;
+  readonly sequence: number;
+  readonly lifecycleGeneration: number;
+  readonly rating: MessageFeedbackValue;
+  readonly detail: MessageFeedbackDetailConfiguration | undefined;
+  readonly detailFor: MessageFeedbackDetailFor;
+  readonly previousRating: MessageFeedbackValue;
+  readonly panelWasOpen: boolean;
+  settlement?: PendingSubmissionSettlement;
+}
+
 /**
  * `<lr-message-feedback>` — thumbs up/down for one assistant message, with an optional inline
  * detail step (categorical reason chips + a free-text comment) that opens as a disclosure directly
@@ -83,16 +214,21 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  * `<lr-message-actions>`'s embedded built-in) never has a panel to reopen, so its thumbs always
  * behave as a plain toggle.
  * The detail record and its reasons are a bounded clone-owned readonly snapshot. Create and
- * reassign a new detail record after changes.
+ * reassign a new detail record after changes. When the detail record enables a comment textarea,
+ * its native `spellcheck`, `autocapitalize`, `autocorrect`, and `wrap` properties forward from
+ * this element; no textarea exists, and those values have no rendered target, otherwise.
  *
  * @customElement lr-message-feedback
  * @event lr-feedback-change - `detail: { rating }`. Fires whenever thumb interaction changes the
  *   provisional rating, including clearing it to `null`.
- * @event lr-feedback-submit - `detail: { rating, reasonIds, comment }`, fired immediately for a
- *   thumbs-only terminal choice or by the detail panel's submit button.
- *   Cancelable: `preventDefault()` holds the panel in its reflected `pending` state until the host
- *   calls `finalizePendingSubmit()` after persistence succeeds or `revertPendingSubmit()` after it
- *   fails. An uncanceled submit retains the synchronous close/announce/focus behavior.
+ * @event lr-feedback-submit - Frozen `detail: { rating, reasonIds, comment, submissionId }`, fired
+ *   immediately for a thumbs-only terminal choice or by the detail panel's submit button.
+ *   `submissionId` is a nonblank, never-reused transaction identity. Cancelable:
+ *   `preventDefault()` holds the panel in its reflected `pending` state until the host calls
+ *   `finalizePendingSubmit(submissionId)` after persistence succeeds or
+ *   `revertPendingSubmit(submissionId)` after it fails. The legacy no-argument settle form works
+ *   only for this instance's first never-invalidated transaction; later calls fail closed. An
+ *   uncanceled submit retains the synchronous close/announce/focus behavior.
  * @event blur - Re-dispatched from the comment `<textarea>`'s own native `blur` -- bubbling and
  *   composed (unlike the native event, which is neither), so a listener above the shadow boundary
  *   can observe it. Mirrors `<lr-model-select>`'s identical re-dispatch for its own free-text
@@ -167,16 +303,44 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
    *  `revertPendingSubmit()`; the component sets this state automatically. */
   @property({ type: Boolean, reflect: true }) pending = false;
 
+  /** Native spellcheck state for the optional comment textarea. `spellcheck="false"` parses false. */
+  @property({ converter: trueDefaultSpellcheckConverter }) override spellcheck = true;
+
+  /** Native autocapitalization hint for the optional comment textarea. Empty preserves its default. */
+  @property({ converter: omittedEmptyStringConverter }) override autocapitalize = '';
+
+  private autocorrectValue = true;
+
+  /** Native autocorrect state for the optional comment textarea. Reads are boolean; writes also
+   *  accept the legacy `'off'` and `'false'` string forms. */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean {
+    return this.autocorrectValue;
+  }
+  override set autocorrect(next: boolean | string) {
+    const previous = this.autocorrectValue;
+    this.autocorrectValue = normalizeAutocorrect(next);
+    this.requestUpdate('autocorrect', previous);
+  }
+
+  /** Native wrapping mode for the optional comment textarea. Removing `wrap` restores `'soft'`. */
+  @property({ converter: declaredDefaultConverter<MessageFeedbackWrap>('soft') })
+  wrap: MessageFeedbackWrap = 'soft';
+
   @state() private panelOpen = false;
   @state() private selectedReasonIds: string[] = [];
   @state() private commentDraft = '';
+  private detailProjectionSource: unknown = Symbol('unprojected-feedback-detail');
+  private detailProjection = EMPTY_FEEDBACK_DETAIL_PROJECTION;
   private pendingInternalRating: { rating: MessageFeedbackValue } | undefined;
-  private submitGeneration = 0;
-  private pendingSubmission?: {
-    token: number;
-    previousRating: MessageFeedbackValue;
-    panelWasOpen: boolean;
-  };
+  private submissionSequence = 0;
+  private submissionCount = 0;
+  private legacyNoArgumentSettlementInvalidated = false;
+  private lifecycleGeneration = 0;
+  private focusGeneration = 0;
+  private settingPending = false;
+  private dispatchingSubmission?: PendingMessageFeedbackSubmission;
+  private pendingSubmission?: PendingMessageFeedbackSubmission;
 
   @query('[part="up-button"]') private upButtonEl?: HTMLButtonElement;
   @query('[part="down-button"]') private downButtonEl?: HTMLButtonElement;
@@ -190,6 +354,21 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   private createToolbarAction(direction: MessageFeedbackRating): LyraToolbarAction {
     const host = this;
     const button = () => direction === 'up' ? host.upButtonEl : host.downButtonEl;
+    let leasedButton: HTMLButtonElement | undefined;
+    let authoredTabIndex: string | null = null;
+    let lastManagedTabIndex: string | null = null;
+    let consumerOwnsTabIndex = false;
+    const releaseTabIndex = (): void => {
+      const target = leasedButton;
+      if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
+        if (authoredTabIndex === null) target.removeAttribute('tabindex');
+        else target.setAttribute('tabindex', authoredTabIndex);
+      }
+      leasedButton = undefined;
+      authoredTabIndex = null;
+      lastManagedTabIndex = null;
+      consumerOwnsTabIndex = false;
+    };
     return {
       id: direction,
       get disabled() {
@@ -200,8 +379,27 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
       },
       setTabIndex(tabIndex) {
         const target = button();
-        if (target) target.tabIndex = tabIndex;
+        if (!target) {
+          releaseTabIndex();
+          return;
+        }
+        if (leasedButton !== target) {
+          releaseTabIndex();
+          leasedButton = target;
+          authoredTabIndex = target.getAttribute('tabindex');
+        }
+        if (
+          consumerOwnsTabIndex ||
+          (lastManagedTabIndex !== null &&
+            target.getAttribute('tabindex') !== lastManagedTabIndex)
+        ) {
+          consumerOwnsTabIndex = true;
+          return;
+        }
+        target.tabIndex = tabIndex;
+        lastManagedTabIndex = target.getAttribute('tabindex');
       },
+      releaseTabIndex,
       matchesEventPath(path) {
         const target = button();
         return target !== undefined && path.includes(target);
@@ -209,7 +407,9 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     };
   }
 
-  /** Ordered logical actions exposed to an enclosing toolbar without exposing shadow nodes. */
+  /** Ordered logical actions exposed to an enclosing toolbar without exposing shadow nodes.
+   *  A parent releases its optional lease when this provider leaves, restoring an untouched
+   *  authored thumb tabindex without replacing a later consumer value. */
   getToolbarActions(): readonly LyraToolbarAction[] {
     return [this.upToolbarAction, this.downToolbarAction];
   }
@@ -233,16 +433,20 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   }
 
   private get detailReasons(): readonly MessageFeedbackReason[] {
-    const seen = new Set<string>();
-    return (this.detail?.reasons ?? []).filter((reason) => {
-      if (!reason || typeof reason.id !== 'string' || reason.id.trim().length === 0 || seen.has(reason.id)) return false;
-      seen.add(reason.id);
-      return true;
-    });
+    return this.currentDetailProjection.reasons;
   }
 
   private get detailCommentable(): boolean {
-    return this.detail?.commentable === true;
+    return this.currentDetailProjection.commentable;
+  }
+
+  private get currentDetailProjection(): FeedbackDetailProjection {
+    const detail = this.detail;
+    if (detail !== this.detailProjectionSource) {
+      this.detailProjectionSource = detail;
+      this.detailProjection = projectFeedbackDetail(detail);
+    }
+    return this.detailProjection;
   }
 
   private get hasDetailContent(): boolean {
@@ -253,14 +457,64 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     return this.detailFor === 'both' || this.detailFor === direction;
   }
 
+  override requestUpdate(
+    name?: PropertyKey,
+    oldValue?: unknown,
+    options?: PropertyDeclaration,
+  ): void {
+    const currentValue =
+      name === 'rating'
+        ? this.rating
+        : name === 'detail'
+        ? this.detail
+        : name === 'detailFor'
+        ? this.detailFor
+        : name === 'pending'
+        ? this.pending
+        : undefined;
+    const changed = oldValue !== currentValue;
+    const internalRatingWrite =
+      name === 'rating' && this.pendingInternalRating?.rating === this.rating;
+    if (
+      changed &&
+      (name === 'rating' || name === 'detail' || name === 'detailFor' || name === 'pending') &&
+      !(name === 'rating' && internalRatingWrite)
+    ) {
+      this.focusGeneration = (this.focusGeneration ?? 0) + 1;
+      if (
+        this.pendingSubmission &&
+        (name !== 'pending' || (!this.settingPending && this.pending === false))
+      ) {
+        this.invalidatePendingSubmission();
+      }
+    }
+    super.requestUpdate(name, oldValue, options);
+  }
+
+  override disconnectedCallback(): void {
+    this.lifecycleGeneration += 1;
+    this.invalidatePendingSubmission();
+    this.upToolbarAction.releaseTabIndex?.();
+    this.downToolbarAction.releaseTabIndex?.();
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.lifecycleGeneration += 1;
+    this.invalidatePendingSubmission();
+    this.upToolbarAction.releaseTabIndex?.();
+    this.downToolbarAction.releaseTabIndex?.();
+  }
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (changed.has('rating')) {
       const internal = this.pendingInternalRating?.rating === this.rating;
       this.pendingInternalRating = undefined;
       if (!internal) {
-        this.pendingSubmission = undefined;
-        this.pending = false;
+        this.invalidatePendingSubmission();
+        this.setPending(false);
         this.panelOpen = false;
         this.selectedReasonIds = [];
         this.commentDraft = '';
@@ -272,7 +526,8 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
       if (!this.detailCommentable) this.commentDraft = '';
     }
     if (this.panelOpen && (!this.rating || !this.detailApplies(this.rating) || !this.hasDetailContent)) {
-      this.pending = false;
+      this.invalidatePendingSubmission();
+      this.setPending(false);
       this.panelOpen = false;
       if (changed.has('detailFor')) {
         this.selectedReasonIds = [];
@@ -366,51 +621,168 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.emit('blur', null);
   };
 
-  private completeSubmission(): void {
-    this.pending = false;
-    this.panelOpen = false;
-    this.liveRegion?.announce(this.localize('feedbackSubmitted'), { force: true });
-    void this.updateComplete.then(() => {
-      if (this.isConnected && !this.pending) this.focusActiveThumb();
-    });
+  private setPending(pending: boolean): void {
+    this.settingPending = true;
+    this.pending = pending;
+    this.settingPending = false;
   }
 
-  /** Completes a submit held by `preventDefault()`, closing and announcing success. */
-  finalizePendingSubmit(): void {
-    if (!this.pendingSubmission) return;
-    this.pendingSubmission = undefined;
-    this.completeSubmission();
-  }
-
-  /** Releases a submit held by `preventDefault()`, restoring the rating that preceded the request
-   *  without announcing success or clearing a detailed draft. */
-  revertPendingSubmit(): void {
+  /** Retires a transaction synchronously so a later same-turn settlement cannot affect it. */
+  private invalidatePendingSubmission(): void {
     const transaction = this.pendingSubmission;
     if (!transaction) return;
     this.pendingSubmission = undefined;
-    this.pending = false;
-    this.setRatingFromInteraction(transaction.previousRating);
-    this.panelOpen = transaction.panelWasOpen;
+    if (this.dispatchingSubmission === transaction) {
+      this.dispatchingSubmission = undefined;
+    }
+    this.legacyNoArgumentSettlementInvalidated = true;
+    this.focusGeneration += 1;
+    this.setPending(false);
+  }
+
+  private isCurrentPendingSubmission(
+    transaction: PendingMessageFeedbackSubmission,
+  ): boolean {
+    if (
+      this.pendingSubmission === transaction &&
+      this.pending &&
+      this.isConnected &&
+      transaction.lifecycleGeneration === this.lifecycleGeneration &&
+      transaction.rating === this.rating &&
+      transaction.detail === this.detail &&
+      transaction.detailFor === this.detailFor
+    ) {
+      return true;
+    }
+    if (this.pendingSubmission === transaction) this.invalidatePendingSubmission();
+    return false;
+  }
+
+  private canSettleWithoutSubmissionId(
+    transaction: PendingMessageFeedbackSubmission,
+  ): boolean {
+    return (
+      !this.legacyNoArgumentSettlementInvalidated &&
+      this.submissionCount === 1 &&
+      transaction.sequence === 1
+    );
+  }
+
+  private scheduleSettlementFocus(
+    transaction: PendingMessageFeedbackSubmission,
+    destination: 'thumb' | 'submit',
+  ): void {
+    const focusGeneration = ++this.focusGeneration;
+    const lifecycleGeneration = transaction.lifecycleGeneration;
     void this.updateComplete.then(() => {
-      if (!this.isConnected || this.pending) return;
-      if (this.panelOpen) this.submitButtonEl?.focus();
+      if (
+        focusGeneration !== this.focusGeneration ||
+        lifecycleGeneration !== this.lifecycleGeneration ||
+        !this.isConnected ||
+        this.pending ||
+        this.pendingSubmission
+      )
+        return;
+      if (destination === 'submit' && this.panelOpen) this.submitButtonEl?.focus();
       else this.focusActiveThumb();
     });
   }
 
+  private settlePendingSubmission(
+    settlement: PendingSubmissionSettlement,
+    submissionId?: string,
+  ): boolean {
+    const transaction = this.pendingSubmission;
+    if (!transaction || !this.isCurrentPendingSubmission(transaction)) return false;
+    if (submissionId === undefined) {
+      if (!this.canSettleWithoutSubmissionId(transaction)) return false;
+    } else if (submissionId !== transaction.submissionId) {
+      return false;
+    }
+    if (transaction.settlement) return false;
+    // Synchronous listeners choose the first matching outcome but leave the transaction installed
+    // until dispatch unwinds. That makes veto/listener ordering deterministic and prevents a later
+    // synchronous callback from observing a half-completed panel.
+    if (this.dispatchingSubmission === transaction) {
+      transaction.settlement = settlement;
+      return true;
+    }
+    this.commitSettlement(transaction, settlement);
+    return true;
+  }
+
+  private commitSettlement(
+    transaction: PendingMessageFeedbackSubmission,
+    settlement: PendingSubmissionSettlement,
+  ): void {
+    if (!this.isCurrentPendingSubmission(transaction)) return;
+    this.pendingSubmission = undefined;
+    if (this.dispatchingSubmission === transaction) {
+      this.dispatchingSubmission = undefined;
+    }
+    this.setPending(false);
+    if (settlement === 'finalize') {
+      this.panelOpen = false;
+      this.liveRegion?.announce(this.localize('feedbackSubmitted'), { force: true });
+      this.scheduleSettlementFocus(transaction, 'thumb');
+      return;
+    }
+    this.setRatingFromInteraction(transaction.previousRating);
+    this.panelOpen = transaction.panelWasOpen;
+    this.scheduleSettlementFocus(
+      transaction,
+      transaction.panelWasOpen ? 'submit' : 'thumb',
+    );
+  }
+
+  /** Completes a live held submit. Pass its event `submissionId`; a no-argument call is retained
+   *  only for this instance's never-invalidated first transaction. Returns whether this call won. */
+  finalizePendingSubmit(submissionId?: string): boolean {
+    return this.settlePendingSubmission('finalize', submissionId);
+  }
+
+  /** Reverts a live held submit to the rating preceding it. Pass its event `submissionId`; the
+   *  restricted legacy no-argument form follows `finalizePendingSubmit()`. Returns whether it won. */
+  revertPendingSubmit(submissionId?: string): boolean {
+    return this.settlePendingSubmission('revert', submissionId);
+  }
+
   private requestSubmission(
-    detail: MessageFeedbackSubmitDetail,
+    detail: Omit<MessageFeedbackSubmitDetail, 'submissionId'>,
     previousRating: MessageFeedbackValue,
     panelWasOpen: boolean,
   ): void {
-    const token = ++this.submitGeneration;
-    // Install the transaction before dispatch: a synchronous listener may finalize or revert it.
-    this.pendingSubmission = { token, previousRating, panelWasOpen };
-    this.pending = true;
-    const event = this.emit('lr-feedback-submit', detail, { cancelable: true });
-    if (this.pendingSubmission?.token !== token) return;
-    if (event.defaultPrevented) return;
-    this.finalizePendingSubmit();
+    this.focusGeneration += 1;
+    const sequence = ++this.submissionSequence;
+    this.submissionCount += 1;
+    const transaction: PendingMessageFeedbackSubmission = {
+      submissionId: nextId('message-feedback-submission'),
+      sequence,
+      lifecycleGeneration: this.lifecycleGeneration,
+      rating: this.rating,
+      detail: this.detail,
+      detailFor: this.detailFor,
+      previousRating,
+      panelWasOpen,
+    };
+    // Install before dispatch: a listener can synchronously select the first matching outcome.
+    this.pendingSubmission = transaction;
+    this.setPending(true);
+    this.dispatchingSubmission = transaction;
+    const event = this.emit(
+      'lr-feedback-submit',
+      { ...detail, submissionId: transaction.submissionId },
+      { cancelable: true },
+    );
+    if (this.dispatchingSubmission === transaction) {
+      this.dispatchingSubmission = undefined;
+    }
+    if (!this.isCurrentPendingSubmission(transaction)) return;
+    if (transaction.settlement) {
+      this.commitSettlement(transaction, transaction.settlement);
+      return;
+    }
+    if (!event.defaultPrevented) this.commitSettlement(transaction, 'finalize');
   }
 
   private onSubmit = (): void => {
@@ -488,6 +860,14 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                           part="comment"
                           aria-label=${this.localize('feedbackCommentLabel')}
                           placeholder=${this.localize('feedbackCommentPlaceholder')}
+                          spellcheck=${this.spellcheck}
+                          autocapitalize=${this.autocapitalize || nothing}
+                          autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
+                            ? this.autocorrect
+                              ? 'on'
+                              : 'off'
+                            : nothing}
+                          wrap=${this.wrap}
                           .value=${this.commentDraft}
                           ?disabled=${this.disabled || this.pending}
                           @input=${this.onCommentInput}

@@ -1160,6 +1160,19 @@ describe('lr-graph-query-builder', () => {
     }
   });
 
+  it('inherits the host-provided component font size into the saved-query delete control and its 1em glyph', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
+    const el = (await fixture(html`
+      <lr-graph-query-builder style="--lr-font-size-sm: 20px" .savedQueries=${saved}></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    const control = el.shadowRoot!.querySelector<HTMLElement>('[part="saved-delete-button"]')!;
+    const glyph = control.querySelector<SVGElement>('svg')!;
+
+    expect(getComputedStyle(control).fontSize).to.equal('20px');
+    expect(getComputedStyle(glyph).width).to.equal('20px');
+    expect(getComputedStyle(glyph).height).to.equal('20px');
+  });
+
   it('reveals the max-hops error text after reportValidity when minHops exceeds maxHops', async () => {
     const el = (await fixture(
       html`<lr-graph-query-builder

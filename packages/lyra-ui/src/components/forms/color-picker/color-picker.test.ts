@@ -63,6 +63,48 @@ it("renders a trigger button wired to the label and keeps the form value", async
   await expect(el).to.be.accessible();
 });
 
+it('rejects accessor-backed swatches without invoking them while retaining later safe entries', async () => {
+  let colorReads = 0;
+  const accessorBacked: Record<string, unknown> = { label: 'Unsafe' };
+  Object.defineProperty(accessorBacked, 'color', {
+    enumerable: true,
+    get(): never {
+      colorReads += 1;
+      throw new Error('do not invoke swatch accessors');
+    },
+  });
+  const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
+  el.swatches = [accessorBacked, { color: '#123456', label: 'Safe' }] as unknown as typeof el.swatches;
+  await el.updateComplete;
+
+  expect(colorReads).to.equal(0);
+  expect(parts(el, 'swatch').map((swatch) => swatch.getAttribute('aria-label')))
+    .to.deep.equal(['Safe']);
+});
+
+it('contains a throwing shadow-root activeElement getter while blurring', async () => {
+  const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
+  const root = el.shadowRoot!;
+  const prior = Object.getOwnPropertyDescriptor(root, 'activeElement');
+  let unavailable = true;
+  Object.defineProperty(root, 'activeElement', {
+    configurable: true,
+    get(): Element {
+      if (unavailable) throw new TypeError('active element unavailable');
+      return {} as Element;
+    },
+  });
+  try {
+    el.blur();
+    unavailable = false;
+    el.blur();
+    expect(el.isConnected).to.equal(true);
+  } finally {
+    if (prior) Object.defineProperty(root, 'activeElement', prior);
+    else delete (root as unknown as { activeElement?: unknown }).activeElement;
+  }
+});
+
 it("exposes the label under both the form-control-label and label part tokens", async () => {
   const el = (await fixture(
     html`<lr-color-picker label="Accent"></lr-color-picker>`

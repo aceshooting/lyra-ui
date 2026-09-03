@@ -72,6 +72,45 @@ it("adds and removes tokens with the keyboard", async () => {
   expect(el.value).to.deep.equal([]);
 });
 
+it("inherits a 20px remove-action font and renders its 1em close glyph at that size", async () => {
+  const el = (await fixture(html`
+    <lr-token-input style="--lr-token-input-font-size:20px" .value=${["alpha"]}></lr-token-input>
+  `)) as LyraTokenInput;
+  const control = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  const remove = el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement;
+  const glyph = remove.querySelector("svg") as SVGElement;
+
+  expect(getComputedStyle(control).fontSize).to.equal("20px");
+  expect(getComputedStyle(remove).fontSize).to.equal("20px");
+  expect(parseFloat(getComputedStyle(glyph).inlineSize)).to.equal(20);
+  expect(parseFloat(getComputedStyle(glyph).blockSize)).to.equal(20);
+});
+
+describe('hostile focus ownership', () => {
+  it('contains a throwing shadow-root activeElement getter while blurring', async () => {
+    const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+    const root = el.shadowRoot!;
+    const prior = Object.getOwnPropertyDescriptor(root, 'activeElement');
+    let unavailable = true;
+    Object.defineProperty(root, 'activeElement', {
+      configurable: true,
+      get(): Element {
+        if (unavailable) throw new TypeError('active element unavailable');
+        return {} as Element;
+      },
+    });
+    try {
+      el.blur();
+      unavailable = false;
+      el.blur();
+      expect(el.isConnected).to.equal(true);
+    } finally {
+      if (prior) Object.defineProperty(root, 'activeElement', prior);
+      else delete (root as unknown as { activeElement?: unknown }).activeElement;
+    }
+  });
+});
+
 it('moves focus to the draft input when a focused sole-token remove button removes itself', async () => {
   const el = (await fixture(
     html`<lr-token-input .value=${['alpha']}></lr-token-input>`

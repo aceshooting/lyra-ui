@@ -6,6 +6,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteAdd, finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { styles } from './virtual-list.styles.js';
 
 /** Fallback per-row height (px) used for any row that hasn't been measured
@@ -19,6 +24,8 @@ const DEFAULT_OVERSCAN_ROWS = 6;
 /** Largest accepted overscan on either side of the visible range. This keeps
  *  an accidental huge value from defeating virtualization. */
 export const MAX_OVERSCAN_ROWS = 100;
+const MAX_VIRTUAL_LIST_GROUPS = 10_000;
+const EMPTY_VIRTUAL_LIST_GROUPS: readonly LyraVirtualListGroup[] = Object.freeze([]);
 
 function normalizeOverscan(value: string | number | null): number {
   if (value === null) return DEFAULT_OVERSCAN_ROWS;
@@ -594,7 +601,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
   private pendingScrollTop: number | null = null;
   /** Normalized once per `groups`/source assignment, then shared by marker and sticky paths. */
-  private normalizedGroups: LyraVirtualListGroup[] = [];
+  private normalizedGroups: readonly LyraVirtualListGroup[] = EMPTY_VIRTUAL_LIST_GROUPS;
   private readonly normalizedGroupByIndex = new Map<number, LyraVirtualListGroup>();
   /** Live block sizes for real group markers. Position-only anchors (`label: ''`) never enter it. */
   private readonly measuredGroupHeights = new Map<number, number>();
@@ -1663,22 +1670,63 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /** Normalizes group definitions only when their inputs change. */
   private recomputeGroups(): void {
+    const normalized: LyraVirtualListGroup[] = [];
     const seen = new Set<number>();
-    this.normalizedGroups = (this.groups ?? [])
-      .filter((group): group is LyraVirtualListGroup => {
-        if (typeof group !== 'object' || group === null) return false;
-        const index = group.startIndex;
+    try {
+      const groups = this.groups;
+      if (!Array.isArray(groups)) throw new TypeError('groups must be an array');
+      const length = getOwnDataDescriptor(groups, 'length');
+      if (
+        length === MISSING_OWN_DATA_DESCRIPTOR ||
+        length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof length.value !== 'number' ||
+        !Number.isSafeInteger(length.value) ||
+        length.value < 0
+      )
+        throw new TypeError('groups must have a bounded length');
+      for (let position = 0; position < Math.min(length.value, MAX_VIRTUAL_LIST_GROUPS); position += 1) {
+        const entry = getOwnDataDescriptor(groups, String(position));
         if (
-          !Number.isInteger(index) ||
-          index < 0 ||
-          index >= this.itemCount ||
-          seen.has(index)
+          entry === MISSING_OWN_DATA_DESCRIPTOR ||
+          entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
+          entry.value === null ||
+          typeof entry.value !== 'object' ||
+          Array.isArray(entry.value)
         )
-          return false;
-        seen.add(index);
-        return true;
-      })
-      .sort((a, b) => a.startIndex - b.startIndex);
+          continue;
+        const key = getOwnDataDescriptor(entry.value, 'key');
+        const label = getOwnDataDescriptor(entry.value, 'label');
+        const startIndex = getOwnDataDescriptor(entry.value, 'startIndex');
+        if (
+          key === MISSING_OWN_DATA_DESCRIPTOR ||
+          key === UNSAFE_OWN_DATA_DESCRIPTOR ||
+          startIndex === MISSING_OWN_DATA_DESCRIPTOR ||
+          startIndex === UNSAFE_OWN_DATA_DESCRIPTOR ||
+          label === UNSAFE_OWN_DATA_DESCRIPTOR ||
+          (typeof key.value !== 'string' && typeof key.value !== 'number') ||
+          typeof startIndex.value !== 'number' ||
+          !Number.isInteger(startIndex.value) ||
+          startIndex.value < 0 ||
+          startIndex.value >= this.itemCount ||
+          seen.has(startIndex.value)
+        )
+          continue;
+        const labelValue = label === MISSING_OWN_DATA_DESCRIPTOR || typeof label.value !== 'string'
+          ? undefined
+          : label.value;
+        seen.add(startIndex.value);
+        normalized.push(Object.freeze({
+          key: key.value,
+          startIndex: startIndex.value,
+          ...(labelValue === undefined ? {} : { label: labelValue }),
+        }));
+      }
+    } catch {
+      // A malformed group collection cannot block the remaining list projection.
+    }
+    this.normalizedGroups = Object.freeze(
+      normalized.sort((a, b) => a.startIndex - b.startIndex)
+    );
     this.normalizedGroupByIndex.clear();
     for (const group of this.normalizedGroups)
       this.normalizedGroupByIndex.set(group.startIndex, group);

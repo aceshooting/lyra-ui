@@ -242,27 +242,59 @@ describe('lr-icon icon libraries', () => {
     expect(getIconLibrary('test-lib')).to.equal(undefined);
   });
 
-  it('continues notifying icon subscribers after one listener throws', () => {
-    const failure = new Error('subscriber failed');
+  it('continues notifying icon subscribers with one fixed dev diagnostic that omits listener failures', () => {
+    let failure = new Error('subscriber failed; listener-secret');
     const notifications: string[] = [];
     const warnings: unknown[][] = [];
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
     const unsubscribeThrowing = subscribeIconLibrary(() => {
       throw failure;
     });
     const unsubscribeHealthy = subscribeIconLibrary((name) => notifications.push(name));
     const originalWarn = console.warn;
     console.warn = (...args: unknown[]) => warnings.push(args);
+    runtime.litIssuedWarnings = new Set();
     try {
+      registerIconLibrary('notify-lib', { resolver: () => '' });
+      failure = new Error('second failure');
       registerIconLibrary('notify-lib', { resolver: () => '' });
     } finally {
       unsubscribeThrowing();
       unsubscribeHealthy();
       console.warn = originalWarn;
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
     }
 
-    expect(notifications).to.deep.equal(['notify-lib']);
+    expect(notifications).to.deep.equal(['notify-lib', 'notify-lib']);
     expect(warnings).to.have.lengthOf(1);
-    expect(warnings[0]?.[1]).to.equal(failure);
+    const message = warnings.flat().map(String).join(' ');
+    expect(message).to.equal('<lr-icon> ignored a throwing icon library listener.');
+    expect(message).to.not.contain('subscriber failed; listener-secret');
+    expect(message).to.not.contain('second failure');
+  });
+
+  it('stays silent for throwing icon-library listeners when Lit development diagnostics are unavailable', () => {
+    const warnings: unknown[][] = [];
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const unsubscribeThrowing = subscribeIconLibrary(() => {
+      throw new Error('production secret');
+    });
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    delete runtime.litIssuedWarnings;
+    try {
+      registerIconLibrary('notify-lib', { resolver: () => '' });
+    } finally {
+      unsubscribeThrowing();
+      console.warn = originalWarn;
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+    }
+
+    expect(warnings).to.have.lengthOf(0);
   });
 
   it('fails closed when an icon-library resolver returns a non-string value', async () => {

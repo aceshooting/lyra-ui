@@ -5,6 +5,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { srOnly } from '../../../internal/a11y.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
@@ -46,6 +51,64 @@ const RADIUS = 40;
 const CENTER = 50;
 const STROKE = 12;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const MAX_CONTEXT_METER_SEGMENTS = 10_000;
+const EMPTY_CONTEXT_METER_SEGMENTS: readonly Readonly<ContextMeterSegment>[] = Object.freeze([]);
+
+function projectContextMeterSegments(value: unknown): readonly Readonly<ContextMeterSegment>[] {
+  try {
+    if (!Array.isArray(value)) return EMPTY_CONTEXT_METER_SEGMENTS;
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return EMPTY_CONTEXT_METER_SEGMENTS;
+
+    const segments: Readonly<ContextMeterSegment>[] = [];
+    for (let index = 0; index < Math.min(length.value, MAX_CONTEXT_METER_SEGMENTS); index += 1) {
+      const entry = getOwnDataDescriptor(value, String(index));
+      if (
+        entry === MISSING_OWN_DATA_DESCRIPTOR ||
+        entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        entry.value === null ||
+        typeof entry.value !== 'object' ||
+        Array.isArray(entry.value)
+      )
+        continue;
+      const label = getOwnDataDescriptor(entry.value, 'label');
+      const segmentValue = getOwnDataDescriptor(entry.value, 'value');
+      const tone = getOwnDataDescriptor(entry.value, 'tone');
+      const color = getOwnDataDescriptor(entry.value, 'color');
+      if (
+        label === MISSING_OWN_DATA_DESCRIPTOR ||
+        label === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        segmentValue === MISSING_OWN_DATA_DESCRIPTOR ||
+        segmentValue === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        tone === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        color === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof label.value !== 'string' ||
+        typeof segmentValue.value !== 'number' ||
+        (tone !== MISSING_OWN_DATA_DESCRIPTOR && typeof tone.value !== 'string') ||
+        (color !== MISSING_OWN_DATA_DESCRIPTOR && typeof color.value !== 'string')
+      )
+        continue;
+      const toneValue = tone === MISSING_OWN_DATA_DESCRIPTOR ? undefined : tone.value;
+      const colorValue = color === MISSING_OWN_DATA_DESCRIPTOR ? undefined : color.value;
+      segments.push(Object.freeze({
+        label: label.value,
+        value: segmentValue.value,
+        ...(toneValue === undefined ? {} : { tone: toneValue as ContextMeterTone }),
+        ...(colorValue === undefined ? {} : { color: colorValue as string }),
+      }));
+    }
+    return Object.freeze(segments);
+  } catch {
+    return EMPTY_CONTEXT_METER_SEGMENTS;
+  }
+}
 
 function formatCount(n: number, locale: string): string {
   return Math.round(finiteNumber(n, 0)).toLocaleString(resolveIntlLocale(locale));
@@ -139,13 +202,26 @@ export class LyraContextMeter extends LyraElement {
    *  `<lr-graph-legend>`. */
   @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
+  private projectedSegmentsSource: unknown;
+  private projectedSegments: readonly Readonly<ContextMeterSegment>[] = EMPTY_CONTEXT_METER_SEGMENTS;
+
+  /** Later rendering only reads this once-projected, bounded data-descriptor view. */
+  private get effectiveSegments(): readonly Readonly<ContextMeterSegment>[] {
+    const source = this.segments;
+    if (source !== this.projectedSegmentsSource) {
+      this.projectedSegmentsSource = source;
+      this.projectedSegments = projectContextMeterSegments(source);
+    }
+    return this.projectedSegments;
+  }
+
   private normalizedSegmentValue(segment: Readonly<ContextMeterSegment>): number {
     return Math.max(0, finiteNumber(segment.value, 0));
   }
 
   /** Sum of segment values, clamped so a negative/NaN entry can't produce a negative total. */
   private get usedTotal(): number {
-    return this.segments.reduce((sum, segment) => {
+    return this.effectiveSegments.reduce((sum, segment) => {
       const next = sum + this.normalizedSegmentValue(segment);
       return finiteNumber(next, Number.MAX_VALUE);
     }, 0);
@@ -159,7 +235,7 @@ export class LyraContextMeter extends LyraElement {
     if (total <= 0) return [];
     const out: RatioSegment[] = [];
     let cumulative = 0;
-    for (const segment of this.segments) {
+    for (const segment of this.effectiveSegments) {
       const raw = this.normalizedSegmentValue(segment);
       const available = Math.max(0, 1 - cumulative);
       const ratio = Math.min(raw / total, available);
@@ -225,7 +301,7 @@ export class LyraContextMeter extends LyraElement {
         aria-valuemax=${total > 0 ? String(total) : nothing}
       ></div>
       <ul part="segment-list" class="sr-only">
-        ${this.segments.map(
+        ${this.effectiveSegments.map(
           (segment) => html`<li part="segment-item">${this.segmentTitle(segment)}</li>`,
         )}
       </ul>
@@ -305,7 +381,7 @@ export class LyraContextMeter extends LyraElement {
   private renderLegend(): TemplateResult {
     return html`
       <div part="legend" aria-hidden="true">
-        ${this.segments.map((segment) => {
+        ${this.effectiveSegments.map((segment) => {
           const color = this.segmentColor(segment);
           return html`<span part="legend-item">
             <span

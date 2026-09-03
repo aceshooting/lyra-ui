@@ -13,6 +13,20 @@ export const Default: StoryObj = {
   render: () => html`<lr-native-time-input label="Start time" value="09:30"></lr-native-time-input>`,
 };
 
+/** Host-owned guidance is resolved onto the inherited native time field. */
+export const ExternalDescription: StoryObj = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-20rem)">
+      <p id="native-time-input-external-description">Choose a time within staffed support hours.</p>
+      <lr-native-time-input
+        aria-describedby="native-time-input-external-description"
+        label="Start time"
+        value="09:30"
+      ></lr-native-time-input>
+    </div>
+  `,
+};
+
 /** Shared input theme values remain inheritable by the native-time-input subclass. */
 export const AncestorTheme: StoryObj = {
   render: () => html`

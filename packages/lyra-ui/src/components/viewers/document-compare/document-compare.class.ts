@@ -20,6 +20,12 @@ import type {
 } from '../../../internal/clipboard.js';
 import { styles } from './document-compare.styles.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -79,6 +85,71 @@ export interface DocumentCompareVersion extends DocumentRef {
   readonly text?: string;
   /** Region highlights rendered over this version's own `<lr-document-preview>` pane (image format only -- see that component's own scope). An id shared between `oldVersion.highlights` and `newVersion.highlights` is what "synchronized anchors" resolves against. */
   readonly highlights?: readonly LyraHighlight[];
+}
+
+const DOCUMENT_COMPARE_VERSION_FIELDS = [
+  'id',
+  'name',
+  'mimeType',
+  'uri',
+  'version',
+  'text',
+  'highlights',
+] as const;
+
+function projectDocumentCompareVersion(value: unknown): DocumentCompareVersion | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const descriptors = new Map<
+      (typeof DOCUMENT_COMPARE_VERSION_FIELDS)[number],
+      ReturnType<typeof getOwnDataDescriptor>
+    >();
+    for (const field of DOCUMENT_COMPARE_VERSION_FIELDS) {
+      descriptors.set(field, getOwnDataDescriptor(value, field));
+    }
+    const fieldValue = (
+      field: (typeof DOCUMENT_COMPARE_VERSION_FIELDS)[number],
+    ): unknown | undefined => {
+      const descriptor = descriptors.get(field);
+      if (
+        descriptor === undefined ||
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
+        return undefined;
+      return descriptor.value;
+    };
+    const idDescriptor = descriptors.get('id');
+    const nameDescriptor = descriptors.get('name');
+    if (
+      idDescriptor === undefined ||
+      idDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      idDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      nameDescriptor === undefined ||
+      nameDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      nameDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      return undefined;
+    const id = fieldValue('id');
+    const name = fieldValue('name');
+    if (typeof id !== 'string' || typeof name !== 'string') return undefined;
+    const mimeType = fieldValue('mimeType');
+    const uri = fieldValue('uri');
+    const version = fieldValue('version');
+    const text = fieldValue('text');
+    const highlights = fieldValue('highlights');
+    return Object.freeze({
+      id,
+      name,
+      ...(typeof mimeType === 'string' ? { mimeType } : {}),
+      ...(typeof uri === 'string' ? { uri } : {}),
+      ...(typeof version === 'string' ? { version } : {}),
+      ...(typeof text === 'string' ? { text } : {}),
+      ...(highlights === undefined ? {} : { highlights: snapshotLyraHighlights(highlights) }),
+    });
+  } catch {
+    return undefined;
+  }
 }
 
 function versionSourceIdentity(version: DocumentCompareVersion | undefined): string {
@@ -184,11 +255,31 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     this.requestUpdate('view', old);
   }
 
-  /** The "before" version. */
-  @property({ attribute: false }) oldVersion?: DocumentCompareVersion;
+  private _oldVersion?: DocumentCompareVersion;
+  /** The "before" version. Display fields are copied through own data descriptors at assignment,
+   * while invalid records render as an unset pane. */
+  @property({ attribute: false })
+  get oldVersion(): DocumentCompareVersion | undefined {
+    return this._oldVersion;
+  }
+  set oldVersion(value: DocumentCompareVersion | undefined) {
+    const previous = this._oldVersion;
+    this._oldVersion = projectDocumentCompareVersion(value);
+    this.requestUpdate('oldVersion', previous);
+  }
 
-  /** The "after" version. */
-  @property({ attribute: false }) newVersion?: DocumentCompareVersion;
+  private _newVersion?: DocumentCompareVersion;
+  /** The "after" version. Display fields are copied through own data descriptors at assignment,
+   * while invalid records render as an unset pane. */
+  @property({ attribute: false })
+  get newVersion(): DocumentCompareVersion | undefined {
+    return this._newVersion;
+  }
+  set newVersion(value: DocumentCompareVersion | undefined) {
+    const previous = this._newVersion;
+    this._newVersion = projectDocumentCompareVersion(value);
+    this.requestUpdate('newVersion', previous);
+  }
 
   /** Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view="diff"`;
    *  unsupported values normalize to reflected `unified`. */
@@ -209,8 +300,20 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   /** Forwarded to the internal `<lr-diff-view>`'s own `copyable` property while `view="diff"`. */
   @property({ type: Boolean }) copyable = false;
 
-  /** Forwarded to the internal `<lr-diff-view>`'s own `language` property while `view="diff"`. */
-  @property() language = '';
+  private _language = '';
+  /** Forwarded to the internal `<lr-diff-view>`'s own `language` property while `view="diff"`.
+   * Runtime values outside the documented string contract fall back to no highlighting. */
+  @property()
+  get language(): string {
+    return this._language;
+  }
+  set language(value: string) {
+    const normalized = typeof value === 'string' ? value : '';
+    const previous = this._language;
+    if (previous === normalized) return;
+    this._language = normalized;
+    this.requestUpdate('language', previous);
+  }
 
   /** Forwarded to the internal `<lr-diff-view>`'s own `languages` property while `view="diff"`. */
   @property({ attribute: false }) languages?: Readonly<

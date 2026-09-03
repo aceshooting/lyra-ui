@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -79,6 +79,10 @@ polite and assertive sinks, respectively;
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
 size of `[part="body"]` before the dialog body scrolls internally.
+`--lr-document-viewer-download-link-hover-bg` defaults to `color-mix(in oklab,
+var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`, and
+`--lr-document-viewer-download-link-active-bg` uses `var(--lr-color-mix-active)` in that same mix
+for the native download action's hover and pressed backgrounds.
 
 **Renderer registry exports:**
 

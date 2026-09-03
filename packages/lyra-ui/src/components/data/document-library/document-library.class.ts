@@ -7,6 +7,11 @@ import {
   getDateTimeFormat,
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import type {
   TableColumn,
@@ -94,6 +99,7 @@ const FRESHNESS_RANK: Record<LibraryDocumentFreshness, number> = {
   stale: 2,
 };
 const MAX_LIBRARY_COLLECTION_ENTRIES = 10_000;
+const INVALID_DOCUMENT_DATE = Symbol('invalid-document-date');
 const FRESHNESS_TONE: Record<
   LibraryDocumentFreshness,
   'success' | 'warning' | 'danger'
@@ -102,6 +108,120 @@ const FRESHNESS_TONE: Record<
   aging: 'warning',
   stale: 'danger',
 };
+
+function projectLibraryStringArray(value: unknown): readonly string[] | undefined {
+  try {
+    if (!Array.isArray(value)) return undefined;
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return undefined;
+    const tags: string[] = [];
+    for (let index = 0; index < Math.min(length.value, MAX_LIBRARY_COLLECTION_ENTRIES); index += 1) {
+      const entry = getOwnDataDescriptor(value, String(index));
+      if (
+        entry === MISSING_OWN_DATA_DESCRIPTOR ||
+        entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof entry.value !== 'string'
+      )
+        return undefined;
+      tags.push(entry.value);
+    }
+    return Object.freeze(tags);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectLibraryDate(value: unknown): Date | string | typeof INVALID_DOCUMENT_DATE {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return new Date(value);
+  try {
+    return new Date(Date.prototype.getTime.call(value));
+  } catch {
+    return INVALID_DOCUMENT_DATE;
+  }
+}
+
+function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined {
+  try {
+    if (
+      candidate === null ||
+      typeof candidate !== 'object' ||
+      Array.isArray(candidate)
+    )
+      return undefined;
+    const id = getOwnDataDescriptor(candidate, 'id');
+    const name = getOwnDataDescriptor(candidate, 'name');
+    const mimeType = getOwnDataDescriptor(candidate, 'mimeType');
+    const uri = getOwnDataDescriptor(candidate, 'uri');
+    const version = getOwnDataDescriptor(candidate, 'version');
+    const tags = getOwnDataDescriptor(candidate, 'tags');
+    const owner = getOwnDataDescriptor(candidate, 'owner');
+    const updatedAt = getOwnDataDescriptor(candidate, 'updatedAt');
+    const freshness = getOwnDataDescriptor(candidate, 'freshness');
+    if (
+      id === MISSING_OWN_DATA_DESCRIPTOR ||
+      id === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      name === MISSING_OWN_DATA_DESCRIPTOR ||
+      name === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      mimeType === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      uri === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      version === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      tags === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      owner === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      updatedAt === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      freshness === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof id.value !== 'string' ||
+      id.value.trim().length === 0 ||
+      typeof name.value !== 'string'
+    )
+      return undefined;
+
+    const mimeTypeValue = mimeType === MISSING_OWN_DATA_DESCRIPTOR ? undefined : mimeType.value;
+    const uriValue = uri === MISSING_OWN_DATA_DESCRIPTOR ? undefined : uri.value;
+    const versionValue = version === MISSING_OWN_DATA_DESCRIPTOR ? undefined : version.value;
+    const ownerValue = owner === MISSING_OWN_DATA_DESCRIPTOR ? undefined : owner.value;
+    const freshnessValue = freshness === MISSING_OWN_DATA_DESCRIPTOR ? undefined : freshness.value;
+    if (
+      (mimeTypeValue !== undefined && typeof mimeTypeValue !== 'string') ||
+      (uriValue !== undefined && typeof uriValue !== 'string') ||
+      (versionValue !== undefined && typeof versionValue !== 'string') ||
+      (ownerValue !== undefined && typeof ownerValue !== 'string') ||
+      (freshnessValue !== undefined &&
+        freshnessValue !== 'fresh' &&
+        freshnessValue !== 'aging' &&
+        freshnessValue !== 'stale')
+    )
+      return undefined;
+
+    const tagValues = tags === MISSING_OWN_DATA_DESCRIPTOR ? undefined : projectLibraryStringArray(tags.value);
+    if (tags !== MISSING_OWN_DATA_DESCRIPTOR && !tagValues) return undefined;
+    const updatedAtValue = updatedAt === MISSING_OWN_DATA_DESCRIPTOR || updatedAt.value === undefined
+      ? undefined
+      : projectLibraryDate(updatedAt.value);
+    if (updatedAtValue === INVALID_DOCUMENT_DATE) return undefined;
+
+    return Object.freeze({
+      id: id.value,
+      name: name.value,
+      ...(mimeTypeValue === undefined ? {} : { mimeType: mimeTypeValue }),
+      ...(uriValue === undefined ? {} : { uri: uriValue }),
+      ...(versionValue === undefined ? {} : { version: versionValue }),
+      ...(tagValues === undefined ? {} : { tags: tagValues }),
+      ...(ownerValue === undefined ? {} : { owner: ownerValue }),
+      ...(updatedAtValue === undefined ? {} : { updatedAt: updatedAtValue }),
+      ...(freshnessValue === undefined ? {} : { freshness: freshnessValue }),
+    });
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * `<lr-document-library>` — a searchable, filterable inventory of documents with versions, tags,
@@ -215,7 +335,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
   set documents(value: readonly LibraryDocument[]) {
     const previous = this._documents;
-    this._documents = this.snapshotDocuments(Array.isArray(value) ? value : []);
+    this._documents = this.snapshotDocuments(value);
     this.requestUpdate('documents', previous);
   }
 
@@ -304,29 +424,30 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     });
   }
 
-  private snapshotDocuments(documents: readonly LibraryDocument[]): readonly LibraryDocument[] {
+  private snapshotDocuments(documents: unknown): readonly LibraryDocument[] {
     const snapshot: LibraryDocument[] = [];
     const seen = new Set<string>();
-    for (const document of documents.slice(0, MAX_LIBRARY_COLLECTION_ENTRIES)) {
-      try {
-        const id = document?.id;
-        if (typeof id !== 'string' || id.trim().length === 0 || seen.has(id)) continue;
-        if (typeof document.name !== 'string') continue;
-        if (
-          document.tags !== undefined &&
-          (!Array.isArray(document.tags) ||
-            document.tags.some((tag) => typeof tag !== 'string'))
-        ) continue;
-        const updatedAt = document.updatedAt instanceof Date ? new Date(document.updatedAt.getTime()) : document.updatedAt;
-        const tags = document.tags === undefined
-          ? undefined
-          : Object.freeze(document.tags.slice(0, MAX_LIBRARY_COLLECTION_ENTRIES));
-        const retained = Object.freeze({ ...document, id, updatedAt, tags });
-        seen.add(id);
-        snapshot.push(retained);
-      } catch {
-        // A malformed record cannot reserve its id or suppress a later valid occurrence.
+    try {
+      if (!Array.isArray(documents)) return Object.freeze(snapshot);
+      const length = getOwnDataDescriptor(documents, 'length');
+      if (
+        length === MISSING_OWN_DATA_DESCRIPTOR ||
+        length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof length.value !== 'number' ||
+        !Number.isSafeInteger(length.value) ||
+        length.value < 0
+      )
+        return Object.freeze(snapshot);
+      for (let index = 0; index < Math.min(length.value, MAX_LIBRARY_COLLECTION_ENTRIES); index += 1) {
+        const entry = getOwnDataDescriptor(documents, String(index));
+        if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+        const document = projectLibraryDocument(entry.value);
+        if (!document || seen.has(document.id)) continue;
+        seen.add(document.id);
+        snapshot.push(document);
       }
+    } catch {
+      // A malformed record cannot reserve its id or suppress a later valid occurrence.
     }
     return Object.freeze(snapshot);
   }

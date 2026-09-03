@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -11,6 +12,12 @@ import {
 import { positiveInitialMarginalGzipBytes } from './bundle-metrics.mjs';
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
+const packageDir = path.join(scriptsDir, '..');
+const requireFromPackage = createRequire(path.join(packageDir, 'package.json'));
+const requireFromLoaderHost = createRequire(
+  requireFromPackage.resolve('@web/dev-server-esbuild'),
+);
+const esbuild = requireFromLoaderHost('esbuild');
 const budgets = JSON.parse(
   readFileSync(path.join(scriptsDir, 'bundle-budgets.json'), 'utf8'),
 );
@@ -24,7 +31,6 @@ const checker = readFileSync(
   path.join(scriptsDir, 'check-bundle-size.mjs'),
   'utf8',
 );
-
 const policyFixture = {
   $maximumHeadroomPercent: 4,
   $reviewedGzipBytes: {
@@ -225,6 +231,16 @@ assert.match(
   'catalog-picker must retain the shared anchored-popover controller',
 );
 assert.match(
+  catalogPickerSource,
+  /from\s+['"]\.\/nonmodal-overlay-manager\.js['"]/u,
+  'catalog-picker must use the lean nonmodal overlay lifecycle',
+);
+assert.doesNotMatch(
+  catalogPickerSource,
+  /from\s+['"]\.\/overlay-manager\.js['"]/u,
+  'catalog-picker must not load modal inerting or scroll-lock machinery eagerly',
+);
+assert.match(
   anchoredPopoverControllerSource,
   /from\s+['"]\.\/anchored-overlay-runtime\.js['"]/u,
   'catalog-picker routes must retain deferred positioning through their anchored controller',
@@ -414,6 +430,162 @@ assert.equal(
   widgetRendererLean.forbiddenInputs.length,
   8,
   'the lean route excludes all eight mapped widget-type class modules',
+);
+const toolParamFormLean =
+  exclusions['dist/components/agent-tools/tool-param-form/tool-param-form.js'];
+assert.ok(
+  toolParamFormLean,
+  'the granular tool-param-form registration needs an inventoried checkbox exclusion claim',
+);
+assert.deepEqual(
+  toolParamFormLean,
+  {
+    includedOptionalPeers: [],
+    forbiddenInputs: ['components/forms/checkbox/'],
+  },
+  'the real bundle graph must reject every checkbox module from the granular registration route',
+);
+const localePickerNonmodalOverlay =
+  exclusions['dist/components/forms/locale-picker/locale-picker.js'];
+assert.deepEqual(
+  localePickerNonmodalOverlay,
+  {
+    includedOptionalPeers: [],
+    forbiddenInputs: [
+      'internal/overlay-manager.js',
+      'internal/rendered-state.js',
+      'internal/scroll-lock.js',
+    ],
+  },
+  'the granular locale-picker route must retain the lean nonmodal overlay graph',
+);
+const exportButtonNonmodalOverlay =
+  exclusions['dist/components/utility/export-button/export-button.js'];
+assert.deepEqual(
+  exportButtonNonmodalOverlay,
+  {
+    includedOptionalPeers: [],
+    forbiddenInputs: [
+      'internal/overlay-manager.js',
+      'internal/rendered-state.js',
+      'internal/scroll-lock.js',
+    ],
+  },
+  'the granular export-button route must retain the lean nonmodal overlay graph',
+);
+
+async function probeToolParamFormRegistrationGraph() {
+  const registrationsKey = '__lyraTask3ToolParamFormRegistrations';
+  const previous = Object.getOwnPropertyDescriptor(globalThis, registrationsKey);
+  const registrations = [];
+  Object.defineProperty(globalThis, registrationsKey, {
+    configurable: true,
+    value: registrations,
+  });
+
+  const registrationStubs = {
+    name: 'registration-stubs',
+    setup(build) {
+      build.onResolve({ filter: /\/internal\/prefix\.js$/ }, () => ({
+        namespace: 'registration-stubs',
+        path: 'prefix',
+      }));
+      build.onResolve(
+        { filter: /\/(?:tool-param-form|select|option)\.class\.js$/ },
+        (args) => ({
+          namespace: 'registration-stubs',
+          path: path.basename(args.path),
+        }),
+      );
+      build.onLoad(
+        { filter: /.*/, namespace: 'registration-stubs' },
+        (args) => {
+          if (args.path === 'prefix') {
+            return {
+              contents:
+                `export function defineElement(name, ctor) { ` +
+                `globalThis[${JSON.stringify(registrationsKey)}].push([name, ctor.name]); }`,
+              loader: 'js',
+            };
+          }
+          const classNames = {
+            'option.class.js': 'LyraOption',
+            'select.class.js': 'LyraSelect',
+            'tool-param-form.class.js': 'LyraToolParamForm',
+          };
+          const className = classNames[args.path];
+          assert.ok(className, `unexpected registration class stub ${args.path}`);
+          return {
+            contents: `export class ${className} {}`,
+            loader: 'js',
+          };
+        },
+      );
+    },
+  };
+
+  try {
+    const result = await esbuild.build({
+      absWorkingDir: packageDir,
+      bundle: true,
+      entryPoints: [
+        'src/components/agent-tools/tool-param-form/tool-param-form.ts',
+      ],
+      format: 'esm',
+      logLevel: 'silent',
+      metafile: true,
+      platform: 'node',
+      plugins: [registrationStubs],
+      write: false,
+    });
+    assert.equal(result.outputFiles.length, 1);
+    await import(
+      `data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`
+    );
+    return {
+      inputs: Object.keys(result.metafile.inputs).map((input) =>
+        input.replaceAll('\\', '/')
+      ),
+      registrations,
+    };
+  } finally {
+    if (previous) Object.defineProperty(globalThis, registrationsKey, previous);
+    else delete globalThis[registrationsKey];
+  }
+}
+
+const toolParamRegistrationProbe = await probeToolParamFormRegistrationGraph();
+assert.equal(
+  toolParamRegistrationProbe.registrations.length,
+  3,
+  'each rendered control must register exactly once even when reached transitively',
+);
+assert.deepEqual(
+  [...toolParamRegistrationProbe.registrations].sort(([left], [right]) =>
+    left.localeCompare(right)
+  ),
+  [
+    ['option', 'LyraOption'],
+    ['select', 'LyraSelect'],
+    ['tool-param-form', 'LyraToolParamForm'],
+  ],
+  'the executed granular module graph must register the form, select, and option controls',
+);
+for (const input of [
+  'src/components/agent-tools/tool-param-form/tool-param-form.ts',
+  'src/components/forms/combobox/option.ts',
+  'src/components/forms/select/select.ts',
+]) {
+  assert.ok(
+    toolParamRegistrationProbe.inputs.includes(input),
+    `the actual registration graph must include ${input}`,
+  );
+}
+assert.ok(
+  toolParamRegistrationProbe.inputs.every(
+    (input) => !input.includes('src/components/forms/checkbox/')
+  ),
+  'the actual registration metafile must exclude the checkbox family',
 );
 
 console.log('hard bundle budget coverage tests passed.');

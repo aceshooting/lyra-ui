@@ -79,14 +79,32 @@ export function createFallbackInternals(): ElementInternals {
  * `host.attachInternals()`, degrading to `createFallbackInternals()` rather than throwing when the
  * host environment either has no such method at all (a DOM shim that stops short of
  * `ElementInternals`) or has one that throws (already-attached internals, a partial polyfill).
- * Both failure modes must be handled: `typeof` alone leaves the throwing case, and `try`/`catch`
- * alone is fine in practice but reads as accidental. Constructing a control must never be the thing
- * that breaks a downstream consumer's non-browser test suite.
+ * Direct property access is deliberately avoided: a partial DOM can expose `attachInternals`
+ * through an accessor that throws before a callable can be saved. Only an own or inherited data
+ * descriptor is eligible, and the saved callable is invoked exactly once. Constructing a control
+ * must never be the thing that breaks a downstream consumer's non-browser test suite.
  */
 export function attachInternalsSafely(host: HTMLElement): ElementInternals {
-  if (typeof host.attachInternals !== 'function') return createFallbackInternals();
+  type AttachInternals = (this: HTMLElement) => ElementInternals;
+  let current: object | null = host;
+  let attachInternals: AttachInternals | undefined;
   try {
-    return host.attachInternals() ?? createFallbackInternals();
+    while (current) {
+      const descriptor = Object.getOwnPropertyDescriptor(current, 'attachInternals');
+      if (descriptor) {
+        if ('value' in descriptor && typeof descriptor.value === 'function') {
+          attachInternals = descriptor.value as AttachInternals;
+        }
+        break;
+      }
+      current = Object.getPrototypeOf(current) as object | null;
+    }
+  } catch {
+    return createFallbackInternals();
+  }
+  if (!attachInternals) return createFallbackInternals();
+  try {
+    return Reflect.apply(attachInternals, host, []) ?? createFallbackInternals();
   } catch {
     return createFallbackInternals();
   }

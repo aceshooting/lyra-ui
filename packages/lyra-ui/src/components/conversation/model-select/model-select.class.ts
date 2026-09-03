@@ -203,6 +203,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   @property({ attribute: false }) catalog?: LyraCatalog<LyraModelCatalogEntry>;
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
+  /** Keeps user edits and catalog commits from changing `value` while retaining focus, popup
+   *  navigation, selection/copy, form submission, reset, and programmatic writes. */
+  @property({ type: Boolean, reflect: true }) readonly: boolean = false;
   /**
    * Optional visible title above the control, rendered alongside the `label` slot in a
    * `part="form-control-label"` `<label>` paired with the active control's id. A host `aria-label`
@@ -278,6 +281,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private readonly catalogPicker = new CatalogPickerController<LyraModelCatalogEntry>(this, {
     catalog: () => this.catalog,
     allowCustom: () => this.allowCustom,
+    isReadonly: () => this.readonly,
     locale: () => this.effectiveLocale,
     searchableFields: (entry) => [entry.id, entry.label],
     emitChange: (detail) => this.emit('lr-change', detail),
@@ -535,8 +539,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   }
 
   /**
-   * Shared with every other form control: own `disabled` and a `<fieldset disabled>` ancestor bar
-   * constraint validation (this picker has no `readonly` of its own). A barred control matches
+   * Shared with every other form control: own `disabled`/`readonly` and a `<fieldset disabled>`
+   * ancestor bar constraint validation. A barred control matches
    * neither `:valid` nor `:invalid` natively, so leaving `valueMissing` raised on a disabled
    * required picker is what painted it red under the documented `:state(user-invalid)` rule.
    */
@@ -655,7 +659,13 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const reposition =
       changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     this.catalogPicker.updated(reposition);
-    if (changed.has('required') || changed.has('touched') || changed.has('value')) {
+    if (
+      changed.has('required') ||
+      changed.has('readonly') ||
+      changed.has('touched') ||
+      changed.has('value')
+    ) {
+      if (changed.has('readonly')) this.updateValidity();
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
     // Unconditional, unlike the data-invalid reflection above: it also has to run on the FIRST
@@ -846,6 +856,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.placeholder || this.localize('model'))}
         aria-describedby=${describedBy || nothing}
         aria-required=${this.required ? 'true' : 'false'}
+        aria-readonly=${this.readonly ? 'true' : 'false'}
         aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
         ?disabled=${this.effectiveDisabled}
         @click=${this.onTriggerClick}
@@ -888,6 +899,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
           aria-autocomplete="list"
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
+          aria-readonly=${this.readonly ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
           autocomplete=${this.autocomplete || nothing}
           spellcheck=${this.spellcheck}
@@ -896,6 +908,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
           inputmode=${this.inputMode || nothing}
           enterkeyhint=${this.enterKeyHint || nothing}
           .value=${this.open ? this.query : this.labelFor(this.value)}
+          .readOnly=${this.readonly}
           placeholder=${this.placeholder}
           ?disabled=${this.effectiveDisabled}
           @input=${this.onInput}

@@ -1,15 +1,66 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import {
   acquireAriaDescription,
+  acquireResolvedAriaRelationship,
   describeElement,
   syncAriaControlsElements,
   syncAriaDescribedByElements,
+  type ResolvedAriaRelationship,
   undescribeElement,
 } from './aria-controls.js';
+import { resolveIdReferencesIn } from './aria-reflection.js';
 
-type Reflected = HTMLElement & { ariaDescribedByElements?: Element[] | null };
+type Reflected = HTMLElement & {
+  ariaDescribedByElements?: Element[] | null;
+  ariaLabelledByElements?: Element[] | null;
+};
 
-const supportsElementReferences = 'ariaDescribedByElements' in HTMLElement.prototype;
+function relationshipProperty(relationship: ResolvedAriaRelationship): keyof Reflected {
+  return relationship === 'aria-describedby'
+    ? 'ariaDescribedByElements'
+    : 'ariaLabelledByElements';
+}
+
+function installElementReferenceReflection(
+  target: HTMLElement,
+  relationship: ResolvedAriaRelationship,
+  initial: readonly Element[] | null = null,
+): () => void {
+  const property = relationshipProperty(relationship);
+  let elements = initial === null ? null : [...initial];
+  Object.defineProperty(target, property, {
+    configurable: true,
+    get: () => elements,
+    set: (next: readonly Element[] | null) => {
+      elements = next === null ? null : [...next];
+      target.setAttribute(relationship, '');
+    },
+  });
+  return () => {
+    Reflect.deleteProperty(target, property);
+  };
+}
+
+function reflectedIds(target: HTMLElement, relationship: ResolvedAriaRelationship): string[] {
+  const value = Reflect.get(target, relationshipProperty(relationship)) as
+    | Iterable<Element>
+    | null
+    | undefined;
+  return value == null ? [] : [...value].map((element) => element.id);
+}
+
+function mutationComplete(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function propertyOwner(start: object, property: PropertyKey): object | null {
+  let current: object | null = start;
+  while (current) {
+    if (Object.prototype.hasOwnProperty.call(current, property)) return current;
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  return null;
+}
 
 it('syncAriaControlsElements is a no-op when no control is supplied', async () => {
   const root = await fixture<HTMLElement>(html`<div><span id="dangling"></span></div>`);
@@ -17,503 +68,605 @@ it('syncAriaControlsElements is a no-op when no control is supplied', async () =
 });
 
 it('tokenizes reflected IDREFs with ASCII whitespace only', async function () {
-  if (!supportsElementReferences || !('ariaControlsElements' in HTMLElement.prototype)) this.skip();
-  const root = await fixture<HTMLElement>(html`<div><button></button><span>Description</span></div>`);
+  if (!('ariaControlsElements' in HTMLElement.prototype) ||
+    !('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const root = await fixture<HTMLElement>(html`<div><button></button><span>Reference</span></div>`);
   const target = root.querySelector<HTMLButtonElement>('button')!;
   const reference = root.querySelector<HTMLElement>('span')!;
   reference.id = 'one\u00a0reference';
 
   expect(syncAriaDescribedByElements(root, target, reference.id)).to.equal(true);
   expect((target.ariaDescribedByElements ?? []).map((element) => element.id)).to.deep.equal([
-    'one\u00a0reference',
+    reference.id,
   ]);
   syncAriaControlsElements(root, target, reference.id);
   expect((target.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([
-    'one\u00a0reference',
+    reference.id,
   ]);
 });
 
-it('syncAriaControlsElements clears an assigned element-reference list back to empty when controls becomes falsy', async function () {
-  if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
-  const root = await fixture<HTMLElement>(html`<div><button></button><span id="clear-controls-target">Panel</span></div>`);
-  const target = root.querySelector<HTMLButtonElement>('button')!;
-  const reference = root.querySelector<HTMLElement>('#clear-controls-target')!;
-
-  syncAriaControlsElements(root, target, reference.id);
-  expect((target.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([
-    'clear-controls-target',
-  ]);
-
-  syncAriaControlsElements(root, target, null);
-  expect(target.ariaControlsElements).to.deep.equal([]);
-});
-
-it('syncAriaDescribedByElements clears an assigned element-reference list to null when describedBy becomes falsy', async function () {
-  if (!supportsElementReferences) this.skip();
+it('clears supported reflected lists for falsy controls and descriptions', async function () {
+  if (!('ariaControlsElements' in HTMLElement.prototype) ||
+    !('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
   const root = await fixture<HTMLElement>(html`
-    <div><button></button><span id="clear-described-first">First</span></div>
+    <div><button></button><span id="clear-reference">Reference</span></div>
   `);
   const target = root.querySelector<HTMLButtonElement>('button')!;
-  const description = root.querySelector<HTMLElement>('#clear-described-first')!;
 
-  expect(syncAriaDescribedByElements(root, target, description.id)).to.equal(true);
-  expect((target.ariaDescribedByElements ?? []).map((element) => element.id)).to.deep.equal([
-    'clear-described-first',
-  ]);
-
+  syncAriaControlsElements(root, target, 'clear-reference');
+  syncAriaControlsElements(root, target, null);
+  expect(target.ariaControlsElements?.length ?? -1).to.equal(0);
+  expect(syncAriaDescribedByElements(root, target, 'clear-reference')).to.equal(true);
   expect(syncAriaDescribedByElements(root, target, null)).to.equal(false);
-  expect(target.ariaDescribedByElements).to.equal(null);
+  expect(target.ariaDescribedByElements === null).to.equal(true);
 });
 
-it('resolves no id references when the host is its own root (a detached element, not a Document/ShadowRoot)', () => {
-  // A standalone, never-appended element is its own getRootNode() result -- a plain Element, which
-  // (unlike Document/DocumentFragment/ShadowRoot) implements no NonElementParentNode.getElementById.
+it('resolves no ID references when the host is its detached element root', () => {
   const host = document.createElement('div');
   const target = document.createElement('button');
   const reference = document.createElement('span');
   reference.id = 'detached-reference';
   host.append(target, reference);
 
-  expect(host.getRootNode() === host).to.equal(true);
+  expect(resolveIdReferencesIn(host, reference.id)).to.deep.equal([]);
   expect(syncAriaDescribedByElements(host, target, reference.id)).to.equal(false);
-  expect(target.hasAttribute('aria-describedby')).to.equal(false);
 });
 
-it('uses element reflection when an owned description id is not one serializable IDREF token', async function () {
-  if (!supportsElementReferences) this.skip();
-  const root = await fixture<HTMLElement>(html`<div><button></button><span>Description</span></div>`);
-  const target = root.querySelector<HTMLButtonElement>('button')!;
-  const description = root.querySelector<HTMLElement>('span')!;
-  description.id = 'owned description';
-  const lease = acquireAriaDescription(target, [description]);
-
-  expect(target.getAttribute('aria-describedby')).to.equal('');
-  expect((target.ariaDescribedByElements ?? []).map((element) => element.id)).to.deep.equal([
-    'owned description',
-  ]);
-  description.id = 'renamed owned description';
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  expect((target.ariaDescribedByElements ?? []).map((element) => element.id)).to.deep.equal([
-    'renamed owned description',
-  ]);
-  lease.release();
-  expect(target.hasAttribute('aria-describedby')).to.equal(false);
-});
-
-it('adds a same-root description through the serialized attribute', async () => {
-  const el = await fixture<HTMLElement>(html`
-    <div><button id="describe-target">Go</button><span id="describe-source">Details</span></div>
-  `);
-  const target = el.querySelector<HTMLElement>('#describe-target')!;
-  const source = el.querySelector('#describe-source')!;
-
-  const applied = describeElement(target, source);
-  expect(target.getAttribute('aria-describedby')).to.equal('describe-source');
-  expect(applied.assigned).to.be.false;
-
-  undescribeElement(applied);
-  expect(target.hasAttribute('aria-describedby')).to.be.false;
-});
-
-it('keeps the descriptions a target already had and restores them exactly', async () => {
-  const el = await fixture<HTMLElement>(html`
-    <div>
-      <button id="describe-target-2" aria-describedby="describe-existing">Go</button>
-      <span id="describe-existing">Existing</span>
-      <span id="describe-source-2">Details</span>
-    </div>
-  `);
-  const target = el.querySelector<HTMLElement>('#describe-target-2')!;
-  const source = el.querySelector('#describe-source-2')!;
-
-  const applied = describeElement(target, source);
-  expect(target.getAttribute('aria-describedby')?.split(/\s+/)).to.have.members([
-    'describe-existing',
-    'describe-source-2',
-  ]);
-
-  undescribeElement(applied);
-  expect(target.getAttribute('aria-describedby')).to.equal('describe-existing');
-});
-
-it('is a no-op when the description is already applied', async () => {
-  const el = await fixture<HTMLElement>(html`
-    <div><button id="describe-target-3" aria-describedby="describe-source-3">Go</button><span id="describe-source-3">D</span></div>
-  `);
-  const target = el.querySelector<HTMLElement>('#describe-target-3')!;
-  const source = el.querySelector('#describe-source-3')!;
-
-  const applied = describeElement(target, source);
-  expect(applied.assigned).to.be.false;
-  expect(target.getAttribute('aria-describedby')).to.equal('describe-source-3');
-  undescribeElement(applied);
-  expect(target.getAttribute('aria-describedby')).to.equal('describe-source-3');
-});
-
-it('crosses a shadow boundary through the element-reference list without dropping existing links', async () => {
-  const tagName = 'test-aria-controls-described-host';
-  if (!customElements.get(tagName)) {
-    customElements.define(
-      tagName,
-      class extends HTMLElement {
-        constructor() {
-          super();
-          this.attachShadow({ mode: 'open' }).innerHTML =
-            '<button aria-describedby="inner-hint">Go</button><span id="inner-hint">Hint</span>';
-        }
-      },
-    );
-  }
-  const el = await fixture<HTMLElement>(`<div>${`<${tagName}></${tagName}>`}<span id="outer-source">Details</span></div>`);
-  const host = el.querySelector<HTMLElement>(tagName)!;
-  const target = host.shadowRoot!.querySelector('button') as Reflected;
-  const hint = host.shadowRoot!.querySelector('#inner-hint')!;
-  const source = el.querySelector('#outer-source')!;
-
-  const applied = describeElement(target, source);
-  if (supportsElementReferences) {
-    expect(applied.assigned).to.be.true;
-    expect([...(target.ariaDescribedByElements ?? [])].map((node) => node.id)).to.have.members([
-      'inner-hint',
-      'outer-source',
-    ]);
-    // Assigning the element-reference list clears the serialized attribute by contract.
-    expect(target.getAttribute('aria-describedby')).to.equal('');
-  } else {
-    expect(applied.assigned).to.be.false;
-    expect(target.getAttribute('aria-describedby')?.split(/\s+/)).to.have.members(['inner-hint', 'outer-source']);
-  }
-
-  undescribeElement(applied);
-  expect(target.getAttribute('aria-describedby')).to.equal('inner-hint');
-  // Back to plain attribute reflection: the explicitly assigned list is gone.
-  expect([...(target.ariaDescribedByElements ?? [hint])].map((node) => node.id)).to.deep.equal(['inner-hint']);
-});
-
-it('keeps overlapping description handles independent when they release out of order', async () => {
-  const el = await fixture<HTMLElement>(html`
-    <div>
-      <button id="overlap-target">Go</button>
-      <span id="overlap-first">First details</span>
-      <span id="overlap-second">Second details</span>
-    </div>
-  `);
-  const target = el.querySelector<HTMLElement>('#overlap-target')!;
-  const first = el.querySelector('#overlap-first')!;
-  const second = el.querySelector('#overlap-second')!;
-
-  const firstHandle = describeElement(target, first);
-  const secondHandle = describeElement(target, second);
-  expect(target.getAttribute('aria-describedby')?.split(/\s+/)).to.have.members([
-    'overlap-first',
-    'overlap-second',
-  ]);
-
-  undescribeElement(firstHandle);
-  expect(target.getAttribute('aria-describedby')).to.equal('overlap-second');
-
-  undescribeElement(secondHandle);
-  expect(target.hasAttribute('aria-describedby')).to.equal(false);
-});
-
-it('deduplicates repeated descriptions across leases and makes release idempotent', async () => {
+it('adds and restores same-root descriptions through the serialized relationship', async () => {
   const root = await fixture<HTMLElement>(html`
-    <div><button></button><span id="shared-description">Shared</span></div>
+    <div>
+      <button aria-describedby="existing">Go</button>
+      <span id="existing">Existing</span>
+      <span id="owned">Owned</span>
+    </div>
   `);
   const target = root.querySelector<HTMLButtonElement>('button')!;
-  const description = root.querySelector<HTMLElement>('#shared-description')!;
-  const first = acquireAriaDescription(target, [description, description]);
-  const second = acquireAriaDescription(target, [description]);
+  const owned = root.querySelector<HTMLElement>('#owned')!;
+  const applied = describeElement(target, owned);
 
-  expect(target.getAttribute('aria-describedby')).to.equal('shared-description');
+  expect(target.getAttribute('aria-describedby')).to.equal('existing owned');
+  expect(applied.assigned).to.equal(false);
+  undescribeElement(applied);
+  expect(target.getAttribute('aria-describedby')).to.equal('existing');
+});
+
+it('keeps overlapping description handles independent and identity-deduplicated', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div><button></button><span id="first"></span><span id="second"></span></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const firstSource = root.querySelector<HTMLElement>('#first')!;
+  const secondSource = root.querySelector<HTMLElement>('#second')!;
+  const first = acquireAriaDescription(target, [firstSource, firstSource]);
+  const second = acquireAriaDescription(target, [firstSource, secondSource]);
+
+  expect(target.getAttribute('aria-describedby')).to.equal('first second');
   first.release();
-  first.release();
-  expect(target.getAttribute('aria-describedby')).to.equal('shared-description');
+  expect(target.getAttribute('aria-describedby')).to.equal('first second');
+  second.release();
   second.release();
   expect(target.hasAttribute('aria-describedby')).to.equal(false);
 });
 
-it('preserves a late external aria-describedby write after the owned description releases', async () => {
-  const el = await fixture<HTMLElement>(html`
-    <div>
-      <button id="late-target">Go</button>
-      <span id="late-description">Temporary details</span>
-      <span id="late-author">Late author details</span>
-    </div>
+it('adopts and preserves a late serialized author description while a lease is active', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div><button></button><span id="owned"></span><span id="author"></span></div>
   `);
-  const target = el.querySelector<HTMLElement>('#late-target')!;
-  const description = el.querySelector('#late-description')!;
-  const handle = describeElement(target, description);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const owned = root.querySelector<HTMLElement>('#owned')!;
+  const lease = acquireAriaDescription(target, [owned]);
 
-  target.setAttribute('aria-describedby', 'late-author');
-  undescribeElement(handle);
-
-  expect(target.getAttribute('aria-describedby')).to.equal('late-author');
+  target.setAttribute('aria-describedby', 'author');
+  await mutationComplete();
+  expect(target.getAttribute('aria-describedby')).to.equal('author owned');
+  lease.release();
+  expect(target.getAttribute('aria-describedby')).to.equal('author');
 });
 
-it('merges a late external write while the owned description remains active', async () => {
-  const el = await fixture<HTMLElement>(html`
-    <div>
-      <button id="live-target">Go</button>
-      <span id="live-owned">Owned details</span>
-      <span id="live-author">Author details</span>
-    </div>
-  `);
-  const target = el.querySelector<HTMLElement>('#live-target')!;
-  const description = el.querySelector('#live-owned')!;
-  const handle = describeElement(target, description);
+it('treats a record-backed same-value author description write as the next baseline', async () => {
+  const root = await fixture<HTMLElement>(html`<div><button></button><span id="owned"></span></div>`);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const owned = root.querySelector<HTMLElement>('#owned')!;
+  const lease = acquireAriaDescription(target, [owned]);
 
-  target.setAttribute('aria-describedby', 'live-author');
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  target.setAttribute('aria-describedby', owned.id);
+  await mutationComplete();
+  lease.release();
 
-  expect(target.getAttribute('aria-describedby')?.split(/\s+/)).to.have.members([
-    'live-author',
-    'live-owned',
-  ]);
-  undescribeElement(handle);
-  expect(target.getAttribute('aria-describedby')).to.equal('live-author');
+  expect(target.getAttribute('aria-describedby')).to.equal(owned.id);
 });
 
-it('tracks owned description id changes and supports replacing a lease collection', async () => {
-  const el = await fixture<HTMLElement>(html`
+it('does not promote generated descriptions when detachment changes native reflection', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div><button></button><span id="owned"></span><span id="author"></span></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const owned = root.querySelector<HTMLElement>('#owned')!;
+  const lease = acquireAriaDescription(target, [owned]);
+
+  target.setAttribute('aria-describedby', 'author');
+  await mutationComplete();
+  target.remove();
+  lease.release();
+
+  expect(target.getAttribute('aria-describedby')).to.equal('author');
+});
+
+it('does not promote a detached owned source into the author baseline', async function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const root = await fixture<HTMLElement>(html`<div><button></button><span id="moved-owned"></span></div>`);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const owned = root.querySelector<HTMLElement>('#moved-owned')!;
+  const lease = acquireAriaDescription(target, [owned]);
+
+  expect(target.getAttribute('aria-describedby')).to.equal(owned.id);
+  owned.remove();
+  await mutationComplete();
+  lease.release();
+
+  expect(target.hasAttribute('aria-describedby')).to.equal(false);
+});
+
+it('preserves a serialized baseline when its resolved source detaches', async function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const root = await fixture<HTMLElement>(html`
     <div>
-      <button id="update-target">Go</button>
-      <span id="update-first">First</span>
-      <span id="update-second">Second</span>
+      <button aria-describedby="baseline-detached"></button>
+      <span id="baseline-detached"></span>
+      <span id="owned-retained"></span>
     </div>
   `);
-  const target = el.querySelector<HTMLElement>('#update-target')!;
-  const first = el.querySelector('#update-first')!;
-  const second = el.querySelector('#update-second')!;
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const baseline = root.querySelector<HTMLElement>('#baseline-detached')!;
+  const owned = root.querySelector<HTMLElement>('#owned-retained')!;
+  const lease = acquireAriaDescription(target, [owned]);
+
+  expect(target.getAttribute('aria-describedby')).to.equal(`${baseline.id} ${owned.id}`);
+  baseline.remove();
+  await mutationComplete();
+  lease.release();
+
+  expect(target.getAttribute('aria-describedby')).to.equal(baseline.id);
+});
+
+it('preserves an initially unresolved serialized baseline when it becomes resolvable', async function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const baselineId = 'baseline-arrives-later';
+  const root = await fixture<HTMLElement>(html`
+    <div>
+      <button aria-describedby=${baselineId}></button>
+      <span id="owned-late-baseline"></span>
+    </div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const owned = root.querySelector<HTMLElement>('#owned-late-baseline')!;
+  const lease = acquireAriaDescription(target, [owned]);
+
+  expect(target.getAttribute('aria-describedby')).to.equal(`${baselineId} ${owned.id}`);
+  const baseline = document.createElement('span');
+  baseline.id = baselineId;
+  root.append(baseline);
+  await mutationComplete();
+  lease.release();
+
+  expect(target.getAttribute('aria-describedby')).to.equal(baselineId);
+});
+
+it('tracks owned IDs and replaces a lease collection', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div><button></button><span id="first"></span><span id="second"></span></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const first = root.querySelector<HTMLElement>('#first')!;
+  const second = root.querySelector<HTMLElement>('#second')!;
   const lease = acquireAriaDescription(target, [first]);
 
-  first.id = 'update-first-renamed';
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  expect(target.getAttribute('aria-describedby')).to.equal('update-first-renamed');
-
+  first.id = 'renamed';
+  await mutationComplete();
+  expect(target.getAttribute('aria-describedby')).to.equal('renamed');
   lease.update([second]);
-  expect(target.getAttribute('aria-describedby')).to.equal('update-second');
+  expect(target.getAttribute('aria-describedby')).to.equal('second');
   lease.release();
   expect(target.hasAttribute('aria-describedby')).to.equal(false);
 });
 
-it('restores an explicit element-reference baseline after a cross-root description releases', async function () {
-  if (!supportsElementReferences) this.skip();
-  const tagName = 'test-aria-description-baseline-host';
-  if (!customElements.get(tagName)) {
-    customElements.define(
-      tagName,
-      class extends HTMLElement {
-        constructor() {
-          super();
-          this.attachShadow({ mode: 'open' }).innerHTML = '<button>Go</button><span id="baseline">Baseline</span>';
-        }
-      },
-    );
-  }
-  const el = await fixture<HTMLElement>(
-    `<div>${`<${tagName}></${tagName}>`}<span id="transient-cross-root">Transient</span></div>`,
-  );
-  const host = el.querySelector<HTMLElement>(tagName)!;
-  const target = host.shadowRoot!.querySelector('button') as Reflected;
-  const baseline = host.shadowRoot!.querySelector('#baseline')!;
-  const transient = el.querySelector('#transient-cross-root')!;
-  target.ariaDescribedByElements = [baseline];
-
-  const handle = describeElement(target, transient);
-  undescribeElement(handle);
-
-  expect((target.ariaDescribedByElements ?? []).map((element) => element.id)).to.deep.equal(['baseline']);
-});
-
-it('does not promote an owned relationship when a dangling reflected sync is a no-op', async function () {
-  if (!supportsElementReferences) this.skip();
-  const root = await fixture<HTMLElement>(html`
-    <div><button id="no-op-sync-target"></button><span id="no-op-sync-owned">Owned</span></div>
-  `);
-  const target = root.querySelector<HTMLButtonElement>('#no-op-sync-target')!;
-  const owned = root.querySelector<HTMLElement>('#no-op-sync-owned')!;
-  const lease = acquireAriaDescription(target, [owned]);
-
-  expect(syncAriaDescribedByElements(root, target, 'dangling-description-id')).to.equal(false);
-  lease.release();
-
-  expect(target.hasAttribute('aria-describedby')).to.equal(false);
-});
-
-it('does not preserve a generated description when its source detaches before release', async function () {
-  if (!supportsElementReferences) this.skip();
-  const root = await fixture<HTMLElement>(html`
-    <div><button id="detach-description-target"></button><span id="detach-description-owned">Owned</span></div>
-  `);
-  const target = root.querySelector<HTMLButtonElement>('#detach-description-target')!;
-  const owned = root.querySelector<HTMLElement>('#detach-description-owned')!;
-  const lease = acquireAriaDescription(target, [owned]);
-
-  owned.remove();
-  lease.release();
-
-  expect(target.hasAttribute('aria-describedby')).to.equal(false);
-});
-
-it('composes description leases acquired through separate module instances', async () => {
-  const firstPath = '../../dist/internal/aria-controls.js?description-owner-copy=first';
-  const secondPath = '../../dist/internal/aria-controls.js?description-owner-copy=second';
-  const firstCopy = await import(firstPath);
-  const secondCopy = await import(secondPath);
-  const root = await fixture<HTMLElement>(html`
-    <div><button></button><span id="copy-first">First</span><span id="copy-second">Second</span></div>
-  `);
-  const target = root.querySelector<HTMLButtonElement>('button')!;
-  const first = root.querySelector<HTMLElement>('#copy-first')!;
-  const second = root.querySelector<HTMLElement>('#copy-second')!;
-  const firstLease = firstCopy.acquireAriaDescription(target, [first]);
-  const secondLease = secondCopy.acquireAriaDescription(target, [second]);
-
-  expect(target.getAttribute('aria-describedby')?.split(' ')).to.have.members(['copy-first', 'copy-second']);
-  firstLease.release();
-  expect(target.getAttribute('aria-describedby')).to.equal('copy-second');
-  secondLease.release();
-  expect(target.hasAttribute('aria-describedby')).to.equal(false);
-});
-
-it('treats a late same-value aria-describedby mutation as an authored baseline', async () => {
-  const root = await fixture<HTMLElement>(html`
-    <div><button></button><span id="same-description">Description</span></div>
-  `);
-  const target = root.querySelector<HTMLButtonElement>('button')!;
-  const description = root.querySelector<HTMLElement>('#same-description')!;
-  const lease = acquireAriaDescription(target, [description]);
-
-  target.setAttribute('aria-describedby', 'same-description');
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  lease.release();
-
-  expect(target.getAttribute('aria-describedby')).to.equal('same-description');
-});
-
-it('recreates description observation in the target realm after adoption', async () => {
-  const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
-  const wrapper = iframe.contentDocument!.createElement('div');
-  wrapper.innerHTML = '<button></button><span id="adopted-owned-description">Owned</span>';
-  iframe.contentDocument!.body.append(wrapper);
-  const target = wrapper.querySelector<HTMLButtonElement>('button')!;
-  const owned = wrapper.querySelector<HTMLElement>('span')!;
-  const lease = acquireAriaDescription(target, [owned]);
-
-  document.body.append(wrapper);
-  lease.update([owned]);
-  iframe.remove();
-  const author = document.createElement('span');
-  author.id = 'adopted-author-description';
-  document.body.append(author);
-  target.setAttribute('aria-describedby', author.id);
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
-
-  expect(target.getAttribute('aria-describedby')?.split(' ')).to.have.members([
-    'adopted-author-description',
-    'adopted-owned-description',
-  ]);
-  lease.release();
-  expect(target.getAttribute('aria-describedby')).to.equal('adopted-author-description');
-  wrapper.remove();
-  author.remove();
-});
-
-it('falls back to serialized ownership when reflected description reads throw', async () => {
-  const root = document.createElement('div');
+it('uses and exactly restores an explicit element-reference baseline', () => {
   const target = document.createElement('button');
-  const description = document.createElement('span');
-  description.id = 'throwing-reflection-description';
-  root.append(target, description);
-  document.body.append(root);
-  Object.defineProperty(target, 'ariaDescribedByElements', {
-    configurable: true,
-    get() {
-      throw new Error('reflection read failed');
-    },
-    set() {},
-  });
+  const baseline = document.createElement('span');
+  const external = document.createElement('span');
+  baseline.id = 'baseline';
+  external.id = 'external';
+  document.body.append(target, baseline, external);
+  const cleanup = installElementReferenceReflection(target, 'aria-describedby', [baseline]);
+  target.setAttribute('aria-describedby', '');
+  const lease = acquireAriaDescription(target, [external]);
+
   try {
-    const lease = describeElement(target, description);
-    expect(target.getAttribute('aria-describedby')).to.equal(description.id);
-    expect(lease.assigned).to.equal(false);
-    undescribeElement(lease);
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id, external.id]);
+    lease.release();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id]);
+  } finally {
+    lease.release();
+    cleanup();
+    target.remove();
+    baseline.remove();
+    external.remove();
+  }
+});
+
+it('adopts a reflected author baseline during an explicit update when observation is unavailable', () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const foreignWindow = iframe.contentWindow!;
+  const foreignDocument = iframe.contentDocument!;
+  const descriptor = Object.getOwnPropertyDescriptor(foreignWindow, 'MutationObserver');
+  class ThrowingMutationObserver {
+    constructor(_callback: MutationCallback) {
+      throw new Error('observer unavailable');
+    }
+  }
+  Object.defineProperty(foreignWindow, 'MutationObserver', {
+    configurable: true,
+    value: ThrowingMutationObserver,
+  });
+  const target = foreignDocument.createElement('button');
+  const owned = foreignDocument.createElement('span');
+  const nextOwned = foreignDocument.createElement('span');
+  const author = foreignDocument.createElement('span');
+  owned.id = 'static-owned';
+  nextOwned.id = 'static-owned-next';
+  author.id = 'static-author';
+  foreignDocument.body.append(target, owned, nextOwned, author);
+  const cleanup = installElementReferenceReflection(target, 'aria-describedby');
+  const lease = acquireAriaDescription(target, [owned]);
+
+  try {
+    Reflect.set(target, 'ariaDescribedByElements', [author]);
+    lease.update([nextOwned]);
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([author.id, nextOwned.id]);
+    lease.release();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([author.id]);
+  } finally {
+    lease.release();
+    cleanup();
+    if (descriptor) Object.defineProperty(foreignWindow, 'MutationObserver', descriptor);
+    else Reflect.deleteProperty(foreignWindow, 'MutationObserver');
+    iframe.remove();
+  }
+});
+
+it('composes descriptions across query-imported current source copies', async () => {
+  const copyUrl = new URL('./aria-controls.ts?current-description-copy=one', import.meta.url).href;
+  const copy = await import(copyUrl) as typeof import('./aria-controls.js');
+  const root = await fixture<HTMLElement>(html`
+    <div><button></button><span id="first"></span><span id="second"></span></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const firstSource = root.querySelector<HTMLElement>('#first')!;
+  const secondSource = root.querySelector<HTMLElement>('#second')!;
+  const first = acquireAriaDescription(target, [firstSource]);
+  const second = copy.acquireAriaDescription(target, [secondSource]);
+
+  try {
+    expect(target.getAttribute('aria-describedby')).to.equal('first second');
+    first.release();
+    expect(target.getAttribute('aria-describedby')).to.equal('second');
+    second.release();
     expect(target.hasAttribute('aria-describedby')).to.equal(false);
   } finally {
-    root.remove();
+    first.release();
+    second.release();
   }
 });
 
-it('preserves empty serialized baselines on platforms without reflected element references', async function () {
-  const findOwner = (key: PropertyKey): object | null => {
-    let current: object | null = HTMLElement.prototype;
-    while (current) {
-      if (Object.prototype.hasOwnProperty.call(current, key)) return current;
-      current = Object.getPrototypeOf(current) as object | null;
-    }
-    return null;
-  };
-  const controlsOwner = findOwner('ariaControlsElements');
-  const describedByOwner = findOwner('ariaDescribedByElements');
-  const controlsDescriptor = controlsOwner
-    ? Object.getOwnPropertyDescriptor(controlsOwner, 'ariaControlsElements')
-    : undefined;
-  const describedByDescriptor = describedByOwner
-    ? Object.getOwnPropertyDescriptor(describedByOwner, 'ariaDescribedByElements')
-    : undefined;
-  if (
-    (controlsDescriptor && !controlsDescriptor.configurable) ||
-    (describedByDescriptor && !describedByDescriptor.configurable)
-  ) this.skip();
+it('projects authored described-by references before target baseline and generated descriptions', () => {
+  const host = document.createElement('div');
+  const first = document.createElement('span');
+  const second = document.createElement('span');
+  const baseline = document.createElement('span');
+  const generated = document.createElement('span');
+  const target = document.createElement('button');
+  first.id = 'author-first';
+  second.id = 'author-second';
+  baseline.id = 'target-baseline';
+  generated.id = 'generated';
+  host.setAttribute('aria-describedby', `${first.id} missing ${second.id} ${first.id}`);
+  host.append(first, second);
+  document.body.append(host, target, baseline, generated);
+  const cleanup = installElementReferenceReflection(target, 'aria-describedby', [baseline]);
+  target.setAttribute('aria-describedby', '');
+  const generatedLease = acquireAriaDescription(target, [generated, first]);
+  const resolved = acquireResolvedAriaRelationship(host, target, 'aria-describedby');
 
-  if (controlsOwner) Reflect.deleteProperty(controlsOwner, 'ariaControlsElements');
-  if (describedByOwner) Reflect.deleteProperty(describedByOwner, 'ariaDescribedByElements');
   try {
-    const modulePath = '../../dist/internal/aria-controls.js?description-owner-copy=without-reflection';
-    const moduleCopy = await import(modulePath);
-    const root = document.createElement('div');
-    const withBaseline = document.createElement('button');
-    const withoutBaseline = document.createElement('button');
-    const description = document.createElement('span');
-    withBaseline.setAttribute('aria-describedby', '');
-    root.append(withBaseline, withoutBaseline, description);
-    document.body.append(root);
-    try {
-      expect(moduleCopy.syncAriaDescribedByElements(root, withBaseline, 'missing')).to.equal(false);
-      expect(() => moduleCopy.syncAriaControlsElements(root, withBaseline, 'missing')).to.not.throw();
-
-      expect(syncAriaDescribedByElements(root, withBaseline, 'missing')).to.equal(false);
-      expect(() => syncAriaControlsElements(root, withBaseline, 'missing')).to.not.throw();
-
-      const baselineLease = moduleCopy.acquireAriaDescription(withBaseline, [description]);
-      expect(withBaseline.getAttribute('aria-describedby')).to.equal('');
-      baselineLease.release();
-      expect(withBaseline.getAttribute('aria-describedby')).to.equal('');
-
-      const emptyLease = moduleCopy.acquireAriaDescription(withoutBaseline, [description]);
-      expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
-      emptyLease.release();
-      expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
-
-      const sourceBaselineLease = acquireAriaDescription(withBaseline, [description]);
-      expect(withBaseline.getAttribute('aria-describedby')).to.equal('');
-      sourceBaselineLease.release();
-      expect(withBaseline.getAttribute('aria-describedby')).to.equal('');
-
-      const sourceEmptyLease = acquireAriaDescription(withoutBaseline, [description]);
-      expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
-      sourceEmptyLease.release();
-      expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
-    } finally {
-      root.remove();
-    }
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([
+      first.id,
+      second.id,
+      baseline.id,
+      generated.id,
+    ]);
+    resolved.release();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id, generated.id, first.id]);
+    generatedLease.release();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id]);
   } finally {
-    if (controlsOwner && controlsDescriptor) {
-      Object.defineProperty(controlsOwner, 'ariaControlsElements', controlsDescriptor);
+    resolved.release();
+    generatedLease.release();
+    cleanup();
+    host.remove();
+    target.remove();
+    baseline.remove();
+    generated.remove();
+  }
+});
+
+it('keeps labelled-by ownership independent and author-first', () => {
+  const host = document.createElement('div');
+  const author = document.createElement('span');
+  const baseline = document.createElement('span');
+  const target = document.createElement('button');
+  author.id = 'label-author';
+  baseline.id = 'label-baseline';
+  host.setAttribute('aria-labelledby', author.id);
+  host.append(author);
+  document.body.append(host, target, baseline);
+  const cleanup = installElementReferenceReflection(target, 'aria-labelledby', [baseline]);
+  target.setAttribute('aria-labelledby', '');
+  const resolved = acquireResolvedAriaRelationship(host, target, 'aria-labelledby');
+
+  try {
+    expect(reflectedIds(target, 'aria-labelledby')).to.deep.equal([author.id, baseline.id]);
+    resolved.release();
+    expect(reflectedIds(target, 'aria-labelledby')).to.deep.equal([baseline.id]);
+  } finally {
+    resolved.release();
+    cleanup();
+    host.remove();
+    target.remove();
+    baseline.remove();
+  }
+});
+
+it('does not serialize cross-root resolved IDs when element-reference reflection is unavailable', async function () {
+  const owner = propertyOwner(HTMLElement.prototype, 'ariaDescribedByElements');
+  const descriptor = owner
+    ? Object.getOwnPropertyDescriptor(owner, 'ariaDescribedByElements')
+    : undefined;
+  if (!owner || !descriptor?.configurable) this.skip();
+  Reflect.deleteProperty(owner, 'ariaDescribedByElements');
+  const host = document.createElement('div');
+  const external = document.createElement('span');
+  const shell = document.createElement('div');
+  external.id = 'cross-root-external';
+  host.setAttribute('aria-describedby', external.id);
+  host.append(external);
+  const shadow = shell.attachShadow({ mode: 'open' });
+  const target = document.createElement('button');
+  const internal = document.createElement('span');
+  internal.id = 'cross-root-internal';
+  target.setAttribute('aria-describedby', internal.id);
+  shadow.append(target, internal);
+  document.body.append(host, shell);
+  let lease: ReturnType<typeof acquireResolvedAriaRelationship> | undefined;
+
+  try {
+    lease = acquireResolvedAriaRelationship(host, target, 'aria-describedby');
+    expect(target.getAttribute('aria-describedby')).to.equal(internal.id);
+    lease.release();
+    lease = undefined;
+    expect(target.getAttribute('aria-describedby')).to.equal(internal.id);
+  } finally {
+    lease?.release();
+    Object.defineProperty(owner, 'ariaDescribedByElements', descriptor);
+    host.remove();
+    shell.remove();
+  }
+});
+
+it('refreshes resolved elements for host changes, IDs, replacement, removal, and reinsertion', async () => {
+  const host = document.createElement('div');
+  const first = document.createElement('span');
+  const second = document.createElement('span');
+  const target = document.createElement('button');
+  const baseline = document.createElement('span');
+  first.id = 'first-source';
+  second.id = 'second-source';
+  baseline.id = 'dynamic-baseline';
+  host.setAttribute('aria-describedby', `${first.id} missing ${first.id}`);
+  host.append(first, second);
+  document.body.append(host, target, baseline);
+  const cleanup = installElementReferenceReflection(target, 'aria-describedby', [baseline]);
+  target.setAttribute('aria-describedby', '');
+  const lease = acquireResolvedAriaRelationship(host, target, 'aria-describedby');
+
+  try {
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([first.id, baseline.id]);
+    first.textContent = 'Changed text';
+    await mutationComplete();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([first.id, baseline.id]);
+
+    first.id = 'first-source-renamed';
+    await mutationComplete();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id]);
+    first.id = 'first-source';
+    await mutationComplete();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([first.id, baseline.id]);
+
+    host.setAttribute('aria-describedby', second.id);
+    await mutationComplete();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([second.id, baseline.id]);
+
+    const replacement = document.createElement('span');
+    replacement.id = second.id;
+    second.replaceWith(replacement);
+    await mutationComplete();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([replacement.id, baseline.id]);
+
+    replacement.remove();
+    await mutationComplete();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id]);
+
+    host.append(replacement);
+    await mutationComplete();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([replacement.id, baseline.id]);
+  } finally {
+    lease.release();
+    cleanup();
+    host.remove();
+    target.remove();
+    baseline.remove();
+  }
+});
+
+it('retargets a resolved relationship and restores both exact target baselines', () => {
+  const host = document.createElement('div');
+  const source = document.createElement('span');
+  const firstTarget = document.createElement('button');
+  const secondTarget = document.createElement('button');
+  const firstBaseline = document.createElement('span');
+  const secondBaseline = document.createElement('span');
+  source.id = 'retarget-source';
+  firstBaseline.id = 'first-baseline';
+  secondBaseline.id = 'second-baseline';
+  host.setAttribute('aria-labelledby', source.id);
+  host.append(source);
+  document.body.append(host, firstTarget, secondTarget, firstBaseline, secondBaseline);
+  const cleanupFirst = installElementReferenceReflection(
+    firstTarget,
+    'aria-labelledby',
+    [firstBaseline],
+  );
+  const cleanupSecond = installElementReferenceReflection(
+    secondTarget,
+    'aria-labelledby',
+    [secondBaseline],
+  );
+  firstTarget.setAttribute('aria-labelledby', '');
+  secondTarget.setAttribute('aria-labelledby', '');
+  const lease = acquireResolvedAriaRelationship(host, firstTarget, 'aria-labelledby');
+
+  try {
+    expect(reflectedIds(firstTarget, 'aria-labelledby')).to.deep.equal([source.id, firstBaseline.id]);
+    lease.update(secondTarget);
+    expect(reflectedIds(firstTarget, 'aria-labelledby')).to.deep.equal([firstBaseline.id]);
+    expect(reflectedIds(secondTarget, 'aria-labelledby')).to.deep.equal([source.id, secondBaseline.id]);
+    lease.release();
+    expect(reflectedIds(secondTarget, 'aria-labelledby')).to.deep.equal([secondBaseline.id]);
+  } finally {
+    lease.release();
+    cleanupFirst();
+    cleanupSecond();
+    host.remove();
+    firstTarget.remove();
+    secondTarget.remove();
+    firstBaseline.remove();
+    secondBaseline.remove();
+  }
+});
+
+it('rebinds a resolved host observer after adoption when update is called on reconnect', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const foreignDocument = iframe.contentDocument!;
+  const host = foreignDocument.createElement('div');
+  const source = foreignDocument.createElement('span');
+  const replacement = foreignDocument.createElement('span');
+  const target = document.createElement('button');
+  const baseline = document.createElement('span');
+  source.id = 'adopt-source';
+  replacement.id = 'adopt-replacement';
+  baseline.id = 'adopt-baseline';
+  host.setAttribute('aria-describedby', source.id);
+  host.append(source, replacement);
+  foreignDocument.body.append(host);
+  document.body.append(target, baseline);
+  const cleanup = installElementReferenceReflection(target, 'aria-describedby', [baseline]);
+  target.setAttribute('aria-describedby', '');
+  const lease = acquireResolvedAriaRelationship(host, target, 'aria-describedby');
+
+  try {
+    document.adoptNode(host);
+    document.body.append(host);
+    lease.update(target);
+    host.setAttribute('aria-describedby', replacement.id);
+    await mutationComplete();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([replacement.id, baseline.id]);
+    lease.release();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id]);
+  } finally {
+    lease.release();
+    cleanup();
+    host.remove();
+    target.remove();
+    baseline.remove();
+    iframe.remove();
+  }
+});
+
+it('observes only the host until a late described-by write needs source-root tracking', async () => {
+  const OriginalMutationObserver = window.MutationObserver;
+  let host: HTMLElement;
+  let hostObserverDisconnects = 0;
+  let rootObservations = 0;
+  let rootObserverDisconnects = 0;
+  class RecordingMutationObserver extends OriginalMutationObserver {
+    private observesHostRelationship = false;
+    private observesRoot = false;
+
+    override observe(target: Node, options: MutationObserverInit): void {
+      if (target === host && options.attributeFilter?.includes('aria-describedby')) {
+        this.observesHostRelationship = true;
+      }
+      if (target === document && options.childList && options.subtree &&
+        options.attributeFilter?.includes('id')) {
+        this.observesRoot = true;
+        rootObservations += 1;
+      }
+      super.observe(target, options);
     }
-    if (describedByOwner && describedByDescriptor) {
-      Object.defineProperty(describedByOwner, 'ariaDescribedByElements', describedByDescriptor);
+
+    override disconnect(): void {
+      if (this.observesHostRelationship) hostObserverDisconnects += 1;
+      if (this.observesRoot) rootObserverDisconnects += 1;
+      super.disconnect();
     }
+  }
+  window.MutationObserver = RecordingMutationObserver;
+  host = document.createElement('div');
+  const target = document.createElement('button');
+  const baseline = document.createElement('span');
+  baseline.id = 'lazy-observer-baseline';
+  document.body.append(host, target, baseline);
+  const cleanup = installElementReferenceReflection(target, 'aria-describedby', [baseline]);
+  target.setAttribute('aria-describedby', '');
+  let lease: ReturnType<typeof acquireResolvedAriaRelationship> | undefined;
+
+  try {
+    lease = acquireResolvedAriaRelationship(host, target, 'aria-describedby');
+    expect(rootObservations).to.equal(0);
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id]);
+    lease.update(target);
+    expect(hostObserverDisconnects).to.equal(0);
+
+    host.setAttribute('aria-describedby', 'late-description');
+    await mutationComplete();
+    const source = document.createElement('span');
+    source.id = 'late-description';
+    host.append(source);
+    await mutationComplete();
+
+    expect(rootObservations).to.be.greaterThan(0);
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([source.id, baseline.id]);
+
+    host.removeAttribute('aria-describedby');
+    await mutationComplete();
+    expect(rootObserverDisconnects).to.equal(1);
+  } finally {
+    lease?.release();
+    cleanup();
+    host.remove();
+    target.remove();
+    baseline.remove();
+    window.MutationObserver = OriginalMutationObserver;
   }
 });

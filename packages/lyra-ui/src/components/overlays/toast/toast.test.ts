@@ -16,7 +16,6 @@ import {
   TOAST_REGION_REJECT,
   TOAST_REGION_SET_ACTIVE,
 } from './toast-region-protocol.js';
-import { styles } from './toast.styles.js';
 
 afterEach(() => {
   for (const region of document.querySelectorAll('body > lr-toast')) region.remove();
@@ -1020,15 +1019,16 @@ it('is accessible once a toast item is showing inside it', async () => {
   await expect(region).to.be.accessible();
 });
 
-it('does not contain the dead `[part="stack"]::slotted(*)` selector', () => {
-  // `::slotted()` must be attached directly to a compound selector matching the
-  // <slot> element itself; `[part='stack']` matches the wrapping <div>, not the
-  // nested <slot>, so this compound selector can never match anything and is inert.
-  const cssText = Array.isArray(styles)
-    ? styles.map((s) => s.cssText).join('\n')
-    : (styles as { cssText: string }).cssText;
-  expect(cssText).to.not.match(/\[part=['"]?stack['"]?\]\s*::slotted/);
-  expect(cssText).to.match(/(^|\n)\s*::slotted\(\*\)\s*{/);
+it('keeps actual slotted toast items pointer-interactive over the noninteractive region', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const item = await region.create('Pointer target', { duration: 0 });
+  try {
+    await waitUntil(() => item.hasAttribute('data-visible'), 'toast item never became visible');
+    expect(getComputedStyle(region).pointerEvents).to.equal('none');
+    expect(getComputedStyle(item).pointerEvents).to.equal('auto');
+  } finally {
+    await item.hide();
+  }
 });
 
 it('keeps an actionable toast persistent when duration is omitted', async () => {

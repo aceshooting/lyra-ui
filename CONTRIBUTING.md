@@ -10,8 +10,10 @@ touching component internals.
 pnpm install
 ```
 
-Node ≥ 20, `pnpm@11.24.0` (pinned via `packageManager` in `package.json` — check that file if this
-drifts again).
+The published package supports Node ≥ 20. Contributor, generation, and release commands use the
+exact Node `22.23.2` in [`.nvmrc`](.nvmrc): run `nvm use` before installing dependencies. For
+package-manager installs, Node ≥ 20, `pnpm@11.25.0` (pinned via `packageManager` in `package.json` —
+check that file if this drifts again).
 
 ## Running things locally
 
@@ -30,8 +32,9 @@ pnpm build        # -r: per package -> dist/. For @aceshooting/lyra-ui this is
 pnpm docs         # Storybook docs site at localhost:6006, demos every component live
 ```
 
-Under Node 22 with the repository-pinned pnpm, run `./scripts/ci.sh` to reproduce the six primary
-CI jobs as one local aggregate. Use `./scripts/ci.sh --platform-matrix` to add all 11
+Under the exact Node `22.23.2` from `.nvmrc` with the repository-pinned pnpm, run
+`./scripts/ci.sh` to reproduce the six primary CI jobs as one local aggregate. Use
+`./scripts/ci.sh --platform-matrix` to add all 11
 platform-contract legs: Firefox and Safari under Node 20, plus Chromium, Chrome, Edge, Firefox,
 and Safari under Node 22. `.github/workflows/ci.yml` is the authoritative, up-to-date gate list;
 [`docs/agents/ci-and-gates.md`](./docs/agents/ci-and-gates.md) documents the local aggregate and

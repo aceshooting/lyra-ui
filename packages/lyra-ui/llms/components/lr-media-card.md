@@ -151,12 +151,6 @@ the video's own native controls bubble up and spuriously fire `lr-media-open`.
 
 **Known gotchas:**
 
-- Calling the real `.click()` (or dispatching a `click`/`MouseEvent`) on the file-chip's `<a href>`
-  in a test genuinely triggers real browser navigation — always `preventDefault()` on a `click`
-  listener registered before triggering it, the same precaution `lr-document-preview`'s own
-  download-link tests already take. A synthetic `dispatchEvent(new MouseEvent('click', {cancelable:
-true}))` still invokes the anchor's native activation behavior if nothing calls
-  `preventDefault()` during dispatch — it is not a safe no-op.
 - `kind` only reflects to the host attribute when explicitly set — CSS keying off the
   auto-detected resolved kind should target the rendered `[part]`/element (e.g. `video[part="media"]`),
   not `:host([kind=...])`, since the latter won't see an auto-detected kind.

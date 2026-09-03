@@ -3,7 +3,8 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { normalizeCatalog } from '../../../internal/catalog-picker.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { finiteNumber, finiteRange, decimalPlaces } from '../../../internal/numbers.js';
+import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import { clampSteppedValue } from '../../../internal/step-value.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './model-settings-panel.styles.js';
 import type { LyraCatalog, LyraModelCatalogEntry } from '../model-select/model-select.class.js';
@@ -155,35 +156,22 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   }
 
   /** Clamps `raw` into `[temperatureMin, temperatureMax]`, snapped to
-   *  `temperatureStep`'s grid anchored at the low end -- exactly mirroring
-   *  `lr-slider`'s own private `clampValue`/`domain` math -- so the
-   *  mirrored `temperature` readout can never disagree with what the nested
-   *  slider itself would clamp the same raw number to. */
+   *  `temperatureStep`'s grid anchored at the low end, matching the nested
+   *  slider's shared numeric semantics. */
   private clampTemperature(raw: number): number {
     const { lo, hi, step } = this.temperatureDomain;
-    const hasStep = step > 0;
-    let stepped = Math.min(hi, Math.max(lo, finiteNumber(raw, lo)));
-    if (hasStep) {
-      const ratio = (stepped - lo) / step;
-      if (Number.isFinite(ratio)) {
-        const candidate = lo + Math.round(ratio) * step;
-        if (Number.isFinite(candidate)) {
-          const factor = 10 ** Math.min(decimalPlaces(step), 15);
-          stepped = Math.round(candidate * factor) / factor;
-        }
-      }
-    }
-    return Math.min(hi, Math.max(lo, stepped));
+    const temperature = finiteNumber(raw, lo);
+    return clampSteppedValue(temperature, lo, hi, step);
   }
 
-  private formatTemperature(value: number): string {
+  private readonly formatTemperature = (value: number): string => {
     const expanded = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 }).format(value);
     if (expanded.length <= 24) return expanded;
     return getNumberFormat(this.effectiveLocale, {
       notation: 'scientific',
       maximumSignificantDigits: 6,
     }).format(value);
-  }
+  };
 
   private emitChange(): void {
     this.emit('lr-change', {
@@ -265,6 +253,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             .max=${domain.max}
             .step=${domain.step}
             .valueAsNumber=${this.temperature}
+            .valueFormatter=${this.formatTemperature}
             .showValue=${false}
             .disabled=${this.disabled}
             @focus=${this.containNativeEvent}

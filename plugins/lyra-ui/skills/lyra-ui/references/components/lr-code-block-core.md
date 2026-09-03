@@ -56,7 +56,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   numbers for highlighted and plain output.
 - `highlightLines: string = ''` (attribute `highlight-lines`) — comma-separated 1-based inclusive
   line ranges (e.g. `"3-5,7"`) to visually emphasize. Declarative sugar over `highlights` — merges
-  with, and renders identically to, any `line-range` entries there.
+  with, and renders identically to, any `line-range` entries there. Malformed segments are ignored
+  while valid segments still apply.
 - `activatableLines: boolean = false` (attribute `activatable-lines`) — turns the
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-activate`.
   Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
@@ -70,8 +71,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback.
-  Replacing the map while connected starts a new loading generation; an older map that settles
-  later cannot clear the current map's loading state or replace its highlighted output. For a
+  If `languages` changes while highlighting is loading, only results for the current map can update
+  the displayed code. For a
   TypeScript annotation, use `import type { ShikiLanguageInput } from
 '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
   granular import emits no registration side effect.
@@ -79,7 +80,6 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
-`refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
 `refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
 Identical behavior to `<lr-code-block>`'s own method.
 

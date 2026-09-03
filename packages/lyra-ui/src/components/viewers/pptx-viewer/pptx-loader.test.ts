@@ -217,18 +217,47 @@ describe('pptx loader', () => {
     expect(module!.RECOMMENDED_ZIP_LIMITS).to.exist;
   });
 
-  it('returns null for an unavailable peer and caches successful loads', async () => {
-    const error = new Error('missing');
+  it('returns null with one fixed dev diagnostic that never includes importer failures', async () => {
+    const error = new Error('missing; pptx-secret');
     const originalWarn = console.warn;
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
     const warnings: unknown[][] = [];
     console.warn = (...args: unknown[]) => warnings.push(args);
+    runtime.litIssuedWarnings = new Set();
     try {
       expect(await loadPptxRenderer(() => Promise.reject(error))).to.be.null;
+      expect(await loadPptxRenderer(() => Promise.reject(new Error('second failure')))).to.be.null;
     } finally {
       console.warn = originalWarn;
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
     }
-    expect(warnings.flat()).to.contain(error);
-    expect(warnings.flat().join(' ')).to.contain('@aiden0z/pptx-renderer');
+    expect(warnings).to.have.length(1);
+    const message = warnings.flat().map(String).join(' ');
+    expect(message).to.equal('<lr-pptx-viewer> could not load its optional @aiden0z/pptx-renderer peer.');
+    expect(message).to.not.contain(error.message);
+    expect(message).to.not.contain('second failure');
+  });
+
+  it('stays silent when Lit development diagnostics are unavailable', async () => {
+    const originalWarn = console.warn;
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    delete runtime.litIssuedWarnings;
+    try {
+      expect(await loadPptxRenderer(() => Promise.reject(new Error('production secret')))).to.be.null;
+      expect(warnings).to.have.length(0);
+    } finally {
+      console.warn = originalWarn;
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+    }
+  });
+
+  it('caches successful loads', async () => {
     const fake = { PptxViewer: class {}, RECOMMENDED_ZIP_LIMITS: {} } as never;
     __setPptxRendererForTesting(fake);
     expect(await getPptxRenderer()).to.equal(fake);

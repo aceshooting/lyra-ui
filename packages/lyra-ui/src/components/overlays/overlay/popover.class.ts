@@ -31,6 +31,7 @@ import {
   type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
 import { setCustomState } from '../../../internal/custom-states.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import {
@@ -296,8 +297,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private transitionAnimation?: Animation;
   private readonly transitionGate = new OverlayTransitionGate();
   private connectionSequence = 0;
-  private readonly popoverInternals =
-    typeof this.attachInternals === 'function' ? this.attachInternals() : undefined;
+  private readonly popoverInternals = attachInternalsSafely(this);
 
   /** Subclass seam for mapped overlays whose public distance default differs from the popover. */
   protected get defaultDistance(): number {

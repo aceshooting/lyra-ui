@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './copy-button.js';
 import type { LyraCopyButton } from './copy-button.js';
+import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
@@ -540,6 +541,42 @@ describe('lr-copy-button', () => {
     expect(event.composed).to.be.true;
     expect(action!.disabled).to.be.true;
   });
+
+it('compare-restores the trigger tabindex when a parent toolbar releases its action lease', async () => {
+    const el = (await fixture(html`<lr-copy-button value="toolbar"></lr-copy-button>`)) as LyraCopyButton;
+    const button = baseButton(el);
+    const action = el.getToolbarActions()[0]! as LyraToolbarAction;
+    expect(button.hasAttribute('tabindex')).to.be.false;
+
+    action.setTabIndex(-1);
+    action.releaseTabIndex?.();
+
+  expect(button.hasAttribute('tabindex')).to.be.false;
+});
+
+it('restores each copy trigger baseline across replacement and preserves a consumer takeover', async () => {
+  const el = (await fixture(html`<lr-copy-button value="toolbar"></lr-copy-button>`)) as LyraCopyButton;
+  const action = el.getToolbarActions()[0]! as LyraToolbarAction;
+  const builtIn = baseButton(el);
+  builtIn.setAttribute('tabindex', '7');
+  action.setTabIndex(-1);
+
+  const trigger = document.createElement('button');
+  trigger.setAttribute('tabindex', '9');
+  trigger.textContent = 'Copy';
+  el.append(trigger);
+  await el.updateComplete;
+  action.setTabIndex(0);
+  expect(builtIn.getAttribute('tabindex')).to.equal('7');
+
+  trigger.setAttribute('tabindex', '5');
+  action.releaseTabIndex?.();
+  expect(trigger.getAttribute('tabindex')).to.equal('5');
+
+  action.setTabIndex(-1);
+  el.remove();
+  expect(trigger.getAttribute('tabindex')).to.equal('5');
+});
 
   it('keeps the logical copy action stable when a custom trigger replaces the built-in button', async () => {
     const el = (await fixture(html`<lr-copy-button value="toolbar"></lr-copy-button>`)) as LyraCopyButton;

@@ -70,6 +70,8 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 emitting an event), and `scrollPosition()` / `scrollPosition({top?,left?})`. The `input` getter
 returns the owned native textarea after render. `selectionStart`, `selectionEnd`, and
 `selectionDirection` use native nullable sentinels before that surface exists.
+`scrollPosition()` reads or writes `[part="editor"]`'s top/left offsets: the gutter and caret share
+that single scroll owner rather than a private textarea scroll position.
 The native textarea receives the actual `required` state. Its `aria-invalid` is true whenever
 visible property/slotted error chrome exists, or after interaction while native validity fails;
 showing error chrome alone does not mutate `ElementInternals` validity.

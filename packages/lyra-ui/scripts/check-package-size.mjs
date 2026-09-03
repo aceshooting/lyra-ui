@@ -8,6 +8,9 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const budgetsPath = join(packageDir, 'scripts', 'package-budgets.json');
+const FIXTURE_PATH = /(?:^|\/)fixtures(?:\/|$)/u;
+const TEST_PATH = /(?:^|\/)(?:tests?(?:\/|$)|[^/]+\.test(?:\.[^/]+)+$)/u;
+const STORY_PATH = /(?:^|\/)(?:stories(?:\/|$)|[^/]+\.stories(?:\.[^/]+)+$)/u;
 
 function percentReduction(baseline, current) {
   return ((baseline - current) / baseline) * 100;
@@ -15,6 +18,10 @@ function percentReduction(baseline, current) {
 
 function formatBytes(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(2)} MiB`;
+}
+
+function normalizedPackagePath(file) {
+  return typeof file?.path === 'string' ? file.path.replaceAll('\\', '/') : '';
 }
 
 export function validatePackageBudgets(budgets) {
@@ -129,6 +136,7 @@ export function validatePackageBudgets(budgets) {
 export function packageBudgetFindings(metrics, budgets) {
   validatePackageBudgets(budgets);
   const findings = [];
+  const packagePaths = metrics.files.map(normalizedPackagePath);
   for (const metric of ['packedBytes', 'unpackedBytes', 'fileCount']) {
     if (metrics[metric] > budgets.maximum[metric]) {
       findings.push(
@@ -137,13 +145,25 @@ export function packageBudgetFindings(metrics, budgets) {
       );
     }
   }
-  const maps = metrics.files.filter((file) => /(?:\.js|\.d\.ts)\.map$/.test(file.path));
+  const maps = packagePaths.filter((file) => /(?:\.js|\.d\.ts)\.map$/.test(file));
   if (maps.length > 0) {
     findings.push(`published tarball contains ${maps.length} dangling JavaScript/declaration map(s)`);
   }
-  const sources = metrics.files.filter((file) => /^src\/.*\.(?:[cm]?ts|tsx)$/.test(file.path));
+  const sources = packagePaths.filter((file) => /^src\/.*\.(?:[cm]?ts|tsx)$/.test(file));
   if (sources.length > 0) {
     findings.push(`published tarball contains ${sources.length} unnecessary TypeScript source file(s)`);
+  }
+  const fixtures = packagePaths.filter((file) => FIXTURE_PATH.test(file));
+  if (fixtures.length > 0) {
+    findings.push(`published tarball contains ${fixtures.length} build-only fixture path(s)`);
+  }
+  const tests = packagePaths.filter((file) => TEST_PATH.test(file));
+  if (tests.length > 0) {
+    findings.push(`published tarball contains ${tests.length} test path(s)`);
+  }
+  const stories = packagePaths.filter((file) => STORY_PATH.test(file));
+  if (stories.length > 0) {
+    findings.push(`published tarball contains ${stories.length} story path(s)`);
   }
   return findings;
 }

@@ -33,17 +33,43 @@ it('rejects a module that cannot sanitize rather than returning it', async () =>
   expect(await loadIconSanitizerDeps(() => Promise.resolve({}))).to.equal(null);
 });
 
-it('returns null and logs the import error when dompurify is unavailable', async () => {
-  const importError = new Error('dompurify boom');
+it('returns null with one fixed dev diagnostic that never includes importer failures', async () => {
+  const importError = new Error('dompurify boom; account-99');
   const originalWarn = console.warn;
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
   const calls: unknown[][] = [];
   console.warn = (...args: unknown[]) => calls.push(args);
+  runtime.litIssuedWarnings = new Set();
   try {
     expect(await loadIconSanitizerDeps(() => Promise.reject(importError))).to.equal(null);
-    expect(calls.flat()).to.contain(importError);
-    expect(calls.flat().join(' ')).to.contain('pnpm add dompurify');
+    expect(await loadIconSanitizerDeps(() => Promise.reject(new Error('second failure')))).to.equal(null);
+    expect(calls).to.have.length(1);
+    const message = calls.flat().map(String).join(' ');
+    expect(message).to.equal('<lr-icon> could not load its optional dompurify peer.');
+    expect(message).to.not.contain(importError.message);
+    expect(message).to.not.contain('second failure');
   } finally {
     console.warn = originalWarn;
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
+  }
+});
+
+it('stays silent when Lit development diagnostics are unavailable', async () => {
+  const originalWarn = console.warn;
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  delete runtime.litIssuedWarnings;
+  try {
+    expect(await loadIconSanitizerDeps(() => Promise.reject(new Error('production secret')))).to.equal(null);
+    expect(calls).to.have.length(0);
+  } finally {
+    console.warn = originalWarn;
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
   }
 });
 

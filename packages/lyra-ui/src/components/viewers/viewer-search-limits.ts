@@ -52,6 +52,11 @@ export class ViewerSearchWorkBudget {
     return true;
   }
 
+  /** Reports whether a complete field can be admitted without mutating the remaining budget. */
+  canConsume(value: string): boolean {
+    return this.remaining > 0 && Math.max(1, value.length) <= this.remaining;
+  }
+
   /** Searches logical concatenation without first joining an attacker-sized string collection. */
   includesJoined(values: Iterable<string>, needle: string, locale: string): boolean {
     const chunks: string[] = [];

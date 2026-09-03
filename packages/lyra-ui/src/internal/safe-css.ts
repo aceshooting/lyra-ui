@@ -1,3 +1,9 @@
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from './data-descriptors.js';
+
 const UNSAFE_CSS_STRUCTURE = /[;{}]/;
 const URL_FUNCTION = /url\s*\(/i;
 const SAFE_SWATCH_COLOR_FALLBACK =
@@ -80,22 +86,36 @@ export interface SafePercentRect {
 
 /** Validates public percentage geometry before it reaches an inline style. */
 export function sanitizePercentRect(value: unknown): SafePercentRect | undefined {
-  if (typeof value !== 'object' || value === null) return undefined;
-  const rect = value as Partial<Record<keyof SafePercentRect, unknown>>;
-  if (
-    typeof rect.x !== 'number' ||
-    typeof rect.y !== 'number' ||
-    typeof rect.width !== 'number' ||
-    typeof rect.height !== 'number' ||
-    !Number.isFinite(rect.x) ||
-    !Number.isFinite(rect.y) ||
-    !Number.isFinite(rect.width) ||
-    !Number.isFinite(rect.height) ||
-    rect.width < 0 ||
-    rect.height < 0
-  ) {
+  try {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+    const read = (key: keyof SafePercentRect): unknown | undefined => {
+      const descriptor = getOwnDataDescriptor(value, key);
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
+        return undefined;
+      return descriptor.value;
+    };
+    const x = read('x');
+    const y = read('y');
+    const width = read('width');
+    const height = read('height');
+    if (
+      typeof x !== 'number' ||
+      typeof y !== 'number' ||
+      typeof width !== 'number' ||
+      typeof height !== 'number' ||
+      !Number.isFinite(x) ||
+      !Number.isFinite(y) ||
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width < 0 ||
+      height < 0
+    )
+      return undefined;
+    return { x, y, width, height };
+  } catch {
     return undefined;
   }
-  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 }
-

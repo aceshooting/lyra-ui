@@ -80,7 +80,9 @@ export const styles = css`
   }
   [part="input"]::-webkit-search-cancel-button,
   [part="input"]::-webkit-search-decoration {
+    -webkit-appearance: none;
     appearance: none;
+    display: none;
   }
   [part="list"] {
     position: relative;
@@ -134,6 +136,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: transparent;
     color: inherit;
+    font: inherit;
     text-align: start;
     cursor: pointer;
   }

@@ -72,7 +72,9 @@ uses for its own `[part="body"]`.
   to plain text if the peer is unavailable; `escape` displays raw HTML source as text while ordinary
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
   content.
-- `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists)
+- `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
+  GFM task-list checkboxes stay disabled. A task's primary inline text supplies its accessible name;
+  nested task text is excluded, and a blank task receives no generated name.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — `target` applied to every
   rendered `<a>`, with `rel="noopener noreferrer"` always added alongside it whenever a `target` is
   emitted. `'_blank'` (the default) preserves the original output; a falsy value (`null`, or the
@@ -138,9 +140,10 @@ placed first and preserved inside both ceilings.
 
 **Events:**
 
-- `lr-link-click` (`detail: { href: string }`) — fired, with the click prevented,
-  when a rendered link's `href` starts with `internal-link-prefix`; ordinary external links navigate
-  normally and never fire this
+- `lr-link-click` (`detail: { href: string }`) — fired, with navigation prevented, when a rendered
+  link's `href` starts with `internal-link-prefix`; ordinary external links navigate normally and
+  never fire this. If an intercepted link overlaps a painted highlight,
+  `lr-highlight-activate` fires first for pointer and Enter activation.
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
   fallback matrix below), or `math` is set but the `katex` peer isn't installed
 - `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked
@@ -642,7 +645,8 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
 - `minRows: number = 1` (attribute `min-rows`) — floored to `1` at render time
 - `maxRows: number = 8` (attribute `max-rows`) — floored to at least `minRows`
 - `status: ChatComposerStatus = 'idle'` (reflected) — `'idle' | 'sending' | 'streaming'`; drives the
-  built-in button's icon/label (send vs. stop) and whether Enter still submits
+  built-in button's icon/label (send vs. stop) and whether Enter still submits. Invalid direct or
+  attribute values normalize and reflect as `idle`.
 - `frame: ChatComposerFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`; `ChatComposerFrame` is an alias of the shared `LyraFrame`).
   `'plain'` drops `[part="base"]`'s border, background, padding and corner radius so a composer
@@ -1130,6 +1134,9 @@ focus move.
   they have no effect in closed-dropdown mode
 - `name: string = ''` (reflected)
 - `disabled: boolean = false` (reflected)
+- `readonly: boolean = false` (reflected) — prevents user typing and catalog
+  commits while retaining focus, popup navigation, selection/copy, submission/reset, and programmatic
+  writes.
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `open: boolean = false` (reflected)
 - `size: LyraSize = 'm'` (reflected) — visual size on the library-wide ladder: `2xs`/`xs`/`s`/`m`/
@@ -1229,8 +1236,8 @@ every labelled control in the library uses, so `--lr-form-control-required-conte
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it here
 exactly as they do on `lr-input` (see `llms/shared.md` → "The required-field marker"). With no visible label there
 is nothing to mark and no stray glyph is rendered. Correspondingly, while the picker is barred from
-constraint validation — its own `disabled`, or an ancestor `<fieldset disabled>`; this control has no
-`readonly` — it reports no violation and publishes neither `:state(invalid)` nor
+constraint validation — its own `disabled` or `readonly`, or an ancestor `<fieldset disabled>` — it
+reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`, matching native `:invalid`. `required`/`optional` keep publishing.
 
 **CSS parts:** `form-control` (the complete label, control, hint, error, and listbox frame),
@@ -1376,9 +1383,8 @@ property and therefore never requests `katex` itself.
 ```
 
 Token-by-token streaming can update `content` far faster than a human can usefully perceive a
-re-render, so updates funnel through `Announcer` (`../../internal/announcer.js`), reused here
-purely as a generic "coalesce rapid calls, flush the latest" timing primitive — with none of that
-class's usual DOM/ARIA plumbing. Within any `coalesce-ms` window, only the _last_ `content` value
+re-render, so updates use a shared coalescing timer. Within any `coalesce-ms` window, only the
+_last_ `content` value
 assigned actually reaches the rendered DOM. Two cases always bypass the throttle and flush
 immediately: the very first `content` assignment after mount, and any transition of `streaming`
 between `true` and `false` in _either_ direction — so the final chunk of a finished stream can
@@ -1521,8 +1527,8 @@ something that announces state _transitions_ instead. The Stop button gets a nor
 ## `lr-code-block`
 
 Fenced code display with optional lazy syntax highlighting and a copy button. First-party invention
-(no Web Awesome equivalent). It lazy-loads the optional peer dependency `shiki` (see
-`code-loader.ts`) for the actual tokenizing, and includes a compact GreyCat/GCL grammar because
+(no Web Awesome equivalent). It lazily loads the optional `shiki` peer for syntax highlighting and
+includes a compact GreyCat/GCL grammar because
 Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer isn't installed or
 `language` is unset/unrecognized. That
 fallback is the _default_ rendering path, not a degraded one: unhighlighted code is perfectly usable,
@@ -1553,7 +1559,8 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   numbers for both highlighted output and the plain-text fallback
 - `highlightLines: string = ''` (attribute `highlight-lines`) — comma-separated 1-based inclusive
   line ranges (e.g. `"3-5,7"`) to visually emphasize. Declarative sugar over `highlights` — merges
-  with, and renders identically to, any `line-range` entries there.
+  with, and renders identically to, any `line-range` entries there. Malformed segments are ignored
+  while valid segments still apply.
 - `activatableLines: boolean = false` (attribute `activatable-lines`) — turns the
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-activate`.
   Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
@@ -1632,14 +1639,10 @@ so it inherits: set it on the element, on an ancestor, or at the theme level.
 `:host` declaration) so it inherits, retinting just the highlighted-line background and leaving every
 other `--lr-color-warning-quiet` surface alone.
 
-**Optional peer deps:** `shiki` (lazy-loaded and cached once per page by `code-loader.ts`'s
-`loadShikiHighlighter()`, which builds a single `Highlighter` seeded with the bundled `github-light`/
-`github-dark` "dual themes" and _zero_ language grammars up front; each `language` a
-`<lr-code-block>` actually requests is loaded incrementally on first use via
-`loadShikiLanguage()`, and a language id that fails to load once is remembered and never retried. If
-`shiki` isn't installed, `loadShikiHighlighter()` resolves to `null` with a one-time `console.warn`
-and every instance falls back to plain text — install it with `pnpm add shiki` to enable
-highlighting).
+**Optional peer deps:** `shiki` — requested only when syntax highlighting is used and shared by
+code blocks on a page. Languages load on demand. If the peer or requested language is unavailable,
+every instance retains a readable plain-text fallback; install it with `pnpm add shiki` to enable
+highlighting.
 
 ```ts
 import { html } from "lit";
@@ -1678,9 +1681,8 @@ one deliberate exception to every other color being a `--lr-*` token.
 
 - `copyable` defaults to `true` and reflects — literal `copyable="false"` and a `.copyable=${false}`
   property binding both disable it; a `?copyable=${false}` boolean-attribute binding does not.
-- an in-flight per-language grammar load is guarded by an internal token so a `code`/`language` change
-  that arrives before a previous load resolves never applies a stale result — only the load matching
-  the _current_ `language` is ever rendered.
+- if `code` or `language` changes while highlighting is loading, only the result matching the
+  current values is rendered.
 - a malformed `code`/`language` combination that makes shiki's `codeToHtml()` throw falls back to
   plain text silently, not a blank code block.
 - the "Copied!" label appears only after clipboard fulfillment and reverts to "Copy" after 1500ms.
@@ -1732,7 +1734,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   numbers for highlighted and plain output.
 - `highlightLines: string = ''` (attribute `highlight-lines`) — comma-separated 1-based inclusive
   line ranges (e.g. `"3-5,7"`) to visually emphasize. Declarative sugar over `highlights` — merges
-  with, and renders identically to, any `line-range` entries there.
+  with, and renders identically to, any `line-range` entries there. Malformed segments are ignored
+  while valid segments still apply.
 - `activatableLines: boolean = false` (attribute `activatable-lines`) — turns the
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-activate`.
   Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
@@ -1746,8 +1749,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback.
-  Replacing the map while connected starts a new loading generation; an older map that settles
-  later cannot clear the current map's loading state or replace its highlighted output. For a
+  If `languages` changes while highlighting is loading, only results for the current map can update
+  the displayed code. For a
   TypeScript annotation, use `import type { ShikiLanguageInput } from
 '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
   granular import emits no registration side effect.
@@ -1755,7 +1758,6 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
-`refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
 `refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
 Identical behavior to `<lr-code-block>`'s own method.
 
@@ -1919,10 +1921,11 @@ wired to a WebAudio `AnalyserNode`; `level: number | null = null` — a pre-comp
 hosts that already have one (e.g. `lr-push-to-talk`'s `lr-level` detail); `state: 'idle' |
 'listening' | 'thinking' | 'speaking' = 'idle'` (reflected) — drives the signal-less ambient
 animation and per-state coloring; `mode: AudioVisualizerMode = 'bars'` (`'bars' | 'waveform'`,
-reflected); `barCount: number = 5` (attribute `bar-count`); `gain: number = 1` — multiplier applied
-to the resolved amplitude; `label: string =
-''` — accessible-name override. Invalid `state` or `mode` attribute/property writes normalize to
-`idle` and `bars` respectively.
+reflected); `barCount: number = 5` (attribute `bar-count`, normalized to an integer in `[1, 64]`);
+`gain: number = 1` — multiplier applied to the resolved amplitude, with a non-finite value treated
+as `1`; `label: string = ''` — accessible-name override. `level` is clamped to `[0, 1]`; after gain,
+waveform and bar values are clamped to `[-1, 1]` and `[0, 1]` respectively. Invalid `state` or
+`mode` attribute/property writes normalize to `idle` and `bars` respectively.
 
 **Methods:** `refreshTheme()` re-reads themeable custom properties after a runtime theme change (the
 canvas resolves token values at paint time and cannot inherit `var()` directly). Canvas-bound
@@ -1935,8 +1938,10 @@ or empty `MediaStream` tears down the prior analyser transaction immediately and
 
 **Slots:** none.
 
-**CSS parts:** `base` (the root wrapper) and `canvas` (the drawing surface, `aria-hidden`; the host
-itself carries `role="img"` and the accessible name).
+**CSS parts:** `base` (the root wrapper) and `canvas` (the drawing surface, `aria-hidden`). The host
+supplies `role="img"` only while an author has not supplied a role; an authored role is preserved,
+and removing it restores `img`. If observation cannot be established, it draws eagerly; otherwise
+it waits for a valid observer entry and pauses offscreen.
 
 **Themeable custom properties:** `--lr-audio-visualizer-color` (default `var(--lr-color-brand)` —
 active bar/waveform color), `--lr-audio-visualizer-quiet-color` (default
@@ -1998,19 +2003,26 @@ intent events, so each built-in can occur at most once. `copyText: string = ''`
 (attribute `copy-text`) — required for the `copy` built-in to render at all. `feedbackRating:
 MessageFeedbackValue = null` (attribute `feedback-rating`) — forwarded to the embedded, thumbs-only
 `lr-message-feedback` (its `detail`/`detailFor` are never forwarded, so its detail panel never
-opens). `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
+opens). `feedbackPending: boolean` (read-only, nonreflecting) — true only while the current built-in
+feedback control awaits settlement; it has no `feedback-pending` attribute or change event.
+`revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
 the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus.
 `label: string = ''` — accessible name override for the toolbar. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — overrides the toolbar's computed accessible name, winning over
 `label` and the localized default; attribute-reflects from a host-level `aria-label`.
+
+**Methods:** `finalizePendingSubmit(submissionId: string): boolean` and
+`revertPendingSubmit(submissionId: string): boolean` settle only the current built-in feedback
+request. Both return `false` for blank, stale, mismatched, removed, or replaced requests.
 
 **Events:** `lr-regenerate`/`lr-edit` — a built-in was activated, `detail: null`. `lr-copy` —
 frozen `detail: { ok: true, text }`, emitted only after the embedded `lr-copy-button`'s clipboard
 write fulfills (bubbles/composed already, not re-emitted). A failed write surfaces generic
 `lr-error` (`detail: null`) plus `lr-copy-error` with frozen
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported' | 'denied' | 'failed'`.
-`lr-feedback-change`/`lr-feedback-submit` — bubble unchanged from the embedded,
-thumbs-only `lr-message-feedback`. A colliding event from an
+`lr-feedback-change`/`lr-feedback-submit` — bubble unchanged from the embedded, thumbs-only
+`lr-message-feedback`; the frozen submit detail includes its `submissionId`, which is the value to
+pass to either settlement method. A colliding event from an
 arbitrary slotted child is contained at that slot boundary rather than being mistaken for a
 built-in action.
 
@@ -2047,21 +2059,34 @@ owns that one detail panel. `disabled: boolean = false` (reflected) makes a reco
 submission while host persistence is unresolved; all feedback controls are disabled and the panel
 reports busy until that state is resolved.
 
+When the optional comment textarea renders, `spellcheck: boolean = true`,
+`autocapitalize: string = ''`, `autocorrect: boolean = true`, and
+`wrap: MessageFeedbackWrap = 'soft'` forward to it; they have no effect without that textarea.
+`MessageFeedbackWrap` is `'soft' | 'hard' | 'off'`, the native textarea wrap vocabulary.
+
 **Methods:** `focus()` focuses the thumb matching the current `rating` (the up thumb when `null`);
 `blur()` blurs both thumbs; `click()` activates that same thumb when enabled.
 `getToolbarActions()` returns the ordered logical thumb actions used by an enclosing toolbar.
-`finalizePendingSubmit()` completes a prevented submit after persistence succeeds, closing the
-panel, announcing success, and returning focus to the active thumb. `revertPendingSubmit()` releases
-the pending state after failure without clearing the draft or announcing success, leaving the panel
-open for retry. Both are no-ops when no submit is pending.
+`finalizePendingSubmit(submissionId?: string): boolean` completes a prevented submit after persistence succeeds, closing the
+panel, announcing success, and returning focus to the active thumb.
+`revertPendingSubmit(submissionId?: string): boolean` releases
+the pending state after failure without clearing the draft or announcing success, restoring the
+prior rating and panel state. A detail-panel submit remains open for retry, while a thumbs-only
+submit remains panel-free; it likewise accepts an optional `submissionId` and returns `boolean`. The event
+supplies a nonblank, never-reused id; a later/current settlement must use that exact id. Legacy
+no-argument settlement remains available only for the first transaction that has never been
+invalidated; stale or mismatched settlements return `false`.
 
 **Events:** `lr-feedback-change` — `detail: { rating: 'up' | 'down' | null }`, fired when a thumb's
 provisional rating changes or clears. `lr-feedback-submit` — cancelable
-`detail: { rating: 'up' | 'down' | null; reasonIds: string[]; comment: string }`, fired for every
+`detail: { rating: 'up' | 'down' | null; reasonIds: string[]; comment: string; submissionId: string }`, fired for every
 terminal thumbs-only choice/clear and by the detail panel's submit button. The pending transaction
-is installed before dispatch, so even a synchronous listener may finalize/revert it safely.
+is installed before dispatch, so even a synchronous listener may finalize/revert it safely. The
+event detail is frozen.
 `preventDefault()` holds the panel/control in `pending` and delays
-success announcement/focus until `finalizePendingSubmit()`; call `revertPendingSubmit()` on failure.
+success announcement/focus until `finalizePendingSubmit(detail.submissionId)`; call
+`revertPendingSubmit(detail.submissionId)` on failure. The no-argument form is only the documented
+legacy first-transaction path.
 When uncanceled it retains the synchronous close/announce/focus behavior. The optional comment
 `<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-toolbar-actions-change` is the no-detail coordination event emitted when the provider's logical
@@ -2122,6 +2147,11 @@ setting it to `0` removes the deadline.
 
 **Methods:** `start()`, `stop()`, and `cancel()` drive the capture lifecycle imperatively (mirroring
 the pointer/keyboard gestures).
+
+After permission is requested, only a still-active control in the same document may begin
+recording; otherwise any stream returned later is immediately stopped. In hold mode, a later held
+press in that document can take over one pending permission request, and a held press while
+stopping begins after the prior take ends. Only one capture runs at a time.
 
 **Slots:** `microphone-icon` replaces the default mic glyph. `recording-icon` replaces the default
 recording-state pulse glyph. Both are
@@ -2411,6 +2441,10 @@ Data-mode thread ids must be nonempty, nonblank, and unique, and every row must 
 before the mode is selected, so focus, actions, slot ownership, and emitted `conversationId`
 values remain unambiguous.
 
+Display fields are captured when `threads` is assigned. After a change, create and assign a new
+collection; changing an assigned record or mutating the assigned array does not update the view.
+`filter`, `groupBy`, row callbacks, and group contexts receive the original source records.
+
 **Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
 (attribute `active-conversation-id`) — data mode:
 marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
@@ -2521,6 +2555,21 @@ prefix: `row-item-base`, `row-item-active-indicator`, `row-item-select-button`, 
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
 internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
 marks returned by `renderRowContent` or any other hook.
+
+**Themeable control states:** `--lr-thread-list-group-toggle-hover-bg` (default
+`var(--lr-color-surface-raised)`), `--lr-thread-list-group-toggle-hover-color` (default
+`var(--lr-color-text)`), `--lr-thread-list-group-toggle-active-bg` (default `color-mix(in oklab,
+var(--lr-thread-list-group-toggle-hover-bg, var(--lr-color-surface-raised)),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-thread-list-group-toggle-active-color` (default
+`var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text))`) style group-toggle hover
+and pressed states. `--lr-thread-list-row-action-hover-bg` (default
+`var(--lr-color-surface-raised)`), `--lr-thread-list-row-action-hover-color` (default
+`var(--lr-color-text)`), `--lr-thread-list-row-action-active-bg` (default `color-mix(in oklab,
+var(--lr-thread-list-row-action-hover-bg, var(--lr-color-surface-raised)),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-thread-list-row-action-active-color` (default
+`var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))`) do the same for row actions.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
 component's own render-callback output (`wrapRow`, `renderStart`, `renderExcerpt`,
@@ -2781,12 +2830,12 @@ value to complete the update.
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).
 
-Caps: depth 32, 5,000 nodes, 100 visited props per node, and 100 unique warning keys plus one
-deterministic suppression warning. The current document/registry generation deduplicates warnings;
-binding-state-only re-resolution stays quiet, while replacing the root or registry releases prior
-keys. Exported deterministic `nodeKey`/`nodePath` identity drives reconciliation. One bounded input
-snapshot is shared by traversal, identity validation, pointer resolution, and rendering, so getters
-beyond an admitted cap are never dereferenced.
+For predictable rendering, documents are limited to depth 32, 5,000 nodes, and 100 properties per
+node. Content beyond those size limits is omitted or truncated; malformed documents fail closed,
+clearing prior output and emitting `lr-render-error`. `document` is captured when assigned, so
+mutate a copy and assign it to update; `bindingState` updates bindings without changing that
+captured document or registry. Exported deterministic `nodeKey`/`nodePath` identity drives
+reconciliation.
 
 ```ts
 import { html } from "lit";
@@ -2815,10 +2864,10 @@ const view = html`<lr-widget-renderer
 ```
 
 For a controlled binding, use a per-instance registry and apply the event's requested value back to
-`bindingState` (this one-field example binds `/name`). This is also the lean registration route: it imports
-the side-effect-free renderer class, defines only `lr-widget-renderer`, and imports only the mapped
-input registration. Do not import `widget-renderer.js` on this route; that entry intentionally
-installs the full default registry.
+`bindingState` (this one-field example binds `/name`). The direct class route supplies the
+default type mappings but defines only `lr-widget-renderer`; register every mapped custom element
+you use yourself. The normal `widget-renderer.js` entry also registers the eight default mapped
+elements, so do not import it on this route.
 
 ```html
 <lr-widget-renderer id="bound-widget"></lr-widget-renderer>
@@ -2858,9 +2907,8 @@ renderer.addEventListener("lr-widget-state-change", (event) => {
 
 **Optional peer deps:** none new — the normal registration entry directly imports the eight mapped
 components (`markdown` keeps its own `marked`/`dompurify` optional-peer fallback). The manual class
-route above is the verified lean path: its real peer-inclusive esbuild metafile excludes
-`default-registry.js` and all eight default mapped class modules, while the consumer explicitly
-imports only the component registrations its per-instance registry maps.
+route supplies the same default type mappings while leaving component registration under the
+consumer's control.
 
 ## `lr-voice-picker`
 
@@ -2907,6 +2955,10 @@ identically-named properties. `size: LyraSize = 'm'` (reflected) selects the sha
 `s`/`m`/`l`. It scales both closed and free-text field chrome through the shared
 `--lr-form-control-*` metrics. The separate preview button retains the library-wide 40px minimum
 hit area at compact tiers and grows with `l`/`xl`.
+
+`readonly: boolean = false` (reflected) mirrors `lr-model-select`: it blocks user typing and catalog
+commits while preserving focus, popup navigation, selection/copy, reset, submission, programmatic
+writes, and the preview actions.
 
 The `label` property and `label` slot share one native label in the standard `form-control` frame.
 Slotted label content participates in the accessible name in both closed-dropdown and free-text
@@ -2961,8 +3013,9 @@ outer pair. One bubbling/composed `lr-invalid` alias fires when native validity 
 `[part="form-control-label"]`, retunable or suppressible through
 `--lr-form-control-required-content`, `--lr-form-control-required-color` and
 `--lr-form-control-required-offset`; and while the picker is barred from
-constraint validation (own `disabled`, or an ancestor `<fieldset disabled>` — there is no `readonly`
-here) it reports no violation and publishes neither `:state(invalid)` nor `:state(user-invalid)`.
+constraint validation (own `disabled` or `readonly`, or an ancestor `<fieldset disabled>`) it
+reports no violation and publishes neither `:state(invalid)` nor
+`:state(user-invalid)`.
 
 **CSS parts:** `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
 (free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet
@@ -3024,7 +3077,7 @@ grounding, and context state: transcript + composer in the main pane, and a deta
 assign new data to the properties as the host receives updates.
 
 This is the single component that binds the most of the provider-neutral vocabulary exported from
-`@aceshooting/lyra-ui/ai` (`src/ai/types.ts`) at once; a host that already holds `ChatMessage[]`,
+`@aceshooting/lyra-ui/ai` at once; a host that already holds `ChatMessage[]`,
 `AgentRun`, `RetrievalChunk[]`, `Citation[]`, and `GroundingAssessment` can wire this up with no
 adapters.
 
@@ -3082,7 +3135,8 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
   the border and padding; a supplied `composer` slot keeps its own frame.
 - `composerValue: string = ''` (attribute `composer-value`) — controlled composer value
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
-'streaming'`, `lr-chat-composer`'s own union
+'streaming'`, `lr-chat-composer`'s own union; invalid values read as `idle` without rewriting the
+  host attribute
 - `composerPlaceholder: string = ''` (attribute `composer-placeholder`)
 - `composerMinRows: number = 1` (attribute `composer-min-rows`), `composerMaxRows: number = 8`
   (attribute `composer-max-rows`)
@@ -3158,11 +3212,13 @@ parse/highlight work; replacing that same-id part with `state: 'complete'` flush
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
-**Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: 'plain' | 'markdown' =
+**Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
 `renderPart?: MessagePartRenderer` (attribute: false), where returning `undefined` delegates that
 part to the built-in renderer; `accessibleLabel: string | null = null` (attribute `aria-label`).
+
+Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`.
 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
 discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath. Tool results are a strict
@@ -3243,6 +3299,7 @@ request. `label` names the prompt section; it is not generic field chrome.
 `autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
 `enterKeyHint: string = ''` (attribute `enterkeyhint`) forward unchanged to the composed native
 textarea; empty string hints preserve the browser default.
+Invalid `status` values read as `idle` without rewriting the host attribute.
 `attachments: readonly LyraPromptInputAttachment[] = []` — `attachmentId` must be nonempty and
 unique; malformed rows and later duplicates are omitted first-wins before rendering and attachment
 events, and surviving chips reconcile by `attachmentId`. `attachmentCapabilities: readonly
@@ -3298,9 +3355,12 @@ replaces the built-in composer action.
 **Themeable custom properties:** `--lr-prompt-input-control-width` (default `--lr-size-12rem`) is
 the preferred width of each generated model, voice, and source control before wrapping.
 
-Mention-popover focus transfer is generation-guarded: closing, disabling, disconnecting, adopting,
-or replacing the query/data before its awaited focus step prevents stale focus. Empty `chips` and
-`footer` wrappers are not rendered, so an absent optional region cannot create phantom spacing.
+An open mention or command popup remains open only while focus is in the primary textarea or that
+popup; moving focus to another prompt control or outside closes it. Arrow keys move focus to the
+active option. Enter or Tab accepting an option is handled before textarea submission. Escape
+restores the textarea's prior ARIA and selection. If the popup closes, becomes unavailable, or its
+input/items change before focus moves, no move occurs. Empty `chips` and `footer` wrappers are not rendered, so an absent optional region cannot
+create phantom spacing.
 
 **Optional peer deps:** none of its own.
 
@@ -3326,6 +3386,12 @@ metadata?: Record<string, unknown> }`.
 Item ids are occurrence identities. Empty ids and later duplicates are ignored before rendering or
 proposing a mutation, preserving one unambiguous `itemId`. Attachment names render visibly for both
 editable and read-only rows; the host `label` is also the visible queue heading.
+
+Supported item and attachment fields are read once when `items` is assigned; create and reassign a
+new collection after changes, because changing an assigned record or reassigning the same mutated
+array does not update the view. Rows or attachments without valid direct data are ignored. Duplicate IDs are resolved
+after validation, so the first valid item wins. `metadata` is opaque and retains identity in
+proposed queue/send-now payloads, while emitted items are new frozen snapshots.
 
 **Events:** `lr-queue-change` (`PromptQueueChangeDetail = { items, reason, itemId }`, with
 `reason: 'edit' | 'remove' | 'reorder'`), `lr-send-now` (`{ item }`). The queue is controlled:
@@ -3444,6 +3510,50 @@ remain host-owned.
 import "@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js";
 ```
 
+## Consumer integration notes
+
+- **Markdown:** GFM task checkboxes stay disabled. When a checkbox has nonblank primary inline
+  text, that primary inline text names the checkbox; nested-list text is excluded and an otherwise blank
+  task receives no invented label. For an intercepted internal link that overlaps a highlight,
+  `lr-highlight-activate` fires before `lr-link-click` for pointer and Enter activation;
+  external links keep their native navigation.
+- **Catalog controls:** `lr-model-select` and `lr-voice-picker` reflect `readonly`. It blocks user
+  typing and catalog commits without disabling focus, popup navigation, selection/copy, reset,
+  submission, or programmatic writes; voice previews remain available. They are barred from native
+  constraint validation while disabled, readonly, or disabled by a fieldset. Voice preview actions
+  expose the shared hover/pressed fill and icon hooks in both standalone and catalog-row layouts.
+- **Status values:** invalid direct or attribute status writes on `lr-chat-composer` normalize and
+  reflect to `idle`. `lr-prompt-input` and `lr-agent-workspace` read invalid forwarded status as the
+  safe `idle` state without rewriting their host attributes.
+- **Feedback toolbar:** `lr-message-actions.feedbackPending` identifies a built-in feedback request
+  awaiting settlement. Pass the frozen `submissionId` from `lr-feedback-submit` to
+  `finalizePendingSubmit()` or `revertPendingSubmit()`. Logical toolbar actions may implement
+  `releaseTabIndex()` to restore an unchanged authored tabindex when the toolbar stops managing it;
+  a later author write is never overwritten.
+- **Message content:** `MessagePartsContentMode` is exported. Unsupported direct or
+  `content-mode` attribute values normalize and reflect as `markdown`.
+- **Prompt queues:** items and attachments are captured on assignment; create and reassign a new
+  collection after changes, because changing an assigned record or reassigning the same mutated
+  array does not update the view.
+  Invalid rows are ignored, and the first valid duplicate id wins. A suggestion popup stays open
+  only while focus remains in its textarea or popup; accepting an option handles Enter or Tab before
+  textarea submission.
+- **Push-to-talk:** releasing hold mode while permission is pending leaves that request eligible
+  only for the next same-document held press; otherwise a later grant is discarded. A held press
+  during a stopping take starts after the current take ends. Disablement, disconnection, or a
+  cross-document move prevents a later permission result from starting or finishing capture.
+- **Code blocks:** malformed highlight-line segments are independently ignored while valid segments
+  remain. When Shiki is unavailable, readable plain text remains available.
+- **Threads:** `lr-thread-list` captures display fields when `threads` is assigned; its render,
+  filter, and grouping callbacks receive the original records, so create and reassign a new
+  collection to update. Changing an assigned record or reassigning the same mutated array does not
+  update the view.
+  Group toggles and row actions have independent hover/pressed background and foreground tokens.
+- **Audio visualizer:** an author-supplied `role` wins; the component supplies `role="img"` only
+  when absent. With a working observer it waits for its first valid visible entry and pauses
+  offscreen; unavailable/broken observation renders eagerly. Canvas input is clamped after gain to
+  `-1..1` for waveforms and `0..1` for bars.
+
 ## Exported TypeScript contracts
 
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
@@ -3452,6 +3562,9 @@ These named interfaces and helper signatures are available to typed integrations
   `ChatMessageToggleDetail {
     collapsed: unknown;
   }`
+
+- **`components-conversation-chat-composer-chat-composer-contracts`** — Supporting data types and helpers for this component family.
+  `normalizeChatComposerStatus(value: unknown): ChatComposerStatus`
 
 - **`components-conversation-checkpoint-checkpoint-contracts`** — Supporting data types and helpers for this component family.
   `CheckpointRestoreDetail {
@@ -3600,6 +3713,7 @@ These named interfaces and helper signatures are available to typed integrations
     options: unknown;
     setTabIndex: unknown;
     tabIndex: unknown;
+    releaseTabIndex?(): void;
     matchesEventPath: unknown;
     path: unknown;
   }`
@@ -3620,6 +3734,7 @@ These named interfaces and helper signatures are available to typed integrations
     rating: unknown;
     reasonIds: unknown;
     comment: unknown;
+    readonly submissionId: string;
   }`
 
 - **`components-conversation-model-select-model-select-contracts`** — Supporting data types and helpers for this component family.

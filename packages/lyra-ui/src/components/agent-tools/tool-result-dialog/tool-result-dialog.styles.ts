@@ -208,6 +208,7 @@ export const styles = css`
   [part="maximize-button"],
   [part="close-button"] {
     display: inline-flex;
+    font: inherit;
     align-items: center;
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);

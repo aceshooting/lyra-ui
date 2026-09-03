@@ -552,7 +552,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.inputEl?.focus(options);
   }
   override blur(): void {
-    const active = this.shadowRoot?.activeElement;
+    const active = activeElementIn(this.shadowRoot);
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }
@@ -743,7 +743,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private retireDisabledInteraction(): void {
     this.tokenFocusRepairPending = undefined;
     this.discardTransientState(true);
-    const active = this.shadowRoot?.activeElement;
+    const active = activeElementIn(this.shadowRoot);
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }
@@ -762,7 +762,9 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // the second setter cannot erase the still-required repair.
     if (next.length >= tokens.length) return;
     const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
-    const token = active?.closest<HTMLElement>('[part~="token"]');
+    const token = typeof active?.closest === 'function'
+      ? active.closest<HTMLElement>('[part~="token"]')
+      : null;
     if (!active || !token) return;
     const index = tokens.indexOf(token);
     if (index < 0) return;

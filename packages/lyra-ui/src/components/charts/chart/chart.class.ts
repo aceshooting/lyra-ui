@@ -24,6 +24,11 @@ import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js'
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { finiteAdd, finiteNumber } from '../../../internal/numbers.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   acquireAnnouncementSink,
@@ -148,6 +153,18 @@ export type LyraChartFormatSurface =
   | 'spoken'
   | 'export';
 
+/** Identifies which numeric component of a structured datum the formatter receives. */
+export type LyraChartStatistic =
+  | 'x'
+  | 'y'
+  | 'r'
+  | 'min'
+  | 'q1'
+  | 'median'
+  | 'q3'
+  | 'max'
+  | 'total';
+
 export interface LyraChartFormatterContext {
   readonly value: number;
   readonly surface: LyraChartFormatSurface;
@@ -155,10 +172,14 @@ export interface LyraChartFormatterContext {
   readonly index?: number;
   readonly label?: string;
   readonly seriesLabel?: string;
-  readonly statistic?: 'min' | 'q1' | 'median' | 'q3' | 'max' | 'total';
+  readonly statistic?: LyraChartStatistic;
 }
 
 export type LyraChartFormatter = (context: LyraChartFormatterContext) => string;
+type LyraChartFormatterMetadata = Omit<
+  LyraChartFormatterContext,
+  'surface' | 'value'
+>;
 
 export type LyraChartExportFormat = 'csv' | 'png';
 
@@ -223,6 +244,7 @@ interface ChartHit {
 }
 
 interface ChartLegendItem {
+  [key: string]: unknown;
   datasetIndex?: number;
   index?: number;
   text?: string;
@@ -256,7 +278,7 @@ interface RuntimeChart {
     event: Event,
     mode: string,
     options: Record<string, unknown>,
-    useFinalPosition: boolean,
+    useFinalPosition: boolean
   ): ChartHit[];
   getDatasetMeta?(index: number): { hidden: boolean | null };
   isDatasetVisible(index: number): boolean;
@@ -325,15 +347,7 @@ function normalizeLegendPosition(value: unknown): LyraChartLegendPosition {
   ) {
     return value;
   }
-  if (
-    isPlainObject(value) &&
-    Object.values(value).every((candidate) =>
-      typeof candidate === 'number' && Number.isFinite(candidate),
-    )
-  ) {
-    return value as { [scaleId: string]: number };
-  }
-  return 'top';
+  return projectLegendPosition(value) ?? 'top';
 }
 
 /**
@@ -349,25 +363,874 @@ function normalizeLegendPosition(value: unknown): LyraChartLegendPosition {
 type EffectiveChartType = LyraChartType | (string & {});
 type ChartFeatureState = 'idle' | 'loading' | 'available' | 'unavailable';
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** The simplified surface tolerates an omitted label/data payload, but never a non-record row. */
-function isChartSeriesRecord(value: unknown): value is LyraChartSeries {
+/**
+ * Establishes only that a value can be passed to descriptor-safe record readers. It deliberately
+ * does not admit a value as a Chart.js configuration record: callers which retain a record for
+ * later use must additionally require `isSafeChartConfigurationRecord()` or project it first.
+ */
+function isChartRecord(value: unknown): value is Record<string, unknown> {
   try {
-    return isPlainObject(value);
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   } catch {
     return false;
   }
 }
 
-function normalizeChartSeries(value: unknown): readonly LyraChartSeries[] {
+const MAX_CHART_INPUT_ENTRIES = 10_000;
+const MAX_CHART_CONFIGURATION_DEPTH = 32;
+const OMIT_CHART_CONFIGURATION_VALUE = Symbol('omit-chart-configuration-value');
+
+/**
+ * A successful admission is the sole array classification for a projection pass. A revocable
+ * proxy may revoke while its `length` descriptor is inspected, so calling `Array.isArray()` a
+ * second time would turn an otherwise fail-closed input into a throw.
+ */
+interface ChartArrayAdmission {
+  readonly source: object;
+  readonly length: number;
+}
+
+function admitChartArray(value: unknown): ChartArrayAdmission | undefined {
   try {
-    return Object.freeze(Array.isArray(value) ? value.filter(isChartSeriesRecord) : []);
+    if (!Array.isArray(value)) return undefined;
+    const descriptor = getOwnDataDescriptor(value, 'length');
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof descriptor.value !== 'number' ||
+      !Number.isSafeInteger(descriptor.value) ||
+      descriptor.value < 0
+    )
+      return undefined;
+    return { source: value, length: Math.min(descriptor.value, MAX_CHART_INPUT_ENTRIES) };
   } catch {
-    return Object.freeze([]);
+    return undefined;
   }
+}
+
+/** A proxy can revoke after first admission; recheck only its descriptor, never Array.isArray(). */
+function chartArrayIsStillAdmitted(admission: ChartArrayAdmission): boolean {
+  const descriptor = chartRecordValue(admission.source, 'length');
+  return (
+    descriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
+    descriptor !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+    typeof descriptor.value === 'number' &&
+    Number.isSafeInteger(descriptor.value) &&
+    descriptor.value >= admission.length
+  );
+}
+
+/** Copies bounded entries through descriptors so later consumers never iterate a source array. */
+function copyChartArrayEntries(admission: ChartArrayAdmission): readonly unknown[] {
+  if (!chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
+  const output: unknown[] = Array.from({ length: admission.length }, () => undefined);
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    output[index] = descriptor.value;
+  }
+  return Object.freeze(output);
+}
+
+/** Enumerates only after the caller established an ordinary record, and contains hostile traps. */
+function chartEnumerableKeys(value: object): readonly string[] | undefined {
+  try {
+    return Object.keys(value);
+  } catch {
+    return undefined;
+  }
+}
+
+interface CanonicalChartSeriesSnapshot {
+  readonly data: readonly (number | null)[];
+  readonly points?: readonly (LyraChartPoint | null)[];
+}
+
+// A source object can forge any exported/non-private property marker. Provenance belongs outside
+// the caller-owned series record, so only a series projected by this module can reuse a snapshot.
+const canonicalChartSeriesSnapshots = new WeakMap<object, CanonicalChartSeriesSnapshot>();
+// Plugins are opaque callback owners after their one checked `id` admission. Re-reading their
+// public shape during every build would let a later getter/proxy revoke break an already-valid chart.
+const admittedChartPlugins = new WeakSet<object>();
+// Raw config datasets still hand Chart.js its opaque payload, while Lyra owns this parallel,
+// descriptor-projected snapshot for summaries, tables, callbacks, and append calculations.
+const canonicalChartDatasetValues = new WeakMap<object, readonly unknown[]>();
+// A config dataset is sometimes cloned by `appendData()` before the next config setter runs. Keep
+// the same private provenance on its caller-visible data array so that clone does not force a
+// second read of an opaque datum merely to rebuild the owning dataset snapshot.
+const canonicalChartDatasetDataValues = new WeakMap<object, readonly unknown[]>();
+
+/** Reuse a prior one-read projection, or safely admit a derived subclass series on demand. */
+function canonicalChartSeries(value: unknown): LyraChartSeries | undefined {
+  if (!isChartRecord(value)) return undefined;
+  if (canonicalChartSeriesSnapshots.has(value)) return value as unknown as LyraChartSeries;
+  return projectChartSeries(value);
+}
+
+function canonicalSeriesData(
+  series: LyraChartSeries
+): readonly (number | null)[] {
+  const canonical = canonicalChartSeries(series);
+  return canonical ? canonicalChartSeriesSnapshots.get(canonical)?.data ?? [] : [];
+}
+
+function canonicalSeriesPoints(
+  series: LyraChartSeries
+): readonly (LyraChartPoint | null)[] | undefined {
+  const canonical = canonicalChartSeries(series);
+  return canonical ? canonicalChartSeriesSnapshots.get(canonical)?.points : undefined;
+}
+
+function chartRecordValue(
+  value: object,
+  property: PropertyKey
+): ReturnType<typeof getOwnDataDescriptor> {
+  return getOwnDataDescriptor(value, property);
+}
+
+function projectChartNumberData(
+  value: unknown,
+  admission = admitChartArray(value),
+): readonly (number | null)[] | undefined {
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return undefined;
+  const output: Array<number | null> = Array.from({ length: admission.length }, () => null);
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    const candidate = descriptor.value;
+    output[index] =
+      typeof candidate === 'number' && Number.isFinite(candidate)
+        ? candidate
+        : null;
+  }
+  return Object.freeze(output);
+}
+
+function projectChartPoint(value: unknown): LyraChartPoint | null {
+  if (!isChartRecord(value)) return null;
+  const x = chartRecordValue(value, 'x');
+  const y = chartRecordValue(value, 'y');
+  const r = chartRecordValue(value, 'r');
+  const label = chartRecordValue(value, 'label');
+  if (
+    x === MISSING_OWN_DATA_DESCRIPTOR ||
+    x === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    y === MISSING_OWN_DATA_DESCRIPTOR ||
+    y === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    r === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    label === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof x.value !== 'number' ||
+    !Number.isFinite(x.value) ||
+    typeof y.value !== 'number' ||
+    !Number.isFinite(y.value)
+  )
+    return null;
+  return Object.freeze({
+    x: x.value,
+    y: y.value,
+    ...(r !== MISSING_OWN_DATA_DESCRIPTOR &&
+    typeof r.value === 'number' &&
+    Number.isFinite(r.value) &&
+    r.value >= 0
+      ? { r: r.value }
+      : {}),
+    ...(label !== MISSING_OWN_DATA_DESCRIPTOR && typeof label.value === 'string'
+      ? { label: label.value }
+      : {}),
+  });
+}
+
+/** Projects a config datum for Lyra-owned reads without changing the peer's opaque payload. */
+function projectChartDatum(value: unknown): unknown {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' || typeof value === 'bigint') return value;
+  if (!isChartRecord(value)) return null;
+  const x = chartRecordValue(value, 'x');
+  const y = chartRecordValue(value, 'y');
+  const r = chartRecordValue(value, 'r');
+  const label = chartRecordValue(value, 'label');
+  const output: Record<string, number | string> = {};
+  let hasValue = false;
+  for (const [property, descriptor] of [
+    ['x', x],
+    ['y', y],
+    ['r', r],
+  ] as const) {
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof descriptor.value !== 'number' ||
+      !Number.isFinite(descriptor.value)
+    )
+      continue;
+    output[property] = descriptor.value;
+    hasValue = true;
+  }
+  if (
+    label !== MISSING_OWN_DATA_DESCRIPTOR &&
+    label !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+    typeof label.value === 'string'
+  ) {
+    output['label'] = label.value;
+    hasValue = true;
+  }
+  return hasValue ? Object.freeze(output) : null;
+}
+
+function projectChartDatasetValues(admission: ChartArrayAdmission): readonly unknown[] {
+  if (!chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
+  const output: unknown[] = Array.from({ length: admission.length }, () => null);
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    output[index] = projectChartDatum(descriptor.value);
+  }
+  return Object.freeze(output);
+}
+
+function projectChartPoints(
+  value: unknown,
+  admission = admitChartArray(value),
+): readonly (LyraChartPoint | null)[] | undefined {
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return undefined;
+  const output: Array<LyraChartPoint | null> = Array.from(
+    { length: admission.length },
+    () => null,
+  );
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    output[index] = projectChartPoint(descriptor.value);
+  }
+  return Object.freeze(output);
+}
+
+function projectChartStrings(
+  value: unknown,
+  admission = admitChartArray(value),
+): readonly string[] | undefined {
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return undefined;
+  const output: string[] = Array.from({ length: admission.length }, () => '');
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof descriptor.value !== 'string'
+    )
+      continue;
+    output[index] = descriptor.value;
+  }
+  return Object.freeze(output);
+}
+
+function projectChartPointRadii(
+  value: unknown,
+  admission = admitChartArray(value),
+): readonly number[] | undefined {
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return undefined;
+  const output: number[] = Array.from({ length: admission.length }, () => Number.NaN);
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof descriptor.value !== 'number' ||
+      !Number.isFinite(descriptor.value)
+    )
+      continue;
+    output[index] = descriptor.value;
+  }
+  return Object.freeze(output);
+}
+
+const CHART_ANNOTATION_TONES = new Set<LyraVariant>([
+  'neutral',
+  'brand',
+  'success',
+  'warning',
+  'danger',
+]);
+
+function projectHiddenDatasetIndexes(value: unknown): readonly number[] | undefined {
+  if (value === undefined) return undefined;
+  const admission = admitChartArray(value);
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
+  const output: number[] = [];
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    const candidate =
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : descriptor.value;
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof candidate !== 'number' ||
+      !Number.isInteger(candidate)
+    )
+      continue;
+    output.push(candidate);
+  }
+  return Object.freeze(output);
+}
+
+function projectChartAnnotations(value: unknown): readonly LyraChartAnnotation[] {
+  const admission = admitChartArray(value);
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
+  const output: LyraChartAnnotation[] = [];
+  for (let index = 0; index < admission.length; index += 1) {
+    const entry = chartRecordValue(admission.source, String(index));
+    if (
+      entry === MISSING_OWN_DATA_DESCRIPTOR ||
+      entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      !isChartRecord(entry.value)
+    )
+      continue;
+    const axis = chartRecordValue(entry.value, 'axis');
+    const lineValue = chartRecordValue(entry.value, 'value');
+    const from = chartRecordValue(entry.value, 'from');
+    const to = chartRecordValue(entry.value, 'to');
+    const label = chartRecordValue(entry.value, 'label');
+    const tone = chartRecordValue(entry.value, 'tone');
+    if (
+      axis === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      lineValue === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      from === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      to === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      label === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      tone === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    const axisValue = axis === MISSING_OWN_DATA_DESCRIPTOR ? undefined : axis.value;
+    const line = lineValue === MISSING_OWN_DATA_DESCRIPTOR ? undefined : lineValue.value;
+    const fromValue = from === MISSING_OWN_DATA_DESCRIPTOR ? undefined : from.value;
+    const toValue = to === MISSING_OWN_DATA_DESCRIPTOR ? undefined : to.value;
+    const labelValue = label === MISSING_OWN_DATA_DESCRIPTOR ? undefined : label.value;
+    const toneValue = tone === MISSING_OWN_DATA_DESCRIPTOR ? undefined : tone.value;
+    if (
+      (axisValue !== undefined && axisValue !== 'x' && axisValue !== 'y') ||
+      (labelValue !== undefined && typeof labelValue !== 'string') ||
+      (toneValue !== undefined &&
+        (typeof toneValue !== 'string' || !CHART_ANNOTATION_TONES.has(toneValue as LyraVariant)))
+    )
+      continue;
+    const normalizedAxis: LyraChartIndexAxis | undefined =
+      axisValue === 'x' || axisValue === 'y' ? axisValue : undefined;
+    const common: Pick<LyraChartAnnotation, 'axis' | 'label' | 'tone'> = {
+      ...(normalizedAxis !== undefined ? { axis: normalizedAxis } : {}),
+      ...(typeof labelValue === 'string' ? { label: labelValue } : {}),
+      ...(typeof toneValue === 'string' ? { tone: toneValue as LyraVariant } : {}),
+    };
+    if (typeof line === 'number' && Number.isFinite(line)) {
+      output.push(Object.freeze({ ...common, value: line }));
+      continue;
+    }
+    if (
+      typeof fromValue === 'number' &&
+      Number.isFinite(fromValue) &&
+      typeof toValue === 'number' &&
+      Number.isFinite(toValue)
+    ) {
+      output.push(
+        Object.freeze({
+          ...common,
+          from: Math.min(fromValue, toValue),
+          to: Math.max(fromValue, toValue),
+        }),
+      );
+    }
+  }
+  return Object.freeze(output);
+}
+
+const CHART_SERIES_PROPERTIES = [
+  'label',
+  'data',
+  'points',
+  'color',
+  'fill',
+  'width',
+  'dash',
+  'noTooltip',
+  'axis',
+  'pointColors',
+  'pointRadius',
+  'segmentColors',
+  'type',
+] as const;
+
+/** The simplified surface tolerates an omitted label/data payload, but every admitted field is
+ * copied through an own data descriptor before later rendering code sees it. */
+function projectChartSeries(value: unknown): LyraChartSeries | undefined {
+  try {
+    if (!isChartRecord(value)) return undefined;
+    const descriptors = new Map<
+      (typeof CHART_SERIES_PROPERTIES)[number],
+      ReturnType<typeof getOwnDataDescriptor>
+    >();
+    for (const property of CHART_SERIES_PROPERTIES) {
+      const descriptor = chartRecordValue(value, property);
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+      descriptors.set(property, descriptor);
+    }
+    const valueAt = (
+      property: (typeof CHART_SERIES_PROPERTIES)[number]
+    ): unknown | undefined => {
+      const descriptor = descriptors.get(property);
+      return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        descriptor === undefined
+        ? undefined
+        : descriptor.value;
+    };
+    const label = valueAt('label');
+    if (label !== undefined && typeof label !== 'string') return undefined;
+    const output: {
+      label: string;
+      data?: readonly (number | null)[];
+      points?: readonly LyraChartPoint[];
+      color?: string | readonly string[];
+      fill?: boolean;
+      width?: number;
+      dash?: boolean;
+      noTooltip?: boolean;
+      axis?: 'y' | 'y2';
+      pointColors?: readonly string[];
+      pointRadius?: number | readonly number[];
+      segmentColors?: readonly string[];
+      type?: 'line' | 'bar';
+    } = { label: label ?? '' };
+    const rawData = valueAt('data');
+    const rawDataAdmission = admitChartArray(rawData);
+    const data = projectChartNumberData(rawData, rawDataAdmission);
+    const rawPoints = valueAt('points');
+    const rawPointsAdmission = admitChartArray(rawPoints);
+    const points = projectChartPoints(rawPoints, rawPointsAdmission);
+    const color = valueAt('color');
+    const fill = valueAt('fill');
+    const width = valueAt('width');
+    const dash = valueAt('dash');
+    const noTooltip = valueAt('noTooltip');
+    const axis = valueAt('axis');
+    const pointColors = projectChartStrings(valueAt('pointColors'));
+    const pointRadius = valueAt('pointRadius');
+    const segmentColors = projectChartStrings(valueAt('segmentColors'));
+    const type = valueAt('type');
+    // `data` and `points` are public caller-owned snapshots. Their canonical copies below are
+    // the only values the component reads after admission; the public fields retain identity for
+    // append and inspection workflows.
+    if (data && rawDataAdmission)
+      output.data = rawDataAdmission.source as unknown as readonly (number | null)[];
+    // `points` is a documented caller-owned identity used by append workflows. Keep it visible
+    // unchanged, while the non-enumerable canonical copy below is the only shape rendering reads.
+    if (points && rawPointsAdmission)
+      output.points = rawPointsAdmission.source as unknown as readonly LyraChartPoint[];
+    if (typeof color === 'string') output.color = color;
+    else {
+      const colors = projectChartStrings(color);
+      if (colors) output.color = colors;
+    }
+    if (typeof fill === 'boolean') output.fill = fill;
+    if (typeof width === 'number' && Number.isFinite(width))
+      output.width = width;
+    if (typeof dash === 'boolean') output.dash = dash;
+    if (typeof noTooltip === 'boolean') output.noTooltip = noTooltip;
+    if (axis === 'y' || axis === 'y2') output.axis = axis;
+    if (pointColors) output.pointColors = pointColors;
+    if (typeof pointRadius === 'number' && Number.isFinite(pointRadius)) {
+      output.pointRadius = pointRadius;
+    } else {
+      const radii = projectChartPointRadii(pointRadius);
+      if (radii) output.pointRadius = radii;
+    }
+    if (segmentColors) output.segmentColors = segmentColors;
+    if (type === 'line' || type === 'bar') output.type = type;
+    const series = Object.freeze(output) as LyraChartSeries;
+    canonicalChartSeriesSnapshots.set(series, {
+      data: data ?? Object.freeze([]),
+      ...(points ? { points } : {}),
+    });
+    return series;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeChartSeries(value: unknown): readonly LyraChartSeries[] {
+  const admission = admitChartArray(value);
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
+  const output: LyraChartSeries[] = [];
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    // `appendData()` can retain an already-admitted point series while replacing a numeric
+    // sibling. Reuse its non-enumerable canonical snapshot instead of revisiting the public
+    // caller-owned `data`/`points` array after it may have changed or become hostile.
+    const series = canonicalChartSeries(descriptor.value);
+    if (series) output.push(series);
+  }
+  return Object.freeze(output);
+}
+
+interface ChartConfigurationBudget {
+  remaining: number;
+  readonly active: Set<object>;
+}
+
+function isSafeChartConfigurationRecord(value: unknown): value is Record<string, unknown> {
+  if (!isChartRecord(value)) return false;
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === null) return true;
+    const constructor = getOwnDataDescriptor(prototype, 'constructor');
+    if (
+      constructor === MISSING_OWN_DATA_DESCRIPTOR ||
+      constructor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof constructor.value !== 'function'
+    )
+      return false;
+    const name = getOwnDataDescriptor(constructor.value, 'name');
+    const constructorPrototype = getOwnDataDescriptor(constructor.value, 'prototype');
+    return (
+      name !== MISSING_OWN_DATA_DESCRIPTOR &&
+      name !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+      name.value === 'Object' &&
+      constructorPrototype !== MISSING_OWN_DATA_DESCRIPTOR &&
+      constructorPrototype !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+      constructorPrototype.value === prototype
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Projects the only structured object accepted for a legend placement. Unlike a generic config
+ * object, this value is read by Lyra itself, so every value must be a finite own data property.
+ */
+function projectLegendPosition(value: unknown): { [scaleId: string]: number } | undefined {
+  if (!isSafeChartConfigurationRecord(value)) return undefined;
+  const keys = chartEnumerableKeys(value);
+  if (!keys || keys.length > MAX_CHART_INPUT_ENTRIES) return undefined;
+  const output: { [scaleId: string]: number } = {};
+  for (const key of keys) {
+    if (UNSAFE_KEYS.has(key)) return undefined;
+    const descriptor = chartRecordValue(value, key);
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      !descriptor.enumerable ||
+      typeof descriptor.value !== 'number' ||
+      !Number.isFinite(descriptor.value)
+    )
+      return undefined;
+    output[key] = descriptor.value;
+  }
+  return Object.freeze(output);
+}
+
+function copyChartConfigurationValue(
+  value: unknown,
+  budget: ChartConfigurationBudget,
+  depth = 0,
+): unknown | typeof OMIT_CHART_CONFIGURATION_VALUE {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
+  if (typeof value === 'function') return value;
+  if (depth > MAX_CHART_CONFIGURATION_DEPTH || budget.remaining <= 0) {
+    return OMIT_CHART_CONFIGURATION_VALUE;
+  }
+  if (budget.active.has(value)) return OMIT_CHART_CONFIGURATION_VALUE;
+  const array = admitChartArray(value);
+  if (array && !chartArrayIsStillAdmitted(array)) return OMIT_CHART_CONFIGURATION_VALUE;
+  if (array) {
+    budget.remaining -= 1;
+    budget.active.add(value);
+    try {
+      const output: unknown[] = Array.from({ length: array.length }, () => undefined);
+      for (let index = 0; index < array.length && budget.remaining > 0; index += 1) {
+        budget.remaining -= 1;
+        const descriptor = chartRecordValue(array.source, String(index));
+        if (
+          descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+          descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+        )
+          continue;
+        const entry = copyChartConfigurationValue(descriptor.value, budget, depth + 1);
+        if (entry !== OMIT_CHART_CONFIGURATION_VALUE) output[index] = entry;
+      }
+      const copied = Object.freeze(output);
+      const canonical = canonicalChartDatasetDataValues.get(array.source);
+      if (canonical) canonicalChartDatasetDataValues.set(copied, canonical);
+      return copied;
+    } finally {
+      budget.active.delete(value);
+    }
+  }
+  if (!isSafeChartConfigurationRecord(value)) {
+    // Canvas gradients/patterns and Chart.js instances are opaque leaves. Their identity is the
+    // contract; Lyra neither reads nor restructures them before handing them to Chart.js.
+    return value;
+  }
+  budget.remaining -= 1;
+  budget.active.add(value);
+  try {
+    const keys = chartEnumerableKeys(value);
+    if (!keys) return OMIT_CHART_CONFIGURATION_VALUE;
+    const output = Object.create(null) as Record<string, unknown>;
+    for (const key of keys) {
+      if (budget.remaining <= 0) break;
+      budget.remaining -= 1;
+      if (UNSAFE_KEYS.has(key)) continue;
+      const descriptor = chartRecordValue(value, key);
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        !descriptor.enumerable
+      )
+        continue;
+      const entry = copyChartConfigurationValue(descriptor.value, budget, depth + 1);
+      if (entry !== OMIT_CHART_CONFIGURATION_VALUE) output[key] = entry;
+    }
+    return Object.freeze(output);
+  } finally {
+    budget.active.delete(value);
+  }
+}
+
+function projectChartPlugins(
+  value: unknown,
+  admission = admitChartArray(value),
+): readonly LyraChartPlugin[] {
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
+  const output: LyraChartPlugin[] = [];
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      descriptor.value === null ||
+      (typeof descriptor.value !== 'object' &&
+        typeof descriptor.value !== 'function')
+    )
+      continue;
+    const plugin = descriptor.value as object;
+    if (admittedChartPlugins.has(plugin)) {
+      output.push(plugin as LyraChartPlugin);
+      continue;
+    }
+    const id = chartRecordValue(plugin, 'id');
+    if (
+      id === MISSING_OWN_DATA_DESCRIPTOR ||
+      id === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof id.value !== 'string' ||
+      id.value.trim() === ''
+    )
+      continue;
+    // Plugins are an intentional opaque-identity exception: Chart.js invokes their callbacks
+    // itself, so only the checked `id` is read by Lyra before retaining the original object.
+    admittedChartPlugins.add(plugin);
+    output.push(plugin as LyraChartPlugin);
+  }
+  return Object.freeze(output);
+}
+
+/**
+ * The raw config escape hatch may retain opaque Chart.js leaves, but a dataset row is later read
+ * for labels, values, axes, visibility, totals, and tooltip filtering. Admit only copied ordinary
+ * records here, then retain opaque identities solely in fields Lyra does not introspect.
+ */
+function projectChartDatasetConfiguration(
+  value: unknown,
+): LyraChartDatasetConfiguration | undefined {
+  if (!isSafeChartConfigurationRecord(value)) return undefined;
+  const keys = chartEnumerableKeys(value);
+  if (!keys) return undefined;
+  const output = Object.create(null) as Record<string, unknown>;
+  const priorCanonicalValues = canonicalChartDatasetValues.get(value);
+  let canonicalValues: readonly unknown[] | undefined;
+  for (const key of keys) {
+    if (UNSAFE_KEYS.has(key)) continue;
+    const descriptor = chartRecordValue(value, key);
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      !descriptor.enumerable
+    )
+      continue;
+    const candidate = descriptor.value;
+    const array = admitChartArray(candidate);
+    if (key === 'data') {
+      if (array) {
+        if (!chartArrayIsStillAdmitted(array)) {
+          output[key] = Object.freeze([]);
+          canonicalValues = Object.freeze([]);
+          continue;
+        }
+        const copied = copyChartArrayEntries(array);
+        output[key] = copied;
+        const canonical =
+          priorCanonicalValues ??
+          canonicalChartDatasetDataValues.get(array.source) ??
+          projectChartDatasetValues(array);
+        canonicalValues = canonical;
+        canonicalChartDatasetDataValues.set(copied, canonical);
+      }
+      continue;
+    }
+    if (key === 'label') {
+      if (
+        typeof candidate === 'string' ||
+        typeof candidate === 'number' ||
+        typeof candidate === 'boolean' ||
+        typeof candidate === 'bigint'
+      ) {
+        output[key] = candidate;
+      } else if (array) {
+        output[key] = copyChartArrayEntries(array);
+      }
+      continue;
+    }
+    if (key === 'hidden' || key === 'noTooltip') {
+      if (typeof candidate === 'boolean') output[key] = candidate;
+      continue;
+    }
+    if (key === 'axis' || key === 'yAxisID' || key === 'type') {
+      if (typeof candidate === 'string') output[key] = candidate;
+      continue;
+    }
+    // These opaque Chart.js presentation/scriptable leaves are intentionally not read by Lyra.
+    // An admitted array is still copied so later colour/radius classification cannot re-enter it.
+    output[key] = array ? copyChartArrayEntries(array) : candidate;
+  }
+  const dataset = Object.freeze(output) as LyraChartDatasetConfiguration;
+  if (canonicalValues) canonicalChartDatasetValues.set(dataset, canonicalValues);
+  return dataset;
+}
+
+function projectChartDatasetConfigurations(
+  value: unknown,
+  admission = admitChartArray(value),
+): readonly LyraChartDatasetConfiguration[] {
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
+  const output: LyraChartDatasetConfiguration[] = [];
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    const dataset = projectChartDatasetConfiguration(descriptor.value);
+    if (dataset) output.push(dataset);
+  }
+  return Object.freeze(output);
+}
+
+/**
+ * Applies the data-schema boundary after generic descriptor copying. Unknown data-level fields
+ * stay available to Chart.js, while labels and dataset rows get the stronger projections required
+ * by Lyra's own later render, table, tooltip, append, and accessibility reads.
+ */
+function projectChartDataConfiguration(value: unknown): LyraChartDataConfiguration | undefined {
+  if (!isSafeChartConfigurationRecord(value)) return undefined;
+  const keys = chartEnumerableKeys(value);
+  if (!keys) return undefined;
+  const output = Object.create(null) as Record<string, unknown>;
+  for (const key of keys) {
+    if (UNSAFE_KEYS.has(key)) continue;
+    const descriptor = chartRecordValue(value, key);
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      !descriptor.enumerable
+    )
+      continue;
+    if (key === 'labels') {
+      const labels = admitChartArray(descriptor.value);
+      output[key] = labels ? copyChartArrayEntries(labels) : Object.freeze([]);
+      continue;
+    }
+    if (key === 'datasets') {
+      output[key] = projectChartDatasetConfigurations(descriptor.value);
+      continue;
+    }
+    output[key] = descriptor.value;
+  }
+  return Object.freeze(output) as LyraChartDataConfiguration;
+}
+
+function projectChartConfiguration(value: unknown): LyraChartConfiguration | undefined {
+  if (!isSafeChartConfigurationRecord(value)) return undefined;
+  const budget: ChartConfigurationBudget = {
+    remaining: MAX_CHART_INPUT_ENTRIES,
+    active: new Set(),
+  };
+  const output = Object.create(null) as Record<string, unknown>;
+  const type = chartRecordValue(value, 'type');
+  const data = chartRecordValue(value, 'data');
+  const options = chartRecordValue(value, 'options');
+  const plugins = chartRecordValue(value, 'plugins');
+  if (
+    type !== MISSING_OWN_DATA_DESCRIPTOR &&
+    type !== UNSAFE_OWN_DATA_DESCRIPTOR
+  ) {
+    if (typeof type.value === 'string') output['type'] = type.value;
+  }
+  for (const [property, descriptor] of [
+    ['data', data],
+    ['options', options],
+  ] as const) {
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    const copied = copyChartConfigurationValue(descriptor.value, budget);
+    if (copied === OMIT_CHART_CONFIGURATION_VALUE) continue;
+    if (property === 'data') {
+      const projected = projectChartDataConfiguration(copied);
+      // Preserve an opaque/non-record root value for the raw passthrough contract. Every Lyra
+      // data-model consumer reprojects it and therefore treats it as empty, but append callers
+      // still observe the original explicit config member they supplied.
+      output[property] = projected ?? copied;
+      continue;
+    }
+    output[property] = copied;
+  }
+  if (
+    plugins !== MISSING_OWN_DATA_DESCRIPTOR &&
+    plugins !== UNSAFE_OWN_DATA_DESCRIPTOR
+  ) {
+    const pluginArray = admitChartArray(plugins.value);
+    if (pluginArray)
+      output['plugins'] = projectChartPlugins(plugins.value, pluginArray);
+    else {
+      const copied = copyChartConfigurationValue(plugins.value, budget);
+      if (copied !== OMIT_CHART_CONFIGURATION_VALUE) output['plugins'] = copied;
+    }
+  }
+  return Object.freeze(output) as LyraChartConfiguration;
 }
 
 // Keys that would let a JSON-sourced `config` (e.g. parsed from an API
@@ -424,22 +1287,56 @@ type BrowserWindow = Window & typeof globalThis;
 // a shared axis-options object applied to both the x and y scale) would incorrectly reuse the first
 // position's merged result for the second, even though each was merged against a different base.
 function deepMerge<T>(base: T, override: unknown, seen = new WeakMap<object, unknown>()): T {
-  if (typeof override === 'object' && override !== null) {
-    const previous = seen.get(override);
-    if (previous !== undefined) return previous as T;
-  }
-  if (!isPlainObject(base) || !isPlainObject(override)) {
+  // Every plain record that reaches here from `projectChartConfiguration()` was copied through
+  // own data descriptors. Anything else is an intentional opaque Chart.js leaf (such as a
+  // gradient, plugin instance, or consumer object) and must replace the generated value without
+  // enumerating keys or reading a property: a class instance can look plain to the broad rendering
+  // predicate while still own an accessor that throws on a later merge.
+  if (!isSafeChartConfigurationRecord(base) || !isSafeChartConfigurationRecord(override)) {
     return (override === undefined ? base : (override as T)) as T;
   }
-  const result: Record<string, unknown> = { ...base };
-  seen.set(override, result);
+  const baseRecord = base as unknown as Record<string, unknown>;
+  const overrideRecord = override;
+  const baseKeys = chartEnumerableKeys(baseRecord);
+  const overrideKeys = chartEnumerableKeys(overrideRecord);
+  // A record that turns hostile between the prototype check and enumeration is an opaque leaf.
+  // Replacing it preserves the raw-config contract without reflecting a getter or proxy trap.
+  if (!baseKeys || !overrideKeys) return override as T;
+  const previous = seen.get(overrideRecord);
+  if (previous !== undefined) return previous as T;
+  const result: Record<string, unknown> = {};
+  for (const key of baseKeys) {
+    if (UNSAFE_KEYS.has(key)) continue;
+    const descriptor = chartRecordValue(baseRecord, key);
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      !descriptor.enumerable
+    )
+      continue;
+    result[key] = descriptor.value;
+  }
+  seen.set(overrideRecord, result);
   try {
-    for (const key of Object.keys(override)) {
+    for (const key of overrideKeys) {
       if (UNSAFE_KEYS.has(key)) continue;
-      result[key] = deepMerge((base as Record<string, unknown>)[key], override[key], seen);
+      const descriptor = chartRecordValue(overrideRecord, key);
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        !descriptor.enumerable
+      )
+        continue;
+      const baseDescriptor = chartRecordValue(baseRecord, key);
+      const baseValue =
+        baseDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        baseDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+          ? undefined
+          : baseDescriptor.value;
+      result[key] = deepMerge(baseValue, descriptor.value, seen);
     }
   } finally {
-    seen.delete(override);
+    seen.delete(overrideRecord);
   }
   return result as T;
 }
@@ -450,7 +1347,7 @@ type LyraCoreChartDatumKind = Exclude<LyraChartDatumKind, 'box'>;
 /** Input-neutral detail shared by every chart-family `lr-datum-activate` event. */
 export interface LyraChartDatumActivateDetail<
   TKind extends LyraChartDatumKind = LyraChartDatumKind,
-  TValue = unknown,
+  TValue = unknown
 > {
   readonly kind: TKind;
   readonly datasetIndex: number;
@@ -486,32 +1383,169 @@ interface EffectiveChartData {
   datasets: LyraChartDatasetConfiguration[];
 }
 
-function isChartPoint(value: unknown): value is LyraChartPoint {
-  if (!isPlainObject(value)) return false;
-  return Number.isFinite(value['x']) && Number.isFinite(value['y']);
+function normalizedChartPoint(value: unknown): LyraChartPoint | null {
+  return projectChartPoint(projectChartDatum(value));
 }
 
-function normalizedChartPoint(value: unknown): LyraChartPoint | null {
-  if (!isChartPoint(value)) return null;
-  const radius = value.r;
-  return {
-    x: value.x,
-    y: value.y,
-    ...(typeof radius === 'number' && Number.isFinite(radius) && radius >= 0
-      ? { r: radius }
-      : {}),
-    ...(typeof value.label === 'string' ? { label: value.label } : {}),
-  };
+/** Converts only primitive chart values, so description/export paths never invoke an opaque datum. */
+function chartNumericValue(value: unknown): number | undefined {
+  const numeric =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' || typeof value === 'bigint'
+        ? Number(value)
+        : Number.NaN;
+  return Number.isFinite(numeric) ? numeric : undefined;
+}
+
+/**
+ * Chart.js passes partial parsed values such as `{ y }` and radial `{ r }` into callbacks. Read
+ * those compatibility shapes through own descriptors so a hostile datum cannot re-enter later
+ * formatting, table, tooltip, or total paths through a getter.
+ */
+function chartDatumNumericValue(value: unknown): number | undefined {
+  const projected = projectChartDatum(value);
+  if (isChartRecord(projected)) {
+    for (const property of ['y', 'r', 'x'] as const) {
+      const descriptor = chartRecordValue(projected, property);
+      if (
+        descriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
+        descriptor !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+        typeof descriptor.value === 'number' &&
+        Number.isFinite(descriptor.value)
+      ) {
+        return descriptor.value;
+      }
+    }
+  }
+  return chartNumericValue(projected);
 }
 
 function nonNegativeFinite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
 }
 
-function labelText(value: unknown): string {
+function labelText(value: unknown, depth = 0): string {
   if (value == null) return '';
-  if (Array.isArray(value)) return value.map(labelText).join(' ');
-  return String(value);
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  )
+    return String(value);
+  const admission = admitChartArray(value);
+  if (depth < MAX_CHART_CONFIGURATION_DEPTH && admission) {
+    const values: string[] = [];
+    for (let index = 0; index < admission.length; index += 1) {
+      const descriptor = chartRecordValue(admission.source, String(index));
+      values.push(
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+          ? ''
+          : labelText(descriptor.value, depth + 1),
+      );
+    }
+    return values.join(' ');
+  }
+  return '';
+}
+
+/** Reads a Chart.js dataset field without invoking a caller or plugin accessor. */
+function chartDatasetValue(dataset: unknown, property: PropertyKey): unknown | undefined {
+  if (!isChartRecord(dataset)) return undefined;
+  const descriptor = chartRecordValue(dataset, property);
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    ? undefined
+    : descriptor.value;
+}
+
+/** Callback/runtime labels are untrusted too; turn them into display text through descriptors. */
+function chartDatasetLabel(dataset: unknown): string {
+  return labelText(chartDatasetValue(dataset, 'label'));
+}
+
+/** Every chart-owned later read uses this bounded descriptor copy rather than a data source array. */
+function chartDatasetValues(dataset: unknown): readonly unknown[] {
+  if (isChartRecord(dataset)) {
+    const snapshot = canonicalChartDatasetValues.get(dataset);
+    if (snapshot) return snapshot;
+  }
+  const data = chartDatasetValue(dataset, 'data');
+  const admission = admitChartArray(data);
+  if (!admission) return Object.freeze([]);
+  return canonicalChartDatasetDataValues.get(admission.source) ?? copyChartArrayEntries(admission);
+}
+
+/** The peer payload stays opaque, but append cloning needs its admitted source identity. */
+function chartDatasetPeerValues(dataset: unknown): readonly unknown[] {
+  const admission = admitChartArray(chartDatasetValue(dataset, 'data'));
+  return admission ? copyChartArrayEntries(admission) : Object.freeze([]);
+}
+
+function chartIndex(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : undefined;
+}
+
+function chartCallbackDatasetIndex(value: unknown): number | undefined {
+  return chartIndex(chartDatasetValue(value, 'datasetIndex'));
+}
+
+function chartCallbackIndexes(value: unknown): ChartHit | undefined {
+  const datasetIndex = chartCallbackDatasetIndex(value);
+  const index = chartIndex(chartDatasetValue(value, 'index')) ??
+    chartIndex(chartDatasetValue(value, 'dataIndex'));
+  return datasetIndex === undefined || index === undefined ? undefined : { datasetIndex, index };
+}
+
+/** Copies peer-produced legend metadata before Lyra reads or returns it to Chart.js. */
+function projectChartLegendItem(value: unknown): ChartLegendItem | undefined {
+  if (!isChartRecord(value)) return undefined;
+  const keys = chartEnumerableKeys(value);
+  if (!keys || keys.length > MAX_CHART_INPUT_ENTRIES) return undefined;
+  const output: ChartLegendItem = Object.create(null);
+  for (const key of keys) {
+    if (UNSAFE_KEYS.has(key)) continue;
+    const descriptor = chartRecordValue(value, key);
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      !descriptor.enumerable
+    )
+      continue;
+    output[key] = descriptor.value;
+  }
+  return output;
+}
+
+function projectChartLegendItems(value: unknown): readonly ChartLegendItem[] | undefined {
+  const admission = admitChartArray(value);
+  if (!admission || !chartArrayIsStillAdmitted(admission)) return undefined;
+  const output: ChartLegendItem[] = [];
+  for (let index = 0; index < admission.length; index += 1) {
+    const descriptor = chartRecordValue(admission.source, String(index));
+    if (
+      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    const item = projectChartLegendItem(descriptor.value);
+    if (item) output.push(item);
+  }
+  return Object.freeze(output);
+}
+
+function chartDatasetBoolean(dataset: unknown, property: PropertyKey): boolean | undefined {
+  const value = chartDatasetValue(dataset, property);
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function chartDatasetAxis(dataset: unknown): 'y' | 'y2' {
+  return chartDatasetValue(dataset, 'yAxisID') === 'y2' ||
+      chartDatasetValue(dataset, 'axis') === 'y2'
+    ? 'y2'
+    : 'y';
 }
 /**
  * `<lr-chart>` — the core Chart.js wrapper used directly and by the typed
@@ -603,7 +1637,9 @@ function labelText(value: unknown): string {
  * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Tooltip text color. Resolved via
  *   `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the
- *   `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).
+ *   `[part='canvas']` hover-state outline.
+ * @cssprop [--lr-chart-canvas-hover-outline-color=var(--lr-chart-grid-color)] - Color of the
+ *   `[part='canvas']` hover-state outline.
  * @cssprop [--lr-chart-pattern-step=var(--lr-space-2xs)] - Tile size of the texture painted on
  *   `[part='legend-swatch']` while `forced-colors: active` matches, where every series collapses to
  *   one system color and the stripe/crosshatch pattern becomes the only channel keeping series
@@ -711,6 +1747,44 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ converter: { fromAttribute: (value) => normalizeChartType(value) } })
   type: LyraChartType = 'bar';
   @property({ attribute: false }) labels: string[] = [];
+  private labelsSnapshot?: { source: unknown; value: readonly string[] };
+  private annotationsSnapshot?: {
+    source: unknown;
+    value: readonly LyraChartAnnotation[];
+  };
+  private hiddenDatasetsSnapshot?: {
+    source: unknown;
+    value: readonly number[] | undefined;
+  };
+
+  /** Public collection identities remain observable; internal computation uses these one-read copies. */
+  private canonicalLabels(): readonly string[] {
+    const source = this.labels;
+    if (this.labelsSnapshot && Object.is(this.labelsSnapshot.source, source))
+      return this.labelsSnapshot.value;
+    const value = projectChartStrings(source) ?? Object.freeze([]);
+    this.labelsSnapshot = { source, value };
+    return value;
+  }
+
+  private canonicalAnnotations(): readonly LyraChartAnnotation[] {
+    const source = this.annotations;
+    if (this.annotationsSnapshot && Object.is(this.annotationsSnapshot.source, source))
+      return this.annotationsSnapshot.value;
+    const value = projectChartAnnotations(source);
+    this.annotationsSnapshot = { source, value };
+    return value;
+  }
+
+  private canonicalHiddenDatasets(): readonly number[] | undefined {
+    const source = this.hiddenDatasets;
+    if (this.hiddenDatasetsSnapshot && Object.is(this.hiddenDatasetsSnapshot.source, source))
+      return this.hiddenDatasetsSnapshot.value;
+    const value = projectHiddenDatasetIndexes(source);
+    this.hiddenDatasetsSnapshot = { source, value };
+    return value;
+  }
+
   private _datasets: readonly LyraChartSeries[] = Object.freeze([]);
   private datasetsSource: unknown = this._datasets;
   /** Simplified chart series. Non-record entries are dropped while valid sibling series remain. */
@@ -791,8 +1865,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ type: Number }) max: number | null = null;
   /** Minimum value-axis bound. Non-finite values are ignored. */
   @property({ type: Number }) min: number | null = null;
-  /** Chart.js plugins attached to this chart instance. */
-  @property({ type: Array }) plugins: LyraChartPlugin[] = [];
+  private _plugins: readonly LyraChartPlugin[] = Object.freeze([]);
+  private pluginsSource: unknown = this._plugins;
+  /** Chart.js plugins attached to this chart instance. Valid plugins retain their opaque identity.
+   * @default [] */
+  @property({ type: Array })
+  get plugins(): readonly LyraChartPlugin[] {
+    return this._plugins;
+  }
+  set plugins(value: readonly LyraChartPlugin[]) {
+    if (Object.is(value, this.pluginsSource) || Object.is(value, this._plugins))
+      return;
+    const previous = this._plugins;
+    this._plugins = projectChartPlugins(value);
+    this.pluginsSource = value;
+    this.requestUpdate('plugins', previous);
+  }
   /**
    * Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible
    * table cells from one callback.
@@ -810,7 +1898,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: 'x-label' }) xLabel: string | null = null;
   @property({ attribute: 'y-label' }) yLabel: string | null = null;
   @property({ attribute: 'y2-label' }) y2Label = '';
-  @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter })
+  @property({
+    type: Boolean,
+    attribute: 'begin-at-zero',
+    converter: trueDefaultBooleanConverter,
+  })
   beginAtZero = true;
   /** Makes the generated data table visible; it remains screen-reader available when false. */
   @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
@@ -892,13 +1984,25 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * model for canvas rendering, append mutation, CSV export, the accessible name/summary, keyboard
    * navigation/events, the DOM legend, and the fallback data table.
    */
-  @property({ attribute: false }) config?: LyraChartConfiguration;
+  private _config?: LyraChartConfiguration;
+  private configSource: unknown = undefined;
+  @property({ attribute: false })
+  get config(): LyraChartConfiguration | undefined {
+    return this._config;
+  }
+  set config(value: LyraChartConfiguration | undefined) {
+    if (Object.is(value, this.configSource)) return;
+    const previous = this._config;
+    this._config = projectChartConfiguration(value);
+    this.configSource = value;
+    this.requestUpdate('config', previous);
+  }
 
   @state() private slottedConfig?: LyraChartConfiguration;
 
   /** Subclass hook for removing raw peer keys that contradict a derived public contract. */
   protected normalizeEffectiveConfig(
-    config: LyraChartConfiguration | undefined,
+    config: LyraChartConfiguration | undefined
   ): LyraChartConfiguration | undefined {
     return config;
   }
@@ -914,13 +2018,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       .find(
         (element): element is HTMLScriptElement =>
           element.localName === 'script' &&
-          (element as HTMLScriptElement).type.trim().toLowerCase() === 'application/json',
+          (element as HTMLScriptElement).type.trim().toLowerCase() === 'application/json'
       );
     let next: LyraChartConfiguration | undefined;
     if (script) {
       try {
         const parsed: unknown = JSON.parse(script.textContent ?? '');
-        if (isPlainObject(parsed)) next = parsed as LyraChartConfiguration;
+        next = projectChartConfiguration(parsed);
       } catch {
         next = undefined;
       }
@@ -935,70 +2039,119 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   private effectiveData(): EffectiveChartData {
     const generated: EffectiveChartData = {
-      labels: this.labels,
-      datasets: this.datasets.map((series) => ({
-        ...series,
-        data: [...(series.points ?? series.data ?? [])],
-        yAxisID: series.axis === 'y2' ? 'y2' : 'y',
-      })),
+      labels: [...this.canonicalLabels()],
+      datasets: this.datasets.map((series) => {
+        const { points: _points, ...safeSeries } = series;
+        return {
+          ...safeSeries,
+          data: [...(canonicalSeriesPoints(series) ?? canonicalSeriesData(series))],
+          yAxisID: series.axis === 'y2' ? 'y2' : 'y',
+        };
+      }),
     };
-    const override = this.effectiveConfig()?.data;
-    const merged = isPlainObject(override)
-      ? deepMerge(generated, override)
-      : generated;
+    const override = projectChartDataConfiguration(this.effectiveConfig()?.data);
+    const merged = override ? deepMerge(generated, override) : generated;
+    const projected = projectChartDataConfiguration(merged);
     return {
-      labels: Array.isArray(merged.labels) ? merged.labels : [],
-      datasets: Array.isArray(merged.datasets)
-        ? merged.datasets.filter(isPlainObject) as LyraChartDatasetConfiguration[]
-        : [],
+      labels: (projected?.labels ?? []) as unknown[],
+      datasets: (projected?.datasets ?? []) as LyraChartDatasetConfiguration[],
     };
+  }
+
+  /** Validates peer callback indexes against the visual data sent to Chart.js. */
+  private callbackDatasetIndex(
+    value: unknown,
+    effective = this.effectiveData(),
+  ): number | undefined {
+    const datasetIndex = chartCallbackDatasetIndex(value);
+    if (datasetIndex === undefined) return undefined;
+    const visualDatasetCount = this.visualDatasetSourceIndexes?.length ?? effective.datasets.length;
+    if (datasetIndex >= visualDatasetCount) return undefined;
+    const sourceDatasetIndex = this.visualDatasetSourceIndexes?.[datasetIndex] ?? datasetIndex;
+    return effective.datasets[sourceDatasetIndex] ? datasetIndex : undefined;
+  }
+
+  /** Validates a peer callback's visual row as well as its visual dataset. */
+  private callbackIndexes(
+    value: unknown,
+    effective = this.effectiveData(),
+  ): ChartHit | undefined {
+    const hit = chartCallbackIndexes(value);
+    if (!hit) return undefined;
+    const visualDatasetCount = this.visualDatasetSourceIndexes?.length ?? effective.datasets.length;
+    if (hit.datasetIndex >= visualDatasetCount) return undefined;
+    const sourceDatasetIndex = this.visualDatasetSourceIndexes?.[hit.datasetIndex] ?? hit.datasetIndex;
+    const dataset = effective.datasets[sourceDatasetIndex];
+    if (!dataset) return undefined;
+    const visualRowCount = this.visualRowSourceIndexes?.length ?? this.datasetValues(dataset).length;
+    return hit.index < visualRowCount ? hit : undefined;
   }
 
   /** The public controlled snapshot when supplied, otherwise the effective configuration default. */
   private effectiveHiddenDatasetIndexes(): number[] {
     const effective = this.effectiveData();
-    const controlled = normalizeHiddenDatasets(this.hiddenDatasets, effective.datasets.length);
+    const controlled = normalizeHiddenDatasets(
+      this.canonicalHiddenDatasets(),
+      effective.datasets.length,
+    );
     if (controlled !== undefined) return controlled;
-    return effective.datasets.flatMap((dataset, index) => dataset.hidden === true ? [index] : []);
+    return effective.datasets.flatMap((dataset, index) =>
+      chartDatasetBoolean(dataset, 'hidden') === true ? [index] : []
+    );
   }
 
   /** Applies the public controlled state to the live Chart.js metadata after any data replacement. */
   private applyDatasetVisibility(): boolean {
     if (!this.chart) return false;
-    const datasetCount = this.chart.data.datasets?.length ?? 0;
+    const chart = this.chart;
     const sourceDatasetCount = this.effectiveData().datasets.length;
-    const controlled = normalizeHiddenDatasets(this.hiddenDatasets, sourceDatasetCount);
+    const datasetCount = this.visualDatasetSourceIndexes?.length ?? sourceDatasetCount;
+    const controlled = normalizeHiddenDatasets(
+      this.canonicalHiddenDatasets(),
+      sourceDatasetCount,
+    );
     if (controlled === undefined) {
       for (let index = 0; index < datasetCount; index++) {
         // Clear Chart.js's metadata override so the replacement configuration's `hidden` property
         // becomes the source of truth again. This is specifically what a programmatic reset to
         // `hiddenDatasets = undefined` promises.
-        const metadata = this.chart.getDatasetMeta?.(index);
-        if (metadata) metadata.hidden = null;
+        try {
+          const metadata = chart.getDatasetMeta?.(index);
+          if (metadata) metadata.hidden = null;
+        } catch {
+          // Chart.js metadata is a mutable public peer boundary; leave an untrusted capability
+          // untouched rather than letting a plugin-owned getter/setter interrupt a redraw.
+        }
       }
       return datasetCount > 0;
     }
     const hidden = new Set(controlled);
     for (let index = 0; index < datasetCount; index++) {
       const sourceIndex = this.visualDatasetSourceIndexes?.[index] ?? index;
-      this.chart.setDatasetVisibility(index, !hidden.has(sourceIndex));
+      try {
+        chart.setDatasetVisibility(index, !hidden.has(sourceIndex));
+      } catch {
+        // See the metadata branch above: external Chart.js capabilities fail closed per dataset.
+      }
     }
     return datasetCount > 0;
   }
 
   private hasExplicitConfigData(): boolean {
     const config = this.effectiveConfig();
-    return isPlainObject(config) && Object.prototype.hasOwnProperty.call(config, 'data');
+    if (!isSafeChartConfigurationRecord(config)) return false;
+    const data = chartRecordValue(config, 'data');
+    return data !== MISSING_OWN_DATA_DESCRIPTOR && data !== UNSAFE_OWN_DATA_DESCRIPTOR;
   }
 
   private datasetLabel(dataset: LyraChartDatasetConfiguration, index: number): string {
-    return labelText(dataset.label) || this.localize('chartPointLabel', undefined, {
+    return chartDatasetLabel(dataset) || this.localize('chartPointLabel', undefined, {
       n: getNumberFormat(this.effectiveLocale).format(index + 1),
     });
   }
 
-  private datasetValues(dataset: LyraChartDatasetConfiguration): unknown[] {
-    return Array.isArray(dataset.data) ? dataset.data : [];
+  private datasetValues(dataset: LyraChartDatasetConfiguration): readonly unknown[] {
+    return chartDatasetValues(dataset);
   }
 
   private isPointDataset(dataset: LyraChartDatasetConfiguration): boolean {
@@ -1006,7 +2159,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return (
       this.effectiveType() === 'scatter' ||
       this.effectiveType() === 'bubble' ||
-      values.some(isChartPoint)
+      values.some((value) => normalizedChartPoint(value) !== null)
     );
   }
 
@@ -1019,6 +2172,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   appendData(label: string, values: (number | null)[], maxPoints: number = 0): void {
     const limit = Number.isFinite(maxPoints) ? Math.max(0, Math.floor(maxPoints)) : 0;
+    const appendedValues = projectChartNumberData(values) ?? Object.freeze([]);
     if (this.hasExplicitConfigData()) {
       const effective = this.effectiveData();
       let domainLength = effective.labels.length;
@@ -1033,20 +2187,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         label,
       ];
       const effectiveConfig = this.effectiveConfig();
-      const currentData = isPlainObject(effectiveConfig?.data) ? effectiveConfig.data : {};
-      const explicitLabels = Array.isArray(currentData['labels']);
-      const explicitDatasets = Array.isArray(currentData['datasets']);
+      const currentData = projectChartDataConfiguration(effectiveConfig?.data) ?? {};
+      const explicitLabels = admitChartArray(currentData['labels']) !== undefined;
+      const explicitDatasets = admitChartArray(currentData['datasets']) !== undefined;
       const nextLabels = limit > 0 ? labels.slice(-limit) : labels;
 
       if (!explicitLabels) this.labels = nextLabels.map(labelText);
       if (!explicitDatasets) {
         const datasets = this.datasets.map((series, index) => {
-          if (series.points) return series;
-          const current = series.data ?? [];
+          if (canonicalSeriesPoints(series) !== undefined) return series;
+          const current = canonicalSeriesData(series);
           const data = [
             ...current,
             ...Array.from({ length: Math.max(0, domainLength - current.length) }, () => null),
-            values[index] ?? null,
+            appendedValues[index] ?? null,
           ];
           return { ...series, data: limit > 0 ? data.slice(-limit) : data };
         });
@@ -1060,46 +2214,51 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           nextData['datasets'] = effective.datasets.map((dataset, index) => {
             if (this.isPointDataset(dataset)) return dataset;
             const current = this.datasetValues(dataset);
+            const peer = chartDatasetPeerValues(dataset);
+            const padding = Array.from(
+              { length: Math.max(0, domainLength - current.length) },
+              () => null,
+            );
             const data = [
-              ...current,
-              ...Array.from({ length: Math.max(0, domainLength - current.length) }, () => null),
-              values[index] ?? null,
+              ...peer,
+              ...padding,
+              appendedValues[index] ?? null,
             ];
-            return { ...dataset, data: limit > 0 ? data.slice(-limit) : data };
+            const canonical = [...current, ...padding, appendedValues[index] ?? null];
+            const nextData = limit > 0 ? data.slice(-limit) : data;
+            const nextCanonical = limit > 0 ? canonical.slice(-limit) : canonical;
+            canonicalChartDatasetDataValues.set(nextData, Object.freeze(nextCanonical));
+            return { ...dataset, data: nextData };
           });
         }
         this.config = { ...effectiveConfig, data: nextData as LyraChartDataConfiguration };
       }
       return;
     }
-    let domainLength = this.labels.length;
+    const currentLabels = this.canonicalLabels();
+    let domainLength = currentLabels.length;
     for (const series of this.datasets) {
-      if (!series.points) domainLength = Math.max(domainLength, series.data?.length ?? 0);
+      if (canonicalSeriesPoints(series) === undefined) {
+        domainLength = Math.max(domainLength, canonicalSeriesData(series).length);
+      }
     }
     const labels = [
-      ...this.labels,
-      ...Array.from({ length: Math.max(0, domainLength - this.labels.length) }, () => ''),
+      ...currentLabels,
+      ...Array.from({ length: Math.max(0, domainLength - currentLabels.length) }, () => ''),
       label,
     ];
-    const datasets = this.datasets.map((series, index) =>
-      series.points
-        ? series
-        : {
-            ...series,
-            data: [
-              ...(series.data ?? []),
-              ...Array.from(
-                { length: Math.max(0, domainLength - (series.data?.length ?? 0)) },
-                () => null,
-              ),
-              values[index] ?? null,
-            ],
-          },
-    );
+    const datasets = this.datasets.map((series, index) => {
+      if (canonicalSeriesPoints(series) !== undefined) return series;
+      const current = canonicalSeriesData(series);
+      const data = [
+        ...current,
+        ...Array.from({ length: Math.max(0, domainLength - current.length) }, () => null),
+        appendedValues[index] ?? null,
+      ];
+      return { ...series, data: limit > 0 ? data.slice(-limit) : data };
+    });
     this.labels = limit > 0 ? labels.slice(-limit) : labels;
-    this.datasets = limit > 0
-      ? datasets.map((series) => (series.points ? series : { ...series, data: series.data?.slice(-limit) }))
-      : datasets;
+    this.datasets = datasets;
   }
 
   /**
@@ -1112,7 +2271,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const columns = effective.datasets.map((dataset, datasetIndex) => {
       const values = this.datasetValues(dataset);
       const label = this.datasetLabel(dataset, datasetIndex);
-      const points = values.filter(isChartPoint);
+      const points = values
+        .map(normalizedChartPoint)
+        .filter((point): point is LyraChartPoint => point !== null);
       return {
         dataset,
         label,
@@ -1131,39 +2292,49 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               ...(column.radius ? [`${column.label} r`] : []),
               ...(column.pointLabel ? [`${column.label} label`] : []),
             ]
-          : [column.label],
+          : [column.label]
       ),
     ].map(escapeCsvField).join(',');
     let rowCount = effective.labels.length;
     for (const dataset of effective.datasets) {
       rowCount = Math.max(rowCount, this.datasetValues(dataset).length);
     }
-    const exportCell = (value: unknown): unknown => {
+    const exportCell = (value: unknown,
+      metadata: LyraChartFormatterMetadata): unknown => {
       if (typeof value !== 'number' || !Number.isFinite(value)) return value ?? '';
-      return this.formatExportValue(value) ?? value;
+      return this.formatExportValue(value, metadata) ?? value;
     };
     const rows = Array.from({ length: rowCount }, (_, index) => {
       const firstPoint = effective.datasets
-        .map((dataset) => this.datasetValues(dataset)[index])
-        .find(isChartPoint);
+        .map((dataset) => normalizedChartPoint(this.datasetValues(dataset)[index]))
+        .find((point): point is LyraChartPoint => point !== null);
       const label = labelText(effective.labels[index]) || firstPoint?.label || '';
       return [
         label,
-        ...columns.flatMap((column) => {
+        ...columns.flatMap((column, datasetIndex) => {
           const value = this.datasetValues(column.dataset)[index];
           // Every numeric cell goes through the 'export' surface, so a consumer's unit formatting
           // reaches the CSV -- the place it matters most, and what <lr-lite-chart> has always done.
           // exportCell() leaves a cell untouched when no formatter is installed, keeping the
           // default output the raw machine-readable number.
-          if (!column.point) return [exportCell(value)];
-          if (!isChartPoint(value)) {
-            return ['', '', ...(column.radius ? [''] : []), ...(column.pointLabel ? [''] : [])];
+          const metadata = {
+            datasetIndex,
+            index,
+            label: label || undefined,
+            seriesLabel: column.label,
+          } satisfies LyraChartFormatterMetadata;
+          if (!column.point) return [exportCell(value, metadata)];
+          const point = normalizedChartPoint(value);
+          if (!point) {
+            return ['', '', ...(column.radius ? [''] : []), ...(column.pointLabel ? [''] : []),];
           }
           return [
-            exportCell(value.x),
-            exportCell(value.y),
-            ...(column.radius ? [value.r == null ? '' : exportCell(value.r)] : []),
-            ...(column.pointLabel ? [value.label ?? ''] : []),
+            exportCell(point.x, { ...metadata, statistic: 'x' }),
+            exportCell(point.y, { ...metadata, statistic: 'y' }),
+            ...(column.radius
+              ? [point.r == null ? '' : exportCell(point.r, { ...metadata, statistic: 'r' })]
+              : []),
+            ...(column.pointLabel ? [point.label ?? ''] : []),
           ];
         }),
       ].map(escapeCsvField).join(',');
@@ -1183,16 +2354,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   // Overridable instance field (not a direct `loadChartJs()` call site) purely so tests can
   // inject a stubbed loader before the element ever connects -- matches map/docx-viewer's own
   // `loadLibrary` field/rationale exactly.
-  private loadLibrary: (withZoom: boolean) => ReturnType<typeof loadChartJs> = (withZoom) =>
-    withZoom ? loadChartJsWithZoom() : loadChartJs();
+  private loadLibrary: (withZoom: boolean) => ReturnType<typeof loadChartJs> = (withZoom) => (
+    withZoom ? loadChartJsWithZoom() : loadChartJs());
   // Separate feature-result seams let tests model an optional peer failure without pretending the
   // mandatory Chart.js core failed too. They intentionally retain the existing `loadLibrary`
   // seam for core-load tests and consumers of the established lifecycle behavior.
   private loadZoomFeature: () => Promise<ChartFeatureLoadResult<ZoomPlugin>> = () =>
     loadChartJsWithZoomResult();
-  private loadDataLabelsFeature: () => Promise<ChartFeatureLoadResult<DataLabelsPlugin>> = () =>
+  private loadDataLabelsFeature: () => Promise<ChartFeatureLoadResult<DataLabelsPlugin>
+  > = () =>
     loadChartJsWithDataLabelsResult();
-  private loadAnnotationFeature: () => Promise<ChartFeatureLoadResult<AnnotationPlugin>> = () =>
+  private loadAnnotationFeature: () => Promise<ChartFeatureLoadResult<AnnotationPlugin>
+  > = () =>
     loadChartJsWithAnnotationResult();
   // Invalidates a lazy-load callback when this element disconnects/reconnects. Without a
   // generation token, two connectedCallback() calls around one in-flight import can both settle
@@ -1456,7 +2629,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private get ownerWindow(): BrowserWindow | undefined {
     // Optional-chained for the server-render path: @lit-labs/ssr's element shim has no
     // `ownerDocument`, and every caller already handles `undefined`.
-    return (this.ownerDocument?.defaultView as BrowserWindow | null | undefined) ?? undefined;
+    return (
+      (this.ownerDocument?.defaultView as BrowserWindow | null | undefined) ?? undefined
+    );
   }
 
   private computedStyle(element: Element = this): CSSStyleDeclaration {
@@ -1781,12 +2956,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     palette: string[],
     effectiveType: EffectiveChartType,
     chartStyle: ChartStyleOptions = this.chartStyleOptions(palette),
-    rowIndexes?: readonly number[],
+    rowIndexes?: readonly number[]
   ): LyraChartDatasetConfiguration {
-    const fullNormalizedData = s.points
-      ? s.points.map(normalizedChartPoint)
-      : (s.data ?? []).map((value) =>
-          typeof value === 'number' && Number.isFinite(value) ? value : null,
+    const series = canonicalChartSeries(s);
+    if (!series) return { label: '', data: [] };
+    const points = canonicalSeriesPoints(series);
+    const fullNormalizedData = points
+      ? points.map(normalizedChartPoint)
+      : canonicalSeriesData(series).map((value) =>
+          typeof value === 'number' && Number.isFinite(value) ? value : null
         );
     const normalizedData = rowIndexes
       ? rowIndexes.map((rowIndex) => fullNormalizedData[rowIndex] ?? null)
@@ -1797,11 +2975,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const fillFallback =
       chartStyle.fillColors[index % chartStyle.fillColors.length] ??
       palette[index % palette.length];
-    const authoredColors = Array.isArray(s.color) && rowIndexes
-      ? rowIndexes.map((rowIndex) => s.color![rowIndex] ?? '')
-      : s.color;
+    const sourceColors = projectChartStrings(series.color);
+    const authoredColors = sourceColors && rowIndexes
+      ? rowIndexes.map((rowIndex) => sourceColors[rowIndex] ?? '')
+      : typeof series.color === 'string'
+        ? series.color
+        : sourceColors;
     const colors = typeof authoredColors === 'string'
-      ? [resolveCanvasColor(this, authoredColors, borderFallback ?? 'transparent')]
+      ? [resolveCanvasColor(this, authoredColors, borderFallback ?? 'transparent'),]
       : authoredColors
         ? resolveCanvasColors(this, authoredColors, borderFallback ?? 'transparent')
         : undefined;
@@ -1817,7 +2998,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             (_, itemIndex) => {
               const sourceIndex = rowIndexes?.[itemIndex] ?? itemIndex;
               return chartStyle.fillColors[sourceIndex % chartStyle.fillColors.length]!;
-            },
+            }
           )
         : undefined;
     const sliceBorderColors =
@@ -1826,48 +3007,55 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             (_, itemIndex) => {
               const sourceIndex = rowIndexes?.[itemIndex] ?? itemIndex;
               return chartStyle.borderColors[sourceIndex % chartStyle.borderColors.length]!;
-            },
+            }
           )
         : undefined;
-    const fill = s.fill ?? this.area;
+    const fill = series.fill ?? this.area;
     const backgroundColor = colors ?? sliceFillColors ?? fillFallback;
-    const datasetType = s.type ?? effectiveType;
-    const authoredSegmentColors = s.segmentColors && rowIndexes
-      ? rowIndexes.map((rowIndex) => s.segmentColors![rowIndex] ?? '')
-      : s.segmentColors;
+    const datasetType = series.type ?? effectiveType;
+    const authoredSegmentColors =
+      series.segmentColors && rowIndexes
+      ? rowIndexes.map((rowIndex) => series.segmentColors![rowIndex] ?? '')
+      : series.segmentColors;
     const segmentColors = authoredSegmentColors
       ? resolveCanvasColors(
           this,
           authoredSegmentColors,
-          colors?.[0] ?? borderFallback ?? 'transparent',
+          colors?.[0] ?? borderFallback ?? 'transparent'
         )
       : undefined;
-    const authoredPointColors = s.pointColors && rowIndexes
-      ? rowIndexes.map((rowIndex) => s.pointColors![rowIndex] ?? '')
-      : s.pointColors;
+    const authoredPointColors =
+      series.pointColors && rowIndexes
+      ? rowIndexes.map((rowIndex) => series.pointColors![rowIndex] ?? '')
+      : series.pointColors;
+    const backgroundColors = projectChartStrings(backgroundColor);
+    const backgroundColorValue = typeof backgroundColor === 'string' ? backgroundColor : undefined;
     const resolvedBackgroundColor =
       datasetType === 'line' &&
       fill &&
       (colors || !chartStyle.authoredFillColors[index % chartStyle.authoredFillColors.length])
-        ? Array.isArray(backgroundColor)
-          ? backgroundColor.map((color) => translucentAreaColor(this, color))
-          : backgroundColor
-            ? translucentAreaColor(this, backgroundColor)
-            : backgroundColor
+        ? backgroundColors
+          ? backgroundColors.map((color) => translucentAreaColor(this, color))
+          : backgroundColorValue
+            ? translucentAreaColor(this, backgroundColorValue)
+            : backgroundColorValue
         : backgroundColor;
     const encoding = forcedColorEncoding(index);
+    const resolvedBackgroundColors = projectChartStrings(resolvedBackgroundColor);
+    const resolvedBackgroundColorValue =
+      typeof resolvedBackgroundColor === 'string' ? resolvedBackgroundColor : undefined;
     const encodedBackgroundColor = chartStyle.forcedColors
-      ? Array.isArray(resolvedBackgroundColor)
-        ? resolvedBackgroundColor.map((color, itemIndex) =>
-            this.forcedColorPattern(sliceChart ? itemIndex : index, color),
+      ? resolvedBackgroundColors
+          ? resolvedBackgroundColors.map((color, itemIndex) =>
+            this.forcedColorPattern(sliceChart ? itemIndex : index, color)
           )
-        : resolvedBackgroundColor
-          ? this.forcedColorPattern(index, resolvedBackgroundColor)
-          : resolvedBackgroundColor
+        : resolvedBackgroundColorValue
+          ? this.forcedColorPattern(index, resolvedBackgroundColorValue)
+          : resolvedBackgroundColorValue
       : resolvedBackgroundColor;
-    const pointRadii = Array.isArray(s.pointRadius) ? s.pointRadius : undefined;
+    const pointRadii = projectChartPointRadii(series.pointRadius);
     return {
-      label: s.label,
+      label: series.label,
       data: normalizedData,
       // Leave unset rather than defaulting to `this.type`: Chart.js already
       // falls back to the chart-level (effective) type for any dataset that
@@ -1879,17 +3067,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // scales are built for `radar` (a single radial `r` scale, no `x`/`y`),
       // which Chart.js can't reconcile — it hangs the page trying to lay out
       // a cartesian-scale controller against a radial-only scale set. Only
-      // `s.type` (an explicit per-series mixed-type override, e.g. a line
+      // `series.type` (an explicit per-series mixed-type override, e.g. a line
       // series over a bar chart of the *same* effective family) is passed
       // through.
-      type: s.type,
+      type: series.type,
       fill,
       borderRadius: chartStyle.borderRadius,
       borderWidth: nonNegativeFinite(
-        s.width,
-        datasetType === 'line' ? chartStyle.lineBorderWidth : chartStyle.borderWidth,
+        series.width,
+        datasetType === 'line' ? chartStyle.lineBorderWidth : chartStyle.borderWidth
       ),
-      borderDash: s.dash ? [4, 4] : chartStyle.forcedColors ? [...encoding.dash] : undefined,
+      borderDash: series.dash ? [4, 4] : chartStyle.forcedColors ? [...encoding.dash] : undefined,
       pointStyle: chartStyle.forcedColors ? encoding.pointStyle : undefined,
       backgroundColor: encodedBackgroundColor,
       borderColor: colors?.[0] ?? sliceBorderColors ?? borderFallback,
@@ -1897,7 +3085,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         ? resolveCanvasColors(
             this,
             authoredPointColors,
-            colors?.[0] ?? borderFallback ?? 'transparent',
+            colors?.[0] ?? borderFallback ?? 'transparent'
           )
         : undefined,
       pointRadius: pointRadii
@@ -1905,7 +3093,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ? rowIndexes.map((rowIndex) => pointRadii[rowIndex])
             : pointRadii
           ).map((radius) => nonNegativeFinite(radius, chartStyle.pointRadius))
-        : nonNegativeFinite(s.pointRadius, chartStyle.pointRadius),
+        : nonNegativeFinite(series.pointRadius, chartStyle.pointRadius),
       // `segment` is Chart.js's per-line-segment scriptable-options hook (line controller only),
       // keyed by the segment's *starting* point index. Only spread in when the series actually
       // sets `segmentColors`, so a series without it produces the exact dataset object it always
@@ -1918,7 +3106,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             },
           }
         : {}),
-      yAxisID: s.axis === 'y2' ? 'y2' : 'y',
+      yAxisID: series.axis === 'y2' ? 'y2' : 'y',
     };
   }
 
@@ -1997,20 +3185,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.ownerDocument,
       index,
       background,
-      this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG),
+      this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG)
     );
   }
 
   private chartStyleOptions(palette: string[]): ChartStyleOptions {
     const computed = this.computedStyle();
     const authoredFillColors = palette.map(
-      (_, index) => index < 6 && !!computed.getPropertyValue(`--fill-color-${index + 1}`).trim(),
+      (_, index) => index < 6 && !!computed.getPropertyValue(`--fill-color-${index + 1}`).trim()
     );
     const borderColors = palette.map((fallback, index) =>
-      index < 6 ? this.styleColor(`--border-color-${index + 1}`, fallback) : fallback,
+      index < 6 ? this.styleColor(`--border-color-${index + 1}`, fallback) : fallback
     );
     const fillColors = palette.map((fallback, index) =>
-      index < 6 ? this.styleColor(`--fill-color-${index + 1}`, fallback) : fallback,
+      index < 6 ? this.styleColor(`--fill-color-${index + 1}`, fallback) : fallback
     );
     return {
       borderColors,
@@ -2041,24 +3229,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * renders nothing at best. A reversed range is normalized rather than rejected — the author's
    * intent is unambiguous.
    */
-  private normalizedAnnotations(): LyraChartAnnotation[] {
-    const source = Array.isArray(this.annotations) ? this.annotations : [];
-    const usable: LyraChartAnnotation[] = [];
-    for (const entry of source) {
-      if (!entry || typeof entry !== 'object') continue;
-      const { value, from, to } = entry;
-      if (typeof value === 'number' && Number.isFinite(value)) {
-        usable.push(entry);
-        continue;
-      }
-      if (
-        typeof from === 'number' && Number.isFinite(from) &&
-        typeof to === 'number' && Number.isFinite(to)
-      ) {
-        usable.push(from <= to ? entry : { ...entry, from: to, to: from });
-      }
-    }
-    return usable;
+  private normalizedAnnotations(): readonly LyraChartAnnotation[] {
+    return this.canonicalAnnotations();
   }
 
   /** Resolves an annotation tone to a canvas-ready color, through the same
@@ -2081,7 +3253,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       const axis = entry.axis === 'x' ? 'x' : 'y';
       const color = this.annotationColor(entry.tone);
       const label = entry.label
-        ? { content: entry.label, display: true, color: this.themeColors().tick }
+        ? { content: entry.label, display: true, color: this.themeColors().tick, }
         : undefined;
       if (typeof entry.value === 'number') {
         entries[`lr-annotation-${index}`] = {
@@ -2126,18 +3298,32 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   private datalabelsOptions(
     theme: ThemeColors,
-    effectiveType: EffectiveChartType,
+    effectiveType: EffectiveChartType
   ): Record<string, unknown> {
     if (!this.needsDataLabels) return { display: false };
-    const datasets = this.effectiveData().datasets;
+    const effective = this.effectiveData();
+    const datasets = effective.datasets;
     const stackTotalsActive =
       this.stackTotals && this.stacked && (effectiveType === 'bar' || effectiveType === 'line');
+    const sourceDatasetIndex = (visualIndex: number): number =>
+      this.visualDatasetSourceIndexes?.[visualIndex] ?? visualIndex;
+    const sourceRowIndex = (visualIndex: number): number =>
+      this.visualRowSourceIndexes?.[visualIndex] ?? visualIndex;
     // The topmost dataset per axis carries the stack total (drawn above the stack).
     const topDatasetIndexByAxis = new Map<'y' | 'y2', number>();
     if (stackTotalsActive) {
-      datasets.forEach((dataset, index) =>
-        topDatasetIndexByAxis.set(dataset.yAxisID === 'y2' || dataset.axis === 'y2' ? 'y2' : 'y', index),
-      );
+      const visualDatasetCount = this.visualDatasetSourceIndexes?.length ?? datasets.length;
+      for (
+        let visualIndex = 0;
+        visualIndex < visualDatasetCount;
+        visualIndex += 1
+      ) {
+        const dataset = datasets[sourceDatasetIndex(visualIndex)];
+        const axis = chartDatasetAxis(dataset);
+        // `visualIndex` is deliberate: Chart.js invokes this callback against the sampled visual
+        // stack, while the mapped source dataset above supplies the axis and source values.
+        topDatasetIndexByAxis.set(axis, visualIndex);
+      }
     }
     const totalsByAxis = stackTotalsActive
       ? { y: this.computeStackTotals('y'), y2: this.computeStackTotals('y2') }
@@ -2148,31 +3334,33 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       align: stackTotalsActive ? 'end' : 'center',
       anchor: stackTotalsActive ? 'end' : 'center',
       display: (context: DataLabelsContext): boolean => {
-        const datasetIndex: number = context.datasetIndex;
-        const dataset = datasets[datasetIndex];
-        const axis: 'y' | 'y2' =
-          dataset?.yAxisID === 'y2' || dataset?.axis === 'y2' ? 'y2' : 'y';
+        const indexes = this.callbackIndexes(context, effective);
+        if (!indexes) return false;
+        const { datasetIndex, index } = indexes;
+        const dataset = datasets[sourceDatasetIndex(datasetIndex)];
+        const axis = chartDatasetAxis(dataset);
         if (stackTotalsActive) {
           // Only the topmost dataset of each axis draws, and only where the
           // category total is non-null.
           if (topDatasetIndexByAxis.get(axis) !== datasetIndex) return this.dataLabels;
-          const total = totalsByAxis?.[axis][context.dataIndex];
+          const total = totalsByAxis?.[axis][sourceRowIndex(index)];
           if (total == null) return this.dataLabels;
           return true;
         }
         return this.dataLabels;
       },
       formatter: (value: unknown, context: DataLabelsContext): string => {
-        const datasetIndex: number = context.datasetIndex;
-        const dataset = datasets[datasetIndex];
-        const axis: 'y' | 'y2' =
-          dataset?.yAxisID === 'y2' || dataset?.axis === 'y2' ? 'y2' : 'y';
+        const indexes = this.callbackIndexes(context, effective);
+        if (!indexes) return '';
+        const { datasetIndex, index } = indexes;
+        const dataset = datasets[sourceDatasetIndex(datasetIndex)];
+        const axis = chartDatasetAxis(dataset);
         if (stackTotalsActive && topDatasetIndexByAxis.get(axis) === datasetIndex) {
-          const total = totalsByAxis?.[axis][context.dataIndex];
+          const total = totalsByAxis?.[axis][sourceRowIndex(index)];
           if (total != null) return this.formatDataLabel(total);
         }
-        const numeric = typeof value === 'number' ? value : Number((value as { y?: number })?.y ?? value);
-        if (numeric == null || !Number.isFinite(numeric)) return '';
+        const numeric = chartDatumNumericValue(value);
+        if (numeric === undefined) return '';
         return this.formatDataLabel(numeric);
       },
     };
@@ -2201,13 +3389,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   private computeStackTotals(axisId: 'y' | 'y2' = 'y'): (number | null)[] {
     const effective = this.effectiveData();
-    const members = effective.datasets.filter(
-      (dataset) =>
-        (dataset.yAxisID === 'y2' || dataset.axis === 'y2' ? 'y2' : 'y') === axisId,
-    );
+    const members = effective.datasets.filter((dataset) => chartDatasetAxis(dataset) === axisId);
     const categoryCount = members.reduce(
       (max, dataset) => Math.max(max, this.datasetValues(dataset).length),
-      effective.labels.length,
+      effective.labels.length
     );
     const totals: (number | null)[] = [];
     for (let i = 0; i < categoryCount; i++) {
@@ -2215,9 +3400,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       let any = false;
       for (const dataset of members) {
         const value = this.datasetValues(dataset)[i];
-        const numeric = isChartPoint(value) ? value.y : value;
-        if (numeric == null || !Number.isFinite(numeric)) continue;
-        sum = finiteAdd(sum, numeric as number);
+        const numeric = chartDatumNumericValue(value);
+        if (numeric === undefined) continue;
+        sum = finiteAdd(sum, numeric);
         any = true;
       }
       totals.push(any ? sum : null);
@@ -2245,7 +3430,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private tickOptions(
     theme: ThemeColors,
-    kind: 'category' | 'value' = 'value',
+    kind: 'category' | 'value' = 'value'
   ): Record<string, unknown> {
     return {
       color: theme.tick,
@@ -2298,7 +3483,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private buildScales(
     effectiveType: EffectiveChartType,
     theme: ThemeColors,
-    chartStyle: ChartStyleOptions,
+    chartStyle: ChartStyleOptions
   ): Record<string, unknown> {
     if (effectiveType === 'pie' || effectiveType === 'doughnut') return {};
 
@@ -2331,7 +3516,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
 
     const hasY2 = this.effectiveData().datasets.some(
-      (dataset) => dataset.yAxisID === 'y2' || dataset.axis === 'y2',
+      (dataset) => chartDatasetAxis(dataset) === 'y2'
     );
     const rtl = this.effectiveDirection === 'rtl';
     // `stacked` only applies to bar/line-family charts sharing a categorical
@@ -2389,7 +3574,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 lineWidth: chartStyle.gridBorderWidth,
               },
               border: { width: chartStyle.gridBorderWidth },
-              title: { display: !!this.y2Label, text: this.y2Label, color: theme.tick },
+              title: { display: !!this.y2Label, text: this.y2Label, color: theme.tick, },
               ticks: this.tickOptions(theme),
               stacked,
             },
@@ -2415,53 +3600,64 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // whatever is passed (see chart.js/src/helpers/helpers.dom.ts
     // `getRelativePosition()`), which `ChartEvent` already has, so the cast
     // here is a type-only correction, not a behavior change.
-    const elements = chart.getElementsAtEventForMode(
-      event as unknown as Event,
-      'nearest',
-      { intersect: true },
-      true,
-    );
-    const hit = elements[0];
+    let elements: unknown;
+    try {
+      elements = chart.getElementsAtEventForMode(
+        event as unknown as Event,
+        'nearest',
+        { intersect: true },
+        true
+      );
+    } catch {
+      return;
+    }
+    const admission = admitChartArray(elements);
+    if (!admission || !chartArrayIsStillAdmitted(admission)) return;
+    const first = chartRecordValue(admission.source, '0');
+    if (first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR) return;
+    const effective = this.effectiveData();
+    const hit = this.callbackIndexes(first.value, effective);
     if (!hit) return;
     const datasetIndex = this.visualDatasetSourceIndexes?.[hit.datasetIndex] ?? hit.datasetIndex;
     const index = this.visualRowSourceIndexes?.[hit.index] ?? hit.index;
-    const effective = this.effectiveData();
     const value = this.datasetValues(effective.datasets[datasetIndex]!)[index] ?? null;
-    const label = isChartPoint(value) && value.label !== undefined
-      ? value.label
-      : labelText(effective.labels[index]) || undefined;
+    const label = normalizedChartPoint(value)?.label ??
+      (labelText(effective.labels[index]) || undefined);
     this.activateDatum({ datasetIndex, index, label, value });
   }
 
   private chartDatums(): ChartDatum[] {
-    const chartData = this.chart?.data;
-    const labels = (chartData?.labels as unknown[] | undefined) ?? this.labels;
-    const datasets =
-      chartData?.datasets ??
-      this.datasets.map((series) => ({ data: series.points ?? series.data ?? [] }));
-    // The keyboard alternative shares the table's bounded planner. Do not spread or scan a
-    // consumer-provided dataset list before sampling: either can turn an otherwise bounded
-    // accessible path into an argument-limit failure or O(all input) pass.
-    let rowCount = labels.length;
-    for (const dataset of datasets) {
-      rowCount = Math.max(rowCount, (dataset.data as unknown[] | undefined)?.length ?? 0);
+    const effective = this.effectiveData();
+    const datasetIndexes = this.visualDatasetSourceIndexes ??
+      effective.datasets.map((_dataset, index) => index);
+    const datasets = datasetIndexes.map((index) => effective.datasets[index]);
+    let rowIndexes = this.visualRowSourceIndexes;
+    if (!rowIndexes) {
+      let sourceRowCount = effective.labels.length;
+      for (const dataset of datasets) {
+        sourceRowCount = Math.max(sourceRowCount, chartDatasetValues(dataset).length);
+      }
+      rowIndexes = Array.from({ length: sourceRowCount }, (_value, index) => index);
     }
+    const labels = rowIndexes.map((index) => effective.labels[index]);
+    // `rowIndexes` is already the visual sample when the chart was bounded for rendering. Sample
+    // only its local positions here, then translate through that map exactly once below.
+    const rowCount = rowIndexes.length;
     const sample = sampleChartTableIndexes(rowCount, datasets.length);
     const datums: ChartDatum[] = [];
     sample.seriesIndexes.forEach((datasetIndex) => {
       const dataset = datasets[datasetIndex];
       if (!dataset) return;
-      const values = (dataset.data as unknown[] | undefined) ?? [];
-      sample.rowIndexes.forEach((index) => {
-        const value = values[index];
+      const values = chartDatasetValues(dataset);
+      sample.rowIndexes.forEach((localIndex) => {
+        const sourceIndex = rowIndexes[localIndex] ?? localIndex;
+        const value = values[sourceIndex];
         if (value == null) return;
         if (typeof value === 'number' && !Number.isFinite(value)) return;
         datums.push({
           datasetIndex: this.visualDatasetSourceIndexes?.[datasetIndex] ?? datasetIndex,
-          index: this.visualRowSourceIndexes?.[index] ?? index,
-          label: isChartPoint(value) && value.label !== undefined
-            ? value.label
-            : labelText(labels[index]) || undefined,
+          index: sourceIndex,
+          label: normalizedChartPoint(value)?.label ?? (labelText(labels[localIndex]) || undefined),
           value,
         });
       });
@@ -2469,37 +3665,41 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return datums;
   }
 
-  private datumDisplayValue(value: unknown): string {
-    if (isChartPoint(value)) {
-      const numberFormat = getNumberFormat(this.effectiveLocale);
-      const x = numberFormat.format(value.x);
-      const y = numberFormat.format(value.y);
-      const coordinates = value.r == null
+  private datumDisplayValue(
+    value: unknown,
+    context: LyraChartFormatterMetadata & {
+      readonly surface: 'table' | 'spoken';
+    } = {
+      surface: 'spoken',
+    },
+  ): string {
+    const { surface, ...metadata } = context;
+    const format = (numeric: number, statistic?: LyraChartStatistic): string =>
+      surface === 'table'
+        ? this.formatTableValue(numeric, { ...metadata, statistic })
+        : this.formatSpokenValue(numeric, { ...metadata, statistic });
+    const point = normalizedChartPoint(value);
+    if (point) {
+      const x = format(point.x, 'x');
+      const y = format(point.y, 'y');
+      const coordinates = point.r == null
         ? this.localize('chartPointCoordinates', undefined, { x, y })
         : this.localize('chartBubblePointCoordinates', undefined, {
             x,
             y,
-            radius: numberFormat.format(value.r),
+            radius: format(point.r, 'r'),
           });
-      return typeof value.label === 'string'
-        ? this.localize('chartLabeledPoint', undefined, { label: value.label, coordinates })
+      return point.label !== undefined
+        ? this.localize('chartLabeledPoint', undefined, { label: point.label, coordinates })
         : coordinates;
     }
-    const numeric =
-      typeof value === 'number'
-        ? value
-        : typeof value === 'object' && value !== null
-          ? Number((value as { y?: unknown; r?: unknown; x?: unknown }).y ??
-              (value as { r?: unknown }).r ??
-              (value as { x?: unknown }).x)
-          : Number(value);
-    return Number.isFinite(numeric) ? this.formatSpokenValue(numeric) : String(value);
+    const numeric = chartDatumNumericValue(value);
+    return numeric === undefined ? labelText(value) : format(numeric);
   }
 
   private datumAnnouncement(datum: ChartDatum, position: number, total: number): string {
-    const series =
-      String(this.effectiveData().datasets[datum.datasetIndex]?.label ?? '') ||
-      this.localize('chartSeriesLabel');
+    const dataset = this.effectiveData().datasets[datum.datasetIndex];
+    const series = chartDatasetLabel(dataset) || this.localize('chartSeriesLabel');
     return this.localize('liteChartMarkSummary', undefined, {
       series,
       label:
@@ -2507,7 +3707,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         this.localize('chartPointLabel', undefined, {
           n: getNumberFormat(this.effectiveLocale).format(datum.index + 1),
         }),
-      value: this.datumDisplayValue(datum.value),
+      value: this.datumDisplayValue(datum.value, {
+        surface: 'spoken',
+        datasetIndex: datum.datasetIndex,
+        index: datum.index,
+        label: datum.label,
+        seriesLabel: series,
+      }),
       index: getNumberFormat(this.effectiveLocale).format(position + 1),
       total: getNumberFormat(this.effectiveLocale).format(total),
     });
@@ -2517,7 +3723,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const datums = this.chartDatums();
     const position = datums.findIndex(
       (candidate) =>
-        candidate.datasetIndex === datum.datasetIndex && candidate.index === datum.index,
+        candidate.datasetIndex === datum.datasetIndex && candidate.index === datum.index
     );
     if (position >= 0) {
       this.keyboardDatumIndex = position;
@@ -2543,7 +3749,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.keyboardDatumAnnouncement = this.datumAnnouncement(
       datums[this.keyboardDatumIndex]!,
       this.keyboardDatumIndex,
-      datums.length,
+      datums.length
     );
   }
 
@@ -2597,28 +3803,36 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private formatValue(value: unknown, context: LyraChartValueFormatterContext): string | unknown {
-    const numeric = typeof value === 'number' ? value : Number(value);
-    if (!Number.isFinite(numeric)) return value;
-    return this.formatter?.({ value: numeric, surface: context }) ??
+    const numeric = chartDatumNumericValue(value);
+    if (numeric === undefined) return value;
+    return (
+      this.formatter?.({ value: numeric, surface: context }) ??
       this.valueFormatter?.(numeric, context) ??
-      value;
+      value
+    );
   }
 
-  private legendValue(item: ChartLegendItem, chart: RuntimeChart): number | undefined {
-    const datasetIndex = item.datasetIndex;
+  private legendValue(item: ChartLegendItem, _chart: RuntimeChart): number | undefined {
+    const effective = this.effectiveData();
+    const datasetIndex = this.callbackDatasetIndex(item, effective);
     if (datasetIndex === undefined) return undefined;
-    const data = chart.data.datasets?.[datasetIndex]?.data;
-    if (!data) return undefined;
-    const indexed =
-      typeof item.index === 'number' && Number.isInteger(item.index)
-        ? Number(data[item.index])
-        : NaN;
-    if (Number.isFinite(indexed)) return indexed;
+    const sourceDatasetIndex = this.visualDatasetSourceIndexes?.[datasetIndex] ?? datasetIndex;
+    const data = this.datasetValues(effective.datasets[sourceDatasetIndex]!);
+    if (!data.length) return undefined;
+    const visualRows = this.visualRowSourceIndexes ?? data.map((_value, index) => index);
+    const indexDescriptor = chartRecordValue(item, 'index');
+    if (indexDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+    if (indexDescriptor !== MISSING_OWN_DATA_DESCRIPTOR) {
+      const itemIndex = chartIndex(indexDescriptor.value);
+      if (itemIndex === undefined || itemIndex >= visualRows.length) return undefined;
+      return chartDatumNumericValue(data[visualRows[itemIndex]!] ?? null);
+    }
     let sum = 0;
     let hasValue = false;
-    for (const datum of data) {
-      const value = Number(datum);
-      if (!Number.isFinite(value)) continue;
+    for (const sourceRowIndex of visualRows) {
+      const datum = data[sourceRowIndex];
+      const value = chartDatumNumericValue(datum);
+      if (value === undefined) continue;
       sum = finiteAdd(sum, value);
       hasValue = true;
     }
@@ -2627,16 +3841,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private legendLabels(chart: RuntimeChart): ChartLegendItem[] {
     const generateLabels = this.chartJsModule?.defaults?.plugins?.legend?.labels?.generateLabels;
-    const labels =
-      (generateLabels && chart.legend && chart.options
-        ? (generateLabels(chart as never) as ChartLegendItem[])
-        : undefined) ??
-      (chart.data.datasets ?? []).map(
-      (dataset, index) => ({
-        text: labelText(dataset.label) || String(index + 1),
-        datasetIndex: index,
-      }),
-      );
+    let generated: readonly ChartLegendItem[] | undefined;
+    if (generateLabels) {
+      try {
+        generated = projectChartLegendItems(generateLabels(chart as never));
+      } catch {
+        generated = undefined;
+      }
+    }
+    const effective = this.effectiveData();
+    const sourceIndexes = this.visualDatasetSourceIndexes ??
+      effective.datasets.map((_dataset, index) => index);
+    const fallbackDatasets = sourceIndexes.map((sourceIndex) => effective.datasets[sourceIndex]);
+    const labels = generated ?? fallbackDatasets.map((dataset, index) => ({
+      text: chartDatasetLabel(dataset) || String(index + 1),
+      datasetIndex: index,
+    }));
     return labels.map((item) => {
       const value = this.legendValue(item, chart);
       const formatted = this.formatValue(value, 'legend');
@@ -2645,7 +3865,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         : {
             ...item,
             text: this.localize('chartValueLabel', undefined, {
-              label: String(item.text),
+              label: labelText(chartDatasetValue(item, 'text')),
               value: String(formatted),
             }),
           };
@@ -2653,15 +3873,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private tooltipLabel(context: ChartTooltipContext): string | undefined {
-    const parsed = context.parsed;
-    const rawValue = isPlainObject(parsed)
-      ? parsed['y'] ?? parsed['r'] ?? parsed['x']
-      : parsed ?? context.raw;
+    const parsed = projectChartDatum(chartDatasetValue(context, 'parsed'));
+    const raw = projectChartDatum(chartDatasetValue(context, 'raw'));
+    const parsedPoint = normalizedChartPoint(parsed);
+    const rawValue = parsedPoint?.y ?? parsed ?? raw;
     const formatted = this.formatValue(rawValue, 'tooltip');
     if (formatted === rawValue || formatted === undefined) return undefined;
-    return context.dataset?.label
+    const label = chartDatasetLabel(chartDatasetValue(context, 'dataset'));
+    return label
       ? this.localize('chartValueLabel', undefined, {
-          label: String(context.dataset.label),
+          label,
           value: String(formatted),
         })
       : String(formatted);
@@ -2702,7 +3923,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * `left`/`right` (the Chart.js-vocabulary passthrough) is pre-compensated so it stays on the
    * physical edge its name promises. `auto` keeps its existing reading-end placement.
    */
-  private legendGridPlacement(): 'top' | 'bottom' | 'inline-start' | 'inline-end' {
+  private legendGridPlacement():
+    | 'top' | 'bottom' | 'inline-start' | 'inline-end' {
     const position = normalizeLegendPosition(this.legendPosition);
     if (position === 'auto') {
       return this.autoLegendPosition === 'right' ? 'inline-end' : 'bottom';
@@ -2727,13 +3949,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       width: Number(area.width),
       height: Number(area.height),
     };
-    if (Object.values(next).some((value) => !Number.isFinite(value))) return;
+    if (![next.top, next.left, next.right, next.bottom, next.width, next.height].every(Number.isFinite))
+      return;
     const previous = this.resolvedChartArea;
     if (
       previous &&
-      Object.keys(next).every(
-        (key) => previous[key as keyof LyraChartArea] === next[key as keyof LyraChartArea],
-      )
+      previous.top === next.top &&
+      previous.left === next.left &&
+      previous.right === next.right &&
+      previous.bottom === next.bottom &&
+      previous.width === next.width &&
+      previous.height === next.height
     ) {
       return;
     }
@@ -2763,15 +3989,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const palette = this.seriesPalette();
     const chartStyle = this.chartStyleOptions(palette);
     const rawDataEscapeHatch = this.hasExplicitConfigData();
+    const labels = this.canonicalLabels();
     let visualRows: readonly number[] | undefined;
     let visualSeries: readonly number[] | undefined;
     if (rawDataEscapeHatch) {
       this.visualRowSourceIndexes = undefined;
       this.visualDatasetSourceIndexes = undefined;
     } else {
-      let rowCount = this.labels.length;
+      let rowCount = labels.length;
       for (const series of this.datasets) {
-        rowCount = Math.max(rowCount, (series.points ?? series.data ?? []).length);
+        rowCount = Math.max(
+          rowCount,
+          (canonicalSeriesPoints(series) ?? canonicalSeriesData(series)).length,
+        );
       }
       const sample = sampleChartTableIndexes(rowCount, this.datasets.length);
       // Keep the ordinary in-budget path byte-for-byte faithful to the authored arrays. Besides
@@ -2788,7 +4018,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const generated: RuntimeChartConfiguration = {
       type: effectiveType,
       data: {
-        labels: visualRows ? visualRows.map((index) => this.labels[index] ?? '') : this.labels,
+        labels: visualRows ? visualRows.map((index) => labels[index] ?? '') : [...labels],
         datasets: visualSeries
           ? visualSeries.map((sourceIndex) =>
               this.seriesToDataset(
@@ -2797,18 +4027,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 palette,
                 effectiveType,
                 chartStyle,
-                visualRows,
-              ),
+                visualRows
+              )
             )
           : this.datasets.map((s, i) =>
-              this.seriesToDataset(s, i, palette, effectiveType, chartStyle, visualRows),
+              this.seriesToDataset(s, i, palette, effectiveType, chartStyle, visualRows)
             ),
       },
       // `chartjs-plugin-datalabels` is registered PER-INSTANCE (only on charts
       // that need it) rather than globally, because a global registration draws
       // on — and breaks the next update of — every other chart on the page.
       // Only added when the peer has actually loaded and the feature is on.
-      ...((this.plugins.length || (this.needsDataLabels && this.dataLabelsPlugin))
+      ...(this.plugins.length || (this.needsDataLabels && this.dataLabelsPlugin)
         ? {
             plugins: [
               ...this.plugins,
@@ -2830,7 +4060,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         // canvas-internal animation loop, so `prefersReducedMotion()` is
         // checked here instead and fed into `options.animation`.
         animation: this.withoutAnimation || prefersReducedMotion(this.ownerWindow) ? false : undefined,
-        interaction: { intersect: false, mode: effectiveType === 'scatter' ? 'nearest' : 'index' },
+        interaction: { intersect: false, mode: effectiveType === 'scatter' ? 'nearest' : 'index', },
         onClick: (event: unknown, _elements: unknown, chart: RuntimeChart) =>
           this.handlePointClick(event, chart),
         plugins: {
@@ -2846,8 +4076,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             position: this.legendPositionForConfig(),
             labels: {
               color: theme.legend,
-              ...((this.formatter || this.valueFormatter)
-                ? { generateLabels: (chart: RuntimeChart) => this.legendLabels(chart) }
+              ...(this.formatter || this.valueFormatter
+                ? { generateLabels: (chart: RuntimeChart) => this.legendLabels(chart), }
                 : {}),
             },
           },
@@ -2856,7 +4086,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             backgroundColor: theme.tooltipBg,
             titleColor: theme.tooltipText,
             bodyColor: theme.tooltipText,
-            ...((this.formatter || this.valueFormatter)
+            ...(this.formatter || this.valueFormatter
               ? {
                   callbacks: {
                     label: (context: ChartTooltipContext) => this.tooltipLabel(context),
@@ -2866,8 +4096,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             // Chart.js's tooltip plugin has no per-dataset `tooltip.enabled`
             // — `LyraChartSeries.noTooltip` is implemented here instead, via the one
             // mechanism the core tooltip plugin actually reads.
-            filter: (item: ChartTooltipContext) =>
-              !this.effectiveData().datasets[item.datasetIndex]?.noTooltip,
+            filter: (item: ChartTooltipContext) => {
+              const effective = this.effectiveData();
+              const datasetIndex = this.callbackDatasetIndex(item, effective);
+              if (datasetIndex === undefined) return false;
+              const sourceDatasetIndex =
+                this.visualDatasetSourceIndexes?.[datasetIndex] ??
+                datasetIndex;
+              return chartDatasetBoolean(
+                effective.datasets[sourceDatasetIndex],
+                'noTooltip',
+              ) !== true;
+            },
           },
           zoom: this.zoom && this.zoomFeatureState !== 'unavailable'
             ? {
@@ -2916,12 +4156,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       ...this.plugins,
       ...(this.needsDataLabels && this.dataLabelsPlugin ? [this.dataLabelsPlugin] : []),
     ];
-    if (requiredPlugins.length) {
-      const mergedPlugins = Array.isArray(merged.plugins) ? merged.plugins : [];
+    const mergedPluginAdmission = admitChartArray(merged.plugins);
+    const mergedPlugins = projectChartPlugins(merged.plugins, mergedPluginAdmission);
+    if (mergedPluginAdmission || requiredPlugins.length) {
       merged.plugins = [
         ...mergedPlugins,
         ...requiredPlugins.filter((plugin) => !mergedPlugins.includes(plugin)),
       ];
+    } else if (merged.plugins !== undefined) {
+      // A non-array raw plugins value cannot be safely iterated or handed to the peer.
+      merged.plugins = [];
     }
     return merged;
   }
@@ -2930,7 +4174,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (!this.chartJsModule || !this.canvasEl) return;
     const config = this.buildConfig();
     const effectiveType = config.type;
-    const nextPlugins = Array.isArray(config.plugins) ? config.plugins : [];
+    const nextPlugins = projectChartPlugins(config.plugins);
     const samePlugins =
       nextPlugins.length === this.builtPlugins.length &&
       nextPlugins.every((plugin, index) => plugin === this.builtPlugins[index]);
@@ -2949,14 +4193,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.discardChart(true);
     this.chart = new this.chartJsModule.Chart(
       this.canvasEl,
-      config as never,
+      config as never
     ) as unknown as RuntimeChart;
     this.builtType = effectiveType;
     this.builtPlugins = [...nextPlugins];
     // A new Chart already reads configured `dataset.hidden` values. Apply and redraw only when a
     // public controlled snapshot is present; this also avoids a redundant first update for the
     // ordinary uncontrolled construction path.
-    if (this.hiddenDatasets !== undefined) {
+    if (this.canonicalHiddenDatasets() !== undefined) {
       this.applyDatasetVisibility();
       this.chart.update('none');
     }
@@ -3016,42 +4260,63 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /** Aggregates a numeric series without materializing a second unbounded values array. */
-  private summarizeSeries(dataset: LyraChartDatasetConfiguration): {
-    count: number;
-    first: number;
-    last: number;
-    min: number;
-    max: number;
-  } | undefined {
+  private summarizeSeries(
+    dataset: LyraChartDatasetConfiguration,
+  ):
+    | {
+        count: number;
+        first: number;
+        last: number;
+        min: number;
+        minIndex: number;
+        max: number;
+        maxIndex: number;
+      }
+    | undefined {
     let count = 0;
     let first = 0;
     let last = 0;
     let min = 0;
+    let minIndex = 0;
     let max = 0;
-    for (const datum of this.datasetValues(dataset)) {
-      const value = isChartPoint(datum) ? datum.y : datum;
-      if (typeof value !== 'number' || !Number.isFinite(value)) continue;
+    let maxIndex = 0;
+    for (const [index, datum] of this.datasetValues(dataset).entries()) {
+      const value = chartDatumNumericValue(datum);
+      if (value === undefined) continue;
       if (count === 0) {
         first = value;
         min = value;
+        minIndex = index;
         max = value;
+        maxIndex = index;
       }
       last = value;
-      min = Math.min(min, value);
-      max = Math.max(max, value);
+      if (value < min) {
+        min = value;
+        minIndex = index;
+      }
+      if (value > max) {
+        max = value;
+        maxIndex = index;
+      }
       count++;
     }
-    return count ? { count, first, last, min, max } : undefined;
+    return count ? { count, first, last, min, minIndex, max, maxIndex } : undefined;
   }
 
   private formatSummaryValue(value: number): string {
     return getNumberFormat(this.effectiveLocale).format(value);
   }
 
-  private formatTableValue(value: number): string {
-    return this.formatter?.({ value, surface: 'table' }) ??
+  private formatTableValue(
+    value: number,
+    metadata: LyraChartFormatterMetadata = {},
+  ): string {
+    return (
+      this.formatter?.({ value, surface: 'table', ...metadata }) ??
       this.valueFormatter?.(value, 'table') ??
-      this.formatSummaryValue(value);
+      this.formatSummaryValue(value)
+    );
   }
 
   /**
@@ -3064,16 +4329,24 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * must stay the raw machine-readable number, not a locale-grouped string a spreadsheet would
    * misparse. `undefined` means "leave the cell as it was".
    */
-  private formatExportValue(value: number): string | undefined {
-    return this.formatter?.({ value, surface: 'export' }) ??
+  private formatExportValue(
+    value: number,
+    metadata: LyraChartFormatterMetadata = {},
+  ): string | undefined {
+    return this.formatter?.({ value, surface: 'export', ...metadata }) ??
       this.valueFormatter?.(value, 'table');
   }
 
   /** The `'spoken'` surface, for the live announcement a keyboard user hears. Falls back to the
    *  locale number format, which is what it always used. */
-  private formatSpokenValue(value: number): string {
-    return this.formatter?.({ value, surface: 'spoken' }) ??
-      this.formatSummaryValue(value);
+  private formatSpokenValue(
+    value: number,
+    metadata: LyraChartFormatterMetadata = {},
+  ): string {
+    return (
+      this.formatter?.({ value, surface: 'spoken', ...metadata }) ??
+      this.formatSummaryValue(value)
+    );
   }
 
   private tableStackAxes(): ('y' | 'y2')[] {
@@ -3081,7 +4354,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (!this.stackTotals || !this.stacked || (type !== 'bar' && type !== 'line')) return [];
     const present = new Set<'y' | 'y2'>();
     for (const dataset of this.effectiveData().datasets) {
-      present.add(dataset.yAxisID === 'y2' || dataset.axis === 'y2' ? 'y2' : 'y');
+      present.add(chartDatasetAxis(dataset));
     }
     return (['y', 'y2'] as const).filter((axis) => present.has(axis));
   }
@@ -3108,25 +4381,52 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       const dataset = effective.datasets[index]!;
       const seriesLabel = this.datasetLabel(dataset, index);
       const values = this.summarizeSeries(dataset);
-      if (!values) return this.localize('chartSeriesNoData', undefined, { label: seriesLabel });
+      if (!values) return this.localize('chartSeriesNoData', undefined, { label: seriesLabel, });
       const trend =
         values.last > values.first
           ? this.localize('chartTrendIncreasing')
           : values.last < values.first
             ? this.localize('chartTrendDecreasing')
             : this.localize('chartTrendFlat');
+      const rawValues = this.datasetValues(dataset);
+      const datumLabelAt = (rowIndex: number): string | undefined => {
+        const datum = rawValues[rowIndex];
+        return normalizedChartPoint(datum)?.label ??
+          (labelText(effective.labels[rowIndex]) || undefined);
+      };
       const summary = this.localize('chartSummary', undefined, {
         label: seriesLabel,
         count: this.formatSummaryValue(values.count),
-        min: this.formatSummaryValue(values.min),
-        max: this.formatSummaryValue(values.max),
+        min: this.formatSpokenValue(values.min, {
+          datasetIndex: index,
+          index: values.minIndex,
+          label: datumLabelAt(values.minIndex),
+          seriesLabel,
+          statistic: 'min',
+        }),
+        max: this.formatSpokenValue(values.max, {
+          datasetIndex: index,
+          index: values.maxIndex,
+          label: datumLabelAt(values.maxIndex),
+          seriesLabel,
+          statistic: 'max',
+        }),
         trend,
       });
-      const rawValues = this.datasetValues(dataset);
       const pointDetails = includePointDetails
         ? sample.rowIndexes.flatMap((rowIndex) => {
             const point = rawValues[rowIndex];
-            return isChartPoint(point) ? [this.datumDisplayValue(point)] : [];
+            return normalizedChartPoint(point)
+              ? [
+                  this.datumDisplayValue(point, {
+                    surface: 'spoken',
+                    datasetIndex: index,
+                    index: rowIndex,
+                    label: datumLabelAt(rowIndex),
+                    seriesLabel,
+                  }),
+                ]
+              : [];
           })
         : [];
       return pointDetails.length
@@ -3140,7 +4440,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           // language delimits sentences with a period-space pair
           summaries: summaries.join(this.localize('chartSummarySeparator')),
         })
-      : this.localize('chartSummaryEmpty', undefined, { type: this.localizedChartType() });
+      : this.localize('chartSummaryEmpty', undefined, { type: this.localizedChartType(), });
     // Annotations carry meaning a sighted reader gets from the line or band, so they belong in the
     // description too -- the same reasoning behind lr-heatmap's [part="legend-annotation"] entries.
     // Only LABELLED entries are announced: the label is consumer-supplied text (deliberately not
@@ -3173,7 +4473,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (this.hasCustomDataTable()) return false;
     const sample = this.dataTableSample();
     if (sample.rowCount === 0 || sample.seriesCount === 0) return false;
-    return sample.rowIndexes.length < sample.rowCount || sample.seriesIndexes.length < sample.seriesCount;
+    return ( sample.rowIndexes.length < sample.rowCount || sample.seriesIndexes.length < sample.seriesCount
+    );
   }
 
   private dataTruncationMessage(): string {
@@ -3196,51 +4497,68 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               return html`<th scope="col">${this.datasetLabel(dataset, index)}</th>`;
             })}
             ${stackAxes.map(
-              (axis) => html`<th scope="col">${this.tableStackTotalLabel(axis, stackAxes.length)}</th>`,
+              (axis) =>
+                html`<th scope="col">${this.tableStackTotalLabel(axis, stackAxes.length)}</th>`
             )}
           </tr>
         </thead>
         <tbody>
-          ${sample.rowIndexes.map((index) => html`
+          ${sample.rowIndexes.map(
+            (index) => html`
             <tr>
               <th scope="row">${labelText(effective.labels[index]) ||
                 sample.seriesIndexes
-                  .map((datasetIndex) => this.datasetValues(effective.datasets[datasetIndex]!)[index])
-                  .find(isChartPoint)?.label ||
+                  .map((datasetIndex) =>
+                    normalizedChartPoint(this.datasetValues(effective.datasets[datasetIndex]!)[index]),
+                  )
+                  .find((point): point is LyraChartPoint => point !== null)?.label ||
                 this.localize('chartPointLabel', undefined, {
                   n: this.formatSummaryValue(index + 1),
                 })}</th>
               ${sample.seriesIndexes.map((datasetIndex) => {
                 const dataset = effective.datasets[datasetIndex]!;
                 const datum = this.datasetValues(dataset)[index];
-                const value = isChartPoint(datum) ? datum.y : datum;
-                if (typeof value !== 'number' || !Number.isFinite(value)) {
+                const point = normalizedChartPoint(datum);
+                const value = point?.y ?? chartDatumNumericValue(datum);
+                if (value === undefined) {
                   return html`<td>${this.localize('noData')}</td>`;
                 }
                 const detail: ChartDatum = {
                   datasetIndex,
                   index,
-                  label: isChartPoint(datum) && datum.label !== undefined
-                    ? datum.label
-                    : labelText(effective.labels[index]) || undefined,
+                  label: point?.label ?? (labelText(effective.labels[index]) || undefined),
                   value: datum,
+                };
+                const metadata: LyraChartFormatterMetadata = {
+                  datasetIndex,
+                  index,
+                  label: detail.label,
+                  seriesLabel: this.datasetLabel(dataset, datasetIndex),
                 };
                 return html`<td><button
                   type="button"
                   tabindex=${this.dataTableVisible ? '0' : '-1'}
                   @click=${() => this.activateDatum(detail)}
-                >${isChartPoint(datum)
-                  ? this.datumDisplayValue(datum)
-                  : this.formatTableValue(value)}</button></td>`;
+                >${point
+                  ? this.datumDisplayValue(datum, {
+                      surface: 'table',
+                      ...metadata,
+                    })
+                  : this.formatTableValue(value, metadata)}</button></td>`;
               })}
               ${stackAxes.map((axis) => {
                 const total = stackTotals.get(axis)?.[index];
                 return html`<td>${total == null
                   ? this.localize('noData')
-                  : this.formatTableValue(total)}</td>`;
+                  : this.formatTableValue(total, {
+                      index,
+                      label: labelText(effective.labels[index]) || undefined,
+                      statistic: 'total',
+                    })}</td>`;
               })}
             </tr>
-          `)}
+            `
+          )}
         </tbody>
       </table>
     `;
@@ -3253,7 +4571,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private legendTextFor(
     dataset: LyraChartDatasetConfiguration,
     datasetIndex: number,
-    rowIndexes?: readonly number[],
+    rowIndexes?: readonly number[]
   ): string {
     const label = this.datasetLabel(dataset, datasetIndex);
     if (!this.formatter && !this.valueFormatter) return label;
@@ -3262,8 +4580,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const values: number[] = [];
     for (const index of selected) {
       const datum = source[index];
-      const value = isChartPoint(datum) ? datum.y : Number(datum);
-      if (Number.isFinite(value)) values.push(value);
+      const value = chartDatumNumericValue(datum);
+      if (value !== undefined) values.push(value);
     }
     if (!values.length) return label;
     const value = values.reduce((sum, item) => finiteAdd(sum, item), 0);
@@ -3279,12 +4597,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private legendColor(
     dataset: LyraChartDatasetConfiguration,
     datasetIndex: number,
-    palette: string[] = this.seriesPalette(),
+    palette: string[] = this.seriesPalette()
   ): string {
     const fallback = palette[datasetIndex % palette.length] ?? 'transparent';
     const rawCandidate =
-      dataset.backgroundColor ?? dataset.borderColor ?? dataset.color;
-    const candidate = Array.isArray(rawCandidate) ? rawCandidate[0] : rawCandidate;
+      chartDatasetValue(dataset, 'backgroundColor') ??
+      chartDatasetValue(dataset, 'borderColor') ??
+      chartDatasetValue(dataset, 'color');
+    const array = admitChartArray(rawCandidate);
+    const first = array ? chartRecordValue(array.source, '0') : undefined;
+    const candidate =
+      first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : first?.value ?? rawCandidate;
     return typeof candidate === 'string'
       ? resolveCanvasColor(this, candidate, fallback)
       : fallback;
@@ -3304,7 +4629,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const proposed = this.emit(
       'lr-before-legend-visibility-change',
       legendVisibilityDetail(datasetIndex, visible, nextHidden),
-      { cancelable: true },
+      { cancelable: true }
     );
     if (proposed.defaultPrevented) return;
     // Materialize the full effective snapshot, including any configured-hidden peers, so an
@@ -3315,7 +4640,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.requestUpdate();
     this.emit(
       'lr-legend-visibility-change',
-      legendVisibilityDetail(datasetIndex, visible, nextHidden),
+      legendVisibilityDetail(datasetIndex, visible, nextHidden)
     );
   }
 
@@ -3326,8 +4651,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const sample = this.dataTableSample(effective);
     const palette = this.seriesPalette();
     const controlledHidden = normalizeHiddenDatasets(
-      this.hiddenDatasets,
-      effective.datasets.length,
+      this.canonicalHiddenDatasets(),
+      effective.datasets.length
     );
     const controlledHiddenSet = controlledHidden === undefined
       ? undefined
@@ -3344,12 +4669,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           // In uncontrolled mode the effective data configuration is the visibility source. DOM
           // legend interaction writes `hiddenDatasets`, so Chart.js metadata never becomes a
           // separate, unobservable state source.
-          const visible = controlledHiddenSet === undefined
-            ? dataset.hidden !== true
-            : !controlledHiddenSet.has(index);
-          const encoding: ForcedColorEncodingName | undefined = forcedColorsActive(this.ownerWindow)
-            ? forcedColorEncoding(index).name
-            : undefined;
+          const visible =
+            controlledHiddenSet === undefined
+              ? chartDatasetBoolean(dataset, 'hidden') !== true
+              : !controlledHiddenSet.has(index);
+          const encoding: ForcedColorEncodingName | undefined =
+            forcedColorsActive(this.ownerWindow)
+              ? forcedColorEncoding(index).name
+              : undefined;
           return html`
             <button
               part=${visible ? 'legend-item' : 'legend-item legend-item-hidden'}
@@ -3361,7 +4688,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 part="legend-swatch"
                 aria-hidden="true"
                 data-encoding=${encoding ?? nothing}
-                style="background-color:${this.legendColor(dataset, index, palette)}"
+                style="background-color:${this.legendColor(
+                  dataset,
+                  index,
+                  palette
+                )}"
               ></span>
               <span>${this.legendTextFor(dataset, index, sample.rowIndexes)}</span>
             </button>
@@ -3375,7 +4706,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (this.loading) {
       return html`
         <div part="base">
-          <slot class="config-slot" @slotchange=${this.onConfigSlotChange}></slot>
+          <slot
+            class="config-slot"
+            @slotchange=${this.onConfigSlotChange}
+          ></slot>
           <span class="sr-only">${this.localize('loading')}</span>
           <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
         </div>
@@ -3384,26 +4718,31 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (this.loadFailed) {
       return html`
         <div part="base">
-          <slot class="config-slot" @slotchange=${this.onConfigSlotChange}></slot>
+          <slot
+            class="config-slot"
+            @slotchange=${this.onConfigSlotChange}
+          ></slot>
           <div part="error">${this.localize('chartMissingLibrary')}</div>
         </div>
       `;
     }
     const effective = this.effectiveData();
     const seriesLabels = this.dataTableSample(effective).seriesIndexes.map((index) =>
-      this.datasetLabel(effective.datasets[index]!, index),
+      this.datasetLabel(effective.datasets[index]!, index)
     );
     const label = this.accessibleName(
       (seriesLabels.length
         ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(seriesLabels)
-        : '') || this.localize('chart'),
+        : '') || this.localize('chart')
     );
     const description = this.chartDescription();
     const hasCustomDataTable = this.hasCustomDataTable();
     return html`
       <div
         part="base"
-        data-legend-position=${this.showsLegend ? this.legendGridPlacement() : nothing}
+        data-legend-position=${this.showsLegend
+          ? this.legendGridPlacement()
+          : nothing}
       >
         <slot class="config-slot" @slotchange=${this.onConfigSlotChange}></slot>
         <div part="plot">
@@ -3425,7 +4764,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                     left: `${this.resolvedChartArea.left + this.resolvedChartArea.width / 2}px`,
                     top: `${this.resolvedChartArea.top + this.resolvedChartArea.height / 2}px`,
                   }
-                : { left: '50%', top: '50%' },
+                : { left: '50%', top: '50%' }
             )}
           >
             <slot name="center"></slot>
@@ -3441,7 +4780,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         <p class="sr-only" aria-hidden="true">${this.keyboardDatumAnnouncement}</p>
         <div part="notices">
           ${this.featureWarningMessages().map(
-            (warning) => html`<p part="feature-warning">${warning}</p>`,
+            (warning) => html`<p part="feature-warning">${warning}</p>`
           )}
           ${this.dataTruncationMessage()
             ? html`<p part="data-truncation">${this.dataTruncationMessage()}</p>`
@@ -3461,9 +4800,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         <div
           id=${this.dataTableId}
           part="data-table"
-          ?data-visually-hidden=${!hasCustomDataTable && !this.dataTableVisible}
+          ?data-visually-hidden=${!this.dataTableVisible}
         >
-          <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
+          <slot
+            name="data-table"
+            @slotchange=${() => this.requestUpdate()}
+          ></slot>
           ${hasCustomDataTable ? nothing : this.renderDataTable()}
         </div>
       </div>

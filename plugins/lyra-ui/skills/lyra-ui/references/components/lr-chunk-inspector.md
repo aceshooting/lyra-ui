@@ -130,7 +130,7 @@ Plus shared tokens otherwise.
 **Known gotchas:**
 
 - `title` and `open-button` are split into two separate parts (rather than one dual-part-name
-  element) because an exact-match `[part="..."]` CSS attribute selector — as this component's own
-  tests use — cannot match a multi-token `part` attribute value.
+  element) because an exact-match `[part="..."]` CSS attribute selector cannot match a multi-token
+  `part` attribute value.
 
 ---

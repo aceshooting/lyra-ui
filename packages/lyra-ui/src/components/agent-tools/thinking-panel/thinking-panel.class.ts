@@ -135,6 +135,8 @@ const NEAR_BOTTOM_PX = 48;
  *   `[part="header"]` padding while `compact`.
  * @cssprop [--lr-thinking-panel-compact-header-gap=var(--lr-space-2xs)] - Gap between the header
  *   toggle, label, and duration while `compact`.
+ * @cssprop [--lr-thinking-panel-compact-header-font-size=var(--lr-font-size-sm)] - Font size of
+ *   `[part="header"]` while `compact`.
  * @cssprop [--lr-thinking-panel-compact-body-padding=var(--lr-space-s)] - `[part="body"]` padding
  *   while `compact`.
  * @status stable

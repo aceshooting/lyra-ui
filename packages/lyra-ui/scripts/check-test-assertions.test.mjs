@@ -8,6 +8,7 @@ import { API } from 'typescript/unstable/sync';
 
 import {
   allRelatedTypes,
+  collectStructuralAssertionProxies,
   collectUnsafeAssertions,
   isDomTypeDescription,
   policyAccountingFailures,
@@ -180,5 +181,69 @@ test('a syntax fallback cannot mask an operational checker failure', () => {
         { kind: 'not.exist', via: 'syntax-fallback' },
       ]);
     }
+  );
+});
+
+test('rejects Chai length comparisons that are tautological for collections', () => {
+  withProject(
+    `
+      declare function expect(value: unknown): any;
+      declare const items: string[];
+
+      expect(items.length >= 0).to.equal(true);
+      expect(0 <= items.length).to.equal(true);
+      expect(items.length > 0).to.equal(true);
+      expect(items.length).to.equal(0);
+    `,
+    (_result, project) => {
+      assert.deepEqual(
+        collectStructuralAssertionProxies(project).map(({ kind }) => kind),
+        ['chai-tautological-length', 'chai-tautological-length'],
+      );
+    },
+  );
+});
+
+test('rejects CSSOM declarations copied to a synthetic probe before measurement', () => {
+  withProject(
+    `
+      declare function expect(value: unknown): any;
+      declare const root: ShadowRoot;
+      const sheet = root.adoptedStyleSheets[0]!;
+      const rule = sheet.cssRules[0] as CSSStyleRule;
+      const declaration = rule.style.maxInlineSize;
+      const probe = document.createElement('span');
+      probe.style.maxInlineSize = declaration;
+      expect(getComputedStyle(probe).maxInlineSize).to.equal('10px');
+    `,
+    (_result, project) => {
+      assert.deepEqual(
+        collectStructuralAssertionProxies(project).map(({ kind }) => kind),
+        ['cssom-proxy-surface'],
+      );
+    },
+  );
+});
+
+test('accepts selector/media CSSOM inspection and computed styles on real or literal probe surfaces', () => {
+  withProject(
+    `
+      declare function expect(value: unknown): any;
+      declare const root: ShadowRoot;
+      const sheet = root.adoptedStyleSheets[0]!;
+      const rule = sheet.cssRules[0] as CSSStyleRule;
+      const media = sheet.cssRules[1] as CSSMediaRule;
+      const realSurface = root.querySelector<HTMLElement>('[part="surface"]')!;
+      const literalProbe = document.createElement('span');
+      literalProbe.style.maxInlineSize = '10px';
+
+      expect(rule.selectorText).to.include('[part="surface"]');
+      expect(media.conditionText).to.equal('(prefers-reduced-motion: reduce)');
+      expect(getComputedStyle(realSurface).display).to.equal('block');
+      expect(getComputedStyle(literalProbe).maxInlineSize).to.equal('10px');
+    `,
+    (_result, project) => {
+      assert.deepEqual(collectStructuralAssertionProxies(project), []);
+    },
   );
 });

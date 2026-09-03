@@ -96,8 +96,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:workflows
       - run: pnpm check:release-qualification
-      - run: node scripts/release-integrity.test.mjs
-      - run: node scripts/publish.test.mjs
+      - run: pnpm check:release-tooling
       - run: pnpm --filter @aceshooting/lyra-ui test:public-api
       - run: pnpm --filter @aceshooting/lyra-ui test:pinned-upstream-manifests
       # Fetches exact public npm tarballs with lifecycle scripts impossible, validates their
@@ -165,7 +164,7 @@ jobs:
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -524,7 +523,7 @@ jobs:
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version: 22.23.2
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -550,6 +549,13 @@ jobs:
       # Runs every packed-consumer check except ATTW. The exhaustive ATTW matrix below checks the
       # same tarball surface in four disjoint shards; the ordinary local command remains unsharded.
       - run: pnpm check:packed-consumer:contracts
+      # Four floor/current compatibility profiles pack this exact built tree and install it through
+      # strict pnpm and npm consumers. Keep the expensive consumer matrix in the primary Node 22
+      # path; the explicit Node 20 contract lane below remains intentionally profile-free. The
+      # profile runner launches Chromium to exercise each packed consumer, so provision its matching
+      # browser explicitly in this otherwise non-container job.
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - run: node scripts/check-peer-compatibility.mjs
 
       # Hard tarball budgets (packed/unpacked bytes and file count). Runs here rather than in
       # contract-policy because it shells out to `npm pack --dry-run`, which needs a built dist/.
@@ -792,11 +798,11 @@ jobs:
           exit "$failed"
 
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
-  # packages/lyra-ui/visual-baselines/README.md): the manifest's 85 stories now produce 255
+  # packages/lyra-ui/visual-baselines/README.md): the manifest's 93 stories now produce 268
   # live light/dark/RTL plus applicable forced-colors/narrow captures. Pending human review leaves
-  # 129 compared with retained baselines and 126 as explicit ephemeral semantic/pixel evidence; all
+  # 123 compared with retained baselines and 145 as explicit ephemeral semantic/pixel evidence; all
   # capture or console errors remain blocking. The axis-level capture inventory is sorted and
-  # round-robin partitioned into three deterministic shards (85/85/85 captures) so the historical
+  # round-robin partitioned into three deterministic shards (90/89/89 captures) so the historical
   # ~3.5min browser sweep no longer sits on one runner's critical path.
   visual-regression:
     name: visual-regression / shard ${{ matrix.shard }}/3

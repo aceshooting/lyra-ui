@@ -1,10 +1,9 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import jsGrammar from 'shiki/langs/javascript.mjs';
 import './document-compare.js';
 import type { LyraDocumentCompare } from './document-compare.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
-import { styles } from './document-compare.styles.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 function stubClipboard(target: Navigator, value: unknown): () => void {
   const descriptor = Object.getOwnPropertyDescriptor(target, 'clipboard');
@@ -59,6 +58,48 @@ describe('lr-document-compare', () => {
     expect(base.getAttribute('aria-label')).to.equal('Document comparison');
   });
 
+  it('projects document versions through own data descriptors before identity, labels, and child props read them', async () => {
+    let getterCalls = 0;
+    const hostileVersion = Object.defineProperties(
+      { id: 'unsafe', name: 'Unsafe' },
+      {
+        text: {
+          enumerable: true,
+          get() {
+            getterCalls += 1;
+            throw new Error('document text accessor must not run');
+          },
+        },
+      },
+    );
+    const el = await fixture<LyraDocumentCompare>(html`<lr-document-compare></lr-document-compare>`);
+    (el as unknown as { oldVersion: unknown }).oldVersion = hostileVersion;
+    el.newVersion = { id: 'safe', name: 'Safe', text: 'retained text' };
+    await el.updateComplete;
+
+    const diff = el.shadowRoot!.querySelector('lr-diff-view') as HTMLElement & {
+      oldText: string;
+      newText: string;
+    };
+    expect(diff.oldText).to.equal('');
+    expect(diff.newText).to.equal('retained text');
+    expect(getterCalls).to.equal(0);
+  });
+
+  it('copies document fields once so a later source mutation cannot change a rendered diff', async () => {
+    const version = { id: 'old', name: 'Old', text: 'before mutation' };
+    const el = await fixture<LyraDocumentCompare>(html`<lr-document-compare></lr-document-compare>`);
+    el.oldVersion = version;
+    await el.updateComplete;
+
+    version.text = 'after mutation';
+    el.copyable = true;
+    await el.updateComplete;
+
+    const diff = el.shadowRoot!.querySelector('lr-diff-view') as HTMLElement & { oldText: string };
+    expect(diff.oldText).to.equal('before mutation');
+  });
+
   describe('view="diff" (default)', () => {
     it('renders an internal lr-diff-view forwarding oldVersion.text/newVersion.text', async () => {
       const el = (await fixture(html`
@@ -89,7 +130,7 @@ describe('lr-document-compare', () => {
       expect(base.getAttribute('aria-label')).to.equal('');
     });
 
-    it('forwards diff-layout, copyable, language, and languages to the internal lr-diff-view', async () => {
+  it('forwards diff-layout, copyable, language, and languages to the internal lr-diff-view', async () => {
       const el = (await fixture(html`
         <lr-document-compare
           diff-layout="split"
@@ -110,6 +151,24 @@ describe('lr-document-compare', () => {
       expect(diff.copyable).to.be.true;
       expect(diff.language).to.equal('js');
       expect(diff.languages).to.deep.equal({ js: jsGrammar });
+    });
+
+    it('contains malformed runtime language values before the diff view can coerce or load them', async () => {
+      let conversionCalls = 0;
+      const malformedLanguage = {
+        toString() {
+          conversionCalls += 1;
+          throw new Error('language coercion must not run');
+        },
+      };
+      const el = await fixture<LyraDocumentCompare>(html`<lr-document-compare></lr-document-compare>`);
+      (el as unknown as Record<string, unknown>)['language'] = malformedLanguage;
+      await el.updateComplete;
+
+      const diff = el.shadowRoot!.querySelector('lr-diff-view') as HTMLElement & { language: string };
+      expect(el.language).to.equal('');
+      expect(diff.language).to.equal('');
+      expect(conversionCalls).to.equal(0);
     });
 
     it('bubbles lr-copy unchanged from the internal lr-diff-view', async () => {
@@ -592,68 +651,59 @@ describe('lr-document-compare', () => {
           .oldVersion=${{ id: 'old', name: 'Old', text: 'before' }}
           .newVersion=${{ id: 'new', name: 'New', text: 'after' }}
         ></lr-document-compare>
-      `)) as LyraDocumentCompare;
-      const pane = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
-      const before = getComputedStyle(pane).borderColor;
-      const rect = pane.getBoundingClientRect();
-      try {
-        await sendMouse({
-          type: 'move',
-          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-        });
-        expect(getComputedStyle(pane).borderColor).to.not.equal(before);
-      } finally {
-        await resetMouse();
+    `)) as LyraDocumentCompare;
+    const pane = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+    const before = getComputedStyle(pane).borderColor;
+    try {
+      await hoverUntilMatched(pane, 'document-compare pane never registered :hover');
+      await waitUntil(
+        () => getComputedStyle(pane).borderColor !== before,
+        'document-compare pane hover treatment never painted',
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+    it('uses live narrow and wide pane geometry with logical LTR/RTL order', async () => {
+      for (const direction of ['ltr', 'rtl']) {
+        const narrowWrap = await fixture<HTMLElement>(html`
+          <div dir=${direction} style="inline-size: 320px">
+            <lr-document-compare
+              view="side-by-side"
+              .oldVersion=${{ id: 'v1', name: 'Old', text: 'a' }}
+              .newVersion=${{ id: 'v2', name: 'New', text: 'b' }}
+            ></lr-document-compare>
+          </div>
+        `);
+        const narrow = narrowWrap.querySelector('lr-document-compare') as LyraDocumentCompare;
+        await narrow.updateComplete;
+        const narrowPanes = narrow.shadowRoot!.querySelector<HTMLElement>('[part="panes"]')!;
+        const narrowOld = narrow.shadowRoot!.querySelector<HTMLElement>('[part="pane-old"]')!;
+        const narrowNew = narrow.shadowRoot!.querySelector<HTMLElement>('[part="pane-new"]')!;
+        const narrowBounds = narrowWrap.getBoundingClientRect();
+        expect(getComputedStyle(narrowPanes).flexDirection, `${direction} narrow layout`).to.equal('column');
+        expect(narrowOld.getBoundingClientRect().left, `${direction} narrow old containment`).to.be.at.least(narrowBounds.left - 1);
+        expect(narrowNew.getBoundingClientRect().right, `${direction} narrow new containment`).to.be.at.most(narrowBounds.right + 1);
+
+        const wideWrap = await fixture<HTMLElement>(html`
+          <div dir=${direction} style="inline-size: 800px">
+            <lr-document-compare
+              view="side-by-side"
+              .oldVersion=${{ id: 'v1', name: 'Old', text: 'a' }}
+              .newVersion=${{ id: 'v2', name: 'New', text: 'b' }}
+            ></lr-document-compare>
+          </div>
+        `);
+        const wide = wideWrap.querySelector('lr-document-compare') as LyraDocumentCompare;
+        await wide.updateComplete;
+        const widePanes = wide.shadowRoot!.querySelector<HTMLElement>('[part="panes"]')!;
+        const oldRect = wide.shadowRoot!.querySelector<HTMLElement>('[part="pane-old"]')!.getBoundingClientRect();
+        const newRect = wide.shadowRoot!.querySelector<HTMLElement>('[part="pane-new"]')!.getBoundingClientRect();
+        expect(getComputedStyle(widePanes).flexDirection, `${direction} wide layout`).to.equal('row');
+        if (direction === 'ltr') expect(oldRect.left).to.be.at.most(newRect.left);
+        else expect(oldRect.right).to.be.at.least(newRect.right);
       }
-    });
-
-    it('stacks panes below 640px container width', async () => {
-      const wrap = await fixture(html`
-        <div style="inline-size:320px;">
-          <lr-document-compare
-            view="side-by-side"
-            .oldVersion=${{ id: 'v1', name: 'Old', text: 'a' }}
-            .newVersion=${{ id: 'v2', name: 'New', text: 'b' }}
-          ></lr-document-compare>
-        </div>
-      `);
-      const narrow = wrap.querySelector('lr-document-compare') as LyraDocumentCompare;
-      await narrow.updateComplete;
-      const panes = narrow.shadowRoot!.querySelector('[part="panes"]') as HTMLElement;
-      expect(getComputedStyle(panes).flexDirection).to.equal('column');
-
-      // Control: the same part at the default (wide) allocation stays a row.
-      const wide = (await fixture(html`
-        <lr-document-compare
-          view="side-by-side"
-          .oldVersion=${{ id: 'v1', name: 'Old', text: 'a' }}
-          .newVersion=${{ id: 'v2', name: 'New', text: 'b' }}
-        ></lr-document-compare>
-      `)) as LyraDocumentCompare;
-      await wide.updateComplete;
-      const widePanes = wide.shadowRoot!.querySelector('[part="panes"]') as HTMLElement;
-      expect(getComputedStyle(widePanes).flexDirection).to.equal('row');
-    });
-
-    it('uses no hardcoded physical left/right in its stylesheet (logical properties only)', () => {
-      const css = styles.cssText;
-      expect(css).to.not.match(/[^-](left|right)\s*:/);
-    });
-
-    it('renders both panes under dir="rtl" without breaking', async () => {
-      const wrapper = await fixture(html`
-        <div dir="rtl">
-          <lr-document-compare
-            view="side-by-side"
-            .oldVersion=${{ id: 'v1', name: 'Old' }}
-            .newVersion=${{ id: 'v2', name: 'New' }}
-          ></lr-document-compare>
-        </div>
-      `);
-      const el = wrapper.querySelector('lr-document-compare') as LyraDocumentCompare;
-      await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('[part="pane-old"]')).to.exist;
-      expect(el.shadowRoot!.querySelector('[part="pane-new"]')).to.exist;
     });
   });
 

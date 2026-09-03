@@ -7,6 +7,7 @@ import {
   type ShikiHighlighter,
   type ShikiLanguageInput,
 } from './shiki-types.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 
 // Preserve the established full-loader module surface. Lean components import the peer-neutral
@@ -24,6 +25,9 @@ export { loadShikiHighlighterCore } from './shiki-types.js';
 
 let highlighter: Promise<ShikiHighlighter | null> | undefined;
 
+type ShikiModuleLoader = () => Promise<unknown>;
+let shikiModuleLoaderForTesting: ShikiModuleLoader | undefined;
+
 /** Language ids that have already failed `loadLanguage()` once — avoids
  *  retrying (and re-throwing on) the same unrecognized `language` value on
  *  every re-render of every `<lr-code-block>` that requests it. Shared
@@ -31,6 +35,18 @@ let highlighter: Promise<ShikiHighlighter | null> | undefined;
  *  ever one, see `loadShikiHighlighter()` below), so this never needs
  *  resetting alongside it. */
 const unsupportedLanguages = new Set<string>();
+
+const FULL_HIGHLIGHTER_WARNING_KEY = 'lyra-code-block-shiki-unavailable';
+const FULL_HIGHLIGHTER_WARNING =
+  '<lr-code-block>: syntax highlighting is unavailable because the optional Shiki peer could not load. Code is rendered as plain text.';
+
+/** @internal Replaces the optional-peer import for deterministic loader-failure tests. */
+export function __setShikiModuleLoaderForTesting(
+  loader: ShikiModuleLoader | undefined
+): void {
+  shikiModuleLoaderForTesting = loader;
+  highlighter = undefined;
+}
 
 const CUSTOM_LANGUAGES: Record<string, ShikiLanguageInput> = {
   gcl: GREYCAT_LANGUAGE,
@@ -59,7 +75,7 @@ function isShikiModule(candidate: unknown): candidate is ShikiModule {
  * `import()` itself, so the created instance is what's cached here rather
  * than just the resolved module (one level deeper than `map-loader.ts`'s
  * single-dependency cached-promise shape, which this otherwise mirrors).
- * Resolves to `null` (with a one-time `console.warn`) if shiki isn't
+ * Resolves to `null` with a one-time development diagnostic if shiki isn't
  * installed — `<lr-code-block>` falls back to plain unhighlighted text in
  * that case, which is a fully supported default, not a degraded mode. No
  * language grammar is loaded up front; `loadShikiLanguage()` below loads each
@@ -67,7 +83,8 @@ function isShikiModule(candidate: unknown): candidate is ShikiModule {
  */
 export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
   if (!highlighter) {
-    highlighter = import('shiki')
+    const loadShikiModule = shikiModuleLoaderForTesting ?? (() => import('shiki'));
+    highlighter = loadShikiModule()
       .then(async (mod) => {
         // Handles both the flat-namespace shape a native ESM `shiki` import produces and a
         // `{ default }`-wrapped shape a CJS-interop bundler/test harness might produce instead.
@@ -88,12 +105,8 @@ export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
         }
         return instance;
       })
-      .catch((err) => {
-        console.warn(
-          '<lr-code-block> needs the optional peer dependency `shiki` for syntax highlighting — install it ' +
-            'with `pnpm add shiki`. Code still renders, just unhighlighted, without it:',
-          err
-        );
+      .catch(() => {
+        devWarnOnce(FULL_HIGHLIGHTER_WARNING_KEY, FULL_HIGHLIGHTER_WARNING);
         return null;
       });
   }

@@ -2,7 +2,7 @@ import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./usage-badge.js";
 import type { LyraUsageBadge } from "./usage-badge.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
@@ -591,13 +591,8 @@ it("renders the interactive base hover and keyboard-focus treatment", async () =
     ></lr-usage-badge>
   `);
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
-  base.scrollIntoView({ block: "center" });
-  const rect = base.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    await hoverUntilMatched(base, "the usage badge never received the pointer hover state");
     await waitUntil(
       () => getComputedStyle(base).backgroundColor === "rgb(1, 2, 3)",
       "the usage badge hover background never appeared",
@@ -618,39 +613,14 @@ it("renders the interactive base hover and keyboard-focus treatment", async () =
   }, "the usage badge keyboard focus ring never appeared");
 });
 
-/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
- *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
- *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
- *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
-function renderedClamp(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = "";
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
-  }
-  const probe = document.createElement("span");
-  probe.style.display = "block";
-  probe.style.setProperty("--lr-popover-viewport-clamp", "10px");
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
-
-it("clamps its floating surface width through the shared popover-viewport-clamp token", async () => {
+it("clamps the actual floating tooltip through the shared popover-viewport-clamp token", async () => {
   const el = (await fixture(
-    html`<lr-usage-badge></lr-usage-badge>`
-  )) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> })
-    .updateComplete;
-  expect(renderedClamp(el, "[part='tooltip']")).to.equal("10px");
+    html`<lr-usage-badge tokens-in="1" style="--lr-popover-viewport-clamp: 10px"></lr-usage-badge>`
+  )) as LyraUsageBadge;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  base.focus();
+  await waitUntil(() => {
+    const tooltip = el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]');
+    return tooltip?.hidden === false && getComputedStyle(tooltip).maxInlineSize === "10px";
+  }, "the rendered tooltip did not resolve the viewport clamp token");
 });

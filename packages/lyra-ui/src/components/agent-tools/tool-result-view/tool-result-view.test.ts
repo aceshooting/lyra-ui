@@ -410,6 +410,66 @@ describe('status / context.reportStatus', () => {
     expect((base(el).querySelector('lr-json-viewer')) == null).to.be.true;
   });
 
+  it('invalidates callback-then-throw status reports before rendering the fallback', async () => {
+    registerToolRenderer('throwing_status_tool', {
+      render: (_result, _args, context) => {
+        if (!context) throw new Error('Expected the tool renderer context.');
+        context.reportStatus('error');
+        queueMicrotask(() => context.reportStatus('denied'));
+        setTimeout(() => context.reportStatus('running'), 25);
+        throw new Error('render failed after reporting status');
+      },
+    });
+
+    const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    const el = document.createElement('lr-tool-result-view') as LyraToolResultView;
+    el.toolName = 'throwing_status_tool';
+    el.result = { ok: false };
+    const eventPromise = oneEvent(el, 'lr-render-error');
+    container.appendChild(el);
+
+    await eventPromise;
+    await el.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve, 80));
+    await el.updateComplete;
+
+    expect(el.status).to.equal('success');
+    expect(el.getAttribute('status')).to.equal('success');
+    expect(base(el).querySelector('lr-json-viewer') !== null).to.be.true;
+  });
+
+  it('ignores microtask and timer reports from a successful attempt once a newer renderer wins', async () => {
+    let staleReport!: ToolRenderContext['reportStatus'];
+    registerToolRenderer('first_tool', {
+      render: (_result, _args, context) => {
+        if (!context) throw new Error('Expected the tool renderer context.');
+        staleReport = context.reportStatus;
+        return litHtml`<span class="first">first</span>`;
+      },
+    });
+    registerToolRenderer('second_tool', {
+      render: (_result, _args, context) => {
+        if (!context) throw new Error('Expected the tool renderer context.');
+        context.reportStatus('denied');
+        return litHtml`<span class="second">second</span>`;
+      },
+    });
+
+    const el = (await fixture(html`
+      <lr-tool-result-view tool-name="first_tool" .result=${{}}></lr-tool-result-view>
+    `)) as LyraToolResultView;
+    el.toolName = 'second_tool';
+    await el.updateComplete;
+
+    queueMicrotask(() => staleReport('error'));
+    setTimeout(() => staleReport('running'), 25);
+    await new Promise<void>((resolve) => setTimeout(resolve, 80));
+    await el.updateComplete;
+
+    expect(el.status).to.equal('denied');
+    expect(base(el).querySelector('.second') !== null).to.be.true;
+  });
+
   it('resets status back to "success" on the next resolve when the newly-matched renderer stays quiet', async () => {
     registerToolRenderer('flaky_tool', {
       render: (_result, _args, context) => {

@@ -16,6 +16,21 @@ const meta: Meta = {
 };
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-rating value="3" label="Satisfaction"></lr-rating>` };
+export const WhitespaceLabelFallback: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A whitespace-only label is treated as absent for the slider name, so the localized rating fallback names the control without changing the raw label value.',
+      },
+    },
+  },
+  render: () => html`<lr-rating
+    value="3"
+    label=" \t "
+    .strings=${{ rating: 'Overall rating' }}
+  ></lr-rating>`,
+};
 export const NativeChangeEvent: StoryObj = {
   parameters: {
     docs: {

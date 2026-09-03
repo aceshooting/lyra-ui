@@ -14,6 +14,11 @@ import {
 } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { invalidateLyraLocaleCache } from '../../../internal/localization-runtime.js';
 import { Slugger } from '../../../internal/slugger.js';
 import {
@@ -86,6 +91,57 @@ const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'd
 const MAX_DOCX_SEARCH_MATCHES = 1_000;
 const MAX_DOCX_PAINTED_SEARCH_MATCHES = 200;
 const MAX_DOCX_PAINTED_HIGHLIGHTS = 100;
+const MAX_DOCX_CONVERSION_MESSAGES = 100;
+
+interface NormalizedDocxConversion {
+  readonly value: string;
+  /** Opaque peer diagnostics are forwarded, never traversed or rendered by this component. */
+  readonly messages: readonly unknown[];
+}
+
+function isArrayValue(value: unknown): value is readonly unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Admits the converter's one required string and a bounded own-data diagnostic prefix without
+ * invoking getters, iterating peer collections, or inspecting a diagnostic's opaque cause.
+ */
+function normalizeDocxConversion(value: unknown): NormalizedDocxConversion | null {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return null;
+  const markup = getOwnDataDescriptor(value, 'value');
+  const diagnostics = getOwnDataDescriptor(value, 'messages');
+  if (
+    markup === MISSING_OWN_DATA_DESCRIPTOR
+    || markup === UNSAFE_OWN_DATA_DESCRIPTOR
+    || diagnostics === MISSING_OWN_DATA_DESCRIPTOR
+    || diagnostics === UNSAFE_OWN_DATA_DESCRIPTOR
+    || typeof markup.value !== 'string'
+    || !isArrayValue(diagnostics.value)
+  )
+    return null;
+  const length = getOwnDataDescriptor(diagnostics.value, 'length');
+  if (
+    length === MISSING_OWN_DATA_DESCRIPTOR
+    || length === UNSAFE_OWN_DATA_DESCRIPTOR
+    || typeof length.value !== 'number'
+    || !Number.isSafeInteger(length.value)
+    || length.value < 0
+  )
+    return null;
+  const messages: unknown[] = [];
+  const count = Math.min(length.value, MAX_DOCX_CONVERSION_MESSAGES);
+  for (let index = 0; index < count; index += 1) {
+    const entry = getOwnDataDescriptor(diagnostics.value, String(index));
+    if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+    messages.push(entry.value);
+  }
+  return Object.freeze({ value: markup.value, messages: Object.freeze(messages) });
+}
 
 /** Wraps the text covered by `range` in one or more `<mark part="...">` elements, splitting any
  *  text node the range only partially covers -- handles a match spanning an inline element
@@ -461,14 +517,34 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (
+        !this.isConnected
+        || generation !== this.generation
+        || this.ownerDocument.defaultView !== fetchTarget.view
+      )
+        return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const arrayBuffer = await readResponseArrayBuffer(response);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (
+        !this.isConnected
+        || generation !== this.generation
+        || this.ownerDocument.defaultView !== fetchTarget.view
+      )
+        return;
       await assertDocxArchiveWithinLimits(arrayBuffer, undefined, undefined, { signal });
-      if (!this.isConnected || generation !== this.generation) return;
+      if (
+        !this.isConnected
+        || generation !== this.generation
+        || this.ownerDocument.defaultView !== fetchTarget.view
+      )
+        return;
       const { mammoth, DOMPurify } = await this.loadLibrary();
-      if (!this.isConnected || generation !== this.generation) return;
+      if (
+        !this.isConnected
+        || generation !== this.generation
+        || this.ownerDocument.defaultView !== fetchTarget.view
+      )
+        return;
       if (!mammoth) {
         this.failWithLocalizedMessage(this.localize('docxViewerMissingConverter'));
         return;
@@ -478,34 +554,52 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         return;
       }
 
-      const converted = (await mammoth.convertToHtml({ arrayBuffer })) as { value: string; messages: unknown[] };
-      if (!this.isConnected || generation !== this.generation) return;
+      const rawConverted = await mammoth.convertToHtml({ arrayBuffer });
+      if (
+        !this.isConnected
+        || generation !== this.generation
+        || this.ownerDocument.defaultView !== fetchTarget.view
+      )
+        return;
+      const converted = normalizeDocxConversion(rawConverted);
+      if (!converted) {
+        throw new LyraUserFacingError(this.localize('documentPreviewFailedToLoad'));
+      }
       const markup = sanitizePassiveMarkup(
         DOMPurify,
         converted.value,
         this.ownerDocument,
         'passive-document',
       );
-      if (!this.isConnected || generation !== this.generation) return;
+      if (
+        !this.isConnected
+        || generation !== this.generation
+        || this.ownerDocument.defaultView !== fetchTarget.view
+      )
+        return;
       this.fetchState = {
         kind: 'loaded',
         markup: this.stampHeadings(markup),
       };
-      if (converted.messages.length > 0) {
-        for (const cause of converted.messages) {
-          this.emit('lr-viewer-diagnostic', {
-            diagnostic: Object.freeze({
-              code: 'docx-conversion-message',
-              severity: 'warning',
-              fatal: false,
-              source: 'mammoth',
-              cause,
-            } as const),
-          });
-        }
+      for (const cause of converted.messages) {
+        this.emit('lr-viewer-diagnostic', {
+          diagnostic: Object.freeze({
+            code: 'docx-conversion-message',
+            severity: 'warning',
+            fatal: false,
+            source: 'mammoth',
+            cause,
+          } as const),
+        });
       }
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (
+        isAbortError(error)
+        || !this.isConnected
+        || generation !== this.generation
+        || this.ownerDocument.defaultView !== fetchTarget.view
+      )
+        return;
       this.fetchState = {
         kind: 'error',
         message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),

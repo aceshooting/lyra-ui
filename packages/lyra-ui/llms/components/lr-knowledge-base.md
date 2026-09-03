@@ -35,7 +35,8 @@ errorMessage?: string }` (all four types exported here), where
   `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
   feeding_ documents, not a document, so the rest of the fields are its own
 - `label?: string` — heading text and the table's accessible name; omission uses the localized
-  knowledge-base label, while an explicit empty string stays empty
+  knowledge-base label. An explicit empty string keeps the visible heading empty while the nested
+  table still takes the localized default as its accessible name
 - `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — hides the aggregate
   total/synced/syncing/needs-attention row
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
@@ -62,6 +63,14 @@ empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omit
 unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`,
 `document-count` (omitted when unset), `permission-badge` (omitted when `permission` is unset),
 `actions-menu`, `actions-trigger` (the kebab `<button>`).
+
+The 13 row parts — `name-cell`, `source-name`, `source-type`, `sync-cell`, `sync-badge`,
+`sync-timestamp`, `sync-error`, `health-cell`, `health-badge`, `document-count`,
+`permission-badge`, `actions-menu`, and `actions-trigger` — are forwarded from the composed table
+through `[part="table"]`/`exportparts`, so they are styleable as
+`lr-knowledge-base::part(actions-trigger)`. `actions-trigger` is the forwarded kebab button: it
+inherits the row font, has the shared `--lr-icon-button-size` minimum hit area (40px by default),
+and keeps independent hover, pressed, and focus treatment.
 
 **Themeable custom properties:** shared tokens only.
 

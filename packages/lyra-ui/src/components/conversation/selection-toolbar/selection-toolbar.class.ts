@@ -11,12 +11,15 @@ import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
   collectComposedFocusTargets,
-  isActionableElement,
   isSemanticActionElement,
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import {
+  finiteAdd,
+  finiteMidpoint,
+  finiteRange,
+} from '../../../internal/numbers.js';
 import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
@@ -63,6 +66,12 @@ interface ActionFocusRepair {
   index: number;
   repair: ComposedFocusRepairSnapshot;
   stop: HTMLElement;
+}
+
+interface ActionTabIndexLease {
+  readonly authored: string | null;
+  lastManaged: string | null;
+  consumerOwns: boolean;
 }
 
 /**
@@ -161,7 +170,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private focusedAction?: ActionFocusRepair;
   private actionObserver?: MutationObserver;
   private managedActionStops = new Set<HTMLElement>();
-  private authoredActionTabIndex = new WeakMap<HTMLElement, string | null>();
+  private actionTabIndexLeases = new WeakMap<HTMLElement, ActionTabIndexLease>();
 
   private get effectiveActions(): readonly SelectionAction[] {
     const seen = new Set<SelectionAction>();
@@ -201,6 +210,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     this.focusedAction = undefined;
     this.actionObserver?.disconnect();
     this.actionObserver = undefined;
+    this.releaseManagedActionStops();
     this.retirePositioning();
     this.overlay?.suspend();
     super.disconnectedCallback();
@@ -216,6 +226,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     this.focusedAction = undefined;
     this.actionObserver?.disconnect();
     this.actionObserver = undefined;
+    this.releaseManagedActionStops();
     this.retirePositioning();
   }
 
@@ -279,12 +290,14 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       this.retirePositioning();
       this.overlay?.deactivate();
       this.overlay = undefined;
+      this.releaseManagedActionStops();
       return;
     }
     if (!this.open || !this.text) {
       this.retirePositioning();
       this.overlay?.deactivate();
       this.overlay = undefined;
+      this.releaseManagedActionStops();
       return;
     }
     if (this.overlay?.isActive()) {
@@ -349,9 +362,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     }).elements.filter(
       (button) =>
         Boolean(isSemanticActionElement(button)) ||
-        (this.authoredActionTabIndex.has(button)
-          ? this.authoredActionTabIndex.get(button) !== null
-          : button.hasAttribute('tabindex'))
+        this.hasAuthoredActionTabIndex(button)
     );
   }
 
@@ -448,31 +459,79 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     return target;
   }
 
+  /** A manager-written tabindex must not turn an otherwise non-action element into a permanent
+   *  authored action after that manager releases it. */
+  private hasAuthoredActionTabIndex(button: HTMLElement): boolean {
+    const lease = this.actionTabIndexLeases.get(button);
+    if (!lease) return button.hasAttribute('tabindex');
+    if (
+      lease.lastManaged !== null &&
+      button.getAttribute('tabindex') === lease.lastManaged
+    ) {
+      return lease.authored !== null;
+    }
+    return button.hasAttribute('tabindex');
+  }
+
+  private writeActionTabIndex(
+    button: HTMLElement,
+    tabIndex: 0 | -1,
+  ): void {
+    let lease = this.actionTabIndexLeases.get(button);
+    if (!lease) {
+      lease = {
+        authored: button.getAttribute('tabindex'),
+        lastManaged: null,
+        consumerOwns: false,
+      };
+      this.actionTabIndexLeases.set(button, lease);
+    }
+    if (
+      lease.consumerOwns ||
+      (lease.lastManaged !== null &&
+        button.getAttribute('tabindex') !== lease.lastManaged)
+    ) {
+      lease.consumerOwns = true;
+      return;
+    }
+    button.tabIndex = tabIndex;
+    lease.lastManaged = button.getAttribute('tabindex');
+  }
+
+  private releaseActionTabIndex(button: HTMLElement): void {
+    const lease = this.actionTabIndexLeases.get(button);
+    if (!lease) return;
+    if (
+      !lease.consumerOwns &&
+      button.getAttribute('tabindex') === lease.lastManaged
+    ) {
+      if (lease.authored === null) button.removeAttribute('tabindex');
+      else button.setAttribute('tabindex', lease.authored);
+    }
+    this.actionTabIndexLeases.delete(button);
+  }
+
+  private releaseManagedActionStops(): void {
+    for (const button of this.managedActionStops) {
+      this.releaseActionTabIndex(button);
+    }
+    this.managedActionStops.clear();
+  }
+
   private setRovingStops(buttons: HTMLElement[], index: number): void {
     this.actionObserver?.disconnect();
-    for (const button of buttons) {
-      if (!this.authoredActionTabIndex.has(button)) {
-        this.authoredActionTabIndex.set(
-          button,
-          button.getAttribute('tabindex')
-        );
-      }
-    }
     for (const previous of this.managedActionStops) {
-      if (
-        !buttons.includes(previous) &&
-        (previous.hasAttribute('tabindex') ||
-          Boolean(isActionableElement(previous)))
-      ) {
-        previous.tabIndex = -1;
-      }
+      if (!buttons.includes(previous)) this.releaseActionTabIndex(previous);
     }
     this.activeActionIndex =
       buttons.length === 0
         ? 0
         : Math.min(Math.max(0, index), buttons.length - 1);
     buttons.forEach((button, buttonIndex) => {
-      button.tabIndex = buttonIndex === this.activeActionIndex ? 0 : -1;
+      this.writeActionTabIndex(
+        button,
+        buttonIndex === this.activeActionIndex ? 0 : -1,
+      );
     });
     this.managedActionStops = new Set(buttons);
     this.observeActionChanges(buttons);
@@ -521,17 +580,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   }
 
   private onActionMutations = (records: MutationRecord[]): void => {
-    for (const record of records) {
-      if (record.type !== 'attributes' || record.attributeName !== 'tabindex')
-        continue;
-      const target = record.target as HTMLElement;
-      if (this.authoredActionTabIndex.has(target)) {
-        this.authoredActionTabIndex.set(
-          target,
-          target.getAttribute('tabindex')
-        );
-      }
-    }
+    void records;
     void this.syncRovingStops();
   };
 
@@ -651,13 +700,25 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     left: number;
     top: number;
     width: number;
+    height: number;
+    right: number;
     bottom: number;
+    inlineCenter: number;
   } {
+    const left = finiteRange(rect.left, 0, -Number.MAX_VALUE, Number.MAX_VALUE);
+    const top = finiteRange(rect.top, 0, -Number.MAX_VALUE, Number.MAX_VALUE);
+    const width = finiteRange(rect.width, 0, 0, Number.MAX_VALUE);
+    const height = finiteRange(rect.height, 0, 0, Number.MAX_VALUE);
+    const right = finiteAdd(left, width);
+    const bottom = finiteAdd(top, height);
     return {
-      left: finiteNumber(rect.left, 0),
-      top: finiteNumber(rect.top, 0),
-      width: finiteNumber(rect.width, 0),
-      bottom: finiteNumber(rect.bottom, 0),
+      left,
+      top,
+      width,
+      height,
+      right,
+      bottom,
+      inlineCenter: finiteMidpoint(left, right),
     };
   }
 
@@ -670,28 +731,46 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     bottom: number;
     layoutWidth: number;
   } {
-    const layoutWidth = Math.max(0, finiteNumber(view.innerWidth, 0));
-    const layoutHeight = Math.max(0, finiteNumber(view.innerHeight, 0));
+    const layoutWidth = finiteRange(view.innerWidth, 0, 0, Number.MAX_VALUE);
+    const layoutHeight = finiteRange(view.innerHeight, 0, 0, Number.MAX_VALUE);
     const viewport = view.visualViewport;
-    const left = Math.max(0, finiteNumber(viewport?.offsetLeft ?? 0, 0));
-    const top = Math.max(0, finiteNumber(viewport?.offsetTop ?? 0, 0));
-    const width = Math.max(
+    const left = finiteRange(
+      viewport?.offsetLeft ?? 0,
       0,
-      finiteNumber(viewport?.width ?? layoutWidth, layoutWidth)
+      0,
+      Number.MAX_VALUE,
     );
-    const height = Math.max(
+    const top = finiteRange(
+      viewport?.offsetTop ?? 0,
       0,
-      finiteNumber(viewport?.height ?? layoutHeight, layoutHeight)
+      0,
+      Number.MAX_VALUE,
+    );
+    const width = finiteRange(
+      viewport?.width ?? layoutWidth,
+      layoutWidth,
+      0,
+      Number.MAX_VALUE,
+    );
+    const height = finiteRange(
+      viewport?.height ?? layoutHeight,
+      layoutHeight,
+      0,
+      Number.MAX_VALUE,
     );
     return {
       left,
       top,
       width,
       height,
-      right: left + width,
-      bottom: top + height,
+      right: finiteAdd(left, width),
+      bottom: finiteAdd(top, height),
       layoutWidth,
     };
+  }
+
+  private px(value: number): string {
+    return `${finiteRange(value, 0, -Number.MAX_VALUE, Number.MAX_VALUE)}px`;
   }
 
   private coordinates(): Record<string, string> {
@@ -707,18 +786,32 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
           bottom: 0,
           layoutWidth: 0,
         };
-    const rect = this.rect ? this.safeRect(this.rect) : undefined;
-    const desiredInline = rect
-      ? rect.left + rect.width / 2
-      : viewport.left + viewport.width / 2;
-    const block = rect?.top ?? viewport.top;
+    const fallbackInline = finiteMidpoint(viewport.left, viewport.right);
+    const rect = this.rect
+      ? this.safeRect(this.rect)
+      : {
+          left: fallbackInline,
+          top: viewport.top,
+          width: 0,
+          height: 0,
+          right: fallbackInline,
+          bottom: viewport.top,
+          inlineCenter: fallbackInline,
+        };
+    const desiredInline = finiteRange(
+      rect.inlineCenter,
+      viewport.left,
+      viewport.left,
+      viewport.right,
+    );
+    const block = finiteRange(rect.top, viewport.top, viewport.top, viewport.bottom);
+    const logicalInline =
+      this.effectiveDirection === 'rtl'
+        ? finiteAdd(viewport.layoutWidth, -desiredInline)
+        : desiredInline;
     return {
-      '--_lr-selection-toolbar-inline-start': `${
-        this.effectiveDirection === 'rtl'
-          ? viewport.layoutWidth - desiredInline
-          : desiredInline
-      }px`,
-      '--_lr-selection-toolbar-block-start': `${block}px`,
+      '--_lr-selection-toolbar-inline-start': this.px(logicalInline),
+      '--_lr-selection-toolbar-block-start': this.px(block),
     };
   }
 
@@ -726,15 +819,26 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
    *  custom property. Placement works in viewport pixels, so it must not pass an unresolved CSS
    *  expression into geometry math; unsupported values retain the historical 8px fallback. */
   private placementGapPx(): number {
-    const raw =
-      this.ownerDocument.defaultView
-        ?.getComputedStyle(this)
-        .getPropertyValue('--lr-selection-toolbar-placement-gap')
-        .trim() ?? '';
+    const view = this.ownerDocument.defaultView;
+    const computed = view?.getComputedStyle(this);
+    const publicValue = resolveCssLength(
+      computed
+        ?.getPropertyValue('--lr-selection-toolbar-placement-gap')
+        .trim() ?? '',
+      { host: this },
+    );
+    if (publicValue !== undefined) {
+      return finiteRange(publicValue, DEFAULT_PLACEMENT_GAP_PX, 0, Number.MAX_VALUE);
+    }
+    const tokenValue = resolveCssLength(
+      computed?.getPropertyValue('--lr-space-s').trim() ?? '',
+      { host: this },
+    );
     return finiteRange(
-      resolveCssLength(raw, { host: this }) ?? DEFAULT_PLACEMENT_GAP_PX,
+      tokenValue ?? DEFAULT_PLACEMENT_GAP_PX,
       DEFAULT_PLACEMENT_GAP_PX,
-      0
+      0,
+      Number.MAX_VALUE,
     );
   }
 
@@ -742,53 +846,90 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     const toolbar = this.toolbar;
     const view = this.ownerDocument.defaultView;
     if (!toolbar || !view) return;
-    const gap = this.placementGapPx();
-    const edge = gap;
     const viewport = this.viewportBounds(view);
-    const rect = this.safeRect(
-      this.rect ??
-        new view.DOMRect(viewport.left + viewport.width / 2, viewport.top, 0, 0)
+    const maxEdge = finiteMidpoint(
+      0,
+      Math.min(viewport.width, viewport.height),
+    );
+    const gap = finiteRange(this.placementGapPx(), DEFAULT_PLACEMENT_GAP_PX, 0, maxEdge);
+    const edge = gap;
+    const fallbackInline = finiteMidpoint(viewport.left, viewport.right);
+    const rect = this.rect
+      ? this.safeRect(this.rect)
+      : {
+          left: fallbackInline,
+          top: viewport.top,
+          width: 0,
+          height: 0,
+          right: fallbackInline,
+          bottom: viewport.top,
+          inlineCenter: fallbackInline,
+        };
+    const doubleEdge = finiteAdd(edge, edge);
+    const maxInlineSize = finiteRange(
+      finiteAdd(viewport.width, -doubleEdge),
+      0,
+      0,
+      Number.MAX_VALUE,
+    );
+    const maxBlockSize = finiteRange(
+      finiteAdd(viewport.height, -doubleEdge),
+      0,
+      0,
+      Number.MAX_VALUE,
     );
     toolbar.style.setProperty(
       '--_lr-selection-toolbar-max-inline-size',
-      `${Math.max(0, viewport.width - edge * 2)}px`
+      this.px(maxInlineSize),
     );
     toolbar.style.setProperty(
       '--_lr-selection-toolbar-max-block-size',
-      `${Math.max(0, viewport.height - edge * 2)}px`
+      this.px(maxBlockSize),
     );
-    const width = toolbar.offsetWidth;
-    const height = toolbar.offsetHeight;
-    const desiredInline = rect.left + rect.width / 2;
-    const desiredLeft = desiredInline - width / 2;
-    const minLeft = viewport.left + edge;
-    const maxLeft = Math.max(minLeft, viewport.right - width - edge);
-    const left = Math.min(maxLeft, Math.max(minLeft, desiredLeft));
-    const above = rect.top - height - gap;
-    const below = rect.bottom + gap;
-    const minTop = viewport.top + edge;
+    const width = finiteRange(toolbar.offsetWidth, 0, 0, Number.MAX_VALUE);
+    const height = finiteRange(toolbar.offsetHeight, 0, 0, Number.MAX_VALUE);
+    const desiredInline = finiteRange(
+      rect.inlineCenter,
+      viewport.left,
+      viewport.left,
+      viewport.right,
+    );
+    const anchorBlock = finiteRange(rect.top, viewport.top, viewport.top, viewport.bottom);
+    const desiredLeft = finiteAdd(desiredInline, -finiteMidpoint(0, width));
+    const minLeft = finiteAdd(viewport.left, edge);
+    const maxLeft = Math.max(
+      minLeft,
+      finiteAdd(finiteAdd(viewport.right, -width), -edge),
+    );
+    const left = finiteRange(desiredLeft, minLeft, minLeft, maxLeft);
+    const above = finiteAdd(finiteAdd(rect.top, -height), -gap);
+    const below = finiteAdd(rect.bottom, gap);
+    const minTop = finiteAdd(viewport.top, edge);
     const desiredTop = above >= minTop ? above : below;
-    const maxTop = Math.max(minTop, viewport.bottom - height - edge);
-    const top = Math.min(maxTop, Math.max(minTop, desiredTop));
+    const maxTop = Math.max(
+      minTop,
+      finiteAdd(finiteAdd(viewport.bottom, -height), -edge),
+    );
+    const top = finiteRange(desiredTop, minTop, minTop, maxTop);
     const logicalInline =
       this.effectiveDirection === 'rtl'
-        ? viewport.layoutWidth - desiredInline
+        ? finiteAdd(viewport.layoutWidth, -desiredInline)
         : desiredInline;
     toolbar.style.setProperty(
       '--_lr-selection-toolbar-inline-start',
-      `${logicalInline}px`
+      this.px(logicalInline),
     );
     toolbar.style.setProperty(
       '--_lr-selection-toolbar-block-start',
-      `${rect.top}px`
+      this.px(anchorBlock),
     );
     toolbar.style.setProperty(
       '--_lr-selection-toolbar-inline-shift',
-      `${left - (desiredInline - width / 2)}px`
+      this.px(finiteAdd(left, -desiredLeft)),
     );
     toolbar.style.setProperty(
       '--_lr-selection-toolbar-block-shift',
-      `${top - (rect.top - height)}px`
+      this.px(finiteAdd(top, -finiteAdd(anchorBlock, -height))),
     );
     toolbar.toggleAttribute('data-positioned', true);
   };

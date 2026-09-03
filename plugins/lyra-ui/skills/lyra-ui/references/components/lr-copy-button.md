@@ -54,7 +54,10 @@ positioning opinion of its own.
 **Methods:** `focus(options?)`, `blur()` and `click()` forward to the active built-in or custom
 trigger. `getToolbarActions(): readonly LyraToolbarAction[]` implements the public logical-toolbar
 provider protocol with one stable action whose id is `copy`; its focus, roving tab index, disabled
-state, and composed-event matching follow the active trigger without exposing that node.
+state, and composed-event matching follow the active trigger without exposing that node. Its
+`releaseTabIndex()` action method lets a parent stop managing its tab index on disconnect, adoption,
+trigger replacement, and parent departure: an untouched author-supplied `tabindex` is restored,
+while a newer author change is never overwritten.
 
 **Events:**
 

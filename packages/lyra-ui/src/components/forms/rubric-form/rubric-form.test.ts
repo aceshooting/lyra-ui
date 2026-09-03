@@ -100,6 +100,29 @@ const KEYS: RubricKey[] = [
 ];
 
 describe("lr-rubric-form", () => {
+  it('rejects accessor-backed schema rows without invoking them while retaining a later valid row', async () => {
+    let typeReads = 0;
+    const accessorBacked: Record<string, unknown> = {
+      key: 'accessor-backed',
+      label: 'Accessor backed',
+      placeholder: 'Write a note',
+    };
+    Object.defineProperty(accessorBacked, 'type', {
+      enumerable: true,
+      get(): never {
+        typeReads += 1;
+        throw new Error('do not invoke rubric accessors');
+      },
+    });
+    const el = (await fixture(html`<lr-rubric-form></lr-rubric-form>`)) as LyraRubricForm;
+    el.keys = [accessorBacked as unknown as RubricKey, { key: 'later', type: 'comment', label: 'Later' }];
+    await el.updateComplete;
+
+    expect(typeReads).to.equal(0);
+    expect([...el.shadowRoot!.querySelectorAll('[part="field"]')].map((field) => field.getAttribute('data-key')))
+      .to.deep.equal(['later']);
+  });
+
   it("renders one control per key, in array order", async () => {
     const el = (await fixture(
       html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`

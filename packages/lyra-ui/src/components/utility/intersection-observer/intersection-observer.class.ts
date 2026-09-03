@@ -3,6 +3,13 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './intersection-observer.styles.js';
 import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
+
+const MAX_OBSERVER_OPTION_VALUES = 10_000;
 
 export interface LyraIntersectionObserverEventMap {
   'lr-intersection': CustomEvent<
@@ -12,22 +19,80 @@ export interface LyraIntersectionObserverEventMap {
 }
 
 function isElementNode(value: unknown): value is Element {
-  const candidate = value as {
-    nodeType?: unknown;
-    ownerDocument?: { nodeType?: unknown };
-    getAttribute?: unknown;
-    matches?: unknown;
-    getBoundingClientRect?: unknown;
-  } | null;
-  return (
-    typeof candidate === 'object' &&
-    candidate !== null &&
-    candidate.nodeType === 1 &&
-    candidate.ownerDocument?.nodeType === 9 &&
-    typeof candidate.getAttribute === 'function' &&
-    typeof candidate.matches === 'function' &&
-    typeof candidate.getBoundingClientRect === 'function'
-  );
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null) return false;
+  try {
+    if (typeof Element === 'undefined') return false;
+    // A native Element method brand-checks its receiver across realms without reading arbitrary
+    // lookalike properties (which could be accessor-backed or proxy-trapped).
+    Element.prototype.getAttribute.call(value, 'data-lr-brand-probe');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function normalizedThreshold(value: unknown): number | number[] {
+  if (typeof value === 'number') return Number.isFinite(value) && value >= 0 && value <= 1 ? value : 0;
+  if (typeof value === 'string') {
+    const values = value
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(Number)
+      .filter((candidate) => Number.isFinite(candidate) && candidate >= 0 && candidate <= 1);
+    return values.length > 0 ? values : 0;
+  }
+  try {
+    if (!Array.isArray(value)) return 0;
+    const length = getOwnDataDescriptor(value, 'length');
+    if (
+      length === MISSING_OWN_DATA_DESCRIPTOR ||
+      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof length.value !== 'number' ||
+      !Number.isSafeInteger(length.value) ||
+      length.value < 0
+    )
+      return 0;
+    const values: number[] = [];
+    for (let index = 0; index < Math.min(length.value, MAX_OBSERVER_OPTION_VALUES); index += 1) {
+      const entry = getOwnDataDescriptor(value, String(index));
+      if (
+        entry === MISSING_OWN_DATA_DESCRIPTOR ||
+        entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof entry.value !== 'number' ||
+        !Number.isFinite(entry.value) ||
+        entry.value < 0 ||
+        entry.value > 1
+      )
+        continue;
+      values.push(entry.value);
+    }
+    return values.length > 0 ? values : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function observerEntries(entries: readonly IntersectionObserverEntry[]): readonly {
+  entry: IntersectionObserverEntry;
+  isIntersecting: boolean;
+  target: Element;
+}[] {
+  const projected: { entry: IntersectionObserverEntry; isIntersecting: boolean; target: Element }[] = [];
+  try {
+    for (const entry of entries) {
+      try {
+        const target = entry.target;
+        if (!isElementNode(target)) continue;
+        projected.push({ entry, target, isIntersecting: entry.isIntersecting === true });
+      } catch {
+        // A malformed callback entry must not strand later native entries.
+      }
+    }
+  } catch {
+    return Object.freeze(projected);
+  }
+  return Object.freeze(projected);
 }
 
 /**
@@ -97,7 +162,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('once') && !this.once) {
+    if (changed.has('once') && this.once !== true) {
       // Turning the one-shot behavior off is the explicit reset boundary. Observer option
       // rebuilds and disconnect/reconnect cycles must otherwise retain consumed targets.
       this.onceIntersectedTargets = new WeakSet<Element>();
@@ -122,18 +187,53 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
 
   private disconnect(): void {
     this.observerGeneration += 1;
-    this.observer = disconnectObserver(this.observer);
+    const observer = this.observer;
+    // Clear the ownership fields before crossing a consumer-controlled observer boundary. A
+    // malformed implementation can throw while resolving or invoking disconnect(), but it must
+    // not retain a current observer through a later rebuild or reconnect.
+    this.observer = undefined;
     this.observerDocument = undefined;
+    try {
+      disconnectObserver(observer);
+    } catch {
+      // Observer implementations are optional capabilities; teardown failures fail closed.
+    }
   }
 
   private observeTargets = (): void => {
     this.disconnect();
     const ownerDocument = this.ownerDocument;
-    const IntersectionObserverCtor = ownerDocument.defaultView?.IntersectionObserver;
-    if (this.disabled || !this.isConnected || !IntersectionObserverCtor) return;
-    const targets = slottedElementTargets(this.renderRoot).filter(
-      (target) => !this.once || !this.onceIntersectedTargets.has(target),
-    );
+    let IntersectionObserverCtor: typeof IntersectionObserver | undefined;
+    try {
+      IntersectionObserverCtor = ownerDocument.defaultView?.IntersectionObserver;
+    } catch {
+      // A configurable owner-window capability getter is also part of the optional boundary.
+      return;
+    }
+    const disabled = this.disabled === true;
+    const once = this.once === true;
+    const rootMarginValue = this.rootMargin;
+    const rootMargin = typeof rootMarginValue === 'string' ? rootMarginValue : '0px';
+    const threshold = normalizedThreshold(this.threshold);
+    const classValue = this.intersectClass;
+    const classes = typeof classValue === 'string'
+      ? Object.freeze(classValue.trim().split(/\s+/).filter(Boolean))
+      : Object.freeze([]);
+    const rootValue = this.root;
+    const root = typeof rootValue === 'string'
+      ? ownerDocument.getElementById(rootValue.trim().replace(/^#/, ''))
+      : isElementNode(rootValue)
+        ? rootValue
+        : null;
+    if (disabled || !this.isConnected || !IntersectionObserverCtor) return;
+    let targets: Element[];
+    try {
+      targets = slottedElementTargets(this.renderRoot).filter(
+        (target) => !once || !this.onceIntersectedTargets.has(target),
+      );
+    } catch {
+      return;
+    }
     if (targets.length === 0) return;
     const generation = this.observerGeneration;
     let observer: IntersectionObserver;
@@ -146,60 +246,66 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     );
     const callback: IntersectionObserverCallback = (entries) => {
       if (!isCurrentObserver()) return;
-      const batch = [...entries].filter(
-        (entry) => !this.once || !this.onceIntersectedTargets.has(entry.target),
+      const batch = observerEntries(entries).filter(
+        ({ target }) => !once || !this.onceIntersectedTargets.has(target),
       );
       if (batch.length === 0) return;
-      for (const entry of batch) {
+      for (const { entry, target, isIntersecting } of batch) {
         if (!isCurrentObserver()) return;
-        if (this.once && entry.isIntersecting) this.onceIntersectedTargets.add(entry.target);
-        for (const token of this.intersectClass.trim().split(/\s+/).filter(Boolean)) {
-          entry.target.classList.toggle(token, entry.isIntersecting);
+        if (once && isIntersecting) this.onceIntersectedTargets.add(target);
+        for (const token of classes) {
+          try {
+            target.classList.toggle(token, isIntersecting);
+          } catch {
+            // A custom element's class-list boundary cannot prevent later entries from emitting.
+          }
         }
         this.emit('lr-intersect', { entry });
         // An item listener may synchronously disconnect or adopt the wrapper. Stop the remainder
         // of the native batch instead of unobserving through, or emitting from, a retired owner.
         if (!isCurrentObserver()) return;
-        if (this.once && entry.isIntersecting) observer.unobserve(entry.target);
+        if (once && isIntersecting) {
+          try {
+            observer.unobserve(target);
+          } catch {
+            // A failed native cleanup is contained by the next observer rebuild/disconnect.
+          }
+        }
       }
-      if (isCurrentObserver()) this.emit('lr-intersection', { entries: batch });
+      if (isCurrentObserver()) this.emit('lr-intersection', { entries: batch.map(({ entry }) => entry) });
     };
-    const thresholdSource = typeof this.threshold === 'string'
-      ? this.threshold.trim().split(/\s+/).filter(Boolean).map(Number)
-      : Array.isArray(this.threshold)
-        ? this.threshold
-        : [this.threshold];
-    const values = thresholdSource
-      .filter((value) => Number.isFinite(value) && value >= 0 && value <= 1);
-    const threshold = values.length > 0
-      ? typeof this.threshold === 'number'
-        ? values[0]!
-        : values
-      : 0;
-    const root = typeof this.root === 'string'
-      ? this.ownerDocument.getElementById(this.root.trim().replace(/^#/, ''))
-      : isElementNode(this.root)
-        ? this.root
-        : null;
     const options: IntersectionObserverInit = {
       root,
-      rootMargin: this.rootMargin,
+      rootMargin,
       threshold,
     };
     try {
       observer = new IntersectionObserverCtor(callback, options);
     } catch {
-      // Native parsing owns the root-margin grammar. Invalid public options fall back to the
-      // platform defaults rather than rejecting the scheduled update.
-      observer = new IntersectionObserverCtor(callback, {
-        root: options.root,
-        rootMargin: '0px',
-        threshold,
-      });
+      try {
+        // Native parsing owns the root-margin grammar. A hostile constructor or invalid public
+        // options leave this update inert instead of escaping the component boundary.
+        observer = new IntersectionObserverCtor(callback, {
+          root: null,
+          rootMargin: '0px',
+          threshold: 0,
+        });
+      } catch {
+        return;
+      }
     }
     this.observer = observer;
     this.observerDocument = ownerDocument;
-    targets.forEach((target) => observer.observe(target));
+    let observed = false;
+    for (const target of targets) {
+      try {
+        observer.observe(target);
+        observed = true;
+      } catch {
+        // A single custom/native target can reject observation without affecting later targets.
+      }
+    }
+    if (!observed) this.disconnect();
   };
 
   override render(): TemplateResult {

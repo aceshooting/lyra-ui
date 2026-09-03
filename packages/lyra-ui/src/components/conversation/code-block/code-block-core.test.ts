@@ -76,6 +76,22 @@ describe("lr-code-block-core", () => {
     expect(toggle.getAttribute("aria-label")).to.equal("Réduire le code");
   });
 
+  it('inherits live host font size into the collapse toggle and its 1em glyph', async () => {
+    const el = (await fixture(
+      html`<lr-code-block-core
+        collapsible
+        style="font: 20px/1 monospace"
+        .code=${'const answer = 42;'}
+      ></lr-code-block-core>`
+    )) as LyraCodeBlockCore;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+    const glyph = toggle.querySelector<SVGElement>('svg')!;
+
+    expect(getComputedStyle(toggle).fontSize).to.equal('20px');
+    expect(getComputedStyle(glyph).width).to.equal('20px');
+    expect(getComputedStyle(glyph).height).to.equal('20px');
+  });
+
   it("renders optional line numbers for plain code", async () => {
     const el = (await fixture(
       html`<lr-code-block-core
@@ -379,6 +395,30 @@ describe("lr-code-block-core", () => {
     const pre = el.shadowRoot!.querySelector("pre");
     expect(pre != null).to.equal(true);
     expect(pre!.textContent).to.include("print(1)");
+  });
+
+  it('keeps localized controls and source visible when the fine-grained highlighter is unavailable', async () => {
+    __setShikiHighlighterCoreLoaderForTesting(() => Promise.resolve(null));
+    const el = document.createElement('lr-code-block-core') as LyraCodeBlockCore;
+    el.collapsible = true;
+    el.language = 'json';
+    el.languages = sharedJsonLanguages;
+    el.code = '{"answer":42}';
+    el.strings = { collapseCode: 'Réduire le code' };
+    document.body.append(el);
+    try {
+      await el2Ready(el);
+      expect(el.hasAttribute('aria-busy')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(
+        '{"answer":42}'
+      );
+      expect(
+        el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-label')
+      ).to.equal('Réduire le code');
+    } finally {
+      el.remove();
+      __setShikiHighlighterCoreLoaderForTesting(undefined);
+    }
   });
 
   it("is accessible", async () => {

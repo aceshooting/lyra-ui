@@ -23,7 +23,7 @@ grounding, and context state: transcript + composer in the main pane, and a deta
 assign new data to the properties as the host receives updates.
 
 This is the single component that binds the most of the provider-neutral vocabulary exported from
-`@aceshooting/lyra-ui/ai` (`src/ai/types.ts`) at once; a host that already holds `ChatMessage[]`,
+`@aceshooting/lyra-ui/ai` at once; a host that already holds `ChatMessage[]`,
 `AgentRun`, `RetrievalChunk[]`, `Citation[]`, and `GroundingAssessment` can wire this up with no
 adapters.
 
@@ -81,7 +81,8 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
   the border and padding; a supplied `composer` slot keeps its own frame.
 - `composerValue: string = ''` (attribute `composer-value`) — controlled composer value
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
-'streaming'`, `lr-chat-composer`'s own union
+'streaming'`, `lr-chat-composer`'s own union; invalid values read as `idle` without rewriting the
+  host attribute
 - `composerPlaceholder: string = ''` (attribute `composer-placeholder`)
 - `composerMinRows: number = 1` (attribute `composer-min-rows`), `composerMaxRows: number = 8`
   (attribute `composer-max-rows`)

@@ -4,6 +4,24 @@ import './number-input.js';
 import './native-time-input.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
+type DescribedNativeInput = HTMLInputElement & {
+  ariaDescribedByElements?: readonly Element[] | null;
+};
+
+function hasDescribedByElementReflection(
+  input: HTMLInputElement,
+): boolean {
+  return Reflect.has(input, 'ariaDescribedByElements');
+}
+
+function describedByIds(input: HTMLInputElement): string[] {
+  if (hasDescribedByElementReflection(input)) {
+    return [...((input as DescribedNativeInput).ariaDescribedByElements ?? [])]
+      .map((element) => element.id);
+  }
+  return input.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
+}
+
 const centerOf = (node: Element): [number, number] => {
   const rect = node.getBoundingClientRect();
   return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
@@ -38,6 +56,48 @@ it('preserves native time semantics on native-time-input', async () => {
   const el = await fixture(html`<lr-native-time-input label="Start time"></lr-native-time-input>`);
   expect((el.shadowRoot!.querySelector('input') as HTMLInputElement).type).to.equal('time');
   await expect(el).to.be.accessible();
+});
+
+it('inherits author-first host descriptions and generated error, hint, and required descriptions without host labelledby', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <span id="shared-input-description-first">First external guidance</span>
+      <span id="shared-input-description-second">Second external guidance</span>
+      <span id="shared-input-label">Host-only label</span>
+      <lr-number-input
+        aria-describedby="shared-input-description-first shared-input-unresolved shared-input-description-second shared-input-description-first"
+        aria-labelledby="shared-input-label"
+        error-text="Invalid number"
+        hint="Enter a whole quantity"
+        required
+      ></lr-number-input>
+      <lr-native-time-input
+        aria-describedby="shared-input-description-first shared-input-unresolved shared-input-description-second shared-input-description-first"
+        aria-labelledby="shared-input-label"
+        error-text="Invalid time"
+        hint="Choose a staffed time"
+        required
+      ></lr-native-time-input>
+    </div>
+  `);
+
+  for (const tagName of ['lr-number-input', 'lr-native-time-input']) {
+    const native = wrapper.querySelector(tagName)!.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const error = wrapper.querySelector(tagName)!.shadowRoot!.querySelector<HTMLElement>('[part="error"]')!;
+    const hint = wrapper.querySelector(tagName)!.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
+    const required = wrapper.querySelector(tagName)!.shadowRoot!
+      .querySelector<HTMLElement>('[data-required-description]');
+    expect(required !== null, tagName).to.equal(true);
+    const ownedIds = [error.id, hint.id, required?.id ?? 'missing-required-description'];
+    const expected = hasDescribedByElementReflection(native)
+      ? ['shared-input-description-first', 'shared-input-description-second', ...ownedIds]
+      : ownedIds;
+
+    expect(describedByIds(native), tagName).to.deep.equal(expected);
+    expect(native.getAttribute('aria-labelledby'), tagName).to.equal(null);
+    expect(native.required, tagName).to.equal(true);
+    expect(native.getAttribute('aria-required'), tagName).to.equal('true');
+  }
 });
 
 // -- lr-number-input steppers (8.0) -----------------------------------------

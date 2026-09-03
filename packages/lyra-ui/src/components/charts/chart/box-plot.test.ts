@@ -7,6 +7,7 @@ import { styles } from './box-plot.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 import { resolveLyraLocale } from '../../../localization.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 function assertiveSink(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
@@ -202,6 +203,67 @@ describe('box-plot family-contract regressions', () => {
     expect(callback({ raw: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } })).to.equal(
       'tooltip:3'
     );
+  });
+
+  it('passes all five statistics through structured table, spoken, and export metadata', async () => {
+    const contexts: Array<Record<string, unknown>> = [];
+    const point = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
+    const el = (await fixture(html`<lr-box-plot show-data-table></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['Cohort A'];
+    el.datasets = [{ label: 'Latency', data: [point] }];
+    el.formatter = (context) => {
+      contexts.push({ ...context });
+      return `${context.surface}:${context.statistic ?? 'value'}:${context.value}`;
+    };
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, 'box plot never initialized');
+
+    const tableText = el.shadowRoot!.querySelector('[part="data-table"]')!.textContent ?? '';
+    for (const statistic of ['min', 'q1', 'median', 'q3', 'max']) {
+      expect(tableText).to.contain(`table:${statistic}:`);
+    }
+    expect(el.exportData('csv')).to.contain('export:median:3');
+
+    (
+      el as unknown as { activateBox: (datum: unknown) => void }
+    ).activateBox({ datasetIndex: 0, index: 0, label: 'Cohort A', value: point });
+    await el.updateComplete;
+    const spoken = el.shadowRoot!.querySelector('p[aria-hidden="true"]')?.textContent ?? '';
+    for (const statistic of ['min', 'q1', 'median', 'q3', 'max']) {
+      expect(spoken).to.contain(`spoken:${statistic}:`);
+      expect(contexts.some((context) =>
+        context['datasetIndex'] === 0 &&
+        context['index'] === 0 &&
+        context['label'] === 'Cohort A' &&
+        context['seriesLabel'] === 'Latency' &&
+        context['statistic'] === statistic,
+      )).to.be.true;
+    }
+  });
+
+  it('labels the spoken median range with median formatter metadata', () => {
+    const contexts: Array<{ value: number; statistic?: string; index?: number }> = [];
+    const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+    el.labels = ['First', 'Last'];
+    el.datasets = [{
+      label: 'Latency',
+      data: [
+        { min: -20, q1: 1, median: 3, q3: 5, max: 90 },
+        { min: -40, q1: 4, median: 9, q3: 12, max: 120 },
+      ],
+    }];
+    el.formatter = (context) => {
+      contexts.push({ value: context.value, statistic: context.statistic, index: context.index });
+      return `${context.statistic}:${context.value}`;
+    };
+
+    expect((el as unknown as { boxPlotDescription(): string }).boxPlotDescription()).to.contain(
+      'median:3',
+    );
+    expect(contexts).to.deep.equal([
+      { value: 3, statistic: 'median', index: 0 },
+      { value: 9, statistic: 'median', index: 1 },
+    ]);
   });
 });
 
@@ -1896,6 +1958,21 @@ describe('data-table disclosure', () => {
     expect(tableWrapper(el).id, 'the wrapper carries a real id').to.not.equal('');
   });
 
+  it('keeps a short localized disclosure label at the token hit-area width', async () => {
+    const el = await boxPlotWith(html`<lr-box-plot
+      data-table-toggle
+      style="--lr-icon-button-size: 64px"
+      .strings=${{ boxPlotData: 'i' }}
+    ></lr-box-plot>`);
+    const button = toggleButton(el);
+
+    expect(button !== null, 'the disclosure renders').to.equal(true);
+    if (!button) throw new Error('Expected a data-table disclosure button');
+    expect(button.textContent?.trim()).to.equal('i');
+    button.style.justifySelf = 'start';
+    expect(button.getBoundingClientRect().width).to.be.at.least(64);
+  });
+
   it('reveals the table on activation and keeps it in the DOM throughout', async () => {
     const el = await boxPlotWith(html`<lr-box-plot data-table-toggle></lr-box-plot>`);
     expect(el.shadowRoot!.querySelector('table'), 'present while collapsed').to.exist;
@@ -1914,6 +1991,30 @@ describe('data-table disclosure', () => {
     expect(tableWrapper(el).hasAttribute('data-visually-hidden')).to.be.true;
   });
 
+  it('synchronizes a slotted data table with the same live disclosure state', async () => {
+    const el = await boxPlotWith(html`
+      <lr-box-plot data-table-toggle>
+        <table slot="data-table">
+          <caption>Custom distributions</caption>
+          <tbody><tr><td>Loss</td></tr></tbody>
+        </table>
+      </lr-box-plot>
+    `);
+    const custom = el.querySelector<HTMLTableElement>('table[slot="data-table"]')!;
+    const wrapper = tableWrapper(el);
+
+    expect(wrapper.hasAttribute('data-visually-hidden')).to.be.true;
+    expect(wrapper.getBoundingClientRect().height).to.equal(1);
+    expect(custom.textContent).to.contain('Loss');
+
+    toggleButton(el)!.click();
+    await el.updateComplete;
+
+    expect(toggleButton(el)!.getAttribute('aria-expanded')).to.equal('true');
+    expect(wrapper.hasAttribute('data-visually-hidden')).to.be.false;
+    expect(wrapper.getBoundingClientRect().height).to.be.greaterThan(1);
+  });
+
   it('starts expanded when show-data-table is set alongside the toggle', async () => {
     const el = await boxPlotWith(html`<lr-box-plot show-data-table data-table-toggle></lr-box-plot>`);
 
@@ -1929,4 +2030,29 @@ describe('data-table disclosure', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+});
+
+it('inherits the chart canvas hover-outline token on a rendered box plot', async () => {
+  const el = (await fixture(html`
+    <lr-box-plot
+      style="--lr-chart-canvas-hover-outline-width: 6px; --lr-chart-canvas-hover-outline-color: rgb(21, 22, 23); --lr-chart-grid-color: rgb(4, 5, 6);"
+      .labels=${['K=2']}
+      .datasets=${[{ label: 'Loss', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }]}
+    ></lr-box-plot>
+  `)) as LyraBoxPlot;
+  await waitUntil(() => (el as any).chart != null, 'box plot never initialized');
+  const canvas = el.shadowRoot!.querySelector<HTMLElement>('[part="canvas"]')!;
+
+  try {
+    await hoverUntilMatched(canvas, 'the box-plot canvas never entered its hover state');
+    await waitUntil(
+      () => {
+        const computed = getComputedStyle(canvas);
+        return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(21, 22, 23)';
+      },
+      'the box-plot canvas did not inherit the chart hover-outline token',
+    );
+  } finally {
+    await resetMouse();
+  }
 });

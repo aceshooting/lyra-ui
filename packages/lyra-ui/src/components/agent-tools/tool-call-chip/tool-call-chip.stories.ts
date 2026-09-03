@@ -120,6 +120,31 @@ export const HoverDetailTooltip: Story = {
   },
 };
 
+export const ExplicitEmptyDefaultSlot: Story = {
+  name: 'Tooltip preview with explicit slot=""',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An explicit empty slot name is the platform default slot, so this preview behaves exactly like unannotated default-slot content.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tool-call-chip name="search_web" status="success" summary="Found 8 results">
+      <div slot="" style="min-width:14rem;">
+        <strong>Query</strong>
+        <div style="margin-top:0.25rem;color:var(--lr-color-text-quiet);">"solar panel efficiency 2026"</div>
+      </div>
+    </lr-tool-call-chip>
+  `,
+  play: async ({ canvasElement }) => {
+    const chip = canvasElement.querySelector<LyraToolCallChip>('lr-tool-call-chip');
+    chip?.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.dispatchEvent(new MouseEvent('mouseenter'));
+    await chip?.updateComplete;
+  },
+};
+
 export const ConstrainedTallPreview: Story = {
   name: 'Read-only preview constrained on both axes',
   parameters: { viewport: { defaultViewport: 'mobile1' } },

@@ -181,6 +181,22 @@ it('localizes the close action and lets per-instance strings reach the rendered 
   expect(close.getAttribute('aria-label')).to.equal('Dismiss notification');
 });
 
+it('inherits the host font through the close control and its 1em glyph', async () => {
+  const el = (await fixture(html`
+    <lr-alert open closable style="font-size: 20px">Message</lr-alert>
+  `)) as LyraAlert;
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!;
+  const glyph = close.querySelector<SVGElement>('svg')!;
+
+  expect(getComputedStyle(el).fontSize).to.equal('20px');
+  expect(getComputedStyle(close).fontSize).to.equal('20px');
+  expect(glyph.getAttribute('width')).to.equal('1em');
+  expect(glyph.getAttribute('height')).to.equal('1em');
+  expect(getComputedStyle(glyph).fontSize).to.equal('20px');
+  expect(getComputedStyle(glyph).width).to.equal('20px');
+  expect(getComputedStyle(glyph).height).to.equal('20px');
+});
+
 it('show() and hide() emit the exact lifecycle in order, vetoable only at lr-show/lr-hide', async () => {
   const el = (await fixture(html`<lr-alert style=${motionless}>Message</lr-alert>`)) as LyraAlert;
   const seen: string[] = [];

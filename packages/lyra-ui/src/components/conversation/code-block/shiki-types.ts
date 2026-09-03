@@ -1,3 +1,5 @@
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+
 /**
  * The peer-neutral highlighter capability used by Lyra's code-rendering components.
  *
@@ -100,6 +102,10 @@ type ShikiHighlighterCoreLoader = (
 ) => Promise<ShikiHighlighterCore | null>;
 let highlighterCoreLoaderForTesting: ShikiHighlighterCoreLoader | undefined;
 
+const FINE_GRAINED_SHIKI_WARNING_KEY = 'lyra-fine-grained-shiki-highlighter-unavailable';
+const FINE_GRAINED_SHIKI_WARNING =
+  'Lyra syntax highlighting failed to build a fine-grained shiki highlighter from the supplied grammars. Code is rendered as plain text.';
+
 /** @internal Replaces the fine-grained loader for deterministic async-generation tests. */
 export function __setShikiHighlighterCoreLoaderForTesting(
   loader: ShikiHighlighterCoreLoader | undefined
@@ -140,12 +146,8 @@ export function loadShikiHighlighterCore(
           return core;
         }
       )
-      .catch((err) => {
-        console.warn(
-          "<lr-code-block>'s `languages` property failed to build a fine-grained shiki highlighter — " +
-            'falling back to plain unhighlighted text for the languages it covers:',
-          err
-        );
+      .catch(() => {
+        devWarnOnce(FINE_GRAINED_SHIKI_WARNING_KEY, FINE_GRAINED_SHIKI_WARNING);
         return null;
       });
     highlighterCores.set(languages, cached);

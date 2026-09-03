@@ -15,6 +15,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
 import type { LyraVariant } from '../../../internal/variants.js';
@@ -53,6 +54,7 @@ const CONNECT_OFFSET_MAX = 120;
 const ZOOM_MULTIPLIER = 1.2;
 const DEFAULT_FIT_PADDING = 24;
 const KEYBOARD_PAN_STEP = 32;
+const UNMATCHED_AUTHORED_CARD_WARNING = 'lyra-flow-canvas-unmatched-authored-card';
 
 function toggledSelection(list: readonly string[], id: string): readonly string[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
@@ -122,6 +124,13 @@ interface FlowNodeCardEl extends HTMLElement {
   selected: boolean;
   inputs: readonly FlowHandle[];
   outputs: readonly FlowHandle[];
+}
+
+/** The author-owned slot value and the last lease value this canvas assigned to one direct card. */
+interface AuthoredCardSlotLease {
+  authoredSlot: string | null;
+  appliedSlot: string | null;
+  authorOwnsSlot: boolean;
 }
 
 interface OwnedAnimationFrame {
@@ -429,6 +438,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   @state() private activeItemIndex = 0;
   @state() private connecting = false;
   @state() private layoutTruncated = false;
+  private hasConnectedLayoutBaseline = false;
+  private layoutLimitAnnouncementPending = false;
   @state() private keyboardConnectSourceId: string | null = null;
   @state() private keyboardConnectTargetIndex = 0;
 
@@ -441,6 +452,11 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private resizeObserver?: ResizeObserver;
   private readonly observedNodeEls = new Set<Element>();
+  private authoredCardObserver?: MutationObserver;
+  private authoredCardObserverDocument?: Document;
+  private authoredCardObserverGeneration = 0;
+  private authoredCardSyncQueued = false;
+  private readonly authoredCardSlotLeases = new Map<Element, AuthoredCardSlotLease>();
   private layoutRaf: OwnedAnimationFrame | null = null;
   private connectedWindow?: Window;
 
@@ -505,14 +521,24 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.resizeObserver = ResizeObserverCtor
       ? new ResizeObserverCtor((entries) => this.onNodesResized(entries))
       : undefined;
+    this.bindAuthoredCardObserver();
+    this.syncAuthoredCards();
+    this.pushCardPropsAll();
     // updated() only runs on renders -- a disconnect/reconnect (e.g. a reparenting move) that
     // changes no reactive property never triggers one, which would leave every already-rendered
     // wrapper unwatched by the freshly created observer above, so re-observe directly here.
-    if (this.hasUpdated) this.observeNodeWrappers();
+    if (this.hasUpdated) {
+      this.observeNodeWrappers();
+      if (this.nodes.length > 0) this.scheduleLayoutPass();
+    }
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.resetAuthoredCardObserver();
+    this.restoreAuthoredCardSlots();
+    this.hasConnectedLayoutBaseline = false;
+    this.layoutLimitAnnouncementPending = false;
     this.announcer.cancel();
     this.releaseAnnouncementSink();
     this.liveText = '';
@@ -564,8 +590,17 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.resetAuthoredCardObserver();
+    this.restoreAuthoredCardSlots();
+    this.hasConnectedLayoutBaseline = false;
+    this.layoutLimitAnnouncementPending = false;
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
+    if (this.isConnected) {
+      this.bindAuthoredCardObserver();
+      this.scheduleAuthoredCardReconciliation();
+      if (this.nodes.length > 0) this.scheduleLayoutPass();
+    }
   }
 
   private requestOwnerAnimationFrame(callback: FrameRequestCallback): OwnedAnimationFrame | null {
@@ -593,6 +628,77 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.announcementSink = acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
+    });
+  }
+
+  private resetAuthoredCardObserver(): void {
+    this.authoredCardObserverGeneration += 1;
+    this.authoredCardObserver?.disconnect();
+    this.authoredCardObserver = undefined;
+    this.authoredCardObserverDocument = undefined;
+    this.authoredCardSyncQueued = false;
+  }
+
+  /** Direct-child insertion/removal and direct `node-id` changes are the only light-DOM changes
+   * that can alter card ownership. The observer is constructed from the element's owner realm so
+   * adoption does not retain an old document's callback. */
+  private bindAuthoredCardObserver(): void {
+    const ownerDocument = this.ownerDocument;
+    if (
+      !this.isConnected ||
+      (this.authoredCardObserver && this.authoredCardObserverDocument === ownerDocument)
+    ) {
+      return;
+    }
+    this.resetAuthoredCardObserver();
+    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const generation = this.authoredCardObserverGeneration;
+    const observer = new MutationObserverCtor((records) => {
+      if (
+        this.authoredCardObserver !== observer ||
+        this.authoredCardObserverDocument !== ownerDocument ||
+        this.authoredCardObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      const directlyRelevant = records.some((record) =>
+        record.type === 'childList'
+          ? record.target === this
+          : record.type === 'attributes' &&
+            record.attributeName === 'node-id' &&
+            record.target.parentNode === this,
+      );
+      if (directlyRelevant) this.scheduleAuthoredCardReconciliation();
+    });
+    observer.observe(this, {
+      childList: true,
+      attributes: true,
+      attributeFilter: ['node-id'],
+      subtree: true,
+    });
+    this.authoredCardObserver = observer;
+    this.authoredCardObserverDocument = ownerDocument;
+  }
+
+  private scheduleAuthoredCardReconciliation(): void {
+    const generation = this.authoredCardObserverGeneration;
+    const ownerDocument = this.authoredCardObserverDocument ?? this.ownerDocument;
+    if (!this.isConnected || this.authoredCardSyncQueued) return;
+    this.authoredCardSyncQueued = true;
+    queueMicrotask(() => {
+      if (
+        this.authoredCardObserverGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.authoredCardSyncQueued = false;
+      this.syncAuthoredCards();
+      this.pushCardPropsAll();
     });
   }
 
@@ -679,8 +785,11 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('edges')) this.rebuildIncidentEdgesIndex();
-    if (changed.has('layoutTruncated') && this.layoutTruncated) {
-      this.announcer.announce(this.localize('flowCanvasLayoutLimit'));
+    if (changed.has('layoutTruncated') && this.layoutLimitAnnouncementPending) {
+      this.layoutLimitAnnouncementPending = false;
+      if (this.isConnected && this.layoutTruncated) {
+        this.announcer.announce(this.localize('flowCanvasLayoutLimit'));
+      }
     }
     this.observeNodeWrappers();
     if (
@@ -722,60 +831,119 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   // Card adoption / prop-push
   // ---------------------------------------------------------------------
 
-  /** Reconciles only consumer-authored light-DOM cards. Default cards are declarative slot fallback
-   *  content in `renderNodes()`, so SSR and hydration share the same owned DOM and no append/remove
-   *  churn can leak into the consumer's light DOM. */
+  /** Reconciles only consumer-authored direct children. Default cards remain declarative named-slot
+   * fallback content in `renderNodes()`, so SSR and hydration never synthesize or remove light-DOM
+   * cards. A lease restores the last author-owned slot only if the canvas still owns its last
+   * assignment; a later author write always wins. */
   private syncAuthoredCards(): void {
-    const ids = new Set(this.nodes.map((n) => n.id));
-    const children = (this as unknown as { children?: HTMLCollection }).children;
-    for (const child of Array.from(children ?? [])) {
+    const ids = new Set(this.nodes.map((node) => node.id));
+    const adopted = new Set<Element>();
+    for (const child of Array.from(this.children)) {
       const nodeId = child.getAttribute('node-id');
-      if (!nodeId) continue;
-      if (ids.has(nodeId)) {
-        child.setAttribute('slot', `node-${nodeId}`);
-      } else {
-        child.removeAttribute('slot');
-        console.warn(
-          `<lr-flow-canvas> a child with node-id="${nodeId}" matches no entry in \`nodes\`; it will not render.`,
+      if (nodeId && ids.has(nodeId)) {
+        this.leaseAuthoredCardSlot(child, nodeId);
+        adopted.add(child);
+        continue;
+      }
+      this.releaseAuthoredCardSlot(child);
+      if (nodeId) {
+        devWarnOnce(
+          UNMATCHED_AUTHORED_CARD_WARNING,
+          '<lr-flow-canvas> has a direct child with a node-id that matches no node; it will not render.',
         );
       }
     }
+    for (const child of [...this.authoredCardSlotLeases.keys()]) {
+      if (!adopted.has(child)) this.releaseAuthoredCardSlot(child);
+    }
   }
 
-  /** Pushes changed node/selection/decoration state onto every currently-adopted card (default or
-   *  user-authored) so handles and run paint always match the model, regardless of which slot
-   *  mechanism produced the card. Indexing the direct children once avoids a full descendant
-   *  selector scan for every node in large flows. */
-  private pushCardPropsAll(changed: PropertyValues): void {
-    const nodesChanged = changed.has('nodes');
-    const selectionChanged = nodesChanged || changed.has('selectedNodeIds');
-    const decorationsChanged = nodesChanged || changed.has('decorations');
-    const orientationChanged = nodesChanged || changed.has('orientation');
+  private leaseAuthoredCardSlot(child: Element, nodeId: string): void {
+    let lease = this.authoredCardSlotLeases.get(child);
+    if (!lease) {
+      const slot = child.getAttribute('slot');
+      lease = { authoredSlot: slot, appliedSlot: slot, authorOwnsSlot: false };
+      this.authoredCardSlotLeases.set(child, lease);
+    }
+    if (lease.authorOwnsSlot || child.getAttribute('slot') !== lease.appliedSlot) {
+      lease.authorOwnsSlot = true;
+      return;
+    }
+    const slot = `node-${nodeId}`;
+    if (child.getAttribute('slot') !== slot) child.setAttribute('slot', slot);
+    lease.appliedSlot = child.getAttribute('slot');
+  }
+
+  private releaseAuthoredCardSlot(child: Element): void {
+    const lease = this.authoredCardSlotLeases.get(child);
+    if (!lease) return;
+    if (!lease.authorOwnsSlot && child.getAttribute('slot') === lease.appliedSlot) {
+      if (lease.authoredSlot === null) child.removeAttribute('slot');
+      else child.setAttribute('slot', lease.authoredSlot);
+    }
+    this.authoredCardSlotLeases.delete(child);
+  }
+
+  private restoreAuthoredCardSlots(): void {
+    for (const child of [...this.authoredCardSlotLeases.keys()]) {
+      this.releaseAuthoredCardSlot(child);
+    }
+  }
+
+  /** Pushes changed node/selection/decoration state onto every currently leased direct card. A
+   * card's property setter is consumer code, so one rejected projection cannot stop later cards. */
+  private pushCardPropsAll(changed?: PropertyValues): void {
+    const nodesChanged = changed?.has('nodes') ?? true;
+    const selectionChanged = nodesChanged || changed?.has('selectedNodeIds') === true;
+    const decorationsChanged = nodesChanged || changed?.has('decorations') === true;
+    const orientationChanged = nodesChanged || changed?.has('orientation') === true;
     const cardsByNodeId = new Map<string, FlowNodeCardEl>();
-    const children = (this as unknown as { children?: HTMLCollection }).children;
-    for (const child of Array.from(children ?? [])) {
+    for (const child of Array.from(this.children)) {
       const nodeId = child.getAttribute('node-id');
-      if (nodeId) cardsByNodeId.set(nodeId, child as unknown as FlowNodeCardEl);
+      if (nodeId && this.authoredCardSlotLeases.has(child)) {
+        cardsByNodeId.set(nodeId, child as FlowNodeCardEl);
+      }
     }
     const selectedNodeIds = selectionChanged ? new Set(this.selectedNodeIds) : null;
 
     for (const node of this.nodes) {
-      const el = cardsByNodeId.get(node.id);
-      if (!el) continue;
+      const card = cardsByNodeId.get(node.id);
+      if (!card) continue;
       if (nodesChanged) {
-        el.inputs = node.inputs ?? [{ id: 'in' }];
-        el.outputs = node.outputs ?? [{ id: 'out' }];
-        el.flowType = node.type ?? '';
+        this.setCardProperty(card, 'inputs', node.inputs ?? [{ id: 'in' }]);
+        this.setCardProperty(card, 'outputs', node.outputs ?? [{ id: 'out' }]);
+        this.setCardProperty(card, 'flowType', node.type ?? '');
       }
-      if (orientationChanged) el.orientation = this.orientation;
-      if (selectedNodeIds) el.selected = selectedNodeIds.has(node.id);
+      if (orientationChanged) this.setCardProperty(card, 'orientation', this.orientation);
+      if (selectedNodeIds) this.setCardProperty(card, 'selected', selectedNodeIds.has(node.id));
       if (decorationsChanged) {
         const decoration = this.decorations?.[node.id];
-        el.status = decoration?.status ?? null;
-        el.progress = decoration?.progress ?? null;
-        el.statusDetail = decoration?.detail ?? '';
-        el.durationMs = decoration?.durationMs ?? null;
+        this.setCardProperty(card, 'status', decoration?.status ?? null);
+        this.setCardProperty(card, 'progress', decoration?.progress ?? null);
+        this.setCardProperty(card, 'statusDetail', decoration?.detail ?? '');
+        this.setCardProperty(card, 'durationMs', decoration?.durationMs ?? null);
       }
+    }
+  }
+
+  private setCardProperty(
+    card: FlowNodeCardEl,
+    property:
+      | 'inputs'
+      | 'outputs'
+      | 'flowType'
+      | 'orientation'
+      | 'selected'
+      | 'status'
+      | 'progress'
+      | 'statusDetail'
+      | 'durationMs',
+    value: unknown,
+  ): void {
+    try {
+      (card as unknown as Record<string, unknown>)[property] = value;
+    } catch {
+      // A consumer card can reject one optional projection without interrupting its siblings.
     }
   }
 
@@ -929,9 +1097,10 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private scheduleLayoutPass(): void {
-    if (this.layoutRaf != null) return;
+    if (!this.isConnected || this.layoutRaf != null) return;
     this.layoutRaf = this.requestOwnerAnimationFrame(() => {
       this.layoutRaf = null;
+      if (!this.isConnected) return;
       this.measureNodeWrappers();
       this.runAutoLayoutIfNeeded();
       this.requestUpdate();
@@ -940,6 +1109,21 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         this.fit();
       }
     });
+  }
+
+  /** The first completed connected layout establishes the live-region baseline. A visible limit
+   * notice and `lr-layout-change` still report that result; only subsequent false-to-true changes
+   * are announcements. */
+  private setLayoutTruncated(truncated: boolean): void {
+    const previous = this.layoutTruncated;
+    this.layoutTruncated = truncated;
+    if (!truncated) this.layoutLimitAnnouncementPending = false;
+    if (!this.isConnected || this.nodes.length === 0) return;
+    if (!this.hasConnectedLayoutBaseline) {
+      this.hasConnectedLayoutBaseline = true;
+      return;
+    }
+    if (!previous && truncated) this.layoutLimitAnnouncementPending = true;
   }
 
   /** Lays out every node currently missing an explicit `position`, leaving explicitly-positioned
@@ -962,7 +1146,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private runAutoLayoutIfNeeded(): void {
     const unpositioned = this.nodes.filter((n) => !n.position);
     if (unpositioned.length === 0) {
-      this.layoutTruncated = false;
+      this.setLayoutTruncated(false);
       return;
     }
     const swap = this.orientation === 'horizontal';
@@ -1001,7 +1185,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.autoPositions.set(n.id, resolved);
       positions[n.id] = Object.freeze(resolved);
     }
-    this.layoutTruncated = result.truncated;
+    this.setLayoutTruncated(result.truncated);
     if (Object.keys(positions).length > 0) {
       this.emit(
         'lr-layout-change',
@@ -2387,7 +2571,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
                   ${fallbackEdges.map((edge) => html`<li>${this.edgeAccessibleText(edge)}</li>`)}
                 </ul>`
               : nothing}
-            <slot></slot>
           `}
       <div part="overlay-rail" data-edge="top">
         <div class="overlay-group" data-align="start"><slot name="top-start"></slot></div>

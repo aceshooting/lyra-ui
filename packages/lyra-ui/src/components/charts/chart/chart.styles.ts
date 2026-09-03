@@ -198,7 +198,10 @@ export const styles = css`
        other --lr-border-width-thin consumer on the page -- the --lr-chart-grid-color/-tick-color
        indirection above, applied to a state-specific rule. */
     outline: var(--lr-chart-canvas-hover-outline-width, var(--lr-border-width-thin)) solid
-      var(--lr-chart-grid-color, var(--_lr-chart-grid-color));
+      var(
+        --lr-chart-canvas-hover-outline-color,
+        var(--lr-chart-grid-color, var(--_lr-chart-grid-color))
+      );
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='canvas']:focus-visible {
@@ -267,6 +270,7 @@ export const styles = css`
     align-self: flex-start;
     font: inherit;
     font-size: var(--lr-font-size-xs);
+    min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

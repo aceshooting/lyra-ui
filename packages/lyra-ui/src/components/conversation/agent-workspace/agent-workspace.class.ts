@@ -4,6 +4,7 @@ import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { ChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
 export type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
@@ -26,7 +27,7 @@ import { styles } from './agent-workspace.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -155,6 +156,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     agentWorkspaceRun: LYRA_DEFAULT_agentWorkspaceRun,
     agentWorkspaceTools: LYRA_DEFAULT_agentWorkspaceTools,
     composerPlaceholder: LYRA_DEFAULT_composerPlaceholder,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -242,7 +244,16 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   @property({ attribute: 'composer-value' }) composerValue = '';
 
   /** Status of the built-in composer. */
-  @property({ attribute: 'composer-status' }) composerStatus: ChatComposerStatus = 'idle';
+  private composerStatusValue: ChatComposerStatus = 'idle';
+  @property({ attribute: 'composer-status' })
+  get composerStatus(): ChatComposerStatus {
+    return this.composerStatusValue;
+  }
+  set composerStatus(value: ChatComposerStatus) {
+    const previous = this.composerStatusValue;
+    this.composerStatusValue = normalizeChatComposerStatus(value);
+    this.requestUpdate('composerStatus', previous);
+  }
 
   /** Placeholder for the built-in composer. */
   @property({ attribute: 'composer-placeholder' }) composerPlaceholder = '';

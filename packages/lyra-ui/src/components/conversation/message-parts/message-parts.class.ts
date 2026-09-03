@@ -24,6 +24,18 @@ import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFA
 
 export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
 
+/** Rendering mode for text and reasoning message parts. */
+export type MessagePartsContentMode = 'plain' | 'markdown';
+
+const MESSAGE_PARTS_CONTENT_MODES = Object.freeze(['plain', 'markdown'] as const);
+
+function normalizeMessagePartsContentMode(value: unknown): MessagePartsContentMode {
+  return typeof value === 'string' &&
+    MESSAGE_PARTS_CONTENT_MODES.includes(value as MessagePartsContentMode)
+    ? value as MessagePartsContentMode
+    : 'markdown';
+}
+
 export interface LyraMessagePartsEventMap
   extends Omit<LyraMarkdownEventMap, 'lr-render-error'>,
     LyraThinkingPanelEventMap,
@@ -119,8 +131,32 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** Ordered message content. */
   @property({ attribute: false }) parts: readonly MessagePart[] = [];
 
-  /** Text/reasoning rendering mode. */
-  @property({ reflect: true, attribute: 'content-mode' }) contentMode: 'plain' | 'markdown' = 'markdown';
+  private contentModeValue: MessagePartsContentMode = 'markdown';
+
+  /** Text/reasoning rendering mode. Unsupported direct or attribute values normalize and reflect
+   * as `markdown`, including when the current value is already `markdown`. */
+  @property({ reflect: true, attribute: 'content-mode' })
+  get contentMode(): MessagePartsContentMode {
+    return this.contentModeValue;
+  }
+  set contentMode(value: MessagePartsContentMode) {
+    const previous = this.contentModeValue;
+    const normalized = normalizeMessagePartsContentMode(value);
+    this.contentModeValue = normalized;
+    // Lit suppresses reflection while it handles an attribute callback. Canonicalize unsupported
+    // attribute text synchronously so an equal default value cannot leave a hostile token behind.
+    if (
+      typeof value === 'string' &&
+      value !== normalized &&
+      this.getAttribute('content-mode') !== normalized
+    ) {
+      this.setAttribute('content-mode', normalized);
+    }
+    this.requestUpdate('contentMode', previous, {
+      reflect: true,
+      hasChanged: () => true,
+    });
+  }
 
   /** Include reasoning parts. */
   @property({

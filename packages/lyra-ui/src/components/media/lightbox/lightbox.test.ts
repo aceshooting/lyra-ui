@@ -142,6 +142,33 @@ it('is accessible while open', async () => {
   el.open = false;
 });
 
+it('inherits a 20px host font into the close and navigation controls and their one-em glyphs', async () => {
+  const el = (await fixture(html`
+    <lr-lightbox
+      open
+      loop
+      style="font: 20px/1 monospace"
+      .images=${[image, { ...image, caption: 'Second' }]}
+    ></lr-lightbox>
+  `)) as LyraLightbox;
+  await el.updateComplete;
+
+  expect(getComputedStyle(el).fontSize).to.equal('20px');
+  for (const part of ['close-button', 'previous-button', 'next-button'] as const) {
+    const control = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    const glyph = control.querySelector<SVGElement>('svg')!;
+
+    expect(getComputedStyle(control).fontSize, `${part} font size`).to.equal('20px');
+    expect(getComputedStyle(control).fontFamily, `${part} font family`).to.equal(
+      getComputedStyle(el).fontFamily,
+    );
+    expect(getComputedStyle(glyph).width, `${part} one-em glyph width`).to.equal('20px');
+    expect(getComputedStyle(glyph).height, `${part} one-em glyph height`).to.equal('20px');
+  }
+
+  el.open = false;
+});
+
 it('closes on Escape and emits lr-lightbox-close with reason "escape"', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let detail: unknown;

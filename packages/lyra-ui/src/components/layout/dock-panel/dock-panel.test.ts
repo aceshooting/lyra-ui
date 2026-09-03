@@ -1363,6 +1363,28 @@ describe("aria-label localization", () => {
     await elementUpdated(el);
     expect(toggle.getAttribute("aria-label")).to.equal("Agrandir le panneau");
   });
+
+  it('localizes the handle pixel value while retaining its numeric ARIA value', async () => {
+    const wrapper = (await fixture(html`
+      <div style="position: relative; height: 20rem; display: flex;">
+        <lr-dock-panel
+          lang="ar-EG"
+          extent="240px"
+          min-extent="160px"
+          max-extent="480px"
+          .strings=${{ resizeValuePixels: 'العرض {value} بكسل' }}
+        ></lr-dock-panel>
+      </div>
+    `)) as HTMLDivElement;
+    const el = wrapper.querySelector<LyraDockPanel>('lr-dock-panel')!;
+    await elementUpdated(el);
+
+    const handle = el.shadowRoot!.querySelector<HTMLElement>('[part="handle"]')!;
+    expect(handle.getAttribute('aria-valuenow')).to.equal('240');
+    expect(handle.getAttribute('aria-valuetext')).to.equal(
+      `العرض ${new Intl.NumberFormat('ar-EG').format(240)} بكسل`
+    );
+  });
 });
 
 it("no longer answers to the pre-8.0.0 size/min-size/max-size attributes — extent replaced them outright", async () => {

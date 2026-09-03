@@ -51,13 +51,17 @@ import { isMainModule } from './is-main-module.mjs';
 //   keyboard-test-coverage  A component class handles keydown but its colocated test never
 //                           simulates keyboard input (sendKeys / KeyboardEvent / keydown).
 //   strings-test-coverage   A component class calls this.localize() but its colocated test
-//                           references neither `.strings` nor `registerLyraLocale`.
+//                           references neither `.strings` nor `registerLyraLocale`. Enrolled
+//                           components additionally prove each literal localize key reaches
+//                           rendered text, a relevant attribute, or validationMessage in the
+//                           same test instead of merely mentioning a catalog/key.
 // Only offenders missing from the baseline fail the check; a baselined file that becomes clean
 // is reported as a note so the baseline can shrink. `--list-baselines` prints the counts.
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { parseSync } from 'oxc-parser';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = path.join(packageDir, 'src');
@@ -66,6 +70,9 @@ const internalRoot = path.join(packageDir, 'src', 'internal');
 const baselinePath = path.join(packageDir, 'scripts', 'source-policy-baselines.json');
 
 const RATCHET_RULES = ['keyboard-test-coverage', 'strings-test-coverage'];
+const STRUCTURAL_STRINGS_TEST_FILES = new Set([
+  'src/components/forms/locale-picker/locale-picker.class.ts',
+]);
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -837,6 +844,331 @@ function checkPhysicalCss(file, rawSource, findings) {
   });
 }
 
+function parseSyntaxProgram(source, file) {
+  const parsed = parseSync(file, source);
+  if (parsed.errors.length === 0) return parsed.program;
+  const detail = parsed.errors
+    .slice(0, 3)
+    .map((error) => error.message)
+    .join('; ');
+  throw new Error(rel(file) + ': source-policy parser failed: ' + detail);
+}
+
+/** Removes transparent TypeScript and parenthesis wrappers without reading source text. */
+function unwrapSyntaxExpression(node) {
+  let expression = node;
+  while (
+    expression &&
+    [
+      'ChainExpression',
+      'ParenthesizedExpression',
+      'TSAsExpression',
+      'TSInstantiationExpression',
+      'TSNonNullExpression',
+      'TSTypeAssertion',
+    ].includes(expression.type)
+  ) {
+    expression = expression.expression;
+  }
+  return expression;
+}
+
+function unwrapAwaitedExpression(node) {
+  let expression = unwrapSyntaxExpression(node);
+  while (expression?.type === 'AwaitExpression') expression = unwrapSyntaxExpression(expression.argument);
+  return expression;
+}
+
+function syntaxIdentifierName(node) {
+  const expression = unwrapSyntaxExpression(node);
+  return expression?.type === 'Identifier' ? expression.name : undefined;
+}
+
+function syntaxMemberName(node) {
+  const expression = unwrapSyntaxExpression(node);
+  if (expression?.type !== 'MemberExpression') return undefined;
+  if (!expression.computed && expression.property?.type === 'Identifier') return expression.property.name;
+  if (expression.computed && expression.property?.type === 'Literal' && typeof expression.property.value === 'string')
+    return expression.property.value;
+  return undefined;
+}
+
+function syntaxStaticString(node) {
+  const expression = unwrapSyntaxExpression(node);
+  return expression?.type === 'Literal' && typeof expression.value === 'string'
+    ? expression.value
+    : undefined;
+}
+
+/** Visits ESTree-compatible parser nodes, including TypeScript extensions. */
+function visitSyntaxNodes(node, visitor) {
+  if (!node || typeof node !== 'object') return;
+  if (typeof node.type === 'string') visitor(node);
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'parent' || key === 'type' || key === 'start' || key === 'end') continue;
+    if (Array.isArray(value)) {
+      for (const child of value) visitSyntaxNodes(child, visitor);
+    } else if (value && typeof value === 'object') visitSyntaxNodes(value, visitor);
+  }
+}
+
+/** Literal `this.localize(key)` calls in executable code only. Parsing, rather than a regex over
+ * source text, intentionally excludes comments, strings, and static template text that merely
+ * mention a localization call. */
+function literalLocalizeCalls(source, file) {
+  const program = parseSyntaxProgram(source, file);
+  const calls = [];
+  const seen = new Set();
+  visitSyntaxNodes(program, (node) => {
+    if (node.type !== 'CallExpression') return;
+    const callee = node.callee;
+    if (
+      callee?.type !== 'MemberExpression' ||
+      callee.computed ||
+      callee.object?.type !== 'ThisExpression' ||
+      callee.property?.type !== 'Identifier' ||
+      callee.property.name !== 'localize'
+    ) return;
+    const argument = node.arguments?.[0];
+    if (
+      argument?.type !== 'Literal' ||
+      typeof argument.value !== 'string' ||
+      !/^[A-Za-z0-9_]+$/u.test(argument.value) ||
+      seen.has(argument.value)
+    ) return;
+    seen.add(argument.value);
+    calls.push({ key: argument.value, index: node.start ?? 0 });
+  });
+  calls.sort((a, b) => a.index - b.index);
+  return calls;
+}
+
+function isFunctionLike(node) {
+  return node?.type === 'ArrowFunctionExpression' ||
+    node?.type === 'FunctionExpression' ||
+    node?.type === 'FunctionDeclaration';
+}
+
+function calleeRootName(callee) {
+  const expression = unwrapSyntaxExpression(callee);
+  if (expression?.type === 'CallExpression') return calleeRootName(expression.callee);
+  if (expression?.type === 'MemberExpression') return calleeRootName(expression.object);
+  return syntaxIdentifierName(expression);
+}
+
+function testCallbacks(source, file) {
+  const callbacks = [];
+  visitSyntaxNodes(parseSyntaxProgram(source, file), (node) => {
+    if (node.type !== 'CallExpression' || !['it', 'test'].includes(calleeRootName(node.callee))) return;
+    const callback = [...node.arguments].reverse().find(isFunctionLike);
+    if (callback) callbacks.push(callback);
+  });
+  return callbacks;
+}
+
+/** Walks executable nodes of one test callback without treating nested function bodies as setup. */
+function visitTestCallbackCode(node, visitor, root = true) {
+  if (!node || typeof node !== 'object') return;
+  if (!root && isFunctionLike(node)) return;
+  if (typeof node.type === 'string') visitor(node);
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'parent' || key === 'type' || key === 'start' || key === 'end') continue;
+    if (Array.isArray(value)) {
+      for (const child of value) visitTestCallbackCode(child, visitor, false);
+    } else if (value && typeof value === 'object') {
+      visitTestCallbackCode(value, visitor, false);
+    }
+  }
+}
+
+function isLocalePickerMarkupTemplate(node) {
+  const expression = unwrapSyntaxExpression(node);
+  if (expression?.type !== 'TaggedTemplateExpression') return false;
+  const tag = syntaxIdentifierName(expression.tag) ?? syntaxMemberName(expression.tag);
+  if (tag !== 'html' && tag !== 'staticHtml') return false;
+  return expression.quasi?.quasis?.some((quasi) =>
+    /<lr-locale-picker\b/u.test(quasi.value?.raw ?? quasi.value?.cooked ?? ''));
+}
+
+function containsLocalePickerMarkup(node) {
+  let found = false;
+  visitSyntaxNodes(node, (candidate) => {
+    if (!found && isLocalePickerMarkupTemplate(candidate)) found = true;
+  });
+  return found;
+}
+
+function isLocalePickerControlInitializer(initializer) {
+  const expression = unwrapAwaitedExpression(initializer);
+  if (expression?.type !== 'CallExpression') return false;
+  if (syntaxIdentifierName(expression.callee) === 'fixture')
+    return expression.arguments.some((argument) => containsLocalePickerMarkup(argument));
+
+  const callee = unwrapSyntaxExpression(expression.callee);
+  const method = syntaxMemberName(callee);
+  const argument = syntaxStaticString(expression.arguments[0]);
+  if (
+    method === 'createElement' &&
+    syntaxIdentifierName(callee?.object) === 'document' &&
+    argument === 'lr-locale-picker'
+  ) return true;
+  if (method === 'querySelector' && argument?.includes('lr-locale-picker')) return true;
+
+  const typeAnnotation = initializer?.type === 'TSAsExpression' || initializer?.type === 'TSTypeAssertion'
+    ? initializer.typeAnnotation
+    : undefined;
+  return (
+    method === 'querySelector' &&
+    typeAnnotation?.type === 'TSTypeReference' &&
+    syntaxIdentifierName(typeAnnotation.typeName) === 'LyraLocalePicker'
+  );
+}
+
+function localePickerControlNames(nodes) {
+  const controls = new Set();
+  for (const node of nodes) {
+    if (node.type !== 'VariableDeclarator' || node.id?.type !== 'Identifier') continue;
+    if (isLocalePickerControlInitializer(node.init)) controls.add(node.id.name);
+  }
+  return controls;
+}
+
+function objectPropertyName(property) {
+  if (property?.type !== 'Property') return undefined;
+  if (!property.computed && property.key?.type === 'Identifier') return property.key.name;
+  return syntaxStaticString(property.key);
+}
+
+function localizedObjectValues(expression, key) {
+  const object = unwrapSyntaxExpression(expression);
+  if (object?.type !== 'ObjectExpression') return [];
+  const values = [];
+  for (const property of object.properties) {
+    if (objectPropertyName(property) !== key) continue;
+    const value = syntaxStaticString(property.value);
+    if (value !== undefined) values.push(value);
+  }
+  return values;
+}
+
+function assignmentDetails(node) {
+  if (node?.type !== 'AssignmentExpression' || node.operator !== '=') return undefined;
+  const left = unwrapSyntaxExpression(node.left);
+  if (left?.type !== 'MemberExpression') return undefined;
+  const control = syntaxIdentifierName(left.object);
+  const member = syntaxMemberName(left);
+  return control === undefined || member === undefined ? undefined : { control, member, right: node.right };
+}
+
+function isNamedCall(node, name) {
+  const expression = unwrapSyntaxExpression(node);
+  return expression?.type === 'CallExpression' && syntaxIdentifierName(expression.callee) === name;
+}
+
+function pickerControlForDomExpression(expression) {
+  const node = unwrapSyntaxExpression(expression);
+  if (node?.type === 'CallExpression') {
+    if (syntaxIdentifierName(node.callee) === 'trigger') return syntaxIdentifierName(node.arguments[0]);
+    const callee = unwrapSyntaxExpression(node.callee);
+    if (['getElementById', 'querySelector', 'querySelectorAll'].includes(syntaxMemberName(callee)))
+      return pickerControlForDomExpression(callee.object);
+    return undefined;
+  }
+  if (node?.type !== 'MemberExpression') return undefined;
+  if (['renderRoot', 'shadowRoot'].includes(syntaxMemberName(node)))
+    return syntaxIdentifierName(node.object);
+  return pickerControlForDomExpression(node.object);
+}
+
+function outputControlForExpression(expression) {
+  const node = unwrapSyntaxExpression(expression);
+  if (node?.type === 'MemberExpression') {
+    const member = syntaxMemberName(node);
+    if (member === 'validationMessage') return syntaxIdentifierName(node.object);
+    if (['innerHTML', 'innerText', 'textContent'].includes(member))
+      return pickerControlForDomExpression(node.object);
+    return undefined;
+  }
+  if (node?.type !== 'CallExpression') return undefined;
+  const callee = unwrapSyntaxExpression(node.callee);
+  if (syntaxMemberName(callee) !== 'getAttribute') return undefined;
+  const attribute = syntaxStaticString(node.arguments[0]);
+  if (
+    attribute === undefined ||
+    !(/^(?:aria-[A-Za-z0-9_-]+|alt|placeholder|title|value)$/u.test(attribute))
+  ) return undefined;
+  return pickerControlForDomExpression(callee.object);
+}
+
+function expectAssertion(node) {
+  if (node?.type !== 'CallExpression') return undefined;
+  if (!['contain', 'equal', 'equals', 'include', 'match'].includes(syntaxMemberName(node.callee)))
+    return undefined;
+  const expected = syntaxStaticString(node.arguments[0]);
+  if (expected === undefined) return undefined;
+  const chain = unwrapSyntaxExpression(node.callee?.object);
+  if (syntaxMemberName(chain) !== 'to') return undefined;
+  const expectation = unwrapSyntaxExpression(chain.object);
+  if (!isNamedCall(expectation, 'expect')) return undefined;
+  return { actual: expectation.arguments[0], expected };
+}
+
+function testCallbackCoversLocalizedKey(callback, key) {
+  const nodes = [];
+  visitTestCallbackCode(callback, (node) => nodes.push(node));
+  const controls = localePickerControlNames(nodes);
+  const configured = new Set();
+  const localeAssignments = [];
+  const catalogs = [];
+
+  for (const node of nodes) {
+    const assignment = assignmentDetails(node);
+    if (assignment && controls.has(assignment.control)) {
+      if (assignment.member === 'strings') {
+        for (const value of localizedObjectValues(assignment.right, key))
+          configured.add(assignment.control + '\u0000' + value);
+      } else if (assignment.member === 'lang' || assignment.member === 'locale') {
+        const locale = syntaxStaticString(assignment.right);
+        if (locale !== undefined) localeAssignments.push({ control: assignment.control, locale });
+      }
+    }
+
+    if (!isNamedCall(node, 'registerLyraLocale')) continue;
+    const locale = syntaxStaticString(node.arguments[0]);
+    const values = localizedObjectValues(node.arguments[1], key);
+    if (locale !== undefined && values.length > 0) catalogs.push({ locale, values });
+  }
+
+  for (const catalog of catalogs) {
+    for (const assignment of localeAssignments) {
+      if (assignment.locale !== catalog.locale) continue;
+      for (const value of catalog.values) configured.add(assignment.control + '\u0000' + value);
+    }
+  }
+
+  for (const node of nodes) {
+    const assertion = expectAssertion(node);
+    if (!assertion) continue;
+    const control = outputControlForExpression(assertion.actual);
+    if (control !== undefined && configured.has(control + '\u0000' + assertion.expected)) return true;
+  }
+  return false;
+}
+
+function findLocalizedOutputCoverageFindings(file, source, testSource) {
+  const callbacks = testCallbacks(testSource, file);
+  const findings = [];
+  for (const { key, index } of literalLocalizeCalls(source, file)) {
+    const covered = callbacks.some((callback) => testCallbackCoversLocalizedKey(callback, key));
+    if (covered) continue;
+    findings.push(
+      `${rel(file)}:${lineOf(source, index)} [strings-test-coverage] '${key}' must be assigned through ` +
+        '`.strings` or an applied registerLyraLocale() catalog and asserted as rendered text, a relevant attribute, or validationMessage in the same test',
+    );
+  }
+  return findings;
+}
+
 /**
  * Runs the per-file source rules through one shared routing seam. Keeping component and internal
  * callers on this function prevents shared helpers from silently receiving a smaller policy set.
@@ -849,6 +1181,7 @@ export function collectSourcePolicyFindings({
   knownKeys = new Set(),
   skipIntlOutsideCache = false,
   skipAnnouncementSource = false,
+  testSource,
 }) {
   const findings = [];
   const rawLines = source.split('\n');
@@ -866,6 +1199,8 @@ export function collectSourcePolicyFindings({
   checkShadowLiveRegion(file, source, findings);
   if (!skipAnnouncementSource) checkAnnouncementSource(file, source, findings);
   if (file.endsWith('.class.ts')) checkAnnouncerTimerRealm(file, source, findings);
+  if (testSource !== undefined)
+    findings.push(...findLocalizedOutputCoverageFindings(file, source, testSource));
   return findings;
 }
 
@@ -982,7 +1317,8 @@ export function runSourcePolicy() {
 
   for (const file of componentFiles) {
     const rawSource = fs.readFileSync(file, 'utf8');
-    findings.push(...collectSourcePolicyFindings({ file, source: rawSource, knownKeys }));
+    const testSource = STRUCTURAL_STRINGS_TEST_FILES.has(rel(file)) ? colocatedTestSource(file) : undefined;
+    findings.push(...collectSourcePolicyFindings({ file, source: rawSource, knownKeys, testSource }));
   }
 
   for (const file of allInternalFiles) {

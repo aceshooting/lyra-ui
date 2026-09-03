@@ -649,6 +649,24 @@ describe('row part styling reaches both rendering paths', () => {
       expect(getComputedStyle(expand).minBlockSize).to.equal('40px');
     });
 
+    it(`inherits the host font through the expand button and its 1em glyph in the ${label} path`, async () => {
+      const el = await list(virtualizeAt);
+      el.style.fontSize = '20px';
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const expand = rowRoot(el).querySelector<HTMLButtonElement>(
+        '[part="expand-button"]'
+      )!;
+      const glyph = expand.querySelector<SVGElement>('svg')!;
+
+      expect(getComputedStyle(el).fontSize).to.equal('20px');
+      expect(getComputedStyle(expand).fontSize).to.equal('20px');
+      expect(glyph.getAttribute('width')).to.equal('1em');
+      expect(glyph.getAttribute('height')).to.equal('1em');
+      expect(getComputedStyle(glyph).fontSize).to.equal('20px');
+      expect(getComputedStyle(glyph).width).to.equal('20px');
+      expect(getComputedStyle(glyph).height).to.equal('20px');
+    });
+
     it(`presents the group header identically in the ${label} path`, async () => {
       const el = await list(virtualizeAt);
       // Virtualized, the header is lr-virtual-list's own `group` part; plain, it is this

@@ -513,6 +513,13 @@ describe('lr-knowledge-graph-explorer', () => {
       el.shadowRoot!.querySelectorAll('[part="search-result"] button')
     ).map((button) => button.textContent?.trim());
     expect(resultLabels).to.deep.equal(['Needle']);
+
+    await waitUntil(() => graphNodeEls(el).length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const numericNode = graphNodeEls(el)[0]!;
+    expect(numericNode.getAttribute('aria-label')).to.equal('numeric');
+    expect(numericNode.querySelector('title')?.textContent).to.equal('numeric');
   });
 
   it('announces the very first search (empty query -> first non-empty query) to the live-region sink', async () => {
@@ -1910,6 +1917,45 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(leaked).to.be.false;
   });
 
+  it('contains the composed visibility proposal without preventing the child and wrapper commits', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector(
+      'lr-graph-legend'
+    ) as LyraGraphLegend;
+    const item =
+      legend.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+    let leakedProposals = 0;
+    let childProposals = 0;
+    let childCommits = 0;
+    let wrapperCommits = 0;
+    el.addEventListener(
+      'lr-before-visibility-change',
+      () => (leakedProposals += 1)
+    );
+    legend.addEventListener(
+      'lr-before-visibility-change',
+      () => (childProposals += 1)
+    );
+    legend.addEventListener('lr-visibility-change', () => (childCommits += 1));
+    el.addEventListener('lr-hidden-types-change', () => (wrapperCommits += 1));
+
+    item.click();
+    await el.updateComplete;
+
+    expect(leakedProposals).to.equal(0);
+    expect(childProposals).to.equal(1);
+    expect(childCommits).to.equal(1);
+    expect(wrapperCommits).to.equal(1);
+    expect(el.hiddenTypes).to.deep.equal(['person']);
+  });
+
   it('emits lr-hidden-types-change with the updated array when a node type is toggled via the composed legend, and stays silent for a host assignment (bug regression)', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
@@ -2019,41 +2065,22 @@ describe('lifecycle super calls', () => {
   });
 });
 
-/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
- *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
- *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
- *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
-function renderedClamp(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = '';
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
-  }
-  const probe = document.createElement('span');
-  probe.style.display = 'block';
-  probe.style.setProperty('--lr-popover-viewport-clamp', '10px');
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
-
 it('clamps its floating surface width through the shared popover-viewport-clamp token', async () => {
-  const el = (await fixture(
-    html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
-  )) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> })
-    .updateComplete;
-  expect(renderedClamp(el, "[part='detail-card']")).to.equal('10px');
+  const el = await settledFixture();
+  el.style.setProperty('--lr-popover-viewport-clamp', '10px');
+  graphNodeEls(el)[0]!.dispatchEvent(
+    new MouseEvent('click', { bubbles: true, composed: true })
+  );
+  const popover = el.shadowRoot!.querySelector(
+    '[part="detail-popover"]'
+  ) as LyraPopover;
+  await waitUntil(() => popover.open, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const detailCard = el.shadowRoot!.querySelector(
+    '[part="detail-card"]'
+  ) as HTMLElement;
+  expect(getComputedStyle(detailCard).maxInlineSize).to.equal('10px');
 });
 
 it('contains long search results horizontally and suppresses the consumed child input event', async () => {

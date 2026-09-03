@@ -1,28 +1,28 @@
 import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 
-export interface EpubNavigationItem {
+interface EpubNavigationItem {
   id?: string;
   href: string;
   label?: string;
   subitems?: EpubNavigationItem[];
 }
 
-export interface EpubSearchResult {
+interface EpubSearchResult {
   cfi: string;
   excerpt?: string;
 }
 
-export interface EpubSpineItem {
+interface EpubSpineItem {
   load(request?: unknown): Promise<unknown> | unknown;
   find(query: string): Promise<EpubSearchResult[]> | EpubSearchResult[];
   unload(): void;
 }
 
-export interface EpubContents {
+interface EpubContents {
   window?: Window;
 }
 
-export interface EpubLocation {
+interface EpubLocation {
   start?: { cfi?: string; href?: string };
 }
 
@@ -37,7 +37,7 @@ interface EpubAnnotations {
   remove(cfi: string, type: string): void;
 }
 
-export interface EpubRendition {
+interface EpubRendition {
   annotations: EpubAnnotations;
   display(target?: string): Promise<void>;
   prev(): Promise<void>;

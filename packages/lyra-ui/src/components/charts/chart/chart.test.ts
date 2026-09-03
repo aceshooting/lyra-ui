@@ -1,5 +1,5 @@
 import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
-import { resetMouse, sendKeys, sendMouse } from '@web/test-runner-commands';
+import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './chart.js';
 import './doughnut-chart.js';
 import {
@@ -12,6 +12,7 @@ import { loadChartAndZoom } from './chart-feature-loader.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { resolveLyraLocale } from '../../../localization.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
@@ -98,6 +99,614 @@ describe('bounded chart surface regressions', () => {
     expect(el.shadowRoot!.querySelector('canvas')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="data-table"]')!.textContent).to.contain('Revenue');
     await expect(el).to.be.accessible();
+  });
+
+  it('projects descriptor-safe Chart.js inputs once while retaining valid siblings and opaque plugins', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const hostileSeries = {};
+    Object.defineProperty(hostileSeries, 'data', {
+      enumerable: true,
+      get: () => {
+        throw new Error('series getter must stay untouched');
+      },
+    });
+    const validSeries = { label: 'Retained', data: [7] };
+    el.datasets = [hostileSeries, validSeries] as unknown as readonly LyraChartSeries[];
+    expect(() => (el as any).buildConfig()).not.to.throw();
+    expect((el as any).buildConfig().data.datasets).to.have.length(1);
+    expect((el as any).buildConfig().data.datasets[0].data).to.deep.equal([7]);
+
+    const plugin = { id: 'opaque-chart-plugin' };
+    const hostileConfig = {};
+    Object.defineProperty(hostileConfig, 'type', {
+      enumerable: true,
+      get: () => {
+        throw new Error('config getter must stay untouched');
+      },
+    });
+    Object.defineProperty(hostileConfig, 'data', {
+      enumerable: true,
+      value: { labels: ['Source'], datasets: [validSeries] },
+    });
+    Object.defineProperty(hostileConfig, 'plugins', { enumerable: true, value: [plugin] });
+    el.config = hostileConfig as unknown as typeof el.config;
+    const config = (el as any).buildConfig();
+    expect(config.data.labels).to.deep.equal(['Source']);
+    expect(config.plugins).to.include(plugin);
+  });
+
+  it('replaces an admitted opaque config leaf without reflecting an enumerable throwing getter during the generated config merge', () => {
+    class OpaqueTooltipConfiguration {}
+    const opaqueTooltip = new OpaqueTooltipConfiguration();
+    Object.defineProperty(opaqueTooltip, 'privateValue', {
+      enumerable: true,
+      get: () => {
+        throw new Error('opaque configuration leaf must not be reflected during merge');
+      },
+    });
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.config = {
+      options: {
+        plugins: { tooltip: opaqueTooltip },
+      },
+    } as unknown as LyraChart['config'];
+
+    expect(() => (el as unknown as { buildConfig(): unknown }).buildConfig()).not.to.throw();
+    const config = (el as unknown as {
+      buildConfig(): { options: { plugins: { tooltip: unknown } } };
+    }).buildConfig();
+    expect(config.options.plugins.tooltip).to.equal(opaqueTooltip);
+  });
+
+  it('drops a label array revoked during descriptor admission instead of reclassifying it while building', () => {
+    let revoke: () => void;
+    const revocable = Proxy.revocable(['North'], {
+      getOwnPropertyDescriptor(target, property) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
+        if (property === 'length') revoke();
+        return descriptor;
+      },
+    });
+    revoke = revocable.revoke;
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = revocable.proxy as unknown as string[];
+
+    expect(() => (el as unknown as { buildConfig(): unknown }).buildConfig()).not.to.throw();
+    const config = (el as unknown as {
+      buildConfig(): { data: { labels: unknown[] } };
+    }).buildConfig();
+    expect(config.data.labels).to.deep.equal([]);
+  });
+
+  it('drops opaque config.data dataset rows while retaining safe rows and their opaque Chart.js leaves', () => {
+    class OpaqueDataset {}
+    class OpaqueColor {}
+    const opaqueRow = new OpaqueDataset();
+    Object.defineProperties(opaqueRow, {
+      label: {
+        enumerable: true,
+        get: () => {
+          throw new Error('opaque config dataset labels must not be read');
+        },
+      },
+      data: {
+        enumerable: true,
+        get: () => {
+          throw new Error('opaque config dataset data must not be read');
+        },
+      },
+    });
+    const opaqueColor = new OpaqueColor();
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.config = {
+      data: {
+        labels: ['North'],
+        datasets: [
+          opaqueRow,
+          { label: 'Retained', data: [7], noTooltip: true, backgroundColor: opaqueColor },
+        ],
+      },
+    } as unknown as LyraChart['config'];
+
+    let description = '';
+    expect(() => {
+      description = (el as unknown as { chartDescription(): string }).chartDescription();
+    }).not.to.throw();
+    const config = (el as unknown as {
+      buildConfig(): { data: { datasets: Array<Record<string, unknown>> } };
+    }).buildConfig();
+    expect(config.data.datasets).to.have.length(1);
+    expect(config.data.datasets[0]!['label']).to.equal('Retained');
+    expect(config.data.datasets[0]!['backgroundColor']).to.equal(opaqueColor);
+    expect(description).to.contain('Retained');
+  });
+
+  it('preserves opaque config datum identity for Chart.js while later summaries use its admitted snapshot', () => {
+    class OpaqueDatum {
+      y = 3;
+    }
+    const datum = new OpaqueDatum();
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.config = {
+      data: { labels: ['North'], datasets: [{ label: 'Retained', data: [datum] }] },
+    } as unknown as LyraChart['config'];
+    Object.defineProperty(datum, 'y', {
+      enumerable: true,
+      get: () => {
+        throw new Error('opaque Chart.js datum must not be re-read after admission');
+      },
+    });
+
+    const config = (el as unknown as {
+      buildConfig(): { data: { datasets: Array<{ data: unknown[] }> } };
+    }).buildConfig();
+    expect(config.data.datasets[0]!.data[0] === datum).to.be.true;
+    expect((el as unknown as { chartDescription(): string }).chartDescription()).to.contain('3');
+  });
+
+  it('captures a partial opaque config datum through each descriptor only once', () => {
+    class OpaqueDatum {}
+    let yReads = 0;
+    const datum = new Proxy(new OpaqueDatum(), {
+      getOwnPropertyDescriptor(target, property) {
+        if (property === 'y') {
+          yReads += 1;
+          if (yReads > 1) {
+            throw new Error('partial config datum must not be reflected twice');
+          }
+          return {
+            configurable: true,
+            enumerable: true,
+            value: 3,
+            writable: true,
+          };
+        }
+        return Reflect.getOwnPropertyDescriptor(target, property);
+      },
+    });
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.config = {
+      data: { labels: ['North'], datasets: [{ label: 'Retained', data: [datum] }] },
+    } as unknown as LyraChart['config'];
+
+    expect(yReads).to.equal(1);
+    expect((el as unknown as { chartDescription(): string }).chartDescription()).to.contain('3');
+  });
+
+  it('keeps an admitted opaque datum snapshot when appendData clones a config dataset', () => {
+    class OpaqueDatum {
+      y = 3;
+    }
+    const datum = new OpaqueDatum();
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.config = {
+      data: { labels: ['North'], datasets: [{ label: 'Retained', data: [datum] }] },
+    } as unknown as LyraChart['config'];
+    Object.defineProperty(datum, 'y', {
+      enumerable: true,
+      get: () => {
+        throw new Error('admitted config datum must not be re-read while appending');
+      },
+    });
+
+    expect(() => el.appendData('Later', [4])).not.to.throw();
+    const config = (el as unknown as {
+      buildConfig(): { data: { datasets: Array<{ data: unknown[] }> } };
+    }).buildConfig();
+    expect(config.data.datasets[0]!.data[0] === datum).to.be.true;
+    expect((el as unknown as { chartDescription(): string }).chartDescription()).to.contain('3');
+  });
+
+  it('keeps keyboard and legend reads on an admitted snapshot instead of a shallow Chart.js clone', () => {
+    class OpaqueDatum {
+      y = 3;
+    }
+    const datum = new OpaqueDatum();
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.config = {
+      data: { labels: ['North'], datasets: [{ label: 'Retained', data: [datum] }] },
+    } as unknown as LyraChart['config'];
+    Object.defineProperty(datum, 'y', {
+      enumerable: true,
+      get: () => {
+        throw new Error('runtime dataset clone must not re-read an admitted datum');
+      },
+    });
+    const runtimeClone = { data: { labels: ['North'], datasets: [{ data: [datum] }] } };
+    (el as unknown as { chart: unknown }).chart = runtimeClone;
+
+    const datums = (el as unknown as { chartDatums(): Array<{ value: unknown }> }).chartDatums();
+    expect(datums).to.have.length(1);
+    expect((el as unknown as { datumDisplayValue(value: unknown): string }).datumDisplayValue(
+      datums[0]!.value,
+    )).to.equal('3');
+    expect((el as unknown as {
+      legendValue(item: unknown, chart: unknown): unknown;
+    }).legendValue({ datasetIndex: 0 }, runtimeClone)).to.equal(3);
+  });
+
+  it('fails closed for out-of-range Chart.js callback indexes', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['North'];
+    el.datasets = [{ label: 'Retained', data: [3] }];
+    el.dataLabels = true;
+
+    const config = (el as unknown as { buildConfig(): any }).buildConfig();
+    const filter = config.options.plugins.tooltip.filter as (item: unknown) => boolean;
+    const dataLabels = (el as unknown as {
+      datalabelsOptions(theme: { tick: string }, type: 'bar'): {
+        display(context: unknown): boolean;
+        formatter(value: unknown, context: unknown): string;
+      };
+    }).datalabelsOptions({ tick: 'black' }, 'bar');
+    let activations = 0;
+    el.addEventListener('lr-datum-activate', () => {
+      activations += 1;
+    });
+
+    expect(filter({ datasetIndex: 999 })).to.equal(false);
+    expect(dataLabels.display({ datasetIndex: 0, dataIndex: 999 })).to.equal(false);
+    expect(dataLabels.formatter(3, { datasetIndex: 999, dataIndex: 0 })).to.equal('');
+    expect((el as unknown as {
+      legendValue(item: unknown, chart: unknown): unknown;
+    }).legendValue({ datasetIndex: 0, index: 999 }, {})).to.equal(undefined);
+    let hit = { datasetIndex: 999, index: 0 };
+    (el as unknown as {
+      handlePointClick(event: unknown, chart: unknown): void;
+    }).handlePointClick({}, {
+      getElementsAtEventForMode: () => [hit],
+    });
+    hit = { datasetIndex: 0, index: 999 };
+    (el as unknown as {
+      handlePointClick(event: unknown, chart: unknown): void;
+    }).handlePointClick({}, {
+      getElementsAtEventForMode: () => [hit],
+    });
+    expect(activations).to.equal(0);
+  });
+
+  it('keeps sampled keyboard and legend row indexes aligned with canonical source rows', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = Array.from({ length: 1_001 }, (_, index) => `Category ${index}`);
+    el.datasets = [{
+      label: 'Retained',
+      data: Array.from({ length: 1_001 }, (_, index) => index + 1_000),
+    }];
+    (el as unknown as { buildConfig(): unknown }).buildConfig();
+
+    const datums = (el as unknown as {
+      chartDatums(): Array<{ index: number; label: string | undefined; value: unknown }>;
+    }).chartDatums();
+    expect(datums).to.have.length(1_000);
+    const middleDatum = datums.find((datum) => datum.index === 501);
+    expect(middleDatum?.label).to.equal('Category 501');
+    expect(middleDatum?.value).to.equal(1_501);
+    const lastDatum = datums.find((datum) => datum.index === 1_000);
+    expect(lastDatum?.label).to.equal('Category 1000');
+    expect(lastDatum?.value).to.equal(2_000);
+    expect((el as unknown as {
+      legendValue(item: unknown, chart: unknown): unknown;
+    }).legendValue({ datasetIndex: 0, index: 999 }, {})).to.equal(2_000);
+    expect((el as unknown as {
+      legendValue(item: unknown, chart: unknown): unknown;
+    }).legendValue({ datasetIndex: 0 }, {})).to.equal(1_500_000);
+  });
+
+  it('fails closed on hostile Chart.js runtime and callback records', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['North'];
+    el.datasets = [{ label: 'Retained', data: [3] }];
+    const runtime = {};
+    Object.defineProperty(runtime, 'data', {
+      get: () => {
+        throw new Error('runtime chart data must be read through a descriptor');
+      },
+    });
+    (el as unknown as { chart: unknown }).chart = runtime;
+
+    expect(() => (el as unknown as { applyDatasetVisibility(): void }).applyDatasetVisibility()).not.to.throw();
+    expect(() => (el as unknown as { chartDatums(): unknown }).chartDatums()).not.to.throw();
+    (el as unknown as { chart: unknown }).chart = undefined;
+
+    const metadata = {};
+    Object.defineProperty(metadata, 'hidden', {
+      set: () => {
+        throw new Error('runtime metadata writes must not interrupt a redraw');
+      },
+    });
+    const visibilityChart = {
+      data: { datasets: [{}] },
+      getDatasetMeta: () => metadata,
+      setDatasetVisibility: () => {
+        throw new Error('runtime visibility writes must not interrupt a redraw');
+      },
+    };
+    (el as unknown as { chart: unknown }).chart = visibilityChart;
+    expect(() => (el as unknown as { applyDatasetVisibility(): void }).applyDatasetVisibility()).not.to.throw();
+    el.hiddenDatasets = [0];
+    expect(() => (el as unknown as { applyDatasetVisibility(): void }).applyDatasetVisibility()).not.to.throw();
+    (el as unknown as { chart: unknown }).chart = undefined;
+
+    const hit = {};
+    Object.defineProperty(hit, 'datasetIndex', {
+      get: () => {
+        throw new Error('point hit indexes must be read through descriptors');
+      },
+    });
+    const clickedChart = {
+      getElementsAtEventForMode: () => [hit],
+    };
+    expect(() =>
+      (el as unknown as {
+        handlePointClick(event: unknown, chart: unknown): void;
+      }).handlePointClick({}, clickedChart),
+    ).not.to.throw();
+
+    const labels = (el as unknown as {
+      legendLabels(chart: unknown): unknown[];
+    }).legendLabels(runtime);
+    expect(labels).to.have.length(1);
+
+    const legendItem = {};
+    Object.defineProperties(legendItem, {
+      datasetIndex: {
+        get: () => {
+          throw new Error('legend dataset indexes must be read through descriptors');
+        },
+      },
+      index: {
+        get: () => {
+          throw new Error('legend item indexes must be read through descriptors');
+        },
+      },
+    });
+    let legendValue: unknown;
+    expect(() => {
+      legendValue = (el as unknown as {
+        legendValue(item: unknown, chart: unknown): unknown;
+      }).legendValue(legendItem, { data: { datasets: [{ data: [3] }] } });
+    }).not.to.throw();
+    expect(legendValue).to.equal(undefined);
+
+    const tooltipContext = {};
+    Object.defineProperties(tooltipContext, {
+      parsed: {
+        get: () => {
+          throw new Error('tooltip parsed values must be read through descriptors');
+        },
+      },
+      raw: {
+        get: () => {
+          throw new Error('tooltip raw values must be read through descriptors');
+        },
+      },
+      dataset: {
+        get: () => {
+          throw new Error('tooltip datasets must be read through descriptors');
+        },
+      },
+    });
+    expect(() =>
+      (el as unknown as { tooltipLabel(context: unknown): unknown }).tooltipLabel(tooltipContext),
+    ).not.to.throw();
+
+    const filter = (el as unknown as { buildConfig(): any }).buildConfig()
+      .options.plugins.tooltip.filter as (item: unknown) => boolean;
+    const tooltipItem = {};
+    Object.defineProperty(tooltipItem, 'datasetIndex', {
+      get: () => {
+        throw new Error('tooltip dataset indexes must be read through descriptors');
+      },
+    });
+    expect(() => filter(tooltipItem)).not.to.throw();
+    expect(filter(tooltipItem)).to.equal(false);
+
+    el.dataLabels = true;
+    const dataLabels = (el as unknown as {
+      datalabelsOptions(theme: { tick: string }, type: 'bar'): {
+        display(context: unknown): boolean;
+        formatter(value: unknown, context: unknown): string;
+      };
+    }).datalabelsOptions({ tick: 'black' }, 'bar');
+    const dataLabelsContext = {};
+    Object.defineProperties(dataLabelsContext, {
+      datasetIndex: {
+        get: () => {
+          throw new Error('data-label dataset indexes must be read through descriptors');
+        },
+      },
+      dataIndex: {
+        get: () => {
+          throw new Error('data-label row indexes must be read through descriptors');
+        },
+      },
+    });
+    expect(dataLabels.display(dataLabelsContext)).to.equal(false);
+    expect(dataLabels.formatter(3, dataLabelsContext)).to.equal('');
+  });
+
+  it('retains an admitted opaque config plugin without re-reading an id revoked after admission', () => {
+    let revoke: () => void;
+    const revocable = Proxy.revocable({ id: 'retained-plugin' }, {
+      getOwnPropertyDescriptor(target, property) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
+        if (property === 'id') revoke();
+        return descriptor;
+      },
+    });
+    revoke = revocable.revoke;
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.config = { plugins: [revocable.proxy] } as unknown as LyraChart['config'];
+
+    const config = (el as unknown as {
+      buildConfig(): { plugins: readonly unknown[] };
+    }).buildConfig();
+    expect(config.plugins.length).to.equal(1);
+    expect(config.plugins[0] === revocable.proxy).to.be.true;
+  });
+
+  it('does not allow caller-visible series markers to forge canonical descriptor provenance', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.datasets = [{ label: 'Admitted', data: [1] }];
+    const symbols = Object.getOwnPropertySymbols(el.datasets[0]!);
+    const forged: Record<PropertyKey, unknown> = { label: 'Forged' };
+    for (const symbol of symbols) {
+      Object.defineProperty(forged, symbol, Object.getOwnPropertyDescriptor(el.datasets[0]!, symbol)!);
+    }
+    Object.defineProperty(forged, 'data', {
+      enumerable: true,
+      get: () => {
+        throw new Error('forged series data must be projected rather than trusted');
+      },
+    });
+
+    expect(symbols).to.deep.equal([]);
+    el.datasets = [forged] as unknown as readonly LyraChartSeries[];
+    const config = (el as unknown as {
+      buildConfig(): { data: { datasets: unknown[] } };
+    }).buildConfig();
+    expect(config.data.datasets).to.deep.equal([]);
+  });
+
+  it('projects Chart.js callback labels through descriptors rather than a peer getter', () => {
+    const dataset = { data: [3] };
+    Object.defineProperty(dataset, 'label', {
+      enumerable: true,
+      get: () => {
+        throw new Error('Chart.js callback labels must not be read through a getter');
+      },
+    });
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.valueFormatter = (value, surface) => `${surface}:${value}`;
+    const config = (el as unknown as { buildConfig(): any }).buildConfig();
+    const tooltip = config.options.plugins.tooltip.callbacks.label as (context: unknown) => unknown;
+    const legend = config.options.plugins.legend.labels.generateLabels as (chart: unknown) => unknown[];
+
+    expect(() => tooltip({ parsed: { y: 3 }, dataset })).not.to.throw();
+    expect(tooltip({ parsed: { y: 3 }, dataset })).to.equal('tooltip:3');
+    expect(() => legend({ data: { datasets: [dataset] } })).not.to.throw();
+  });
+
+  it('projects a structured legend position through own data descriptors', () => {
+    const position = {};
+    Object.defineProperty(position, 'x', {
+      enumerable: true,
+      get: () => {
+        throw new Error('legend position getters must not be read');
+      },
+    });
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.legendPosition = position as LyraChart['legendPosition'];
+
+    expect(() => (el as unknown as { buildConfig(): unknown }).buildConfig()).not.to.throw();
+    const config = (el as unknown as {
+      buildConfig(): { options: { plugins: { legend: { position: unknown } } } };
+    }).buildConfig();
+    expect(config.options.plugins.legend.position).to.equal('top');
+  });
+
+  it('keeps public data identities while all later chart reads use canonical descriptors', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const data = [3];
+    const points = [{ x: 1, y: 3 }];
+    const labels = new Array<string>(1);
+    Object.defineProperty(labels, '0', {
+      enumerable: true,
+      get: () => {
+        throw new Error('labels must not be re-read');
+      },
+    });
+    const annotations = [{}];
+    Object.defineProperty(annotations[0]!, 'value', {
+      enumerable: true,
+      get: () => {
+        throw new Error('annotation must not be re-read');
+      },
+    });
+    const hidden = new Array<number>(1);
+    Object.defineProperty(hidden, '0', {
+      enumerable: true,
+      get: () => {
+        throw new Error('hidden index must not be re-read');
+      },
+    });
+    el.labels = labels;
+    el.datasets = [{ label: 'Safe', data }, { label: 'Point', points }];
+    el.annotations = annotations as unknown as readonly LyraChartAnnotation[];
+    el.hiddenDatasets = hidden;
+
+    Object.defineProperty(data, '0', {
+      enumerable: true,
+      get: () => {
+        throw new Error('data must not be re-read after admission');
+      },
+    });
+    Object.defineProperty(points, '0', {
+      enumerable: true,
+      get: () => {
+        throw new Error('points must not be re-read after admission');
+      },
+    });
+
+    expect(el.datasets[0]!.data).to.equal(data);
+    expect(el.datasets[1]!.points).to.equal(points);
+    expect(() => (el as any).chartDescription()).not.to.throw();
+    expect(() => (el as any).normalizedAnnotations()).not.to.throw();
+    expect(() => (el as any).effectiveHiddenDatasetIndexes()).not.to.throw();
+    let normalized = (el as any).buildConfig();
+    expect(normalized.data.labels).to.deep.equal(['']);
+    expect(normalized.data.datasets[0].data).to.deep.equal([3]);
+    expect(normalized.data.datasets[1].data).to.deep.equal([{ x: 1, y: 3 }]);
+    expect(() => el.appendData('Later', [4])).not.to.throw();
+    normalized = (el as any).buildConfig();
+    expect(normalized.data.datasets[0].data).to.deep.equal([3, 4]);
+    expect(normalized.data.datasets[1].data).to.deep.equal([{ x: 1, y: 3 }]);
+
+    const context = document.createElement('canvas').getContext('2d')!;
+    const gradient = context.createLinearGradient(0, 0, 1, 1);
+    const callback = (): string => 'opaque callback identity';
+    const options: Record<string, unknown> = {
+      plugins: { tooltip: { backgroundColor: gradient, callbacks: { label: callback } } },
+    };
+    options['self'] = options;
+    el.config = { options } as never;
+    const config = (el as any).buildConfig();
+    expect(config.options.plugins.tooltip.backgroundColor).to.equal(gradient);
+    expect(config.options.plugins.tooltip.callbacks.label).to.equal(callback);
+    expect(config.options.self).to.equal(undefined);
+
+    const configLabels = new Array<string>(1);
+    Object.defineProperty(configLabels, '0', {
+      enumerable: true,
+      get: () => {
+        throw new Error('config labels must not be re-read');
+      },
+    });
+    const configDataset = { data: [1] };
+    Object.defineProperties(configDataset, {
+      label: {
+        enumerable: true,
+        get: () => {
+          throw new Error('config dataset label must not be re-read');
+        },
+      },
+      noTooltip: {
+        enumerable: true,
+        get: () => {
+          throw new Error('config noTooltip must not be re-read');
+        },
+      },
+    });
+    el.config = {
+      data: { labels: configLabels, datasets: [configDataset] },
+    } as never;
+    let tooltipVisible = false;
+    expect(() => {
+      const projected = (el as any).buildConfig();
+      (el as any).chartDescription();
+      tooltipVisible = projected.options.plugins.tooltip.filter({ datasetIndex: 0 });
+    }).not.to.throw();
+    expect(tooltipVisible).to.be.true;
   });
 
   it('normalizes invalid closed-set and nested numeric writes before building peer config', async () => {
@@ -1180,19 +1789,18 @@ it('redraws when a config callback is replaced even though its surrounding data 
   expect((el as any).buildConfig().options.plugins.tooltip.callbacks.label).to.equal(second);
 });
 
-it('does not serialize circular or BigInt config values while building the Chart.js config', () => {
+it('omits active config cycles while retaining opaque scalar option values', () => {
   const el = document.createElement('lr-chart') as LyraChart;
-  const circular: Record<string, unknown> = { options: {} };
-  circular['self'] = circular;
-  circular['count'] = 1n;
-  el.config = circular as never;
+  const options: Record<string, unknown> = { count: 1n };
+  options['self'] = options;
+  el.config = { options } as never;
 
   let config: any;
   expect(() => {
     config = (el as any).buildConfig();
   }).to.not.throw();
-  expect(config.self).to.equal(config);
-  expect(config.count).to.equal(1n);
+  expect(config.options.self).to.equal(undefined);
+  expect(config.options.count).to.equal(1n);
 });
 
 it('deep-merges the same reused override object independently at each config position', () => {
@@ -1312,27 +1920,48 @@ it('renders independent hover and pressed theme hooks for each chart control sur
   }
 });
 
-it("routes [part='canvas']:hover's rendered outline through the scoped width and color tokens", async () => {
+it('keeps the canvas hover outline on the chart grid-color fallback by default', async () => {
   const el = (await fixture(html`
     <lr-chart
-      style="--lr-chart-canvas-hover-outline-width: 7px; --lr-chart-grid-color: rgb(1, 2, 3);"
+      style="--lr-chart-grid-color: rgb(4, 5, 6);"
       .labels=${['A', 'B']}
       .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
     ></lr-chart>
   `)) as LyraChart;
   await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
   const canvas = el.shadowRoot!.querySelector<HTMLElement>('[part="canvas"]')!;
-  const rect = canvas.getBoundingClientRect();
 
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
-    await waitUntil(() => {
-      const computed = getComputedStyle(canvas);
-      return computed.outlineWidth === '7px' && computed.outlineColor === 'rgb(1, 2, 3)';
-    }, 'the rendered canvas hover outline never picked up the scoped tokens');
+    await hoverUntilMatched(canvas, 'the chart canvas never entered its hover state');
+    await waitUntil(
+      () => getComputedStyle(canvas).outlineColor === 'rgb(4, 5, 6)',
+      'the default canvas hover outline did not use the chart grid-color fallback',
+    );
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('routes [part="canvas"]:hover’s rendered outline through scoped width and color tokens', async () => {
+  const el = (await fixture(html`
+    <lr-chart
+      style="--lr-chart-canvas-hover-outline-width: 7px; --lr-chart-canvas-hover-outline-color: rgb(1, 2, 3); --lr-chart-grid-color: rgb(4, 5, 6);"
+      .labels=${['A', 'B']}
+      .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+    ></lr-chart>
+  `)) as LyraChart;
+  await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+  const canvas = el.shadowRoot!.querySelector<HTMLElement>('[part="canvas"]')!;
+
+  try {
+    await hoverUntilMatched(canvas, 'the chart canvas never entered its hover state');
+    await waitUntil(
+      () => {
+        const computed = getComputedStyle(canvas);
+        return computed.outlineWidth === '7px' && computed.outlineColor === 'rgb(1, 2, 3)';
+      },
+      'the rendered canvas hover outline never picked up the scoped tokens',
+    );
   } finally {
     await resetMouse();
   }
@@ -2612,9 +3241,9 @@ it('sets a dashed borderDash for a series with dash: true', async () => {
   expect(ds.borderDash).to.deep.equal([4, 4]);
 });
 
-// --- handlePointClick(): value fallback for a dangling index -------------------------------------
+// --- handlePointClick(): fail-closed dangling index -----------------------------------------------
 
-it('emits a null value (not throwing) when the resolved click hits an index with no backing data', async () => {
+it('does not emit when a resolved click carries an index with no backing data', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
@@ -2627,10 +3256,12 @@ it('emits a null value (not throwing) when the resolved click hits an index with
   chart.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 99 }];
   try {
     const onClick = (el as any).buildConfig().options.onClick;
-    let event: CustomEvent | undefined;
-    el.addEventListener('lr-point-click', (e) => (event = e as CustomEvent), { once: true });
+    let pointClick = false;
+    el.addEventListener('lr-point-click', () => {
+      pointClick = true;
+    }, { once: true });
     onClick({} as never, [], chart);
-    expect(event!.detail.value).to.equal(null);
+    expect(pointClick).to.equal(false);
   } finally {
     chart.getElementsAtEventForMode = original;
   }
@@ -2670,9 +3301,10 @@ it('legendValue returns undefined for a legend item whose dataset index has no m
 
 it('legendValue returns the value at a specific integer item.index instead of summing the whole series (per-slice pie/doughnut legend items)', () => {
   const el = document.createElement('lr-chart') as LyraChart;
+  el.config = { data: { datasets: [{ label: 'A', data: [10, 20, 30] }] } };
   const value = (el as any).legendValue(
     { datasetIndex: 0, index: 1 },
-    { data: { datasets: [{ label: 'A', data: [10, 20, 30] }] } },
+    {},
   );
   expect(value).to.equal(20);
 });
@@ -2711,7 +3343,8 @@ it('legendLabels falls back to an empty items array when chart.data.datasets is 
 
 it('legendLabels labels a dataset by its 1-based index when it has no explicit label', () => {
   const el = document.createElement('lr-chart') as LyraChart;
-  const labels = (el as any).legendLabels({ data: { datasets: [{ data: [1, 2] }] } });
+  el.config = { data: { datasets: [{ data: [1, 2] }] } };
+  const labels = (el as any).legendLabels({});
   expect(labels[0].text).to.equal('1');
 });
 
@@ -3364,6 +3997,7 @@ it('locale-formats generated table values, row ordinals, and summary counts', as
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     el.strings = { chartValueLabel: '{label} equals {value}' };
     el.valueFormatter = (value, context) => `${context}-${value}`;
+    el.config = { data: { datasets: [{ label: 'Revenue', data: [10, 20] }] } };
 
     expect(
       (el as any).tooltipLabel({
@@ -3371,9 +4005,7 @@ it('locale-formats generated table values, row ordinals, and summary counts', as
         dataset: { label: 'Revenue' },
       }),
     ).to.equal('Revenue equals tooltip-20');
-    const labels = (el as any).legendLabels({
-      data: { datasets: [{ label: 'Revenue', data: [10, 20] }] },
-    });
+    const labels = (el as any).legendLabels({});
     expect(labels[0].text).to.equal('Revenue equals legend-30');
   });
 
@@ -4055,13 +4687,14 @@ describe('appendData with an explicit config.data', () => {
     expect(el.datasets[0]!.data).to.deep.equal([1, 2]);
   });
 
-  it('joins an array label into a single readable category name', async () => {
-    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  it('renders an array config label as the exact semantic row header', async () => {
+    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
     el.config = { data: { labels: [['Q1', '2026']], datasets: [{ label: 'R', data: [1] }] } };
     await ready(el);
-    expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
-    const summary = el.shadowRoot!.textContent ?? '';
-    expect(summary.includes('Q1') || summary.length >= 0).to.be.true;
+    const rowHeader = el.shadowRoot!.querySelector<HTMLTableCellElement>(
+      '[part="data-table"] tbody th[scope="row"]',
+    );
+    expect(rowHeader?.textContent?.trim()).to.equal('Q1 2026');
   });
 
   it('treats a non-plain-object explicit config.data as empty when computing what to append', () => {
@@ -4571,6 +5204,56 @@ describe('coverage: data-labels formatter/display and stack-total point values',
     (el as unknown as { stackTotals: boolean }).stackTotals = true;
     const totals = (el as any).computeStackTotals('y');
     expect(totals).to.deep.equal([10, 20]);
+  });
+
+  it('maps sampled visual callback indexes back to source rows and series for totals, axes, and noTooltip', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.stacked = true;
+    el.stackTotals = true;
+    el.labels = Array.from({ length: 1_001 }, (_, index) => `Category ${index}`);
+    el.datasets = Array.from({ length: 1_001 }, (_, index) => ({
+      label: `series-${index}`,
+      axis: index % 2 === 0 ? 'y' as const : 'y2' as const,
+      data: [],
+    }));
+
+    // The first build establishes both visual source-index maps without expanding any data array.
+    (el as any).buildConfig();
+    const visualSeries = (el as any).visualDatasetSourceIndexes as number[];
+    const visualRows = (el as any).visualRowSourceIndexes as number[];
+    expect(visualSeries).to.have.length.greaterThan(1);
+    expect(visualRows).to.have.length.greaterThan(1);
+    const visualRow = visualRows.length - 1;
+    const sourceRow = visualRows[visualRow]!;
+    const visualY = [...visualSeries.keys()].filter((index) => visualSeries[index]! % 2 === 0);
+    const visualY2 = [...visualSeries.keys()].filter((index) => visualSeries[index]! % 2 === 1);
+    const topY = visualY.at(-1)!;
+    const lowerY = visualY[0]!;
+    const topY2 = visualY2.at(-1)!;
+    const lowerY2 = visualY2[0]!;
+    const valuesAtSourceRow = (value: number) => {
+      const values = Array<number | null>(sourceRow + 1).fill(null);
+      values[sourceRow] = value;
+      return values;
+    };
+    el.datasets = el.datasets.map((series, sourceIndex) => ({
+      ...series,
+      ...(sourceIndex === visualSeries[lowerY] ? { data: valuesAtSourceRow(10) } : {}),
+      ...(sourceIndex === visualSeries[topY] ? { data: valuesAtSourceRow(20) } : {}),
+      ...(sourceIndex === visualSeries[lowerY2] ? { data: valuesAtSourceRow(30) } : {}),
+      ...(sourceIndex === visualSeries[topY2]
+        ? { data: valuesAtSourceRow(40), noTooltip: true }
+        : {}),
+    }));
+
+    const config = (el as any).buildConfig();
+    const datalabels = config.options.plugins.datalabels;
+    expect(datalabels.display({ datasetIndex: topY, dataIndex: visualRow })).to.equal(true);
+    expect(datalabels.formatter(20, { datasetIndex: topY, dataIndex: visualRow })).to.equal('30');
+    expect(datalabels.display({ datasetIndex: topY2, dataIndex: visualRow })).to.equal(true);
+    expect(datalabels.formatter(40, { datasetIndex: topY2, dataIndex: visualRow })).to.equal('70');
+    expect(config.options.plugins.tooltip.filter({ datasetIndex: topY2 })).to.equal(false);
   });
 
   it('recovers requiredPlugins into an array when config.plugins overrides the generated array with a non-array value', () => {
@@ -5204,6 +5887,73 @@ describe("formatter surfaces: export and spoken", () => {
       new Intl.NumberFormat(resolveLyraLocale(el)).format(1234)
     );
   });
+
+  it('passes complete structured table and spoken metadata for scalar and bubble values', async () => {
+    const contexts: Array<Record<string, unknown>> = [];
+    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'Revenue', data: [7, 9] },
+      { label: 'Requests', points: [{ x: 1, y: 2, r: 3, label: 'Named request' }] },
+    ];
+    el.formatter = (context) => {
+      contexts.push({ ...context });
+      return `${context.surface}:${context.statistic ?? 'value'}:${context.value}`;
+    };
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+
+    const tableText = el.shadowRoot!.querySelector('[part="data-table"]')!.textContent ?? '';
+    expect(tableText).to.contain('table:value:7');
+    expect(tableText).to.contain('table:x:1');
+    expect(tableText).to.contain('table:y:2');
+    expect(tableText).to.contain('table:r:3');
+
+    const point = { x: 1, y: 2, r: 3, label: 'Named request' };
+    const announcement = (
+      el as unknown as {
+        datumAnnouncement: (datum: unknown, position: number, total: number) => string;
+        chartDescription: () => string;
+      }
+    ).datumAnnouncement({ datasetIndex: 1, index: 0, label: 'Named request', value: point }, 0, 1);
+    expect(announcement).to.contain('spoken:x:1');
+    expect(announcement).to.contain('spoken:y:2');
+    expect(announcement).to.contain('spoken:r:3');
+    expect((el as unknown as { chartDescription: () => string }).chartDescription()).to.contain(
+      'spoken:min:7',
+    );
+    expect((el as unknown as { chartDescription: () => string }).chartDescription()).to.contain(
+      'spoken:max:9',
+    );
+
+    expect(contexts.some((context) =>
+      context['surface'] === 'table' &&
+      context['datasetIndex'] === 0 &&
+      context['index'] === 0 &&
+      context['label'] === 'Q1' &&
+      context['seriesLabel'] === 'Revenue',
+    )).to.be.true;
+    expect(contexts.some((context) =>
+      context['surface'] === 'spoken' &&
+      context['datasetIndex'] === 1 &&
+      context['index'] === 0 &&
+      context['label'] === 'Named request' &&
+      context['seriesLabel'] === 'Requests' &&
+      context['statistic'] === 'r',
+    )).to.be.true;
+    expect(contexts.some((context) =>
+      context['surface'] === 'spoken' &&
+      context['datasetIndex'] === 0 &&
+      context['seriesLabel'] === 'Revenue' &&
+      context['statistic'] === 'min',
+    )).to.be.true;
+    expect(contexts.some((context) =>
+      context['surface'] === 'spoken' &&
+      context['datasetIndex'] === 0 &&
+      context['seriesLabel'] === 'Revenue' &&
+      context['statistic'] === 'max',
+    )).to.be.true;
+  });
 });
 
 describe('data-table disclosure', () => {
@@ -5247,6 +5997,21 @@ describe('data-table disclosure', () => {
     expect(tableWrapper(el).id, 'the wrapper carries a real id').to.not.equal('');
   });
 
+  it('keeps a short localized disclosure label at the token hit-area width', async () => {
+    const el = await chartWith(html`<lr-chart
+      data-table-toggle
+      style="--lr-icon-button-size: 64px"
+      .strings=${{ chartData: 'i' }}
+    ></lr-chart>`);
+    const button = toggleButton(el);
+
+    expect(button !== null, 'the disclosure renders').to.equal(true);
+    if (!button) throw new Error('Expected a data-table disclosure button');
+    expect(button.textContent?.trim()).to.equal('i');
+    button.style.justifySelf = 'start';
+    expect(button.getBoundingClientRect().width).to.be.at.least(64);
+  });
+
   it('reveals the table on activation and keeps it in the DOM throughout', async () => {
     const el = await chartWith(html`<lr-chart data-table-toggle></lr-chart>`);
     const button = toggleButton(el)!;
@@ -5264,6 +6029,33 @@ describe('data-table disclosure', () => {
     await el.updateComplete;
     expect(toggleButton(el)!.getAttribute('aria-expanded')).to.equal('false');
     expect(tableWrapper(el).hasAttribute('data-visually-hidden')).to.be.true;
+  });
+
+  it('synchronizes a slotted data alternative with the disclosure, including native keyboard activation', async () => {
+    const el = await chartWith(html`
+      <lr-chart data-table-toggle>
+        <table slot="data-table">
+          <caption>Custom chart data</caption>
+          <thead><tr><th scope="col">Metric</th></tr></thead>
+          <tbody><tr><td>Revenue</td></tr></tbody>
+        </table>
+      </lr-chart>
+    `);
+    const button = toggleButton(el)!;
+    const wrapper = tableWrapper(el);
+    const customTable = el.querySelector('table')!;
+
+    expect(wrapper.hasAttribute('data-visually-hidden')).to.be.true;
+    expect(customTable.getAttribute('slot')).to.equal('data-table');
+    expect(wrapper.getBoundingClientRect().height).to.equal(1);
+
+    button.focus();
+    await sendKeys({ press: 'Enter' });
+    await el.updateComplete;
+
+    expect(button.getAttribute('aria-expanded')).to.equal('true');
+    expect(wrapper.hasAttribute('data-visually-hidden')).to.be.false;
+    expect(wrapper.getBoundingClientRect().height).to.be.greaterThan(1);
   });
 
   it('starts expanded when show-data-table is set alongside the toggle', async () => {
@@ -5691,11 +6483,14 @@ describe('bounded chart fallback paths', () => {
       { datasetIndex: 0, index: 0, label: 'A', value: 5 },
     ]);
     (el as any).chart = { data: { labels: [], datasets: [{}] } };
-    expect((el as any).chartDatums()).to.deep.equal([]);
+    expect((el as any).chartDatums()).to.deep.equal([
+      { datasetIndex: 0, index: 0, label: 'A', value: 5 },
+    ]);
   });
 
   it('covers remaining direct formatting and legend fallbacks', () => {
     const el = document.createElement('lr-chart') as LyraChart;
+    el.config = { data: { datasets: [{ data: [Number.NaN, 2] }] } };
     expect((el as any).datumAnnouncement(
       { datasetIndex: 9, index: 0, label: 'A', value: 1 },
       0,
@@ -5704,7 +6499,7 @@ describe('bounded chart fallback paths', () => {
 
     expect((el as any).legendValue(
       { datasetIndex: 0 },
-      { data: { datasets: [{ data: [Number.NaN, 2] }] } },
+      {},
     )).to.equal(2);
 
     el.valueFormatter = (value, context) => `${context}:${value}`;

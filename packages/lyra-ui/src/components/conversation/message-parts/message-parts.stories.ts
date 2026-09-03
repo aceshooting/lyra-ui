@@ -59,6 +59,29 @@ const citationDenseParts: MessagePart[] = Array.from(
         }
 );
 
+const narrowErrorRetryParts: MessagePart[] = [
+  {
+    id: 'breakable-retry-error',
+    type: 'error',
+    message: 'تعذرت إعادة المحاولة الآن، راجع اتصال الشبكة ثم حاول مرة أخرى.',
+    retryable: true,
+  },
+  {
+    id: 'unbroken-retry-error',
+    type: 'error',
+    message: 'RETRYERRORIDENTIFIER20260903A9F4E7B2C8D1REQUIRESMANUALRETRYCONFIRMATION',
+    retryable: true,
+  },
+];
+
+const contentModeParts: MessagePart[] = [
+  {
+    id: 'content-mode-text',
+    type: 'text',
+    text: '**A populated formatting fallback** keeps this content visible.',
+  },
+];
+
 export const Default: Story = {
   render: () => html`<lr-message-parts .parts=${parts}></lr-message-parts>`,
 };
@@ -120,6 +143,37 @@ export const Narrow: Story = {
   render: () => html`
     <div style="max-width: 320px;">
       <lr-message-parts .parts=${parts}></lr-message-parts>
+    </div>
+  `,
+};
+
+/** Retryable errors demonstrate ordinary break opportunities and one genuinely unbroken token. */
+export const NarrowErrorRetry: Story = {
+  name: 'Narrow error retry',
+  render: () => html`
+    <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-message-parts .parts=${narrowErrorRetryParts}></lr-message-parts>
+    </div>
+  `,
+};
+
+/** Plain, Markdown, and an invalid content-mode token all retain populated text content. */
+export const ContentModeFallback: Story = {
+  name: 'Content mode fallback',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); max-inline-size: var(--lr-size-30rem);">
+      <section>
+        <h3>Plain</h3>
+        <lr-message-parts content-mode="plain" .parts=${contentModeParts}></lr-message-parts>
+      </section>
+      <section>
+        <h3>Markdown</h3>
+        <lr-message-parts content-mode="markdown" .parts=${contentModeParts}></lr-message-parts>
+      </section>
+      <section>
+        <h3>Invalid token falls back to Markdown</h3>
+        <lr-message-parts content-mode="unsupported-mode" .parts=${contentModeParts}></lr-message-parts>
+      </section>
     </div>
   `,
 };

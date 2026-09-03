@@ -10,6 +10,25 @@ const spans: LyraSpan[] = [
   { id: 'draft', parentId: 'root', name: 'draft_itinerary', kind: 'tool', startMs: 650, status: 'running' },
 ];
 
+const edgeClampSpans: LyraSpan[] = [
+  {
+    id: 'first-edge',
+    name: 'أول هدف عند بداية المسار الزمني',
+    kind: 'tool',
+    startMs: 0,
+    endMs: 1,
+    status: 'success',
+  },
+  {
+    id: 'last-edge',
+    name: 'آخر هدف عند نهاية المسار الزمني',
+    kind: 'tool',
+    startMs: 999,
+    endMs: 1000,
+    status: 'success',
+  },
+];
+
 const meta: Meta = {
   title: 'Observability/Span Waterfall',
   component: 'lr-span-waterfall',
@@ -61,6 +80,20 @@ export const Empty: Story = {
 /** 320px container — rows stack to two lines (name above bar) below 480px. */
 export const Narrow: Story = {
   render: () => html`<lr-span-waterfall style="max-width: 320px" .spans=${spans}></lr-span-waterfall>`,
+};
+
+/** Both interactive target floors begin or end exactly at the constrained 320px track edges. */
+export const NarrowEdgeClamp: Story = {
+  name: 'Narrow edge clamp',
+  render: () => html`
+    <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-span-waterfall
+        .spans=${edgeClampSpans}
+        .viewStartMs=${0}
+        .viewEndMs=${1000}
+      ></lr-span-waterfall>
+    </div>
+  `,
 };
 
 export const RetintedActiveRow: Story = {

@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -241,8 +242,8 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     if (changed.has('items')) {
       this.focusRestoreGeneration++;
       this.hoverIndex = null;
-      const focusedCell = this.shadowRoot?.activeElement as HTMLElement | null;
-      const focusedIndex = Number(focusedCell?.dataset['index']);
+      const focusedCell = activeElementIn(this.shadowRoot) as HTMLElement | null;
+      const focusedIndex = Number(focusedCell?.dataset?.['index']);
       if (!Number.isInteger(focusedIndex) || focusedIndex < 0) {
         this.keyboardIndex = null;
         return;

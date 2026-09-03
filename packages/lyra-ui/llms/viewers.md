@@ -4,6 +4,8 @@ Viewer loading contract: `lr-archive-viewer`, `lr-calendar-viewer`, `lr-contact-
 visible `[part="spinner"]` treatment. Its localized label is ordinary readable text (including
 without CSS), its decorative ring stops under reduced motion, and `[part="base"]` exposes explicit
 `aria-busy="true"|"false"` while transition announcements remain in the shared document-level sink.
+That shared ring uses `--lr-duration-ambient` with `--lr-easing-linear`; reduced motion stops the
+ring rather than merely shortening the animation.
 
 Viewer search events use `detail: { query, matchCount, matchCountExact, activeIndex }`.
 `matchCountExact: false` means the retained `matchCount` is a known lower bound, never an exact
@@ -94,7 +96,11 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
   over the image-format preview; ignored for the `text`/`generic` formats. IDs are trimmed and
   required to be nonempty, with the first record retained when IDs repeat. A rectangle renders only
-  when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
+  when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative. Image-region
+  geometry is captured when `highlights` is assigned: an invalid or accessor-backed `region` anchor
+  is ignored, and mutating an accepted anchor later does not move its painted region. Reassign
+  `highlights` to update it; the original public anchor identity remains available for
+  reference-based `scrollToAnchor()`.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
 - `anchorKinds: readonly LyraAnchor['kind'][] = ['region']` (this viewer's supported
@@ -156,7 +162,11 @@ every other element that read them. The tone-specific resting border and hover t
 `--lr-document-preview-highlight-accent-color`, `--lr-document-preview-highlight-success-color`,
 `--lr-document-preview-highlight-warning-color`, `--lr-document-preview-highlight-danger-color`,
 and `--lr-document-preview-highlight-neutral-color` (defaulting respectively to the matching
-brand/success/warning/danger/neutral color tokens). Plus shared tokens
+brand/success/warning/danger/neutral color tokens). `--lr-document-preview-download-link-hover-bg`
+defaults to `color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner)
+var(--lr-color-mix-hover))`; `--lr-document-preview-download-link-active-bg` uses the same mix with
+`var(--lr-color-mix-active)`, styling the native download action's hover and pressed backgrounds.
+Plus shared tokens
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
@@ -296,6 +306,10 @@ polite and assertive sinks, respectively;
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
 size of `[part="body"]` before the dialog body scrolls internally.
+`--lr-document-viewer-download-link-hover-bg` defaults to `color-mix(in oklab,
+var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`, and
+`--lr-document-viewer-download-link-active-bg` uses `var(--lr-color-mix-active)` in that same mix
+for the native download action's hover and pressed backgrounds.
 
 **Renderer registry exports:**
 
@@ -447,6 +461,12 @@ resolved keyboard action was activated.
 content. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call.
 
+Mammoth's conversion result is usable only when it has own-data `value: string` and an own-data
+`messages` array; an unusable primary result is terminal. From a usable result, the first 100
+message positions are considered, malformed entries are omitted, and valid opaque causes are
+retained in their diagnostics. Sanitized document content remains visible while those non-fatal
+diagnostics are emitted.
+
 **CSS parts:** `base`, `body`, `content`, `spinner`, `error`, `highlight` (a painted `text-quote`
 highlight), `highlight-actions` (keyboard-accessible actions for resolved highlights),
 `highlight-action` (one native highlight activation button), `search-match` (a painted in-document
@@ -503,6 +523,11 @@ An attachment with no filename uses the localized `emailViewerUnnamedAttachment`
 (`"Unnamed attachment"` in English) for its visible name, open-button accessible name, and
 `lr-attachment-open` detail. The fallback resolves while rendering, so changing the locale or
 per-instance `strings` after the message loads updates it without reparsing the message.
+
+Parser output is admitted through a bounded direct-data projection: malformed optional fields,
+recipients, and attachment entries are omitted without discarding later valid siblings. Accepted
+string, `Uint8Array`, and `ArrayBuffer` attachment bytes are copied before use, and every
+`lr-attachment-open` creates a fresh Blob, so later source mutation cannot change event bytes.
 
 Sanitized HTML uses the passive-document profile: anchors, form controls, and custom elements are
 unwrapped to ordinary text/children where safe, remote navigation/resource attributes are removed,
@@ -701,7 +726,9 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 Renders EPUB ebooks through the optional `epubjs` peer. `src` is fetched as an `ArrayBuffer`, and
 epub.js renders the reading area into its stable `mount` element, using an internal iframe for
-chapter content.
+chapter content. A usable book exposes `ready`, `renderTo()`, and `destroy()`, and its rendition
+exposes `display()`, `prev()`, `next()`, `on()`, and `annotations.highlight()`/`remove()`; an absent
+required capability is terminal. Navigation and spine data are optional.
 
 **Properties:** `src: string = ''` and `name: string = ''`. A plain `aria-label` attribute on the
 host overrides the reading region's accessible name — by attribute presence, so an explicitly empty
@@ -722,14 +749,17 @@ viewer's supported `LyraAnchor.kind` values for the shared anchor-target contrac
 **Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,
 populated once `book.ready` resolves) flattened into document-ordered `EbookTocItem[]` (`{ id,
 label, href, level }`, `level` starting at 1 for a top-level entry, `id` falling back to `href`
-when a navigation entry has none), `[]` before a book has loaded. `search(query)` resolves the
+when a navigation entry has none), `[]` before a book has loaded or when navigation is absent. TOC
+projection examines at most 10,000 positions, nodes, and depth 100; malformed entries are skipped
+without preventing later valid entries. `search(query)` resolves the
 match count across every spine section, in document order, via epub.js's own `item.load()`/
 `item.find()`/`item.unload()` (empty/whitespace query behaves like `clearSearch()`; a newer
 `search()` call or a `src` change aborts an in-flight scan; peer output is capped at 10,000
 matches after at most 1,000 spine items and 4,000,000 result code units; queries are capped at 4,096
 code units); `searchNext()`/`searchPrevious()`
 advance/step back through matches (wrapping, resolving `false` when there are none); `clearSearch()`
-clears the query, matches, and painted search annotation.
+clears the query, matches, and painted search annotation. `matchCountExact: false` also reports
+malformed or holey spine/find data and failed section load/unload work, not only a search ceiling.
 
 **Events:** `lr-render-error` with `detail.error` when fetching, opening, or rendering fails;
 `lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
@@ -1947,7 +1977,10 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 - `oldVersion?: DocumentCompareVersion`, `newVersion?: DocumentCompareVersion` (attribute: false) —
   the before/after inputs. `DocumentCompareVersion` extends `DocumentRef`
   (`id`, `name`, `mimeType?`, `uri?`, `version?`) with `text?: string` for diff mode and
-  `highlights?: LyraHighlight[]` for its own preview pane.
+  `highlights?: LyraHighlight[]` for its own preview pane. Each assignment becomes a frozen
+  snapshot: own string `id` and `name` are required or that pane is unset; valid string optional
+  fields are retained and other values are omitted. Its highlights use the shared snapshot too, so
+  mutation requires reassignment.
 - `view: 'diff' | 'side-by-side' = 'diff'` (reflected) — one inline text diff or two rendered
   preview panes. Invalid property or attribute values normalize to `diff` and repair the reflected
   attribute.
@@ -1956,7 +1989,8 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   repair the reflected attribute.
 - `copyable: boolean = false` — forwards the diff copy action.
 - `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
-  attribute: false) — optional syntax highlighting forwarded to the diff.
+  attribute: false) — optional syntax highlighting forwarded to the diff. A runtime non-string
+  `language` is treated as `''` without coercion.
 - `syncScroll: boolean = true` (attribute `sync-scroll`) — proportionally mirrors either
   side-by-side pane's scroll fraction to the other. The true-default converter accepts the literal
   `sync-scroll="false"`.

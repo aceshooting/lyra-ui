@@ -7,6 +7,11 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
+import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
@@ -43,6 +48,46 @@ const splitLines = (text: string): string[] =>
 // highlighter. These ceilings apply even when maxLines is explicitly relaxed.
 const MAX_DIFF_CHARACTERS = 1_000_000;
 const MAX_DIFF_COMPARISONS = 4_000_000;
+const MAX_DIFF_LANGUAGES = 10_000;
+const MAX_DIFF_LANGUAGE_INSPECTIONS = MAX_DIFF_LANGUAGES * 2;
+
+/** Copies grammar-map entries through data descriptors so optional loading never invokes a
+ * consumer accessor while it discovers the requested language. Grammar values stay opaque. */
+function projectLanguages(value: unknown): Record<string, ShikiLanguageInput> | undefined {
+  if (value === null || typeof value !== 'object') return undefined;
+  try {
+    if (Array.isArray(value)) return undefined;
+    const projected = Object.create(null) as Record<string, ShikiLanguageInput>;
+    // Own-name discovery avoids Object.keys()/for-in's implicit enumerable-descriptor probe, so
+    // one hostile Proxy descriptor cannot hide a later valid grammar. Structural reflection and
+    // admitted enumerable grammars have separate limits: opaque/non-enumerable names never spend
+    // an admission slot, while the total descriptor walk remains bounded.
+    const keys = Object.getOwnPropertyNames(value);
+    let inspected = 0;
+    let admitted = 0;
+    for (const key of keys) {
+      if (inspected >= MAX_DIFF_LANGUAGE_INSPECTIONS || admitted >= MAX_DIFF_LANGUAGES) break;
+      inspected += 1;
+      const descriptor = getOwnDataDescriptor(value, key);
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        !descriptor.enumerable
+      )
+        continue;
+      Object.defineProperty(projected, key, {
+        value: descriptor.value as ShikiLanguageInput,
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      });
+      admitted += 1;
+    }
+    return Object.freeze(projected);
+  } catch {
+    return undefined;
+  }
+}
 
 export interface LyraDiffViewEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
@@ -181,12 +226,30 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
    * adoption makes the pending write obsolete. */
   private copyGeneration = 0;
 
+  /** Canonical scalar text and grammar-map inputs. Every later diff/highlight read uses these
+   * admitted values instead of re-reading caller-owned public properties. */
+  private oldTextSnapshot = '';
+  private newTextSnapshot = '';
+  private languageSnapshot = '';
+  private languagesSnapshot?: Record<string, ShikiLanguageInput>;
+
   // The O(n*m) LCS computation only needs rerunning when the compared texts or their ceiling
   // changes. A render triggered purely by copy feedback toggling reuses the same result.
   private diffOps: LyraDiffOp[] = [];
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (!this.hasUpdated || changed.has('oldText') || changed.has('newText')) {
+      const oldText = this.oldText;
+      const newText = this.newText;
+      this.oldTextSnapshot = typeof oldText === 'string' ? oldText : '';
+      this.newTextSnapshot = typeof newText === 'string' ? newText : '';
+    }
+    if (!this.hasUpdated || changed.has('language') || changed.has('languages')) {
+      const language = this.language;
+      this.languageSnapshot = typeof language === 'string' ? language : '';
+      this.languagesSnapshot = projectLanguages(this.languages);
+    }
     if (
       this.hasUpdated &&
       (changed.has('oldText') || changed.has('newText') || changed.has('copyable') || changed.has('maxLines'))
@@ -194,11 +257,11 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
       this.resetCopyFeedback();
     }
     if (changed.has('oldText') || changed.has('newText') || changed.has('maxLines')) {
-      const oldLines = splitLines(this.oldText);
-      const newLines = splitLines(this.newText);
+      const oldLines = splitLines(this.oldTextSnapshot);
+      const newLines = splitLines(this.newTextSnapshot);
       const maxLines =
         this.maxLines === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : finiteCount(this.maxLines, 5000);
-      const characterCount = this.oldText.length + this.newText.length;
+      const characterCount = this.oldTextSnapshot.length + this.newTextSnapshot.length;
       const comparisons = oldLines.length * newLines.length;
       this.diffTooLarge =
         oldLines.length > maxLines ||
@@ -260,23 +323,38 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
       this.highlightedNewLines = null;
       return;
     }
-    const lang = this.language;
-    const languages = this.languages;
-    if (!lang || !languages?.[lang]) {
+    const lang = this.languageSnapshot;
+    const languages = this.languagesSnapshot;
+    if (!lang || !languages || !Object.hasOwn(languages, lang)) {
       this.highlightedOldLines = null;
       this.highlightedNewLines = null;
       return;
     }
-    void this.loadHighlighterCore(languages).then((hl) => {
-      if (token !== this.highlightToken) return; // superseded by a newer oldText/newText/language/languages change
-      if (!hl) {
+    let loading: Promise<ShikiHighlighterCore | null>;
+    try {
+      loading = this.loadHighlighterCore(languages);
+    } catch {
+      this.highlightedOldLines = null;
+      this.highlightedNewLines = null;
+      return;
+    }
+    void loading.then(
+      (hl) => {
+        if (token !== this.highlightToken) return; // superseded by a newer oldText/newText/language/languages change
+        if (!hl) {
+          this.highlightedOldLines = null;
+          this.highlightedNewLines = null;
+          return;
+        }
+        this.highlightedOldLines = this.tokenizeLines(hl, this.oldTextSnapshot, lang);
+        this.highlightedNewLines = this.tokenizeLines(hl, this.newTextSnapshot, lang);
+      },
+      () => {
+        if (token !== this.highlightToken) return;
         this.highlightedOldLines = null;
         this.highlightedNewLines = null;
-        return;
-      }
-      this.highlightedOldLines = this.tokenizeLines(hl, this.oldText, lang);
-      this.highlightedNewLines = this.tokenizeLines(hl, this.newText, lang);
-    });
+      },
+    );
   }
 
   /** Tokenizes `text` as one document (so multi-line tokens survive) and splits shiki's own

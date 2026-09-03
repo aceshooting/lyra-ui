@@ -36,21 +36,34 @@ owns that one detail panel. `disabled: boolean = false` (reflected) makes a reco
 submission while host persistence is unresolved; all feedback controls are disabled and the panel
 reports busy until that state is resolved.
 
+When the optional comment textarea renders, `spellcheck: boolean = true`,
+`autocapitalize: string = ''`, `autocorrect: boolean = true`, and
+`wrap: MessageFeedbackWrap = 'soft'` forward to it; they have no effect without that textarea.
+`MessageFeedbackWrap` is `'soft' | 'hard' | 'off'`, the native textarea wrap vocabulary.
+
 **Methods:** `focus()` focuses the thumb matching the current `rating` (the up thumb when `null`);
 `blur()` blurs both thumbs; `click()` activates that same thumb when enabled.
 `getToolbarActions()` returns the ordered logical thumb actions used by an enclosing toolbar.
-`finalizePendingSubmit()` completes a prevented submit after persistence succeeds, closing the
-panel, announcing success, and returning focus to the active thumb. `revertPendingSubmit()` releases
-the pending state after failure without clearing the draft or announcing success, leaving the panel
-open for retry. Both are no-ops when no submit is pending.
+`finalizePendingSubmit(submissionId?: string): boolean` completes a prevented submit after persistence succeeds, closing the
+panel, announcing success, and returning focus to the active thumb.
+`revertPendingSubmit(submissionId?: string): boolean` releases
+the pending state after failure without clearing the draft or announcing success, restoring the
+prior rating and panel state. A detail-panel submit remains open for retry, while a thumbs-only
+submit remains panel-free; it likewise accepts an optional `submissionId` and returns `boolean`. The event
+supplies a nonblank, never-reused id; a later/current settlement must use that exact id. Legacy
+no-argument settlement remains available only for the first transaction that has never been
+invalidated; stale or mismatched settlements return `false`.
 
 **Events:** `lr-feedback-change` — `detail: { rating: 'up' | 'down' | null }`, fired when a thumb's
 provisional rating changes or clears. `lr-feedback-submit` — cancelable
-`detail: { rating: 'up' | 'down' | null; reasonIds: string[]; comment: string }`, fired for every
+`detail: { rating: 'up' | 'down' | null; reasonIds: string[]; comment: string; submissionId: string }`, fired for every
 terminal thumbs-only choice/clear and by the detail panel's submit button. The pending transaction
-is installed before dispatch, so even a synchronous listener may finalize/revert it safely.
+is installed before dispatch, so even a synchronous listener may finalize/revert it safely. The
+event detail is frozen.
 `preventDefault()` holds the panel/control in `pending` and delays
-success announcement/focus until `finalizePendingSubmit()`; call `revertPendingSubmit()` on failure.
+success announcement/focus until `finalizePendingSubmit(detail.submissionId)`; call
+`revertPendingSubmit(detail.submissionId)` on failure. The no-argument form is only the documented
+legacy first-transaction path.
 When uncanceled it retains the synchronous close/announce/focus behavior. The optional comment
 `<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-toolbar-actions-change` is the no-detail coordination event emitted when the provider's logical

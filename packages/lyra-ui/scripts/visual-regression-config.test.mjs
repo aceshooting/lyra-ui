@@ -13,6 +13,38 @@ const componentInventory = JSON.parse(
 );
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
 const ciWorkflow = await readFile(new URL('../../../.github/workflows/ci.yml', import.meta.url), 'utf8');
+const chartStories = await readFile(
+  new URL('../src/components/charts/chart/chart.stories.ts', import.meta.url),
+  'utf8',
+);
+const liteChartStories = await readFile(
+  new URL('../src/components/charts/chart/lite-chart.stories.ts', import.meta.url),
+  'utf8',
+);
+const messagePartsStories = await readFile(
+  new URL('../src/components/conversation/message-parts/message-parts.stories.ts', import.meta.url),
+  'utf8',
+);
+const resultFieldStories = await readFile(
+  new URL('../src/components/agent-tools/result-card/result-field.stories.ts', import.meta.url),
+  'utf8',
+);
+const dropdownStories = await readFile(
+  new URL('../src/components/overlays/overlay/dropdown.stories.ts', import.meta.url),
+  'utf8',
+);
+const textareaStories = await readFile(
+  new URL('../src/components/forms/textarea/textarea.stories.ts', import.meta.url),
+  'utf8',
+);
+const spanWaterfallStories = await readFile(
+  new URL('../src/components/agent-tools/span-waterfall/span-waterfall.stories.ts', import.meta.url),
+  'utf8',
+);
+const subagentPanelStories = await readFile(
+  new URL('../src/components/agent-tools/subagent-panel/subagent-panel.stories.ts', import.meta.url),
+  'utf8',
+);
 
 assert.equal(manifest.schemaVersion, 1);
 assert.ok(Array.isArray(manifest.axes));
@@ -109,6 +141,168 @@ for (const storyId of storyIds) {
     `${storyId} has neither deterministic tag coverage nor an untagged reason`,
   );
 }
+
+const task47Canaries = [
+  {
+    id: 'resultcard-result-field--narrow-long-rtl',
+    profile: 'narrow-evidence',
+    tag: 'lr-result-field',
+    narrowProbe: 'viewport-fit',
+  },
+  {
+    id: 'overlay-dropdown--narrow-long-rtl',
+    profile: 'narrow-evidence',
+    tag: 'lr-dropdown',
+    narrowProbe: 'viewport-fit',
+  },
+  {
+    id: 'textarea--narrow-long-rtl',
+    profile: 'narrow-evidence',
+    tag: 'lr-textarea',
+    narrowProbe: 'viewport-fit',
+  },
+  {
+    id: 'observability-span-waterfall--narrow-edge-clamp',
+    profile: 'narrow-evidence',
+    tag: 'lr-span-waterfall',
+    narrowProbe: 'viewport-fit',
+  },
+  {
+    id: 'agent-tools-subagent-panel--depth-12-narrow',
+    profile: 'narrow-evidence',
+    tag: 'lr-subagent-panel',
+    narrowProbe: 'viewport-fit',
+  },
+  {
+    id: 'message-parts--narrow-error-retry',
+    profile: 'narrow-evidence',
+    tag: 'lr-message-parts',
+    narrowProbe: 'viewport-fit',
+  },
+  {
+    id: 'charts-chart--annotations-canary',
+    profile: 'forced-colors-chart',
+    tag: 'lr-chart',
+    forcedColorsProbe: 'chart-encodings',
+  },
+  {
+    id: 'charts-litechart--logarithmic-scale-canary',
+    profile: 'standard',
+    tag: 'lr-lite-chart',
+  },
+];
+
+for (const expected of task47Canaries) {
+  const story = manifest.stories.find(({ id }) => id === expected.id);
+  assert.deepEqual(
+    {
+      profile: story?.profile,
+      comparisonPolicy: story?.comparisonPolicy,
+      narrowProbe: story?.narrowProbe,
+      forcedColorsProbe: story?.forcedColorsProbe,
+    },
+    {
+      profile: expected.profile,
+      comparisonPolicy: 'evidence-only',
+      narrowProbe: expected.narrowProbe,
+      forcedColorsProbe: expected.forcedColorsProbe,
+    },
+    `${expected.id} must retain its exact enrolled visual profile and probes`,
+  );
+  assert.ok(
+    typeof story?.comparisonReason === 'string' && story.comparisonReason.trim().length > 0,
+    `${expected.id} must retain its evidence-only review reason`,
+  );
+  assert.deepEqual(
+    Object.entries(manifest.tagCoverage)
+      .filter(([, coveredStoryIds]) => coveredStoryIds.includes(expected.id))
+      .map(([tag]) => tag),
+    [expected.tag],
+    `${expected.id} must have exactly one deterministic component owner`,
+  );
+  assert.equal(manifest.untaggedStories?.[expected.id], undefined);
+}
+
+function generatedStoryId(title, exportName) {
+  const normalizeTitle = (value) =>
+    value
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase();
+  const normalizeExport = (value) =>
+    value
+      .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+      .replace(/([a-zA-Z])([0-9])/g, '$1-$2')
+      .replace(/([0-9])([a-zA-Z])/g, '$1-$2')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase();
+  return `${normalizeTitle(title)}--${normalizeExport(exportName)}`;
+}
+
+for (const { source, title, exportName, id } of [
+  {
+    source: resultFieldStories,
+    title: 'ResultCard/Result field',
+    exportName: 'NarrowLongRtl',
+    id: 'resultcard-result-field--narrow-long-rtl',
+  },
+  {
+    source: dropdownStories,
+    title: 'Overlay/Dropdown',
+    exportName: 'NarrowLongRtl',
+    id: 'overlay-dropdown--narrow-long-rtl',
+  },
+  {
+    source: textareaStories,
+    title: 'Textarea',
+    exportName: 'NarrowLongRtl',
+    id: 'textarea--narrow-long-rtl',
+  },
+  {
+    source: spanWaterfallStories,
+    title: 'Observability/Span Waterfall',
+    exportName: 'NarrowEdgeClamp',
+    id: 'observability-span-waterfall--narrow-edge-clamp',
+  },
+  {
+    source: subagentPanelStories,
+    title: 'Agent Tools/Subagent Panel',
+    exportName: 'Depth12Narrow',
+    id: 'agent-tools-subagent-panel--depth-12-narrow',
+  },
+  {
+    source: messagePartsStories,
+    title: 'Message Parts',
+    exportName: 'NarrowErrorRetry',
+    id: 'message-parts--narrow-error-retry',
+  },
+]) {
+  assert.ok(source.includes(`title: '${title}'`), `${id} must retain its Storybook title`);
+  assert.ok(source.includes(`export const ${exportName}:`), `${id} must retain its named export`);
+  assert.equal(generatedStoryId(title, exportName), id, `${exportName} must generate ${id}`);
+}
+
+assert.match(chartStories, /title: 'Charts\/Chart'/);
+assert.match(chartStories, /export const AnnotationsCanary: Story/);
+assert.equal(
+  generatedStoryId('Charts/Chart', 'AnnotationsCanary'),
+  'charts-chart--annotations-canary',
+  'AnnotationsCanary must generate the manifest’s exact Storybook id',
+);
+assert.match(liteChartStories, /title: 'Charts\/LiteChart'/);
+assert.match(liteChartStories, /export const LogarithmicScaleCanary: Story/);
+assert.equal(
+  generatedStoryId('Charts/LiteChart', 'LogarithmicScaleCanary'),
+  'charts-litechart--logarithmic-scale-canary',
+  'LogarithmicScaleCanary must generate the manifest’s exact Storybook id',
+);
+assert.match(chartStories, /export const HoverOutlineToken: Story/);
+assert.match(chartStories, /--lr-chart-canvas-hover-outline-color/);
+assert.equal(storyIds.has('charts-chart--hover-outline-token'), false);
+assert.match(messagePartsStories, /export const ContentModeFallback: Story/);
+assert.match(messagePartsStories, /content-mode="unsupported-mode"/);
+assert.equal(storyIds.has('message-parts--content-mode-fallback'), false);
 
 assert.ok(['pending-human-review', 'complete'].includes(manifest.baselineReview.status));
 if (manifest.baselineReview.status === 'pending-human-review') {
@@ -210,13 +404,20 @@ await assert.rejects(
   'a persistent render failure must remain blocking after the one recovery navigation',
 );
 
-const expectedTrackedBaselines = [];
+const requiredTrackedBaselines = [];
+const eligibleTrackedBaselines = new Set();
 for (const story of manifest.stories) {
   for (const axisName of profiles[story.profile].axes) {
     const axis = axes.get(axisName);
     if (axis.artifactPolicy !== 'tracked-baseline') continue;
-    await access(new URL(`../visual-baselines/${story.id}/${axisName}.png`, import.meta.url));
-    expectedTrackedBaselines.push(`packages/lyra-ui/visual-baselines/${story.id}/${axisName}.png`);
+    const baseline = `packages/lyra-ui/visual-baselines/${story.id}/${axisName}.png`;
+    eligibleTrackedBaselines.add(baseline);
+    // An evidence-only story may retain a historical reviewed PNG, but a new one must not require
+    // an unreviewed PNG before its semantic capture can run.
+    if (story.comparisonPolicy !== 'evidence-only') {
+      await access(new URL(`../visual-baselines/${story.id}/${axisName}.png`, import.meta.url));
+      requiredTrackedBaselines.push(baseline);
+    }
   }
 }
 const trackedBaselines = execFileSync(
@@ -228,11 +429,29 @@ const trackedBaselines = execFileSync(
   .split('\n')
   .filter(Boolean)
   .sort();
-assert.deepEqual(
-  trackedBaselines,
-  expectedTrackedBaselines.sort(),
-  'only retained baseline axes may be tracked; forced-colors/narrow captures stay ephemeral',
-);
+const trackedBaselineSet = new Set(trackedBaselines);
+for (const baseline of requiredTrackedBaselines) {
+  assert.ok(trackedBaselineSet.has(baseline), `${baseline} must remain a committed required baseline`);
+}
+for (const baseline of trackedBaselines) {
+  assert.ok(
+    eligibleTrackedBaselines.has(baseline),
+    `${baseline} is not a tracked axis in the visual manifest`,
+  );
+}
+for (const story of task47Canaries) {
+  for (const axisName of profiles[story.profile].axes) {
+    const axis = axes.get(axisName);
+    if (axis.artifactPolicy !== 'tracked-baseline') continue;
+    const baseline = `packages/lyra-ui/visual-baselines/${story.id}/${axisName}.png`;
+    assert.equal(trackedBaselineSet.has(baseline), false, `${baseline} must remain evidence only`);
+    await assert.rejects(
+      access(new URL(`../visual-baselines/${story.id}/${axisName}.png`, import.meta.url)),
+      { code: 'ENOENT' },
+      `${baseline} must not be written before a human review`,
+    );
+  }
+}
 
 const captures = manifest.stories.reduce(
   (total, story) => total + profiles[story.profile].axes.length,

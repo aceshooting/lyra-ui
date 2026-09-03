@@ -140,6 +140,73 @@ describe('parseStackTrace', () => {
     expect(groups[1]!.message).to.equal('RuntimeError: second');
   });
 
+  it('recognizes only complete canonical Python chain separators', () => {
+    const separators = [
+      'The above exception was the direct cause of the following exception:',
+      'During handling of the above exception, another exception occurred:',
+    ];
+    for (const separator of separators) {
+      const groups = parseStackTrace([
+        'Traceback (most recent call last):',
+        '  File "/app/outer.py", line 1, in outer',
+        'ValueError: outer',
+        '',
+        separator,
+        '',
+        'Traceback (most recent call last):',
+        '  File "/app/inner.py", line 2, in inner',
+        'RuntimeError: inner',
+      ].join('\n'), []);
+      expect(groups.map((group) => group.message)).to.deep.equal(['ValueError: outer', 'RuntimeError: inner']);
+    }
+  });
+
+  it('keeps incidental chain phrases in Python source and message text', () => {
+    const source = '    raise RuntimeError("During handling of the above exception, another exception occurred:")';
+    const message = 'ValueError: The above exception was the direct cause of a retry';
+    const groups = parseStackTrace([
+      'Traceback (most recent call last):',
+      '  File "/app/main.py", line 4, in run',
+      source,
+      message,
+    ].join('\n'), []);
+
+    expect(groups).to.have.lengthOf(1);
+    expect(groups[0]!.frames[0]!.raw).to.contain(source);
+    expect(groups[0]!.message).to.equal(message);
+  });
+
+  it('treats only unindented qualified identifier trailers as no-message Python exceptions', () => {
+    const emptyTrailers = ['Name', 'Name:', 'pkg.Name', 'pkg.Name:'];
+    for (const trailer of emptyTrailers) {
+      const groups = parseStackTrace([
+        'Traceback (most recent call last):',
+        '  File "/app/main.py", line 4, in run',
+        trailer,
+      ].join('\n'), []);
+      expect(groups).to.have.lengthOf(1);
+      expect(groups[0]!.message).to.equal('');
+      expect(groups[0]!.frames[0]!.raw).to.equal('  File "/app/main.py", line 4, in run');
+    }
+
+    const ordinary = parseStackTrace([
+      'Traceback (most recent call last):',
+      '  File "/app/main.py", line 4, in run',
+      'pkg.Name: explanatory detail',
+    ].join('\n'), []);
+    expect(ordinary[0]!.message).to.equal('pkg.Name: explanatory detail');
+
+    const indentedSource = '    pkg.Name: value';
+    const withSource = parseStackTrace([
+      'Traceback (most recent call last):',
+      '  File "/app/main.py", line 4, in run',
+      indentedSource,
+      'Name',
+    ].join('\n'), []);
+    expect(withSource[0]!.frames[0]!.raw).to.contain(indentedSource);
+    expect(withSource[0]!.message).to.equal('');
+  });
+
   it('marks a frame internal when its file matches a string or RegExp pattern', () => {
     const trace = 'Error: x\n    at f (/app/node_modules/dep/index.js:1:1)\n    at g (/app/src/x.js:2:2)';
     const groups = parseStackTrace(trace, ['node_modules/', /^\/app\/src\//]);

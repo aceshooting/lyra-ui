@@ -150,10 +150,13 @@ describe('lr-approval-queue', () => {
       <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
     `);
     const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
+    const closes: Array<{ invocationId: string; reason: string }> = [];
+    el.addEventListener('lr-approval-close', (event) => {
+      closes.push((event as CustomEvent<{ invocationId: string; reason: string }>).detail);
+    });
     el.addEventListener('lr-approval-decision', () => {
       el.requests = [];
     });
-    const closed = oneEvent(el, 'lr-approval-close');
     dialog.dispatchEvent(new CustomEvent('lr-approve', {
       bubbles: true,
       composed: true,
@@ -165,18 +168,175 @@ describe('lr-approval-queue', () => {
       composed: true,
       detail: 'approve',
     }));
-    expect((await closed).detail).to.deep.equal({ invocationId: 'call-1', reason: 'approve' });
+    await el.updateComplete;
+    expect(closes).to.deep.equal([{ invocationId: 'call-1', reason: 'approve' }]);
   });
 
-  it('clears stale selected and open state when the controlled queue shrinks', async () => {
+  it('does not let a stale child close close a replacement selected during its decision event', async () => {
+    const replacement: ToolApprovalRequest = {
+      id: 'call-2',
+      toolName: 'read_file',
+      args: { path: 'replacement.md' },
+    };
     const el = await fixture<LyraApprovalQueue>(html`
       <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
     `);
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
+    el.addEventListener('lr-approval-decision', () => {
+      el.requests = [replacement];
+      el.selectedInvocationId = replacement.id;
+      el.open = true;
+    });
+
+    dialog.dispatchEvent(new CustomEvent('lr-approve', {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      detail: { args: requests[0]!.args },
+    }));
+    dialog.dispatchEvent(new CustomEvent('lr-close', {
+      bubbles: true,
+      composed: true,
+      detail: 'approve',
+    }));
+    await el.updateComplete;
+
+    expect(el.selectedInvocationId).to.equal('call-2');
+    expect(el.open).to.be.true;
+    const replacementDialog = el.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+    expect(replacementDialog.open).to.be.true;
+    expect(replacementDialog.toolName).to.equal('read_file');
+  });
+
+  it('clears an invalidated selection before emitting one noncancelable close', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`
+      <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
+    `);
+    const closes: Array<{
+      detail: { invocationId: string; reason: string };
+      selectedInvocationId: string | null;
+      open: boolean;
+      cancelable: boolean;
+      defaultPrevented: boolean;
+    }> = [];
+    el.addEventListener('lr-approval-close', (event) => {
+      event.preventDefault();
+      closes.push({
+        detail: (event as CustomEvent<{ invocationId: string; reason: string }>).detail,
+        selectedInvocationId: el.selectedInvocationId,
+        open: el.open,
+        cancelable: event.cancelable,
+        defaultPrevented: event.defaultPrevented,
+      });
+    });
     el.requests = [];
     await el.updateComplete;
     expect(el.selectedInvocationId).to.equal(null);
     expect(el.open).to.be.false;
     expect(el.shadowRoot!.querySelector('lr-tool-approval-dialog') === null).to.be.true;
+    expect(closes).to.deep.equal([{
+      detail: { invocationId: 'call-1', reason: 'request-invalidated' },
+      selectedInvocationId: null,
+      open: false,
+      cancelable: false,
+      defaultPrevented: false,
+    }]);
+
+    el.requests = [];
+    await el.updateComplete;
+    expect(closes).to.have.lengthOf(1);
+  });
+
+  it('reports a resolved replacement for a previously pending selection even when already closed', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`
+      <lr-approval-queue selected-invocation-id="call-1" .open=${false} .requests=${requests}></lr-approval-queue>
+    `);
+    const closes: Array<{ invocationId: string; reason: string }> = [];
+    el.addEventListener('lr-approval-close', (event) => {
+      closes.push((event as CustomEvent<{ invocationId: string; reason: string }>).detail);
+    });
+
+    el.requests = [{ ...requests[0]!, status: 'approved' }];
+    await el.updateComplete;
+
+    expect(el.selectedInvocationId).to.equal(null);
+    expect(el.open).to.be.false;
+    expect(closes).to.deep.equal([{ invocationId: 'call-1', reason: 'request-invalidated' }]);
+  });
+
+  it('does not add an invalidation close when an already-closed child closes in its request replacement turn', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`
+      <lr-approval-queue selected-invocation-id="call-1" .open=${false} .requests=${requests}></lr-approval-queue>
+    `);
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
+    const closes: Array<{ invocationId: string; reason: string }> = [];
+    el.addEventListener('lr-approval-close', (event) => {
+      const detail = (event as CustomEvent<{ invocationId: string; reason: string }>).detail;
+      closes.push(detail);
+      if (detail.reason === 'api') el.requests = [];
+    });
+
+    dialog.dispatchEvent(new CustomEvent('lr-close', {
+      bubbles: true,
+      composed: true,
+      detail: 'api',
+    }));
+    await el.updateComplete;
+
+    expect(el.selectedInvocationId).to.equal(null);
+    expect(el.open).to.be.false;
+    expect(closes).to.deep.equal([{ invocationId: 'call-1', reason: 'api' }]);
+
+    el.requests = requests;
+    el.selectedInvocationId = 'call-1';
+    await el.updateComplete;
+    el.requests = [];
+    await el.updateComplete;
+
+    expect(closes).to.deep.equal([
+      { invocationId: 'call-1', reason: 'api' },
+      { invocationId: 'call-1', reason: 'request-invalidated' },
+    ]);
+  });
+
+  it('keeps initial/direct invalid selections and no-op controlled updates silent', async () => {
+    const el = document.createElement('lr-approval-queue') as LyraApprovalQueue;
+    const closes: Array<{ invocationId: string; reason: string }> = [];
+    el.selectedInvocationId = 'missing';
+    el.open = true;
+    el.requests = requests;
+    el.addEventListener('lr-approval-close', (event) => {
+      closes.push((event as CustomEvent<{ invocationId: string; reason: string }>).detail);
+    });
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.selectedInvocationId).to.equal(null);
+      expect(el.open).to.be.false;
+      expect(closes).to.have.lengthOf(0);
+
+      el.selectedInvocationId = 'missing';
+      el.open = true;
+      await el.updateComplete;
+      expect(el.selectedInvocationId).to.equal(null);
+      expect(el.open).to.be.false;
+      expect(closes).to.have.lengthOf(0);
+
+      el.selectedInvocationId = 'call-1';
+      el.open = true;
+      await el.updateComplete;
+      el.requests = [...requests];
+      await el.updateComplete;
+      expect(el.selectedInvocationId).to.equal('call-1');
+      expect(el.open).to.be.true;
+      expect(closes).to.have.lengthOf(0);
+
+      el.open = false;
+      await el.updateComplete;
+      expect(closes).to.have.lengthOf(0);
+    } finally {
+      el.remove();
+    }
   });
 
   it('keeps resolved requests visible but non-actionable', async () => {

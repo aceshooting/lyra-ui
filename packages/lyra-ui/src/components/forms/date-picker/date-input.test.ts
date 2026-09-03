@@ -2271,41 +2271,19 @@ describe("control min-height knob and exact-height hatch", () => {
   });
 });
 
-/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
- *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
- *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
- *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
-function renderedClamp(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = "";
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
-  }
-  const probe = document.createElement("span");
-  probe.style.display = "block";
-  probe.style.setProperty("--lr-popover-viewport-clamp", "10px");
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
-
-it("clamps its floating surface width through the shared popover-viewport-clamp token", async () => {
+it("clamps its open floating surface width through the shared popover-viewport-clamp token", async () => {
   const el = (await fixture(
-    html`<lr-date-input></lr-date-input>`
-  )) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> })
-    .updateComplete;
-  expect(renderedClamp(el, "[part='popup']")).to.equal("10px");
+    html`<lr-date-input style="--lr-popover-viewport-clamp: 10px"></lr-date-input>`
+  )) as LyraDateInput;
+  await el.show();
+  await el.updateComplete;
+  const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
+  await waitUntil(
+    () => popup.getAttribute('aria-hidden') === 'false',
+    'the opened date input did not expose its popup'
+  );
+
+  expect(getComputedStyle(popup).maxInlineSize).to.equal('10px');
 });
 
 // -- Locale-order fallback paths, selection accessors before
@@ -4661,6 +4639,46 @@ describe('range presets forwarding', () => {
     const buttons = inner.shadowRoot!.querySelectorAll('[part~="preset-button"]');
 
     expect(buttons.length, 'the row renders inside the popover').to.equal(2);
+  });
+
+  it('forwards only descriptor-safe preset projections while preserving the selected source identity', async () => {
+    const target = {
+      label: 'Safe range',
+      start: '2026-08-13',
+      end: '2026-08-19',
+    };
+    const source = new Proxy(target, {
+      get(): never {
+        throw new Error('the nested picker must not read the preset source');
+      },
+      getOwnPropertyDescriptor(value, key): PropertyDescriptor | undefined {
+        return Reflect.getOwnPropertyDescriptor(value, key);
+      },
+    });
+    const unsafe = Object.defineProperty({}, 'label', {
+      enumerable: true,
+      get(): never {
+        throw new Error('unsafe preset accessor');
+      },
+    });
+    const el = (await fixture(
+      html`<lr-date-input mode="range" open></lr-date-input>`,
+    )) as LyraDateInput;
+
+    el.presets = [unsafe, source] as unknown as typeof PRESETS;
+    await el.updateComplete;
+    const inner = picker(el) as LyraDatePicker;
+    await inner.updateComplete;
+    const buttons = Array.from(
+      inner.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="preset-button"]'),
+    );
+    expect(buttons.map((button) => button.textContent?.trim())).to.deep.equal([
+      'Safe range',
+    ]);
+
+    buttons[0]!.click();
+    await inner.updateComplete;
+    expect(inner.appliedPreset).to.equal(source);
   });
 
   it('keeps the forwarded picker renderable for malformed runtime collections', async () => {

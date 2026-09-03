@@ -57,18 +57,33 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
 });
 
-it('keeps a host aria-label on the host while the dialog panel remains heading-labelled', async () => {
+it('keeps authored host aria-label changes on the host while the dialog panel remains heading-labelled', async () => {
   const el = (await fixture(
-    html`<lr-tool-approval-dialog open tool-name="web_search" aria-label="Custom approval name"></lr-tool-approval-dialog>`,
+    html`<lr-tool-approval-dialog open tool-name="web_search"></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
 
+  el.setAttribute('aria-label', 'Custom approval name');
+  await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.equal('Custom approval name');
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
+
+  el.setAttribute('aria-label', 'Changed approval name');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Changed approval name');
   expect(panel.hasAttribute('aria-label')).to.equal(false);
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
 
   el.setAttribute('aria-label', '');
   await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(el.hasAttribute('aria-label')).to.equal(false);
   expect(panel.hasAttribute('aria-label')).to.equal(false);
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
 });
@@ -81,6 +96,38 @@ it('falls back to aria-labelledby when no host aria-label is set', async () => {
 
   expect(panel.hasAttribute('aria-label')).to.equal(false);
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
+});
+
+it('uses a direct accessibleLabel to name the dialog panel without reflecting a host aria-label', async () => {
+  const el = document.createElement('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+  el.open = true;
+  el.accessibleLabel = 'Review the proposed tool call';
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+
+    expect(el.hasAttribute('aria-label')).to.equal(false);
+    expect(panel.getAttribute('aria-label')).to.equal('Review the proposed tool call');
+    expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+    await expect(el).to.be.accessible();
+
+    el.accessibleLabel = null;
+    await el.updateComplete;
+
+    expect(panel.hasAttribute('aria-label')).to.equal(false);
+    expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
+
+    el.accessibleLabel = 'Changed after connection';
+    await el.updateComplete;
+    expect(el.hasAttribute('aria-label')).to.equal(false);
+    expect(panel.getAttribute('aria-label')).to.equal('Changed after connection');
+    expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+  } finally {
+    el.open = false;
+    await el.updateComplete;
+    el.remove();
+  }
 });
 
 it('renders the tool name in the heading, defaulting to a generic "tool" when unset', async () => {
@@ -166,6 +213,57 @@ describe('editing', () => {
     expect((el.shadowRoot!.querySelector('[part="args-view"]')) == null).to.be.true;
     expect(textarea(el).value).to.equal(JSON.stringify(ARGS, null, 2));
     expect(editButton(el).textContent!.trim()).to.equal('Cancel');
+  });
+
+  it('contains native editor input after committing draft state without preventing the native event', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><lr-tool-approval-dialog open .args=${ARGS}></lr-tool-approval-dialog></div>
+    `);
+    const el = wrapper.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    const editor = textarea(el);
+    let hostInputs = 0;
+    let ancestorInputs = 0;
+    let draftDuringInput = '';
+    el.addEventListener('input', () => hostInputs += 1);
+    wrapper.addEventListener('input', () => ancestorInputs += 1);
+    editor.addEventListener('input', () => {
+      draftDuringInput = (el as unknown as { draftText: string }).draftText;
+    });
+
+    editor.value = '{ invalid JSON';
+    const input = new Event('input', { bubbles: true, cancelable: true, composed: true });
+    editor.dispatchEvent(input);
+
+    expect(draftDuringInput).to.equal('{ invalid JSON');
+    expect(input.defaultPrevented).to.equal(false);
+    expect(hostInputs).to.equal(0);
+    expect(ancestorInputs).to.equal(0);
+    await el.updateComplete;
+    expect(editor.getAttribute('aria-invalid')).to.equal('true');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Invalid JSON.');
+  });
+
+  it('contains native editor input while a decision is pending', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><lr-tool-approval-dialog open .args=${ARGS}></lr-tool-approval-dialog></div>
+    `);
+    const el = wrapper.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    const editor = textarea(el);
+    let hostInputs = 0;
+    let ancestorInputs = 0;
+    el.addEventListener('input', () => hostInputs += 1);
+    wrapper.addEventListener('input', () => ancestorInputs += 1);
+    el.pending = 'approve';
+    await el.updateComplete;
+
+    editor.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+
+    expect(hostInputs).to.equal(0);
+    expect(ancestorInputs).to.equal(0);
   });
 
   it('falls back to editable JSON null when the proposed args are circular', async () => {

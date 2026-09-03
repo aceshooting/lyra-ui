@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './artifact-panel.js';
 import type { LyraArtifactPanel } from './artifact-panel.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-artifact-panel', () => {
   it('defaults to view=preview and activeVersionId=null (latest)', async () => {
@@ -512,6 +512,53 @@ describe('lr-artifact-panel', () => {
         expect(getComputedStyle(button).backgroundColor, `${part} hover`).to.equal('rgb(1, 2, 3)');
         button.focus();
         expect(getComputedStyle(button).outlineStyle, `${part} focus`).to.equal('solid');
+      }
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('removes version navigation hover and press paint when an enabled control becomes disabled under the pointer', async function () {
+    this.timeout(20000);
+    const cases: Array<{ part: 'version-previous' | 'version-next'; disabledVersionId: string | null }> = [
+      { part: 'version-previous', disabledVersionId: 'v1' },
+      { part: 'version-next', disabledVersionId: null },
+    ];
+
+    try {
+      for (const { part, disabledVersionId } of cases) {
+        const el = await fixture<LyraArtifactPanel>(html`
+          <lr-artifact-panel
+            active-version-id="v2"
+            style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-color-mix-partner: rgb(4, 5, 6); --lr-color-mix-active: 100%"
+            .versions=${[{ id: 'v1' }, { id: 'v2' }, { id: 'v3' }]}
+          ></lr-artifact-panel>
+        `);
+        const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+        const resting = getComputedStyle(button).backgroundColor;
+
+        await hoverUntilMatched(button, `${part} never registered :hover while enabled`);
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
+          `${part} never painted its enabled hover state`,
+        );
+        const hovered = getComputedStyle(button).backgroundColor;
+        await sendMouse({ type: 'down' });
+        await waitUntil(
+          () => button.matches(':active') && getComputedStyle(button).backgroundColor !== hovered,
+          `${part} never painted its enabled press state`,
+        );
+
+        el.activeVersionId = disabledVersionId;
+        await el.updateComplete;
+        const disabledButton = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+        expect(disabledButton.disabled, `${part} must become disabled without moving the pointer`).to.equal(true);
+        expect(disabledButton.matches(':hover'), `${part} must remain under the stationary pointer`).to.equal(true);
+        await waitUntil(
+          () => getComputedStyle(disabledButton).backgroundColor === resting,
+          `${part} kept hover or press paint after becoming disabled`,
+        );
+        await sendMouse({ type: 'up' });
       }
     } finally {
       await resetMouse();

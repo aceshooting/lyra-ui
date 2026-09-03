@@ -8,7 +8,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-2xs);
-    font-size: var(--lr-font-size-xs);
+    font: inherit;
     color: var(--lr-color-text-quiet);
   }
   [part='previous-button'],
@@ -21,6 +21,7 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
+    font: inherit;
     border: 0;
     border-radius: var(--lr-radius-xs);
     background: transparent;
@@ -69,6 +70,7 @@ export const styles = css`
   }
   [part='position'] {
     white-space: nowrap;
+    font-size: var(--lr-font-size-xs);
     font-variant-numeric: tabular-nums;
   }
 `;

@@ -25,6 +25,7 @@ function pickerController(
   const controller = new CatalogPickerController(host, {
     catalog: () => catalog,
     allowCustom: () => true,
+    isReadonly: () => false,
     locale: () => 'en',
     searchableFields: (entry) => [entry.id, entry.label],
     emitChange: () => {},

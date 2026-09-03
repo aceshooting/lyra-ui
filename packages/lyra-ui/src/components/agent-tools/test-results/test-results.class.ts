@@ -12,7 +12,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -149,8 +149,10 @@ export interface LyraTestResultsEventMap {
  *   status-word text; carries `data-status`.
  * @csspart test-name - The activatable test-name button.
  * @csspart test-duration - The duration text.
- * @csspart test-expand-toggle - The expand/collapse button for a row's failure detail. Rendered
- *   for any failed test, or any test with canonical suite-scoped detail content.
+ * @csspart test-expand-toggle - The expand/collapse button for a row's failure detail. Its
+ *   accessible name joins the suite and test name with the localized
+ *   `accessibleLabelSeparator`. Rendered for any failed test, or any test with canonical
+ *   suite-scoped detail content.
  * @csspart failure - The failure-detail wrapper; hidden while collapsed.
  * @csspart failure-message - The failure's plain message text.
  * @csspart limit - Localized resource-ceiling notice.
@@ -176,6 +178,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
@@ -502,7 +505,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     const failureId = `${this.idPrefix}-${domKey}-failure`;
     const statusId = `${this.idPrefix}-${domKey}-status`;
     const toggleName = this.localize(expanded ? 'testResultsCollapseTest' : 'testResultsExpandTest', undefined, {
-      name: `${suiteName}: ${test.name}`,
+      name: [suiteName, test.name].join(this.localize('accessibleLabelSeparator')),
     });
     return html`
       <div part="test" role="listitem" data-status=${test.status}>

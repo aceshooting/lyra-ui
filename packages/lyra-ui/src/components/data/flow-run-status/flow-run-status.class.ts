@@ -1,6 +1,7 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
@@ -22,6 +23,9 @@ import { LYRA_DEFAULT_flowRunStatusCount, LYRA_DEFAULT_flowRunStatusLabel, LYRA_
 
 const ALL_STATUSES: readonly LyraToolStatus[] = ['pending', 'running', 'success', 'error', 'denied'];
 const DONE_STATUSES = new Set<LyraToolStatus>(['success', 'error', 'denied']);
+const DECORATIONS_OWNERSHIP_WARNING_KEY = 'lyra-flow-run-status-decoration-ownership-conflict';
+const DECORATIONS_OWNERSHIP_WARNING =
+  '<lr-flow-run-status>: direct and companion decorations writes conflict; the companion decorations take precedence.';
 
 interface FlowCanvasLike extends HTMLElement {
   decorations: FlowRunDecorations | null;
@@ -195,9 +199,7 @@ export class LyraFlowRunStatus extends LyraElement {
     if (!this.canvasEl) return;
     const current = this.canvasEl.decorations;
     if (this.lastWrittenDecorations !== null && current !== null && current !== this.lastWrittenDecorations) {
-      console.warn(
-        '<lr-flow-run-status> is overwriting <lr-flow-canvas>.decorations set by something else; mixing this element with direct decorations writes is unsupported.',
-      );
+      devWarnOnce(DECORATIONS_OWNERSHIP_WARNING_KEY, DECORATIONS_OWNERSHIP_WARNING);
     }
     this.canvasEl.decorations = this.decorations;
     // Canvas snapshots inputs again at its own ownership boundary; track that settled public

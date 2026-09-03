@@ -59,7 +59,7 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * Pressing Escape releases the next Tab for native forward traversal instead of indenting; typing
  * any other key, or focus leaving the editor, re-arms Tab indentation.
  * In narrow allocations label/hint/error chrome wraps at the host boundary, while unbroken source
- * remains reachable through the editor's internal scroll surface instead of widening the page.
+ * remains reachable through the editor's one internal scroll surface instead of widening the page.
  * When a containing block gives the host a definite block size, the host, form-control, editor,
  * and textarea chain fills that allocation; without one, the editor remains content-sized above
  * its active `--lr-code-editor-min-block-size` floor.
@@ -87,7 +87,7 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @csspart form-control - Outer wrapper.
  * @csspart form-control-label - Label. Also carries the `label` part token for compatibility.
  * @csspart label - Alias of `form-control-label`.
- * @csspart editor - Editor frame.
+ * @csspart editor - Editor frame and the component's only scrollport.
  * @csspart gutter - Line-number gutter.
  * @csspart textarea - Native textarea.
  * @csspart hint - Supporting text.
@@ -274,7 +274,10 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @state() private hasErrorSlot = false;
   @query('textarea') private textarea?: HTMLTextAreaElement;
   @query('[part="editor"]') private editor?: HTMLElement;
+  @query('[part="gutter"]') private gutter?: HTMLElement;
+  @query('.editor-caret-measure') private caretMeasure?: HTMLElement;
   @state() private gutterWindowStart = 0;
+  @state() private caretOffset = 0;
   /** The normalized live value. Native textarea line endings are always LF; the host, form state,
    * gutter and selection APIs use that same representation. */
   override get value(): string {
@@ -341,37 +344,48 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
   select(): void {
     this.textarea?.select();
+    this.syncCaretOffset();
   }
   get selectionStart(): number | null {
     return this.textarea?.selectionStart ?? null;
   }
   set selectionStart(value: number | null) {
-    if (this.textarea) this.textarea.selectionStart = value ?? 0;
+    if (this.textarea) {
+      this.textarea.selectionStart = value ?? 0;
+      this.syncCaretOffset();
+    }
   }
   get selectionEnd(): number | null {
     return this.textarea?.selectionEnd ?? null;
   }
   set selectionEnd(value: number | null) {
-    if (this.textarea) this.textarea.selectionEnd = value ?? 0;
+    if (this.textarea) {
+      this.textarea.selectionEnd = value ?? 0;
+      this.syncCaretOffset();
+    }
   }
   get selectionDirection(): 'forward' | 'backward' | 'none' | null {
     return this.textarea?.selectionDirection ?? null;
   }
   set selectionDirection(value: 'forward' | 'backward' | 'none' | null) {
-    if (this.textarea) this.textarea.selectionDirection = value ?? 'none';
+    if (this.textarea) {
+      this.textarea.selectionDirection = value ?? 'none';
+      this.syncCaretOffset();
+    }
   }
   setSelectionRange(
     start: number,
     end: number,
-    direction?: 'forward' | 'backward' | 'none'
+    direction?: 'forward' | 'backward' | 'none',
   ): void {
     this.textarea?.setSelectionRange(start, end, direction);
+    this.syncCaretOffset();
   }
   setRangeText(
     replacement: string,
     start?: number,
     end?: number,
-    selectionMode?: SelectionMode
+    selectionMode?: SelectionMode,
   ): void {
     const textarea = this.textarea;
     if (!textarea) return;
@@ -379,30 +393,30 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       replacement,
       start ?? textarea.selectionStart,
       end ?? textarea.selectionEnd,
-      selectionMode
+      selectionMode,
     );
     this.value = textarea.value;
+    this.syncCaretOffset();
     this.fitToContent();
   }
+  /** Reads or sets the editor frame's physical scroll offsets. The private native textarea is
+   * deliberately sized to its unwrapped measurement layer, so it never owns a competing scroll
+   * range that could desynchronize the line-number gutter or a programmatic scroll. */
   scrollPosition(position?: {
     top?: number;
     left?: number;
   }): { top: number; left: number } | undefined {
-    if (!this.textarea) return undefined;
+    const editor = this.editor;
+    if (!editor) return undefined;
     if (position === undefined)
-      return { top: this.textarea.scrollTop, left: this.textarea.scrollLeft };
+      return { top: editor.scrollTop, left: editor.scrollLeft };
     if (position.top !== undefined) {
-      this.textarea.scrollTop = finiteNumber(
-        position.top,
-        this.textarea.scrollTop
-      );
+      editor.scrollTop = finiteNumber(position.top, editor.scrollTop);
     }
     if (position.left !== undefined) {
-      this.textarea.scrollLeft = finiteNumber(
-        position.left,
-        this.textarea.scrollLeft
-      );
+      editor.scrollLeft = finiteNumber(position.left, editor.scrollLeft);
     }
+    this.syncGutterInlinePosition();
     return undefined;
   }
   private onInput = (event: InputEvent): void => {
@@ -411,6 +425,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       return;
     }
     this.value = (event.target as HTMLTextAreaElement).value;
+    this.syncCaretOffset();
     this.fitToContent();
     relayNativeEvent(this, event);
     this.emit('lr-input', { value: this.value });
@@ -429,6 +444,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       event.stopPropagation();
       return;
     }
+    this.syncCaretOffset();
     relayNativeEvent(this, event);
   };
   // Disabling a focused native control forces the browser to blur it --
@@ -461,7 +477,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
         ' '.repeat(this.indentWidth),
         start,
         target.selectionEnd,
-        'end'
+        'end',
       );
       this.value = target.value;
       dispatchNativeInputEvent(this, {
@@ -473,6 +489,44 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     }
     this.tabBypassArmed = false;
   };
+  private onCaretChange = (): void => {
+    this.syncCaretOffset();
+  };
+  private syncCaretOffset(): void {
+    const textarea = this.textarea;
+    if (!textarea) return;
+    const next = finiteInteger(textarea.selectionEnd, 0, 0, this.value.length);
+    if (next === this.caretOffset) {
+      this.scrollCaretIntoView();
+      return;
+    }
+    this.caretOffset = next;
+  }
+  private scrollCaretIntoView(): void {
+    const editor = this.editor;
+    const marker = this.caretMeasure;
+    if (!editor || !marker) return;
+    const frame = editor.getBoundingClientRect();
+    const caret = marker.getBoundingClientRect();
+    const left =
+      caret.left < frame.left
+        ? caret.left - frame.left
+        : caret.right > frame.right
+        ? caret.right - frame.right
+        : 0;
+    const top =
+      caret.top < frame.top
+        ? caret.top - frame.top
+        : caret.bottom > frame.bottom
+        ? caret.bottom - frame.bottom
+        : 0;
+    if (left === 0 && top === 0) return;
+    editor.scrollBy({
+      left: finiteNumber(left, 0),
+      top: finiteNumber(top, 0),
+    });
+    this.syncGutterInlinePosition();
+  }
   private onLabelSlotChange = (e: Event): void => {
     this.hasLabelSlot =
       (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
@@ -492,13 +546,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'label'
+        (el) => el.getAttribute('slot') === 'label',
       );
       this.hasHintSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'hint'
+        (el) => el.getAttribute('slot') === 'hint',
       );
       this.hasErrorSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'error'
+        (el) => el.getAttribute('slot') === 'error',
       );
     }
   }
@@ -517,7 +571,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       this.updateValidity();
       this.toggleAttribute(
         'data-invalid',
-        this.touched && !this.internals.validity.valid
+        this.touched && !this.internals.validity.valid,
       );
     }
     if (changed.has('wrap') || changed.has('cols')) this.syncSubmissionValue();
@@ -529,6 +583,9 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     ) {
       this.fitToContent();
     }
+    this.syncGutterInlinePosition();
+    if (changed.has('caretOffset') || changed.has('value'))
+      this.scrollCaretIntoView();
   }
   protected updateValidity(): void {
     if (isBarredFromValidation(this, this.internals)) {
@@ -538,7 +595,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     if (this.required && this.value === '') {
       this[SET_ANCHORED_VALIDITY](
         { valueMissing: true },
-        this.localize('fieldRequired')
+        this.localize('fieldRequired'),
       );
       return;
     }
@@ -551,7 +608,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       tooShort || tooLong ? { tooShort, tooLong } : {},
       tooShort || tooLong
         ? native?.validationMessage || this.localize('valueInvalid')
-        : ''
+        : '',
     );
   }
   private countLines(): number {
@@ -562,10 +619,20 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     }
     return count;
   }
+  private syncGutterInlinePosition(): void {
+    const editor = this.editor;
+    const gutter = this.gutter;
+    if (!editor || !gutter) return;
+    gutter.style.setProperty(
+      '--_lr-code-editor-gutter-scroll-translation',
+      `${finiteNumber(editor.scrollLeft, 0)}px`,
+    );
+  }
   private onEditorScroll = (): void => {
+    this.syncGutterInlinePosition();
     if (!this.lineNumbers || !this.editor || !this.textarea) return;
     const computed = this.ownerDocument.defaultView?.getComputedStyle(
-      this.textarea
+      this.textarea,
     );
     const lineHeight = computed
       ? Number.parseFloat(computed.lineHeight)
@@ -573,7 +640,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
     const next = Math.max(
       0,
-      Math.floor(this.editor.scrollTop / lineHeight) - 20
+      Math.floor(this.editor.scrollTop / lineHeight) - 20,
     );
     if (next !== this.gutterWindowStart) this.gutterWindowStart = next;
   };
@@ -669,7 +736,14 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
               ${this.gutterRows(lineCount)}
             </div>`
           : nothing}
-        <textarea
+        <div class="editor-content">
+          <span class="editor-measure" data-wrap=${this.wrap} aria-hidden="true"
+            >${this.value.slice(0, this.caretOffset)}<span
+              class="editor-caret-measure"
+            ></span
+            >${this.value.slice(this.caretOffset)}​</span
+          >
+          <textarea
           id="textarea"
           part="textarea"
           .value=${this.value}
@@ -697,9 +771,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
           @input=${this.onInput}
           @change=${this.onChange}
           @keydown=${this.onKeyDown}
+          @keyup=${this.onCaretChange}
+          @mouseup=${this.onCaretChange}
+          @select=${this.onCaretChange}
           @focus=${this.onFocus}
           @blur=${this.onBlur}
-        ></textarea>
+          ></textarea>
+        </div>
       </div>
       <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>
         ${this.hint}<slot

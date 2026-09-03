@@ -133,11 +133,6 @@ function wireDemo(containerId: string): void {
     suggestionGeneration += 1;
     triggerIndex = -1;
     popover.open = false;
-    popover.syncActiveDescendant(textarea);
-  };
-
-  const syncActiveDescendant = () => {
-    popover.syncActiveDescendant(textarea);
   };
 
   textarea.addEventListener('input', () => {
@@ -153,26 +148,27 @@ function wireDemo(containerId: string): void {
     popover.anchor = textarea;
     popover.query = match[1];
     popover.open = true;
-    syncActiveDescendant();
   });
 
   textarea.addEventListener('keydown', (e) => {
-    if (popover.open && popover.handleKeyDown(e)) {
-      if (!popover.syncActiveDescendant(textarea) && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-        const generation = suggestionGeneration;
-        void popover.focusActiveOption({
-          ownsFocus: () =>
-            generation === suggestionGeneration &&
-            (textarea.ownerDocument.activeElement === textarea ||
-              textarea.ownerDocument.activeElement === popover),
-        });
-      }
+    if (
+      popover.open &&
+      popover.handleKeyDown(e) &&
+      (e.key === 'ArrowDown' || e.key === 'ArrowUp')
+    ) {
+      const generation = suggestionGeneration;
+      void popover.focusActiveOption({
+        ownsFocus: () =>
+          generation === suggestionGeneration &&
+          (textarea.ownerDocument.activeElement === textarea ||
+            textarea.ownerDocument.activeElement === popover),
+      });
     }
   });
 
   textarea.addEventListener('blur', (event) => {
-    // The same-tree fallback deliberately moves focus from the textarea into
-    // the popover. Shadow retargeting exposes that move as the popover host.
+    // Keyboard navigation deliberately moves real focus from the textarea
+    // into the popover. Shadow retargeting exposes that move as the host.
     if (event.relatedTarget !== popover) closeMention();
   });
 
@@ -187,8 +183,4 @@ function wireDemo(containerId: string): void {
     textarea.focus();
     closeMention();
   }) as EventListener);
-
-  popover.addEventListener('lr-mention-close', () => {
-    popover.syncActiveDescendant(textarea);
-  });
 }

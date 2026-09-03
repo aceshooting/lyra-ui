@@ -121,4 +121,31 @@ describe('mapped outer-wrapper part parity', () => {
       style.remove();
     }
   });
+
+  it('keeps Details wrapper aliases on the outer disclosure container rather than its private native details', async () => {
+    const element = await render('lr-details');
+    try {
+      const wrapper = element.shadowRoot?.querySelector<HTMLElement>(
+        '[part~="base"][part~="details"]'
+      );
+      const nativeDetails = element.shadowRoot?.querySelector<HTMLDetailsElement>(
+        'details:not([part])'
+      );
+      const header = element.shadowRoot?.querySelector<HTMLElement>('[part="header"]');
+      const summary = element.shadowRoot?.querySelector<HTMLElement>('[part="summary"]');
+      const headerActions = element.shadowRoot?.querySelector<HTMLElement>(
+        '[part~="header-actions"]'
+      );
+      const content = element.shadowRoot?.querySelector<HTMLElement>('[part="content"]');
+      expect(wrapper?.localName ?? null).to.equal('div');
+      expect(nativeDetails?.localName ?? null).to.equal('details');
+      expect(nativeDetails?.hasAttribute('part') ?? true).to.equal(false);
+      expect(header?.parentElement === wrapper).to.equal(true);
+      expect(summary?.parentElement === nativeDetails).to.equal(true);
+      expect(headerActions?.previousElementSibling === nativeDetails).to.equal(true);
+      expect(content?.parentElement?.hasAttribute('part') ?? true).to.equal(false);
+    } finally {
+      element.remove();
+    }
+  });
 });

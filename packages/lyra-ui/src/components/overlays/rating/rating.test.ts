@@ -1290,6 +1290,92 @@ it("names the slider from `label`, letting a host aria-label win over it", async
   ).to.equal("Rating");
 });
 
+it("uses the localized slider fallback for blank or whitespace-only labels without rewriting label", async () => {
+  const el = (await fixture(
+    html`<lr-rating label=" \t "></lr-rating>`
+  )) as LyraRating;
+
+  expect(el.label).to.equal(" \t ");
+  expect(el.getAttribute("aria-label")).to.equal("Rating");
+
+  el.strings = { rating: "Évaluation" };
+  await el.updateComplete;
+  expect(el.getAttribute("aria-label")).to.equal("Évaluation");
+
+  el.label = "  Overall score  ";
+  await el.updateComplete;
+  expect(el.label).to.equal("  Overall score  ");
+  expect(el.getAttribute("aria-label")).to.equal("  Overall score  ");
+
+  el.label = "";
+  await el.updateComplete;
+  expect(el.getAttribute("aria-label")).to.equal("Évaluation");
+});
+
+it("keeps authored and external label provenance ahead of a whitespace fallback", async () => {
+  const authored = (await fixture(
+    html`<lr-rating label=" \t " aria-label=""></lr-rating>`
+  )) as LyraRating;
+  expect(authored.getAttribute("aria-label")).to.equal("");
+
+  authored.setAttribute("aria-label", "Author score");
+  await authored.updateComplete;
+  expect(authored.getAttribute("aria-label")).to.equal("Author score");
+
+  authored.setAttribute("aria-label", "");
+  await authored.updateComplete;
+  expect(authored.getAttribute("aria-label")).to.equal("");
+
+  authored.removeAttribute("aria-label");
+  await authored.updateComplete;
+  expect(authored.getAttribute("aria-label")).to.equal("Rating");
+
+  const host = await fixture<HTMLElement>(html`
+    <div>
+      <label for="whitespace-rating">External score</label>
+      <lr-rating id="whitespace-rating" label=" \t "></lr-rating>
+    </div>
+  `);
+  const external = host.querySelector("lr-rating") as LyraRating;
+  const externalLabel = host.querySelector("label")!;
+  await external.updateComplete;
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(external.getAttribute("aria-label")).to.equal("External score");
+
+  external.strings = { rating: "Évaluation externe" };
+  await external.updateComplete;
+  expect(external.getAttribute("aria-label")).to.equal("External score");
+
+  externalLabel.remove();
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(external.getAttribute("aria-label")).to.equal("Évaluation externe");
+});
+
+it("keeps a managed whitespace fallback live through hydration-shaped reconnects", async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement("lr-rating") as LyraRating;
+  el.setAttribute("label", " \t ");
+  el.setAttribute("data-lr-rating-managed-label", "Rating");
+  el.setAttribute("aria-label", "Rating");
+  el.attachShadow({ mode: "open" });
+  container.append(el);
+  await el.updateComplete;
+
+  expect(el.label).to.equal(" \t ");
+  expect(el.getAttribute("aria-label")).to.equal("Rating");
+
+  el.strings = { rating: "Évaluation reconnectée" };
+  await el.updateComplete;
+  expect(el.getAttribute("aria-label")).to.equal("Évaluation reconnectée");
+
+  el.remove();
+  container.append(el);
+  await el.updateComplete;
+  expect(el.getAttribute("aria-label")).to.equal("Évaluation reconnectée");
+});
+
 it("preserves an explicitly empty host aria-label and restores live fallbacks when it is removed", async () => {
   const el = (await fixture(
     html`<lr-rating aria-label="" label="Satisfaction"></lr-rating>`
@@ -1708,16 +1794,19 @@ it("routes the built-in accessible name through the .strings override", async ()
 
 // -- accessibility --------------------------------------------------------
 
-it("is accessible while required, labelled, rated, and rendering a custom symbol", async () => {
+it("is accessible while required, whitespace-labelled, rated, and rendering a custom symbol", async () => {
   const el = (await fixture(
     html`<lr-rating
       name="score"
-      label="Satisfaction"
+      label=" \t "
       required
       value="3"
       max="5"
     ></lr-rating>`
   )) as LyraRating;
+  el.strings = { rating: "Évaluation accessible" };
+  await el.updateComplete;
+  expect(el.getAttribute("aria-label")).to.equal("Évaluation accessible");
   expect(starsOf(el).length).to.equal(5);
   await expect(el).to.be.accessible();
 

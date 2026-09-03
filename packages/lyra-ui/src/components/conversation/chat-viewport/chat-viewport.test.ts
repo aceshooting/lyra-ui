@@ -93,6 +93,18 @@ it('parses the plain-HTML attribute string follow="false", not just a .follow pr
   expect(el.follow).to.be.false;
 });
 
+it('inherits a 20px consumer font into the jump pill', async () => {
+  const el = (await fixture(html`
+    <lr-chat-viewport .follow=${false} style="block-size:100px;font-size:20px">
+      ${row('Latest message')}
+    </lr-chat-viewport>
+  `)) as LyraChatViewport;
+  await el.updateComplete;
+
+  const pill = el.shadowRoot!.querySelector<HTMLElement>('[part="jump-pill"]')!;
+  expect(getComputedStyle(pill).fontSize).to.equal('20px');
+});
+
 it('is role="log" with aria-live="off" and tabindex="0", labeled by the default or a custom label', async () => {
   const el = (await fixture(
     html`<lr-chat-viewport></lr-chat-viewport>`

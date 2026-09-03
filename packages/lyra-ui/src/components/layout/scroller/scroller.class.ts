@@ -26,10 +26,10 @@ export interface LyraScrollerEventMap {
  *
  * @customElement lr-scroller
  * @slot - Scrollable content.
- * @event lr-scroll - The scroll position or available edge changed. Scroll-driven emissions are
- *   coalesced through one `requestAnimationFrame` tick, so a fling that fires dozens of native
- *   `scroll` events produces at most one of these per frame — the same contract
- *   `<lr-virtual-list>`'s identically-named event already carries.
+ * @event lr-scroll - `detail: { scrollStart: boolean; scrollEnd: boolean; scrollLeft: number;
+ *   scrollTop: number }` reports the scroll position and available edges. Scroll-driven emissions
+ *   are coalesced through one `requestAnimationFrame` tick, so a fling that fires dozens of native
+ *   `scroll` events produces at most one of these per frame.
  * @csspart base - The overall scroller layout.
  * @csspart viewport - The native scroll container.
  * @csspart content - The slotted content wrapper.
@@ -217,11 +217,9 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   // Coalesce to one edge read + one `lr-scroll` dispatch per animation frame. Native `scroll`
   // events fire far faster than that during a trackpad/touch fling, and each tick otherwise cost a
-  // full scrollWidth/clientWidth/scrollLeft layout read plus a CustomEvent dispatch. The sibling
-  // `<lr-virtual-list>` already contracts its identically-named `lr-scroll` this way, so the two
-  // now share one firing rule. Realm-guarded like every other deferred callback here: a scroller
-  // adopted into (or removed from) another document drops the pending frame instead of reading a
-  // stale viewport.
+  // full scrollWidth/clientWidth/scrollLeft layout read plus a CustomEvent dispatch.
+  // Realm-guarded like every other deferred callback here: a scroller adopted into (or removed
+  // from) another document drops the pending frame instead of reading a stale viewport.
   private scrollFrame?: number;
   private scrollFrameWindow?: Window;
 

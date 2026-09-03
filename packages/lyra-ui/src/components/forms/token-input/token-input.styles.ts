@@ -198,6 +198,7 @@ export const styles = css`
     padding: 0;
     background: transparent;
     color: inherit;
+    font: inherit;
     cursor: pointer;
   }
   [part="remove"]:hover {

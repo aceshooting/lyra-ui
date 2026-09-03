@@ -197,7 +197,7 @@ export const ThemedInteractionStates: Story = {
     docs: {
       description: {
         story:
-          "Hover/press the mobile toggle and full-mode resizer. Their scoped state hooks inherit from these wrappers without changing unrelated brand-colored components.",
+          "Hover/press the mobile toggle and full-mode resizer. Their scoped state hooks inherit from these wrappers without changing unrelated brand-colored components; inspect the accessibility tree to see localized pixel text alongside the resizer's numeric ARIA range.",
       },
     },
   },
@@ -211,6 +211,7 @@ export const ThemedInteractionStates: Story = {
           --lr-app-rail-toggle-hover-color: ${storyColor("success")};
           --lr-app-rail-toggle-active-bg: ${storyColor("warningQuiet")};
           --lr-app-rail-toggle-active-color: ${storyColor("warning")};
+          font: 20px/1 monospace;
         "
       >
         <lr-app-rail mobile-breakpoint="9999px"></lr-app-rail>
@@ -223,8 +224,10 @@ export const ThemedInteractionStates: Story = {
         "
       >
         <lr-app-rail
+          lang="ar-EG"
           force-mode="full"
           resizable
+          .strings=${{ resizeValuePixels: 'العرض {value} بكسل' }}
           style="inline-size: var(--lr-app-rail-width); block-size: var(--lr-size-10rem);"
         ></lr-app-rail>
       </div>

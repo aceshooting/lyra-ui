@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An accessible two-pane layout with percent/pixel positioning, optional primary-pane preservation, constraints, snapping, keyboard resizing, and horizontal or vertical orientation. String snap points reflect to the `snap` attribute; callback snap functions are property-only.',
+          'An accessible two-pane layout with percent/pixel positioning, optional primary-pane preservation, constraints, snapping, keyboard resizing, and horizontal or vertical orientation. The divider keeps its ARIA range numeric while reporting the current percentage through the effective locale. String snap points reflect to the `snap` attribute; callback snap functions are property-only.',
       },
     },
   },
@@ -30,6 +30,8 @@ export const Default: Story = {
   render: () => html`
     <lr-split-panel
       aria-label="Resize editor panes"
+      lang="ar-EG"
+      .strings=${{ resizeValuePercent: 'النسبة {value} بالمئة' }}
       style="block-size: 16rem; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
     >
       <section slot="start" style=${`${paneStyle} background: var(--lr-color-surface-raised);`}>

@@ -355,8 +355,7 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
   `currentIndex` clamped into `[0, itemCount)`; fractional, negative, `NaN`, infinite, and oversized
   values cannot poison end conditions or the slider.
 - `interval-ms` is clamped to the 16ms floor and the browser's finite timer ceiling: a non-finite or
-  lower value ticks at 16ms, while an oversized value uses the timer ceiling. Each distinct invalid
-  value is warned once (deduplicated per value, not a single once-ever flag).
+  lower value ticks at 16ms, while an oversized value uses the timer ceiling.
 - Initial `playing` and `item-count` attributes are resolved together on the first update, so
   playback starts consistently regardless of their source order; an invalid final `itemCount <= 1`
   clears the reflected `playing` state.
@@ -448,7 +447,8 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   the live host cascade before passing the expression to MapLibre's WebGL renderer.
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
 [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
-  trimmed and must be nonempty, and the first marker for an explicit ID wins. Markers are reconciled
+  trimmed and must be nonempty, and the first successfully admitted marker for an explicit ID wins.
+  A malformed earlier row does not reserve that ID. Markers are reconciled
   by that explicit ID (falling back
   to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
   when `id` is omitted) so an unchanged marker isn't torn down and recreated on every `markers`
@@ -474,7 +474,8 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
 GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
 'danger' | 'neutral'; color?: string; strokeColor?: string; kind?: LyraMapDataLayerKind;
 heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` is trimmed and must be nonempty; the first layer for a
-  `sourceId` wins and blank or later duplicate records are ignored. Each retained entry adds one
+  `sourceId` that is successfully admitted wins; blank, malformed, and later duplicate records are
+  ignored without reserving an identity for a valid later sibling. Each retained entry adds one
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
   matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`).
@@ -497,6 +498,10 @@ heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` 
   when stable feature IDs make a safe diff possible, otherwise `setData()`), one that's dropped has
   its private source/layers removed, and a genuinely new `sourceId` gets new resources — nothing
   leaks on removal, style change, or disconnect.
+
+  The component snapshots the configuration it reads. It passes `choropleth.geojson` and
+  `dataLayers[].geojson` through to MapLibre; assign a new `choropleth`, `dataLayers`, or `markers`
+  value after changing configuration, because mutating an assigned value is not observed.
 
   `cluster` and `kind` (both new in 12.0.0) opt one entry out of that three-layer geometry split.
   **Both are strictly additive: an entry that sets neither renders exactly what it rendered before,
@@ -570,9 +575,9 @@ expensive on an animated one. When every feature has a unique `string`/`number` 
 features keep semantically unchanged geometry/bbox values, the component emits MapLibre's
 incremental `updateData()` for property changes, additions, removals, and order changes. The exact
 next order is preserved: an unchanged prefix stays in place and only the invalidated suffix is
-removed and re-added. Lyra's immutable ownership boundary detaches GeoJSON assignments, so geometry
-reference identity cannot survive between frames; a bounded, accessor-free comparison verifies the
-JSON geometry graph instead. A missing/duplicate ID, changed geometry, exceeded bound, or uncertain
+removed and re-added. Lyra snapshots control and projection data while retaining opaque GeoJSON
+identity at the MapLibre boundary; a bounded, accessor-free comparison verifies the JSON geometry
+graph instead. A missing/duplicate ID, changed geometry, exceeded bound, or uncertain
 comparison falls back to `setData()` with no change in rendered behaviour. Peers without
 `updateData()` always take the old path.
 
@@ -626,6 +631,10 @@ is MapLibre's `point_count`/`point_count_abbreviated`/`cluster_id` properties, w
 zoom-to-cluster handler reads. The count label is deliberately not hit-tested (it sits exactly on
 the circle already queried and would only make the label the topmost hit), and a `kind: 'heatmap'`
 layer is never queried at all — MapLibre returns no features for a rendered density surface
+
+The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
+original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
+markup as described above.
 
 **Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even
@@ -860,10 +869,8 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 `resetValidity()`; reset clears only consumer custom validity and restores current intrinsic
 `required` validity.
 
-**Events:** a user selection or removal emits native bubbling/composed `input`, then `change`;
-programmatic `files` writes are silent. The hidden native picker's own `change` is contained inside
-the shadow root, so a picker selection exposes exactly one post-commit host `change`, not the
-implementation event plus a duplicate. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
+**Events:** a user selection or removal emits native bubbling/composed `input`, then exactly one
+host `change`; programmatic `files` writes are silent. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
 frozen readonly `files` and `rejected` arrays and frozen rejected-file records, fired on both drop
 and manual file-picker selection; immutable `File` objects retain identity) —
 `LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
@@ -924,10 +931,9 @@ What this changes for you:
 - **Nothing about what the visible text says or where it renders.** `[part="rejection"]`'s text is
   ordinary visible content and stays in the accessibility tree, so a user who reaches it reads it
   normally. Both parts remain the right styling hooks.
-- **A test that asserted `::part(rejection)` had `role="alert"`, or that read announcements out of
-  `::part(status)`, now fails.** Assert against the shared light-DOM region instead — query
-  `[data-lr-live-region="assertive"]` (or `"polite"`) in the document, which is also where every
-  other Lyra announcement lands.
+- **Read announcements from the shared light-DOM region** — query
+  `[data-lr-live-region="assertive"]` or `[data-lr-live-region="polite"]` in the document rather
+  than the styling parts.
 - **A `::part(rejection)[role]`-style selector never matched anyway** — an attribute selector
   cannot follow `::part()`. Nothing that worked before stopped working.
 
@@ -1342,9 +1348,8 @@ already focused on the chip still hears an upload failure — goes to the librar
   can read at their own pace, and a retry that fails the same way twice is announced twice rather
   than being a silent no-op. The ticking `uploading` readout announces nothing at all — a live
   region re-announcing every progress tick is noise, not information.
-- A test that asserted `::part(status-text)` had `role="alert"` now fails; query
-  `[data-lr-live-region="assertive"]` in the document instead. `::part(status-text)` is still the
-  styling hook, and still the place to read the visible status wording.
+- Read the announcement from `[data-lr-live-region="assertive"]` in the document;
+  `::part(status-text)` remains the styling hook and visible-status text.
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
@@ -1603,12 +1608,6 @@ the video's own native controls bubble up and spuriously fire `lr-media-open`.
 
 **Known gotchas:**
 
-- Calling the real `.click()` (or dispatching a `click`/`MouseEvent`) on the file-chip's `<a href>`
-  in a test genuinely triggers real browser navigation — always `preventDefault()` on a `click`
-  listener registered before triggering it, the same precaution `lr-document-preview`'s own
-  download-link tests already take. A synthetic `dispatchEvent(new MouseEvent('click', {cancelable:
-true}))` still invokes the anchor's native activation behavior if nothing calls
-  `preventDefault()` during dispatch — it is not a safe no-op.
 - `kind` only reflects to the host attribute when explicitly set — CSS keying off the
   auto-detected resolved kind should target the rendered `[part]`/element (e.g. `video[part="media"]`),
   not `:host([kind=...])`, since the latter won't see an auto-detected kind.
@@ -2186,6 +2185,12 @@ theme and color-scheme changes redraw automatically. Async peer and image result
 generation-guarded, including across disconnect/reconnect.
 `LyraQrCode.preload(): Promise<boolean>` is a static optional-peer warm-up that starts the shared
 `qrcode` import without encoding a value; it resolves to `false` when the peer is unavailable.
+
+When `IntersectionObserver` is available, painting waits for a valid intersecting entry and resumes
+whenever the code re-enters view. If the API is unavailable, its constructor fails, or `observe()`
+throws, rendering proceeds immediately. Invalid resolved paint colors fall back to the documented
+safe fill/background without changing the QR's loading or error state: foreground becomes black,
+background becomes transparent, and `imageBackground` becomes the resolved QR background.
 
 At ordinary sizes the backing store is a fixed `2×` the CSS size, independent of device pixel
 ratio. It degrades uniformly only to stay within 4,096 pixels per dimension and 8,388,608 total

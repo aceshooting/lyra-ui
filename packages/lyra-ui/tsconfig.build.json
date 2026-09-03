@@ -1,8 +1,9 @@
 {
   // Publish-time emit config, used only by `scripts/build.mjs` (and therefore by
-  // `pnpm run build` / `prepack`). It is tsconfig.json minus the source maps:
-  // package.json#files publishes `dist` and NOT `src`, so every emitted
-  // `.js.map` / `.d.ts.map` points at a `../../../../src/**/*.ts` path that does
+  // `pnpm run build` / `prepack`). It is tsconfig.json minus source maps and
+  // build-only fixture modules: package.json#files publishes `dist` and NOT
+  // `src`, so every emitted `.js.map` / `.d.ts.map` points at a
+  // `../../../../src/**/*.ts` path that does
   // not exist in an install and carries no `sourcesContent` — dead weight in the
   // tarball, and worse for `declarationMap`, which routes an editor's
   // Go-to-Definition at that missing `.ts` and fails instead of falling back to
@@ -10,10 +11,13 @@
   //
   // Maps stay ON in tsconfig.json so local type-checking, the type tests
   // (tsconfig.type-tests.json extends it), docs and ad-hoc `tsc` debugging are
-  // unaffected; only the published artifact drops them.
+  // unaffected; only the published artifact drops them. Fixture sources and
+  // deterministic assets likewise remain in src for tests and stories while
+  // their helper modules stay out of dist.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "sourceMap": false,
     "declarationMap": false
-  }
+  },
+  "exclude": ["src/**/*.test.ts", "src/**/*.stories.ts", "src/**/fixtures/**"]
 }

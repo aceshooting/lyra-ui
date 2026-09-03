@@ -82,6 +82,7 @@ const echartsProcessInteropPlugin = {
 
 const mouseButtons = new Set(['left', 'middle', 'right']);
 const mouseCommandTypes = new Set(['move', 'click', 'down', 'up']);
+const nativeScrollbarVerification = process.env.WTR_NATIVE_SCROLLBAR === '1';
 
 function validateMouseCommand(payload) {
   if (payload === null || typeof payload !== 'object' || !mouseCommandTypes.has(payload.type)) {
@@ -104,10 +105,28 @@ function validateMouseCommand(payload) {
   }
 }
 
+function validateWheelCommand(payload) {
+  if (
+    payload === null ||
+    typeof payload !== 'object' ||
+    typeof payload.deltaX !== 'number' ||
+    !Number.isFinite(payload.deltaX) ||
+    typeof payload.deltaY !== 'number' ||
+    !Number.isFinite(payload.deltaY)
+  ) {
+    throw new Error('The send-wheel command requires finite deltaX and deltaY values.');
+  }
+}
+
 const mouseCommandPlugin = {
   name: 'lyra-mouse-command',
   async executeCommand({ command, payload, session }) {
-    if (command !== 'send-mouse' && command !== 'reset-mouse') return;
+    if (
+      command !== 'send-mouse' &&
+      command !== 'reset-mouse' &&
+      command !== 'send-wheel'
+    )
+      return;
     if (session.browser.type !== 'playwright') {
       throw new Error(`Mouse commands do not support browser type ${session.browser.type}.`);
     }
@@ -124,6 +143,12 @@ const mouseCommandPlugin = {
       await page.mouse.up({ button: 'middle' });
       await page.mouse.up({ button: 'right' });
       await page.mouse.move(0, 0);
+      return true;
+    }
+
+    if (command === 'send-wheel') {
+      validateWheelCommand(payload);
+      await page.mouse.wheel(payload.deltaX, payload.deltaY);
       return true;
     }
 
@@ -236,14 +261,37 @@ const webkitLaunchOptions = { env: { ...process.env, LIBGL_ALWAYS_SOFTWARE: '1' 
 // stack trace, or testsFinishTimeout message at all (that watchdog is 300s; the silence here was
 // ~128s, too short for it to have fired). --disable-dev-shm-usage makes Chromium fall back to
 // /tmp instead, which is unconstrained on both this CI runner and this repo's own dev machines.
-const chromiumLaunchOptions = { args: ['--disable-dev-shm-usage'] };
+// Playwright hides Chromium scrollbars in ordinary headless runs. The dedicated
+// native-scrollbar verification test needs a real physical thumb, but changing
+// that default changes layout metrics for the rest of the suite. Keep the
+// exceptional browser setup behind its one-file runner mode.
+const chromiumLaunchOptions = {
+  args: ['--disable-dev-shm-usage'],
+  ...(nativeScrollbarVerification ? { ignoreDefaultArgs: ['--hide-scrollbars'] } : {}),
+};
+const nativeWebkitLaunchOptions = nativeScrollbarVerification
+  ? {
+      ...webkitLaunchOptions,
+      headless: false,
+    }
+  : webkitLaunchOptions;
 const browserLaunchers = {
   chromium: { product: 'chromium', launchOptions: chromiumLaunchOptions },
   chrome: { product: 'chromium', launchOptions: { ...chromiumLaunchOptions, channel: 'chrome' } },
   edge: { product: 'chromium', launchOptions: { ...chromiumLaunchOptions, channel: 'msedge' } },
-  safari: { product: 'webkit', launchOptions: webkitLaunchOptions },
-  firefox: { product: 'firefox' },
-  webkit: { product: 'webkit', launchOptions: webkitLaunchOptions },
+  safari: { product: 'webkit', launchOptions: nativeWebkitLaunchOptions },
+  firefox: {
+    product: 'firefox',
+    ...(nativeScrollbarVerification
+      ? {
+          launchOptions: {
+            headless: false,
+            firefoxUserPrefs: { 'widget.gtk.overlay-scrollbars.enabled': false },
+          },
+        }
+      : {}),
+  },
+  webkit: { product: 'webkit', launchOptions: nativeWebkitLaunchOptions },
 };
 const launcherConfig = browserLaunchers[browserProduct];
 if (!launcherConfig) {
@@ -276,6 +324,7 @@ const testRunnerHtml = (testRunnerImport) => `
       globalThis.litIssuedWarnings = new Set(['dev-mode']);
       globalThis.__LYRA_WTR_COVERAGE__ = ${collectCoverage};
       globalThis.__LYRA_WTR_STRICT_CONSOLE__ = ${strictConsole};
+      globalThis.__LYRA_WTR_NATIVE_SCROLLBAR__ = ${nativeScrollbarVerification};
       ${strictConsole ? `
       // Trip once, then fall back to the real console methods for the rest of this page's life.
       // WTR's own client-side error reporting re-logs a caught exception via console.error; with
@@ -312,7 +361,7 @@ const testRunnerHtml = (testRunnerImport) => `
 </html>`;
 
 export default {
-  files: 'src/**/*.test.ts',
+  files: ['src/**/*.test.ts', '!src/**/*.native-scrollbar.test.ts'],
   // Parallel aggregate runs assign a port per lane. Without an explicit port, WTR's portfinder
   // probe releases the candidate before the server binds it, so two processes can select the
   // same port and one then fails with EADDRINUSE. Ordinary standalone runs retain auto-discovery.

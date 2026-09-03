@@ -29,6 +29,11 @@ An attachment with no filename uses the localized `emailViewerUnnamedAttachment`
 `lr-attachment-open` detail. The fallback resolves while rendering, so changing the locale or
 per-instance `strings` after the message loads updates it without reparsing the message.
 
+Parser output is admitted through a bounded direct-data projection: malformed optional fields,
+recipients, and attachment entries are omitted without discarding later valid siblings. Accepted
+string, `Uint8Array`, and `ArrayBuffer` attachment bytes are copied before use, and every
+`lr-attachment-open` creates a fresh Blob, so later source mutation cannot change event bytes.
+
 Sanitized HTML uses the passive-document profile: anchors, form controls, and custom elements are
 unwrapped to ordinary text/children where safe, remote navigation/resource attributes are removed,
 and an `<a>` itself never remains. Images render only inline base64 GIF, JPEG, PNG, or WebP data;

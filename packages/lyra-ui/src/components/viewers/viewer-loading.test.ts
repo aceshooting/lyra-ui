@@ -1,6 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { renderViewerLoading, viewerLoadingStyles } from './viewer-loading.js';
+import { setReducedMotion } from '../../../test/wtr-media.js';
 import './archive-viewer/archive-viewer.js';
 import './calendar-viewer/calendar-viewer.js';
 import './contact-viewer/contact-viewer.js';
@@ -88,17 +89,42 @@ describe('shared viewer loading treatment', () => {
     expect(host.shadowRoot!.querySelectorAll('[role="status"], [role="alert"], [aria-live]')).to.have.lengthOf(0);
   });
 
-  it('ships a static reduced-motion branch for the shared animated indicator', async () => {
-    const host = await fixture<ViewerLoadingFixture>(html`<test-viewer-loading></test-viewer-loading>`);
-    await host.updateComplete;
-    const sheets = [...host.shadowRoot!.styleSheets, ...host.shadowRoot!.adoptedStyleSheets];
-    const reducedRule = sheets.flatMap((sheet) => [...sheet.cssRules])
-      .find((rule) => rule instanceof CSSMediaRule
-        && rule.conditionText === '(prefers-reduced-motion: reduce)') as CSSMediaRule | undefined;
-    expect(reducedRule?.conditionText).to.equal('(prefers-reduced-motion: reduce)');
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const indicator = host.shadowRoot!.querySelector<HTMLElement>('.viewer-loading-indicator')!;
-      expect(getComputedStyle(indicator).animationName).to.equal('none');
+  it('uses the ambient duration for DOCX, email, and HTML loading indicators, inherits it, and stops them under reduced motion', async () => {
+    await setReducedMotion('no-preference');
+    try {
+      const cases = [
+        ['lr-docx-viewer', 'fetchState'],
+        ['lr-email-viewer', 'fetchState'],
+        ['lr-html-viewer', 'fetchState'],
+      ] as const;
+      const holder = await fixture<HTMLElement>(html`
+        <div style="--lr-theme-duration-slow: 3s"></div>
+      `);
+      const indicators: HTMLElement[] = [];
+
+      for (const [tagName, stateKey] of cases) {
+        const viewer = document.createElement(tagName) as HTMLElement & {
+          requestUpdate(): void;
+          updateComplete: Promise<unknown>;
+        };
+        holder.append(viewer);
+        await viewer.updateComplete;
+        (viewer as unknown as Record<string, unknown>)[stateKey] = { kind: 'loading' };
+        viewer.requestUpdate();
+        await viewer.updateComplete;
+        const indicator = viewer.shadowRoot!.querySelector<HTMLElement>('.viewer-loading-indicator')!;
+        expect(getComputedStyle(indicator).animationDuration, tagName).to.equal('3s');
+        indicators.push(indicator);
+      }
+
+      await setReducedMotion('reduce');
+      expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      for (const indicator of indicators) {
+        expect(getComputedStyle(indicator).animationName).to.equal('none');
+      }
+    } finally {
+      await setReducedMotion('no-preference');
     }
   });
 });

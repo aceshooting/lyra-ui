@@ -13,7 +13,11 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 import type { ApprovalAction } from '../approval-state.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { firstByIdentity } from '../collection-identity.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings.generated.js';
@@ -91,19 +95,25 @@ export interface LyraToolTimelineEventMap {
   'lr-tool-render-error': CustomEvent<ToolTimelineRenderErrorDetail>;
 }
 
-function entrySourceKey(entry: ToolTimelineEntry): string | undefined {
-  return entry.sourceKey?.trim() ? entry.sourceKey : undefined;
-}
-
-function entryIdentity(entry: ToolTimelineEntry): string {
-  return JSON.stringify([entrySourceKey(entry) ?? null, entry.id]);
-}
-
-function entryCorrelation(entry: ToolTimelineEntry): ToolTimelineActivateDetail {
-  const sourceKey = entrySourceKey(entry);
-  return sourceKey === undefined
-    ? { invocationId: entry.id }
-    : { invocationId: entry.id, sourceKey };
+/** The one-read data shape used after an entry source has been admitted. `source` remains opaque
+ * and exists only to retain the caller's documented identity; every render path uses these copied
+ * scalar fields and the explicitly opaque payload references instead. */
+interface CanonicalToolTimelineEntry {
+  readonly source: ToolTimelineEntry;
+  readonly id: string;
+  readonly name: string;
+  readonly args: unknown;
+  readonly status: ToolCallStatus;
+  readonly result?: unknown;
+  readonly error?: string;
+  readonly sourceKey?: string;
+  readonly icon?: string;
+  readonly startedAt?: number;
+  readonly endedAt?: number;
+  readonly retryCount?: number;
+  readonly redactedFields: readonly unknown[];
+  readonly needsApproval?: boolean;
+  readonly approved?: boolean;
 }
 
 const MAX_RENDERED_ENTRIES = 500;
@@ -111,10 +121,137 @@ const MAX_REDACTION_PATHS = 100;
 const MAX_REDACTION_DEPTH = 64;
 const MAX_REDACTION_NODES = 10_000;
 const TOOL_STATUSES = new Set<ToolCallStatus>(['pending', 'running', 'success', 'error', 'denied']);
+const EMPTY_REDACTION_PATHS: readonly unknown[] = Object.freeze([]);
+const TOO_MANY_REDACTION_PATHS: readonly unknown[] = Object.freeze(
+  new Array<unknown>(MAX_REDACTION_PATHS + 1),
+);
 
-function normalizeEntry(entry: ToolTimelineEntry): ToolTimelineEntry {
-  const status = TOOL_STATUSES.has(entry.status) ? entry.status : 'pending';
-  return status === entry.status ? entry : { ...entry, status };
+function descriptorValue(value: object, property: PropertyKey): ReturnType<typeof getOwnDataDescriptor> {
+  return getOwnDataDescriptor(value, property);
+}
+
+function projectedRedactionFields(value: unknown): readonly unknown[] | undefined {
+  try {
+    if (!Array.isArray(value)) return EMPTY_REDACTION_PATHS;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    )
+      return undefined;
+    if (lengthDescriptor.value > MAX_REDACTION_PATHS) return TOO_MANY_REDACTION_PATHS;
+    const fields: unknown[] = [];
+    for (let index = 0; index < lengthDescriptor.value; index += 1) {
+      const field = descriptorValue(value, String(index));
+      if (field === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+      fields.push(field === MISSING_OWN_DATA_DESCRIPTOR ? undefined : field.value);
+    }
+    return Object.freeze(fields);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectToolTimelineEntry(value: unknown): CanonicalToolTimelineEntry | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const idDescriptor = descriptorValue(value, 'id');
+    const nameDescriptor = descriptorValue(value, 'name');
+    const argsDescriptor = descriptorValue(value, 'args');
+    const statusDescriptor = descriptorValue(value, 'status');
+    const resultDescriptor = descriptorValue(value, 'result');
+    const errorDescriptor = descriptorValue(value, 'error');
+    const sourceKeyDescriptor = descriptorValue(value, 'sourceKey');
+    const iconDescriptor = descriptorValue(value, 'icon');
+    const startedAtDescriptor = descriptorValue(value, 'startedAt');
+    const endedAtDescriptor = descriptorValue(value, 'endedAt');
+    const retryCountDescriptor = descriptorValue(value, 'retryCount');
+    const redactedFieldsDescriptor = descriptorValue(value, 'redactedFields');
+    const needsApprovalDescriptor = descriptorValue(value, 'needsApproval');
+    const approvedDescriptor = descriptorValue(value, 'approved');
+    if (
+      [
+        idDescriptor,
+        nameDescriptor,
+        argsDescriptor,
+        statusDescriptor,
+        resultDescriptor,
+        errorDescriptor,
+        sourceKeyDescriptor,
+        iconDescriptor,
+        startedAtDescriptor,
+        endedAtDescriptor,
+        retryCountDescriptor,
+        redactedFieldsDescriptor,
+        needsApprovalDescriptor,
+        approvedDescriptor,
+      ].some((descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR)
+    )
+      return undefined;
+    const valueOf = (descriptor: ReturnType<typeof getOwnDataDescriptor>): unknown | undefined => {
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
+        return undefined;
+      return descriptor.value;
+    };
+    const id = valueOf(idDescriptor);
+    if (typeof id !== 'string' || id.trim().length === 0) return undefined;
+    const redactedFieldsValue = valueOf(redactedFieldsDescriptor);
+    const redactedFields = redactedFieldsValue === undefined
+      ? EMPTY_REDACTION_PATHS
+      : projectedRedactionFields(redactedFieldsValue);
+    if (redactedFields === undefined) return undefined;
+    const name = valueOf(nameDescriptor);
+    const status = valueOf(statusDescriptor);
+    const result = valueOf(resultDescriptor);
+    const error = valueOf(errorDescriptor);
+    const sourceKey = valueOf(sourceKeyDescriptor);
+    const icon = valueOf(iconDescriptor);
+    const startedAt = valueOf(startedAtDescriptor);
+    const endedAt = valueOf(endedAtDescriptor);
+    const retryCount = valueOf(retryCountDescriptor);
+    const needsApproval = valueOf(needsApprovalDescriptor);
+    const approved = valueOf(approvedDescriptor);
+    return Object.freeze({
+      source: value as ToolTimelineEntry,
+      id,
+      name: typeof name === 'string' ? name : '',
+      args: valueOf(argsDescriptor),
+      status: TOOL_STATUSES.has(status as ToolCallStatus) ? status as ToolCallStatus : 'pending',
+      ...(result === undefined ? {} : { result }),
+      ...(typeof error === 'string' ? { error } : {}),
+      ...(typeof sourceKey === 'string' ? { sourceKey } : {}),
+      ...(typeof icon === 'string' ? { icon } : {}),
+      ...(typeof startedAt === 'number' ? { startedAt } : {}),
+      ...(typeof endedAt === 'number' ? { endedAt } : {}),
+      ...(typeof retryCount === 'number' ? { retryCount } : {}),
+      redactedFields,
+      ...(typeof needsApproval === 'boolean' ? { needsApproval } : {}),
+      ...(typeof approved === 'boolean' ? { approved } : {}),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function entrySourceKey(entry: CanonicalToolTimelineEntry): string | undefined {
+  return entry.sourceKey?.trim() ? entry.sourceKey : undefined;
+}
+
+function entryIdentity(entry: CanonicalToolTimelineEntry): string {
+  return JSON.stringify([entrySourceKey(entry) ?? null, entry.id]);
+}
+
+function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActivateDetail {
+  const sourceKey = entrySourceKey(entry);
+  return sourceKey === undefined
+    ? { invocationId: entry.id }
+    : { invocationId: entry.id, sourceKey };
 }
 
 /** `hour:minute` in the component's effective locale -- identical algorithm to
@@ -179,7 +316,7 @@ function redactBranch(
 
 /** Entry point for `redactBranch()` -- a no-op (returns `value` unchanged) whenever `paths` is
  *  empty, so the common unredacted case never allocates a clone. */
-function redactField(value: unknown, root: string, paths: readonly string[], placeholder: string): unknown {
+function redactField(value: unknown, root: string, paths: readonly unknown[], placeholder: string): unknown {
   if (paths.length === 0) return value;
   if (paths.length > MAX_REDACTION_PATHS) return placeholder;
   const relevant: string[] = [];
@@ -203,7 +340,7 @@ interface RedactionCacheEntry extends RedactedEntry {
   sourceArgs: unknown;
   sourceResult: unknown;
   sourceError: unknown;
-  sourcePaths: readonly string[];
+  sourcePaths: readonly unknown[];
   placeholder: string;
 }
 
@@ -249,8 +386,11 @@ interface RedactionCacheEntry extends RedactedEntry {
  * belonging to an entry that isn't pending approval emits the timeline-owned, correlated
  * `lr-tool-activate`; raw child selection and disclosure lifecycle events are contained.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Public collection properties take bounded readonly snapshots. `entries` retains each source
+ * object and its opaque `args`/`result` payloads by identity only while a closed descriptor-safe
+ * projection copies the fields this component uses; later rendering never re-reads an admitted
+ * source record. Create a new collection and reassign it after changes; mutating the assigned
+ * array does not update the view.
  *
  * @customElement lr-tool-timeline
  * @event lr-tool-approval-decide - A pending entry's approval dialog was resolved.
@@ -320,6 +460,9 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
+  /** Provider tool payloads can be opaque objects. Preserve row identity at the array boundary,
+   * then admit only one descriptor-safe canonical record for every rendering path. */
+  protected static override readonly identityCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
@@ -340,9 +483,9 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   @state() private reviewingEntryKey?: string;
   @state() private approvalPending: ToolTimelineApprovalPending = null;
   @state() private openedEntryIds = new Set<string>();
-  private projectedEntriesCache: ToolTimelineEntry[] = [];
+  private projectedEntriesCache: CanonicalToolTimelineEntry[] = [];
   private projectionTruncated = false;
-  private redactionCache = new WeakMap<ToolTimelineEntry, RedactionCacheEntry>();
+  private redactionCache = new WeakMap<CanonicalToolTimelineEntry, RedactionCacheEntry>();
   private limitAnnouncementSink?: AnnouncementSink;
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
@@ -410,18 +553,15 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
 
   private rebuildProjection(): void {
     const entries = Array.isArray(this.entries) ? this.entries : [];
-    const projected: ToolTimelineEntry[] = [];
+    const projected: CanonicalToolTimelineEntry[] = [];
     const projectedIndex = new Map<string, number>();
     const reservedKeys = new Set(this.openedEntryIds);
     if (this.reviewingEntryKey !== undefined) reservedKeys.add(this.reviewingEntryKey);
-    const displacedReserved = new Map<string, ToolTimelineEntry>();
+    const displacedReserved = new Map<string, CanonicalToolTimelineEntry>();
     const seen = new Set<string>();
-    for (const sourceEntry of firstByIdentity(entries, (entry) =>
-      typeof entry?.id === 'string' && entry.id.trim().length > 0
-        ? entryIdentity(entry)
-        : undefined
-    )) {
-      const entry = normalizeEntry(sourceEntry);
+    for (const sourceEntry of entries) {
+      const entry = projectToolTimelineEntry(sourceEntry);
+      if (!entry) continue;
       const key = entryIdentity(entry);
       if (seen.has(key)) continue;
       seen.add(key);
@@ -445,7 +585,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     this.projectionTruncated = seen.size > projected.length;
   }
 
-  private get sortedEntries(): ToolTimelineEntry[] {
+  private get sortedEntries(): CanonicalToolTimelineEntry[] {
     return this.projectedEntriesCache
       .map((entry, index) => ({ entry, index }))
       .sort((a, b) => {
@@ -456,13 +596,13 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
       .map(({ entry }) => entry);
   }
 
-  private get reviewingEntry(): ToolTimelineEntry | undefined {
+  private get reviewingEntry(): CanonicalToolTimelineEntry | undefined {
     return this.reviewingEntryKey === undefined
       ? undefined
       : this.projectedEntriesCache.find((entry) => entryIdentity(entry) === this.reviewingEntryKey);
   }
 
-  private durationFor(entry: ToolTimelineEntry): number | undefined {
+  private durationFor(entry: CanonicalToolTimelineEntry): number | undefined {
     if (entry.startedAt == null || entry.endedAt == null) return undefined;
     const diff = entry.endedAt - entry.startedAt;
     return Number.isFinite(diff) ? diff : undefined;
@@ -474,7 +614,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
-  private onChipSelect(entry: ToolTimelineEntry, event: Event): void {
+  private onChipSelect(entry: CanonicalToolTimelineEntry, event: Event): void {
     event.stopPropagation();
     if (entry.needsApproval && entry.approved === undefined) {
       this.reviewingEntryKey = entryIdentity(entry);
@@ -542,7 +682,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     this.approvalPending = null;
   }
 
-  private onDetailsToggle(entry: ToolTimelineEntry, event: CustomEvent<{ open: boolean }>): void {
+  private onDetailsToggle(entry: CanonicalToolTimelineEntry, event: CustomEvent<{ open: boolean }>): void {
     event.stopPropagation();
     const key = entryIdentity(entry);
     const next = new Set(this.openedEntryIds);
@@ -556,15 +696,15 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
 
   private onRenderError(
-    entry: ToolTimelineEntry,
+    entry: CanonicalToolTimelineEntry,
     event: CustomEvent<{ toolName: string; error: unknown }>,
   ): void {
     event.stopPropagation();
     this.emit('lr-tool-render-error', { ...entryCorrelation(entry), ...event.detail });
   }
 
-  private redactedEntry(entry: ToolTimelineEntry, placeholder: string): RedactedEntry {
-    const paths = Array.isArray(entry.redactedFields) ? entry.redactedFields : [];
+  private redactedEntry(entry: CanonicalToolTimelineEntry, placeholder: string): RedactedEntry {
+    const paths = entry.redactedFields;
     const cached = this.redactionCache.get(entry);
     if (
       cached
@@ -594,7 +734,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     return redacted;
   }
 
-  private openedDetailsTemplate(entry: ToolTimelineEntry, placeholder: string): TemplateResult {
+  private openedDetailsTemplate(entry: CanonicalToolTimelineEntry, placeholder: string): TemplateResult {
     const redacted = this.redactedEntry(entry, placeholder);
     return html`
       <lr-tool-result-view
@@ -609,7 +749,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     `;
   }
 
-  private entryTemplate(entry: ToolTimelineEntry, placeholder: string): TemplateResult {
+  private entryTemplate(entry: CanonicalToolTimelineEntry, placeholder: string): TemplateResult {
     const started = this.normalizedDate(entry.startedAt);
     const durationMs = this.durationFor(entry);
     const retryCount = finiteCount(entry.retryCount ?? 0);

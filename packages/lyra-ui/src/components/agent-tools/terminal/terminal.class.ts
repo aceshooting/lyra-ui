@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
@@ -203,6 +204,15 @@ export interface LyraTerminalEventMap {
  * @cssprop [--lr-terminal-height=var(--lr-size-20rem)] - Block size of `[part="viewport"]`, the
  *   scrollable log region. Not declared on `:host`, so it is inherited — set it on the host or any
  *   ancestor.
+ * @cssprop [--lr-terminal-surface-color=var(--lr-color-surface-raised)] - Card-frame background
+ *   and the fallback foreground for inverse ANSI segments without an explicit background. The
+ *   `frame="plain"` escape remains transparent.
+ * @cssprop [--lr-terminal-toolbar-button-hover-bg=var(--lr-color-brand-quiet)] - Hover background
+ *   of `[part="copy-button"]` and `[part="download-button"]`.
+ * @cssprop [--lr-terminal-toolbar-button-active-bg=color-mix(in oklab, var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of the toolbar buttons.
+ * @cssprop [--lr-terminal-line-hover-bg=var(--lr-color-brand-quiet)] - Hover background of an
+ *   ordinary rendered `[part="line"]`.
+ * @cssprop [--lr-terminal-line-active-bg=color-mix(in oklab, var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of an ordinary rendered line.
  * @cssprop [--lr-terminal-highlight-accent-bg=var(--lr-color-brand-quiet)] - Background of an
  *   `accent`-tone highlighted line. Decoupled from the shared `--lr-color-brand-quiet` token also
  *   used by `[part="copy-button"]`/`[part="download-button"]`'s hover state, and from any
@@ -310,6 +320,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   private lineSeq = 0;
   private column = 0;
   private appliedContent = '';
+  private readonly terminalLineKey = (item: unknown): number => (item as TerminalLine).number;
   private readonly ansiParser = createAnsiParser();
   private copyTimeoutId?: number;
   private copyTimeoutWindow?: Window;
@@ -1021,7 +1032,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         >
           <lr-virtual-list
             exportparts="line:line, line-interactive:line-interactive, line-highlight-accent:line-highlight-accent, line-highlight-success:line-highlight-success, line-highlight-warning:line-highlight-warning, line-highlight-danger:line-highlight-danger, line-highlight-neutral:line-highlight-neutral, line-match:line-match, line-active-match:line-active-match"
-            .items=${this.lines}
+            .items=${guard([this.lines], () => this.lines)}
             .renderItem=${(item: unknown) =>
               this.renderLine(
                 item as TerminalLine,
@@ -1030,7 +1041,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
                 matchedLineNumbers,
                 activeMatchLineNumber,
               )}
-            .keyFunction=${(item: unknown) => (item as TerminalLine).number}
+            .keyFunction=${this.terminalLineKey}
             .activeItemId=${this.scrollTargetLineNumber ?? ''}
             row-height=${this.wrap ? 'auto' : '24'}
             @lr-visible-range-change=${this.onVisibleRangeChanged}

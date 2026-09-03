@@ -413,7 +413,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     const firstId = ordered.rows[0]?.run.id;
     return html`
       <div part="base">
-        ${this.runs.length
+        ${ordered.rows.length
           ? html`<ul
               part="list"
               role="tree"

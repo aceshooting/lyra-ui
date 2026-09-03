@@ -49,6 +49,11 @@ import {
 } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
@@ -130,6 +135,32 @@ const CANVAS_NODE_LABEL_MIN_ZOOM = 0.5; // canvas-only declutter -- node labels 
 // WebKit does not pointer-hit-test a mathematically zero-length SVG line. A sub-pixel segment
 // preserves the circular target created by the round, zoom-compensated 24px stroke in every engine.
 const NODE_HIT_SEGMENT_HALF = 0.5;
+
+/** Admits only own data-string values from controlled graph rows. This keeps malformed runtime
+ * input out of rendered text without evaluating an accessor or coercing an arbitrary object. */
+function ownGraphText(
+  value: object,
+  property: PropertyKey
+): string | undefined {
+  const descriptor = getOwnDataDescriptor(value, property);
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof descriptor.value !== 'string'
+    ? undefined
+    : descriptor.value;
+}
+
+/** Reads an own data value without crossing an accessor-backed row property. */
+function ownGraphValue(
+  value: object,
+  property: PropertyKey
+): unknown | undefined {
+  const descriptor = getOwnDataDescriptor(value, property);
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    ? undefined
+    : descriptor.value;
+}
 
 /**
  * Tiny deterministic PRNG (mulberry32, public-domain) used only when `seed`
@@ -1647,22 +1678,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       });
       const edgeLabels =
         this.showEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom
-          ? this.simLinks
-              .filter((l) => l.label)
-              .map((l) => {
-                const pos = this.edgeLabelPosition(l);
-                const coords = this.linkCoordinates(l);
-                const edgeLength = Math.hypot(
-                  coords.x2 - coords.x1,
-                  coords.y2 - coords.y1
-                );
-                const tooLong =
-                  this.edgeLabelWidth(l.label!) >
-                  edgeLength * EDGE_LABEL_LENGTH_GATE_RATIO;
-                return { x: pos.x, y: pos.y, text: l.label!, tooLong };
-              })
-              .filter((l) => !l.tooLong)
-              .map(({ x, y, text }) => ({ x, y, text }))
+          ? this.simLinks.flatMap((l) => {
+              const label = ownGraphText(l, 'label');
+              if (!label) return [];
+              const pos = this.edgeLabelPosition(l);
+              const coords = this.linkCoordinates(l);
+              const edgeLength = Math.hypot(
+                coords.x2 - coords.x1,
+                coords.y2 - coords.y1
+              );
+              const tooLong =
+                this.edgeLabelWidth(label) >
+                edgeLength * EDGE_LABEL_LENGTH_GATE_RATIO;
+              return tooLong ? [] : [{ x: pos.x, y: pos.y, text: label }];
+            })
           : [];
       const nodeFillDefault =
         cs.getPropertyValue('--lr-node-fill').trim() ||
@@ -1679,13 +1708,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           dimmed: this.isDimmed('node', n.id),
         };
       });
-      const nodeLabels = this.simNodes
-        .filter((n) => n.label)
-        .map((n) => ({
-          x: (n.x ?? 0) + this.nodeRadius(n) + 2,
-          y: n.y ?? 0,
-          text: n.label!,
-        }));
+      const nodeLabels = this.simNodes.flatMap((n) => {
+        const label = ownGraphText(n, 'label');
+        return label
+          ? [
+              {
+                x: (n.x ?? 0) + this.nodeRadius(n) + 2,
+                y: n.y ?? 0,
+                text: label,
+              },
+            ]
+          : [];
+      });
       const expandIndicators = this.simNodes
         .filter((n) => n.expandable)
         .map((n) => ({ x: n.x ?? 0, y: n.y ?? 0, r: this.nodeRadius(n) }));
@@ -2742,13 +2776,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.simLinks.forEach((l, i) => {
         const labelEl = this.linkLabelEls[i];
         if (!labelEl) return;
+        const label = ownGraphText(l, 'label');
         const pos = this.edgeLabelPosition(l);
         labelEl.setAttribute('x', String(pos.x));
         labelEl.setAttribute('y', String(pos.y));
         const { x1, y1, x2, y2 } = this.linkCoordinates(l);
         const edgeLength = Math.hypot(x2 - x1, y2 - y1);
         const tooLong =
-          this.edgeLabelWidth(l.label ?? '') >
+          this.edgeLabelWidth(label ?? '') >
           edgeLength * EDGE_LABEL_LENGTH_GATE_RATIO;
         if (this.linkLabelHiddenByLength[i] !== tooLong) {
           this.linkLabelHiddenByLength[i] = tooLong;
@@ -3159,12 +3194,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private nodeAccessibleText(node: LyraGraphNode): string {
-    let text = node.accessibleLabel || node.label || node.id;
+    let text =
+      ownGraphText(node, 'accessibleLabel') ||
+      ownGraphText(node, 'label') ||
+      node.id;
     const type = this.resolveNodeType(node);
-    if (type)
+    const typeLabel = type ? ownGraphText(type, 'label') : undefined;
+    if (typeLabel !== undefined)
       text = this.localize('graphTypedNode', undefined, {
         label: text,
-        type: type.label,
+        type: typeLabel,
       });
     if (node.expandable)
       text = this.localize('graphExpandableItem', undefined, { item: text });
@@ -3172,7 +3211,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   /** One bounded tooltip/content-summary model shared by SVG, canvas and live announcements. */
-  private boundedGraphText(value: string): string {
+  private boundedGraphText(value: unknown): string {
+    if (typeof value !== 'string') return '';
     const normalized = value.replace(/\s+/g, ' ').trim();
     return normalized.length > 512
       ? `${normalized.slice(0, 512)}…`
@@ -3181,30 +3221,41 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private nodeTooltipText(node: LyraGraphNode): string {
     return this.boundedGraphText(
-      node.description || node.label || node.accessibleLabel || node.id
+      ownGraphText(node, 'description') ||
+        ownGraphText(node, 'label') ||
+        ownGraphText(node, 'accessibleLabel') ||
+        node.id
     );
   }
 
   private linkAccessibleText(link: SimLink): string {
-    if (link.accessibleLabel) return link.accessibleLabel;
+    const accessibleLabel = ownGraphText(link, 'accessibleLabel');
+    if (accessibleLabel) return accessibleLabel;
+    const sourceValue = ownGraphValue(link, 'source');
+    const targetValue = ownGraphValue(link, 'target');
     const source =
-      typeof link.source === 'object'
-        ? this.nodeAccessibleText(link.source as SimNode)
-        : String(link.source);
+      sourceValue !== null && typeof sourceValue === 'object'
+        ? this.nodeAccessibleText(sourceValue as SimNode)
+        : typeof sourceValue === 'string'
+        ? sourceValue
+        : '';
     const target =
-      typeof link.target === 'object'
-        ? this.nodeAccessibleText(link.target as SimNode)
-        : String(link.target);
+      targetValue !== null && typeof targetValue === 'object'
+        ? this.nodeAccessibleText(targetValue as SimNode)
+        : typeof targetValue === 'string'
+        ? targetValue
+        : '';
     return (
-      link.label || this.localize('graphLink', undefined, { source, target })
+      ownGraphText(link, 'label') ||
+      this.localize('graphLink', undefined, { source, target })
     );
   }
 
   private linkTooltipText(link: SimLink): string {
     return this.boundedGraphText(
-      link.description ||
-        link.label ||
-        link.accessibleLabel ||
+      ownGraphText(link, 'description') ||
+        ownGraphText(link, 'label') ||
+        ownGraphText(link, 'accessibleLabel') ||
         this.linkAccessibleText(link)
     );
   }
@@ -3360,6 +3411,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return index < 0 ? -1 : this.communityIndexBase() + index;
   }
 
+  private communityText(community: LyraGraphCommunity): string {
+    return ownGraphText(community, 'label') ?? community.id;
+  }
+
   private graphItemText(index: number): string {
     if (index < this.linkIndexBase()) {
       const node = this.simNodes[index];
@@ -3376,7 +3431,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const entry = this.visibleCommunities()[index - this.communityIndexBase()];
     return entry
       ? this.localize('graphCommunity', undefined, {
-          label: entry.community.label ?? entry.community.id,
+          label: this.communityText(entry.community),
           count: getNumberFormat(this.effectiveLocale).format(
             entry.members.length
           ),
@@ -3545,7 +3600,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               (entry) =>
                 html`<li>
                   ${this.localize('graphCommunity', undefined, {
-                    label: entry.community.label ?? entry.community.id,
+                    label: this.communityText(entry.community),
                     count: getNumberFormat(this.effectiveLocale).format(
                       entry.members.length
                     ),
@@ -3609,7 +3664,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             ${this.visibleCommunities().map((entry, hi) => {
               const i = this.communityIndexBase() + hi;
               const label = this.localize('graphCommunity', undefined, {
-                label: entry.community.label ?? entry.community.id,
+                label: this.communityText(entry.community),
                 count: getNumberFormat(this.effectiveLocale).format(
                   entry.members.length
                 ),
@@ -3681,7 +3736,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const hull = this.communityHull(entry.members);
               const fill = sanitizeNodeColor(entry.community.color);
               const label = this.localize('graphCommunity', undefined, {
-                label: entry.community.label ?? entry.community.id,
+                label: this.communityText(entry.community),
                 count: getNumberFormat(this.effectiveLocale).format(
                   entry.members.length
                 ),
@@ -3714,9 +3769,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 ></path>
                 <text part="community-label" aria-hidden="true" x=${hullCentroidX(
                   hull
-                )} y=${hullTopY(hull) - HULL_PADDING}>${
-                entry.community.label ?? entry.community.id
-              }</text>
+                )} y=${hullTopY(hull) - HULL_PADDING}>${this.communityText(
+                entry.community
+              )}</text>
               </g>`;
             })}
             ${this.simLinks.map((l) => {
@@ -3728,8 +3783,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const coordinates = this.linkCoordinates(l);
               const color = sanitizeNodeColor(l.color);
               const dash = normalizeLinkDash(l.dash);
+              const visibleLabel = ownGraphText(l, 'label');
               const labelPos =
-                this.showEdgeLabels && l.label
+                this.showEdgeLabels && visibleLabel
                   ? this.edgeLabelPosition(l)
                   : undefined;
               const hitLineEl = svg`<line
@@ -3811,7 +3867,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               // remain a sibling, so an unlabeled public <line part="link"> keeps the same parent
               // and consumer-facing part geometry it had before the expanded target was added.
               return labelPos
-                ? svg`<g>${hitLineEl}${lineEl}<text part="link-label" aria-hidden="true" text-anchor="middle" x=${labelPos.x} y=${labelPos.y}>${l.label}</text></g>`
+                ? svg`<g>${hitLineEl}${lineEl}<text part="link-label" aria-hidden="true" text-anchor="middle" x=${labelPos.x} y=${labelPos.y}>${visibleLabel}</text></g>`
                 : svg`${hitLineEl}${lineEl}`;
             })}
             ${this.danglingLinks.map((l) => {
@@ -3834,6 +3890,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const tabindex =
                 this.normalizedGraphItem() === itemIndex ? '0' : '-1';
               const label = this.nodeAccessibleText(n);
+              const visibleLabel = ownGraphText(n, 'label');
               // Unlike link styling below (which always renders style=${styleMap(...)}, even as
               // an empty string), an untyped/unknown-type node must render with NO style
               // attribute at all -- not just an empty one -- so hasAttribute('style') distinguishes
@@ -3914,10 +3971,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 ${hitEl}
                 ${shapeEl}
                 ${
-                  n.label
+                  visibleLabel
                     ? svg`<text part="label" aria-hidden="true" x=${
                         (n.x ?? 0) + this.nodeRadius(n) + 2
-                      } y=${n.y ?? 0}>${n.label}</text>`
+                      } y=${n.y ?? 0}>${visibleLabel}</text>`
                     : ''
                 }
                 ${
@@ -3986,7 +4043,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             (entry) =>
               html`<li>
                 ${this.localize('graphCommunity', undefined, {
-                  label: entry.community.label ?? entry.community.id,
+                  label: this.communityText(entry.community),
                   count: getNumberFormat(this.effectiveLocale).format(
                     entry.members.length
                   ),

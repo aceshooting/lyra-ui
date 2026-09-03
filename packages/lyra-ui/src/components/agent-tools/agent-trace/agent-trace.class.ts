@@ -10,7 +10,7 @@ import { normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 import type { LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_popover, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_popover, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -80,8 +80,10 @@ export interface LyraAgentTraceEventMap {
  * shape, so
  * a host can encode the current span id in a URL and feed it straight back in.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Public collection properties take bounded readonly snapshots. `spans` keeps its admitted item
+ * identities only long enough for the shared descriptor-safe projection to copy its fields; later
+ * rendering never re-reads an admitted source row. Create a new collection and reassign it after
+ * changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-agent-trace
  * @event lr-span-select - `detail: { spanId }` — a span was activated, from the tree or the handoff list.
@@ -114,10 +116,16 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     spanKindOther: LYRA_DEFAULT_spanKindOther,
     spanKindRetriever: LYRA_DEFAULT_spanKindRetriever,
     spanKindTool: LYRA_DEFAULT_spanKindTool,
+    tokensIn: LYRA_DEFAULT_tokensIn,
+    tokensOut: LYRA_DEFAULT_tokensOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['spans', 'hiddenKinds']);
+  /** Span sources can carry opaque provider metadata; the shared normalizer copies only its closed
+   * display schema once, so cloning each whole source record would both lose opaque identity and
+   * create an unsafe second traversal. */
+  protected static override readonly identityCollectionProperties = Object.freeze(['spans']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -193,6 +201,12 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     this.emit('lr-span-visibility-change', { hiddenKinds: [...this.hiddenKinds] });
   };
 
+  /** Keeps the composed legend's cancelable proposal within this wrapper without changing its
+   * default-prevented state. The child still owns the proposal, commit, and announcement. */
+  private onBeforeVisibilityChange = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   /** Keeps `activeSpanId` (and therefore the handoff list's own highlighting) in sync when
    *  selection originates inside the composed `<lr-trace-tree>` rather than the handoff quick-jump
    *  list. The original event is never stopped here, so it still reaches a host listener on this
@@ -216,6 +230,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
         .label=${this.localize('agentTraceFilterLabel')}
         .types=${types}
         .hiddenTypes=${this.hiddenKinds}
+        @lr-before-visibility-change=${this.onBeforeVisibilityChange}
         @lr-visibility-change=${this.onVisibilityChange}
       ></lr-graph-legend>
     `;

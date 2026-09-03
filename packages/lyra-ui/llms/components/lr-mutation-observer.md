@@ -31,6 +31,14 @@ form of `attr`, equivalent to `attr: '*'`) and `characterData` (`character-data`
 `charData`). Plus `subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`
 (neither reflects).
 
+The browser capability is optional. A missing or throwing owner-window lookup, or an unavailable or
+throwing constructor, leaves that rebuild inert rather than leaking an exception. Individual
+`observe` and `disconnect` failures are contained, so later valid targets and later rebuilds can still observe.
+Callbacks from a retired document are ignored after disconnect or adoption. `attributeFilter` is
+likewise a bounded own-data snapshot (examining at most its first 10,000 direct data entries);
+malformed or accessor-backed entries are skipped, a valid prefix remains active, and an entirely
+unusable value falls back to an empty filter.
+
 **Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
 `detail.records` and mapped `detail.mutationList` reference the same sequence, while each native
 `MutationRecord` retains identity.

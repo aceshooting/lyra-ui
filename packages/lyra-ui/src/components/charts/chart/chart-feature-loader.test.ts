@@ -546,6 +546,32 @@ describe('annotation feature loading', () => {
     expect(registrationFailure.warnings.flat()).to.contain(registrationError);
   });
 
+  it('allows a later annotation request to retry after an unavailable peer', async () => {
+    const chart = fakeChartModule();
+    let attempts = 0;
+    const unavailable = await captureWarnings(() =>
+      loadChartAndAnnotation(
+        () => Promise.resolve(chart),
+        () => {
+          attempts += 1;
+          return Promise.reject(new Error('annotation peer unavailable'));
+        },
+      ),
+    );
+    expect(unavailable.result.kind).to.equal('feature-unavailable');
+
+    const retry = await loadChartAndAnnotation(
+      () => Promise.resolve(chart),
+      () => {
+        attempts += 1;
+        return Promise.resolve({ default: { id: 'annotation-retry' } });
+      },
+    );
+    expect(attempts).to.equal(2);
+    expect(retry.kind).to.equal('available');
+    if (retry.kind === 'available') expect(retry.plugin.id).to.equal('annotation-retry');
+  });
+
   it('rejects malformed annotation namespaces and memoizes the page-wide result', async () => {
     for (const malformed of [null, {}, { default: { id: '' } }]) {
       const { result, warnings } = await captureWarnings(() =>

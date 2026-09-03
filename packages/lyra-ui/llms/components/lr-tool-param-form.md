@@ -127,8 +127,8 @@ fired once up front at connect time and after every effective change; serializat
 publish their root message as `errors.base` and `formError`), and no-detail `focus`/`blur` events for
 generated native text/number inputs. The composed
 `<lr-select>` controls already bubble their own focus/blur bridges through the host.
-Their implementation events (`input`, `change`, `lr-change`, select show/hide, and option mutation)
-are contained at the form boundary; consumers receive the single form-level `lr-input` contract.
+Nested control events (`input`, `change`, `lr-change`, select show/hide, and option mutation) are
+contained at the form boundary; consumers receive the single form-level `lr-input` contract.
 `lr-invalid` (no detail) is the bubbling/composed, cancelable alias emitted when the complete
 parameter form fails a native validity check; preventing it also prevents the native `invalid`
 event's default validation UI.

@@ -128,10 +128,28 @@ export const styles = css`
 
   [part="search"]:hover {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
+    background: var(
+      --lr-data-grid-control-hover-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-hover),
+        transparent
+      )
+    );
   }
 
   [part="search"]:active {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
+    background: var(
+      --lr-data-grid-control-active-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-active),
+        transparent
+      )
+    );
   }
 
   [part="search"]:focus-visible,
@@ -166,18 +184,26 @@ export const styles = css`
   button:hover:not(:disabled) {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(
-      --row-hover-background,
-      var(--_lr-data-grid-row-hover-background)
+      --lr-data-grid-control-hover-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-hover),
+        transparent
+      )
     );
   }
 
   button:active:not(:disabled) {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
-    background: color-mix(
-      in srgb,
-      var(--accent-color, var(--_lr-data-grid-accent-color))
-        var(--lr-color-mix-active),
-      transparent
+    background: var(
+      --lr-data-grid-control-active-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-active),
+        transparent
+      )
     );
   }
 
@@ -259,17 +285,25 @@ export const styles = css`
 
   [part~="header-cell"][data-sortable]:hover {
     background: var(
-      --row-hover-background,
-      var(--_lr-data-grid-row-hover-background)
+      --lr-data-grid-sortable-header-hover-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-hover),
+        transparent
+      )
     );
   }
 
   [part~="header-cell"][data-sortable]:active {
-    background: color-mix(
-      in srgb,
-      var(--accent-color, var(--_lr-data-grid-accent-color))
-        var(--lr-color-mix-active),
-      transparent
+    background: var(
+      --lr-data-grid-sortable-header-active-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-active),
+        transparent
+      )
     );
   }
 
@@ -325,11 +359,14 @@ export const styles = css`
      The selected row is the one a user presses to DEselect, so placing this first would leave the
      commonest press in a selectable grid with no feedback. */
   [part~="row"]:active {
-    background: color-mix(
-      in srgb,
-      var(--accent-color, var(--_lr-data-grid-accent-color))
-        var(--lr-color-mix-active),
-      transparent
+    background: var(
+      --lr-data-grid-row-active-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-active),
+        transparent
+      )
     );
   }
 
@@ -387,6 +424,23 @@ export const styles = css`
     background: inherit;
   }
 
+  /* The body is the only scrollport. A vertical scrollbar reduces its logical inline-end edge,
+     while header/footer pins otherwise resolve against the clipped outer grid. Mirror that gutter
+     only for those outer end pins so start pins and body pins retain their native sticky edge. */
+  [part="header"] > [data-pin="right"],
+  [part="footer-row"] > [data-pin="right"] {
+    inset-inline-end: calc(
+      var(--pin-offset, 0) + var(--data-grid-body-inline-end-gutter, 0)
+    );
+  }
+
+  /* Header/footer live outside the sole scrollport. Only ordinary tracks mirror its physical
+     offset; pinned tracks keep their sticky logical inset against the clipped grid viewport. */
+  [part="header"] > :not([data-pin]),
+  [part="footer-row"] > :not([data-pin]) {
+    translate: var(--data-grid-scroll-translation, 0) 0;
+  }
+
   [part="pin-indicator"] {
     position: absolute;
     inset-block: 0;
@@ -414,21 +468,28 @@ export const styles = css`
     touch-action: none;
   }
 
-  [part="resize-handle"]:hover {
-    background: color-mix(
-      in srgb,
-      var(--accent-color, var(--_lr-data-grid-accent-color))
-        var(--lr-color-mix-hover),
-      transparent
+  [part="resize-handle"]:hover:not(:where([data-resizing])) {
+    background: var(
+      --lr-data-grid-control-hover-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-hover),
+        transparent
+      )
     );
   }
 
-  [part="resize-handle"]:active {
-    background: color-mix(
-      in srgb,
-      var(--accent-color, var(--_lr-data-grid-accent-color))
-        var(--lr-color-mix-active),
-      transparent
+  [part="resize-handle"]:active,
+  [part="resize-handle"]:where([data-resizing]) {
+    background: var(
+      --lr-data-grid-control-active-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-active),
+        transparent
+      )
     );
   }
 
@@ -574,13 +635,27 @@ export const styles = css`
 
   [part="page-size"]:hover {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
+    background: var(
+      --lr-data-grid-control-hover-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-hover),
+        transparent
+      )
+    );
   }
 
   [part="page-size"]:active {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(
-      --row-hover-background,
-      var(--_lr-data-grid-row-hover-background)
+      --lr-data-grid-page-size-active-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-hover),
+        transparent
+      )
     );
   }
 

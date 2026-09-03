@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./document-viewer.js";
 import {
   clearDocumentRenderers,
@@ -8,10 +8,25 @@ import {
 } from "./registry.js";
 import type { LyraDocumentViewer } from "./document-viewer.js";
 import type { DialogCloseReason } from "../../overlays/dialog/dialog.class.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 afterEach(() => {
   clearDocumentRenderers();
 });
+
+function cssColorAlpha(color: string): number {
+  const slash = color.match(/\/\s*([\d.]+)(%)?\s*\)$/);
+  if (slash) {
+    const value = Number(slash[1]);
+    return slash[2] === '%' ? value / 100 : value;
+  }
+  const rgba = color.match(/^rgba?\((.*)\)$/);
+  if (!rgba) return 1;
+  const values = rgba[1]!.split(',');
+  if (values.length !== 4) return 1;
+  const alpha = values[3]!.trim();
+  return alpha.endsWith('%') ? Number(alpha.slice(0, -1)) / 100 : Number(alpha);
+}
 
 describe("defaults", () => {
   it("defaults to closed with optional file properties unset", async () => {
@@ -56,6 +71,81 @@ describe("defaults", () => {
 
     expect(getComputedStyle(inheritedBody).maxBlockSize).to.equal("123px");
     expect(getComputedStyle(directBody).maxBlockSize).to.equal("111px");
+  });
+});
+
+describe('download state CSS properties', () => {
+  it('paints independently inherited and direct hover/active hooks after settled pointer input', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        style="--lr-document-viewer-download-link-hover-bg: rgb(1, 2, 3); --lr-document-viewer-download-link-active-bg: rgb(4, 5, 6)"
+      >
+        <lr-document-viewer
+          open
+          style="--lr-document-viewer-download-link-hover-bg: rgb(7, 8, 9)"
+          name="report.pdf"
+          mime-type="application/pdf"
+          src="https://example.test/report.pdf"
+        ></lr-document-viewer>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-document-viewer') as LyraDocumentViewer;
+    const link = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="download-link"]')!;
+    link.addEventListener('click', (event) => event.preventDefault());
+
+    try {
+      await hoverUntilMatched(link, 'viewer download link never registered :hover');
+      await waitUntil(
+        () => getComputedStyle(link).backgroundColor === 'rgb(7, 8, 9)',
+        'the direct hover hook never painted',
+      );
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(link).backgroundColor === 'rgb(4, 5, 6)',
+        'the inherited active hook never painted',
+      );
+      el.style.setProperty('--lr-document-viewer-download-link-active-bg', 'rgb(10, 11, 12)');
+      await waitUntil(
+        () => getComputedStyle(link).backgroundColor === 'rgb(10, 11, 12)',
+        'the direct active hook never superseded the inherited value',
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('keeps default hover and active paint opaque when --lr-color-shadow is hostile in light and dark scopes', async () => {
+    for (const themeClass of ['lr-light', 'lr-dark']) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div class=${themeClass} style="--lr-color-shadow: rgb(0 0 0 / 0)">
+          <lr-document-viewer
+            open
+            name="report.pdf"
+            mime-type="application/pdf"
+            src="https://example.test/report.pdf"
+          ></lr-document-viewer>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-document-viewer') as LyraDocumentViewer;
+      const link = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="download-link"]')!;
+      link.addEventListener('click', (event) => event.preventDefault());
+      try {
+        await hoverUntilMatched(link, `${themeClass} viewer download link never registered :hover`);
+        await waitUntil(
+          () => cssColorAlpha(getComputedStyle(link).backgroundColor) >= 0.999,
+          `${themeClass} hover paint inherited translucent shadow alpha`,
+        );
+        await sendMouse({ type: 'down' });
+        await waitUntil(
+          () => cssColorAlpha(getComputedStyle(link).backgroundColor) >= 0.999,
+          `${themeClass} active paint inherited translucent shadow alpha`,
+        );
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    }
   });
 });
 

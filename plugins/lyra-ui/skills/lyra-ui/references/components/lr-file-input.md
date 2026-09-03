@@ -108,10 +108,8 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 `resetValidity()`; reset clears only consumer custom validity and restores current intrinsic
 `required` validity.
 
-**Events:** a user selection or removal emits native bubbling/composed `input`, then `change`;
-programmatic `files` writes are silent. The hidden native picker's own `change` is contained inside
-the shadow root, so a picker selection exposes exactly one post-commit host `change`, not the
-implementation event plus a duplicate. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
+**Events:** a user selection or removal emits native bubbling/composed `input`, then exactly one
+host `change`; programmatic `files` writes are silent. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
 frozen readonly `files` and `rejected` arrays and frozen rejected-file records, fired on both drop
 and manual file-picker selection; immutable `File` objects retain identity) —
 `LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
@@ -172,10 +170,9 @@ What this changes for you:
 - **Nothing about what the visible text says or where it renders.** `[part="rejection"]`'s text is
   ordinary visible content and stays in the accessibility tree, so a user who reaches it reads it
   normally. Both parts remain the right styling hooks.
-- **A test that asserted `::part(rejection)` had `role="alert"`, or that read announcements out of
-  `::part(status)`, now fails.** Assert against the shared light-DOM region instead — query
-  `[data-lr-live-region="assertive"]` (or `"polite"`) in the document, which is also where every
-  other Lyra announcement lands.
+- **Read announcements from the shared light-DOM region** — query
+  `[data-lr-live-region="assertive"]` or `[data-lr-live-region="polite"]` in the document rather
+  than the styling parts.
 - **A `::part(rejection)[role]`-style selector never matched anyway** — an attribute selector
   cannot follow `::part()`. Nothing that worked before stopped working.
 

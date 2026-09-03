@@ -115,9 +115,8 @@ already focused on the chip still hears an upload failure — goes to the librar
   can read at their own pace, and a retry that fails the same way twice is announced twice rather
   than being a silent no-op. The ticking `uploading` readout announces nothing at all — a live
   region re-announcing every progress tick is noise, not information.
-- A test that asserted `::part(status-text)` had `role="alert"` now fails; query
-  `[data-lr-live-region="assertive"]` in the document instead. `::part(status-text)` is still the
-  styling hook, and still the place to read the visible status wording.
+- Read the announcement from `[data-lr-live-region="assertive"]` in the document;
+  `::part(status-text)` remains the styling hook and visible-status text.
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),

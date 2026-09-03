@@ -70,11 +70,12 @@ const PYTHON_FRAME = /^\s*File \x22([^\x22]+)\x22, line ([^,]*), in (.+)$/;
 // Keep language detection strict. PYTHON_FRAME intentionally recognizes malformed coordinate
 // candidates after a traceback has already been identified, but prose resembling such a line must
 // not make a JavaScript trace skip its valid V8/Firefox frames.
-const PYTHON_CHAIN_SEPARATOR = /direct cause|During handling/;
+const PYTHON_CHAIN_SEPARATOR = /^(?:The above exception was the direct cause of the following exception:|During handling of the above exception, another exception occurred:)\s*$/;
+const PYTHON_EMPTY_TRAILER = /^(?:[A-Za-z_][A-Za-z0-9_]*)(?:\.[A-Za-z_][A-Za-z0-9_]*)*:?\s*$/;
 // Equivalent to the original `\S+(\.\S+)*:\s` -- `\S` already matches `.`, so the `(\.\S+)*`
 // group added no coverage, only exponential backtracking (CodeQL js/redos) on input like many
 // repetitions of '!.'.
-const PYTHON_EXC_TRAILER = /^\s*\S+:\s/;
+const PYTHON_EXC_TRAILER = /^\S+:\s/;
 
 interface V8FrameWithFn {
   fn: string;
@@ -278,7 +279,8 @@ function parsePython(lines: string[], internalPatterns: readonly (string | RegEx
         !PYTHON_FRAME.test(maybeSource) &&
         !PYTHON_HEADER.test(maybeSource) &&
         !PYTHON_CHAIN_SEPARATOR.test(maybeSource) &&
-        !PYTHON_EXC_TRAILER.test(maybeSource);
+        !PYTHON_EXC_TRAILER.test(maybeSource) &&
+        !PYTHON_EMPTY_TRAILER.test(maybeSource);
       if (isContinuation) {
         frame.raw += `\n${maybeSource}`;
         i++;
@@ -291,7 +293,10 @@ function parsePython(lines: string[], internalPatterns: readonly (string | RegEx
   const parsedGroups = groups
     .filter((g) => g.frames.length > 0 || g.trailerLines.some((l) => l.trim() !== ''))
     .map((g) => ({
-      message: g.trailerLines.join('\n').trim(),
+      message: g.trailerLines.filter((line) => line.trim() !== '').length === 1
+        && PYTHON_EMPTY_TRAILER.test(g.trailerLines.find((line) => line.trim() !== '') ?? '')
+        ? ''
+        : g.trailerLines.join('\n').trim(),
       frames: [...g.frames].reverse(),
     }));
   const structuredCount = parsedGroups.reduce((n, group) => n + group.frames.filter((frame) => frame.file !== undefined).length, 0);

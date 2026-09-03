@@ -8,7 +8,6 @@ import type {
   LyraPaletteItem,
 } from './node-palette.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.js';
-import { styles } from './node-palette.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -59,56 +58,97 @@ it('renders an empty item collection as a disabled listbox option', async () => 
   await expect(el).to.be.accessible();
 });
 
-it('keeps an explicitly empty label genuinely empty instead of falling back to the localized default', async () => {
+it('uses the localized listbox fallback for blank labels without changing raw label readback', async () => {
   const el = (await fixture(
-    html`<lr-node-palette label="" .items=${items}></lr-node-palette>`
+    html`<lr-node-palette
+      .items=${items}
+      .strings=${{ nodePaletteLabel: 'Localized palette' }}
+    ></lr-node-palette>`
   )) as LyraNodePalette;
   await el.updateComplete;
   const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
-  expect(el.label).to.equal('');
-  expect(listbox.getAttribute('aria-label')).to.equal('');
 
-  el.setAttribute('aria-label', 'Custom');
+  el.label = '';
   await el.updateComplete;
-  expect(listbox.getAttribute('aria-label')).to.equal('');
+  expect(el.label).to.equal('');
+  expect(listbox.getAttribute('aria-label')).to.equal('Localized palette');
+
+  el.label = ' \t ';
+  await el.updateComplete;
+  expect(el.label).to.equal(' \t ');
+  expect(listbox.getAttribute('aria-label')).to.equal('Localized palette');
+
+  el.strings = { nodePaletteLabel: 'Updated palette' };
+  await el.updateComplete;
+  expect(listbox.getAttribute('aria-label')).to.equal('Updated palette');
+  await expect(el).to.be.accessible();
 });
 
-it('keeps explicit-empty and dynamic host naming distinct from the listbox label', async () => {
+it('uses a direct accessibleLabel for the actual listbox without reflecting a host aria-label', async () => {
+  const el = document.createElement('lr-node-palette') as LyraNodePalette;
+  el.items = items;
+  el.strings = { nodePaletteLabel: 'Localized palette' };
+  el.accessibleLabel = 'Before connection';
+  expect(el.hasAttribute('aria-label')).to.equal(false);
+
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
+    expect(listbox.getAttribute('aria-label')).to.equal('Before connection');
+    expect(el.hasAttribute('aria-label')).to.equal(false);
+
+    el.accessibleLabel = 'After connection';
+    await el.updateComplete;
+    expect(listbox.getAttribute('aria-label')).to.equal('After connection');
+    expect(el.hasAttribute('aria-label')).to.equal(false);
+
+    el.accessibleLabel = null;
+    await el.updateComplete;
+    expect(listbox.getAttribute('aria-label')).to.equal('Localized palette');
+  } finally {
+    el.remove();
+  }
+});
+
+it('keeps dynamic authored host naming distinct from the listbox label', async () => {
   const el = (await fixture(
-    html`<lr-node-palette .items=${items}></lr-node-palette>`
+    html`<lr-node-palette
+      .items=${items}
+      .strings=${{ nodePaletteLabel: 'Localized palette' }}
+    ></lr-node-palette>`
   )) as LyraNodePalette;
   await el.updateComplete;
   const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
-  expect(listbox.getAttribute('aria-label') === 'Node palette').to.equal(true);
-
-  el.label = 'Workflow nodes';
+  el.accessibleLabel = 'Direct listbox name';
   await el.updateComplete;
-  expect(listbox.getAttribute('aria-label')).to.equal('Workflow nodes');
+  expect(listbox.getAttribute('aria-label')).to.equal('Direct listbox name');
+  expect(el.hasAttribute('aria-label')).to.equal(false);
 
   el.setAttribute('aria-label', 'Automation blocks');
   await el.updateComplete;
   expect(el.accessibleLabel).to.equal('Automation blocks');
   expect(el.getAttribute('aria-label')).to.equal('Automation blocks');
-  expect(listbox.getAttribute('aria-label')).to.equal('Workflow nodes');
+  expect(listbox.getAttribute('aria-label')).to.equal('Localized palette');
 
   el.setAttribute('aria-label', '');
   await el.updateComplete;
   expect(el.hasAttribute('aria-label')).to.equal(true);
   expect(el.getAttribute('aria-label')).to.equal('');
-  expect(listbox.getAttribute('aria-label')).to.equal('Workflow nodes');
+  expect(listbox.getAttribute('aria-label')).to.equal('Localized palette');
 
   el.setAttribute('aria-label', 'Revised blocks');
   await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.equal('Revised blocks');
-  expect(listbox.getAttribute('aria-label')).to.equal('Workflow nodes');
+  expect(listbox.getAttribute('aria-label')).to.equal('Localized palette');
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.equal(null);
-  expect(listbox.getAttribute('aria-label')).to.equal('Workflow nodes');
+  expect(listbox.getAttribute('aria-label')).to.equal('Localized palette');
 });
 
-it("falls back to the localized listbox label when the host names itself but the palette's own label stays unset", async () => {
+it('falls back to the localized listbox label when the host names itself but the palette label stays unset', async () => {
   const el = (await fixture(
     html`<lr-node-palette
       aria-label="Host name"
@@ -118,8 +158,8 @@ it("falls back to the localized listbox label when the host names itself but the
   await el.updateComplete;
   expect(el.label).to.be.undefined;
   const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
-  // hostLabel !== null (the host named itself) but el.label is unset, so the listbox falls all
-  // the way through to the localized default instead of adopting the host's own name.
+  // The authored host label remains on the host, while the semantic listbox receives its own
+  // localized fallback.
   expect(listbox.getAttribute('aria-label') === 'Node palette').to.equal(true);
 });
 
@@ -218,6 +258,75 @@ it('treats a non-array items value as empty and omits malformed rows before a va
   expect(rendered.map((item) => item.textContent?.trim())).to.deep.equal([
     'Valid node',
   ]);
+});
+
+it('projects admitted item fields once from own data descriptors without invoking accessors', async () => {
+  let unsafeReads = 0;
+  const accessorBacked = Object.create(null) as LyraPaletteItem;
+  Object.defineProperties(accessorBacked, {
+    type: { configurable: true, enumerable: true, value: 'unsafe' },
+    label: { configurable: true, enumerable: true, value: 'Unsafe' },
+    category: {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        unsafeReads += 1;
+        throw new Error('the palette must not invoke source accessors');
+      },
+    },
+  });
+  const source: LyraPaletteItem = {
+    type: 'alpha',
+    label: 'Alpha',
+    category: 'Data',
+    keywords: ['first'],
+  };
+  const el = (await fixture(
+    html`<lr-node-palette .items=${[accessorBacked, source]}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  expect(unsafeReads).to.equal(0);
+  expect(
+    Array.from(el.shadowRoot!.querySelectorAll('[part="item-label"]')).map(
+      (item) => item.textContent
+    )
+  ).to.deep.equal(['Alpha']);
+
+  let sourceReads = 0;
+  Object.defineProperty(source, 'label', {
+    configurable: true,
+    get: () => {
+      sourceReads += 1;
+      throw new Error('admitted sources must stay opaque after projection');
+    },
+  });
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = 'alpha';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+
+  expect(sourceReads).to.equal(0);
+  expect(
+    Array.from(el.shadowRoot!.querySelectorAll('[part="item-label"]')).map(
+      (item) => item.textContent
+    )
+  ).to.deep.equal(['Alpha']);
+  await expect(el).to.be.accessible();
+});
+
+it('emits the original admitted item object rather than a copied event detail', async () => {
+  const source: LyraPaletteItem = { type: 'source', label: 'Source' };
+  const el = (await fixture(
+    html`<lr-node-palette .items=${[source]}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  let selected: LyraPaletteItem | undefined;
+  el.addEventListener('lr-select', (event) => {
+    selected = (event as LyraNodePaletteEventMap['lr-select']).detail.item;
+  });
+
+  (el.shadowRoot!.querySelector('[part="item"]') as HTMLElement).click();
+  expect(selected === source).to.equal(true);
 });
 
 it('ArrowDown from the search field moves real DOM focus to the first enabled item', async () => {
@@ -913,10 +1022,7 @@ it("adoptedCallback re-arms the announcer's timer host in the new owner window",
   }
 });
 
-it('renders the search focus ring and retains the native search-cancel reset declaration', async () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='search'\]::-webkit-search-cancel-button/);
-
+it('renders the search focus ring', async () => {
   const el = await fixture<LyraNodePalette>(html`
     <lr-node-palette
       style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6)"
@@ -929,6 +1035,78 @@ it('renders the search focus ring and retains the native search-cancel reset dec
     const computed = getComputedStyle(input);
     return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(4, 5, 6)';
   }, 'the node-palette search keyboard focus ring never painted');
+});
+
+it('removes the native search reset affordance where the engine supplies one', async () => {
+  const el = await fixture<LyraNodePalette>(html`
+    <lr-node-palette style="inline-size: 20rem" .items=${items}></lr-node-palette>
+  `);
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
+
+  if (!CSS.supports('selector(input::-webkit-search-cancel-button)')) {
+    expect(input.type).to.equal('search');
+    expect(
+      el.shadowRoot!.querySelectorAll(
+        '[part="search"] + button, [part="search"] + [role="button"]'
+      ).length
+    ).to.equal(0);
+    return;
+  }
+
+  const nativeDecoration = document.createElement('style');
+  nativeDecoration.textContent = `
+    [part='search']::-webkit-search-cancel-button {
+      appearance: auto !important;
+      -webkit-appearance: searchfield-cancel-button !important;
+      display: block !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+  `;
+  el.shadowRoot!.append(nativeDecoration);
+  input.focus();
+  const rect = input.getBoundingClientRect();
+  try {
+    let cancelPosition: [number, number] | undefined;
+    for (let offset = 2; offset <= 48; offset += 2) {
+      input.value = 'clear me';
+      input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
+      );
+      const candidate: [number, number] = [
+        Math.round(rect.right - offset),
+        Math.round(rect.top + rect.height / 2),
+      ];
+      await sendMouse({ type: 'click', position: candidate });
+      if (input.value === '') {
+        cancelPosition = candidate;
+        break;
+      }
+    }
+    expect(
+      cancelPosition !== undefined,
+      'positive control exposes the native clear action'
+    ).to.equal(true);
+
+    input.value = 'keep me';
+    input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+    nativeDecoration.remove();
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+    await sendMouse({ type: 'click', position: cancelPosition! });
+    expect(
+      input.value,
+      'component styling removes the native clear action'
+    ).to.equal('keep me');
+  } finally {
+    nativeDecoration.remove();
+    await resetMouse();
+  }
 });
 
 it("renders the search field's ::placeholder in the shared quiet-text token's color instead of the UA default", async () => {
@@ -1075,6 +1253,44 @@ describe('reorderable', () => {
       itemLabels(el),
       'the palette never reorders its own items'
     ).to.deep.equal(['HTTP Request', 'Transform', 'Send Email', 'Webhook']);
+  });
+
+  it('keeps original host-array indices when an accessor-backed row is omitted', async () => {
+    let unsafeReads = 0;
+    const accessorBacked = Object.create(null) as LyraPaletteItem;
+    Object.defineProperties(accessorBacked, {
+      type: { configurable: true, enumerable: true, value: 'unsafe' },
+      label: {
+        configurable: true,
+        enumerable: true,
+        get: () => {
+          unsafeReads += 1;
+          throw new Error('the palette must not invoke source accessors');
+        },
+      },
+    });
+    const first: LyraPaletteItem = { type: 'first', label: 'First' };
+    const second: LyraPaletteItem = { type: 'second', label: 'Second' };
+    const el = (await fixture(
+      html`<lr-node-palette
+        reorderable
+        .items=${[accessorBacked, first, second]}
+      ></lr-node-palette>`
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    expect(unsafeReads).to.equal(0);
+
+    const firstRow = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
+    const pending = oneEvent(el, 'lr-reorder');
+    pressReorder(firstRow, 'ArrowDown');
+    const detail = (await pending)
+      .detail as LyraNodePaletteEventMap['lr-reorder']['detail'];
+    expect(detail).to.deep.equal({
+      type: 'first',
+      category: null,
+      fromIndex: 1,
+      toIndex: 2,
+    });
   });
 
   it('counts a disabled neighbour, so a request never silently jumps over a visible row', async () => {

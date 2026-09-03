@@ -36,6 +36,8 @@ export const styles = css`
   [part='search']::-webkit-search-cancel-button,
   [part='search']::-webkit-search-decoration {
     appearance: none;
+    -webkit-appearance: none;
+    display: none;
   }
   [part='search']::placeholder {
     color: var(--lr-color-text-quiet);

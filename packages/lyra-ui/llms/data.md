@@ -471,7 +471,16 @@ body-cell text, `--lr-data-grid-cell-link-color` (default `var(--lr-color-brand)
 anchors, and `--lr-data-grid-cell-link-hover-color` (default
 `var(--lr-data-grid-cell-link-color, var(--lr-color-brand))`) controls those anchors on hover,
 focus-visible, and active interaction. Set the link color to `revert` to restore the user-agent
-default.
+default. Six independent interaction-background hooks preserve those state boundaries:
+`--lr-data-grid-control-hover-background` and `--lr-data-grid-control-active-background` theme
+search, toolbar, pager, and resize controls; `--lr-data-grid-page-size-active-background` themes
+the page-size selector when pressed; `--lr-data-grid-row-active-background` themes pressed data
+rows; and `--lr-data-grid-sortable-header-hover-background` and
+`--lr-data-grid-sortable-header-active-background` theme sortable header states. They default to
+live `color-mix()` values of the effective grid accent and transparent, using the corresponding
+`--lr-color-mix-hover` or `--lr-color-mix-active` token (the page-size pressed state intentionally
+uses the hover mix), so an accent override remains coherent while each surface can still be
+overridden independently.
 
 ```html
 <lr-data-grid
@@ -3089,9 +3098,11 @@ Responsive month calendar with event markers and an agenda view.
 **Properties:**
 
 - `events: CalendarEvent[] = []` (attribute: false) — `{ readonly id?, readonly date, readonly
-title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is
-  sanitized before being used as the marker background. The former ignored `start`/`end` fields
-  are not part of the contract; use one event per displayed date
+title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` string, finite epoch
+  milliseconds, or a valid `Date`, then normalizes to the displayed ISO day. Invalid date/title rows
+  are omitted; `lr-event-select.detail.event` remains the original admitted object. `color` is
+  sanitized before use as the marker background. The former ignored `start`/`end` fields are not
+  part of the contract; use one event per displayed date
 - `value: string = ''` — the selected ISO date
 - `viewDate: string` (attribute `view-date`, defaults to the 1st of the current month) — the visible
   month; an unparseable value falls back to the current month
@@ -3133,6 +3144,10 @@ and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, ap
 day's background; `--lr-calendar-day-outside-color` (default `var(--lr-color-text-quiet)`) and
 `--lr-calendar-day-outside-bg` (default `var(--lr-color-surface)`) for adjacent-month days; and
 `--lr-calendar-day-today-outline-color` (default `var(--lr-color-brand)`) for today's outline.
+`--lr-calendar-nav-hover-bg`, `--lr-calendar-nav-active-bg`, `--lr-calendar-day-hover-bg`,
+`--lr-calendar-day-active-bg`, `--lr-calendar-agenda-event-hover-bg`, and
+`--lr-calendar-agenda-event-active-bg` independently theme navigation, day, and agenda-event
+hover/pressed states through inheritable inline fallbacks.
 These state hooks use inline fallbacks at their paint rules, so an application theme can set them
 on an ancestor. They keep persistent selection, outside-month chrome, and today's outline
 independent from shared tokens that also drive unrelated component states.
@@ -3505,6 +3520,26 @@ name continues to identify each row's destructive action.
 At allocations of 320px or less, each condition stacks its composed field/operator/value controls
 into one column. Long field labels and localized operator text remain contained and ellipsize inside
 the nested `lr-select` triggers in both LTR and RTL; they do not widen the host or document.
+
+## Consumer integration notes
+
+- **Data grid:** variable-height rows use `[part="body"]` as the only vertical and horizontal scroll
+  viewport; header and footer mirror its logical inline position. Resize `aria-valuenow` stays in
+  CSS pixels while `aria-valuetext` is localized with the effective locale. Row/group measurement is
+  cached by stable identity: after width, columns, locale, or display structure changes, a pending
+  `scrollToIndex()` target realigns after measurement unless a user scroll supersedes the correction.
+  `--lr-data-grid-control-hover-background`, `--lr-data-grid-control-active-background`,
+  `--lr-data-grid-page-size-active-background`, `--lr-data-grid-row-active-background`,
+  `--lr-data-grid-sortable-header-hover-background`, and
+  `--lr-data-grid-sortable-header-active-background` theme those independent state surfaces.
+- **Table:** resize-handle numeric ARIA ranges remain CSS pixels, with localized current-pixel
+  `aria-valuetext`. Adjacent row-expand controls inherit table typography and use a `1em` glyph.
+- **Flow canvas:** only direct child cards participate. A matching `node-id` receives the managed
+  `node-{id}` slot. When the canvas stops managing a card, it restores that card's original `slot`
+  only if it has not changed in the meantime; a later author-set `slot` is left intact. Unmatched
+  direct cards do not render because there is no catch-all slot. The first completed connected
+  layout is silent even if truncated; it still shows the limit and emits `lr-layout-change`, while
+  only a later false-to-true truncation transition announces.
 
 ## Exported TypeScript contracts
 

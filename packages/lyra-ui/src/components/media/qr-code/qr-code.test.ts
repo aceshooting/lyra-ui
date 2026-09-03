@@ -50,6 +50,15 @@ function installFakeLoader(el: LyraQrCode, api: FakeQrCodeApi | null): void {
   (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () => Promise.resolve(api);
 }
 
+function restoreOwnProperty(
+  target: object,
+  name: PropertyKey,
+  descriptor: PropertyDescriptor | undefined,
+): void {
+  if (descriptor) Object.defineProperty(target, name, descriptor);
+  else delete (target as Record<PropertyKey, unknown>)[name];
+}
+
 async function waitForPart(el: LyraQrCode, part: string): Promise<void> {
   const selector = part === 'canvas' ? 'canvas:not([hidden])' : `[part="${part}"]`;
   await waitUntil(() => el.shadowRoot!.querySelector(selector) !== null);
@@ -70,10 +79,8 @@ describe('lr-qr-code', () => {
     // by design, since its whole purpose is priming the actual peer for a real application.
     // `qrcode` is a genuine multi-file CommonJS package with no single-file browser bundle
     // (qr-code-loader.test.ts's own skipped "caches the real optional module result" test
-    // documents the same gap), so this test browser cannot resolve it and the loader's documented
-    // fail-closed `console.warn()` fires -- exactly the behavior under test, not a bug. Stub
-    // `console.warn` locally (matching qr-code-loader.test.ts's "returns null and logs the import
-    // error" pattern) so that expected warning doesn't trip strict-console mode.
+    // documents the same gap), so this test browser cannot resolve it. Its fixed development-only
+    // diagnostic is expected; stub `console.warn` locally so it does not trip strict-console mode.
     const originalWarn = console.warn;
     console.warn = () => {};
     try {
@@ -562,9 +569,11 @@ describe('lr-qr-code', () => {
     let observerConstructions = 0;
     let observerDisconnects = 0;
     let observedInOwnerRealm = false;
+    let ownerObserverCallback: IntersectionObserverCallback | undefined;
     class OwnerIntersectionObserver {
-      constructor(_callback: IntersectionObserverCallback) {
+      constructor(callback: IntersectionObserverCallback) {
         observerConstructions += 1;
+        ownerObserverCallback = callback;
       }
       observe(target: Element): void {
         observedInOwnerRealm = target.ownerDocument === frameDocument;
@@ -610,6 +619,10 @@ describe('lr-qr-code', () => {
       expect(canvas === initialCanvas).to.equal(true);
       expect(observerConstructions).to.equal(1);
       expect(observedInOwnerRealm).to.be.true;
+      ownerObserverCallback!(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
       expect(canvas.width).to.equal(80);
       expect(canvas.height).to.equal(80);
 
@@ -738,8 +751,11 @@ describe('lr-qr-code', () => {
       fakeApi(() => ({ modules: fakeModules(true) })),
     );
     const originalWarn = console.warn;
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
     const calls: unknown[][] = [];
     console.warn = (...args: unknown[]) => calls.push(args);
+    runtime.litIssuedWarnings = new Set();
     try {
       el.value = 'hello';
       await waitForPart(el, 'canvas');
@@ -750,15 +766,38 @@ describe('lr-qr-code', () => {
       expect(pixel[0]).to.equal(0);
       expect(pixel[1]).to.equal(0);
       expect(pixel[2]).to.equal(0);
-      const matches = calls.filter((args) => args.join(' ').includes('not-a-color'));
-      expect(matches.length).to.equal(1);
+      expect(calls).to.have.length(1);
+      const diagnostic = calls.flat().map(String).join(' ');
+      expect(diagnostic).to.equal('<lr-qr-code> received an invalid color and used its fallback color.');
+      expect(diagnostic).to.not.contain('not-a-color');
 
       // A second draw with the same bad value must not warn again.
       el.refreshTheme();
-      const stillMatches = calls.filter((args) => args.join(' ').includes('not-a-color'));
-      expect(stillMatches.length).to.equal(1);
+      expect(calls).to.have.length(1);
     } finally {
       console.warn = originalWarn;
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+    }
+  });
+
+  it('keeps invalid-color diagnostics silent when Lit development diagnostics are unavailable', async () => {
+    const el = (await fixture(html`<lr-qr-code fill="not-a-color"></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    const originalWarn = console.warn;
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    delete runtime.litIssuedWarnings;
+    try {
+      el.value = 'production diagnostic';
+      await waitForPart(el, 'canvas');
+      expect(calls).to.have.length(0);
+    } finally {
+      console.warn = originalWarn;
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
     }
   });
 
@@ -1028,6 +1067,279 @@ describe('lr-qr-code', () => {
     (el as unknown as { draw(): void }).draw();
     await el.updateComplete;
     expect(parseInt(canvas.style.width, 10)).to.equal(150);
+  });
+
+  it('loads and generates while observer visibility is unknown, then paints only after a valid true entry', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+    let callback: IntersectionObserverCallback | undefined;
+    let observedTarget: Element | undefined;
+    class ControlledIntersectionObserver {
+      constructor(next: IntersectionObserverCallback) {
+        callback = next;
+      }
+      observe(target: Element): void {
+        observedTarget = target;
+      }
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: ControlledIntersectionObserver,
+    });
+
+    let el: LyraQrCode | undefined;
+    try {
+      el = (await fixture(html`<lr-qr-code size="40"></lr-qr-code>`)) as LyraQrCode;
+      let loads = 0;
+      installFakeLoader(
+        el,
+        fakeApi(() => {
+          loads++;
+          return { modules: fakeModules(true) };
+        }),
+      );
+      el.value = 'deferred paint';
+      await waitForPart(el, 'canvas');
+      const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+      expect(observedTarget === el).to.be.true;
+      expect(loads).to.equal(1);
+      expect(state.visible).to.be.false;
+      expect(state.visibilityKnown).to.be.false;
+      expect(el.canvas.width).to.equal(300);
+
+      callback!([], {} as IntersectionObserver);
+      callback!([{} as IntersectionObserverEntry], {} as IntersectionObserver);
+      const hostileEntry = Object.defineProperty({}, 'target', {
+        get: () => { throw new Error('malformed observer entry'); },
+      });
+      callback!(
+        [null, hostileEntry] as unknown as IntersectionObserverEntry[],
+        {} as IntersectionObserver,
+      );
+      const { proxy: revokedEntries, revoke } = Proxy.revocable([], {});
+      revoke();
+      callback!(revokedEntries as unknown as IntersectionObserverEntry[], {} as IntersectionObserver);
+      const throwingEntries = new Proxy([], {
+        get(target, key, receiver) {
+          if (key === Symbol.iterator) throw new Error('throwing observer entries container');
+          return Reflect.get(target, key, receiver);
+        },
+      });
+      callback!(throwingEntries as unknown as IntersectionObserverEntry[], {} as IntersectionObserver);
+      expect(el.canvas.width).to.equal(300);
+      callback!(
+        [{ target: el, isIntersecting: false } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      el.size = 50;
+      await el.updateComplete;
+      expect(el.canvas.width).to.equal(300);
+
+      callback!(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(el.canvas.width).to.equal(100);
+      el.size = 60;
+      await el.updateComplete;
+      expect(el.canvas.width).to.equal(120);
+    } finally {
+      el?.remove();
+      restoreOwnProperty(window, 'IntersectionObserver', descriptor);
+    }
+  });
+
+  const eagerVisibilityFallbackCases: ReadonlyArray<readonly [string, () => void]> = [
+    [
+      'the capability lookup throws',
+      () => Object.defineProperty(window, 'IntersectionObserver', {
+        configurable: true,
+        get: () => { throw new Error('unavailable observer capability'); },
+      }),
+    ],
+    [
+      'the constructor throws',
+      () => Object.defineProperty(window, 'IntersectionObserver', {
+        configurable: true,
+        value: class {
+          constructor() { throw new Error('observer constructor failed'); }
+        },
+      }),
+    ],
+    [
+      'observe throws',
+      () => Object.defineProperty(window, 'IntersectionObserver', {
+        configurable: true,
+        value: class {
+          constructor(_callback: IntersectionObserverCallback) {}
+          observe(): void { throw new Error('observer rejected target'); }
+          unobserve(): void {}
+          disconnect(): void {}
+          takeRecords(): IntersectionObserverEntry[] { return []; }
+        },
+      }),
+    ],
+  ];
+
+  for (const [name, install] of eagerVisibilityFallbackCases) {
+    it(`falls back to eager painting when ${name}`, async () => {
+      const descriptor = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+      install();
+      let el: LyraQrCode | undefined;
+      try {
+        el = (await fixture(html`<lr-qr-code size="40"></lr-qr-code>`)) as LyraQrCode;
+        installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+        el.value = 'eager fallback';
+        await waitForPart(el, 'canvas');
+        const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+        expect(state.visible).to.be.true;
+        expect(state.visibilityKnown).to.be.true;
+        expect(el.canvas.width).to.equal(80);
+      } finally {
+        el?.remove();
+        restoreOwnProperty(window, 'IntersectionObserver', descriptor);
+      }
+    });
+  }
+
+  it('retires stale observer callbacks across disconnect, reconnect, and owner adoption', async () => {
+    interface ObserverRecord {
+      callback: IntersectionObserverCallback;
+      target?: Element;
+      disconnects: number;
+    }
+
+    const mainDescriptor = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+    const mainRecords: ObserverRecord[] = [];
+    class MainIntersectionObserver {
+      readonly record: ObserverRecord;
+      constructor(callback: IntersectionObserverCallback) {
+        this.record = { callback, disconnects: 0 };
+        mainRecords.push(this.record);
+      }
+      observe(target: Element): void {
+        this.record.target = target;
+      }
+      unobserve(): void {}
+      disconnect(): void {
+        this.record.disconnects++;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: MainIntersectionObserver,
+    });
+
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow!;
+    const frameDocument = iframe.contentDocument!;
+    const frameDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'IntersectionObserver');
+    const frameRecords: ObserverRecord[] = [];
+    class FrameIntersectionObserver {
+      readonly record: ObserverRecord;
+      constructor(callback: IntersectionObserverCallback) {
+        this.record = { callback, disconnects: 0 };
+        frameRecords.push(this.record);
+      }
+      observe(target: Element): void {
+        this.record.target = target;
+      }
+      unobserve(): void {}
+      disconnect(): void {
+        this.record.disconnects++;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+    Object.defineProperty(frameWindow, 'IntersectionObserver', {
+      configurable: true,
+      value: FrameIntersectionObserver,
+    });
+
+    let el: LyraQrCode | undefined;
+    try {
+      el = document.createElement('lr-qr-code') as LyraQrCode;
+      el.size = 40;
+      installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+      document.body.append(el);
+      el.value = 'owner generation';
+      await waitForPart(el, 'canvas');
+      const canvas = el.canvas;
+      const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+      expect(mainRecords).to.have.length(1);
+      const firstMain = mainRecords[0]!;
+      expect(firstMain.target === el).to.be.true;
+      firstMain.callback(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(canvas.width).to.equal(80);
+
+      el.remove();
+      expect(firstMain.disconnects).to.equal(1);
+      document.body.append(el);
+      await el.updateComplete;
+      expect(mainRecords).to.have.length(2);
+      const activeMain = mainRecords[1]!;
+      expect(activeMain.target === el).to.be.true;
+      el.size = 50;
+      await el.updateComplete;
+      expect(state.visible).to.be.false;
+      expect(state.visibilityKnown).to.be.false;
+      expect(canvas.width).to.equal(80);
+      firstMain.callback(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(canvas.width).to.equal(80);
+      expect(state.visibilityKnown).to.be.false;
+      activeMain.callback(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(canvas.width).to.equal(100);
+
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      expect(activeMain.disconnects).to.equal(1);
+      expect(frameRecords).to.have.length(1);
+      const activeFrame = frameRecords[0]!;
+      expect(activeFrame.target === el).to.be.true;
+      el.size = 60;
+      await el.updateComplete;
+      expect(state.visible).to.be.false;
+      expect(state.visibilityKnown).to.be.false;
+      expect(canvas.width).to.equal(100);
+      activeMain.callback(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(canvas.width).to.equal(100);
+      expect(state.visibilityKnown).to.be.false;
+      activeFrame.callback(
+        [{ target: el, isIntersecting: true } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(canvas.width).to.equal(120);
+
+      el.remove();
+      expect(activeFrame.disconnects).to.equal(1);
+    } finally {
+      el?.remove();
+      restoreOwnProperty(window, 'IntersectionObserver', mainDescriptor);
+      restoreOwnProperty(frameWindow, 'IntersectionObserver', frameDescriptor);
+      iframe.remove();
+    }
   });
 
   it('no-ops draw() while the load state is not ready', async () => {

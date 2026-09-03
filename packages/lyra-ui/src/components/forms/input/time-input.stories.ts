@@ -17,6 +17,21 @@ export const Default: Story = {
   `,
 };
 
+/** Host-owned guidance is resolved onto the segmented semantic group before its own hint text. */
+export const ExternalDescription: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+      <p id="time-input-external-description">Choose a time during staffed support hours.</p>
+      <lr-time-input
+        aria-describedby="time-input-external-description"
+        hint="Times are shown in your selected locale."
+        label="Appointment time"
+        value="09:30"
+      ></lr-time-input>
+    </div>
+  `,
+};
+
 /** Locale controls the segment order, separators, digits, and day-period labels. */
 export const LocalesAndHourFormats: Story = {
   render: () => html`

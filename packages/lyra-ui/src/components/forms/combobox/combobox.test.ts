@@ -4618,39 +4618,64 @@ describe("clear affordance on the filter axis", () => {
   });
 });
 
-/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
- *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
- *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
- *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
-function renderedClamp(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = "";
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
-  }
-  const probe = document.createElement("span");
-  probe.style.display = "block";
-  probe.style.setProperty("--lr-popover-viewport-clamp", "10px");
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
+it('clamps its focused floating surface width through the shared popover-viewport-clamp token', async () => {
+  const el = (await fixture(html`
+    <lr-combobox
+      style="--lr-popover-viewport-clamp: 10px; --lr-transition-fast: 0s"
+    >
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part="combobox-input"]'
+  )!;
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
 
-it("clamps its floating surface width through the shared popover-viewport-clamp token", async () => {
-  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> })
-    .updateComplete;
-  expect(renderedClamp(el, "[part='listbox']")).to.equal("10px");
+  input.focus();
+  await waitUntil(
+    () =>
+      el.open &&
+      listbox.hasAttribute('data-positioned') &&
+      getComputedStyle(listbox).visibility === 'visible',
+    'the focused combobox did not show a positioned listbox'
+  );
+  await waitUntil(
+    () => getComputedStyle(listbox).maxInlineSize === '10px',
+    'the visible combobox listbox did not receive the viewport clamp'
+  );
+
+  expect(getComputedStyle(listbox).maxInlineSize).to.equal('10px');
+});
+
+it('inherits a 20px host font into clear and tag-remove controls and their one-em glyphs', async () => {
+  const el = (await fixture(html`
+    <lr-combobox
+      multiple
+      clearable
+      style="font: 20px/1 monospace; --lr-combobox-font-size: 20px; --lr-font-size-m: 20px"
+    >
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  el.value = ['a'];
+  await el.updateComplete;
+
+  const clear = el.shadowRoot!.querySelector<HTMLElement>('[part="clear-button"]')!;
+  const clearGlyph = clear.querySelector<SVGElement>('svg')!;
+  const remove = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part~="tag__remove-button"]'
+  )!;
+  const removeGlyph = remove.querySelector<SVGElement>('svg')!;
+
+  expect(getComputedStyle(el).fontSize).to.equal('20px');
+  expect(getComputedStyle(clear).fontSize).to.equal('20px');
+  expect(getComputedStyle(clear).fontFamily).to.equal(getComputedStyle(el).fontFamily);
+  expect(getComputedStyle(clearGlyph).width).to.equal('20px');
+  expect(getComputedStyle(clearGlyph).height).to.equal('20px');
+  expect(getComputedStyle(remove).fontSize).to.equal('20px');
+  expect(getComputedStyle(remove).fontFamily).to.equal(getComputedStyle(el).fontFamily);
+  expect(getComputedStyle(removeGlyph).width).to.equal('20px');
+  expect(getComputedStyle(removeGlyph).height).to.equal('20px');
 });
 
 it("colors the combobox-input's placeholder text instead of leaving the UA default", () => {

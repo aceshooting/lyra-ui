@@ -37,8 +37,10 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper
 
-**Events:** `lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array, fired
-after each toggle).
+**Events:** cancelable `lr-before-visibility-change` (`detail: { hiddenTypes }`, a frozen complete
+next array) fires before a toggle changes state or announces it. Preventing it suppresses all three.
+`lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array) fires after an
+accepted assignment and announcement.
 
 **Slots:** none.
 

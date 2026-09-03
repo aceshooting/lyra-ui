@@ -141,16 +141,17 @@ from assistive technology: do not place independent links, buttons, inputs, form
 targets there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden
 visual contract, while the trigger button remains the sole action. Details has `summary`,
 `header-actions`, `expand-icon`, `collapse-icon`, plus default content. `header-actions` renders
-extra controls (e.g. a trailing "add" button) inside the `<summary>` header row — the one subtree a
-native `<details>` keeps out of its generated content box — so they stay rendered, visible, and
-hit-testable while the panel is collapsed. Activating one never toggles the panel: a click whose
+extra controls (e.g. a trailing "add" button) as a sibling of the private native `<details>` in the
+complete header row, so they stay rendered, visible, and hit-testable while the panel is collapsed
+or disabled. Activating one never toggles the panel: a click whose
 composed path crosses `[part~="header-actions"]` is exempted from disclosure activation. Its wrapper
 is hidden and reclaims layout space whenever the slot is empty.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
 same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
-exposes `base` and `details` on the same native `<details>` wrapper, plus `header`, `summary`,
-`icon`, `header-actions`, and `content`.
+exposes `base` and `details` on the same outer container, plus `header`, `summary`, `icon`,
+`header-actions`, and `content`. The native `<details>` is private; `content` is inside its
+findable `hidden="until-found"` closed-state gate.
 The Details icon wrapper also carries Shoelace's `summary-icon` alias, so either part name styles
 the same node. `header-actions` is the wrapper around the `header-actions` slot.
 

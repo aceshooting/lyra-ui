@@ -1610,3 +1610,181 @@ describe("back-compat", () => {
     expect(lines).to.deep.equal(["  a", "- b", "+ c"]);
   });
 });
+
+it('contains hostile non-string text and language descriptors without rejecting its update', async () => {
+  const hostileText = new Proxy({}, {
+    get() {
+      throw new Error('text must not be read');
+    },
+  });
+  const hostileLanguages = new Proxy({}, {
+    get() {
+      throw new Error('language map must not be read');
+    },
+  });
+  const el = (await fixture(html`<lr-diff-view .oldText=${'old'} .newText=${'new'}></lr-diff-view>`)) as LyraDiffView;
+  const seam = el as unknown as {
+    oldText: unknown;
+    languages: unknown;
+    language: unknown;
+    loadHighlighterCore: () => Promise<unknown>;
+  };
+  let loads = 0;
+  seam.loadHighlighterCore = () => {
+    loads += 1;
+    return Promise.resolve(null);
+  };
+
+  seam.oldText = hostileText;
+  seam.languages = hostileLanguages;
+  seam.language = 'text';
+  let rejected = false;
+  try {
+    await el.updateComplete;
+  } catch {
+    rejected = true;
+  }
+
+  expect(rejected).to.equal(false);
+  expect(el.shadowRoot!.textContent).to.contain('+ new');
+  expect(loads).to.equal(0);
+});
+
+it('contains an optional highlighter-loader rejection and retains the plain diff', async () => {
+  const el = (await fixture(html`<lr-diff-view .oldText=${'old'} .newText=${'new'}></lr-diff-view>`)) as LyraDiffView;
+  const seam = el as unknown as {
+    languages: unknown;
+    language: unknown;
+    loadHighlighterCore: () => Promise<unknown>;
+  };
+  seam.loadHighlighterCore = () => Promise.reject(new Error('optional loader failed'));
+  seam.languages = { text: {} };
+  seam.language = 'text';
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(el.shadowRoot!.textContent).to.contain('old');
+  expect(el.shadowRoot!.textContent).to.contain('new');
+});
+
+it('bounds language descriptor projection before an enumerable hostile tail', async () => {
+  const languageMap = Object.create(null) as Record<string, unknown>;
+  languageMap['text'] = {};
+  for (let index = 0; index < 30_000; index += 1) languageMap[`tail-${index}`] = {};
+  languageMap['unreachable-tail'] = {};
+  let descriptorReads = 0;
+  let objectKeysCalls = 0;
+  const originalDescriptor = Object.getOwnPropertyDescriptor;
+  const originalKeys = Object.keys;
+  Object.getOwnPropertyDescriptor = function <T>(value: T, key: PropertyKey) {
+    if ((value as unknown) === languageMap) descriptorReads += 1;
+    return originalDescriptor(value, key);
+  };
+  Object.keys = ((value: object): string[] => {
+    if (value === languageMap) {
+      objectKeysCalls += 1;
+      throw new Error('language projection must not use Object.keys');
+    }
+    return originalKeys(value);
+  }) as typeof Object.keys;
+  const el = (await fixture(html`<lr-diff-view .oldText=${'old'} .newText=${'new'}></lr-diff-view>`)) as LyraDiffView;
+  const seam = el as unknown as {
+    languages: unknown;
+    language: unknown;
+    loadHighlighterCore: () => Promise<unknown>;
+  };
+  let loads = 0;
+  seam.loadHighlighterCore = () => {
+    loads += 1;
+    return Promise.resolve(null);
+  };
+
+  try {
+    seam.languages = languageMap;
+    seam.language = 'text';
+    await el.updateComplete;
+    await aTimeout(0);
+  } finally {
+    Object.getOwnPropertyDescriptor = originalDescriptor;
+    Object.keys = originalKeys;
+  }
+
+  expect(loads).to.equal(1);
+  expect(objectKeysCalls).to.equal(0);
+  expect(descriptorReads <= 10_000).to.equal(true);
+});
+
+it('retains a later language descriptor after a hostile proxy descriptor trap', async () => {
+  let descriptorTrapReads = 0;
+  const languages = new Proxy(
+    {},
+    {
+      ownKeys: () => ['unsafe', 'text'],
+      getOwnPropertyDescriptor(_target, key) {
+        if (key === 'unsafe') {
+          descriptorTrapReads += 1;
+          throw new Error('unsafe language descriptor must not discard text');
+        }
+        return key === 'text'
+          ? { value: {}, enumerable: true, configurable: true }
+          : undefined;
+      },
+    },
+  );
+  const el = (await fixture(html`<lr-diff-view .oldText=${'old'} .newText=${'new'}></lr-diff-view>`)) as LyraDiffView;
+  const seam = el as unknown as {
+    languages: unknown;
+    language: string;
+    loadHighlighterCore: (value: Record<string, unknown>) => Promise<unknown>;
+  };
+  let loads = 0;
+  seam.loadHighlighterCore = (value) => {
+    loads += 1;
+    expect(Object.hasOwn(value, 'text')).to.equal(true);
+    return Promise.resolve(null);
+  };
+  seam.languages = languages;
+  seam.language = 'text';
+  let rejected = false;
+  try {
+    await el.updateComplete;
+    await aTimeout(0);
+  } catch {
+    rejected = true;
+  }
+
+  expect(rejected).to.equal(false);
+  expect(descriptorTrapReads).to.equal(1);
+  expect(loads).to.equal(1);
+});
+
+it('does not let non-enumerable grammar names consume an admitted language slot', async () => {
+  const languages = Object.create(null) as Record<string, unknown>;
+  for (let index = 0; index < 5000; index += 1) {
+    Object.defineProperty(languages, `hidden-${index}`, {
+      value: {},
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  languages['text'] = {};
+  const el = (await fixture(html`<lr-diff-view .oldText=${'old'} .newText=${'new'}></lr-diff-view>`)) as LyraDiffView;
+  const seam = el as unknown as {
+    languages: unknown;
+    language: string;
+    loadHighlighterCore: (value: Record<string, unknown>) => Promise<unknown>;
+  };
+  let loads = 0;
+  seam.loadHighlighterCore = (value) => {
+    loads += 1;
+    expect(Object.hasOwn(value, 'text')).to.equal(true);
+    expect(Object.hasOwn(value, 'hidden-0')).to.equal(false);
+    return Promise.resolve(null);
+  };
+  seam.languages = languages;
+  seam.language = 'text';
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(loads).to.equal(1);
+});

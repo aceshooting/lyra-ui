@@ -279,13 +279,19 @@ export const ScopedStateTheme: Story = {
  * quick-range row above the calendar in range mode, reusing `<lr-time-range>`'s already-shipped
  * `label`/`start`/`end` preset shape so the library has one preset vocabulary rather than two —
  * the only difference is the unit (ISO dates instead of numbers). Applying one commits exactly as a
- * two-click selection would, so existing change handling needs no special case.
+ * two-click selection would, so existing change handling needs no special case. The selected
+ * preset's background, border, and foreground hooks remain independently themeable.
  */
 export const RangePresets: Story = {
   render: () => html`
     <lr-date-picker
       mode="range"
       value="2026-08-13/2026-08-19"
+      style="
+        --lr-date-picker-preset-selected-bg: var(--lr-color-success);
+        --lr-date-picker-preset-selected-border: var(--lr-color-warning);
+        --lr-date-picker-preset-selected-color: var(--lr-color-on-success);
+      "
       .presets=${[
         { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
         { label: 'Last 30 days', start: '2026-07-21', end: '2026-08-19' },

@@ -88,6 +88,7 @@ export const styles = css`
   [part="close-button"],
   [part="previous-button"],
   [part="next-button"] {
+    font: inherit;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;

@@ -116,8 +116,8 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 </script>
 ```
 
-The default slot's tooltip is positioned with the same `internal/positioner.js` `place()` helper
-`<lr-combobox>` uses for its listbox (`placement: 'top-start'`), and appears/disappears instantly
+The default slot's tooltip uses the same `'top-start'` placement as `<lr-combobox>`'s listbox, and
+appears/disappears instantly
 on hover/focus/blur/mouseleave with no fade transition and no "pointer moved into the tooltip"
 tracking — it's documented as read-only preview content, not an interactive surface meant to retain
 focus of its own. `denied` gets its own warning-toned glyph and color (a policy rejection, not a
@@ -285,12 +285,11 @@ registerToolRenderer("run_query", {
   `registry` prop is set
 - `findToolRenderer(toolName: string, payload: unknown, registry?: ToolRendererRegistry):
 ToolRendererDefinition | undefined` — the dispatch function `<lr-tool-result-view>` calls
-  internally on every resolve; exposed for direct use/testing too
+  internally on every resolve; exposed for direct use too
 - `loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToolRendererDefinition>` — resolves `def`
   to a definition guaranteed to carry a real `render`, awaiting/unwrapping `def.load()` when present
   (or returning `def` unchanged otherwise)
-- `clearToolRenderers(): void` — test-only utility that empties the default registry and its
-  `load()` cache, so one test's `registerToolRenderer()` calls can't leak into the next
+- `clearToolRenderers(): void` — clears the default registry and its `load()` cache
 
 **Dispatch order** (`findToolRenderer`), exactly as `<lr-tool-result-view>`'s own `resolve()` uses
 it:
@@ -560,8 +559,8 @@ the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
 click when `lightDismiss` is enabled, or a `close()` call), and no-detail `focus`/`blur` events
 re-dispatched when the internal search input gains or loses focus.
-Native `input`/`change` and prefixed `lr-input` implementation events from the built-in checkbox and
-switch controls stop at the dialog boundary; listen for the single aggregate `lr-change` proposal.
+Native `input`/`change` and prefixed `lr-input` events from the built-in checkbox and switch
+controls stop at the dialog boundary; listen for the single aggregate `lr-change` proposal.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has
@@ -697,6 +696,8 @@ pending duration/toggle accent without changing the shared brand token;
 `--lr-thinking-panel-compact-header-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`) —
 `[part="header"]` padding while `compact`; `--lr-thinking-panel-compact-header-gap` (default
 `var(--lr-space-2xs)`) — gap between the toggle, label, and duration while `compact`; and
+`--lr-thinking-panel-compact-header-font-size` (default `var(--lr-font-size-sm)`) — font size of
+`[part="header"]` while `compact`; and
 `--lr-thinking-panel-compact-body-padding` (default `var(--lr-space-s)`) — `[part="body"]`
 padding while `compact`. Plus shared
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
@@ -1152,8 +1153,8 @@ fired once up front at connect time and after every effective change; serializat
 publish their root message as `errors.base` and `formError`), and no-detail `focus`/`blur` events for
 generated native text/number inputs. The composed
 `<lr-select>` controls already bubble their own focus/blur bridges through the host.
-Their implementation events (`input`, `change`, `lr-change`, select show/hide, and option mutation)
-are contained at the form boundary; consumers receive the single form-level `lr-input` contract.
+Nested control events (`input`, `change`, `lr-change`, select show/hide, and option mutation) are
+contained at the form boundary; consumers receive the single form-level `lr-input` contract.
 `lr-invalid` (no detail) is the bubbling/composed, cancelable alias emitted when the complete
 parameter form fails a native validity check; preventing it also prevents the native `invalid`
 event's default validation UI.
@@ -1369,9 +1370,9 @@ around either the slotted content or the plain `value` text).
 
 - `HTMLElement.textContent` read on a shadow-DOM wrapper containing a `<slot>` does NOT include the
   slot's assigned/projected light-DOM content — only literal fallback children of the `<slot>` tag
-  itself (there are none here). Asserting against `[part="value"]`'s own `.textContent` to check
-  rendered slotted content will read as empty even when the component is rendering correctly;
-  assert against the slot's `assignedNodes()`/`assignedElements()` instead.
+  itself (there are none here). Reading `[part="value"]`'s own `.textContent` yields an empty value
+  even when slotted content is rendering correctly; use the slot's
+  `assignedNodes()`/`assignedElements()` instead.
 
 ---
 
@@ -1620,13 +1621,22 @@ of the text last announced while `announce-output` is set).
 `[part="announcer"]` is a styling and inspection surface only — it carries **no** live-region role
 of its own. The announcement itself goes to the library's shared **light-DOM** polite region,
 appended to the consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live
-region inside a shadow root is not reliably announced (JAWS with Firefox ignores one outright). A
-test therefore asserts against that shared region, not `::part(announcer)`; the part remains the
-right hook for styling, and for reading back what the terminal last announced.
+region inside a shadow root is not reliably announced (JAWS with Firefox ignores one outright).
+Inspect the shared region, not `::part(announcer)`, when reading an announcement; the part remains
+the right hook for styling and for reading back what the terminal last announced.
 
 **Themeable custom properties:** `--lr-terminal-height` (default `var(--lr-size-20rem)`) — the
 viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
-`--lr-terminal-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-terminal-surface-color` (default `var(--lr-color-surface-raised)`) controls the card-frame
+background and the fallback foreground for inverse ANSI segments without an explicit background;
+`frame="plain"` remains transparent. `--lr-terminal-toolbar-button-hover-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-terminal-toolbar-button-active-bg` (default
+`color-mix(in oklab, var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet)),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`) control the copy and download buttons.
+`--lr-terminal-line-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-terminal-line-active-bg` (default `color-mix(in oklab, var(--lr-terminal-line-hover-bg,
+var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) control
+ordinary rendered lines. `--lr-terminal-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-terminal-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
 `--lr-terminal-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-terminal-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
@@ -1766,8 +1776,8 @@ against the new tint as well.
 
 ## `lr-activity-feed`
 
-An append-only streaming log of granular agent actions ("Searching the web…", "Read
-src/index.ts"), collapsing to a localized "Completed N steps" summary once the run is over. Entries
+An append-only streaming log of granular agent actions ("Searching the web…", "Read the
+application entry point"), collapsing to a localized "Completed N steps" summary once the run is over. Entries
 never change state once added — a step whose status mutates in place belongs to `<lr-task-list>`
 instead. Implements the shared follow (stick-to-bottom) contract. At/above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
@@ -1784,13 +1794,14 @@ unset. `mode: 'live' | 'post-hoc' =
 `label?: string` — omission localizes `activityFeedLabel` (`'Activity'` in the built-in English
 catalog), while any supplied string is a verbatim override, including `'Activity'` under a
 non-English `.strings` catalog and `''`. A present host `aria-label` names the owned list in both
-plain and virtualized rendering paths while `label` remains the visible header text —
+plain and virtualized rendering paths while `label` remains the visible header text. Host
+`aria-labelledby` and `aria-describedby` likewise reach that semantic list in both rendering paths —
 `showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
-identically whether or not the feed is currently virtualized; fully replaces `[part="entry-text"]`
-rather than augmenting it, and `virtualizeAt: number = 199` (attribute
+identically whether or not the feed is currently virtualized; replaces the plain text **inside**
+the persistent `[part="entry-text"]` wrapper rather than removing that part, and `virtualizeAt: number = 199` (attribute
 `virtualize-at`).
 
 **Events:** `lr-toggle` (`detail: { expanded }`, the header was activated) and
@@ -2213,7 +2224,7 @@ cancelable. Retry is available for `error` and `cancelled`.
 **Properties:**
 
 - `run: AgentRun | null = null` (attribute: false) — **`AgentRun`, imported from
-  `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; status: AgentStatus; startedAt?:
+  `@aceshooting/lyra-ui/ai`**: `{ id: string; status: AgentStatus; startedAt?:
 number; endedAt?: number; model?: string; costEstimate?: number; steps: readonly AgentStep[] }`, where
   `AgentStatus { kind: AgentStatusKind; message?: string }` and `AgentStep { id: string; kind:
 string; label: string; status: AgentStatus; startedAt?: number; endedAt?: number }`. All timestamps
@@ -2396,8 +2407,8 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
 
 - `examples: readonly EvalExample[] = []` (attribute: false) — `EvalExample { id: string; input: string;
 expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unknown> }` (exported here).
-  Deliberately its own small shape rather than reusing anything from `src/ai/types.ts` — none of that
-  module's interfaces models "one row of a labeled eval dataset". `input`/`expectedOutput` are plain
+  It is a dedicated dataset-row shape; no shared agent type models a labeled evaluation row.
+  `input`/`expectedOutput` are plain
   strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
   controlled: add/remove/import/export are all _requests_; the host mutates and passes the array
   back. Empty/blank ids and later duplicate ids are omitted before selection, filtering, mutation requests, and the
@@ -3006,6 +3017,42 @@ import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-pane
 - `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
+
+## Consumer integration notes
+
+- **Tool selection:** `lr-tool-select-dialog` inspects at most 10,000 supplied positions. A usable
+  row is a plain or null-prototype record with nonblank string `id` and `name`; malformed rows are
+  omitted and the first usable duplicate wins. `selectedToolIds` independently retains its first
+  nonblank ids, including ids that are not presently offered, and `lr-change` carries that bounded
+  canonical sequence.
+- **Parameter schemas:** `lr-tool-param-form` recursively admits only own-data fields from arrays,
+  plain records, and null-prototype records. Unsafe branches are omitted while safe siblings remain;
+  they cannot enter serialized values or `FormData`. A malformed enum omits only that field and
+  leaves schema-shape validity false. Its semantic owner renders `aria-invalid="true"` only after
+  interaction or `reportValidity()` when invalid and not barred from validation; otherwise it
+  explicitly renders `"false"`.
+- **Localized metrics:** `lr-span-waterfall` and `lr-test-results` format visual and spoken metrics
+  with the effective locale, joining row and toggle labels with the localized accessible-label
+  separator.
+- **Terminal styling:** `--lr-terminal-surface-color` defaults to
+  `var(--lr-color-surface-raised)` for the card frame and inverse ANSI fallback foreground; a plain
+  frame stays transparent. `--lr-terminal-toolbar-button-hover-bg`,
+  `--lr-terminal-toolbar-button-active-bg`, `--lr-terminal-line-hover-bg`, and
+  `--lr-terminal-line-active-bg` independently theme toolbar-button and ordinary-line hover/pressed
+  states; highlighted lines retain their tone-specific backgrounds.
+- **Approval lifecycle:** when a selected pending request disappears or resolves,
+  `lr-approval-close.detail.reason` can be `'request-invalidated'`; selection and open state clear
+  before that noncancelable event.
+- **Tool result slots:** explicitly assigning `slot=""` is default detail content and can enable the
+  tool-call tooltip; named slots do not. A renderer's synchronous `reportStatus()` applies only to
+  its current render attempt, so late or stale reports are ignored.
+- **Trace visibility:** `lr-agent-trace` contains the nested graph legend's proposal event. Its
+  public `lr-span-visibility-change` event reports the resulting `{ hiddenKinds }` state. If an
+  integration exposes the nested `lr-graph-legend`, attach a veto listener to that legend rather
+  than to the wrapper.
+- **Schema viewer input:** `lr-json-schema-viewer` uses a bounded descriptor-safe own-data snapshot.
+  It recurses through arrays, plain records, and null-prototype records only; unsupported or unsafe
+  branches are omitted while valid siblings and the valid prefix remain available.
 
 ## Exported TypeScript contracts
 

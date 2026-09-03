@@ -130,7 +130,7 @@ export const LiveContainerBounds: Story = {
     docs: {
       description: {
         story:
-          'Drag the native resize corner on the outer box. The panel clamps immediately when the box becomes narrower than its extent, keeps the separator range truthful, and does not grow back implicitly when space returns.',
+          'Drag the native resize corner on the outer box. The panel clamps immediately when the box becomes narrower than its extent, keeps the separator range truthful, reports its current pixel extent through the effective locale, and does not grow back implicitly when space returns.',
       },
     },
   },
@@ -142,10 +142,12 @@ export const LiveContainerBounds: Story = {
         Resize this containing block.
       </div>
       <lr-dock-panel
+        lang="ar-EG"
         style="position:absolute;inset-block:0;inset-inline-end:0"
         edge="end"
         extent="350px"
         min-extent="120px"
+        .strings=${{ resizeValuePixels: 'العرض {value} بكسل' }}
       >
         <div style="padding:var(--lr-space-s)">
           Live bounds keep the rendered panel and separator ARIA in sync.

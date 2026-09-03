@@ -4,7 +4,6 @@ import {
   DEFAULT_MAX_FILE_SIZE_BYTES,
   type LyraFileInput,
 } from "./file-input.js";
-import { styles } from "./file-input.styles.js";
 import { resolveValidityAnchor } from "../../../internal/anchored-validity.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
@@ -980,20 +979,28 @@ it("keeps the gap and radius hooks opt-in, inheritable, and subordinate to the c
   expect(dropzoneGap(compactFallbackEl)).to.equal("2px");
 });
 
-it("uses the shared --lr-opacity-disabled token instead of a literal 0.5 for the disabled dropzone state", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.include("opacity: var(--lr-opacity-disabled);");
-  expect(css).to.not.include("opacity: 0.5;");
+it("resolves the shared --lr-opacity-disabled token on the disabled dropzone", async () => {
+  const el = (await fixture(
+    html`<lr-file-input disabled style="--lr-opacity-disabled: 0.37"></lr-file-input>`
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+
+  expect(getComputedStyle(base).opacity).to.equal("0.37");
 });
 
-it("hides the status live region visually via the shared sr-only helper, not a private duplicate", async () => {
+it("hides the status live region with the shared sr-only geometry", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
   const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
   expect(status.classList.contains("sr-only")).to.be.true;
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.not.include("[part='status']");
+  const computed = getComputedStyle(status);
+
+  expect(computed.position).to.equal("absolute");
+  expect(computed.inlineSize).to.equal("1px");
+  expect(computed.blockSize).to.equal("1px");
+  expect(computed.clipPath).to.equal("inset(50%)");
+  expect(computed.overflow).to.equal("hidden");
 });
 
 it("is accessible", async () => {
@@ -1865,6 +1872,20 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
 
     expect(el.files.map((file) => file.name)).to.deep.equal(["b.csv"]);
     expect(events).to.deep.equal(["input", "change"]);
+  });
+
+  it("inherits a 20px host font at the remove control and its 1em glyph", async () => {
+    const el = (await fixture(
+      html`<lr-file-input multiple style="font-size: 20px"></lr-file-input>`
+    )) as LyraFileInput;
+    el.files = [makeFile("a.csv", "text/csv")];
+    await el.updateComplete;
+    const remove = el.shadowRoot!.querySelector('[part~="remove-button"]') as HTMLButtonElement;
+    const glyph = remove.querySelector("svg") as SVGElement;
+
+    expect(getComputedStyle(remove).fontSize).to.equal("20px");
+    expect(getComputedStyle(glyph).width).to.equal("20px");
+    expect(getComputedStyle(glyph).height).to.equal("20px");
   });
 
   it("renders label, hint, error, and dropzone chrome on the first SSR-hinted render", async () => {

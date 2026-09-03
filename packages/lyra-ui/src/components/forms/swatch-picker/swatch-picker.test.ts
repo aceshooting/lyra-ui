@@ -1237,3 +1237,30 @@ describe("lr-swatch-picker", () => {
     });
   });
 });
+
+describe('hostile focus ownership', () => {
+  it('contains a throwing shadow-root activeElement getter while replacing swatches', async () => {
+    const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker></lr-swatch-picker>`);
+    const root = el.shadowRoot!;
+    const prior = Object.getOwnPropertyDescriptor(root, 'activeElement');
+    let unavailable = true;
+    Object.defineProperty(root, 'activeElement', {
+      configurable: true,
+      get(): Element {
+        if (unavailable) throw new TypeError('active element unavailable');
+        return {} as Element;
+      },
+    });
+    try {
+      el.items = [{ value: 'blue', color: 'blue', label: 'Blue' }];
+      await el.updateComplete;
+      unavailable = false;
+      el.items = [{ value: 'green', color: 'green', label: 'Green' }];
+      await el.updateComplete;
+      expect(el.items.map((item) => item.value)).to.deep.equal(['green']);
+    } finally {
+      if (prior) Object.defineProperty(root, 'activeElement', prior);
+      else delete (root as unknown as { activeElement?: unknown }).activeElement;
+    }
+  });
+});

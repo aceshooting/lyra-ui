@@ -3,22 +3,26 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
+import { nextId, srOnly } from '../../../internal/a11y.js';
+import {
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+  getOwnDataDescriptor,
+} from '../../../internal/data-descriptors.js';
 import { styles } from './tool-select-dialog.styles.js';
 import '../../forms/checkbox/checkbox.class.js';
 import '../../forms/switch/switch.class.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
-import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectLimit, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** One selectable agent tool. `id` is the stable, nonempty selection identity; empty ids are
- *  omitted and when the input collection repeats an id, its first occurrence wins before
- *  grouping, searching, counting, or rendering.
+/** One selectable agent tool. `id` is the stable, nonempty selection identity; canonicalization
+ *  inspects at most the first 10,000 input positions, omits empty ids, and lets the first valid
+ *  admitted occurrence of a repeated id win before grouping, searching, counting, or rendering.
  *  `category` groups the row; tools with no `category` (or an empty one) fall into the trailing
  *  localized "Other" bucket. A literal caller category named "Other" remains a separate ordinary
  *  category. */
@@ -68,9 +72,163 @@ export interface LyraToolSelectDialogEventMap {
 const UNCATEGORIZED = null;
 type ToolCategoryKey = string | null;
 const MAX_RENDERED_TOOLS = 200;
+const MAX_NORMALIZED_TOOL_ENTRIES = 10_000;
+const FUNCTION_TO_STRING = Function.prototype.toString;
+const OBJECT_CONSTRUCTOR_SOURCE = FUNCTION_TO_STRING.call(Object);
+
+interface CanonicalTool {
+  readonly id: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly category?: string;
+  readonly icon?: string;
+  readonly disabled?: boolean;
+  readonly disabledReason?: string;
+}
+
+function isRuntimeArray(value: unknown): value is readonly unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+function ownDataArrayValues(value: unknown, limit: number): unknown[] {
+  if (!isRuntimeArray(value)) return [];
+  const length = getOwnDataDescriptor(value, 'length');
+  if (
+    length === MISSING_OWN_DATA_DESCRIPTOR ||
+    length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof length.value !== 'number' ||
+    !Number.isSafeInteger(length.value) ||
+    length.value < 0
+  )
+    return [];
+
+  const values: unknown[] = [];
+  for (let index = 0; index < Math.min(length.value, limit); index += 1) {
+    const entry = getOwnDataDescriptor(value, String(index));
+    if (
+      entry === MISSING_OWN_DATA_DESCRIPTOR ||
+      entry === UNSAFE_OWN_DATA_DESCRIPTOR
+    )
+      continue;
+    values.push(entry.value);
+  }
+  return values;
+}
+
+function isPlainToolRecord(value: unknown): value is object {
+  if (value === null || typeof value !== 'object') return false;
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === null) return true;
+    if (Object.getPrototypeOf(prototype) !== null) return false;
+    const constructor = getOwnDataDescriptor(prototype, 'constructor');
+    if (
+      constructor === MISSING_OWN_DATA_DESCRIPTOR ||
+      constructor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof constructor.value !== 'function'
+    )
+      return false;
+    const name = getOwnDataDescriptor(constructor.value, 'name');
+    const constructorPrototype = getOwnDataDescriptor(constructor.value, 'prototype');
+    return (
+      name !== MISSING_OWN_DATA_DESCRIPTOR &&
+      name !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+      name.value === 'Object' &&
+      constructorPrototype !== MISSING_OWN_DATA_DESCRIPTOR &&
+      constructorPrototype !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+      constructorPrototype.value === prototype &&
+      FUNCTION_TO_STRING.call(constructor.value) === OBJECT_CONSTRUCTOR_SOURCE
+    );
+  } catch {
+    return false;
+  }
+}
+
+function requiredToolString(record: object, key: string): string | undefined {
+  const value = getOwnDataDescriptor(record, key);
+  if (
+    value === MISSING_OWN_DATA_DESCRIPTOR ||
+    value === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof value.value !== 'string' ||
+    value.value.trim().length === 0
+  )
+    return undefined;
+  return value.value;
+}
+
+function optionalToolString(record: object, key: string): string | null | undefined {
+  const value = getOwnDataDescriptor(record, key);
+  if (value === MISSING_OWN_DATA_DESCRIPTOR) return undefined;
+  if (value === UNSAFE_OWN_DATA_DESCRIPTOR || typeof value.value !== 'string') return null;
+  return value.value;
+}
+
+function optionalToolBoolean(record: object, key: string): boolean | null | undefined {
+  const value = getOwnDataDescriptor(record, key);
+  if (value === MISSING_OWN_DATA_DESCRIPTOR) return undefined;
+  if (value === UNSAFE_OWN_DATA_DESCRIPTOR || typeof value.value !== 'boolean') return null;
+  return value.value;
+}
+
+function canonicalTool(value: unknown): CanonicalTool | undefined {
+  if (!isPlainToolRecord(value)) return undefined;
+  const id = requiredToolString(value, 'id');
+  const name = requiredToolString(value, 'name');
+  const description = optionalToolString(value, 'description');
+  const category = optionalToolString(value, 'category');
+  const icon = optionalToolString(value, 'icon');
+  const disabled = optionalToolBoolean(value, 'disabled');
+  const disabledReason = optionalToolString(value, 'disabledReason');
+  if (
+    id === undefined ||
+    name === undefined ||
+    description === null ||
+    category === null ||
+    icon === null ||
+    disabled === null ||
+    disabledReason === null
+  )
+    return undefined;
+  return Object.freeze({
+    id,
+    name,
+    ...(description === undefined ? {} : { description }),
+    ...(category === undefined ? {} : { category }),
+    ...(icon === undefined ? {} : { icon }),
+    ...(disabled === undefined ? {} : { disabled }),
+    ...(disabledReason === undefined ? {} : { disabledReason }),
+  });
+}
+
+function projectCanonicalTools(input: unknown): readonly CanonicalTool[] {
+  const tools: CanonicalTool[] = [];
+  const seen = new Set<string>();
+  for (const entry of ownDataArrayValues(input, MAX_NORMALIZED_TOOL_ENTRIES)) {
+    const tool = canonicalTool(entry);
+    if (!tool || seen.has(tool.id)) continue;
+    seen.add(tool.id);
+    tools.push(tool);
+  }
+  return Object.freeze(tools);
+}
+
+function projectCanonicalSelectedToolIds(input: unknown): readonly string[] {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of ownDataArrayValues(input, MAX_NORMALIZED_TOOL_ENTRIES)) {
+    if (typeof entry !== 'string' || entry.trim().length === 0 || seen.has(entry)) continue;
+    seen.add(entry);
+    ids.push(entry);
+  }
+  return Object.freeze(ids);
+}
 
 /** Default `filter`: case-insensitive substring match against the tool's name and description. */
-function defaultFilter(tool: ToolSelectDialogTool, query: string, locale: string): boolean {
+function defaultFilter(tool: CanonicalTool, query: string, locale: string): boolean {
   const intlLocale = resolveIntlLocale(locale);
   return (
     tool.name.toLocaleLowerCase(intlLocale).includes(query) ||
@@ -80,7 +238,7 @@ function defaultFilter(tool: ToolSelectDialogTool, query: string, locale: string
 
 interface ToolGroup {
   category: ToolCategoryKey;
-  tools: ToolSelectDialogTool[];
+  tools: CanonicalTool[];
 }
 
 interface ToolProjection {
@@ -120,7 +278,10 @@ interface ToolProjection {
  * `selectedToolIds` summary remain available without first loading every preceding tool. When more
  * matches remain, a localized limit notice and Load more button make the bounded projection
  * explicit and provide a keyboard-reachable continuation; search can independently narrow the
- * complete catalog. `tools`, selection counts, and emitted ids retain the caller's complete catalog.
+ * catalog. Both canonical projections inspect at most their first 10,000 input positions. Within
+ * that prefix, a repeated tool id's first valid admitted occurrence wins; selected ids retain
+ * their first nonblank occurrence. Selected ids absent from `tools` remain in that canonical
+ * selection and in `lr-change` proposals, preserving independently managed selection state.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -131,8 +292,9 @@ interface ToolProjection {
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
  * Changes already apply live via `lr-change`, so this is optional.
  * @event lr-change - A proposed enabled-tool selection or `useDefaults` toggle.
- * `detail: { selectedToolIds: string[], useDefaults: boolean }`. Cancelable; preventing it preserves
- * both properties and restores the built-in checkbox or switch to its current checked state.
+ * `detail: { selectedToolIds: string[], useDefaults: boolean }`, with `selectedToolIds` from the
+ * canonical first-10,000-input-position selection. Cancelable; preventing it preserves both
+ * properties and restores the built-in checkbox or switch to its current checked state.
  * @event lr-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
  * via Escape, an opted-in backdrop click, or a `close()` call.
  * @event focus - Re-dispatched when the internal search input receives focus.
@@ -203,12 +365,14 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
    *  `<lr-dialog>`, `<lr-drawer>`, and `<lr-lightbox>`. */
   @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
-  /** The full set of tools a consumer offers, across all categories. Empty ids are omitted and
-   *  duplicate ids use a deterministic first-wins projection. */
+  /** The full set of tools a consumer offers, across all categories. The first 10,000 input
+   *  positions are inspected; empty ids are omitted and duplicate ids use a deterministic
+   *  first-valid-admitted-occurrence projection. */
   @property({ attribute: false }) tools: readonly ToolSelectDialogTool[] = [];
 
-  /** The currently-enabled tool ids. Empty ids are omitted and duplicates are treated as one
-   *  selection. */
+  /** The currently-enabled tool ids. The first 10,000 input positions form the canonicalization
+   *  prefix; empty ids are omitted and duplicates are treated as one selection. Ids absent from
+   *  `tools` remain independently selected. */
   @property({ attribute: false }) selectedToolIds: readonly string[] = [];
 
   /** Whether the conversation is using the default tool set (`true`) or a custom selection (`false`) — see the class doc for the exact interaction with `selectedToolIds`/per-tool editing. */
@@ -243,6 +407,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   @state() private renderedToolLimit = MAX_RENDERED_TOOLS;
 
   private overlay?: OverlayHandle;
+  private canonicalToolsCache?: readonly CanonicalTool[];
+  private canonicalSelectedToolIdsCache?: readonly string[];
+  private canonicalSelectedToolIdsSource?: readonly string[];
   private readonly titleId = nextId('tool-select-dialog-title');
   // Stable per-category heading ids, keyed by category name (or the null
   // uncategorized sentinel) -- generated once (not regenerated every
@@ -255,7 +422,15 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     if (!this.hasUpdated) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
     }
-    if (changed.has('tools') || changed.has('filter')) {
+    if (changed.has('tools')) {
+      this.canonicalToolsCache = undefined;
+      this.renderedToolLimit = MAX_RENDERED_TOOLS;
+    }
+    if (changed.has('selectedToolIds')) {
+      this.canonicalSelectedToolIdsCache = undefined;
+      this.canonicalSelectedToolIdsSource = undefined;
+    }
+    if (changed.has('filter')) {
       this.renderedToolLimit = MAX_RENDERED_TOOLS;
     }
     if (changed.has('open')) {
@@ -366,6 +541,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private onSearchInput = (e: Event): void => {
     this.query = (e.target as HTMLInputElement).value;
     this.renderedToolLimit = MAX_RENDERED_TOOLS;
+    e.stopPropagation();
   };
   private onSearchFocus = (): void => { this.emit('focus'); };
   private onSearchBlur = (): void => { this.emit('blur'); };
@@ -377,7 +553,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private onDefaultsToggle = (e: CustomEvent<{ checked: boolean }>): void => {
     e.stopPropagation();
     const next: ToolSelectionChangeDetail = {
-      selectedToolIds: this.uniqueSelectedToolIds,
+      selectedToolIds: this.canonicalSelectedToolIds,
       useDefaults: e.detail.checked,
     };
     if (this.emitChange(next)) {
@@ -387,20 +563,36 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     this.restoreChildChecked(e, this.useDefaults);
   };
 
-  private onToolToggle(tool: ToolSelectDialogTool, e: CustomEvent<{ checked: boolean }>): void {
+  private onToolToggle(tool: CanonicalTool, e: CustomEvent<{ checked: boolean }>): void {
     e.stopPropagation();
     if (tool.disabled || this.useDefaults) return;
-    const set = new Set(this.selectedToolIds);
-    e.detail.checked ? set.add(tool.id) : set.delete(tool.id);
+    const selected = this.canonicalSelectedToolIds;
+    const index = selected.indexOf(tool.id);
+    // A change detail is itself an immutable, bounded public collection. Keep the existing
+    // canonical order and reserve the final slot for a just-enabled tool, rather than briefly
+    // building an over-limit selection that the event snapshot must reject. Unknown ids are
+    // ordinary canonical entries here: they are independently managed state, not invalid tools.
+    const selectedToolIds = e.detail.checked
+      ? index >= 0
+        ? selected
+        : [...selected.slice(0, MAX_NORMALIZED_TOOL_ENTRIES - 1), tool.id]
+      : index < 0
+        ? selected
+        : [...selected.slice(0, index), ...selected.slice(index + 1)];
     const next: ToolSelectionChangeDetail = {
-      selectedToolIds: [...set],
+      selectedToolIds,
       useDefaults: this.useDefaults,
     };
     if (this.emitChange(next)) {
       this.selectedToolIds = next.selectedToolIds;
+      // A listener can synchronously trigger another checkbox change before the scheduled
+      // `willUpdate()` invalidates this cache. Keep that same-turn read aligned with the just
+      // accepted, already-bounded proposal so the second toggle extends rather than replaces it.
+      this.canonicalSelectedToolIdsCache = next.selectedToolIds;
+      this.canonicalSelectedToolIdsSource = this.selectedToolIds;
       return;
     }
-    this.restoreChildChecked(e, this.selectedToolIds.includes(tool.id));
+    this.restoreChildChecked(e, this.canonicalSelectedToolIds.includes(tool.id));
   }
 
   private categoryId(category: ToolCategoryKey): string {
@@ -412,21 +604,21 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     return id;
   }
 
-  private get uniqueTools(): ToolSelectDialogTool[] {
-    return firstByIdentity(
-      Array.isArray(this.tools) ? this.tools : [],
-      (tool) => tool.id,
-    );
+  private get canonicalTools(): readonly CanonicalTool[] {
+    if (!this.canonicalToolsCache) this.canonicalToolsCache = projectCanonicalTools(this.tools);
+    return this.canonicalToolsCache;
   }
 
-  private get uniqueSelectedToolIds(): string[] {
-    return [
-      ...new Set(
-        (this.selectedToolIds as readonly unknown[]).filter(
-          (id): id is string => typeof id === 'string' && id.trim().length > 0
-        )
-      ),
-    ];
+  private get canonicalSelectedToolIds(): readonly string[] {
+    const source = this.selectedToolIds;
+    if (
+      this.canonicalSelectedToolIdsCache === undefined ||
+      this.canonicalSelectedToolIdsSource !== source
+    ) {
+      this.canonicalSelectedToolIdsCache = projectCanonicalSelectedToolIds(source);
+      this.canonicalSelectedToolIdsSource = source;
+    }
+    return this.canonicalSelectedToolIdsCache;
   }
 
   /** Tools grouped by `category` (first-seen order), with an uncategorized
@@ -435,8 +627,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
    *  rendered as an empty heading. */
   private get projection(): ToolProjection {
     const order: ToolCategoryKey[] = [];
-    const byCategory = new Map<ToolCategoryKey, ToolSelectDialogTool[]>();
-    for (const tool of this.uniqueTools) {
+    const byCategory = new Map<ToolCategoryKey, CanonicalTool[]>();
+    for (const tool of this.canonicalTools) {
       const category: ToolCategoryKey = tool.category?.trim() || UNCATEGORIZED;
       let bucket = byCategory.get(category);
       if (!bucket) {
@@ -449,15 +641,22 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     if (byCategory.has(UNCATEGORIZED)) order.push(UNCATEGORIZED);
 
     const q = this.query.trim().toLocaleLowerCase(this.effectiveLocale);
+    const filter = typeof this.filter === 'function' ? this.filter : null;
     const matches = q
-      ? (tool: ToolSelectDialogTool) =>
-          this.filter ? this.filter(tool, q) : defaultFilter(tool, q, this.effectiveLocale)
+      ? (tool: CanonicalTool) => {
+          if (!filter) return defaultFilter(tool, q, this.effectiveLocale);
+          try {
+            return Boolean(filter(tool as ToolSelectDialogTool, q));
+          } catch {
+            return false;
+          }
+        }
       : () => true;
     const matchingGroups = order
       .map((category) => ({ category, tools: byCategory.get(category)!.filter(matches) }))
       .filter((group) => group.tools.length > 0);
     const totalMatches = matchingGroups.reduce((total, group) => total + group.tools.length, 0);
-    const selectedIds = new Set(this.uniqueSelectedToolIds);
+    const selectedIds = new Set(this.canonicalSelectedToolIds);
     const chosenIds = new Set<string>();
     for (const group of matchingGroups) {
       for (const tool of group.tools) {
@@ -496,14 +695,14 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     });
   };
 
-  private renderTool(tool: ToolSelectDialogTool): TemplateResult {
+  private renderTool(tool: CanonicalTool, selectedIds: ReadonlySet<string>): TemplateResult {
     const rowDisabled = Boolean(tool.disabled) || this.useDefaults;
     return html`
       <li part="tool-row" ?data-disabled=${rowDisabled}>
         <lr-checkbox
           part="tool-checkbox"
           value=${tool.id}
-          ?checked=${this.selectedToolIds.includes(tool.id)}
+          ?checked=${selectedIds.has(tool.id)}
           ?disabled=${rowDisabled}
           @input=${this.stopNestedControlEvent}
           @lr-input=${this.stopNestedControlEvent}
@@ -522,7 +721,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     `;
   }
 
-  private renderCategory(group: ToolGroup): TemplateResult {
+  private renderCategory(group: ToolGroup, selectedIds: ReadonlySet<string>): TemplateResult {
     const headingId = this.categoryId(group.category);
     const formattedCount = getNumberFormat(this.effectiveLocale).format(group.tools.length);
     return html`
@@ -540,7 +739,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
           >
         </h3>
         <ul part="category-list">
-          ${group.tools.map((tool) => this.renderTool(tool))}
+          ${group.tools.map((tool) => this.renderTool(tool, selectedIds))}
         </ul>
       </div>
     `;
@@ -549,8 +748,10 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   override render(): TemplateResult {
     const projection = this.projection;
     const groups = projection.groups;
-    const uniqueTools = this.uniqueTools;
-    const hasTools = uniqueTools.length > 0;
+    const tools = this.canonicalTools;
+    const selectedToolIds = this.canonicalSelectedToolIds;
+    const selectedIds = new Set(selectedToolIds);
+    const hasTools = tools.length > 0;
     const label = this.label === undefined ? this.localize('selectTools') : this.label;
     const searchPlaceholder = this.searchPlaceholder === undefined
       ? this.localize('searchToolsPlaceholder')
@@ -558,12 +759,16 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     const searchAccessibleName = searchPlaceholder.trim().length > 0
       ? searchPlaceholder
       : this.localize('searchToolsPlaceholder');
-    const knownIds = new Set(uniqueTools.map((tool) => tool.id));
-    const selectedCount = new Set(
-      this.selectedToolIds.filter((id) => knownIds.has(id))
-    ).size;
+    const knownIds = new Set(tools.map((tool) => tool.id));
+    const selectedCount = selectedToolIds.filter((id) => knownIds.has(id)).length;
     const number = getNumberFormat(this.effectiveLocale);
-    const panelLabel = hostAriaLabel(this) === null && this.accessibleLabel ? this.accessibleLabel : null;
+    // An authored host label belongs to the custom-element host. A direct property assignment has
+    // no host attribute to preserve, so it instead names the actual dialog owner in this shadow tree.
+    const panelLabel = !this.hasAttribute('aria-label') &&
+      typeof this.accessibleLabel === 'string' &&
+      this.accessibleLabel.length > 0
+      ? this.accessibleLabel
+      : null;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
@@ -625,7 +830,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
                   ? this.localize('noMatchesQuery', undefined, { query: this.query })
                   : this.localize('toolSelectNoneAvailable')}
               </p>`
-            : groups.map((group) => this.renderCategory(group))}
+            : groups.map((group) => this.renderCategory(group, selectedIds))}
           ${projection.truncated
             ? html`<div part="limit">
                 <span>${this.localize('toolSelectLimit', undefined, {

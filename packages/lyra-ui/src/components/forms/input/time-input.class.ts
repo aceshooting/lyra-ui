@@ -13,11 +13,14 @@ import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchor
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import {
   acquireAriaDescription,
+  acquireResolvedAriaRelationship,
   type AriaDescriptionLease,
+  type ResolvedAriaRelationshipLease,
 } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { finiteNumber } from '../../../internal/numbers.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import {
   deferredPlaceReady as place,
   waitForDeferredPlacement,
@@ -193,6 +196,10 @@ function containsElement(container: Element | null, value: unknown): value is El
  * also has one localized hidden group description that composes with the visible hint/error
  * relationship; visible error chrome wins `aria-invalid` immediately, while intrinsic/custom
  * invalidity is exposed only after interaction.
+ * A host `aria-describedby` is resolved onto the semantic group before its own hint, error, and
+ * required descriptions, so externally-owned guidance remains valid across the shadow boundary.
+ * Host `aria-labelledby` is deliberately not projected: the rendered visible label owns this
+ * group's label relationship.
  *
  * @customElement lr-time-input
  * @event input - Native `InputEvent` fired for user edits.
@@ -376,6 +383,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private errorId = nextId('time-input-error');
   private requiredDescriptionId = nextId('time-input-required');
   private popupId = nextId('time-input-popup');
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private requiredDescriptionLease?: AriaDescriptionLease;
   private requiredDescriptionTarget?: HTMLElement;
   /** Clock seam for deterministic local-time tests. */
@@ -390,7 +398,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated) this.syncRequiredDescription();
+    if (this.hasUpdated) {
+      this.syncRequiredDescription();
+      this.syncExternalDescription();
+    }
   }
 
   /** Whether the column picker is open.
@@ -869,7 +880,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override blur(): void {
-    const active = this.shadowRoot?.activeElement;
+    const active = activeElementIn(this.shadowRoot);
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }
@@ -1167,8 +1178,9 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const order = this.segmentOrder;
     const orderKey = order.join('|');
     const orderChanged = orderKey !== this.segmentOrderKey;
-    const focusedSegment = orderChanged
-      ? (this.shadowRoot?.activeElement?.getAttribute('data-segment') as SegmentName | null)
+    const focused = orderChanged ? activeElementIn(this.shadowRoot) : null;
+    const focusedSegment = typeof focused?.getAttribute === 'function'
+      ? (focused.getAttribute('data-segment') as SegmentName | null)
       : null;
     const nextActiveSegment =
       focusedSegment && order.includes(focusedSegment)
@@ -1203,6 +1215,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.syncComponentStates();
     this.toggleAttribute('data-invalid', this.touched && !this.validity.valid);
     this.syncRequiredDescription();
+    this.syncExternalDescription();
     const pendingSegmentFocus = this.pendingSegmentFocus;
     this.pendingSegmentFocus = undefined;
     if (pendingSegmentFocus && !this.effectiveDisabled) {
@@ -1216,6 +1229,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     this.releaseRequiredDescription();
     this.transitionToken++;
     this.forceClose(false);
@@ -1223,6 +1237,39 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.syncOpenAttribute();
     this.pendingSegmentFocus = undefined;
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    this.releaseRequiredDescription();
+    if (this.isConnected && this.hasUpdated) {
+      this.syncRequiredDescription();
+      this.syncExternalDescription();
+    }
+  }
+
+  /** Resolves host-owned descriptions before the semantic group's generated descriptions. */
+  private syncExternalDescription(): void {
+    const target = this.renderRoot.querySelector<HTMLElement>('[part~="input"]');
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (!this.externalDescriptionLease) {
+      this.externalDescriptionLease = acquireResolvedAriaRelationship(
+        this,
+        target,
+        'aria-describedby',
+      );
+      return;
+    }
+    this.externalDescriptionLease.update(target);
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
   }
 
   /** Owns only requiredness text; the rendered hint and error IDs remain the baseline owners. */

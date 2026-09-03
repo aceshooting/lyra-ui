@@ -1,7 +1,13 @@
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import type { LyraAttachmentChip } from "../../media/attachment-chip/attachment-chip.class.js";
+import type { LyraAttachmentTrigger } from '../../media/attachment-trigger/attachment-trigger.class.js';
 import type { LyraChatComposer } from "../chat-composer/chat-composer.class.js";
 import type { LyraMentionPopover } from "../../utility/mention-popover/mention-popover.class.js";
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import type {
+  PromptQueueChangeDetail,
+  PromptQueueItem,
+} from '../prompt-queue/prompt-queue.class.js';
 import "./prompt-input.js";
 import type {
   LyraPromptInput,
@@ -49,6 +55,24 @@ it("declares a prompt-scoped control-width hook with a safe fallback", () => {
     /flex:\s*1 1 var\(--lr-prompt-input-control-width,\s*[^)]+\)/
   );
   expect(css).to.not.include("var(--lr-control-width");
+});
+
+it('centers the source disclosure content within its retained touch-target floor in RTL', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      dir="rtl"
+      .sources=${[{ id: 'guide', label: 'Guide' }]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const summary = el.shadowRoot!.querySelector(
+    '[part="sources-summary"]'
+  ) as HTMLElement;
+  const style = getComputedStyle(summary);
+
+  expect(style.display).to.equal('flex');
+  expect(style.alignItems).to.equal('center');
+  expect(style.textAlign).to.equal('start');
+  expect(summary.getBoundingClientRect().height >= parseFloat(style.minBlockSize)).to.be.true;
 });
 
 it("names the semantic group that owns the prompt option controls", async () => {
@@ -153,6 +177,62 @@ it("composes attachments, model, voice, sources, queue, and the chat composer", 
   });
 });
 
+it('forwards opaque canonical prompt-queue metadata through actual child requests', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      .queue=${[{ id: 'safe', value: 'Safe rendered queue' }]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const queue = el.shadowRoot!.querySelector('lr-prompt-queue') as HTMLElement & {
+    items: readonly PromptQueueItem[];
+    updateComplete: Promise<unknown>;
+  };
+  const plainMetadata = { source: 'plain' };
+  let metadataReflections = 0;
+  const hostileMetadata = new Proxy(
+    { source: 'hostile' },
+    {
+      ownKeys(): never[] {
+        metadataReflections += 1;
+        throw new Error('the wrapper must not inspect opaque queue metadata');
+      },
+    },
+  );
+  queue.items = [
+    { id: 'plain', value: 'Plain metadata', metadata: plainMetadata },
+    { id: 'hostile', value: 'Hostile forwarded item', metadata: hostileMetadata },
+  ];
+  await queue.updateComplete;
+
+  const sent = oneEvent(el, 'lr-send-now');
+  queue.shadowRoot!
+    .querySelector<HTMLElement>('[data-id="hostile"] [data-action="send"]')!
+    .click();
+  const sentEvent = (await sent) as CustomEvent<{ item: PromptQueueItem } | null>;
+  expect(sentEvent.detail === null).to.equal(false);
+  if (sentEvent.detail === null) return;
+  expect(sentEvent.detail.item.metadata === hostileMetadata).to.equal(true);
+
+  const changed = oneEvent(el, 'lr-queue-change');
+  queue.shadowRoot!
+    .querySelector<HTMLElement>('[data-id="hostile"] lr-textarea')!
+    .dispatchEvent(new CustomEvent('lr-input', {
+      bubbles: true,
+      composed: true,
+      detail: { value: 'Updated hostile metadata' },
+    }));
+  const changedEvent = (await changed) as CustomEvent<PromptQueueChangeDetail | null>;
+  expect(changedEvent.detail === null).to.equal(false);
+  if (changedEvent.detail === null) return;
+  expect(changedEvent.detail.items[0]?.metadata === plainMetadata).to.equal(
+    true
+  );
+  expect(changedEvent.detail.items[1]?.metadata === hostileMetadata).to.equal(
+    true
+  );
+  expect(metadataReflections).to.equal(0);
+});
+
 it("composes canonical start/end slots and restores generated fallbacks live", async () => {
   const el = (await fixture(html`
     <lr-prompt-input>
@@ -216,6 +296,8 @@ it("detects mention triggers, anchors the popover to the real textarea, and inse
     .mentionItems=${[
       { suggestionId: "ada", label: "Ada", description: "Engineering" },
       { suggestionId: "adam", label: "Adam", description: "Research" },
+      { suggestionId: "adara", label: "Adara" },
+      { suggestionId: "adrian", label: "Adrian" },
     ]}
   ></lr-prompt-input>`)) as LyraPromptInput;
   const composer = el.shadowRoot!.querySelector(
@@ -241,71 +323,39 @@ it("detects mention triggers, anchors the popover to the real textarea, and inse
   expect(popover.open).to.be.true;
   expect(popover.query).to.equal("ad");
   expect(popover.anchor?.tagName).to.equal("TEXTAREA");
-  expect(
-    composer.input?.hasAttribute("aria-controls"),
-    "a document-owned input must not publish a string IDREF into the popover shadow root"
-  ).to.be.false;
-  const reflected =
-    (
-      composer.input as HTMLTextAreaElement & {
-        ariaActiveDescendantElement?: Element | null;
-      }
-    ).ariaActiveDescendantElement === popover.activeDescendantElement;
-  if (!reflected) {
-    expect(
-      composer.input?.hasAttribute("aria-activedescendant"),
-      "unsupported cross-root reflection must fail closed without a broken string IDREF"
-    ).to.be.false;
-  }
+  expect(composer.input?.hasAttribute("role")).to.be.false;
+  expect(composer.input?.hasAttribute("aria-expanded")).to.be.false;
+  expect(composer.input?.hasAttribute("aria-controls")).to.be.false;
+  expect(composer.input?.hasAttribute("aria-activedescendant")).to.be.false;
+  expect(composer.input?.getAttribute("aria-haspopup")).to.equal("listbox");
+  expect(composer.input?.getAttribute("aria-autocomplete")).to.equal("list");
 
   composer.input!.focus();
-  const initialActiveDescendant = popover.activeDescendantId;
-  const keydown = new KeyboardEvent("keydown", {
+  const firstArrow = new KeyboardEvent("keydown", {
+    key: "ArrowUp",
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  composer.input!.dispatchEvent(firstArrow);
+  await waitUntil(() => {
+    return (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id'] === "ada";
+  });
+  expect(firstArrow.defaultPrevented).to.be.true;
+  expect((popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('ada');
+
+  const optionArrow = new KeyboardEvent("keydown", {
     key: "ArrowDown",
     bubbles: true,
     composed: true,
     cancelable: true,
   });
-  composer.input!.dispatchEvent(keydown);
-  await el.updateComplete;
-  expect(keydown.defaultPrevented).to.be.true;
-  expect(popover.activeDescendantId).to.not.equal(initialActiveDescendant);
+  popover.shadowRoot!.activeElement!.dispatchEvent(optionArrow);
   await waitUntil(() => {
-    const currentReflection = (
-      composer.input as HTMLTextAreaElement & {
-        ariaActiveDescendantElement?: Element | null;
-      }
-    ).ariaActiveDescendantElement;
-    return (
-      currentReflection === popover.activeDescendantElement ||
-      (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id'] ===
-        "adam"
-    );
+    return (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id'] === "adam";
   });
-  const usesReflection =
-    (
-      composer.input as HTMLTextAreaElement & {
-        ariaActiveDescendantElement?: Element | null;
-      }
-    ).ariaActiveDescendantElement === popover.activeDescendantElement;
-  if (usesReflection) {
-    expect(
-      (
-        composer.input as HTMLTextAreaElement & {
-          ariaActiveDescendantElement?: Element | null;
-        }
-      ).ariaActiveDescendantElement === popover.activeDescendantElement
-    ).to.be.true;
-    expect(composer.shadowRoot!.activeElement === composer.input).to.be.true;
-  } else {
-    expect(
-      composer.input?.hasAttribute("aria-activedescendant"),
-      "the fallback must continue avoiding a broken string IDREF"
-    ).to.be.false;
-    expect(
-      (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']
-    ).to.equal("adam");
-  }
+  expect(optionArrow.defaultPrevented).to.be.true;
+  expect((popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('adam');
 
   const selected = oneEvent(el, "lr-mention-select");
   popover.dispatchEvent(
@@ -328,6 +378,279 @@ it("detects mention triggers, anchors the popover to the real textarea, and inse
     trigger: "@",
   });
   expect(el.value).to.equal("Hello @Ada ");
+});
+
+it('closes a textarea mention instead of treating another prompt control as focus ownership', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input .mentionItems=${[{ suggestionId: 'ada', label: 'Ada' }]}></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  const textarea = composer.input!;
+  const attachment = el.shadowRoot!.querySelector('lr-attachment-trigger') as LyraAttachmentTrigger;
+  await attachment.updateComplete;
+  const attachmentButton = attachment.shadowRoot!.querySelector('[part="menu-trigger"]') as HTMLButtonElement;
+  textarea.value = '@a';
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+  await popover.updateComplete;
+  expect(popover.open).to.equal(true);
+  let optionFocusCount = 0;
+  popover.shadowRoot!.addEventListener('focusin', () => {
+    optionFocusCount += 1;
+  });
+
+  textarea.focus();
+  textarea.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowDown',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  }));
+  attachmentButton.focus();
+  expect(deepActiveElementIn(document)?.getAttribute('part')).to.equal('menu-trigger');
+  await waitUntil(() => !popover.open, 'the prompt did not close its mention session after attachment focus');
+  await el.updateComplete;
+  await popover.updateComplete;
+
+  expect(popover.open).to.equal(false);
+  expect(optionFocusCount).to.equal(0);
+  expect(popover.shadowRoot!.activeElement === null).to.equal(true);
+});
+
+it('keeps an adopted textarea-to-popover Arrow transfer in its owner realm', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input .mentionItems=${[{ suggestionId: 'ada', label: 'Ada' }]}></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const ownerDocument = frame.contentDocument!;
+  const ownerWindow = frame.contentWindow!;
+
+  try {
+    ownerDocument.body.append(ownerDocument.adoptNode(el));
+    await el.updateComplete;
+    const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+    await composer.updateComplete;
+    const textarea = composer.input!;
+    textarea.value = '@a';
+    textarea.setSelectionRange(2, 2);
+    textarea.dispatchEvent(new ownerWindow.Event('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+    await popover.updateComplete;
+    expect(popover.open).to.equal(true);
+
+    const initialGeneration = (
+      el as unknown as { suggestionNavigationGeneration: number }
+    ).suggestionNavigationGeneration;
+    textarea.focus();
+    const arrow = new ownerWindow.KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    textarea.dispatchEvent(arrow);
+    await waitUntil(() => {
+      return (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id'] === 'ada';
+    });
+    await el.updateComplete;
+    await popover.updateComplete;
+
+    expect(arrow.defaultPrevented).to.equal(true);
+    expect((el as unknown as { suggestionNavigationGeneration: number }).suggestionNavigationGeneration)
+      .to.equal(initialGeneration + 1);
+    expect(popover.open).to.equal(true);
+    expect(
+      (deepActiveElementIn(ownerDocument) as HTMLElement | null)?.dataset['id'],
+    ).to.equal('ada');
+    expect((popover.shadowRoot!.activeElement as HTMLElement | null)?.tabIndex).to.equal(0);
+  } finally {
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('owns and restores authored textarea ARIA while an Escape-dismissed multiline mention is open', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      .mentionItems=${[
+        { suggestionId: 'ada', label: 'Ada' },
+        { suggestionId: 'adam', label: 'Adam' },
+      ]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector(
+    'lr-chat-composer'
+  ) as LyraChatComposer;
+  const textarea = composer.input!;
+  textarea.setAttribute('role', 'searchbox');
+  textarea.setAttribute('aria-expanded', 'false');
+  textarea.setAttribute('aria-haspopup', 'grid');
+  textarea.setAttribute('aria-autocomplete', 'both');
+  textarea.setAttribute('aria-controls', 'author-results');
+  textarea.setAttribute('aria-activedescendant', 'author-active');
+  textarea.value = 'First line\n@ad';
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector(
+    'lr-mention-popover'
+  ) as LyraMentionPopover;
+  await popover.updateComplete;
+
+  expect(popover.open).to.equal(true);
+  expect(textarea.hasAttribute('role')).to.equal(false);
+  expect(textarea.hasAttribute('aria-expanded')).to.equal(false);
+  expect(textarea.getAttribute('aria-haspopup')).to.equal('listbox');
+  expect(textarea.getAttribute('aria-autocomplete')).to.equal('list');
+  expect(textarea.hasAttribute('aria-controls')).to.equal(false);
+  expect(textarea.hasAttribute('aria-activedescendant')).to.equal(false);
+
+  textarea.focus();
+  const escape = new KeyboardEvent('keydown', {
+    key: 'Escape',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  textarea.dispatchEvent(escape);
+  await waitUntil(() => !popover.open);
+  await el.updateComplete;
+  await popover.updateComplete;
+
+  expect(escape.defaultPrevented).to.equal(true);
+  expect(composer.shadowRoot!.activeElement === textarea).to.equal(true);
+  expect(textarea.selectionStart).to.equal(textarea.value.length);
+  expect(textarea.selectionEnd).to.equal(textarea.value.length);
+  expect(textarea.getAttribute('role')).to.equal('searchbox');
+  expect(textarea.getAttribute('aria-expanded')).to.equal('false');
+  expect(textarea.getAttribute('aria-haspopup')).to.equal('grid');
+  expect(textarea.getAttribute('aria-autocomplete')).to.equal('both');
+  expect(textarea.getAttribute('aria-controls')).to.equal('author-results');
+  expect(textarea.getAttribute('aria-activedescendant')).to.equal('author-active');
+});
+
+it('commits a multiline mention with Enter before the composed textarea can submit, then restores its caret', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      .mentionItems=${[{ suggestionId: 'ada', label: 'Ada' }]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector(
+    'lr-chat-composer'
+  ) as LyraChatComposer;
+  const textarea = composer.input!;
+  textarea.value = 'First line\n@a';
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector(
+    'lr-mention-popover'
+  ) as LyraMentionPopover;
+  await popover.updateComplete;
+  let submissions = 0;
+  el.addEventListener('lr-submit', () => {
+    submissions += 1;
+  });
+
+  textarea.focus();
+  const enter = new KeyboardEvent('keydown', {
+    key: 'Enter',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  textarea.dispatchEvent(enter);
+  await waitUntil(() => el.value === 'First line\n@Ada ');
+  await composer.updateComplete;
+
+  expect(enter.defaultPrevented).to.equal(true);
+  expect(submissions).to.equal(0);
+  expect(composer.shadowRoot!.activeElement === textarea).to.equal(true);
+  expect(composer.selectionStart).to.equal('First line\n@Ada '.length);
+  expect(composer.selectionEnd).to.equal('First line\n@Ada '.length);
+});
+
+it('commits a multiline mention with Tab before the composed textarea can submit, then restores its caret', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      .mentionItems=${[{ suggestionId: 'ada', label: 'Ada' }]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector(
+    'lr-chat-composer'
+  ) as LyraChatComposer;
+  const textarea = composer.input!;
+  textarea.value = 'First line\n@a';
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector(
+    'lr-mention-popover'
+  ) as LyraMentionPopover;
+  await popover.updateComplete;
+  let submissions = 0;
+  el.addEventListener('lr-submit', () => {
+    submissions += 1;
+  });
+
+  textarea.focus();
+  const tab = new KeyboardEvent('keydown', {
+    key: 'Tab',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  textarea.dispatchEvent(tab);
+  await waitUntil(() => el.value === 'First line\n@Ada ');
+  await composer.updateComplete;
+
+  expect(tab.defaultPrevented).to.equal(true);
+  expect(submissions).to.equal(0);
+  expect(composer.shadowRoot!.activeElement === textarea).to.equal(true);
+  expect(composer.selectionStart).to.equal('First line\n@Ada '.length);
+  expect(composer.selectionEnd).to.equal('First line\n@Ada '.length);
+});
+
+it('commits a multiline mention through the option pointer path without moving focus or submitting', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      .mentionItems=${[{ suggestionId: 'ada', label: 'Ada' }]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector(
+    'lr-chat-composer'
+  ) as LyraChatComposer;
+  const textarea = composer.input!;
+  textarea.value = 'First line\n@a';
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector(
+    'lr-mention-popover'
+  ) as LyraMentionPopover;
+  await popover.updateComplete;
+  const option = popover.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+  let submissions = 0;
+  el.addEventListener('lr-submit', () => {
+    submissions += 1;
+  });
+
+  textarea.focus();
+  const mouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  option.dispatchEvent(mouseDown);
+  option.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  await waitUntil(() => el.value === 'First line\n@Ada ');
+  await composer.updateComplete;
+
+  expect(mouseDown.defaultPrevented).to.equal(true);
+  expect(submissions).to.equal(0);
+  expect(composer.shadowRoot!.activeElement === textarea).to.equal(true);
+  expect(composer.selectionStart).to.equal('First line\n@Ada '.length);
+  expect(composer.selectionEnd).to.equal('First line\n@Ada '.length);
 });
 
 it("does not overwrite a controlled caret after suggestion selection", async () => {
@@ -686,7 +1009,6 @@ it("does not transfer suggestion focus after an outside control takes ownership"
 
   let transfers = 0;
   let guardedAfterOwnershipChanged = false;
-  popover.syncActiveDescendant = () => false;
   const outside = wrapper.querySelector("#outside") as HTMLButtonElement;
   popover.focusActiveOption = async (options = {}) => {
     transfers += 1;
@@ -1529,7 +1851,7 @@ it("keeps the text editing facade inert before the composed textarea renders", (
 it("forwards status, placeholder and submitOnEnter to the composed chat composer", async () => {
   const el = (await fixture(html`
     <lr-prompt-input
-      status="busy"
+      status="sending"
       placeholder="Ask anything"
       submit-on-enter="false"
     ></lr-prompt-input>
@@ -1540,9 +1862,32 @@ it("forwards status, placeholder and submitOnEnter to the composed chat composer
   await composer.updateComplete;
 
   // `status` is not cosmetic: the composer gates Enter-to-submit and its send/stop button on it.
-  expect(composer.status).to.equal("busy");
+  expect(composer.status).to.equal("sending");
   expect(composer.placeholder).to.equal("Ask anything");
   expect(composer.submitOnEnter).to.equal(false);
+});
+
+it('normalizes hostile status without rewriting the prompt host’s authored attribute', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-input status="busy"></lr-prompt-input>`
+  )) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector(
+    'lr-chat-composer'
+  ) as LyraChatComposer;
+  await composer.updateComplete;
+
+  expect(el.status).to.equal('idle');
+  expect(el.getAttribute('status')).to.equal('busy');
+  expect(composer.status).to.equal('idle');
+  expect(composer.getAttribute('status')).to.equal('idle');
+
+  (el as unknown as { status: unknown }).status = 'busy';
+  await el.updateComplete;
+  await composer.updateComplete;
+
+  expect(el.status).to.equal('idle');
+  expect(el.getAttribute('status')).to.equal('busy');
+  expect(composer.status).to.equal('idle');
 });
 
 it("forwards the unset defaults of status, placeholder and submitOnEnter unchanged", async () => {
@@ -1606,9 +1951,9 @@ it("suppresses Enter-to-submit end to end when submit-on-enter is false, and res
   ).to.equal(1);
 });
 
-it("gates Enter-to-submit on the forwarded status, so a busy prompt cannot submit again", async () => {
+it("gates Enter-to-submit on the forwarded status, so a sending prompt cannot submit again", async () => {
   const el = (await fixture(
-    html`<lr-prompt-input status="busy" value="drafted"></lr-prompt-input>`
+    html`<lr-prompt-input status="sending" value="drafted"></lr-prompt-input>`
   )) as LyraPromptInput;
   const composer = el.shadowRoot!.querySelector(
     "lr-chat-composer"
@@ -1629,7 +1974,7 @@ it("gates Enter-to-submit on the forwarded status, so a busy prompt cannot submi
       composed: true,
     })
   );
-  expect(submits, "a busy composer never submits on Enter").to.equal(0);
+  expect(submits, "a sending composer never submits on Enter").to.equal(0);
 
   el.status = "idle";
   await el.updateComplete;

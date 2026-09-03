@@ -4,7 +4,11 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
-import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { nextId } from '../../../internal/a11y.js';
+import {
+  acquireResolvedAriaRelationship,
+  type ResolvedAriaRelationshipLease,
+} from '../../../internal/aria-controls.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -20,7 +24,6 @@ import { firstByIdentity } from '../collection-identity.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_activityFeedCompletedStep, LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export interface ActivityEntry {
   id: string;
@@ -38,10 +41,7 @@ export interface ActivityEntry {
  *  transcript-mode vocabulary, identical to `<lr-thinking-panel>`'s `ThinkingPanelMode`. */
 export type ActivityFeedMode = LyraTranscriptMode;
 
-const ACTIVITY_FEED_MODE = literalSetConverter<ActivityFeedMode>(
-  ['live', 'post-hoc'],
-  'live',
-);
+const ACTIVITY_FEED_MODE = literalSetConverter<ActivityFeedMode>(['live', 'post-hoc'], 'live');
 
 export interface ActivityFeedToggleDetail {
   expanded: boolean;
@@ -73,12 +73,12 @@ function variantDotPart(variant: LyraVariant): string {
     variant === 'brand'
       ? 'variant-dot variant-dot-brand'
       : variant === 'success'
-        ? 'variant-dot variant-dot-success'
-        : variant === 'warning'
-          ? 'variant-dot variant-dot-warning'
-          : variant === 'danger'
-            ? 'variant-dot variant-dot-danger'
-            : 'variant-dot variant-dot-neutral';
+      ? 'variant-dot variant-dot-success'
+      : variant === 'warning'
+      ? 'variant-dot variant-dot-warning'
+      : variant === 'danger'
+      ? 'variant-dot variant-dot-danger'
+      : 'variant-dot variant-dot-neutral';
   return part;
 }
 
@@ -89,7 +89,10 @@ function variantDotPart(variant: LyraVariant): string {
  *  otherwise repeat for every visible row on every appended entry. `effectiveLocale` always
  *  resolves to a non-empty tag (it falls back to `'en'`), so no empty-locale guard is needed. */
 function defaultFormatTimestamp(date: Date, locale: string): string {
-  return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
+  return getDateTimeFormat(locale, {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
 }
 
 /**
@@ -106,8 +109,9 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * first occurrence wins.
  *
  * Each entry's `text` renders as plain text by default; a host needing richer per-entry content
- * (rendered markdown, a trailing tool-call chip list, etc.) sets `renderText` to fully replace it,
- * identically whether or not the feed is currently virtualized.
+ * (rendered markdown, a trailing tool-call chip list, etc.) sets `renderText` to replace the
+ * default text inside the stable `entry-text` styling wrapper, identically whether or not the feed
+ * is currently virtualized.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -137,8 +141,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @csspart variant-dot-success - A `success`-variant entry's dot (also carries `variant-dot`).
  * @csspart variant-dot-warning - A `warning`-variant entry's dot (also carries `variant-dot`).
  * @csspart variant-dot-danger - A `danger`-variant entry's dot (also carries `variant-dot`).
- * @csspart entry-text - The entry's `text`. Not rendered while `renderText` is set — its returned
- *   content replaces this part entirely.
+ * @csspart entry-text - The entry's text styling wrapper. `renderText`, when set, supplies rich
+ *   content inside this stable part instead of replacing the part itself.
  * @csspart entry-timestamp - The formatted timestamp, only rendered while `showTimestamps` and a
  *   valid `timestamp` is set.
  * @cssprop [--lr-activity-feed-max-height=16rem] - Cap on how tall the expanded body grows
@@ -194,16 +198,21 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   /** Component-managed, host-assignable stick-to-bottom flag — released on user scroll-up,
    *  re-engaged at the bottom. Only drives scrolling in `'live'` mode. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  follow = true;
 
   /** Body visibility. Never self-mutated on `mode` changes — a host wanting the finished feed
    *  collapsed sets `mode="post-hoc"` and `expanded=false` together. */
   @property({ type: Boolean, reflect: true }) expanded = false;
 
   /** Optional header-text override. Omission localizes `activityFeedLabel`; any supplied string,
-   *  including `'Activity'` or `''`, is rendered verbatim. A host `aria-label`, when present, names
-   *  the owned list in both the plain and virtualized rendering paths while this remains the visible
-   *  header text. */
+   *  including `'Activity'` or `''`, is rendered verbatim. The semantic list uses an authored host
+   *  `aria-label` when present (including an explicit empty value), otherwise its localized
+   *  `activityFeedLabel` fallback, while this remains the visible header text. */
   @property() label?: string;
 
   /** Trailing `<time datetime>` per entry, default `hour:minute` in `effectiveLocale`. */
@@ -212,12 +221,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   /** Overrides the default `hour:minute` rendering of every entry's `timestamp`. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
 
-  /** Overrides the default plain-text `[part="entry-text"]` rendering of every entry with an
-   *  arbitrary `TemplateResult` (e.g. rendered markdown, or markdown plus a trailing list of
-   *  `<lr-tool-call-chip>`s) — the returned content fully replaces `[part="entry-text"]` rather
-   *  than augmenting it, the same way `formatTimestamp` fully replaces the default timestamp
-   *  formatting. Applies identically whether or not the feed is currently virtualized, since both
-   *  paths render every entry through the same internal template. */
+  /** Overrides the default plain text inside every `[part="entry-text"]` wrapper with an arbitrary
+   *  `TemplateResult` (e.g. rendered markdown, or markdown plus a trailing list of
+   *  `<lr-tool-call-chip>`s). The stable wrapper remains available for styling in both rendering
+   *  paths, since both render every entry through the same internal template. */
   @property({ attribute: false }) renderText?: (entry: ActivityEntry) => TemplateResult;
 
   /** At/above this entry count, the body renders through an internal `<lr-virtual-list>`. */
@@ -242,20 +249,33 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private anchoringVirtualTail = false;
   private ownerRealmGeneration = 0;
   private virtualAnchorRequest = 0;
+  private externalLabelledByLease?: ResolvedAriaRelationshipLease;
+  private externalDescribedByLease?: ResolvedAriaRelationshipLease;
+  private relationshipSyncRequest = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) {
+      this.syncListRelationships();
+      this.scheduleListRelationshipSync();
+    }
     if (this.hasUpdated && this.shouldFollowLiveTail) this.scrollToLatest();
   }
 
   override disconnectedCallback(): void {
+    this.releaseListRelationships();
     this.resetOwnerRealmWork();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.releaseListRelationships();
     this.resetOwnerRealmWork();
+    if (this.isConnected && this.hasUpdated) {
+      this.syncListRelationships();
+      this.scheduleListRelationshipSync();
+    }
     if (this.isConnected && this.shouldFollowLiveTail) this.scrollToLatest();
   }
 
@@ -300,6 +320,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private resetOwnerRealmWork(): void {
     this.ownerRealmGeneration += 1;
     this.virtualAnchorRequest += 1;
+    this.relationshipSyncRequest += 1;
     this.cancelScrollFrame();
     this.cancelVirtualAnchorReleaseFrame();
     this.anchoringVirtualTail = false;
@@ -317,6 +338,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncListRelationships();
+    this.scheduleListRelationshipSync();
     const wasMounting = this.isMounting;
     this.isMounting = false;
 
@@ -369,7 +392,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           this.anchoringVirtualTail = false;
           return;
         }
-        list.scrollToIndex(this.normalizedEntries.length - 1, { align: 'end', behavior: 'auto' });
+        list.scrollToIndex(this.normalizedEntries.length - 1, {
+          align: 'end',
+          behavior: 'auto',
+        });
         const firstHandle = ownerWindow.requestAnimationFrame(() => {
           if (
             this.virtualAnchorReleaseRafId !== firstHandle ||
@@ -452,7 +478,71 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
       getPluralRules(this.effectiveLocale).select(count) === 'one'
         ? 'activityFeedCompletedStep'
         : 'activityFeedCompletedSteps';
-    return this.localize(key, undefined, { count: getNumberFormat(this.effectiveLocale).format(count) });
+    return this.localize(key, undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(count),
+    });
+  }
+
+  /** The element that owns the real list role in either rendering path. The virtual list's public
+   *  scrollContainer is its internal `[part="base"]` list owner, not the composed custom-element
+   *  host, so host IDREF relationships reach the semantic element without widening virtual-list's
+   *  public API. */
+  private get listSemanticOwner(): HTMLElement | null {
+    if (!this.isVirtualized) {
+      return this.renderRoot.querySelector<HTMLElement>('[part="body"][role="list"]');
+    }
+    return this.virtualListEl?.scrollContainer ?? null;
+  }
+
+  /** Projects both authored host IDREF relationships onto the current semantic list owner. */
+  private syncListRelationships(): void {
+    const target = this.listSemanticOwner;
+    if (!target) {
+      this.releaseListRelationships();
+      return;
+    }
+    if (!this.externalLabelledByLease) {
+      this.externalLabelledByLease = acquireResolvedAriaRelationship(this, target, 'aria-labelledby');
+    } else {
+      this.externalLabelledByLease.update(target);
+    }
+    if (!this.externalDescribedByLease) {
+      this.externalDescribedByLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+    } else {
+      this.externalDescribedByLease.update(target);
+    }
+  }
+
+  /** A parent update can finish before the composed virtual list creates its real list owner. */
+  private scheduleListRelationshipSync(): void {
+    const list = this.virtualListEl;
+    if (!this.isVirtualized || !list || !this.isConnected) {
+      this.relationshipSyncRequest += 1;
+      return;
+    }
+    const request = ++this.relationshipSyncRequest;
+    const ownerDocument = this.ownerDocument;
+    const generation = this.ownerRealmGeneration;
+    void list.updateComplete.then(() => {
+      if (
+        request !== this.relationshipSyncRequest ||
+        generation !== this.ownerRealmGeneration ||
+        this.ownerDocument !== ownerDocument ||
+        !this.isConnected ||
+        !this.isVirtualized ||
+        this.virtualListEl !== list
+      ) {
+        return;
+      }
+      this.syncListRelationships();
+    });
+  }
+
+  private releaseListRelationships(): void {
+    this.externalLabelledByLease?.release();
+    this.externalLabelledByLease = undefined;
+    this.externalDescribedByLease?.release();
+    this.externalDescribedByLease = undefined;
   }
 
   private toggle = (): void => {
@@ -499,8 +589,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     const dotPart = variantDotPart(variant);
     return html`
       <div part="entry" role=${ownRole ? 'listitem' : nothing} data-variant=${variant}>
-        <span part="entry-icon" aria-hidden="true">${entry.icon ? entry.icon : html`<span part=${dotPart} data-variant=${variant}></span>`}</span>
-        ${this.renderText ? this.renderText(entry) : html`<span part="entry-text">${entry.text}</span>`}
+        <span part="entry-icon" aria-hidden="true"
+          >${entry.icon ? entry.icon : html`<span part=${dotPart} data-variant=${variant}></span>`}</span
+        >
+        <span part="entry-text">${this.renderText ? this.renderText(entry) : entry.text}</span>
         ${this.showTimestamps && ts
           ? html`<time part="entry-timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>`
           : nothing}
@@ -510,9 +602,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   override render(): TemplateResult {
     const entries = this.normalizedEntries;
-    const label = this.label == null ? this.localize('activityFeedLabel') : this.label;
-    const ariaLabel = hostAriaLabel(this) ?? label;
-    const headerText = this.mode === 'live' ? (entries[entries.length - 1]?.text ?? '') : this.completedStepsSummary();
+    const fallbackLabel = this.localize('activityFeedLabel');
+    const label = this.label == null ? fallbackLabel : this.label;
+    const headerText = this.mode === 'live' ? entries[entries.length - 1]?.text ?? '' : this.completedStepsSummary();
+    const listAriaLabel = this.hasAttribute('aria-label') ? this.getAttribute('aria-label') ?? '' : fallbackLabel;
+    const headerAriaLabel = `${label} ${headerText}`.trim() ? nothing : fallbackLabel;
     const virtualized = this.isVirtualized;
 
     return html`
@@ -523,6 +617,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           id=${this.headerId}
           aria-expanded=${this.expanded ? 'true' : 'false'}
           aria-controls=${this.bodyId}
+          aria-label=${headerAriaLabel}
           @click=${this.toggle}
         >
           <span part="toggle" aria-hidden="true">${chevronIcon()}</span>
@@ -535,7 +630,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           id=${this.bodyId}
           role=${virtualized ? nothing : 'list'}
           tabindex=${virtualized ? nothing : '0'}
-          aria-label=${virtualized ? nothing : ariaLabel}
+          aria-label=${virtualized ? nothing : listAriaLabel}
           ?hidden=${!this.expanded}
           @scroll=${this.onBodyScroll}
         >
@@ -545,11 +640,15 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
                 .items=${entries}
                 .renderItem=${(item: unknown) => this.entryTemplate(item as ActivityEntry, false)}
                 .keyFunction=${(item: unknown) => (item as ActivityEntry).id}
-                aria-label=${ariaLabel}
+                aria-label=${listAriaLabel}
                 @lr-visible-range-change=${this.onVirtualListRangeChanged}
                 @lr-virtual-scroll=${this.stopOwnedEvent}
               ></lr-virtual-list>`
-            : repeat(entries, (entry) => entry.id, (entry) => this.entryTemplate(entry, true))}
+            : repeat(
+                entries,
+                (entry) => entry.id,
+                (entry) => this.entryTemplate(entry, true),
+              )}
         </div>
         <lr-live-region></lr-live-region>
       </div>

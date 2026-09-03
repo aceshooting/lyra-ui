@@ -363,9 +363,12 @@ description?: string; category?: string; keywords?: string[]; icon?: unknown; di
   first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable.
   A non-array value is treated as empty. Rows require nonblank string `type` and `label` values;
   malformed optional `description`, `category`, `keywords`, or `disabled` values omit only that row,
-  preserving later valid entries
+  preserving later valid entries. At most 10,000 positions are examined through own data
+  descriptors; accessor-backed rows are omitted without reserving later valid rows. The frozen
+  projection drives display while `lr-select.detail.item` retains the original admitted identity
 - `label?: string` — accessible name for the search field/listbox; omission uses the localized
-  palette label, while an explicit empty string stays empty
+  palette label. An omitted, empty, or whitespace-only value uses that fallback without changing
+  the raw property readback
 - `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
   reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
   behaving exactly like a plain Arrow press
@@ -448,8 +451,10 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper
 
-**Events:** `lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array, fired
-after each toggle).
+**Events:** cancelable `lr-before-visibility-change` (`detail: { hiddenTypes }`, a frozen complete
+next array) fires before a toggle changes state or announces it. Preventing it suppresses all three.
+`lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array) fires after an
+accepted assignment and announcement.
 
 **Slots:** none.
 
@@ -917,8 +922,8 @@ Plus shared tokens otherwise.
 **Known gotchas:**
 
 - `title` and `open-button` are split into two separate parts (rather than one dual-part-name
-  element) because an exact-match `[part="..."]` CSS attribute selector — as this component's own
-  tests use — cannot match a multi-token `part` attribute value.
+  element) because an exact-match `[part="..."]` CSS attribute selector cannot match a multi-token
+  `part` attribute value.
 
 ---
 
@@ -1484,7 +1489,7 @@ and `lr-citation-badge` for each evidence entry.
 **Properties:**
 
 - `assessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`,
-  imported from `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ supportedClaims: number;
+  imported from `@aceshooting/lyra-ui/ai`**: `{ supportedClaims: number;
 unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[];
 claims?: GroundedClaim[] }`, where `coverage` and `confidence` are 0–1 fractions. `null` renders
   the empty state
@@ -1507,16 +1512,16 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
   level used by both warnings and evidence sections; `'none'` keeps the visual text without
   exposing a heading role, and invalid untyped values fall back to level 3
 
-Direct citations and `assessment.claims` are canonicalized independently by nonblank `id` before
-counts, child composition, rendering, or events. Malformed rows and later duplicate ids are omitted;
-the first valid occurrence wins.
+Direct citations and `assessment.claims` are keyed independently by nonblank `id` before counts,
+rendering, or events. Usable display fields are captured once while emitted selected claim/citation
+objects retain their original identity. Malformed rows and later duplicate ids are omitted; the
+first valid occurrence wins.
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
 The inner `lr-citation-badge`'s generic activation is stopped at this composition boundary; this
-richer event exists because a bare `sourceId`/`index` pair can't tell a host which exact evidence
-_span_ to jump to. The composed `lr-claim-evidence` also surfaces
-`lr-claim-select` (`detail: { claim }`) unchanged when a claim is activated.
+richer event exists because a bare `sourceId`/`index` pair cannot identify the exact evidence span.
+The summary emits `lr-claim-select` (`detail: { claim }`) when a claim is activated.
 
 **Slots:** none.
 
@@ -1528,7 +1533,7 @@ row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-co
 its semantics survive list-style resets),
 `evidence-item` (one `<li>` containing a badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
-`Citation.span` range, omitted when unset), `claims` (the composed claim-evidence audit), `empty`
+`Citation.span` range, omitted when unset), `claims` (the claim/evidence region), `empty`
 (shown when `assessment` is `null`).
 
 **Themeable custom properties:** shared tokens only.
@@ -1596,7 +1601,7 @@ announcement itself goes to the library's shared **light-DOM** assertive region,
 consumer's `<body>` and marked `data-lr-live-region="assertive"`, because a live region inside a
 shadow root is not reliably announced (JAWS with Firefox ignores one outright). What is announced
 is unchanged: only failures added or transitioned _after_ mount, so historical failed rows stay
-visible without being re-announced. Assert against that document-level region rather than
+visible without being re-announced. Read that document-level region rather than
 `::part(failure-live)`.
 
 In virtualized mode (above `virtualizeAt`) the rows live in the internal
@@ -1635,7 +1640,8 @@ errorMessage?: string }` (all four types exported here), where
   `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
   feeding_ documents, not a document, so the rest of the fields are its own
 - `label?: string` — heading text and the table's accessible name; omission uses the localized
-  knowledge-base label, while an explicit empty string stays empty
+  knowledge-base label. An explicit empty string keeps the visible heading empty while the nested
+  table still takes the localized default as its accessible name
 - `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — hides the aggregate
   total/synced/syncing/needs-attention row
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
@@ -1662,6 +1668,14 @@ empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omit
 unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`,
 `document-count` (omitted when unset), `permission-badge` (omitted when `permission` is unset),
 `actions-menu`, `actions-trigger` (the kebab `<button>`).
+
+The 13 row parts — `name-cell`, `source-name`, `source-type`, `sync-cell`, `sync-badge`,
+`sync-timestamp`, `sync-error`, `health-cell`, `health-badge`, `document-count`,
+`permission-badge`, `actions-menu`, and `actions-trigger` — are forwarded from the composed table
+through `[part="table"]`/`exportparts`, so they are styleable as
+`lr-knowledge-base::part(actions-trigger)`. `actions-trigger` is the forwarded kebab button: it
+inherits the row font, has the shared `--lr-icon-button-size` minimum hit area (40px by default),
+and keeps independent hover, pressed, and focus treatment.
 
 **Themeable custom properties:** shared tokens only.
 
@@ -1884,7 +1898,7 @@ text verbatim. Large sets window through an internal `lr-virtual-list`.
 **Properties:**
 
 - `chunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk`, imported from
-  `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; text: string; score: number;
+  `@aceshooting/lyra-ui/ai`**: `{ id: string; text: string; score: number;
 source: DocumentRef; metadata?: Record<string, unknown>; rank?: number; locator?: DocumentLocator;
 queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreakdown }`. The raw,
   unsorted/ungrouped result set; host-owned. Blank ids and later duplicate ids are omitted
@@ -2389,6 +2403,16 @@ import "@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-da
 `lr-grounding-summary` and `lr-rag-answer` now accept `GroundingAssessment.claims` and expose
 `showClaims: boolean = true`; `lr-retrieval-results` forwards `RetrievalChunk.locator` as the
 document-viewer-compatible `anchor` in `lr-chunk-open`.
+
+## Consumer integration notes
+
+- **Explorer legend:** observe `lr-hidden-types-change` on
+  `lr-knowledge-graph-explorer` for an accepted visibility change. A visibility proposal can be
+  vetoed only from the legend control when an integration renders or owns one separately.
+- **Projected records:** `lr-memory-panel` and `lr-claim-evidence` capture usable display/action
+  fields when their collections are assigned. Unsafe or malformed branches are omitted while valid
+  siblings remain; selected/action event details retain the original record where that identity is
+  part of the public contract. Reassign a new collection to update the rendered projection.
 
 ## Exported TypeScript contracts
 

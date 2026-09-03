@@ -60,6 +60,17 @@ export const AllowCustom: Story = {
   `,
 };
 
+/** `readonly` keeps both catalog modes focusable and browseable. Typing and commits are locked,
+ * while the standalone preview action and application-driven value updates remain available. */
+export const Readonly: Story = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-24rem)">
+      <lr-voice-picker readonly label="Voice" value="aria" .catalog=${catalog}></lr-voice-picker>
+      <lr-voice-picker readonly allow-custom label="Voice" value="aria" .catalog=${catalog}></lr-voice-picker>
+    </div>
+  `,
+};
+
 /** Free-text mode exposes the native selection facade while keeping the committed voice id in sync. */
 export const SelectionEditingFacade: Story = {
   render: () => {

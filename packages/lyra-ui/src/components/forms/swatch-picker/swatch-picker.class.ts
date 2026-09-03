@@ -10,6 +10,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './swatch-picker.styles.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface SwatchPickerItem {
   /** The option's value -- reported in `lr-change` and matched against `value`. */
@@ -249,8 +250,8 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (!changed.has('items')) return;
-    const active = this.shadowRoot?.activeElement as HTMLElement | null;
-    if (active?.getAttribute('part') !== 'swatch') return;
+    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    if (typeof active?.getAttribute !== 'function' || active.getAttribute('part') !== 'swatch') return;
     const previousOptions = changed.get('items') as
       | readonly SwatchPickerItem[]
       | undefined;
@@ -332,10 +333,10 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
           (candidate as Partial<Element>).getAttribute?.('part') === 'swatch' &&
           (candidate as Element).getRootNode() === this.renderRoot
       );
-    const focused = this.shadowRoot?.activeElement;
+    const focused = activeElementIn(this.shadowRoot);
     const candidate =
       fromEvent ??
-      (focused?.getAttribute('part') === 'swatch'
+      (typeof focused?.getAttribute === 'function' && focused.getAttribute('part') === 'swatch'
         ? (focused as HTMLElement)
         : undefined);
     const index = Number(candidate?.dataset['index']);

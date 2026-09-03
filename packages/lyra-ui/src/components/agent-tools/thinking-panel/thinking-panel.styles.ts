@@ -25,6 +25,10 @@ export const styles = css`
       var(--lr-space-2xs) var(--lr-space-s)
     );
     gap: var(--lr-thinking-panel-compact-header-gap, var(--lr-space-2xs));
+    font-size: var(
+      --lr-thinking-panel-compact-header-font-size,
+      var(--lr-font-size-sm)
+    );
   }
   :host([compact]) [part="body"] {
     padding: var(--lr-thinking-panel-compact-body-padding, var(--lr-space-s));

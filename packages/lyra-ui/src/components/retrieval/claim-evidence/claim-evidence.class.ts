@@ -7,9 +7,13 @@ import type {
   GroundedClaim,
   GroundedClaimStatus,
 } from '../../../ai/types.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
@@ -23,7 +27,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraClaimEvidenceEventMap {
@@ -42,6 +46,219 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
   contradicted: 'danger',
 };
 
+const MAX_PROJECTED_CLAIM_EVIDENCE_ROWS = 10_000;
+
+interface CanonicalClaim {
+  /** The admitted input is retained only for its public selection-event identity. */
+  readonly source: GroundedClaim;
+  readonly id: string;
+  readonly text: string;
+  readonly status: string;
+  readonly citationIds: readonly string[];
+  readonly confidence?: number;
+  readonly explanation?: string;
+}
+
+interface CanonicalCitation {
+  /** The admitted input is retained only for its public selection-event identity. */
+  readonly source: Citation;
+  readonly id: string;
+  readonly sourceId?: string;
+  readonly label?: string;
+  readonly quote?: string;
+}
+
+const EMPTY_CANONICAL_CLAIMS: readonly CanonicalClaim[] = Object.freeze([]);
+const EMPTY_CANONICAL_CITATIONS: readonly CanonicalCitation[] = Object.freeze(
+  []
+);
+
+function descriptorValue(
+  value: object,
+  property: PropertyKey
+): ReturnType<typeof getOwnDataDescriptor> {
+  return getOwnDataDescriptor(value, property);
+}
+
+function valueOfDescriptor(
+  descriptor: ReturnType<typeof getOwnDataDescriptor>
+): unknown | undefined {
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+    ? undefined
+    : descriptor.value;
+}
+
+function hasUnsafeDescriptor(
+  descriptors: readonly ReturnType<typeof getOwnDataDescriptor>[]
+): boolean {
+  return descriptors.some(
+    (descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+  );
+}
+
+function projectCitationIds(value: unknown): readonly string[] | undefined {
+  try {
+    if (!Array.isArray(value)) return undefined;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    )
+      return undefined;
+
+    const ids: string[] = [];
+    const length = Math.min(
+      lengthDescriptor.value,
+      MAX_PROJECTED_CLAIM_EVIDENCE_ROWS
+    );
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = descriptorValue(value, String(index));
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+      if (
+        descriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
+        typeof descriptor.value === 'string'
+      )
+        ids.push(descriptor.value);
+    }
+    return Object.freeze(ids);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectClaim(value: unknown): CanonicalClaim | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+      return undefined;
+    const idDescriptor = descriptorValue(value, 'id');
+    const textDescriptor = descriptorValue(value, 'text');
+    const statusDescriptor = descriptorValue(value, 'status');
+    const citationIdsDescriptor = descriptorValue(value, 'citationIds');
+    const confidenceDescriptor = descriptorValue(value, 'confidence');
+    const explanationDescriptor = descriptorValue(value, 'explanation');
+    if (
+      hasUnsafeDescriptor([
+        idDescriptor,
+        textDescriptor,
+        statusDescriptor,
+        citationIdsDescriptor,
+        confidenceDescriptor,
+        explanationDescriptor,
+      ])
+    )
+      return undefined;
+
+    const id = valueOfDescriptor(idDescriptor);
+    const text = valueOfDescriptor(textDescriptor);
+    const citationIds = projectCitationIds(valueOfDescriptor(citationIdsDescriptor));
+    if (
+      typeof id !== 'string' ||
+      id.trim().length === 0 ||
+      typeof text !== 'string' ||
+      citationIds === undefined
+    )
+      return undefined;
+
+    const status = valueOfDescriptor(statusDescriptor);
+    const confidence = valueOfDescriptor(confidenceDescriptor);
+    const explanation = valueOfDescriptor(explanationDescriptor);
+    return Object.freeze({
+      source: value as GroundedClaim,
+      id,
+      text,
+      status: typeof status === 'string' ? status : 'unsupported',
+      citationIds,
+      ...(typeof confidence === 'number' && Number.isFinite(confidence)
+        ? { confidence }
+        : {}),
+      ...(typeof explanation === 'string' ? { explanation } : {}),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectCitation(value: unknown): CanonicalCitation | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+      return undefined;
+    const idDescriptor = descriptorValue(value, 'id');
+    const sourceIdDescriptor = descriptorValue(value, 'sourceId');
+    const labelDescriptor = descriptorValue(value, 'label');
+    const quoteDescriptor = descriptorValue(value, 'quote');
+    if (
+      hasUnsafeDescriptor([
+        idDescriptor,
+        sourceIdDescriptor,
+        labelDescriptor,
+        quoteDescriptor,
+      ])
+    )
+      return undefined;
+
+    const id = valueOfDescriptor(idDescriptor);
+    if (typeof id !== 'string' || id.trim().length === 0) return undefined;
+    const sourceId = valueOfDescriptor(sourceIdDescriptor);
+    const label = valueOfDescriptor(labelDescriptor);
+    const quote = valueOfDescriptor(quoteDescriptor);
+    return Object.freeze({
+      source: value as Citation,
+      id,
+      ...(typeof sourceId === 'string' ? { sourceId } : {}),
+      ...(typeof label === 'string' ? { label } : {}),
+      ...(typeof quote === 'string' ? { quote } : {}),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function projectRows<T extends { readonly id: string }>(
+  value: unknown,
+  project: (entry: unknown) => T | undefined,
+  empty: readonly T[]
+): readonly T[] {
+  try {
+    if (!Array.isArray(value)) return empty;
+    const lengthDescriptor = descriptorValue(value, 'length');
+    if (
+      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    )
+      return empty;
+
+    const rows: T[] = [];
+    const seen = new Set<string>();
+    const length = Math.min(
+      lengthDescriptor.value,
+      MAX_PROJECTED_CLAIM_EVIDENCE_ROWS
+    );
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = descriptorValue(value, String(index));
+      if (
+        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
+        continue;
+      const row = project(descriptor.value);
+      // A malformed duplicate must never reserve its public identity ahead of a valid later row.
+      if (!row || seen.has(row.id)) continue;
+      seen.add(row.id);
+      rows.push(row);
+    }
+    return Object.freeze(rows);
+  } catch {
+    return empty;
+  }
+}
+
 function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
   switch (status) {
     case 'supported':
@@ -59,9 +276,11 @@ function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
  * claims to complete citation records, exposes assessment status/confidence, and tolerates
  * missing citation ids without fabricating evidence.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
- * Blank claim/citation ids and later duplicates are ignored before lookup, rendering, counts, or
+ * Public collection sequences are bounded, frozen snapshots. Admitted claim and citation source
+ * identities remain opaque while descriptor-safe projections copy the fields used for display and
+ * lookup once; later rendering and events never reread a source record. Create a new collection
+ * and reassign it after changes; mutating the assigned array does not update the view. Blank
+ * claim/citation ids and later duplicates are ignored before lookup, rendering, counts, or
  * activation. The first record for an id wins.
  * A nested badge's `lr-citation-activate` is contained and translated to `lr-citation-select` with
  * the complete citation record. Its distinct `lr-citation-open` signal intentionally remains a
@@ -94,6 +313,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    citation: LYRA_DEFAULT_citation,
     claimEvidenceConfidence: LYRA_DEFAULT_claimEvidenceConfidence,
     claimEvidenceContradicted: LYRA_DEFAULT_claimEvidenceContradicted,
     claimEvidenceEmpty: LYRA_DEFAULT_claimEvidenceEmpty,
@@ -116,12 +336,22 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     'claims',
     'citations',
   ]);
+  /** Source records carry opaque caller fields returned by the public selection events. */
+  protected static override readonly identityCollectionProperties = Object.freeze([
+    'claims',
+    'citations',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-claim-select',
     'lr-citation-select',
   ]);
+  /** Keep the admitted source opaque inside the otherwise frozen event envelope. */
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-claim-select': Object.freeze(['claim']),
+    'lr-citation-select': Object.freeze(['citation']),
+  });
 
   /** Grounded claims rendered as the selectable evidence index. */
   @property({ attribute: false }) claims: readonly GroundedClaim[] = [];
@@ -144,17 +374,44 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
    *  (nothing left to tighten). */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
-  private get normalizedClaims(): GroundedClaim[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.claims) ? this.claims : [],
-      (claim) => claim.id
+  private readonly canonicalClaimsBySource = new WeakMap<
+    object,
+    readonly CanonicalClaim[]
+  >();
+  private readonly canonicalCitationsBySource = new WeakMap<
+    object,
+    readonly CanonicalCitation[]
+  >();
+
+  private canonicalRowsFor<T extends { readonly id: string }>(
+    source: unknown,
+    cache: WeakMap<object, readonly T[]>,
+    project: (entry: unknown) => T | undefined,
+    empty: readonly T[]
+  ): readonly T[] {
+    if (source === null || typeof source !== 'object') return empty;
+    const cached = cache.get(source);
+    if (cached) return cached;
+    const rows = projectRows(source, project, empty);
+    cache.set(source, rows);
+    return rows;
+  }
+
+  private get normalizedClaims(): readonly CanonicalClaim[] {
+    return this.canonicalRowsFor(
+      this.claims,
+      this.canonicalClaimsBySource,
+      projectClaim,
+      EMPTY_CANONICAL_CLAIMS
     );
   }
 
-  private get normalizedCitations(): Citation[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.citations) ? this.citations : [],
-      (citation) => citation.id
+  private get normalizedCitations(): readonly CanonicalCitation[] {
+    return this.canonicalRowsFor(
+      this.citations,
+      this.canonicalCitationsBySource,
+      projectCitation,
+      EMPTY_CANONICAL_CITATIONS
     );
   }
 
@@ -179,16 +436,16 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   }
 
   private resolvedCitations(
-    claim: GroundedClaim,
-    citations: readonly Citation[]
-  ): Citation[] {
+    claim: CanonicalClaim,
+    citations: readonly CanonicalCitation[]
+  ): CanonicalCitation[] {
     const ids = new Set(claim.citationIds);
     return citations.filter((citation) => ids.has(citation.id));
   }
 
   private renderClaim(
-    claim: GroundedClaim,
-    allCitations: readonly Citation[]
+    claim: CanonicalClaim,
+    allCitations: readonly CanonicalCitation[]
   ): TemplateResult {
     const selected = claim.id === this.selectedClaimId;
     const citations = this.resolvedCitations(claim, allCitations);
@@ -200,7 +457,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
           part="claim-trigger"
           type="button"
           aria-pressed=${selected ? 'true' : 'false'}
-          @click=${() => this.emit('lr-claim-select', { claim })}
+          @click=${() => this.emit('lr-claim-select', { claim: claim.source })}
         >
           <lr-badge part="status" variant=${STATUS_VARIANT[status]}>
             ${this.statusLabel(status)}
@@ -226,7 +483,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
                       .label=${citation.label ?? ''}
                       @lr-citation-activate=${(event: Event) => {
                         event.stopPropagation();
-                        this.emit('lr-citation-select', { citation });
+                        this.emit('lr-citation-select', {
+                          citation: citation.source,
+                        });
                       }}
                     ></lr-citation-badge>
                     ${citation.quote ? html`<q>${citation.quote}</q>` : nothing}

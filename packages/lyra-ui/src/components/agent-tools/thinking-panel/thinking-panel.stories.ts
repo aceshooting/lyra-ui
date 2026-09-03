@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { createRef, ref } from 'lit/directives/ref.js';
 import './thinking-panel.js';
 import type { LyraThinkingPanel } from './thinking-panel.js';
 
@@ -74,29 +75,32 @@ export const Collapsed: Story = {
 export const CancelableToggle: Story = {
   name: 'Cancelable toggle proposal',
   render: () => {
-    function wire(root: HTMLElement): void {
-      const panel = root.querySelector<LyraThinkingPanel>('lr-thinking-panel')!;
-      const veto = root.querySelector<HTMLInputElement>('[data-veto]')!;
-      const status = root.querySelector<HTMLElement>('[data-status]')!;
-      if (panel.hasAttribute('data-wired')) return;
-      panel.setAttribute('data-wired', '');
-      panel.addEventListener('lr-toggle-request', (event) => {
-        status.textContent = `Requested expanded=${event.detail.expanded}`;
-        if (veto.checked) {
-          event.preventDefault();
-          status.textContent += ' (vetoed)';
-        }
-      });
-      panel.addEventListener('lr-toggle', (event) => {
-        status.textContent += `; committed expanded=${event.detail.expanded}`;
-      });
-    }
+    const vetoRef = createRef<HTMLInputElement>();
+    const statusRef = createRef<HTMLElement>();
+    const onToggleRequest = (event: Event): void => {
+      const status = statusRef.value;
+      if (!status) return;
+      status.textContent = `Requested expanded=${(event as CustomEvent<{ expanded: boolean }>).detail.expanded}`;
+      if (vetoRef.value?.checked) {
+        event.preventDefault();
+        status.textContent += ' (vetoed)';
+      }
+    };
+    const onToggle = (event: Event): void => {
+      if (statusRef.value) {
+        statusRef.value.textContent += `; committed expanded=${(event as CustomEvent<{ expanded: boolean }>).detail.expanded}`;
+      }
+    };
     return html`
-      <div style="display:grid;gap:0.75rem;max-width:32rem" @click=${(event: Event) =>
-        wire(event.currentTarget as HTMLElement)}>
-        <label><input data-veto type="checkbox" /> Veto the next toggle request</label>
-        <lr-thinking-panel>Only accepted proposals change this disclosure.</lr-thinking-panel>
-        <p data-status style="margin:0;color:var(--lr-color-text-quiet)">Activate the panel header.</p>
+      <div style="display:grid;gap:0.75rem;max-width:32rem">
+        <label><input ${ref(vetoRef)} data-veto type="checkbox" /> Veto the next toggle request</label>
+        <lr-thinking-panel
+          @lr-toggle-request=${onToggleRequest}
+          @lr-toggle=${onToggle}
+        >
+          Only accepted proposals change this disclosure.
+        </lr-thinking-panel>
+        <p ${ref(statusRef)} data-status style="margin:0;color:var(--lr-color-text-quiet)">Activate the panel header.</p>
       </div>
     `;
   },
@@ -129,6 +133,19 @@ export const DensityAndChrome: Story = {
   },
 };
 
+export const RetunedCompactHeader: Story = {
+  name: 'Compact header typography rethemed',
+  render: () => html`
+    <lr-thinking-panel
+      compact
+      expanded
+      style="max-width:32rem; --lr-thinking-panel-compact-header-font-size: var(--lr-font-size-xs);"
+    >
+      Compact header typography can be tuned independently from the transcript body.
+    </lr-thinking-panel>
+  `,
+};
+
 export const CustomLabel: Story = {
   render: () => html`
     <lr-thinking-panel label="Reasoning" mode="post-hoc" duration-ms="61500" expanded style="max-width: 32rem;">
@@ -153,58 +170,67 @@ export const LiveStreamingDemo: Story = {
       'Drafting the final summary now.',
     ];
 
-    function wire(root: HTMLElement): void {
-      const panel = root.querySelector<LyraThinkingPanel>('lr-thinking-panel')!;
-      const content = root.querySelector<HTMLElement>('[data-content]')!;
-      const status = root.querySelector<HTMLElement>('[data-status]')!;
-      if (panel.hasAttribute('data-wired')) return;
-      panel.setAttribute('data-wired', '');
-
-      const start = performance.now();
-      let i = 0;
-      const tick = (): void => {
-        if (i >= chunks.length) {
-          panel.mode = 'post-hoc';
-          panel.durationMs = Math.round(performance.now() - start);
-          status.textContent = 'Complete.';
-          return;
-        }
-        content.append(chunks[i]!);
-        i++;
-        status.textContent = `Streaming… (${i}/${chunks.length})`;
-        setTimeout(tick, 350);
-      };
-
-      root.querySelector('[data-start]')!.addEventListener('click', () => {
-        content.textContent = '';
-        // On a second (or later) run, `expanded` is already `true` (a no-op)
-        // but `mode` genuinely transitions from 'post-hoc' back to 'live' --
-        // that transition alone resets follow and jumps to the
-        // latest content, so a reader who scrolled up during the previous
-        // run doesn't silently stop auto-following this time.
-        panel.mode = 'live';
-        panel.durationMs = undefined;
-        panel.expanded = true;
-        i = 0;
-        status.textContent = 'Streaming…';
-        setTimeout(tick, 350);
-      });
-    }
+    const panelRef = createRef<LyraThinkingPanel>();
+    const contentRef = createRef<HTMLElement>();
+    const statusRef = createRef<HTMLElement>();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let start = 0;
+    let i = 0;
+    const tick = (): void => {
+      const panel = panelRef.value;
+      const content = contentRef.value;
+      const status = statusRef.value;
+      if (!panel || !content || !status) {
+        timer = undefined;
+        return;
+      }
+      if (i >= chunks.length) {
+        panel.mode = 'post-hoc';
+        panel.durationMs = Math.round(performance.now() - start);
+        status.textContent = 'Complete.';
+        timer = undefined;
+        return;
+      }
+      content.append(chunks[i]!);
+      i++;
+      status.textContent = `Streaming… (${i}/${chunks.length})`;
+      timer = setTimeout(tick, 350);
+    };
+    const startStreaming = (): void => {
+      const panel = panelRef.value;
+      const content = contentRef.value;
+      const status = statusRef.value;
+      if (!panel || !content || !status) return;
+      if (timer !== undefined) clearTimeout(timer);
+      content.textContent = '';
+      // On a second (or later) run, `expanded` is already `true` (a no-op)
+      // but `mode` genuinely transitions from 'post-hoc' back to 'live' --
+      // that transition alone resets follow and jumps to the
+      // latest content, so a reader who scrolled up during the previous
+      // run doesn't silently stop auto-following this time.
+      panel.mode = 'live';
+      panel.durationMs = undefined;
+      panel.expanded = true;
+      start = performance.now();
+      i = 0;
+      status.textContent = 'Streaming…';
+      timer = setTimeout(tick, 350);
+    };
 
     return html`
-      <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;" @click=${(e: Event) =>
-        wire(e.currentTarget as HTMLElement)}>
-        <lr-thinking-panel mode="live">
-          <span data-content></span>
+      <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
+        <lr-thinking-panel ${ref(panelRef)} mode="live">
+          <span ${ref(contentRef)} data-content></span>
         </lr-thinking-panel>
         <div style="display:flex; align-items:center; gap:0.5rem;">
           <button
             data-start
+            @click=${startStreaming}
             style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface); cursor:pointer;"
           >
             Start streaming
           </button>
-          <span data-status style="font-size:0.8125rem; color:var(--lr-color-text-quiet);"></span>
+          <span ${ref(statusRef)} data-status style="font-size:0.8125rem; color:var(--lr-color-text-quiet);"></span>
         </div>
         <p style="margin:0; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
           While streaming, scroll the panel up to read earlier lines -- new chunks stop auto-scrolling

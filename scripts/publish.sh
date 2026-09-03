@@ -51,6 +51,30 @@ done
 
 cd "$ROOT_DIR"
 
+# The dependency upgrader deliberately changes these authority and package-manager surfaces before
+# it regenerates later release artifacts. Keep the preview, abort guidance, and staging handoff on
+# this one path set so an approved upgrade cannot strand a tracked or newly created authority file.
+UPGRADE_DEPS_HANDOFF_PATHS=(
+  package.json
+  pnpm-lock.yaml
+  packages/*/package.json
+  AGENTS.md
+  CONTRIBUTING.md
+  docs/agents/ci-and-gates.md
+  scripts/peer-compatibility-profiles.json
+)
+
+print_upgrade_deps_revert_command() {
+  printf "Aborted. Dependency upgrade left in the working tree; revert with 'git checkout --" >&2
+  printf ' %q' "${UPGRADE_DEPS_HANDOFF_PATHS[@]}" >&2
+  printf "' if unwanted.\n" >&2
+}
+
+# Release generation and qualification must run under the repository's exact Node patch. A nearby
+# Node 22 release can change generated package metadata or measured gzip output, so a major-only
+# check would make the tarball and its review evidence non-reproducible.
+node scripts/check-node-version.mjs
+
 # ---------------------------------------------------------------------------
 # Discover publishable workspace packages (packages/*/package.json without
 # "private": true).
@@ -318,11 +342,11 @@ if [[ "$UPGRADE_DEPS" -eq 1 ]]; then
 
   echo
   echo "==> Dependency upgrade diff"
-  git --no-pager diff -- pnpm-lock.yaml packages/*/package.json
+  git --no-pager diff -- "${UPGRADE_DEPS_HANDOFF_PATHS[@]}"
   echo
   read -rp "Type 'yes' to continue the release with the dependency upgrade shown above: " upgrade_confirm
   if [[ "$upgrade_confirm" != "yes" ]]; then
-    echo "Aborted. Dependency upgrade left in the working tree; revert with 'git checkout -- pnpm-lock.yaml packages/*/package.json' if unwanted." >&2
+    print_upgrade_deps_revert_command
     exit 1
   fi
 else
@@ -461,6 +485,18 @@ if [[ "$LYRA_UI_RELEASED" -eq 1 ]]; then
   echo
   echo "==> [@aceshooting/lyra-ui] Verify plugin and marketplace contracts"
   pnpm skill:check
+
+  # package.sh is a source-writing generator. Rebuild and remeasure after it rather than letting
+  # the pre-package loop's earlier dist/ evidence stand for its output.
+  echo
+  echo "==> [@aceshooting/lyra-ui] Rebuild after packaged-reference generation"
+  pnpm --filter @aceshooting/lyra-ui build
+  echo
+  echo "==> [@aceshooting/lyra-ui] Regenerate built component-quality evidence"
+  pnpm --filter @aceshooting/lyra-ui component-quality
+  echo
+  echo "==> [@aceshooting/lyra-ui] Verify final built component-quality evidence"
+  pnpm --filter @aceshooting/lyra-ui check:component-quality:built
 fi
 
 echo
@@ -592,6 +628,10 @@ for dir in "${RELEASE_DIRS[@]}"; do
   echo "==> [$name] Packing tarball"
   rm -f "$dir/$stem"-*.tgz
   (cd "$dir" && pnpm pack)
+  # `pnpm pack` runs the package prepack lifecycle. Check the resulting dist/ measurements after
+  # that later writer so the tarball-producing lifecycle cannot invalidate the final evidence.
+  echo "==> [$name] Verify built component-quality evidence after pack"
+  pnpm --filter "$name" --if-present run check:component-quality:built
   tarball_path="$dir/$stem-$new_version.tgz"
   if [[ ! -f "$tarball_path" ]]; then
     # Use `false` rather than `exit 1`: an explicit `exit` does NOT run the
@@ -616,6 +656,9 @@ done
 echo
 echo "==> Committing version bump"
 git add README.md pnpm-lock.yaml packages/*/package.json packages/*/CHANGELOG.md .changeset
+if [[ "$UPGRADE_DEPS" -eq 1 ]]; then
+  git add -- "${UPGRADE_DEPS_HANDOFF_PATHS[@]}"
+fi
 for dir in "${PKG_DIRS[@]}"; do
   [[ -f "$dir/custom-elements.json" ]] && git add "$dir/custom-elements.json"
   # The explicit preflight generators and `pnpm pack`'s prepack lifecycle re-stamp the new

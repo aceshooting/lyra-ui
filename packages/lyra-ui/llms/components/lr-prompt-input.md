@@ -34,6 +34,7 @@ request. `label` names the prompt section; it is not generic field chrome.
 `autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
 `enterKeyHint: string = ''` (attribute `enterkeyhint`) forward unchanged to the composed native
 textarea; empty string hints preserve the browser default.
+Invalid `status` values read as `idle` without rewriting the host attribute.
 `attachments: readonly LyraPromptInputAttachment[] = []` — `attachmentId` must be nonempty and
 unique; malformed rows and later duplicates are omitted first-wins before rendering and attachment
 events, and surviving chips reconcile by `attachmentId`. `attachmentCapabilities: readonly
@@ -89,9 +90,12 @@ replaces the built-in composer action.
 **Themeable custom properties:** `--lr-prompt-input-control-width` (default `--lr-size-12rem`) is
 the preferred width of each generated model, voice, and source control before wrapping.
 
-Mention-popover focus transfer is generation-guarded: closing, disabling, disconnecting, adopting,
-or replacing the query/data before its awaited focus step prevents stale focus. Empty `chips` and
-`footer` wrappers are not rendered, so an absent optional region cannot create phantom spacing.
+An open mention or command popup remains open only while focus is in the primary textarea or that
+popup; moving focus to another prompt control or outside closes it. Arrow keys move focus to the
+active option. Enter or Tab accepting an option is handled before textarea submission. Escape
+restores the textarea's prior ARIA and selection. If the popup closes, becomes unavailable, or its
+input/items change before focus moves, no move occurs. Empty `chips` and `footer` wrappers are not rendered, so an absent optional region cannot
+create phantom spacing.
 
 **Optional peer deps:** none of its own.
 

@@ -4,6 +4,7 @@ import {
   oneEvent,
   html,
   waitUntil,
+  aTimeout,
 } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
@@ -443,35 +444,28 @@ it("classifies a rejected clipboard write as denied without rendering the raw er
   }
 });
 
-it("reports a 'failed' outcome when serializing the value itself throws, never reaching the clipboard", async () => {
+it("omits an unsupported toJSON hook from the owned copy snapshot without invoking it", async () => {
+  let toJsonCalls = 0;
   const poison = {
-    toJSON(): never {
+    toJSON(): string {
+      toJsonCalls += 1;
       throw new Error("cannot serialize");
     },
   };
   const el = await withData({ poison });
   el.copyable = true;
-  el.strings = { copyFailed: "JSON copy failed" };
   await el.updateComplete;
 
-  let successes = 0;
-  el.addEventListener("lr-copy", () => successes++);
-  const errored = oneEvent(el, "lr-error");
-  const failed = oneEvent(el, "lr-copy-error");
+  const copied = oneEvent(el, "lr-copy");
   (
     el.shadowRoot!.querySelector(
       '[part="toolbar"] [part="copy-button"]'
     ) as HTMLButtonElement
   ).click();
-  const [, failedEvent] = await Promise.all([errored, failed]);
+  const event = await copied;
 
-  expect(failedEvent.detail).to.include({ ok: false, reason: "failed" });
-  expect(failedEvent.detail.error).to.be.instanceOf(Error);
-  expect(successes).to.equal(0);
-  expect(
-    document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)
-      ?.textContent
-  ).to.contain("JSON copy failed");
+  expect(toJsonCalls).to.equal(0);
+  expect(event.detail.text).to.equal(JSON.stringify({ poison: {} }, null, 2));
 });
 
 it("never reports a serialization failure once the element has already disconnected", async () => {
@@ -514,7 +508,7 @@ it('copies the literal string "undefined" when the root data is undefined', asyn
   expect(event.detail.text).to.equal("undefined");
 });
 
-it("copies root Symbol/function values as strings instead of emitting undefined", async () => {
+it("omits unsupported root Symbol/function values from the owned snapshot", async () => {
   for (const value of [Symbol("root"), function rootValue() {}]) {
     const el = await withData(value);
     el.copyable = true;
@@ -527,7 +521,7 @@ it("copies root Symbol/function values as strings instead of emitting undefined"
     ).click();
     const event = await listener;
     expect(typeof event.detail.text).to.equal("string");
-    expect(event.detail.text).to.equal(String(value));
+    expect(event.detail.text).to.equal("undefined");
   }
 });
 
@@ -802,13 +796,13 @@ it("sizes the closing-bracket spacer to the toggle's real (min-inline-size-drive
 });
 
 it("does not re-walk the data tree to recompute search state on a toggle-only re-render", async () => {
-  let accesses = 0;
+  let descriptorReads = 0;
   const trackedChild = new Proxy(
     { value: "no match here" },
     {
-      get(target, prop, receiver) {
-        accesses++;
-        return Reflect.get(target, prop, receiver);
+      getOwnPropertyDescriptor(target, prop) {
+        descriptorReads++;
+        return Reflect.getOwnPropertyDescriptor(target, prop);
       },
     }
   );
@@ -818,18 +812,18 @@ it("does not re-walk the data tree to recompute search state on a toggle-only re
   // "hidden" (depth 1) starts collapsed from this very first render (data,
   // collapsed-depth, and search are all assigned before the first await, so
   // Lit batches them into one update) -- normal rendering never descends
-  // into it, so any access to trackedChild can only come from the search
-  // walk itself, which -- unlike rendering -- traverses the whole tree
-  // regardless of what's currently expanded.
+  // into it, so the descriptor projection into trackedChild can only come
+  // from the search walk itself, which -- unlike rendering -- traverses the
+  // whole tree regardless of what's currently expanded.
   el.data = { other: { a: 1 }, hidden: { nested: trackedChild } };
   el.collapsedDepth = 1;
   el.search = "no-match-anywhere";
   await el.updateComplete;
 
-  const accessesAfterFirstRender = accesses;
+  const descriptorReadsAfterFirstRender = descriptorReads;
   // Sanity check: the initial search walk did reach into the collapsed
   // subtree, so the counter is a meaningful signal for the assertion below.
-  expect(accessesAfterFirstRender).to.be.greaterThan(0);
+  expect(descriptorReadsAfterFirstRender).to.be.greaterThan(0);
 
   // "other" (not "hidden") is toggled, so `data`/`search` are unchanged --
   // this is an `expandedOverrides`-only re-render.
@@ -840,7 +834,7 @@ it("does not re-walk the data tree to recompute search state on a toggle-only re
   toggle.click();
   await el.updateComplete;
 
-  expect(accesses).to.equal(accessesAfterFirstRender);
+  expect(descriptorReads).to.equal(descriptorReadsAfterFirstRender);
 });
 
 it("prunes stale expandedOverrides entries once their path no longer exists after a data reassignment", async () => {
@@ -1704,4 +1698,150 @@ describe("per-row copy-button reveal", () => {
     ) as HTMLElement;
     expect(getComputedStyle(toolbarButton).opacity).to.equal("1");
   });
+});
+
+it('skips hostile object and array children without losing valid later siblings', async () => {
+  let objectGetterReads = 0;
+  let arrayGetterReads = 0;
+  const object = Object.create(null) as Record<string, unknown>;
+  Object.defineProperty(object, 'unsafe', {
+    enumerable: true,
+    get() {
+      objectGetterReads += 1;
+      throw new Error('object getter must not run');
+    },
+  });
+  object['safeObject'] = 'kept';
+  const array: unknown[] = [];
+  Object.defineProperty(array, 0, {
+    enumerable: true,
+    get() {
+      arrayGetterReads += 1;
+      throw new Error('array getter must not run');
+    },
+  });
+  array[1] = 'kept array value';
+
+  const el = (await fixture(html`<lr-json-viewer .data=${{ object, array }}></lr-json-viewer>`)) as LyraJsonViewer;
+  let rejected = false;
+  try {
+    await el.updateComplete;
+  } catch {
+    rejected = true;
+  }
+
+  expect(rejected).to.equal(false);
+  expect(objectGetterReads).to.equal(0);
+  expect(arrayGetterReads).to.equal(0);
+  expect(el.shadowRoot!.textContent).to.contain('safeObject');
+  expect(el.shadowRoot!.textContent).to.contain('kept');
+  expect(el.shadowRoot!.textContent).to.contain('kept array value');
+});
+
+it('skips a hostile proxy descriptor while retaining its later own-data sibling', async () => {
+  let descriptorTrapReads = 0;
+  const source = new Proxy(
+    {},
+    {
+      ownKeys: () => ['unsafe', 'safe'],
+      getOwnPropertyDescriptor(_target, key) {
+        if (key === 'unsafe') {
+          descriptorTrapReads += 1;
+          throw new Error('unsafe descriptor must not discard later data');
+        }
+        return key === 'safe'
+          ? { value: 'kept', enumerable: true, configurable: true }
+          : undefined;
+      },
+    },
+  );
+  const el = (await fixture(html`<lr-json-viewer .data=${source}></lr-json-viewer>`)) as LyraJsonViewer;
+  let rejected = false;
+  try {
+    await el.updateComplete;
+  } catch {
+    rejected = true;
+  }
+
+  expect(rejected).to.equal(false);
+  expect(descriptorTrapReads).to.equal(1);
+  expect(el.shadowRoot!.textContent).to.contain('safe');
+  expect(el.shadowRoot!.textContent).to.contain('kept');
+});
+
+it('does not let non-enumerable source names consume the visible snapshot budget', async () => {
+  const source = Object.create(null) as Record<string, unknown>;
+  for (let index = 0; index < 5000; index += 1) {
+    Object.defineProperty(source, `hidden-${index}`, {
+      value: index,
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  source['safe'] = 'kept';
+
+  const el = (await fixture(html`<lr-json-viewer .data=${source}></lr-json-viewer>`)) as LyraJsonViewer;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.textContent).to.contain('safe');
+  expect(el.shadowRoot!.textContent).to.contain('kept');
+  expect(el.shadowRoot!.textContent).not.to.contain('hidden-0');
+  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+});
+
+it('copies the owned descriptor snapshot without rereading unsafe branches or later source mutations', async () => {
+  const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const writes: string[] = [];
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      writeText(text: string): Promise<void> {
+        writes.push(text);
+        return Promise.resolve();
+      },
+    },
+  });
+  let getterReads = 0;
+  const data = Object.create(null) as Record<string, unknown>;
+  data['safe'] = 'kept';
+  Object.defineProperty(data, 'unsafe', {
+    enumerable: true,
+    get() {
+      getterReads += 1;
+      throw new Error('unsafe copy branch must not run');
+    },
+  });
+  let el: LyraJsonViewer | undefined;
+  try {
+    el = (await fixture(html`<lr-json-viewer copyable .data=${data}></lr-json-viewer>`)) as LyraJsonViewer;
+    await el.updateComplete;
+    data['safe'] = 'mutated after admission';
+    const copied: string[] = [];
+    let failures = 0;
+    el.addEventListener('lr-copy', (event) => copied.push((event as CustomEvent<{ text: string }>).detail.text));
+    el.addEventListener('lr-copy-error', () => failures += 1);
+    const toolbar = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toolbar"] [part="copy-button"]')!;
+    const safeRow = Array.from(el.shadowRoot!.querySelectorAll('.row')).find(
+      (row) => row.querySelector('[part="key"]')?.textContent === 'safe'
+    );
+    const perNode = safeRow?.querySelector<HTMLButtonElement>('[part="copy-button"]');
+
+    expect(perNode === undefined || perNode === null).to.equal(false);
+    toolbar.click();
+    await aTimeout(0);
+    perNode!.click();
+    await aTimeout(0);
+
+    expect(getterReads).to.equal(0);
+    expect(failures).to.equal(0);
+    expect(copied).to.deep.equal([
+      JSON.stringify({ safe: 'kept' }, null, 2),
+      JSON.stringify('kept', null, 2),
+    ]);
+    expect(writes).to.deep.equal(copied);
+  } finally {
+    el?.remove();
+    if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
 });

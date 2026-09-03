@@ -16,7 +16,6 @@ import type { LyraSize } from '../../../internal/variants.js';
 import {
   collectFocusableElements,
   composedContains,
-  deepActiveElement,
 } from '../../../internal/overlay-manager.js';
 import { styles } from './menu.styles.js';
 import type { LyraMenuItem } from './menu-item.class.js';
@@ -32,6 +31,7 @@ import {
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { tag } from '../../../internal/prefix.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import './menu-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -70,6 +70,49 @@ function isLyraMenuItemElement(value: unknown): value is LyraMenuItem {
 
 function isLyraMenuElement(value: unknown): value is LyraMenu {
   return isHtmlElement(value) && value.localName === tag('menu');
+}
+
+/** `activeElement` is Web-IDL typed as an Element, but an embedders' partial DOM may return a
+ * structural lookalike. Brand-check before passing it to composed containment, whose parent walk
+ * necessarily reads native Node accessors. */
+function isUsableActiveElement(value: unknown): value is Element {
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null)
+    return false;
+  try {
+    const candidate = value as Node;
+    if (candidate.nodeType !== 1) return false;
+    const NodeConstructor =
+      candidate.ownerDocument?.defaultView?.Node ??
+      (typeof Node === 'undefined' ? undefined : Node);
+    if (!NodeConstructor) return false;
+    NodeConstructor.prototype.getRootNode.call(candidate);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Descend through open shadow roots without allowing a malformed active-element result to reach
+ * composed containment. The guarded read itself stays centralized in `activeElementIn()`. */
+function safeDeepActiveElement(
+  root: Document | ShadowRoot | null | undefined,
+): Element | null {
+  const initial: unknown = activeElementIn(root);
+  if (!isUsableActiveElement(initial)) return null;
+  let active: Element = initial;
+  while (true) {
+    let shadowRoot: ShadowRoot | null;
+    try {
+      shadowRoot = active.shadowRoot;
+    } catch {
+      return null;
+    }
+    if (!shadowRoot) return active;
+    const nested: unknown = activeElementIn(shadowRoot);
+    if (nested === null) return active;
+    if (!isUsableActiveElement(nested)) return null;
+    active = nested;
+  }
 }
 
 interface OwnedTimeout {
@@ -503,7 +546,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // identity instead.
     const previouslyActive =
       this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
-    const focusedBefore = deepActiveElement(this.ownerDocument);
+    const focusedBefore = safeDeepActiveElement(this.ownerDocument);
     const activeItemLostFocus =
       Boolean(previouslyActive) &&
       (focusedBefore === null ||
@@ -553,12 +596,17 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         ) {
           this.rehomeZeroSurvivorFocus();
         }
-      } else if (!this.contains(this.ownerDocument.activeElement)) {
-        // Reordering an item moves the node, which blurs it and drops focus out
-        // to <body> -- beyond reach of the list keydown handler, leaving an open
-        // menu keyboard-dead. The guard keeps this from stealing focus a user
-        // parked on slotted non-item content, which stays within this element.
-        this.items[this.activeIndex]!.focus();
+      } else {
+        const active = activeElementIn(this.ownerDocument);
+        const containsActive =
+          isUsableActiveElement(active) && this.contains(active);
+        if (!containsActive) {
+          // Reordering an item moves the node, which blurs it and drops focus out
+          // to <body> -- beyond reach of the list keydown handler, leaving an open
+          // menu keyboard-dead. The guard keeps this from stealing focus a user
+          // parked on slotted non-item content, which stays within this element.
+          this.items[this.activeIndex]!.focus();
+        }
       }
     }
   }
@@ -608,7 +656,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     ) {
       const current = this.activeIndex;
       const displaced = this.items[current]!;
-      const focused = deepActiveElement(this.ownerDocument);
+      const focused = safeDeepActiveElement(this.ownerDocument);
       const displacedHadFocus =
         focused === null ||
         focused === this.ownerDocument.body ||
@@ -911,7 +959,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       if (!item.submenuOpen) return;
       // A submenu the keyboard is inside was opened deliberately; dismissing it because the
       // pointer wandered off would strand focus on an element about to become invisible.
-      if (composedContains(item, deepActiveElement(this.ownerDocument))) return;
+      if (composedContains(item, safeDeepActiveElement(this.ownerDocument))) return;
       item.closeSubmenu();
     }, SUBMENU_CLOSE_DELAY);
   }
@@ -951,7 +999,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     const footer = this.popupPart('footer');
     const listEl = this.popupPart('list');
     const backwards = e.shiftKey;
-    const active = deepActiveElement(this.ownerDocument) as HTMLElement | null;
+    const active = safeDeepActiveElement(this.ownerDocument) as HTMLElement | null;
     const headerStops = header ? collectFocusableElements(header) : [];
     const footerStops = footer ? collectFocusableElements(footer) : [];
     const listStops = listEl ? collectFocusableElements(listEl) : [];

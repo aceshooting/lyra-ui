@@ -38,7 +38,8 @@ export interface ToolRenderContext {
    * the outcome via its `status` property while still keeping the renderer's own template mounted,
    * rather than discarding it for the `<lr-json-viewer>` fallback the way a *thrown* error does.
    * Calling this is entirely optional: a renderer that never calls it leaves `status` at its
-   * default, `'success'`.
+   * default, `'success'`. Calls from a renderer that throws, or after a later render has started,
+   * are ignored.
    */
   reportStatus: (status: ToolResultStatus) => void;
 }

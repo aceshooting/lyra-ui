@@ -193,9 +193,10 @@ the PR checks list tells you which of these to reproduce locally:
    `docs-and-storybook` aggregate requires both. The split retains the complete Chromium checks
    while removing their former 214-second + 248-second serial chain from one runner.
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
-   `packages/lyra-ui/visual-baselines/README.md`). The 253 axis-level captures are lexically sorted
-   and round-robin partitioned across a three-leg matrix (85/84/84 captures), so the historical
-   ~3.5min sweep no longer sits on one runner's critical path. Each leg downloads the
+   `packages/lyra-ui/visual-baselines/README.md`). The 93 stories expand to 268 axis-level
+   captures: 123 compare against tracked baselines and 145 are evidence-only. They are lexically
+   sorted and round-robin partitioned across a three-leg matrix (90/89/89 captures), so the
+   historical ~3.5min sweep no longer sits on one runner's critical path. Each leg downloads the
    `storybook-static/` artifact `docs_build` (point 5) already built, runs
    `test:visual` with its one-based shard coordinates, and unconditionally uploads a uniquely
    named diff artifact. A lightweight `visual-regression` aggregate preserves the stable
@@ -210,7 +211,7 @@ VISUAL_SHARD_INDEX=1 VISUAL_SHARD_TOTAL=3 \
 
 Sharding happens after an optional `--filter` and at capture-axis granularity, not story
 granularity. The unit test proves every capture is selected exactly once and shard sizes differ by
-at most one; an ordinary unsharded local run still exercises all 253 captures.
+at most one; an ordinary unsharded local run still exercises all 268 captures.
 
 A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`) for
 Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Nine legs use the
@@ -227,7 +228,7 @@ everything else) had most Node 22 legs finishing in 50-110s, of which roughly ha
 per-job overhead (checkout/install/browser setup) rather than test execution against the 26-file
 `test:platform` suite -- oversharded legs pay that fixed cost repeatedly for little parallelism
 gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
-uses `package.json#packageManager` (`pnpm@11.24.0`). The package's supported engine remains
+uses `package.json#packageManager` (`pnpm@11.25.0`). The package's supported engine remains
 `node >=20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
 20-job throughput limit, so `max-parallel` no longer needs to chase that cap. The Firefox/Node 20
 leg runs the same packed contract mode as the primary contract lane: every runtime, install,
@@ -294,9 +295,10 @@ succeeds.
 ## Local aggregate: `scripts/ci.sh`
 
 `./scripts/ci.sh` consolidates the six primary jobs into one Node 22/Chromium run. It requires the
-active Node major to be 22 and pnpm to match `package.json#packageManager`; this prevents a green
-run under a newer local Node from being mistaken for the CI environment. It intentionally reuses
-one install, one library build, and one Storybook build where independent CI jobs repeat them.
+exact `22.23.2` patch recorded in `.nvmrc` and pnpm to match `package.json#packageManager`; this
+prevents a green run under a different Node 22 patch from being mistaken for the CI environment.
+Run `nvm use` before the aggregate. It intentionally reuses one install, one library build, and one
+Storybook build where independent CI jobs repeat them.
 It also omits external Codecov/upload-artifact reporting actions; the blocking local equivalents
 (`check:bundle-size`, coverage, and visual regression) still run. `codecov:bundle` is reporting
 only and does not replace the blocking bundle-size gate. The aggregate includes the static job's
@@ -317,10 +319,10 @@ the same checksum-pinned actionlint workflow gate as `static-checks`.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then the exact
   local counterpart of CI's platform matrix. Its 11 legs are source-derived: Node 20 runs Firefox
   (1 shard) and Safari (1 shard); Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),
-  Firefox (4 shards), and Safari (1 shard). Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.24.0.
+  Firefox (4 shards), and Safari (1 shard). Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.25.0.
   The `CI_SH_NODE20_BIN`, `CI_SH_NODE22_BIN`, `CI_SH_PNPM20_BIN`, and `CI_SH_PNPM22_BIN` overrides
-  accept explicit executable paths. NVM installations are discovered by major version, with the
-  newest installed patch selected by version order.
+  accept explicit executable paths. For Node 22, the runner accepts only the `.nvmrc` patch
+  (`22.23.2`); its Node 20 resolver may select the newest installed Node 20 patch.
 - `CI_SH_SKIP_INSTALL=1` skips only the primary dependency installation and Chromium download;
   platform modes still install their own dependencies and requested Playwright engines.
 - `--keep-going` aggregates only generated-artifact freshness failures. Real lint, build, test,
@@ -471,13 +473,12 @@ Current release-integrity caveats and operational rules:
   change look artifact-neutral — a clean manifest is not evidence that component-quality is clean.
   Rule of thumb: touched anything under `src/`? rebuild, then rerun
   `generate-component-quality.mjs --write --measure-gzip` before committing.
-- **The measured gzip bytes are Node-patch-sensitive, so regenerate them on the Node version CI
-  uses.** The measurement is esbuild-bundle-then-gzip, and the gzip half runs through Node's bundled
-  zlib — which is not byte-identical across Node patch releases. On 2026-08-18 the artifacts were
-  regenerated on Node 22.22.1 and CI (`setup-node` with `node-version: 22`, resolving to 22.23.2)
-  rejected them as stale twice in a row, with `--check --measure-gzip` passing locally each time.
-  esbuild was identical and pinned; only zlib differed. Read the version out of the failing job's
-  log (`Found in cache @ /opt/hostedtoolcache/node/<version>`) and regenerate under exactly that.
+- **The measured gzip bytes are Node-patch-sensitive, so regenerate them on the exact Node version
+  CI uses.** The measurement is esbuild-bundle-then-gzip, and the gzip half runs through Node's
+  bundled zlib — which is not byte-identical across Node patch releases. A build regenerated on
+  Node 22.22.1 was rejected by CI's exact `.nvmrc` Node 22.23.2 run even though
+  `--check --measure-gzip` passed locally. esbuild was identical and pinned; only zlib differed.
+  Run `nvm use` and regenerate under the checked-in patch.
   A remote build box is the usual place this bites, since its Node rarely matches the runner's.
 - **Regenerate component-quality LAST, after every other generator.** Several generators write into
   `src/` — `generate-default-string-slices.mjs --write` rewrites the per-component slice block in

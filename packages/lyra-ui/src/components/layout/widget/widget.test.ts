@@ -201,6 +201,27 @@ describe("fullscreen-icon slot override", () => {
   });
 });
 
+it('inherits a 20px host font at collapse and fullscreen controls and their 1em glyphs', async () => {
+  const el = (await fixture(html`
+    <lr-widget label="Typography" collapsible expandable style="font-size: 20px"
+      >content</lr-widget
+    >
+  `)) as LyraWidget;
+
+  for (const part of ['collapse-button', 'fullscreen-button']) {
+    const control = el.shadowRoot!.querySelector(
+      `[part="${part}"]`
+    ) as HTMLButtonElement;
+    const glyph = control.querySelector('svg') as SVGElement;
+
+    expect(getComputedStyle(control).fontSize, `${part} inherits the host font`).to.equal(
+      '20px'
+    );
+    expect(getComputedStyle(glyph).width, `${part} 1em glyph width`).to.equal('20px');
+    expect(getComputedStyle(glyph).height, `${part} 1em glyph height`).to.equal('20px');
+  }
+});
+
 describe("decorative icon slot isolation", () => {
   it("keeps interactive icon overrides inert and pointer-transparent", async () => {
     const root = await fixture(html`

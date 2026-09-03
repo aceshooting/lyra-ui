@@ -13,9 +13,11 @@ import { API, SymbolFlags } from 'typescript/unstable/sync';
 import {
   isAsExpression,
   isAwaitExpression,
+  isBinaryExpression,
   isCallExpression,
   isConditionalExpression,
   isElementAccessExpression,
+  isForOfStatement,
   isIdentifier,
   isNonNullExpression,
   isNullLiteral,
@@ -24,6 +26,7 @@ import {
   isSatisfiesExpression,
   isTypeAssertion,
   isVariableDeclaration,
+  isVariableDeclarationList,
   isVoidExpression,
 } from 'typescript/unstable/ast/is';
 
@@ -256,6 +259,186 @@ function lineOf(sourceFile, node) {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
 }
 
+function declarationForIdentifier(checker, node) {
+  const identifier = unwrapExpression(node);
+  if (!isIdentifier(identifier)) return undefined;
+  try {
+    const declaration = checker.getSymbolAtLocation(identifier)?.valueDeclaration;
+    return declaration?.resolve?.() ?? declaration;
+  } catch {
+    return undefined;
+  }
+}
+
+function declarationForBinding(checker, declaration) {
+  return isIdentifier(declaration.name) ? declarationForIdentifier(checker, declaration.name) : undefined;
+}
+
+function propertyChainIncludes(node, propertyName) {
+  const current = unwrapExpression(node);
+  if (isPropertyAccessExpression(current))
+    return current.name.text === propertyName || propertyChainIncludes(current.expression, propertyName);
+  if (isElementAccessExpression(current)) return propertyChainIncludes(current.expression, propertyName);
+  if (isCallExpression(current)) return propertyChainIncludes(current.expression, propertyName);
+  return false;
+}
+
+function isCssStyleRuleCast(node, sourceFile) {
+  return (isAsExpression(node) || isTypeAssertion(node)) && node.type.getText(sourceFile).includes('CSSStyleRule');
+}
+
+function isCssRuleExpression(checker, node, sourceFile, cssRules) {
+  if (isCssStyleRuleCast(node, sourceFile)) return true;
+  const current = unwrapExpression(node);
+  const declaration = declarationForIdentifier(checker, current);
+  if (declaration && cssRules.has(declaration)) return true;
+  return propertyChainIncludes(current, 'cssRules');
+}
+
+function isCssDeclarationExpression(checker, node, sourceFile, cssRules, cssDeclarations) {
+  const current = unwrapExpression(node);
+  const declaration = declarationForIdentifier(checker, current);
+  if (declaration && cssDeclarations.has(declaration)) return true;
+  if (isCallExpression(current)) {
+    const receiver = unwrapExpression(current.expression);
+    return (
+      isPropertyAccessExpression(receiver) &&
+      ['getPropertyValue', 'item'].includes(receiver.name.text) &&
+      isCssDeclarationExpression(checker, receiver.expression, sourceFile, cssRules, cssDeclarations)
+    );
+  }
+  if (!isPropertyAccessExpression(current)) return false;
+  if (current.name.text === 'style')
+    return isCssRuleExpression(checker, current.expression, sourceFile, cssRules);
+  return isCssDeclarationExpression(checker, current.expression, sourceFile, cssRules, cssDeclarations);
+}
+
+function isSyntheticElementExpression(checker, node, syntheticElements) {
+  const current = unwrapExpression(node);
+  const declaration = declarationForIdentifier(checker, current);
+  if (declaration && syntheticElements.has(declaration)) return declaration;
+  if (isCallExpression(current) && ['createElement', 'createElementNS'].includes(callName(current))) return current;
+  return undefined;
+}
+
+function syntheticStyleOwner(checker, node, syntheticElements, syntheticStyles) {
+  const current = unwrapExpression(node);
+  const declaration = declarationForIdentifier(checker, current);
+  if (declaration && syntheticStyles.has(declaration)) return syntheticStyles.get(declaration);
+  if (!isPropertyAccessExpression(current)) return undefined;
+  if (current.name.text === 'style')
+    return isSyntheticElementExpression(checker, current.expression, syntheticElements);
+  return syntheticStyleOwner(checker, current.expression, syntheticElements, syntheticStyles);
+}
+
+function isStyleAttributeCall(node) {
+  if (!isCallExpression(node) || callName(node) !== 'setAttribute') return false;
+  const name = unwrapExpression(node.arguments[0]);
+  return Boolean(name && name.getText().replaceAll("'", '').replaceAll('"', '') === 'style');
+}
+
+function isTautologicalLengthComparison(node, sourceFile) {
+  const comparison = unwrapExpression(node);
+  if (!isBinaryExpression(comparison)) return false;
+  const operator = comparison.operatorToken.getText(sourceFile);
+  const left = unwrapExpression(comparison.left);
+  const right = unwrapExpression(comparison.right);
+  const isLength = (expression) => isPropertyAccessExpression(expression) && expression.name.text === 'length';
+  const isZero = (expression) => expression.getText(sourceFile) === '0';
+  return (
+    (operator === '>=' && isLength(left) && isZero(right)) ||
+    (operator === '<=' && isZero(left) && isLength(right))
+  );
+}
+
+/**
+ * Finds two forms of assertion that have passed without exercising the rendered component:
+ * non-negative collection-length predicates passed to Chai, and CSSOM declarations copied onto a
+ * newly-created probe before `getComputedStyle()` measures it. CSSOM remains valid for selector or
+ * media-rule inspection; the latter only becomes a proxy when a declaration is moved from an
+ * adopted sheet/CSSStyleRule to a synthetic element instead of reading the component's own surface.
+ */
+export function collectStructuralAssertionProxies(project, { includeFile = defaultTestFileFilter } = {}) {
+  const findings = [];
+  const checker = project.checker;
+
+  for (const fileName of project.program.getSourceFileNames()) {
+    if (!includeFile(fileName)) continue;
+    const sourceFile = project.program.getSourceFile(fileName);
+    if (!sourceFile) continue;
+
+    const cssRules = new Set();
+    const cssDeclarations = new Set();
+    const syntheticElements = new Set();
+    const syntheticStyles = new Map();
+    const copiedDeclarations = new Map();
+    const measuredSyntheticElements = new Set();
+
+    const recordBinding = (binding, initializer) => {
+      const declaration = declarationForBinding(checker, binding);
+      if (!declaration || !initializer) return;
+      if (isCssRuleExpression(checker, initializer, sourceFile, cssRules)) cssRules.add(declaration);
+      if (isCssDeclarationExpression(checker, initializer, sourceFile, cssRules, cssDeclarations))
+        cssDeclarations.add(declaration);
+      const synthetic = isSyntheticElementExpression(checker, initializer, syntheticElements);
+      if (synthetic) syntheticElements.add(declaration);
+      const syntheticOwner = syntheticStyleOwner(checker, initializer, syntheticElements, syntheticStyles);
+      if (syntheticOwner) syntheticStyles.set(declaration, syntheticOwner);
+    };
+
+    const recordStyleCopy = (target, value, node) => {
+      if (!value || !isCssDeclarationExpression(checker, value, sourceFile, cssRules, cssDeclarations)) return;
+      const syntheticOwner = syntheticStyleOwner(checker, target, syntheticElements, syntheticStyles);
+      if (syntheticOwner) copiedDeclarations.set(syntheticOwner, node);
+    };
+
+    const visit = (node) => {
+      if (isVariableDeclaration(node)) recordBinding(node, node.initializer);
+
+      if (isForOfStatement(node) && isVariableDeclarationList(node.initializer)) {
+        for (const declaration of node.initializer.declarations) recordBinding(declaration, node.expression);
+      }
+
+      if (isBinaryExpression(node) && node.operatorToken.getText(sourceFile) === '=') {
+        if (isIdentifier(unwrapExpression(node.left))) recordBinding({ name: unwrapExpression(node.left) }, node.right);
+        recordStyleCopy(node.left, node.right, node);
+      }
+
+      if (isCallExpression(node)) {
+        const expression = unwrapExpression(node.expression);
+        if (isPropertyAccessExpression(expression) && expression.name.text === 'setProperty')
+          recordStyleCopy(expression.expression, node.arguments[1], node);
+        if (isStyleAttributeCall(node)) recordStyleCopy(expression.expression, node.arguments[1], node);
+        if (callName(node) === 'getComputedStyle') {
+          const synthetic = isSyntheticElementExpression(checker, node.arguments[0], syntheticElements);
+          if (synthetic) measuredSyntheticElements.add(synthetic);
+        }
+        if (isIdentifier(expression) && expression.text === 'expect' && isTautologicalLengthComparison(node.arguments[0], sourceFile)) {
+          findings.push({
+            fileName,
+            line: lineOf(sourceFile, node),
+            kind: 'chai-tautological-length',
+          });
+        }
+      }
+
+      node.forEachChild(visit);
+    };
+    sourceFile.forEachChild(visit);
+
+    for (const [synthetic, node] of copiedDeclarations) {
+      if (!measuredSyntheticElements.has(synthetic)) continue;
+      findings.push({
+        fileName,
+        line: lineOf(sourceFile, node),
+        kind: 'cssom-proxy-surface',
+      });
+    }
+  }
+
+  return findings;
+}
+
 function assertionPolarity(expectCall, assertionNode) {
   let current = assertionNode;
   while (current && current !== expectCall) {
@@ -412,7 +595,7 @@ export function policyAccountingFailures(result, expectedTestFileCount) {
 export function runTestAssertionPolicy({
   cwd = packageDir,
   projectFile = configFile,
-  expectedTestFileCount = 380,
+  expectedTestFileCount = 381,
   includeFile = defaultTestFileFilter,
 } = {}) {
   const api = new API({ cwd });
@@ -421,18 +604,31 @@ export function runTestAssertionPolicy({
     const project = snapshot.getProject(projectFile) ?? snapshot.getProjects()[0];
     if (!project) throw new Error(`could not load ${projectFile}`);
     const result = collectUnsafeAssertions(project, { includeFile });
+    const structuralFindings = collectStructuralAssertionProxies(project, { includeFile });
     const accountingFailures = policyAccountingFailures(result, expectedTestFileCount);
     const accounting =
       `${result.candidateCount} candidate(s), ${result.classifiedCount} typed classification(s), ` +
       `${result.fallbackCount} syntax fallback(s), ${result.errorCount} error(s), ` +
       `${result.scannedFileCount} test file(s)`;
 
-    if (result.findings.length > 0 || accountingFailures.length > 0) {
-      console.error(`Test assertion policy failed with ${result.findings.length} live-DOM payload(s) (${accounting}):`);
+    if (result.findings.length > 0 || structuralFindings.length > 0 || accountingFailures.length > 0) {
+      console.error(
+        `Test assertion policy failed with ${result.findings.length} live-DOM payload(s) and ` +
+          `${structuralFindings.length} structural proxy/proxies (${accounting}):`
+      );
       for (const finding of result.findings) {
         console.error(
           `- ${path.relative(cwd, finding.fileName)}:${finding.line} [chai-node-payload] ` +
             `${finding.kind} assertion must compare a boolean or stable primitive projection (${finding.via})`
+        );
+      }
+      for (const finding of structuralFindings) {
+        const message =
+          finding.kind === 'chai-tautological-length'
+            ? 'Chai collection-length assertions must prove a positive or exact-zero result, not `length >= 0`'
+            : 'CSSStyleRule/adopted-sheet declarations must be asserted on the real rendered surface, not a synthetic probe';
+        console.error(
+          `- ${path.relative(cwd, finding.fileName)}:${finding.line} [${finding.kind}] ${message}`
         );
       }
       for (const failure of accountingFailures) console.error(`- [test-assertion-accounting] ${failure}`);
@@ -440,7 +636,7 @@ export function runTestAssertionPolicy({
     } else {
       console.log(`Test assertion policy passed: no Chai assertion carries a live DOM payload (${accounting})`);
     }
-    return { ...result, accountingFailures };
+    return { ...result, structuralFindings, accountingFailures };
   } finally {
     snapshot.dispose();
     api.close();

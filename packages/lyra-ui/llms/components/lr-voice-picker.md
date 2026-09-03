@@ -60,6 +60,10 @@ identically-named properties. `size: LyraSize = 'm'` (reflected) selects the sha
 `--lr-form-control-*` metrics. The separate preview button retains the library-wide 40px minimum
 hit area at compact tiers and grows with `l`/`xl`.
 
+`readonly: boolean = false` (reflected) mirrors `lr-model-select`: it blocks user typing and catalog
+commits while preserving focus, popup navigation, selection/copy, reset, submission, programmatic
+writes, and the preview actions.
+
 The `label` property and `label` slot share one native label in the standard `form-control` frame.
 Slotted label content participates in the accessible name in both closed-dropdown and free-text
 modes; an explicit host `aria-label` remains the highest-precedence name.
@@ -113,8 +117,9 @@ outer pair. One bubbling/composed `lr-invalid` alias fires when native validity 
 `[part="form-control-label"]`, retunable or suppressible through
 `--lr-form-control-required-content`, `--lr-form-control-required-color` and
 `--lr-form-control-required-offset`; and while the picker is barred from
-constraint validation (own `disabled`, or an ancestor `<fieldset disabled>` — there is no `readonly`
-here) it reports no violation and publishes neither `:state(invalid)` nor `:state(user-invalid)`.
+constraint validation (own `disabled` or `readonly`, or an ancestor `<fieldset disabled>`) it
+reports no violation and publishes neither `:state(invalid)` nor
+`:state(user-invalid)`.
 
 **CSS parts:** `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
 (free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet

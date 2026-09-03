@@ -4,7 +4,10 @@ import type {
   MessagePart,
 } from "../../../ai/types.js";
 import "./message-parts.js";
-import type { LyraMessageParts } from "./message-parts.class.js";
+import type {
+  LyraMessageParts,
+  MessagePartsContentMode,
+} from "./message-parts.class.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
 function assertiveSinkTexts(doc: Document = document): string[] {
@@ -60,6 +63,11 @@ const parts: MessagePart[] = [
   { id: "data", type: "data", name: "scores", data: { groundedness: 0.9 } },
   { id: "audio", type: "audio", transcript: "Spoken answer" },
   { id: "error", type: "error", message: "Could not finish", retryable: true },
+];
+
+const declaredMessagePartsContentModes: readonly MessagePartsContentMode[] = [
+  "plain",
+  "markdown",
 ];
 
 it("renders ordered provider-neutral message parts through existing Lyra primitives", async () => {
@@ -276,6 +284,56 @@ it("honors false literals for true-default rendering options", async () => {
   expect(
     el.shadowRoot!.querySelectorAll('[data-type="reasoning"]')
   ).to.have.lengthOf(0);
+});
+
+it("canonicalizes unsupported content modes to reflected markdown across direct, attribute, and lifecycle writes", async () => {
+  expect(declaredMessagePartsContentModes).to.deep.equal(["plain", "markdown"]);
+
+  const el = (await fixture(html`
+    <lr-message-parts
+      .parts=${[
+        { id: "answer", type: "text", text: "**Markdown remains active**" },
+      ]}
+    ></lr-message-parts>
+  `)) as LyraMessageParts;
+  el.setAttribute("content-mode", "unsupported-attribute-mode");
+  await el.updateComplete;
+
+  expect(el.contentMode).to.equal("markdown");
+  expect(el.getAttribute("content-mode")).to.equal("markdown");
+  expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(1);
+
+  (el as unknown as { contentMode: unknown }).contentMode =
+    "unsupported-direct-mode";
+  await el.updateComplete;
+
+  expect(el.contentMode).to.equal("markdown");
+  expect(el.getAttribute("content-mode")).to.equal("markdown");
+  expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(1);
+
+  const lifecycle = document.createElement(
+    "lr-message-parts"
+  ) as LyraMessageParts;
+  try {
+    lifecycle.setAttribute("content-mode", "unsupported-preconnect-mode");
+    expect(lifecycle.contentMode).to.equal("markdown");
+    expect(lifecycle.getAttribute("content-mode")).to.equal("markdown");
+
+    document.body.append(lifecycle);
+    await lifecycle.updateComplete;
+    expect(lifecycle.contentMode).to.equal("markdown");
+    expect(lifecycle.getAttribute("content-mode")).to.equal("markdown");
+
+    lifecycle.remove();
+    lifecycle.setAttribute("content-mode", "unsupported-reconnect-mode");
+    document.body.append(lifecycle);
+    await lifecycle.updateComplete;
+
+    expect(lifecycle.contentMode).to.equal("markdown");
+    expect(lifecycle.getAttribute("content-mode")).to.equal("markdown");
+  } finally {
+    lifecycle.remove();
+  }
 });
 
 it("uses safe public fallbacks for optional part fields and media sources", async () => {
@@ -512,6 +570,86 @@ it("keeps an unbroken error message and retry action inside a narrow row", async
     errorRect.right + 1
   );
   expect(retryRect.width, "the retry action remains operable").to.be.greaterThan(0);
+});
+
+it("wraps ordinary and unbroken error text without overflowing, and centers retry targets in their enlarged floors", async () => {
+  const el = (await fixture(html`
+    <lr-message-parts
+      style="display:block; inline-size:160px;"
+      .parts=${[
+        {
+          id: "breakable-error",
+          type: "error",
+          message:
+            "A normal error message keeps ordinary words intact before retry moves rows",
+          retryable: true,
+        },
+        {
+          id: "unbroken-error",
+          type: "error",
+          message:
+            "ThisUnbrokenFailureMessageStillBreaksOnlyWhenItsTokenCannotFit",
+          retryable: true,
+        },
+      ]}
+    ></lr-message-parts>
+  `)) as LyraMessageParts;
+  await el.updateComplete;
+
+  const rows = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="error"]'),
+  ];
+  expect(rows).to.have.lengthOf(2);
+
+  for (const row of rows) {
+    const message = row.querySelector("span") as HTMLSpanElement | null;
+    const retry = row.querySelector<HTMLElement>('[part="retry"]');
+    expect(message === null).to.equal(false);
+    expect(retry === null).to.equal(false);
+    if (!message || !retry) continue;
+    await (retry as HTMLElement & { updateComplete?: Promise<unknown> })
+      .updateComplete;
+
+    const target =
+      retry.shadowRoot?.querySelector<HTMLElement>('[part~="base"]');
+    expect(target === null).to.equal(false);
+    if (!target) continue;
+    const rowRect = row.getBoundingClientRect();
+    const messageRect = message.getBoundingClientRect();
+    const retryRect = retry.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+
+    expect(getComputedStyle(message).overflowWrap).to.equal("break-word");
+    expect(row.scrollWidth).to.be.at.most(Math.ceil(rowRect.width) + 1);
+    expect(messageRect.right).to.be.at.most(rowRect.right + 1);
+    expect(retryRect.right).to.be.at.most(rowRect.right + 1);
+    expect(
+      Math.abs(
+        targetRect.left +
+          targetRect.width / 2 -
+          (retryRect.left + retryRect.width / 2)
+      )
+    ).to.be.at.most(1);
+    expect(
+      Math.abs(
+        targetRect.top +
+          targetRect.height / 2 -
+          (retryRect.top + retryRect.height / 2)
+      )
+    ).to.be.at.most(1);
+  }
+
+  const breakableMessage = rows[0]?.querySelector(
+    "span"
+  ) as HTMLSpanElement | null;
+  const breakableRetry = rows[0]?.querySelector<HTMLElement>('[part="retry"]');
+  expect(breakableMessage === null).to.equal(false);
+  expect(breakableRetry === null).to.equal(false);
+  if (breakableMessage && breakableRetry) {
+    expect(breakableMessage.getBoundingClientRect().height).to.be.greaterThan(
+      breakableRetry.getBoundingClientRect().height
+    );
+  }
 });
 
 it("inherits independently rethemeable streaming, transcript, and error state longhands", async () => {

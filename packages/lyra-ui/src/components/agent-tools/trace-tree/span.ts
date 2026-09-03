@@ -1,4 +1,9 @@
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
+import {
+  getOwnDataDescriptor,
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+} from '../../../internal/data-descriptors.js';
 import { finiteRange } from '../../../internal/numbers.js';
 
 export type LyraSpanKind = 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
@@ -71,6 +76,126 @@ export interface LyraSpanProjection {
   truncated: boolean;
 }
 
+/** A source span remains an opaque identity after its admitted data fields have been copied. */
+interface CanonicalLyraSpan {
+  readonly source: object;
+  readonly span: LyraSpan;
+}
+
+const SPAN_PROPERTIES = [
+  'id',
+  'parentId',
+  'name',
+  'kind',
+  'startMs',
+  'endMs',
+  'status',
+  'tokensIn',
+  'tokensOut',
+  'costText',
+  'detail',
+] as const;
+
+const normalizedSpanCache = new WeakMap<readonly unknown[], readonly CanonicalLyraSpan[]>();
+
+function descriptorValue(value: object, property: PropertyKey): ReturnType<typeof getOwnDataDescriptor> {
+  return getOwnDataDescriptor(value, property);
+}
+
+function projectLyraSpan(value: unknown): CanonicalLyraSpan | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const descriptors = new Map<
+      (typeof SPAN_PROPERTIES)[number],
+      ReturnType<typeof getOwnDataDescriptor>
+    >();
+    for (const property of SPAN_PROPERTIES) {
+      const descriptor = descriptorValue(value, property);
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+      descriptors.set(property, descriptor);
+    }
+    const descriptor = (property: (typeof SPAN_PROPERTIES)[number]): unknown | undefined => {
+      const valueDescriptor = descriptors.get(property);
+      if (
+        valueDescriptor === undefined ||
+        valueDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+        valueDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+      )
+        return undefined;
+      return valueDescriptor.value;
+    };
+    const id = descriptor('id');
+    const start = descriptor('startMs');
+    const end = descriptor('endMs');
+    if (
+      typeof id !== 'string' ||
+      id.length === 0 ||
+      typeof start !== 'number' ||
+      !Number.isFinite(start) ||
+      (end != null && (typeof end !== 'number' || !Number.isFinite(end)))
+    )
+      return undefined;
+
+    const startMs = finiteRange(start, 0, 0, Number.MAX_SAFE_INTEGER);
+    const endMs = end == null
+      ? undefined
+      : finiteRange(end, startMs, startMs, Number.MAX_SAFE_INTEGER);
+    const parentId = descriptor('parentId');
+    const name = descriptor('name');
+    const kind = descriptor('kind');
+    const status = descriptor('status');
+    const tokensIn = descriptor('tokensIn');
+    const tokensOut = descriptor('tokensOut');
+    const costText = descriptor('costText');
+    const detail = descriptor('detail');
+    const span: LyraSpan = {
+      id,
+      name: typeof name === 'string' ? name : '',
+      kind: normalizeLyraSpanKind(kind),
+      startMs,
+      status: normalizeLyraSpanStatus(status),
+      ...(endMs === undefined ? {} : { endMs }),
+      ...(typeof parentId === 'string' && parentId.length > 0 ? { parentId } : {}),
+      ...(typeof tokensIn === 'number' ? { tokensIn } : {}),
+      ...(typeof tokensOut === 'number' ? { tokensOut } : {}),
+      ...(typeof costText === 'string' ? { costText } : {}),
+      ...(typeof detail === 'string' ? { detail } : {}),
+    };
+    Object.freeze(span);
+    return Object.freeze({ source: value, span });
+  } catch {
+    return undefined;
+  }
+}
+
+function canonicalLyraSpans(values: readonly unknown[]): readonly CanonicalLyraSpan[] {
+  let cacheable = false;
+  try {
+    cacheable = Object.isFrozen(values);
+  } catch {
+    return [];
+  }
+  if (cacheable) {
+    const cached = normalizedSpanCache.get(values);
+    if (cached) return cached;
+  }
+  const canonical: CanonicalLyraSpan[] = [];
+  const seenIds = new Set<string>();
+  try {
+    for (const value of values) {
+      const projected = projectLyraSpan(value);
+      if (!projected || seenIds.has(projected.span.id)) continue;
+      seenIds.add(projected.span.id);
+      canonical.push(projected);
+    }
+  } catch {
+    return [];
+  }
+  const result = Object.freeze(canonical);
+  if (cacheable) normalizedSpanCache.set(values, result);
+  return result;
+}
+
 /** One bounded, runtime-safe projection shared by every agent trace view. Invalid records and
  * later duplicate ids are omitted, while closed provider enums normalize to their documented
  * fallbacks. When `activeSpanId` resolves, that span and as much of its nearest ancestor path as
@@ -80,42 +205,10 @@ export function normalizeLyraSpans(
   values: readonly unknown[],
   activeSpanId: string | null = null,
 ): LyraSpanProjection {
-  const normalized: LyraSpan[] = [];
-  const normalizedById = new Map<string, LyraSpan>();
   const source = Array.isArray(values) ? values : [];
-  for (const value of source) {
-    if (value === null || typeof value !== 'object') continue;
-    const candidate = value as Partial<LyraSpan>;
-    if (
-      typeof candidate.id !== 'string'
-      || candidate.id.length === 0
-      || normalizedById.has(candidate.id)
-      || typeof candidate.startMs !== 'number'
-      || !Number.isFinite(candidate.startMs)
-      || (candidate.endMs != null && (typeof candidate.endMs !== 'number' || !Number.isFinite(candidate.endMs)))
-    ) continue;
-    const startMs = finiteRange(candidate.startMs, 0, 0, Number.MAX_SAFE_INTEGER);
-    const endMs = candidate.endMs == null
-      ? undefined
-      : finiteRange(candidate.endMs, startMs, startMs, Number.MAX_SAFE_INTEGER);
-    const span: LyraSpan = {
-      ...(candidate as LyraSpan),
-      id: candidate.id,
-      name: typeof candidate.name === 'string' ? candidate.name : '',
-      kind: normalizeLyraSpanKind(candidate.kind),
-      status: normalizeLyraSpanStatus(candidate.status),
-      startMs,
-      ...(endMs === undefined ? {} : { endMs }),
-      ...(typeof candidate.parentId === 'string' && candidate.parentId.length > 0
-        ? { parentId: candidate.parentId }
-        : {}),
-    };
-    if (typeof candidate.parentId !== 'string' || candidate.parentId.length === 0) {
-      Reflect.deleteProperty(span, 'parentId');
-    }
-    normalized.push(span);
-    normalizedById.set(span.id, span);
-  }
+  const normalized = canonicalLyraSpans(source).map(({ span }) => span);
+  const normalizedById = new Map<string, LyraSpan>();
+  for (const span of normalized) normalizedById.set(span.id, span);
 
   const chosenIds = new Set<string>();
   const visitedPath = new Set<string>();

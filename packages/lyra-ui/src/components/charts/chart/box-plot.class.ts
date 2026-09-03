@@ -40,6 +40,8 @@ import type {
   LyraChartDatumActivateDetail,
   LyraChartFormatSurface,
   LyraChartFormatter,
+  LyraChartFormatterContext,
+  LyraChartStatistic,
 } from './chart.class.js';
 import {
   chartChromeLegendPlacement,
@@ -64,6 +66,8 @@ export interface LyraBoxPlotSeries {
   readonly data: readonly LyraBoxPlotSummary[];
   readonly color?: string;
 }
+
+type LyraChartFormatterMetadata = Omit<LyraChartFormatterContext, 'surface' | 'value'>;
 
 function isBoxPlotSeries(value: unknown): value is LyraBoxPlotSeries {
   try {
@@ -298,8 +302,9 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @cssprop [--lr-chart-legend-item-hover-bg=var(--lr-color-brand-quiet)] - Legend-item hover background.
  * @cssprop --lr-chart-legend-item-active-bg - Legend-item pressed background.
  * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the
- *   `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`). Same token and
- *   default as `<lr-chart>`.
+ *   `[part='canvas']` hover-state outline.
+ * @cssprop [--lr-chart-canvas-hover-outline-color=var(--lr-chart-grid-color)] - Color of the
+ *   `[part='canvas']` hover-state outline. Same token and default as `<lr-chart>`.
  * @cssprop [--lr-chart-pattern-step=var(--lr-space-2xs)] - Tile size of the texture painted on
  *   `[part='legend-swatch']` while `forced-colors: active` matches, where the eight-color series
  *   ramp collapses onto a repeating system-color cycle and the stripe/crosshatch pattern becomes
@@ -874,14 +879,18 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     if (this.legend) this.requestUpdate();
   }
 
-  private formatValue(value: number, surface: LyraChartFormatSurface): string {
+  private formatValue(
+    value: number,
+    surface: LyraChartFormatSurface,
+    metadata: LyraChartFormatterMetadata = {},
+  ): string {
     const legacyContext: LyraChartValueFormatterContext | undefined =
       surface === 'export' || surface === 'spoken'
         ? 'table'
         : surface === 'visual'
           ? undefined
           : surface;
-    return this.formatter?.({ value, surface }) ??
+    return this.formatter?.({ value, surface, ...metadata }) ??
       (legacyContext ? this.valueFormatter?.(value, legacyContext) : undefined) ??
       getNumberFormat(this.effectiveLocale).format(value);
   }
@@ -902,17 +911,23 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       'max',
     ].map(escapeCsvField).join(',');
     const rows: string[] = [];
-    this.datasets.forEach((series) => {
+    this.datasets.forEach((series, datasetIndex) => {
       series.data.forEach((point, index) => {
         if (!this.validPoint(point)) return;
+        const metadata: LyraChartFormatterMetadata = {
+          datasetIndex,
+          index,
+          label: this.labels[index] || undefined,
+          seriesLabel: series.label,
+        };
         rows.push([
           this.labels[index] ?? '',
           series.label,
-          this.formatValue(point.min, 'export'),
-          this.formatValue(point.q1, 'export'),
-          this.formatValue(point.median, 'export'),
-          this.formatValue(point.q3, 'export'),
-          this.formatValue(point.max, 'export'),
+          this.formatValue(point.min, 'export', { ...metadata, statistic: 'min' }),
+          this.formatValue(point.q1, 'export', { ...metadata, statistic: 'q1' }),
+          this.formatValue(point.median, 'export', { ...metadata, statistic: 'median' }),
+          this.formatValue(point.q3, 'export', { ...metadata, statistic: 'q3' }),
+          this.formatValue(point.max, 'export', { ...metadata, statistic: 'max' }),
         ].map(escapeCsvField).join(','));
       });
     });
@@ -928,17 +943,27 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       let first = 0;
       let last = 0;
       let min = 0;
+      let minIndex = 0;
       let max = 0;
-      for (const point of series.data) {
+      let maxIndex = 0;
+      for (const [pointIndex, point] of series.data.entries()) {
         if (!this.validPoint(point)) continue;
         if (count === 0) {
           first = point.median;
           min = point.median;
+          minIndex = pointIndex;
           max = point.median;
+          maxIndex = pointIndex;
         }
         last = point.median;
-        min = Math.min(min, point.median);
-        max = Math.max(max, point.median);
+        if (point.median < min) {
+          min = point.median;
+          minIndex = pointIndex;
+        }
+        if (point.median > max) {
+          max = point.median;
+          maxIndex = pointIndex;
+        }
         count++;
       }
       if (count === 0) return this.localize('chartSeriesNoData', undefined, { label: series.label });
@@ -951,8 +976,20 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       return this.localize('boxPlotSeriesSummary', undefined, {
         label: series.label,
         count: getNumberFormat(this.effectiveLocale).format(count),
-        min: this.formatValue(min, 'spoken'),
-        max: this.formatValue(max, 'spoken'),
+        min: this.formatValue(min, 'spoken', {
+          datasetIndex: index,
+          index: minIndex,
+          label: this.labels[minIndex] || undefined,
+          seriesLabel: series.label,
+          statistic: 'median',
+        }),
+        max: this.formatValue(max, 'spoken', {
+          datasetIndex: index,
+          index: maxIndex,
+          label: this.labels[maxIndex] || undefined,
+          seriesLabel: series.label,
+          statistic: 'median',
+        }),
         trend,
       });
     });
@@ -1001,21 +1038,27 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   ): string {
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const point = datum.value;
-    const parts: Array<[string, number]> = point
+    const parts: Array<[LyraChartStatistic, string, number]> = point
       ? [
-          [this.localize('boxPlotMin'), point.min],
-          [this.localize('boxPlotQ1'), point.q1],
-          [this.localize('boxPlotMedian'), point.median],
-          [this.localize('boxPlotQ3'), point.q3],
-          [this.localize('boxPlotMax'), point.max],
+          ['min', this.localize('boxPlotMin'), point.min],
+          ['q1', this.localize('boxPlotQ1'), point.q1],
+          ['median', this.localize('boxPlotMedian'), point.median],
+          ['q3', this.localize('boxPlotQ3'), point.q3],
+          ['max', this.localize('boxPlotMax'), point.max],
         ]
       : [];
     const summary = parts
-      .filter(([, value]) => Number.isFinite(value))
-      .map(([label, value]) =>
+      .filter(([, , value]) => Number.isFinite(value))
+      .map(([statistic, label, value]) =>
         this.localize('chartValueLabel', undefined, {
           label,
-          value: numberFormat.format(value),
+          value: this.formatValue(value, 'spoken', {
+            datasetIndex: datum.datasetIndex,
+            index: datum.index,
+            label: datum.label,
+            seriesLabel: this.datasets[datum.datasetIndex]?.label,
+            statistic,
+          }),
         }),
       )
       .join(this.localize('chartSummarySeparator'));
@@ -1166,17 +1209,23 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
             return sample.rowIndexes.map(
               (index) => {
                 const point = series.data[index];
+                const metadata: LyraChartFormatterMetadata = {
+                  datasetIndex: seriesIndex,
+                  index,
+                  label: this.labels[index] || undefined,
+                  seriesLabel: series.label,
+                };
                 return this.validPoint(point) ? html`
                 <tr>
                   <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, {
                     n: numberFormat.format(index + 1),
                   })}</th>
                   <td>${series.label}</td>
-                  <td>${this.formatValue(point.min, 'table')}</td>
-                  <td>${this.formatValue(point.q1, 'table')}</td>
-                  <td>${this.formatValue(point.median, 'table')}</td>
-                  <td>${this.formatValue(point.q3, 'table')}</td>
-                  <td>${this.formatValue(point.max, 'table')}</td>
+                  <td>${this.formatValue(point.min, 'table', { ...metadata, statistic: 'min' })}</td>
+                  <td>${this.formatValue(point.q1, 'table', { ...metadata, statistic: 'q1' })}</td>
+                  <td>${this.formatValue(point.median, 'table', { ...metadata, statistic: 'median' })}</td>
+                  <td>${this.formatValue(point.q3, 'table', { ...metadata, statistic: 'q3' })}</td>
+                  <td>${this.formatValue(point.max, 'table', { ...metadata, statistic: 'max' })}</td>
                 </tr>
               ` : nothing;
               },
@@ -1316,7 +1365,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         <div
           id=${this.dataTableId}
           part="data-table"
-          ?data-visually-hidden=${!hasCustomDataTable && !this.dataTableVisible}
+          ?data-visually-hidden=${!this.dataTableVisible}
         >
           <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
           ${hasCustomDataTable ? nothing : this.renderDataTable()}

@@ -5,9 +5,12 @@ export function resolveIdReferencesIn(root: Node, value: string | null): Element
   if (!value || !('getElementById' in root)) return [];
   const getElementById = (root as Document | ShadowRoot).getElementById.bind(root);
   const references: Element[] = [];
+  const seen = new Set<Element>();
   for (const id of asciiWhitespaceTokens(value)) {
     const target = getElementById(id);
-    if (target) references.push(target);
+    if (!target || seen.has(target)) continue;
+    seen.add(target);
+    references.push(target);
   }
   return references;
 }

@@ -305,11 +305,60 @@ it("the built-in feedback owns wrapper-domain change and terminal submit events"
     ) as HTMLButtonElement
   ).click();
   expect((await changePromise).detail).to.deep.equal({ rating: "down" });
-  expect((await submitPromise).detail).to.deep.equal({
+  const submit = (await submitPromise).detail;
+  expect({
+    rating: submit.rating,
+    reasonIds: submit.reasonIds,
+    comment: submit.comment,
+  }).to.deep.equal({
     rating: "down",
     reasonIds: [],
     comment: "",
   });
+  expect(submit.submissionId).to.match(/^lr-message-feedback-submission-/);
+});
+
+it('proxies only the current built-in feedback transaction without re-emitting its one bubbled event', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions .controls=${['feedback']}></lr-message-actions>
+  `)) as LyraMessageActions;
+  let events = 0;
+  let pendingChangeEvents = 0;
+  let submissionId = '';
+  el.addEventListener('lr-feedback-pending-change', () => {
+    pendingChangeEvents += 1;
+  });
+  el.addEventListener('lr-feedback-submit', (event) => {
+    events += 1;
+    event.preventDefault();
+    submissionId = (event as CustomEvent<{ readonly submissionId: string }>).detail
+      .submissionId;
+  });
+  const feedback = el.shadowRoot!.querySelector(
+    'lr-message-feedback',
+  ) as HTMLElement;
+  const down = feedback.shadowRoot!.querySelector(
+    '[part="down-button"]',
+  ) as HTMLButtonElement;
+
+  down.click();
+
+  expect(events).to.equal(1);
+  expect(el.feedbackPending).to.be.true;
+  expect(el.hasAttribute('feedback-pending')).to.be.false;
+  expect(pendingChangeEvents).to.equal(0);
+  expect(el.finalizePendingSubmit('wrong')).to.be.false;
+  expect(el.finalizePendingSubmit(submissionId)).to.be.true;
+  await el.updateComplete;
+  await aTimeout(0);
+
+  down.click();
+  expect(el.feedbackPending).to.be.true;
+  el.controls = [];
+  await el.updateComplete;
+
+  expect(el.feedbackPending).to.be.false;
+  expect(el.revertPendingSubmit(submissionId)).to.be.false;
 });
 
 it("contains colliding feedback events from slotted children at the slot boundary", async () => {
@@ -377,6 +426,44 @@ it("forwards a host aria-label to the toolbar, winning over label", async () => 
   expect(
     el.shadowRoot!.querySelector('[role="toolbar"]')!.getAttribute("aria-label")
   ).to.equal("Assistant reply actions");
+});
+
+it('restores a departed direct action’s authored tabindex unless a consumer took it over', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions>
+      <button id="leased-message-action" tabindex="7">Leased action</button>
+      <button id="fallback-message-action">Fallback action</button>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  const leased = el.querySelector<HTMLButtonElement>('#leased-message-action')!;
+  const fallback = el.querySelector<HTMLButtonElement>('#fallback-message-action')!;
+  await waitUntil(() => leased.tabIndex === 0);
+
+  leased.setAttribute('tabindex', '5');
+  leased.hidden = true;
+  await waitUntil(() => fallback.tabIndex === 0);
+
+  expect(leased.getAttribute('tabindex')).to.equal('5');
+});
+
+it('inherits the host font for regenerate and edit controls and their one-em glyphs', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions
+      style="font-size: 20px"
+      .controls=${['regenerate', 'edit']}
+    ></lr-message-actions>
+  `)) as LyraMessageActions;
+  const controls = [
+    ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+      '[part~="regenerate-button"], [part~="edit-button"]'
+    ),
+  ];
+
+  expect(controls).to.have.length(2);
+  for (const control of controls) {
+    expect(getComputedStyle(control).fontSize).to.equal('20px');
+    expect(getComputedStyle(control.querySelector('svg')!).width).to.equal('20px');
+  }
 });
 
 it("roving tabindex: only the active plain-button stop is tabbable, and ArrowRight/ArrowLeft move it", async () => {
@@ -582,7 +669,7 @@ it("navigates a closed-shadow custom composite only through the logical-action p
 
   provider.setUnavailable(true);
   await waitUntil(() => regenerate.tabIndex === 0);
-  expect(provider.actionTabIndex).to.equal(-1);
+  expect(provider.actionTabIndex).to.equal(0);
 });
 
 it('omits provider actions with blank identities before roving focus', async () => {
@@ -745,15 +832,10 @@ it("live-reconciles every authored availability and actionability change without
 
   first.disabled = true;
   await waitUntil(() => second.tabIndex === 0);
-  expect(first.tabIndex, "a newly disabled former stop is cleared").to.equal(
-    -1
-  );
+  expect(first.getAttribute('tabindex')).to.equal(null);
 
   second.setAttribute("aria-disabled", " TRUE ");
-  await waitUntil(() => second.tabIndex === -1);
-  expect(second.tabIndex, "an aria-disabled former stop is cleared").to.equal(
-    -1
-  );
+  await waitUntil(() => second.getAttribute('tabindex') === null);
 
   first.disabled = false;
   second.removeAttribute("aria-disabled");
@@ -761,8 +843,7 @@ it("live-reconciles every authored availability and actionability change without
   first.hidden = true;
   await waitUntil(() => second.tabIndex === 0);
   second.inert = true;
-  await waitUntil(() => second.tabIndex === -1);
-  expect(second.tabIndex, "an inert former stop is cleared").to.equal(-1);
+  await waitUntil(() => second.getAttribute('tabindex') === null);
 
   promoted.setAttribute("tabindex", "-1");
   await waitUntil(() => promoted.tabIndex === 0);
@@ -819,7 +900,7 @@ it("repairs focus after a focused slotted action is removed or becomes unavailab
 
   survivor.setAttribute("aria-disabled", "true");
   await waitUntil(() => el.shadowRoot!.activeElement === base);
-  expect(survivor.tabIndex).to.equal(-1);
+  expect(survivor.getAttribute('tabindex')).to.equal(null);
 });
 
 it("does not steal newer external focus while live action availability reconciles", async () => {
@@ -1002,7 +1083,7 @@ it("rebinds live action observation to the current realm after adoption", async 
     await waitUntil(() => second.tabIndex === 0);
 
     expect(observerConstructions).to.be.greaterThan(0);
-    expect(first.tabIndex).to.equal(-1);
+    expect(first.getAttribute('tabindex')).to.equal(null);
   } finally {
     frameWindow.MutationObserver = NativeObserver;
     el.remove();
@@ -1031,7 +1112,7 @@ it('fails hostile toolbar providers closed without stranding the roving tab stop
     composed: true,
   }));
   await waitUntil(() => fallback.tabIndex === 0);
-  expect(provider.actionTabIndex).to.equal(-1);
+  expect(provider.actionTabIndex).to.equal(0);
 
   provider.getToolbarActions = (): never => {
     throw new Error('hostile toolbar provider');
@@ -1042,6 +1123,196 @@ it('fails hostile toolbar providers closed without stranding the roving tab stop
   }));
   await el.updateComplete;
   expect(fallback.tabIndex).to.equal(0);
+});
+
+it('projects provider actions from saved data descriptors and invokes the supported disabled accessor once', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions></lr-message-actions>`,
+  )) as LyraMessageActions;
+  const provider = document.createElement('div');
+  const providerPrototype = Object.create(Object.getPrototypeOf(provider));
+  let providerCalls = 0;
+  let disabledReads = 0;
+  let savedSetTabIndexCalls = 0;
+  const actionPrototype = {
+    focus(): void {},
+    setTabIndex(): void {
+      savedSetTabIndexCalls += 1;
+    },
+    matchesEventPath(): boolean {
+      return false;
+    },
+  };
+  const action = Object.create(actionPrototype);
+  Object.defineProperties(action, {
+    id: { value: 'descriptor-action' },
+    disabled: {
+      get(): boolean {
+        disabledReads += 1;
+        return false;
+      },
+    },
+  });
+  Object.defineProperty(providerPrototype, 'getToolbarActions', {
+    value(): readonly unknown[] {
+      providerCalls += 1;
+      return [action];
+    },
+  });
+  Object.setPrototypeOf(provider, providerPrototype);
+  el.append(provider);
+  await aTimeout(0);
+
+  providerCalls = 0;
+  disabledReads = 0;
+  savedSetTabIndexCalls = 0;
+  const projected = (
+    el as unknown as {
+      logicalActions(): readonly { readonly action: LyraToolbarAction }[];
+    }
+  ).logicalActions();
+  Object.defineProperty(actionPrototype, 'setTabIndex', {
+    value(): never {
+      throw new Error('projected action must use the saved callable');
+    },
+  });
+  projected[0]!.action.setTabIndex(-1);
+
+  expect(providerCalls).to.equal(1);
+  expect(disabledReads).to.equal(1);
+  expect(savedSetTabIndexCalls).to.equal(1);
+});
+
+it('inspects only own descriptors 0 through 99 of a huge sparse provider result and retains later valid siblings', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions></lr-message-actions>`,
+  )) as LyraMessageActions;
+  const provider = document.createElement('div');
+  const providerPrototype = Object.create(Object.getPrototypeOf(provider));
+  const invalid = {};
+  let invalidReads = 0;
+  Object.defineProperty(invalid, 'id', {
+    get(): never {
+      invalidReads += 1;
+      throw new Error('index accessor must not run');
+    },
+  });
+  const valid: LyraToolbarAction = {
+    id: 'later-valid',
+    disabled: false,
+    focus(): void {},
+    setTabIndex(): void {},
+    matchesEventPath(): boolean {
+      return false;
+    },
+  };
+  const backing = new Array<unknown>(1_000_000);
+  backing[0] = invalid;
+  backing[1] = valid;
+  const touched: string[] = [];
+  const valueReads: string[] = [];
+  const actions = new Proxy(backing, {
+    get(target, key, receiver): unknown {
+      if (
+        key === Symbol.iterator ||
+        key === 'length' ||
+        (typeof key === 'string' && /^\d+$/.test(key) && Number(key) < 100)
+      ) {
+        valueReads.push(String(key));
+        return Reflect.get(target, key, receiver);
+      }
+      throw new Error('the sparse tail must never be materialized');
+    },
+    getOwnPropertyDescriptor(target, key): PropertyDescriptor | undefined {
+      if (key === '100') throw new Error('the sparse tail must stay untouched');
+      if (typeof key === 'string' && /^\d+$/.test(key)) touched.push(key);
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  Object.defineProperty(providerPrototype, 'getToolbarActions', {
+    value(): readonly LyraToolbarAction[] {
+      return actions as unknown as readonly LyraToolbarAction[];
+    },
+  });
+  Object.setPrototypeOf(provider, providerPrototype);
+  el.append(provider);
+  await aTimeout(0);
+
+  touched.length = 0;
+  const projected = (
+    el as unknown as {
+      logicalActions(): readonly { readonly action: LyraToolbarAction }[];
+    }
+  ).logicalActions();
+
+  expect(invalidReads).to.equal(0);
+  expect(projected.map(({ action }) => action.id)).to.deep.equal(['later-valid']);
+  expect(touched).to.deep.equal(
+    Array.from({ length: 100 }, (_value, index) => String(index)),
+  );
+  expect(valueReads).to.deep.equal([]);
+});
+
+it('does not invoke a provider getter while failing it closed', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions><button id="provider-getter-fallback">Fallback</button></lr-message-actions>
+  `)) as LyraMessageActions;
+  const provider = document.createElement('div');
+  let getterReads = 0;
+  Object.defineProperty(provider, 'getToolbarActions', {
+    get(): never {
+      getterReads += 1;
+      throw new Error('provider getter must not run');
+    },
+  });
+  el.prepend(provider);
+  await aTimeout(0);
+
+  expect(getterReads).to.equal(0);
+  expect(
+    el.querySelector<HTMLButtonElement>('#provider-getter-fallback')!.tabIndex,
+  ).to.equal(0);
+});
+
+it('continues releasing later provider actions when one optional lease release throws', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions></lr-message-actions>`,
+  )) as LyraMessageActions;
+  const provider = document.createElement('div');
+  let available = true;
+  let laterReleases = 0;
+  const action = (id: string, release: () => void): LyraToolbarAction => ({
+    id,
+    disabled: false,
+    focus(): void {},
+    setTabIndex(): void {},
+    releaseTabIndex: release,
+    matchesEventPath(): boolean {
+      return false;
+    },
+  });
+  const first = action('first', () => {
+    throw new Error('first release failed');
+  });
+  const second = action('second', () => {
+    laterReleases += 1;
+  });
+  Object.defineProperty(provider, 'getToolbarActions', {
+    value: (): readonly LyraToolbarAction[] => (available ? [first, second] : []),
+  });
+  el.append(provider);
+  await aTimeout(0);
+
+  available = false;
+  provider.dispatchEvent(
+    new CustomEvent('lr-toolbar-actions-change', {
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  await aTimeout(0);
+
+  expect(laterReleases).to.equal(1);
 });
 
 it('recognizes a callable toolbar provider structurally', async () => {

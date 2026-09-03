@@ -33,6 +33,12 @@ Item ids are occurrence identities. Empty ids and later duplicates are ignored b
 proposing a mutation, preserving one unambiguous `itemId`. Attachment names render visibly for both
 editable and read-only rows; the host `label` is also the visible queue heading.
 
+Supported item and attachment fields are read once when `items` is assigned; create and reassign a
+new collection after changes, because changing an assigned record or reassigning the same mutated
+array does not update the view. Rows or attachments without valid direct data are ignored. Duplicate IDs are resolved
+after validation, so the first valid item wins. `metadata` is opaque and retains identity in
+proposed queue/send-now payloads, while emitted items are new frozen snapshots.
+
 **Events:** `lr-queue-change` (`PromptQueueChangeDetail = { items, reason, itemId }`, with
 `reason: 'edit' | 'remove' | 'reorder'`), `lr-send-now` (`{ item }`). The queue is controlled:
 these events propose complete next values without mutating `items`.

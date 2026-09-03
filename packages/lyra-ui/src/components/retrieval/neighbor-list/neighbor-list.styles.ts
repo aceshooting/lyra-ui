@@ -94,6 +94,7 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     background: transparent;
     color: var(--lr-color-text-quiet);
+    font: inherit;
     cursor: pointer;
   }
   [part='expand-button']:hover,

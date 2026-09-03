@@ -130,7 +130,10 @@ property).
 - `formatter?: LyraChartFormatter` (attribute: false) — the family-wide context-object formatter:
   `({ value, surface, datasetIndex?, index?, label?, seriesLabel?, statistic? }) => string`.
   `surface` identifies `visual`, `spoken`, `export`, `tick`, `tooltip`, `legend`, or `table`.
-  It takes precedence over the legacy positional `valueFormatter` where both are supplied.
+  `statistic`, when present for a structured datum or stack total, is one of `x`, `y`, `r`,
+  `min`, `q1`, `median`, `q3`, `max`, or `total`. It takes precedence over the legacy positional
+  `valueFormatter` where both are supplied. The legacy callback remains a visual/table compatibility
+  hook; use `formatter` when a generated spoken value or CSV cell must use the same unit text.
 - `area: boolean = false` — chart-wide default for whether line-type series fill the region under
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
@@ -185,8 +188,10 @@ property).
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
   `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
   table stays in the DOM in both states, so assistive technology never loses it, and the button
-  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
-  renders and behavior is identical to before.
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Until the
+  reader activates it, the disclosure follows `showDataTable`; afterwards the reader's selected
+  state remains authoritative for that mounted chart. A supplied `slot="data-table"` follows this
+  same disclosure state. Unset, nothing renders and behavior is identical to before.
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
@@ -341,7 +346,8 @@ plot in narrow containers;
 declaration on a DOM element (the outline is painted by the stylesheet, not by Chart.js), so it is
 consumed directly with no `getComputedStyle` bridging; it is an inline `var()` fallback at the point
 of use, so it can be set on the element or any ancestor, and left unset the outline is exactly the
-`--lr-border-width-thin` it always was.
+`--lr-border-width-thin` it always was. `--lr-chart-canvas-hover-outline-color` (default
+`var(--lr-chart-grid-color)`) independently controls that outline's color.
 
 `--lr-chart-pattern-step` (default `var(--lr-space-2xs)`) is the tile size of the texture painted on
 `[part="legend-swatch"]` while `forced-colors: active` matches — the legend half of the non-colour
@@ -517,7 +523,8 @@ passthrough). Not a subclass of `LyraChart`.
   more here than on `lr-chart`: this component exists to avoid the Chart.js peers, so without it an
   app that chose it for exactly that reason had to either hand-roll a `<details>` around a
   duplicated table or adopt `lr-chart` and pull in Chart.js for a button — the cheap component
-  stuck with the expensive workaround. Unset, nothing renders and behavior is unchanged.
+  stuck with the expensive workaround. A supplied `slot="data-table"` follows the same disclosure
+  state. Unset, nothing renders and behavior is unchanged.
   Themeable via `--lr-lite-chart-data-table-toggle-hover-bg` (default
   `var(--lr-color-brand-quiet)`) and `--lr-lite-chart-data-table-toggle-active-bg` (default: that
   hover colour mixed by `--lr-color-mix-active`).
@@ -593,10 +600,12 @@ passthrough). Not a subclass of `LyraChart`.
   equivalent for the full charts.
 - `withoutValueAxis: boolean = false` (attribute `without-value-axis`) — suppresses gridlines and
   value-axis tick labels; x-axis category labels remain.
-- `selectedIndices: readonly number[] = []` (attribute: false) — applies to every interactive data mark for
-  both `type="bar"` and `type="line"`: matching bars and line points receive `data-selected` and
-  explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`. For a multi-series
-  chart, the category index selects the matching mark in every dataset. Empty is the default.
+- `selectedIndices: readonly number[] = []` (attribute: false) — names **source category indices**,
+  not positions in the sampled SVG output. Finite integer entries whose source rows are represented
+  in the bounded rendered sample select matching bars and line points, which receive
+  `data-selected` and explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`.
+  For a multi-series chart, a selected source category selects the matching rendered mark in every
+  dataset. Empty is the default.
   Style the built-in highlight through `--lr-lite-chart-selected-outline-color` and
   `--lr-lite-chart-selected-outline-width`. Note
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
@@ -770,7 +779,7 @@ failure transition is announced through the shared document-level light-DOM asse
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
-`--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
+`--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
 `lr-chart` above); each of the eight variants below reads the same set, so one rule retunes them
 together. The mirrored hooks are `--border-color-1`,
 `--border-color-2`, `--border-color-3`, `--border-color-4`, `--border-color-5`,
@@ -854,7 +863,7 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
-`--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
+`--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
 mirrored `--border-color-1`,
 `--border-color-2`,
 `--border-color-3`, `--border-color-4`, `--border-color-5`, `--border-color-6`, `--fill-color-1`,
@@ -925,8 +934,9 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting. The context-object formatter receives the
   family-wide `spoken` surface for the generated summary and `export` for CSV cells; the legacy
-  positional formatter continues to receive `table` for both compatibility paths. The
-  context-object formatter takes precedence
+  positional formatter receives `table` for the spoken/export compatibility paths, its normal
+  surface name for axis, tooltip, and table work, and no fallback for a `visual` context. The
+  context-object formatter takes precedence.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
@@ -934,8 +944,9 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
   `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
   table stays in the DOM in both states, so assistive technology never loses it, and the button
-  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
-  renders and behavior is identical to before.
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. A supplied
+  `slot="data-table"` follows this same disclosure state. Unset, nothing renders and behavior is
+  identical to before.
 
 **Methods:** `exportData('csv'|'png')` returns spreadsheet-safe summary rows or the current canvas
 PNG data URL. `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme
@@ -989,7 +1000,8 @@ that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` 
 so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-pattern-step`
 (default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
-hover outline, `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
+hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color)`) sets
+its color. `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
 `lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather
 than inheriting the chart pair, since its stylesheet is not a re-export:
@@ -1046,8 +1058,10 @@ These helpers do not download files; compose them with
 `lr-export-button` so the host owns filenames and download policy.
 
 For route-level warming, the side-effect-free chart preload entry exports
-`preloadCharts({ zoom?, dataLabels?, boxPlot? })`. Core Chart.js is always requested and optional
-capabilities only when flagged; the result reports which requested capabilities are available.
+`preloadCharts({ zoom?, dataLabels?, annotations?, boxPlot? })`. Core Chart.js is always requested
+and optional capabilities only when flagged; the result reports which requested capabilities are
+available. `annotations` appears in the result only when requested, and is `true` only after the
+optional annotation peer loads.
 
 ## Exported TypeScript contracts
 
@@ -1139,12 +1153,14 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraChartPreloadOptions {
     zoom: unknown;
     dataLabels: unknown;
+    annotations: unknown;
     boxPlot: unknown;
   }`
   `LyraChartPreloadResult {
     core: unknown;
     zoom: unknown;
     dataLabels: unknown;
+    annotations: unknown;
     boxPlot: unknown;
   }`
   `preloadCharts(/* public names: options */): unknown`

@@ -4,6 +4,9 @@ import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } fro
 import { styles } from './mention-popover.styles.js';
 import { ignoreResizeObserverLoopErrors } from '../../../../test/resize-observer-noise.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import type { DeferredOperationHandle } from '../../../internal/anchored-overlay-runtime.js';
+import { registerLyraLocale } from '../../../internal/localization.js';
 
 // Several tests here mount an <iframe> (to exercise cross-document anchors) and then remove it in
 // a `finally`, tearing the frame down while Floating UI's `autoUpdate` ResizeObservers are still
@@ -18,6 +21,15 @@ const ITEMS: LyraMentionItem[] = [
   { suggestionId: 'bob', label: 'Bob Nakamura', icon: '🤖' },
   { suggestionId: 'carol', label: 'Carol Ibarra', description: 'Engineering' },
 ];
+
+type ReflectedTextarea = HTMLTextAreaElement & {
+  ariaActiveDescendantElement?: Element | null;
+  ariaControlsElements?: readonly Element[] | null;
+};
+
+type MentionPopoverInternals = {
+  cleanup?: DeferredOperationHandle;
+};
 
 class MentionPopoverShadowHarness extends HTMLElement {
   constructor() {
@@ -36,8 +48,11 @@ function rows(el: LyraMentionPopover): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
 }
 
-function hasPlatformProperty(value: object, property: PropertyKey): boolean {
-  return property in value;
+function politeAnnouncements(doc: Document = document): string[] {
+  const sink = doc.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  );
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
 }
 
 async function openWithItems(items: LyraMentionItem[] = ITEMS): Promise<LyraMentionPopover> {
@@ -65,6 +80,31 @@ async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2
     if (performance.now() - start > timeoutMs) throw new Error(`waitFor timed out after ${timeoutMs}ms`);
     await new Promise((r) => requestAnimationFrame(() => r(null)));
   }
+}
+
+function createPendingPlacement(): {
+  readonly handle: DeferredOperationHandle;
+  readonly resolve: (positioned: boolean) => void;
+} {
+  let settleReady!: (positioned: boolean) => void;
+  let settled = false;
+  const settle = (positioned: boolean): void => {
+    if (settled) return;
+    settled = true;
+    settleReady(positioned);
+  };
+  const ready = new Promise<boolean>((resolve) => {
+    settleReady = resolve;
+  });
+  const handle = (() => settle(false)) as DeferredOperationHandle;
+  handle.ready = ready;
+  return { handle, resolve: settle };
+}
+
+function replacePlacement(el: LyraMentionPopover, handle: DeferredOperationHandle): void {
+  const internals = el as unknown as MentionPopoverInternals;
+  internals.cleanup?.();
+  internals.cleanup = handle;
 }
 
 it('renders items as listbox rows, with icon/description parts only when set', async () => {
@@ -390,22 +430,79 @@ it('exposes activeDescendantId as null while closed', async () => {
   expect(el.activeDescendantId).to.be.null;
 });
 
-it('uses element reflection when supported and otherwise offers a same-tree real-focus fallback', async () => {
+it('temporarily clears forbidden textarea semantics and restores authored ARIA/AOM after dismissal', async () => {
   const el = await openWithItems();
-  const textarea = document.createElement('textarea') as HTMLTextAreaElement & {
-    ariaActiveDescendantElement: Element | null;
-  };
-  document.body.appendChild(textarea);
-  el.anchor = textarea;
-  await el.updateComplete;
-  textarea.focus();
+  const textarea = document.createElement('textarea');
+  const reflected = textarea as ReflectedTextarea;
+  const authoredActiveDescendant = document.createElement('span');
+  const authoredControls = document.createElement('div');
+  authoredActiveDescendant.id = 'mention-authored-active';
+  authoredControls.id = 'mention-authored-controls';
+  document.body.append(textarea, authoredActiveDescendant, authoredControls);
 
-  const active = el.activeDescendantElement;
-  expect(active?.getAttribute('data-id')).to.equal('alice');
-  if (el.syncActiveDescendant(textarea)) {
-    expect(textarea.ariaActiveDescendantElement === active).to.be.true;
-  } else {
-    expect(textarea.hasAttribute('aria-activedescendant')).to.be.false;
+  let nativeEmptyAttributeAom = false;
+  if ('ariaActiveDescendantElement' in textarea && 'ariaControlsElements' in textarea) {
+    try {
+      reflected.ariaActiveDescendantElement = authoredActiveDescendant;
+      reflected.ariaControlsElements = [authoredControls];
+      nativeEmptyAttributeAom =
+        reflected.ariaActiveDescendantElement === authoredActiveDescendant &&
+        reflected.ariaControlsElements?.[0] === authoredControls &&
+        textarea.getAttribute('aria-activedescendant') === '' &&
+        textarea.getAttribute('aria-controls') === '';
+    } catch {
+      // Engines without usable native element reflection exercise the controlled fallback below.
+    }
+  }
+
+  let activeDescendantElement: Element | null = authoredActiveDescendant;
+  let controlsElements: readonly Element[] | null = [authoredControls];
+  if (!nativeEmptyAttributeAom) {
+    Object.defineProperties(textarea, {
+      ariaActiveDescendantElement: {
+        configurable: true,
+        get: () => activeDescendantElement,
+        set: (value: Element | null) => {
+          activeDescendantElement = value;
+        },
+      },
+      ariaControlsElements: {
+        configurable: true,
+        get: () => controlsElements,
+        set: (value: readonly Element[] | null) => {
+          controlsElements = value;
+        },
+      },
+    });
+    // Element-reference reflection uses empty attributes as its native serialization. This
+    // fallback deliberately models that provenance instead of conflating it with an author IDREF.
+    textarea.setAttribute('aria-controls', '');
+    textarea.setAttribute('aria-activedescendant', '');
+  }
+
+  textarea.setAttribute('role', 'searchbox');
+  textarea.setAttribute('aria-expanded', 'false');
+  textarea.setAttribute('aria-haspopup', 'grid');
+  textarea.setAttribute('aria-autocomplete', 'both');
+  const authoredControlsAttribute = textarea.getAttribute('aria-controls');
+  const authoredActiveDescendantAttribute = textarea.getAttribute('aria-activedescendant');
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    textarea.focus();
+
+    const active = el.activeDescendantElement;
+    expect(active?.getAttribute('data-id')).to.equal('alice');
+    expect(textarea.hasAttribute('role')).to.equal(false);
+    expect(textarea.hasAttribute('aria-expanded')).to.equal(false);
+    expect(textarea.hasAttribute('aria-controls')).to.equal(false);
+    expect(textarea.hasAttribute('aria-activedescendant')).to.equal(false);
+    expect(textarea.getAttribute('aria-haspopup')).to.equal('listbox');
+    expect(textarea.getAttribute('aria-autocomplete')).to.equal('list');
+    expect(el.syncActiveDescendant(textarea)).to.be.false;
+    expect(reflected.ariaActiveDescendantElement === null).to.equal(true);
+    expect(reflected.ariaControlsElements === null).to.equal(true);
+
     expect(await el.focusActiveOption()).to.be.true;
     expect(el.shadowRoot!.activeElement === active).to.be.true;
 
@@ -428,197 +525,380 @@ it('uses element reflection when supported and otherwise offers a same-tree real
     );
     await el.updateComplete;
     expect(document.activeElement === textarea).to.be.true;
+    expect(textarea.getAttribute('role')).to.equal('searchbox');
+    expect(textarea.getAttribute('aria-expanded')).to.equal('false');
+    expect(textarea.getAttribute('aria-haspopup')).to.equal('grid');
+    expect(textarea.getAttribute('aria-autocomplete')).to.equal('both');
+    expect(textarea.getAttribute('aria-controls')).to.equal(authoredControlsAttribute);
+    expect(textarea.getAttribute('aria-activedescendant')).to.equal(authoredActiveDescendantAttribute);
+    expect(reflected.ariaActiveDescendantElement === authoredActiveDescendant).to.equal(true);
+    expect(reflected.ariaControlsElements?.[0] === authoredControls).to.equal(true);
+  } finally {
+    textarea.remove();
+    authoredActiveDescendant.remove();
+    authoredControls.remove();
   }
-
-  textarea.remove();
 });
 
-it('owns and restores the anchor combobox relationship across close, replacement, and adoption', async () => {
+it('restores temporary textarea ARIA plus focus and caret across replacement and adoption', async () => {
   const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
   el.items = ITEMS;
-  const first = document.createElement('textarea') as HTMLTextAreaElement & {
-    ariaControlsElements?: readonly Element[] | null;
-    ariaActiveDescendantElement?: Element | null;
-  };
+  const first = document.createElement('textarea');
+  const reflectedFirst = first as ReflectedTextarea;
+  const authoredActiveDescendant = document.createElement('span');
+  const authoredControls = document.createElement('div');
+  authoredActiveDescendant.id = 'mention-string-active';
+  authoredControls.id = 'mention-string-controls';
+  first.value = 'Hello @ad';
+  first.setSelectionRange(6, 9);
   first.setAttribute('role', 'searchbox');
   first.setAttribute('aria-expanded', 'false');
   first.setAttribute('aria-haspopup', 'grid');
-  first.setAttribute('aria-controls', 'author-results');
-  first.setAttribute('aria-activedescendant', 'author-active');
-  const second = document.createElement('input');
-  second.type = 'search';
-  second.setAttribute('aria-expanded', 'mixed-author-value');
-  document.body.append(first, second);
+  first.setAttribute('aria-autocomplete', 'both');
+  first.setAttribute('aria-controls', authoredControls.id);
+  first.setAttribute('aria-activedescendant', authoredActiveDescendant.id);
+  const second = document.createElement('textarea');
+  second.setAttribute('aria-haspopup', 'menu');
+  second.setAttribute('aria-autocomplete', 'inline');
+  document.body.append(first, second, authoredActiveDescendant, authoredControls);
   try {
     el.anchor = first;
     el.open = true;
     await el.updateComplete;
-    expect(first.getAttribute('role')).to.equal('searchbox');
-    expect(first.getAttribute('aria-expanded')).to.equal('true');
+    expect(first.hasAttribute('role')).to.be.false;
+    expect(first.hasAttribute('aria-expanded')).to.be.false;
     expect(first.getAttribute('aria-haspopup')).to.equal('listbox');
-    if (hasPlatformProperty(first, 'ariaControlsElements')) {
-      const controlled = first.ariaControlsElements?.[0];
-      expect(controlled === listbox(el) || controlled === el).to.be.true;
-    } else {
-      expect(first.hasAttribute('aria-controls')).to.be.false;
-    }
-    if (hasPlatformProperty(first, 'ariaActiveDescendantElement')) {
-      const active = first.ariaActiveDescendantElement;
-      expect(active === null || active === el.activeDescendantElement).to.be.true;
-      if (active === null) expect(first.hasAttribute('aria-activedescendant')).to.be.false;
-    } else {
-      expect(first.hasAttribute('aria-activedescendant')).to.be.false;
-    }
+    expect(first.getAttribute('aria-autocomplete')).to.equal('list');
+    expect(first.hasAttribute('aria-controls')).to.be.false;
+    expect(first.hasAttribute('aria-activedescendant')).to.be.false;
+    first.focus();
+    expect(await el.focusActiveOption()).to.be.true;
 
     el.anchor = second;
     await el.updateComplete;
+    expect(document.activeElement === first).to.be.true;
+    expect(first.selectionStart).to.equal(6);
+    expect(first.selectionEnd).to.equal(9);
     expect(first.getAttribute('role')).to.equal('searchbox');
     expect(first.getAttribute('aria-expanded')).to.equal('false');
     expect(first.getAttribute('aria-haspopup')).to.equal('grid');
-    expect(first.getAttribute('aria-controls')).to.equal('author-results');
-    expect(first.getAttribute('aria-activedescendant')).to.equal('author-active');
-    expect(second.getAttribute('role')).to.equal('combobox');
-    expect(second.getAttribute('aria-expanded')).to.equal('true');
-
-    el.open = false;
-    await el.updateComplete;
+    expect(first.getAttribute('aria-autocomplete')).to.equal('both');
+    expect(first.getAttribute('aria-controls')).to.equal(authoredControls.id);
+    expect(first.getAttribute('aria-activedescendant')).to.equal(authoredActiveDescendant.id);
+    if ('ariaActiveDescendantElement' in first) {
+      expect(reflectedFirst.ariaActiveDescendantElement === authoredActiveDescendant).to.equal(true);
+    }
+    if ('ariaControlsElements' in first) {
+      expect(reflectedFirst.ariaControlsElements?.[0] === authoredControls).to.equal(true);
+    }
     expect(second.hasAttribute('role')).to.be.false;
-    expect(second.getAttribute('aria-expanded')).to.equal('mixed-author-value');
-    expect(second.hasAttribute('aria-haspopup')).to.be.false;
+    expect(second.hasAttribute('aria-expanded')).to.be.false;
+    expect(second.getAttribute('aria-haspopup')).to.equal('listbox');
+    expect(second.getAttribute('aria-autocomplete')).to.equal('list');
+    expect(second.hasAttribute('aria-controls')).to.be.false;
+    expect(second.hasAttribute('aria-activedescendant')).to.be.false;
 
     el.anchor = first;
-    el.open = true;
     await el.updateComplete;
+    expect(second.getAttribute('aria-haspopup')).to.equal('menu');
+    expect(second.getAttribute('aria-autocomplete')).to.equal('inline');
+    first.focus();
+    expect(await el.focusActiveOption()).to.be.true;
     const frame = document.createElement('iframe');
     document.body.append(frame);
     try {
       frame.contentDocument!.adoptNode(el);
+      expect(document.activeElement === first).to.be.true;
+      expect(first.selectionStart).to.equal(6);
+      expect(first.selectionEnd).to.equal(9);
       expect(first.getAttribute('role')).to.equal('searchbox');
       expect(first.getAttribute('aria-expanded')).to.equal('false');
-      expect(first.getAttribute('aria-controls')).to.equal('author-results');
+      expect(first.getAttribute('aria-haspopup')).to.equal('grid');
+      expect(first.getAttribute('aria-autocomplete')).to.equal('both');
+      expect(first.getAttribute('aria-controls')).to.equal(authoredControls.id);
+      expect(first.getAttribute('aria-activedescendant')).to.equal(authoredActiveDescendant.id);
+      if ('ariaActiveDescendantElement' in first) {
+        expect(reflectedFirst.ariaActiveDescendantElement === authoredActiveDescendant).to.equal(true);
+      }
+      if ('ariaControlsElements' in first) {
+        expect(reflectedFirst.ariaControlsElements?.[0] === authoredControls).to.equal(true);
+      }
     } finally {
       frame.remove();
     }
   } finally {
     first.remove();
     second.remove();
+    authoredActiveDescendant.remove();
+    authoredControls.remove();
   }
 });
 
-it('swallows a restoration failure on detach on a partial AOM implementation, still restoring the plain attributes', async () => {
-  const el = await openWithItems();
-  const textarea = document.createElement('textarea') as HTMLTextAreaElement & {
-    ariaControlsElements?: unknown;
-    ariaActiveDescendantElement?: unknown;
-  };
-  textarea.setAttribute('role', 'searchbox');
-  document.body.appendChild(textarea);
+it('restores nonempty textarea string IDREFs on disconnect without rewriting their provenance', async () => {
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
+  const textarea = document.createElement('textarea');
+  const authoredActiveDescendant = document.createElement('span');
+  const authoredControls = document.createElement('div');
+  authoredActiveDescendant.id = 'mention-disconnect-active';
+  authoredControls.id = 'mention-disconnect-controls';
+  textarea.setAttribute('aria-activedescendant', authoredActiveDescendant.id);
+  textarea.setAttribute('aria-controls', authoredControls.id);
+  document.body.append(textarea, authoredActiveDescendant, authoredControls);
   try {
     el.anchor = textarea;
+    el.items = ITEMS;
+    el.open = true;
     await el.updateComplete;
 
-    // Force the *restoration* assignment (which only runs later, at detach time) to throw --
-    // simulating a partial AOM implementation that accepts installing the reflection but rejects
-    // restoring it back to its prior value.
-    Object.defineProperty(textarea, 'ariaActiveDescendantElement', {
-      configurable: true,
-      get: () => null,
-      set: () => {
-        throw new Error('cannot restore');
-      },
-    });
-    Object.defineProperty(textarea, 'ariaControlsElements', {
-      configurable: true,
-      get: () => null,
-      set: () => {
-        throw new Error('cannot restore');
-      },
-    });
+    el.remove();
 
-    el.anchor = undefined;
-    await el.updateComplete;
-
-    // The plain-attribute restoration below the swallowed throw remains authoritative.
-    expect(textarea.getAttribute('role')).to.equal('searchbox');
+    expect(textarea.getAttribute('aria-activedescendant')).to.equal(authoredActiveDescendant.id);
+    expect(textarea.getAttribute('aria-controls')).to.equal(authoredControls.id);
   } finally {
     textarea.remove();
+    authoredActiveDescendant.remove();
+    authoredControls.remove();
   }
 });
 
-it('falls back to removing aria-activedescendant when the reflection setter itself throws', async () => {
-  const el = await openWithItems();
-  const textarea = document.createElement('textarea') as HTMLTextAreaElement & {
-    ariaActiveDescendantElement?: unknown;
-  };
-  textarea.setAttribute('aria-activedescendant', 'preexisting-idref');
-  document.body.appendChild(textarea);
-  Object.defineProperty(textarea, 'ariaActiveDescendantElement', {
-    configurable: true,
-    get: () => null,
-    set: () => {
-      throw new Error('rejected');
-    },
-  });
-  try {
-    el.anchor = textarea;
-    await el.updateComplete;
-    expect(textarea.hasAttribute('aria-activedescendant')).to.be.false;
-  } finally {
-    textarea.remove();
-  }
-});
+it('restores a textarea session before a close listener mutates and reopens it', async () => {
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
+  const textarea = document.createElement('textarea');
+  const initialActiveDescendant = document.createElement('span');
+  const initialControls = document.createElement('div');
+  const reopenedActiveDescendant = document.createElement('span');
+  const reopenedControls = document.createElement('div');
+  initialActiveDescendant.id = 'mention-close-initial-active';
+  initialControls.id = 'mention-close-initial-controls';
+  reopenedActiveDescendant.id = 'mention-close-reopened-active';
+  reopenedControls.id = 'mention-close-reopened-controls';
+  const reflected = textarea as ReflectedTextarea;
+  document.body.append(
+    textarea,
+    initialActiveDescendant,
+    initialControls,
+    reopenedActiveDescendant,
+    reopenedControls,
+  );
 
-it('falls back to removing aria-controls when the reflection setter itself throws while installing it', async () => {
-  const el = await openWithItems();
-  const textarea = document.createElement('textarea') as HTMLTextAreaElement & {
-    ariaControlsElements?: unknown;
-  };
-  textarea.setAttribute('aria-controls', 'preexisting-idref');
-  document.body.appendChild(textarea);
-  Object.defineProperty(textarea, 'ariaControlsElements', {
-    configurable: true,
-    get: () => null,
-    set: () => {
-      throw new Error('rejected');
-    },
-  });
-  try {
-    el.anchor = textarea;
-    await el.updateComplete;
-    expect(textarea.hasAttribute('aria-controls')).to.be.false;
-  } finally {
-    textarea.remove();
-  }
-});
-
-it('falls back to a plain aria-controls removal when the platform lacks ariaControlsElements entirely', async () => {
-  const probe = document.createElement('textarea') as HTMLTextAreaElement & { ariaControlsElements?: unknown };
-  let owner: object | null = null;
-  for (let proto: object | null = Object.getPrototypeOf(probe); proto; proto = Object.getPrototypeOf(proto)) {
-    if (Object.prototype.hasOwnProperty.call(proto, 'ariaControlsElements')) {
-      owner = proto;
-      break;
-    }
-  }
-  const descriptor = owner ? Object.getOwnPropertyDescriptor(owner, 'ariaControlsElements') : undefined;
-  if (owner) delete (owner as Record<string, unknown>)['ariaControlsElements'];
-
-  try {
-    const el = await openWithItems();
-    const textarea = document.createElement('textarea');
-    textarea.setAttribute('aria-controls', 'preexisting-idref');
-    document.body.appendChild(textarea);
+  let nativeEmptyAttributeAom = false;
+  if ('ariaActiveDescendantElement' in textarea && 'ariaControlsElements' in textarea) {
     try {
-      el.anchor = textarea;
-      await el.updateComplete;
-      // A string idref cannot cross from the owner tree into this shadow root, whether the
-      // platform lacks the reflection API entirely (this test) or rejects it (a sibling test).
-      expect(textarea.hasAttribute('aria-controls')).to.be.false;
-    } finally {
-      textarea.remove();
+      reflected.ariaActiveDescendantElement = initialActiveDescendant;
+      reflected.ariaControlsElements = [initialControls];
+      nativeEmptyAttributeAom =
+        reflected.ariaActiveDescendantElement === initialActiveDescendant &&
+        reflected.ariaControlsElements?.[0] === initialControls &&
+        textarea.getAttribute('aria-activedescendant') === '' &&
+        textarea.getAttribute('aria-controls') === '';
+    } catch {
+      // The ordinary serialized-IDREF assertions below cover engines without native reflection.
+    }
+  }
+  if (!nativeEmptyAttributeAom) {
+    textarea.setAttribute('aria-activedescendant', initialActiveDescendant.id);
+    textarea.setAttribute('aria-controls', initialControls.id);
+  }
+  textarea.setAttribute('role', 'searchbox');
+  const initialActiveAttribute = textarea.getAttribute('aria-activedescendant');
+  const initialControlsAttribute = textarea.getAttribute('aria-controls');
+  let reopenedActiveAttribute: string | null = null;
+  let reopenedControlsAttribute: string | null = null;
+  let closeCount = 0;
+  el.addEventListener('lr-mention-close', () => {
+    closeCount += 1;
+    if (closeCount !== 1) return;
+    expect(textarea.getAttribute('role')).to.equal('searchbox');
+    expect(textarea.getAttribute('aria-activedescendant')).to.equal(initialActiveAttribute);
+    expect(textarea.getAttribute('aria-controls')).to.equal(initialControlsAttribute);
+    if (nativeEmptyAttributeAom) {
+      expect(reflected.ariaActiveDescendantElement === initialActiveDescendant).to.equal(true);
+      expect(reflected.ariaControlsElements?.[0] === initialControls).to.equal(true);
+    }
+
+    textarea.setAttribute('role', 'textbox');
+    if (nativeEmptyAttributeAom) {
+      reflected.ariaActiveDescendantElement = reopenedActiveDescendant;
+      reflected.ariaControlsElements = [reopenedControls];
+    } else {
+      textarea.setAttribute('aria-activedescendant', reopenedActiveDescendant.id);
+      textarea.setAttribute('aria-controls', reopenedControls.id);
+    }
+    reopenedActiveAttribute = textarea.getAttribute('aria-activedescendant');
+    reopenedControlsAttribute = textarea.getAttribute('aria-controls');
+    el.open = true;
+  });
+
+  try {
+    el.anchor = textarea;
+    el.items = ITEMS;
+    el.open = true;
+    await el.updateComplete;
+
+    el.open = false;
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(closeCount).to.equal(1);
+    expect(el.open).to.equal(true);
+
+    el.open = false;
+    await el.updateComplete;
+    await el.updateComplete;
+
+    expect(closeCount).to.equal(2);
+    expect(textarea.getAttribute('role')).to.equal('textbox');
+    expect(textarea.getAttribute('aria-activedescendant')).to.equal(reopenedActiveAttribute);
+    expect(textarea.getAttribute('aria-controls')).to.equal(reopenedControlsAttribute);
+    if (nativeEmptyAttributeAom) {
+      expect(reflected.ariaActiveDescendantElement === reopenedActiveDescendant).to.equal(true);
+      expect(reflected.ariaControlsElements?.[0] === reopenedControls).to.equal(true);
     }
   } finally {
-    if (owner && descriptor) Object.defineProperty(owner, 'ariaControlsElements', descriptor);
+    textarea.remove();
+    initialActiveDescendant.remove();
+    initialControls.remove();
+    reopenedActiveDescendant.remove();
+    reopenedControls.remove();
+  }
+});
+
+it('restores a textarea session before a select listener authors replacement semantics', async () => {
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
+  const textarea = document.createElement('textarea');
+  const initialActiveDescendant = document.createElement('span');
+  const initialControls = document.createElement('div');
+  const selectedActiveDescendant = document.createElement('span');
+  const selectedControls = document.createElement('div');
+  initialActiveDescendant.id = 'mention-select-initial-active';
+  initialControls.id = 'mention-select-initial-controls';
+  selectedActiveDescendant.id = 'mention-select-authored-active';
+  selectedControls.id = 'mention-select-authored-controls';
+  const reflected = textarea as ReflectedTextarea;
+  document.body.append(
+    textarea,
+    initialActiveDescendant,
+    initialControls,
+    selectedActiveDescendant,
+    selectedControls,
+  );
+
+  let nativeEmptyAttributeAom = false;
+  if ('ariaActiveDescendantElement' in textarea && 'ariaControlsElements' in textarea) {
+    try {
+      reflected.ariaActiveDescendantElement = initialActiveDescendant;
+      reflected.ariaControlsElements = [initialControls];
+      nativeEmptyAttributeAom =
+        reflected.ariaActiveDescendantElement === initialActiveDescendant &&
+        reflected.ariaControlsElements?.[0] === initialControls &&
+        textarea.getAttribute('aria-activedescendant') === '' &&
+        textarea.getAttribute('aria-controls') === '';
+    } catch {
+      // The serialized-IDREF fallback below covers engines without native element reflection.
+    }
+  }
+  if (!nativeEmptyAttributeAom) {
+    textarea.setAttribute('aria-activedescendant', initialActiveDescendant.id);
+    textarea.setAttribute('aria-controls', initialControls.id);
+  }
+  textarea.value = '@a';
+  textarea.setSelectionRange(2, 2);
+  textarea.setAttribute('role', 'searchbox');
+  textarea.setAttribute('aria-expanded', 'false');
+  textarea.setAttribute('aria-haspopup', 'grid');
+  textarea.setAttribute('aria-autocomplete', 'both');
+  const initialActiveAttribute = textarea.getAttribute('aria-activedescendant');
+  const initialControlsAttribute = textarea.getAttribute('aria-controls');
+  let selectedActiveAttribute: string | null = null;
+  let selectedControlsAttribute: string | null = null;
+  let selectCount = 0;
+  el.addEventListener('lr-mention-select', () => {
+    selectCount += 1;
+    expect(textarea.getAttribute('role')).to.equal('searchbox');
+    expect(textarea.getAttribute('aria-expanded')).to.equal('false');
+    expect(textarea.getAttribute('aria-haspopup')).to.equal('grid');
+    expect(textarea.getAttribute('aria-autocomplete')).to.equal('both');
+    expect(textarea.getAttribute('aria-activedescendant')).to.equal(initialActiveAttribute);
+    expect(textarea.getAttribute('aria-controls')).to.equal(initialControlsAttribute);
+    expect(document.activeElement === textarea).to.equal(true);
+    expect(textarea.selectionStart).to.equal(2);
+    expect(textarea.selectionEnd).to.equal(2);
+    if (nativeEmptyAttributeAom) {
+      expect(reflected.ariaActiveDescendantElement === initialActiveDescendant).to.equal(true);
+      expect(reflected.ariaControlsElements?.[0] === initialControls).to.equal(true);
+    }
+
+    textarea.setAttribute('role', 'textbox');
+    textarea.setAttribute('aria-expanded', 'true');
+    textarea.setAttribute('aria-haspopup', 'menu');
+    textarea.setAttribute('aria-autocomplete', 'none');
+    if (nativeEmptyAttributeAom) {
+      reflected.ariaActiveDescendantElement = selectedActiveDescendant;
+      reflected.ariaControlsElements = [selectedControls];
+    } else {
+      textarea.setAttribute('aria-activedescendant', selectedActiveDescendant.id);
+      textarea.setAttribute('aria-controls', selectedControls.id);
+    }
+    selectedActiveAttribute = textarea.getAttribute('aria-activedescendant');
+    selectedControlsAttribute = textarea.getAttribute('aria-controls');
+  });
+
+  try {
+    el.anchor = textarea;
+    el.items = ITEMS;
+    el.open = true;
+    await el.updateComplete;
+    textarea.focus();
+    expect(await el.focusActiveOption()).to.equal(true);
+    const active = el.shadowRoot!.activeElement as HTMLElement;
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    active.dispatchEvent(enter);
+    await waitUntil(() => !el.open);
+    await el.updateComplete;
+
+    expect(enter.defaultPrevented).to.equal(true);
+    expect(selectCount).to.equal(1);
+    expect(textarea.getAttribute('role')).to.equal('textbox');
+    expect(textarea.getAttribute('aria-expanded')).to.equal('true');
+    expect(textarea.getAttribute('aria-haspopup')).to.equal('menu');
+    expect(textarea.getAttribute('aria-autocomplete')).to.equal('none');
+    expect(textarea.getAttribute('aria-activedescendant')).to.equal(selectedActiveAttribute);
+    expect(textarea.getAttribute('aria-controls')).to.equal(selectedControlsAttribute);
+    if (nativeEmptyAttributeAom) {
+      expect(reflected.ariaActiveDescendantElement === selectedActiveDescendant).to.equal(true);
+      expect(reflected.ariaControlsElements?.[0] === selectedControls).to.equal(true);
+    }
+  } finally {
+    textarea.remove();
+    initialActiveDescendant.remove();
+    initialControls.remove();
+    selectedActiveDescendant.remove();
+    selectedControls.remove();
+  }
+});
+
+it('retains the established single-line input route without applying textarea-only autocomplete', async () => {
+  const el = await openWithItems();
+  const input = document.createElement('input');
+  input.type = 'search';
+  input.setAttribute('aria-expanded', 'mixed-author-value');
+  input.setAttribute('aria-autocomplete', 'both');
+  document.body.appendChild(input);
+  try {
+    el.anchor = input;
+    await el.updateComplete;
+    expect(input.getAttribute('role')).to.equal('combobox');
+    expect(input.getAttribute('aria-expanded')).to.equal('true');
+    expect(input.getAttribute('aria-haspopup')).to.equal('listbox');
+    expect(input.getAttribute('aria-autocomplete')).to.equal('both');
+
+    el.open = false;
+    await el.updateComplete;
+    expect(input.hasAttribute('role')).to.be.false;
+    expect(input.getAttribute('aria-expanded')).to.equal('mixed-author-value');
+    expect(input.hasAttribute('aria-haspopup')).to.be.false;
+    expect(input.getAttribute('aria-autocomplete')).to.equal('both');
+  } finally {
+    input.remove();
   }
 });
 
@@ -704,6 +984,35 @@ it('refuses a stale fallback focus transfer when caller ownership expires during
   }
 });
 
+it('does not restore an option after placement settles once real focus has left the textarea session', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  const outside = document.createElement('button');
+  const pendingPlacement = createPendingPlacement();
+  document.body.append(textarea, outside);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    textarea.focus();
+    expect(await el.focusActiveOption()).to.equal(true);
+
+    replacePlacement(el, pendingPlacement.handle);
+    el.items = ITEMS.slice(0, 2);
+    await el.updateComplete;
+    outside.focus();
+    pendingPlacement.resolve(true);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.activeElement === outside).to.equal(true);
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
+  } finally {
+    pendingPlacement.handle();
+    textarea.remove();
+    outside.remove();
+  }
+});
+
 it('invalidates a pending fallback focus transfer on close, candidate replacement, and disconnect', async () => {
   for (const invalidate of [
     (el: LyraMentionPopover) => {
@@ -735,6 +1044,69 @@ it('invalidates a pending fallback focus transfer on close, candidate replacemen
       el.remove();
       textarea.remove();
       outside.remove();
+    }
+  }
+});
+
+it('invalidates a textarea focus transfer when close/reopen, query, or anchor returns to its original snapshot', async () => {
+  const invalidations: readonly {
+    readonly name: string;
+    readonly apply: (el: LyraMentionPopover, textarea: HTMLTextAreaElement, alternate: HTMLTextAreaElement) => void;
+  }[] = [
+    {
+      name: 'close/reopen',
+      apply: (el) => {
+        el.open = false;
+        el.open = true;
+      },
+    },
+    {
+      name: 'query roundtrip',
+      apply: (el) => {
+        el.query = 'bob';
+        el.query = '';
+      },
+    },
+    {
+      name: 'anchor roundtrip',
+      apply: (el, textarea, alternate) => {
+        el.anchor = alternate;
+        el.anchor = textarea;
+      },
+    },
+  ];
+
+  for (const { name, apply } of invalidations) {
+    const el = await openWithItems();
+    const textarea = document.createElement('textarea');
+    const alternate = document.createElement('textarea');
+    document.body.append(textarea, alternate);
+    try {
+      el.anchor = textarea;
+      await el.updateComplete;
+      await waitFor(
+        () => getComputedStyle(listbox(el)).visibility,
+        (visibility) => visibility === 'visible',
+      );
+      textarea.focus();
+      // Schedule a render before starting the transfer. The later mutations return to this exact
+      // snapshot before that render settles, which defeats value-only snapshot comparisons.
+      el.query = 'bob';
+      const pending = el.focusActiveOption({ ownsFocus: () => document.activeElement === textarea });
+      if (name === 'query roundtrip') {
+        el.query = '';
+        el.query = 'bob';
+      } else {
+        apply(el, textarea, alternate);
+      }
+      await el.updateComplete;
+
+      expect(await pending, `${name} must invalidate the stale textarea focus transfer`).to.equal(false);
+      expect(document.activeElement === textarea).to.equal(true);
+      expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    } finally {
+      textarea.remove();
+      alternate.remove();
     }
   }
 });
@@ -1116,6 +1488,91 @@ it('honors a strings override for mentionSuggestions/noMatches while label/empty
   expect(listbox(el).getAttribute('aria-label')).to.equal('Suggestions de mention');
   const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
   expect(empty.textContent).to.equal('Aucun résultat');
+});
+
+it('announces localized result state in the document light DOM without repeating an unchanged active row', async () => {
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
+  const anchor = document.createElement('textarea');
+  document.body.append(anchor);
+  const before = politeAnnouncements().length;
+  try {
+    el.strings = {
+      mentionResultCount: { one: '{count} result', other: '{count} results' },
+      mentionResultPosition: 'Result {current} of {total}',
+      noMatches: 'No matching suggestions',
+    };
+    el.anchor = anchor;
+    el.items = ITEMS.slice(0, 2);
+    el.open = true;
+    await el.updateComplete;
+
+    el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+    await el.updateComplete;
+    el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+    await el.updateComplete;
+
+    el.items = [];
+    await el.updateComplete;
+    el.items = [];
+    await el.updateComplete;
+
+    expect(politeAnnouncements().slice(before)).to.deep.equal([
+      '2 results',
+      'Result 1 of 2',
+      'Result 2 of 2',
+      'No matching suggestions',
+    ]);
+  } finally {
+    el.remove();
+    anchor.remove();
+  }
+});
+
+it('reconciles open result announcements after an inherited locale update without duplicates', async () => {
+  registerLyraLocale('x-mention-announcement', {
+    mentionSuggestions: 'Suggestions de test',
+    mentionResultCount: { one: '{count} résultat de test', other: '{count} résultats de test' },
+    mentionResultPosition: 'Résultat de test {current} sur {total}',
+  });
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div lang="en"><lr-mention-popover></lr-mention-popover></div>
+  `);
+  const el = wrapper.querySelector('lr-mention-popover') as LyraMentionPopover;
+  const anchor = document.createElement('textarea');
+  wrapper.append(anchor);
+  const before = politeAnnouncements().length;
+  try {
+    el.anchor = anchor;
+    el.items = ITEMS.slice(0, 2);
+    el.open = true;
+    await el.updateComplete;
+    expect(politeAnnouncements().slice(before)).to.deep.equal([
+      '2 suggestions',
+      'Suggestion 1 of 2',
+    ]);
+
+    wrapper.setAttribute('lang', 'x-mention-announcement');
+    await Promise.resolve();
+    await el.updateComplete;
+    await Promise.resolve();
+    await el.updateComplete;
+
+    expect(listbox(el).getAttribute('aria-label')).to.equal('Suggestions de test');
+    expect(politeAnnouncements().slice(before)).to.deep.equal([
+      '2 suggestions',
+      'Suggestion 1 of 2',
+      '2 résultats de test',
+      'Résultat de test 1 sur 2',
+    ]);
+
+    const announcementCount = politeAnnouncements().length;
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(politeAnnouncements().length).to.equal(announcementCount);
+  } finally {
+    el.remove();
+    anchor.remove();
+  }
 });
 
 it('keeps explicit empty and old-English label strings caller-owned', async () => {

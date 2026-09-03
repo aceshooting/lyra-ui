@@ -22,6 +22,12 @@ import {
 } from '../../../internal/intl-cache.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import {
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+  getOwnDataDescriptor,
+} from '../../../internal/data-descriptors.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -135,33 +141,100 @@ function defaultFilter(
   );
 }
 
-// `threads` is an owned collection property (see `ownedCollectionProperties` on the class below):
-// `LyraElement`'s snapshot machinery detaches a caller-supplied `Date` into a frozen, read-only
-// proxy wrapping a private clone, so a later mutation of the caller's own `Date` (or of the array)
-// can never leak into what's already rendered. That proxy still satisfies `instanceof Date` and a
-// normal `date.getTime()` *method* call -- its own `get` trap forwards to a correctly-bound copy --
-// but it has no `[[DateValue]]` internal slot of its own, so the shared `normalizeLyraTimestamp()`
-// helper's `Date.prototype.getTime.call(value)` (a borrowed, unbound method call) throws a
-// TypeError for it and silently normalizes to `undefined`. Every `thread.timestamp` read here or
-// forwarded to the row goes through this first, so both this component's own date-bucket math and
-// the child `lr-conversation-item`'s later `normalizeLyraTimestamp()` call see a real `Date`
-// instance again rather than the snapshot proxy. Strings/numbers/`undefined` pass through as-is.
-function rehydrateThreadTimestamp(
-  value: LyraTimestamp | undefined
-): LyraTimestamp | undefined {
-  if (value === undefined) return undefined;
+const THREADS_AND_SLOTTED_CONTENT_WARNING_KEY =
+  'lyra-thread-list:threads-and-slotted-content';
+const THREADS_AND_SLOTTED_CONTENT_WARNING =
+  '<lr-thread-list>: both `threads` and slotted content were supplied; `threads` data mode wins and the default slot is ignored.';
+
+const canonicalThreadSnapshots = new WeakMap<
+  readonly unknown[],
+  readonly LyraChatThread[]
+>();
+const sourceThreadByProjection = new WeakMap<
+  LyraChatThread,
+  LyraChatThread
+>();
+
+function normalizeProjectedTimestamp(value: unknown): Date | undefined {
   if (
-    typeof value !== 'object' ||
-    typeof (value as { getTime?: unknown }).getTime !== 'function'
+    typeof value !== 'string' &&
+    typeof value !== 'number' &&
+    (value === null || typeof value !== 'object')
   )
-    return value;
-  let epoch: number;
-  try {
-    epoch = (value as { getTime(): number }).getTime();
-  } catch {
     return undefined;
+  return normalizeLyraTimestamp(value as LyraTimestamp);
+}
+
+function isSafeNonArrayObject(value: unknown): value is object {
+  if (value === null || typeof value !== 'object') return false;
+  try {
+    return !Array.isArray(value);
+  } catch {
+    return false;
   }
-  return Number.isFinite(epoch) ? new Date(epoch) : undefined;
+}
+
+/** Projects the closed display schema once; render hooks receive only the original source identity. */
+function projectThread(value: unknown): LyraChatThread | undefined {
+  if (!isSafeNonArrayObject(value)) return undefined;
+  const id = getOwnDataDescriptor(value, 'id');
+  const title = getOwnDataDescriptor(value, 'title');
+  const excerpt = getOwnDataDescriptor(value, 'excerpt');
+  const timestamp = getOwnDataDescriptor(value, 'timestamp');
+  const pinned = getOwnDataDescriptor(value, 'pinned');
+  const archived = getOwnDataDescriptor(value, 'archived');
+  if (
+    id === MISSING_OWN_DATA_DESCRIPTOR ||
+    id === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    title === MISSING_OWN_DATA_DESCRIPTOR ||
+    title === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof id.value !== 'string' ||
+    id.value.trim().length === 0 ||
+    typeof title.value !== 'string'
+  )
+    return undefined;
+  const thread = Object.freeze({
+    id: id.value,
+    title: title.value,
+    excerpt:
+      excerpt === MISSING_OWN_DATA_DESCRIPTOR ||
+      excerpt === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof excerpt.value !== 'string'
+        ? undefined
+        : excerpt.value,
+    timestamp:
+      timestamp === MISSING_OWN_DATA_DESCRIPTOR ||
+      timestamp === UNSAFE_OWN_DATA_DESCRIPTOR
+        ? undefined
+        : normalizeProjectedTimestamp(timestamp.value),
+    pinned:
+      pinned === MISSING_OWN_DATA_DESCRIPTOR ||
+      pinned === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof pinned.value !== 'boolean'
+        ? false
+        : pinned.value,
+    archived:
+      archived === MISSING_OWN_DATA_DESCRIPTOR ||
+      archived === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof archived.value !== 'boolean'
+        ? false
+        : archived.value,
+  });
+  sourceThreadByProjection.set(thread, value as LyraChatThread);
+  return thread;
+}
+
+function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[] {
+  const cached = canonicalThreadSnapshots.get(values);
+  if (cached) return cached;
+  const projected: LyraChatThread[] = [];
+  for (const value of values) {
+    const thread = projectThread(value);
+    if (thread) projected.push(thread);
+  }
+  const snapshot = Object.freeze(projected);
+  canonicalThreadSnapshots.set(values, snapshot);
+  return snapshot;
 }
 
 /**
@@ -194,8 +267,10 @@ function rehydrateThreadTimestamp(
  * `<lr-dropdown>` + `<lr-menu>` with Rename/Delete — sets `renderActions` instead; its content is appended after any
  * built-in `rowActions` output in the same slot, and `wrapRow` continues to compose around the result.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Public collection properties take bounded, detached readonly sequences. Thread display fields
+ * are projected from own data descriptors once per assignment; callbacks retain the caller's
+ * exact source thread identity. Create a new collection and reassign it after changes; mutating
+ * the assigned array does not update the view.
  *
  * @customElement lr-thread-list
  * @slot - Slotted mode only: host-supplied `lr-conversation-item`s, rendered in order. Each
@@ -264,6 +339,14 @@ function rehydrateThreadTimestamp(
  * @csspart row-item-meta - Data mode: the row item's `meta` wrapper.
  * @csspart row-item-timestamp - Data mode: the row item's `<time>` element.
  * @csspart row-item-actions - Data mode: the row item's `actions` wrapper.
+ * @cssprop [--lr-thread-list-group-toggle-hover-bg=var(--lr-color-surface-raised)] - Group-toggle hover background.
+ * @cssprop [--lr-thread-list-group-toggle-hover-color=var(--lr-color-text)] - Group-toggle hover foreground.
+ * @cssprop [--lr-thread-list-group-toggle-active-bg=color-mix(in oklab, var(--lr-thread-list-group-toggle-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Group-toggle pressed background.
+ * @cssprop [--lr-thread-list-group-toggle-active-color=var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text))] - Group-toggle pressed foreground.
+ * @cssprop [--lr-thread-list-row-action-hover-bg=var(--lr-color-surface-raised)] - Row-action hover background.
+ * @cssprop [--lr-thread-list-row-action-hover-color=var(--lr-color-text)] - Row-action hover foreground.
+ * @cssprop [--lr-thread-list-row-action-active-bg=color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Row-action pressed background.
+ * @cssprop [--lr-thread-list-row-action-active-color=var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))] - Row-action pressed foreground.
  * @cssprop [--lr-thread-list-excerpt-highlight-background=var(--lr-color-warning-quiet)] -
  *   Background of `<mark>` descendants returned by `renderExcerpt`.
  * @cssprop [--lr-thread-list-excerpt-highlight-foreground=inherit] - Foreground of `<mark>`
@@ -302,6 +385,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['threads', 'groupOrder', 'collapsedGroupIds', 'rowActions']);
+  protected static override readonly identityCollectionProperties = Object.freeze(['threads']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -512,8 +596,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       const hasDataThreads = this.normalizedThreads.length > 0;
       if (hasDataThreads && defaultSlotted.length > 0) {
         this.restoreInjectedListItemRoles();
-        console.warn(
-          '[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.'
+        devWarnOnce(
+          THREADS_AND_SLOTTED_CONTENT_WARNING_KEY,
+          THREADS_AND_SLOTTED_CONTENT_WARNING
         );
       } else if (!hasDataThreads) {
         this.markAsListItems(defaultSlotted);
@@ -573,17 +658,19 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private get normalizedThreads(): LyraChatThread[] {
     const seen = new Set<string>();
-    return this.threads.filter((thread) => {
-      if (thread === null || typeof thread !== 'object') return false;
-      if (
-        typeof thread.id !== 'string' ||
-        thread.id.trim().length === 0 ||
-        typeof thread.title !== 'string' ||
-        seen.has(thread.id)
-      ) return false;
+    return canonicalThreads(this.threads).filter((thread) => {
+      if (seen.has(thread.id)) return false;
       seen.add(thread.id);
       return true;
     });
+  }
+
+  private sourceThread(thread: LyraChatThread): LyraChatThread {
+    return sourceThreadByProjection.get(thread) ?? thread;
+  }
+
+  private sourceThreads(threads: readonly LyraChatThread[]): readonly LyraChatThread[] {
+    return Object.freeze(threads.map((thread) => this.sourceThread(thread)));
   }
 
   private get visibleThreads(): LyraChatThread[] {
@@ -594,7 +681,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     if (q === '') return withArchiveFilter;
     return withArchiveFilter.filter((t) =>
       this.filter
-        ? this.filter(t, q)
+        ? this.filter(this.sourceThread(t), q)
         : defaultFilter(t, q, this.effectiveLocale)
     );
   }
@@ -602,10 +689,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private bucketFor(thread: LyraChatThread, now: Date): ThreadBucketKey {
     if (thread.archived) return 'archived';
     if (thread.pinned) return 'pinned';
-    const ts =
-      thread.timestamp == null
-        ? undefined
-        : normalizeLyraTimestamp(rehydrateThreadTimestamp(thread.timestamp));
+    const ts = thread.timestamp === undefined
+      ? undefined
+      : normalizeLyraTimestamp(thread.timestamp);
     if (!ts) return 'previous30';
     const dayMs = 86_400_000;
     const startOfDay = (d: Date) =>
@@ -621,20 +707,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     )}`;
   }
 
-  private bucketLabel(
-    key: ThreadBucketKey,
-    threads: readonly LyraChatThread[]
-  ): string {
+  private bucketLabel(key: ThreadBucketKey): string {
     const groupDate = key.startsWith('month:')
       ? this.dateForBucket(key)
       : undefined;
-    const context: ThreadGroupContext = {
-      id: key,
-      threads,
-      bucket: key,
-      date: groupDate,
-    };
-    if (this.getGroupLabel) return this.getGroupLabel(context);
     switch (key) {
       case 'pinned':
         return this.localize('threadGroupPinned');
@@ -730,7 +806,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       for (const thread of visible) {
         let id: unknown;
         try {
-          id = this.groupBy(thread);
+          id = this.groupBy(this.sourceThread(thread));
         } catch {
           continue;
         }
@@ -742,7 +818,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       return this.groupedItems(
         grouped,
         this.orderedCustomGroupIds(grouped),
-        (id, groupedThreads) => ({ id, threads: groupedThreads }),
+        (id, groupedThreads) => ({
+          id,
+          threads: this.sourceThreads(groupedThreads),
+        }),
         (context) => context.id
       );
     }
@@ -773,14 +852,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         const bucket = id as ThreadBucketKey;
         return {
           id,
-          threads: groupedThreads,
+          threads: this.sourceThreads(groupedThreads),
           bucket,
           date: bucket.startsWith('month:')
             ? this.dateForBucket(bucket)
             : undefined,
         };
       },
-      (context) => this.bucketLabel(context.bucket!, context.threads)
+      (context) => this.bucketLabel(context.bucket!)
     );
   }
 
@@ -1017,6 +1096,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   };
 
   private renderRowActions(thread: LyraChatThread): TemplateResult {
+    const source = this.sourceThread(thread);
     return html`
       <span slot="actions" part="row-actions">
         ${this.rowActions.includes('pin')
@@ -1064,7 +1144,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               ${trashIcon()}
             </button>`
           : nothing}
-        ${this.renderActions ? this.renderActions(thread) : nothing}
+        ${this.renderActions ? this.renderActions(source) : nothing}
       </span>
     `;
   }
@@ -1124,13 +1204,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private renderRow = (item: unknown): unknown => {
     const thread = item as LyraChatThread;
+    const source = this.sourceThread(thread);
     const row = html`
       <lr-conversation-item
         exportparts="base:row-item-base, active-indicator:row-item-active-indicator, select-button:row-item-select-button, start:row-item-start, content:row-item-content, label:row-item-label, label-input:row-item-label-input, rename-button:row-item-rename-button, excerpt:row-item-excerpt, meta:row-item-meta, timestamp:row-item-timestamp, actions:row-item-actions"
         conversation-id=${thread.id}
         label=${thread.title}
         excerpt=${thread.excerpt ?? ''}
-        .timestamp=${rehydrateThreadTimestamp(thread.timestamp)}
+        .timestamp=${thread.timestamp}
         ?active=${thread.id === this.activeConversationId}
         ?compact=${this.compact}
         .renamable=${this.renamable}
@@ -1153,17 +1234,17 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       >
         ${this.renderStart
           ? html`<span slot="start" part="row-start" inert
-              >${this.renderStart(thread)}</span
+              >${this.renderStart(source)}</span
             >`
           : nothing}
         ${this.renderExcerpt
           ? html`<span slot="excerpt" part="row-excerpt" inert
-              >${this.renderExcerpt(thread)}</span
+              >${this.renderExcerpt(source)}</span
             >`
           : nothing}
         ${this.renderRowContent
           ? html`<span slot="content" part="row-content" inert
-              >${this.renderRowContent(thread)}</span
+              >${this.renderRowContent(source)}</span
             >`
           : nothing}
         ${thread.pinned
@@ -1173,7 +1254,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           : nothing}
         ${this.renderMeta
           ? html`<span slot="meta" part="row-meta" inert
-              >${this.renderMeta(thread)}</span
+              >${this.renderMeta(source)}</span
             >`
           : nothing}
         ${this.rowActions.length > 0 || this.renderActions
@@ -1188,7 +1269,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     // measurement-neutral but generates no box at all, making `::part(row-wrapper)` unusable for
     // the padding/border/background/flex rules the part exists for.
     return this.wrapRow
-      ? html`<div part="row-wrapper">${this.wrapRow(thread, row)}</div>`
+      ? html`<div part="row-wrapper">${this.wrapRow(source, row)}</div>`
       : row;
   };
 

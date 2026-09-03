@@ -98,8 +98,8 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 </script>
 ```
 
-The default slot's tooltip is positioned with the same `internal/positioner.js` `place()` helper
-`<lr-combobox>` uses for its listbox (`placement: 'top-start'`), and appears/disappears instantly
+The default slot's tooltip uses the same `'top-start'` placement as `<lr-combobox>`'s listbox, and
+appears/disappears instantly
 on hover/focus/blur/mouseleave with no fade transition and no "pointer moved into the tooltip"
 tracking — it's documented as read-only preview content, not an interactive surface meant to retain
 focus of its own. `denied` gets its own warning-toned glyph and color (a policy rejection, not a

@@ -1,6 +1,7 @@
-import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 
 async function settleClipboard(el: LyraTerminal): Promise<void> {
   await Promise.resolve();
@@ -8,7 +9,7 @@ async function settleClipboard(el: LyraTerminal): Promise<void> {
   await Promise.resolve();
   await el.updateComplete;
 }
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 
@@ -35,6 +36,58 @@ function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
 function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
   const element = sinkElement(politeness);
   return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
+
+function recordVirtualListOffsetRebuilds(list: LyraVirtualList): {
+  count: () => number;
+  updates: () => string[][];
+  restore: () => void;
+} {
+  const seam = list as unknown as { recomputeOffsets: () => void };
+  const updateSeam = list as unknown as { willUpdate: (changed: Map<PropertyKey, unknown>) => void };
+  const original = seam.recomputeOffsets;
+  const originalWillUpdate = updateSeam.willUpdate;
+  let count = 0;
+  const updates: string[][] = [];
+  seam.recomputeOffsets = () => {
+    count += 1;
+    original.call(list);
+  };
+  updateSeam.willUpdate = (changed) => {
+    updates.push([...changed.keys()].map(String));
+    originalWillUpdate.call(list, changed);
+  };
+  return {
+    count: () => count,
+    updates: () => updates,
+    restore: () => {
+      seam.recomputeOffsets = original;
+      updateSeam.willUpdate = originalWillUpdate;
+    },
+  };
+}
+
+async function assertTokenizedPointerBackground(
+  target: HTMLElement,
+  hover: string,
+  active: string,
+  description: string,
+): Promise<void> {
+  try {
+    await hoverUntilMatched(target, `${description} never registered :hover`);
+    await waitUntil(
+      () => getComputedStyle(target).backgroundColor === hover,
+      `${description} hover background never reached ${hover}`,
+    );
+    await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => target.matches(':active') && getComputedStyle(target).backgroundColor === active,
+      `${description} active background never reached ${active}`,
+    );
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 }
 
 describe('lr-terminal', () => {
@@ -75,6 +128,49 @@ describe('lr-terminal', () => {
     el.content = 'reset';
     await el.updateComplete;
     expect(el.getPlainText()).to.equal('reset');
+  });
+
+  it('keeps the terminal virtual-list key callback stable while its per-render item callback stays fresh', async () => {
+    const el = await fixture<LyraTerminal>(html`<lr-terminal .wrap=${false}></lr-terminal>`);
+    el.write(Array.from({ length: 300 }, (_, index) => `line ${index}`).join('\n'));
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    await list.updateComplete;
+    const keyFunction = list.keyFunction;
+    const renderItem = list.renderItem;
+
+    el.copyable = false;
+    await el.updateComplete;
+    await list.updateComplete;
+
+    expect(list.keyFunction).to.equal(keyFunction);
+    expect(list.renderItem).not.to.equal(renderItem);
+  });
+
+  it('avoids terminal virtual-list offset rebuilds for unrelated parent updates while new lines reconcile', async () => {
+    const el = await fixture<LyraTerminal>(html`<lr-terminal .wrap=${false}></lr-terminal>`);
+    el.write(Array.from({ length: 300 }, (_, index) => `line ${index}`).join('\n'));
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    await list.updateComplete;
+    await aTimeout(100);
+    const items = list.items;
+    const rebuilds = recordVirtualListOffsetRebuilds(list);
+    try {
+      el.copyable = false;
+      await el.updateComplete;
+      await list.updateComplete;
+      expect(rebuilds.count(), JSON.stringify(rebuilds.updates())).to.equal(0);
+      expect(list.items).to.equal(items);
+
+      el.write('\nnew terminal line');
+      await el.updateComplete;
+      await list.updateComplete;
+      expect(rebuilds.count()).to.equal(1);
+      expect(list.items).to.not.equal(items);
+    } finally {
+      rebuilds.restore();
+    }
   });
 
   it('commits same-turn replace/write/clear operations in call order', async () => {
@@ -1283,6 +1379,24 @@ describe('lr-terminal', () => {
     expect(segment.style.backgroundColor).to.equal('var(--lr-color-text)');
   });
 
+  it('uses a live terminal surface token for card chrome and inverse ANSI while plain remains transparent', async () => {
+    const parent = await fixture<HTMLDivElement>(html`<div><lr-terminal></lr-terminal></div>`);
+    const el = parent.querySelector<LyraTerminal>('lr-terminal')!;
+    el.write('\x1b[7minverse-default\x1b[0m');
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const segment = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="1"] span')!;
+
+    parent.style.setProperty('--lr-terminal-surface-color', 'rgb(7, 8, 9)');
+    expect(getComputedStyle(base).backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(segment).color).to.equal('rgb(7, 8, 9)');
+
+    el.frame = 'plain';
+    await el.updateComplete;
+    expect(getComputedStyle(base).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
   it('omits the toolbar entirely when both copyable and downloadable are false', async () => {
     const el = (await fixture(
       html`<lr-terminal .copyable=${false} .downloadable=${false}></lr-terminal>`,
@@ -1378,6 +1492,38 @@ describe('lr-terminal', () => {
     line.focus();
     expect(getComputedStyle(line).outlineStyle, 'line :focus-visible outlineStyle').to.equal('solid');
     expect(getComputedStyle(line).outlineWidth, 'line :focus-visible outlineWidth').to.equal('2px');
+  });
+
+  it('uses inherited toolbar and line hover/active background tokens in their live pointer states', async () => {
+    const parent = await fixture<HTMLDivElement>(html`
+      <div
+        style="--lr-terminal-toolbar-button-hover-bg: rgb(1, 2, 3); --lr-terminal-toolbar-button-active-bg: rgb(4, 5, 6); --lr-terminal-line-hover-bg: rgb(7, 8, 9); --lr-terminal-line-active-bg: rgb(10, 11, 12)"
+      ><lr-terminal></lr-terminal></div>
+    `);
+    const el = parent.querySelector<LyraTerminal>('lr-terminal')!;
+    el.write('ordinary terminal line');
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="copy-button"]')!;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const line = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="1"]')!;
+    const preventCopy = (event: Event): void => event.stopImmediatePropagation();
+    button.addEventListener('click', preventCopy, { capture: true });
+    try {
+      await assertTokenizedPointerBackground(
+        button,
+        'rgb(1, 2, 3)',
+        'rgb(4, 5, 6)',
+        'terminal toolbar button',
+      );
+      await assertTokenizedPointerBackground(
+        line,
+        'rgb(7, 8, 9)',
+        'rgb(10, 11, 12)',
+        'terminal line',
+      );
+    } finally {
+      button.removeEventListener('click', preventCopy, { capture: true });
+    }
   });
 
   for (const part of ['copy-button', 'download-button', 'jump-to-latest']) {

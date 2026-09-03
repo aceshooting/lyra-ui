@@ -1,4 +1,5 @@
-import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import type { PropertyValues } from 'lit';
 import './locale-picker.js';
 import '../../../translations/fa.js';
@@ -18,6 +19,13 @@ function trigger(el: LyraLocalePicker): HTMLButtonElement {
 }
 function rows(el: LyraLocalePicker): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
+}
+interface ManagedLocalePickerPopup {
+  isActive(): boolean;
+  isTopmost(): boolean;
+}
+function popupOverlay(el: LyraLocalePicker): ManagedLocalePickerPopup | undefined {
+  return (el as unknown as { overlayHandle?: ManagedLocalePickerPopup }).overlayHandle;
 }
 function requiredItem<T>(items: ArrayLike<T>, index: number, description: string): T {
   const item = items[index];
@@ -520,6 +528,61 @@ it('the default English required-validation message is localized via this.locali
   )) as LyraLocalePicker;
   await el.updateComplete;
   expect(el.validationMessage).to.equal('Please choose a language.');
+});
+
+it('recomputes localized intrinsic validity after strings and effective-locale changes without replacing a custom error', async () => {
+  registerLyraLocale('qaa-QA', {
+    localePickerLabel: 'Langue du catalogue',
+    localePickerRequired: 'Choisissez dans le catalogue…',
+  });
+  const el = (await fixture(
+    html`<lr-locale-picker required .locales=${['fr']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+
+  el.strings = {
+    localePickerLabel: 'Langue',
+    localePickerRequired: 'Choisissez…',
+  };
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-label'), 'the localized trigger is rendered').to.equal('Langue');
+  expect(el.validationMessage).to.equal('Choisissez…');
+
+  el.setCustomValidity('The server has not enabled this language.');
+  el.strings = {};
+  el.locale = 'qaa-QA';
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-label'), 'the catalog label is rendered').to.equal(
+    'Langue du catalogue',
+  );
+  expect(trigger(el).textContent, 'the effective locale preview is rendered').to.contain(
+    localeNativeName('qaa-QA'),
+  );
+  expect(el.validationMessage, 'caller custom validity survives library revalidation').to.equal(
+    'The server has not enabled this language.',
+  );
+
+  el.setCustomValidity('');
+  expect(el.validationMessage, 'clearing the caller error restores the current intrinsic message').to.equal(
+    'Choisissez dans le catalogue…',
+  );
+});
+
+it('uses a programmatic locale set before connection for its first localized intrinsic message', async () => {
+  registerLyraLocale('x-lp-before-connect', {
+    localePickerLabel: 'Langue avant connexion',
+    localePickerRequired: 'Choisissez avant connexion…',
+  });
+  const el = document.createElement('lr-locale-picker') as LyraLocalePicker;
+  el.required = true;
+  el.locale = 'x-lp-before-connect';
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(trigger(el).getAttribute('aria-label')).to.equal('Langue avant connexion');
+    expect(el.validationMessage).to.equal('Choisissez avant connexion…');
+  } finally {
+    el.remove();
+  }
 });
 
 // Keyboard navigation.
@@ -1114,6 +1177,198 @@ it('closes an open listbox on an outside pointerdown but not one inside the host
   document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(el.open).to.be.false;
+});
+
+describe('managed popup overlay lifecycle', () => {
+  it('uses one activation-ordered handle per open popup so Escape and outside pointer dismiss only the topmost picker', async () => {
+    const root = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-locale-picker id="older" .locales=${['fr', 'de']}></lr-locale-picker>
+        <lr-locale-picker id="newer" .locales=${['fr', 'de']}></lr-locale-picker>
+        <button id="outside" type="button">Outside</button>
+      </div>
+    `);
+    const older = root.querySelector('#older') as LyraLocalePicker;
+    const newer = root.querySelector('#newer') as LyraLocalePicker;
+    const outside = root.querySelector('#outside') as HTMLButtonElement;
+
+    older.open = true;
+    await older.updateComplete;
+    newer.open = true;
+    await newer.updateComplete;
+
+    const olderHandle = popupOverlay(older);
+    const newerHandle = popupOverlay(newer);
+    expect(olderHandle?.isActive(), 'the older open picker has one live overlay handle').to.be.true;
+    expect(olderHandle?.isTopmost(), 'the older picker is below the newest open picker').to.be.false;
+    expect(newerHandle?.isActive(), 'the newer open picker has one live overlay handle').to.be.true;
+    expect(newerHandle?.isTopmost(), 'activation order makes the newer picker topmost').to.be.true;
+
+    newer.locales = ['fr'];
+    await newer.updateComplete;
+    expect(popupOverlay(newer), 'repositioning an open picker reuses its handle').to.equal(newerHandle);
+
+    const escape = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(escape);
+    await older.updateComplete;
+    await newer.updateComplete;
+    expect(escape.defaultPrevented, 'the owner-document overlay stack owns Escape').to.be.true;
+    expect(newer.open, 'one Escape closes the newest picker').to.be.false;
+    expect(older.open, 'one Escape leaves the older picker open').to.be.true;
+
+    newer.open = true;
+    await newer.updateComplete;
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await older.updateComplete;
+    await newer.updateComplete;
+    expect(newer.open, 'one outside pointer closes only the newest picker').to.be.false;
+    expect(older.open, 'the older picker remains open after the same outside pointer').to.be.true;
+
+    older.open = false;
+    await older.updateComplete;
+  });
+
+  it('paints popup listboxes in activation order even when the later DOM picker opened first', async () => {
+    const root = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-locale-picker id="earlier" .locales=${['fr', 'de']}></lr-locale-picker>
+        <lr-locale-picker id="later" .locales=${['fr', 'de']}></lr-locale-picker>
+      </div>
+    `);
+    const earlier = root.querySelector('#earlier') as LyraLocalePicker;
+    const later = root.querySelector('#later') as LyraLocalePicker;
+
+    later.open = true;
+    await later.updateComplete;
+    earlier.open = true;
+    await earlier.updateComplete;
+
+    const earlierListbox = earlier.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+    const laterListbox = later.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+    const earlierZIndex = Number.parseInt(getComputedStyle(earlierListbox).zIndex, 10);
+    const laterZIndex = Number.parseInt(getComputedStyle(laterListbox).zIndex, 10);
+    expect(Number.isFinite(earlierZIndex), 'the later activation has a rendered z-index').to.be.true;
+    expect(Number.isFinite(laterZIndex), 'the first activation has a rendered z-index').to.be.true;
+    expect(earlierZIndex, 'the later activation paints above the earlier activation').to.be.greaterThan(laterZIndex);
+
+    earlier.open = false;
+    later.open = false;
+    await earlier.updateComplete;
+    await later.updateComplete;
+  });
+
+  it('returns focus for manager-owned Escape while native Tab leaves the trigger without a focus rebound', async () => {
+    const root = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>
+        <button id="after" type="button">After</button>
+      </div>
+    `);
+    const el = root.querySelector('lr-locale-picker') as LyraLocalePicker;
+    const after = root.querySelector('#after') as HTMLButtonElement;
+
+    el.focus();
+    await waitUntil(
+      () => el.shadowRoot!.activeElement === trigger(el),
+      'the trigger never received initial focus',
+    );
+    el.open = true;
+    await el.updateComplete;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open, 'owner-document Escape closes the popup').to.be.false;
+    expect(el.shadowRoot!.activeElement === trigger(el), 'Escape returns focus to the trigger').to.be.true;
+
+    el.open = true;
+    await el.updateComplete;
+    const syntheticTab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, composed: true, cancelable: true });
+    trigger(el).dispatchEvent(syntheticTab);
+    expect(syntheticTab.defaultPrevented, 'a nonmodal picker never traps Tab').to.be.false;
+    expect(el.open, 'synthetic Tab does not itself close the popup before focus moves').to.be.true;
+
+    await sendKeys({ press: 'Tab' });
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(el.open, 'native Tab blur closes the popup').to.be.false;
+    expect(document.activeElement?.id, 'Tab retains its native destination').to.equal(after.id);
+  });
+
+  it('releases the old owner-document overlay before adoption and creates a new one only after a destination reopen', async () => {
+    const root = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-locale-picker open .locales=${['fr', 'de']}></lr-locale-picker>
+        <iframe title="Locale picker adoption target"></iframe>
+      </div>
+    `);
+    const el = root.querySelector('lr-locale-picker') as LyraLocalePicker;
+    const frame = root.querySelector('iframe') as HTMLIFrameElement;
+    await waitUntil(
+      () => Boolean(frame.contentDocument?.body),
+      'the adoption target document never became ready',
+    );
+    const oldHandle = popupOverlay(el);
+    expect(oldHandle?.isActive(), 'the original owner document has a live handle').to.be.true;
+
+    try {
+      const frameDocument = frame.contentDocument!;
+      frameDocument.adoptNode(el);
+      await el.updateComplete;
+      expect(el.ownerDocument === frameDocument).to.be.true;
+      expect(el.open, 'adoption closes rather than leaving a half-open popup').to.be.false;
+      expect(oldHandle?.isActive(), 'the original document no longer owns an overlay entry').to.be.false;
+
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      el.open = true;
+      await el.updateComplete;
+      const destinationHandle = popupOverlay(el);
+      expect(destinationHandle?.isActive(), 'the destination document receives a new handle').to.be.true;
+      expect(destinationHandle === oldHandle, 'an adopted popup never reuses its former document handle').to.be.false;
+
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect(el.open, 'the former owner document cannot dismiss the adopted popup').to.be.true;
+      frameDocument.dispatchEvent(new frame.contentWindow!.PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect(el.open, 'the destination owner document dismisses the popup').to.be.false;
+    } finally {
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      if (!root.contains(el)) root.append(el);
+      el.open = false;
+      await el.updateComplete;
+    }
+  });
+
+  it('deactivates a disconnected popup and makes a fresh handle only after a controlled reconnect reopen', async () => {
+    const el = (await fixture(
+      html`<lr-locale-picker open .locales=${['fr', 'de']}></lr-locale-picker>`,
+    )) as LyraLocalePicker;
+    const parent = el.parentElement!;
+    const initialHandle = popupOverlay(el);
+    expect(initialHandle?.isActive(), 'an open connected picker has a live handle').to.be.true;
+
+    el.remove();
+    await el.updateComplete;
+    expect(el.open, 'disconnect closes the popup instead of retaining a stale handle').to.be.false;
+    expect(initialHandle?.isActive(), 'disconnect deactivates the previous handle').to.be.false;
+
+    parent.append(el);
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    const reopenedHandle = popupOverlay(el);
+    expect(reopenedHandle?.isActive(), 'a controlled reopen creates a live replacement handle').to.be.true;
+    expect(reopenedHandle === initialHandle, 'the reconnect uses a fresh handle').to.be.false;
+
+    document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open, 'the replacement handle still routes outside dismissal').to.be.false;
+  });
 });
 
 it('tracks slotted label, hint and error content through slotchange', async () => {

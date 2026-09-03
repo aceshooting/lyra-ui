@@ -3,6 +3,7 @@ import type { LyraDateRangePreset } from '../../forms/date-picker/date-picker.cl
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import {
   collectFocusableElements,
   deepActiveElement,
@@ -1361,7 +1362,10 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
                       const chip = e.currentTarget as HTMLElement;
                       this.clearFilter(
                         def.filterId,
-                        chip.shadowRoot?.activeElement !== null
+                        (() => {
+                          const active = activeElementIn(chip.shadowRoot);
+                          return (active as Partial<Node> | null)?.nodeType === 1;
+                        })()
                       );
                     }}
                     >${def.label}: ${display}</lr-chip

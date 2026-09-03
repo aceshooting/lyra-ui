@@ -229,6 +229,30 @@ it('forwards retrieval, context-total, and composer state and restores opt-in de
   expect(defaultComposer.maxRows).to.equal(8);
 });
 
+it('normalizes hostile composer-status without rewriting the workspace host’s authored attribute', async () => {
+  const el = await fixture<LyraAgentWorkspace>(
+    html`<lr-agent-workspace composer-status="busy"></lr-agent-workspace>`
+  );
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as HTMLElement & {
+    status: string;
+    updateComplete: Promise<unknown>;
+  };
+  await composer.updateComplete;
+
+  expect(el.composerStatus).to.equal('idle');
+  expect(el.getAttribute('composer-status')).to.equal('busy');
+  expect(composer.status).to.equal('idle');
+  expect(composer.getAttribute('status')).to.equal('idle');
+
+  (el as unknown as { composerStatus: unknown }).composerStatus = 'busy';
+  await el.updateComplete;
+  await composer.updateComplete;
+
+  expect(el.composerStatus).to.equal('idle');
+  expect(el.getAttribute('composer-status')).to.equal('busy');
+  expect(composer.status).to.equal('idle');
+});
+
 it('gates built-in detail sections on canonical nonblank collection identities', async () => {
   const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace></lr-agent-workspace>`);
   el.tools = [{ id: ' ', name: 'blank', args: {}, status: 'success' }] as LyraAgentWorkspace['tools'];

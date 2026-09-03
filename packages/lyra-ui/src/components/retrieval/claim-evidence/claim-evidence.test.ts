@@ -346,3 +346,82 @@ it('omits blank and later duplicate claim and citation ids before lookup, render
   ).click();
   expect((await citationPending).detail).to.deep.equal({ citation });
 });
+
+it('keeps admitted claim and citation source identities opaque through selection events', async () => {
+  const claim: GroundedClaim = {
+    id: 'opaque-claim',
+    text: 'The source identity must survive selection.',
+    status: 'supported',
+    citationIds: ['opaque-citation'],
+  };
+  const metadata = { requestId: 'opaque-metadata' };
+  const citation: Citation = {
+    id: 'opaque-citation',
+    sourceId: 'source',
+    label: 'Opaque evidence',
+    metadata,
+  };
+  const el = await fixture<LyraClaimEvidence>(html`
+    <lr-claim-evidence .claims=${[claim]} .citations=${[citation]}></lr-claim-evidence>
+  `);
+
+  const claimPending = oneEvent(el, 'lr-claim-select');
+  (
+    el.shadowRoot!.querySelector('[part="claim-trigger"]') as HTMLButtonElement
+  ).click();
+  expect((await claimPending).detail.claim === claim).to.equal(true);
+
+  const citationPending = oneEvent(el, 'lr-citation-select');
+  (
+    el
+      .shadowRoot!.querySelector('lr-citation-badge')!
+      .shadowRoot!.querySelector('button') as HTMLButtonElement
+  ).click();
+  const citationDetail = (await citationPending).detail.citation;
+  expect(citationDetail === citation).to.equal(true);
+  expect(citationDetail.metadata === metadata).to.equal(true);
+});
+
+it('rejects accessor rows before duplicate reservation and never rereads admitted display fields', async () => {
+  const accessorDuplicate = {
+    id: 'shared',
+    text: 'Accessor text must not run.',
+    status: 'supported',
+    citationIds: [],
+  } as GroundedClaim;
+  Object.defineProperty(accessorDuplicate, 'text', {
+    enumerable: true,
+    get: () => {
+      throw new Error('claim text accessor must not run');
+    },
+  });
+  const claim: GroundedClaim = {
+    id: 'shared',
+    text: 'The valid later claim remains visible.',
+    status: 'supported',
+    citationIds: [],
+  };
+  const el = await fixture<LyraClaimEvidence>(html`
+    <lr-claim-evidence .claims=${[accessorDuplicate, claim]}></lr-claim-evidence>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('[part~="claim"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="claim-text"]')!.textContent).to.equal(
+    'The valid later claim remains visible.'
+  );
+
+  let rereads = 0;
+  Object.defineProperty(claim, 'text', {
+    configurable: true,
+    enumerable: true,
+    get: () => {
+      rereads += 1;
+      throw new Error('admitted claim text must stay cached');
+    },
+  });
+  el.selectedClaimId = 'shared';
+  await el.updateComplete;
+  expect(rereads).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="claim-text"]')!.textContent).to.equal(
+    'The valid later claim remains visible.'
+  );
+});

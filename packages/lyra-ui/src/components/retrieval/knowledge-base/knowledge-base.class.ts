@@ -108,6 +108,22 @@ const PERMISSION_VARIANT: Record<KnowledgeSourcePermission, BadgeVariant> = {
   restricted: 'warning',
 };
 
+const TABLE_EXPORT_PARTS = [
+  'name-cell:name-cell',
+  'source-name:source-name',
+  'source-type:source-type',
+  'sync-cell:sync-cell',
+  'sync-badge:sync-badge',
+  'sync-timestamp:sync-timestamp',
+  'sync-error:sync-error',
+  'health-cell:health-cell',
+  'health-badge:health-badge',
+  'document-count:document-count',
+  'permission-badge:permission-badge',
+  'actions-menu:actions-menu',
+  'actions-trigger:actions-trigger',
+].join(', ');
+
 // One-off glyphs kept local rather than added to the shared internal/icons.ts set -- same approach
 // lr-thread-list's local pinIcon()/archiveIcon()/trashIcon() take, for the identical reason (these
 // aren't part of the library's general-purpose icon vocabulary). trashIcon mirrors lr-thread-list's
@@ -255,8 +271,9 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
 
   /** Heading text and the nested table's accessible name. A host `aria-label` independently
-   *  names the complete component. Omitted falls back to a localized default; an explicitly
-   *  empty `label` is used as-is. */
+   *  names the complete component. Omitted falls back to a localized default. An explicitly
+   *  empty `label` keeps the visible heading empty, but the nested table still receives the
+   *  localized default as its accessible name so the grid is never left unnamed. */
   @property() label?: string;
 
   /** Hides the aggregate summary row (total/synced/syncing/needs-attention). */
@@ -509,6 +526,9 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     const sources = this.normalizedSources;
     const heading =
       this.label == null ? this.localize('knowledgeBaseHeading') : this.label;
+    // An explicitly blank heading is a visual choice; the grid still needs a name.
+    const tableLabel =
+      heading.trim() === '' ? this.localize('knowledgeBaseHeading') : heading;
     return html`
       <div part="base">
         <div part="toolbar">
@@ -529,10 +549,11 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           : nothing}
         <lr-table
           part="table"
+          exportparts=${TABLE_EXPORT_PARTS}
           .columns=${this.tableColumns()}
           .rows=${sources}
           .rowKey=${(row: KnowledgeSource) => row.id}
-          .accessibleLabel=${heading}
+          .accessibleLabel=${tableLabel}
           empty-heading=${this.localize('knowledgeBaseEmptyHeading')}
           empty-description=${this.localize(
             'knowledgeBaseEmptyDescription',

@@ -1,4 +1,8 @@
 import { resolveOptionalPeerCapability } from './optional-peer-capabilities.js';
+import { devWarnOnce } from './dev-mode-attribute-warning.js';
+
+const PAPAPARSE_WARNING_KEY = 'lyra-papaparse-unavailable';
+const PAPAPARSE_WARNING = 'A lyra-ui component could not load its optional papaparse peer.';
 
 export interface PapaParseApi {
   parse(input: string, options?: Record<string, unknown>): unknown;
@@ -25,11 +29,8 @@ export async function loadPapaParse(
   try {
     const module = await importPapaParse();
     return resolveOptionalPeerCapability(module, isPapaParseApi);
-  } catch (error) {
-    console.warn(
-      'A lyra-ui component needs the optional peer dependency `papaparse` to parse delimited text — install it with `pnpm add papaparse`:',
-      error,
-    );
+  } catch {
+    devWarnOnce(PAPAPARSE_WARNING_KEY, PAPAPARSE_WARNING);
     return null;
   }
 }

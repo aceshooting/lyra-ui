@@ -16,8 +16,8 @@
 
 ## `lr-activity-feed`
 
-An append-only streaming log of granular agent actions ("Searching the web…", "Read
-src/index.ts"), collapsing to a localized "Completed N steps" summary once the run is over. Entries
+An append-only streaming log of granular agent actions ("Searching the web…", "Read the
+application entry point"), collapsing to a localized "Completed N steps" summary once the run is over. Entries
 never change state once added — a step whose status mutates in place belongs to `<lr-task-list>`
 instead. Implements the shared follow (stick-to-bottom) contract. At/above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
@@ -34,13 +34,14 @@ unset. `mode: 'live' | 'post-hoc' =
 `label?: string` — omission localizes `activityFeedLabel` (`'Activity'` in the built-in English
 catalog), while any supplied string is a verbatim override, including `'Activity'` under a
 non-English `.strings` catalog and `''`. A present host `aria-label` names the owned list in both
-plain and virtualized rendering paths while `label` remains the visible header text —
+plain and virtualized rendering paths while `label` remains the visible header text. Host
+`aria-labelledby` and `aria-describedby` likewise reach that semantic list in both rendering paths —
 `showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
-identically whether or not the feed is currently virtualized; fully replaces `[part="entry-text"]`
-rather than augmenting it, and `virtualizeAt: number = 199` (attribute
+identically whether or not the feed is currently virtualized; replaces the plain text **inside**
+the persistent `[part="entry-text"]` wrapper rather than removing that part, and `virtualizeAt: number = 199` (attribute
 `virtualize-at`).
 
 **Events:** `lr-toggle` (`detail: { expanded }`, the header was activated) and

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 47 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 47 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -236,7 +236,16 @@ body-cell text, `--lr-data-grid-cell-link-color` (default `var(--lr-color-brand)
 anchors, and `--lr-data-grid-cell-link-hover-color` (default
 `var(--lr-data-grid-cell-link-color, var(--lr-color-brand))`) controls those anchors on hover,
 focus-visible, and active interaction. Set the link color to `revert` to restore the user-agent
-default.
+default. Six independent interaction-background hooks preserve those state boundaries:
+`--lr-data-grid-control-hover-background` and `--lr-data-grid-control-active-background` theme
+search, toolbar, pager, and resize controls; `--lr-data-grid-page-size-active-background` themes
+the page-size selector when pressed; `--lr-data-grid-row-active-background` themes pressed data
+rows; and `--lr-data-grid-sortable-header-hover-background` and
+`--lr-data-grid-sortable-header-active-background` theme sortable header states. They default to
+live `color-mix()` values of the effective grid accent and transparent, using the corresponding
+`--lr-color-mix-hover` or `--lr-color-mix-active` token (the page-size pressed state intentionally
+uses the hover mix), so an accent override remains coherent while each surface can still be
+overridden independently.
 
 ```html
 <lr-data-grid

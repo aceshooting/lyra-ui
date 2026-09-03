@@ -69,6 +69,18 @@ it("gives the stop button the shared minimum hit area", async () => {
   expect(getComputedStyle(stopButton).minBlockSize).to.equal("40px");
 });
 
+it('inherits a 20px consumer font into the stop control and its glyph', async () => {
+  const el = (await fixture(
+    html`<lr-generation-metrics status="running" style="font-size:20px"></lr-generation-metrics>`,
+  )) as LyraGenerationMetrics;
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="stop-button"]')!;
+  const glyph = button.querySelector<SVGElement>('svg')!;
+
+  expect(getComputedStyle(button).fontSize).to.equal('20px');
+  expect(getComputedStyle(glyph).width).to.equal('20px');
+  expect(getComputedStyle(glyph).height).to.equal('20px');
+});
+
 it("localizes the stop button aria-label via .strings (stopGenerating)", async () => {
   const el = (await fixture(html`
     <lr-generation-metrics

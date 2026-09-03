@@ -170,39 +170,21 @@ describe('loadMarkdownAndSanitizer (independent marked / dompurify loading)', ()
   });
 
   it('still resolves dompurify when marked fails to load — content still renders sanitized-but-empty rather than every markdown surface breaking', async () => {
-    const markedError = new Error('marked boom');
-    const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
-    try {
-      const deps = await loadMarkdownAndSanitizer(
-        () => Promise.reject(markedError),
-        () => import('dompurify'),
-      );
-      expect(deps.marked).to.equal(undefined);
-      expect(deps.DOMPurify).to.not.equal(undefined);
-      expect(calls.flat()).to.contain(markedError);
-    } finally {
-      console.warn = originalWarn;
-    }
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.reject(new Error('marked boom')),
+      () => import('dompurify'),
+    );
+    expect(deps.marked).to.equal(undefined);
+    expect(deps.DOMPurify).to.not.equal(undefined);
   });
 
   it('still resolves marked when dompurify fails to load — a sanitize="false" consumer does not need dompurify at all', async () => {
-    const purifyError = new Error('dompurify boom');
-    const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
-    try {
-      const deps = await loadMarkdownAndSanitizer(
-        () => import('marked'),
-        () => Promise.reject(purifyError),
-      );
-      expect(deps.marked).to.not.equal(undefined);
-      expect(deps.DOMPurify).to.equal(undefined);
-      expect(calls.flat()).to.contain(purifyError);
-    } finally {
-      console.warn = originalWarn;
-    }
+    const deps = await loadMarkdownAndSanitizer(
+      () => import('marked'),
+      () => Promise.reject(new Error('dompurify boom')),
+    );
+    expect(deps.marked).to.not.equal(undefined);
+    expect(deps.DOMPurify).to.equal(undefined);
   });
 
   it('falls back to the bare module namespace when the dompurify import resolves with no .default (module-shape interop)', async () => {
@@ -218,51 +200,50 @@ describe('loadMarkdownAndSanitizer (independent marked / dompurify loading)', ()
   });
 
   it('resolves both as undefined when both peers fail to load', async () => {
-    const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
-    try {
-      const deps = await loadMarkdownAndSanitizer(
-        () => Promise.reject(new Error('marked boom')),
-        () => Promise.reject(new Error('dompurify boom')),
-      );
-      expect(deps.marked).to.equal(undefined);
-      expect(deps.DOMPurify).to.equal(undefined);
-      expect(calls).to.have.length(2);
-    } finally {
-      console.warn = originalWarn;
-    }
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.reject(new Error('marked boom')),
+      () => Promise.reject(new Error('dompurify boom')),
+    );
+    expect(deps.marked).to.equal(undefined);
+    expect(deps.DOMPurify).to.equal(undefined);
   });
 
-  it('logs the real caught error (not a generic message) when marked fails to load', async () => {
-    const markedError = new Error('specific marked failure reason');
+  it('uses fixed, bounded development diagnostics for optional peer failures without exposing errors and stays silent in production', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
     const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
+    const messages: string[] = [];
+    const markedFailure = new Error('private marked loader failure');
+    const dompurifyFailure = new Error('private dompurify loader failure');
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
     try {
-      await loadMarkdownAndSanitizer(
-        () => Promise.reject(markedError),
-        () => import('dompurify'),
-      );
-    } finally {
-      console.warn = originalWarn;
-    }
-    expect(calls.flat()).to.contain(markedError);
-  });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const deps = await loadMarkdownAndSanitizer(
+          () => Promise.reject(markedFailure),
+          () => Promise.reject(dompurifyFailure),
+        );
+        expect(deps.marked).to.equal(undefined);
+        expect(deps.DOMPurify).to.equal(undefined);
+      }
+      expect(messages).to.deep.equal([
+        '<lr-markdown>/<lr-markdown-core>: Markdown parsing is unavailable because the optional marked peer could not load. Content is rendered as plain text.',
+        '<lr-markdown>/<lr-markdown-core>: HTML sanitization is unavailable because the optional DOMPurify peer could not load. Content is rendered as plain text unless trusted HTML is explicitly selected.',
+      ]);
+      expect(messages.join(' ')).to.not.contain(markedFailure.message);
+      expect(messages.join(' ')).to.not.contain(dompurifyFailure.message);
 
-  it('logs the real caught error (not a generic message) when dompurify fails to load', async () => {
-    const purifyError = new Error('specific dompurify failure reason');
-    const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
-    try {
+      messages.length = 0;
+      delete runtime.litIssuedWarnings;
       await loadMarkdownAndSanitizer(
-        () => import('marked'),
-        () => Promise.reject(purifyError),
+        () => Promise.reject(markedFailure),
+        () => Promise.reject(dompurifyFailure),
       );
+      expect(messages).to.deep.equal([]);
     } finally {
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
       console.warn = originalWarn;
     }
-    expect(calls.flat()).to.contain(purifyError);
   });
 });

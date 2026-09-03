@@ -626,57 +626,59 @@ it('stops the real timer when `playing` is set to false directly, not just via p
   expect(el.currentIndex).to.equal(indexAfterStop);
 });
 
-it('clamps a non-positive interval-ms instead of hammering a zero-delay tick loop', async () => {
+it('uses one fixed development-only diagnostic for invalid intervals without exposing values', async () => {
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
   const originalWarn = console.warn;
-  const calls: unknown[][] = [];
-  console.warn = (...args: unknown[]) => calls.push(args);
+  const messages: string[] = [];
+  runtime.litIssuedWarnings = new Set();
+  console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
   try {
-    const el = (await fixture(html`<lr-sequence-playback item-count="1000" interval-ms="0"></lr-sequence-playback>`)) as LyraSequencePlayback;
+    const el = (await fixture(html`<lr-sequence-playback item-count="1000" interval-ms="11.23456789"></lr-sequence-playback>`)) as LyraSequencePlayback;
     el.play();
     await aTimeout(50);
     // With no clamp this would have ticked dozens/hundreds of times already;
     // clamped to a sane minimum, only a handful of ticks land in 50ms.
     expect(el.currentIndex).to.be.lessThan(20);
-    expect(calls).to.have.length(1);
-    expect(calls[0]![0]).to.contain('below the 16ms floor');
     el.pause();
-  } finally {
-    console.warn = originalWarn;
-  }
-});
 
-it('warns with a reason that matches the actual cause: "below the Xms floor" for a merely-small value, "non-finite" for NaN', async () => {
-  const originalWarn = console.warn;
-  const calls: unknown[][] = [];
-  console.warn = (...args: unknown[]) => calls.push(args);
-  try {
-    // 12 (not 10, which many earlier tests already used) so this assertion
-    // does not depend on being the first test in the file to warn about it --
-    // the warning is deduplicated per distinct value, not globally.
     const small = (await fixture(
-      html`<lr-sequence-playback item-count="5" interval-ms="12"></lr-sequence-playback>`,
+      html`<lr-sequence-playback item-count="5" interval-ms="-987654321"></lr-sequence-playback>`,
     )) as LyraSequencePlayback;
     small.play();
     small.pause();
 
     const invalid = (await fixture(
-      html`<lr-sequence-playback item-count="5" interval-ms="NaN"></lr-sequence-playback>`,
+      html`<lr-sequence-playback item-count="5" interval-ms="9007199254740991"></lr-sequence-playback>`,
     )) as LyraSequencePlayback;
     invalid.play();
     invalid.pause();
 
     const huge = (await fixture(
-      html`<lr-sequence-playback item-count="5" interval-ms="${Number.MAX_VALUE}"></lr-sequence-playback>`,
+      html`<lr-sequence-playback item-count="5" .intervalMs=${Number.NaN}></lr-sequence-playback>`,
     )) as LyraSequencePlayback;
     huge.play();
     huge.pause();
 
-    expect(calls.map(([message]) => message)).to.deep.equal([
-      '<lr-sequence-playback> interval-ms (12) is below the 16ms floor; clamping to 16ms.',
-      '<lr-sequence-playback> interval-ms (NaN) is non-finite; clamping to 16ms.',
-      `<lr-sequence-playback> interval-ms (${Number.MAX_VALUE}) is above the 2147483647ms ceiling; clamping to 2147483647ms.`,
+    expect(messages).to.deep.equal([
+      '<lr-sequence-playback>: interval-ms is outside the supported timer range and the timer delay was clamped.',
     ]);
+    expect(runtime.litIssuedWarnings!.has('lyra-sequence-playback-invalid-interval')).to.be.true;
+    expect(messages.join(' ')).to.not.contain('9007199254740991');
+    expect(messages.join(' ')).to.not.contain('-987654321');
+    expect(messages.join(' ')).to.not.contain('NaN');
+
+    messages.length = 0;
+    delete runtime.litIssuedWarnings;
+    const production = (await fixture(
+      html`<lr-sequence-playback item-count="5" interval-ms="-987654320"></lr-sequence-playback>`,
+    )) as LyraSequencePlayback;
+    production.play();
+    production.pause();
+    expect(messages).to.deep.equal([]);
   } finally {
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
     console.warn = originalWarn;
   }
 });

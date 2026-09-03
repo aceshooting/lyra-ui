@@ -203,6 +203,7 @@ export const styles = css`
   [part='saved-delete-button'] {
     flex: none;
     display: inline-flex;
+    font: inherit;
     align-items: center;
     justify-content: center;
     inline-size: var(--lr-space-2xl);

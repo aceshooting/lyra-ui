@@ -21,6 +21,7 @@ import '../translations/he.js';
 import '../translations/pt-BR.js';
 import '../translations/zh-CN.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
+import type { LyraMessage, LyraMessageKey } from './localization-types.js';
 
 it('resolves registered locale messages and per-instance overrides', async () => {
   registerLyraLocale('x-test', {
@@ -102,6 +103,52 @@ it('defines the copy-to-clipboard confirmation label', () => {
 it('includes openNavigation and resizeNavigation in the default English strings', () => {
   expect(LYRA_DEFAULT_STRINGS.openNavigation).to.equal('Open navigation');
   expect(LYRA_DEFAULT_STRINGS.resizeNavigation).to.equal('Resize navigation');
+});
+
+it('defines and resolves the shared resize-value and mention-result messages', async () => {
+  const sharedKeys = [
+    'resizeValuePixels',
+    'resizeValuePercent',
+    'mentionResultCount',
+    'mentionResultPosition',
+  ] as const satisfies readonly LyraMessageKey[];
+  type SharedMessageKey = (typeof sharedKeys)[number];
+
+  const catalog = {
+    resizeValuePixels: '{value} Bildpunkte',
+    resizeValuePercent: '{value} Prozentpunkte',
+    mentionResultCount: { one: '{count} Treffer', other: '{count} Treffer' },
+    mentionResultPosition: 'Treffer {current} von {total}',
+  } satisfies Record<SharedMessageKey, LyraMessage>;
+
+  expect(LYRA_DEFAULT_STRINGS.resizeValuePixels).to.equal('{value} pixels');
+  expect(LYRA_DEFAULT_STRINGS.resizeValuePercent).to.equal('{value} percent');
+  expect(LYRA_DEFAULT_STRINGS.mentionResultCount).to.deep.equal({
+    one: '{count} suggestion',
+    other: '{count} suggestions',
+  });
+  expect(LYRA_DEFAULT_STRINGS.mentionResultPosition).to.equal('Suggestion {current} of {total}');
+
+  registerLyraLocale('x-shared-messages', catalog);
+  const host = await localeHost('x-shared-messages');
+  expect(resolveLyraString(host, 'resizeValuePixels', undefined, undefined, { value: '640' })).to.equal(
+    '640 Bildpunkte',
+  );
+  expect(resolveLyraString(host, 'resizeValuePercent', undefined, undefined, { value: '35' })).to.equal(
+    '35 Prozentpunkte',
+  );
+  expect(
+    resolveLyraString(host, 'mentionResultCount', undefined, undefined, {
+      count: '2',
+      pluralCount: 2,
+    }),
+  ).to.equal('2 Treffer');
+  expect(
+    resolveLyraString(host, 'mentionResultPosition', undefined, undefined, {
+      current: '2',
+      total: '4',
+    }),
+  ).to.equal('Treffer 2 von 4');
 });
 
 it('defines a complete localizable lite-chart mark summary', () => {

@@ -34,6 +34,33 @@ export const Default: StoryObj = {
     `,
 };
 
+/** Forced open at the RTL inline-start edge so the positioned menu is visible at 320px. Like
+ *  `Default`, it opens only in the story canvas: an already-open menu on the autodocs page would
+ *  light-dismiss on the next trigger click and swallow the interaction the docs canvas is checked
+ *  for. */
+export const NarrowLongRtl: StoryObj = {
+  name: 'Narrow long RTL',
+  render: (_args, context) => html`
+    <div
+      dir="rtl"
+      lang="ar"
+      style="display: flex; justify-content: start; inline-size: 320px; max-inline-size: 100%; min-block-size: var(--lr-size-20rem);"
+    >
+      <lr-dropdown
+        aria-label="إجراءات المستند المطوّل"
+        placement="bottom-start"
+        .open=${context.viewMode !== 'docs'}
+      >
+        <button slot="trigger" type="button">إجراءات المستند</button>
+        <lr-dropdown-item value="rename">إعادة تسمية المستند ذي العنوان الطويل جداً</lr-dropdown-item>
+        <lr-dropdown-item value="duplicate">إنشاء نسخة لمراجعة متعددة اللغات</lr-dropdown-item>
+        <lr-dropdown-item value="archive" disabled>أرشفة النسخة السابقة</lr-dropdown-item>
+        <lr-dropdown-item value="delete" variant="danger">حذف المسودة نهائياً</lr-dropdown-item>
+      </lr-dropdown>
+    </div>
+  `,
+};
+
 /** Disabled is an opening invariant: even declarative `open` markup normalizes closed before the
  * first rendered/positioned state, independent of attribute order. */
 export const DisabledOpenNormalizesClosed: StoryObj = {

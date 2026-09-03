@@ -1171,6 +1171,37 @@ it('announces the rendered width when a resizable column has no pixel width', as
   expect(el.shadowRoot!.querySelector('[part="resize-handle"]')!.getAttribute('aria-valuenow')).to.equal('192');
 });
 
+it('localizes the synchronized rendered resize value while retaining its numeric ARIA value', async () => {
+  const el = (await fixture(
+    html`<lr-table
+      lang="ar-EG"
+      .strings=${{ resizeValuePixels: 'العرض {value} بكسل' }}
+    ></lr-table>`
+  )) as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '12rem',
+      resizable: true,
+      cell: (row) => row.name,
+    },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const header = el.shadowRoot!.querySelector('th[data-col-key="name"]') as HTMLElement;
+  header.getBoundingClientRect = () => ({ width: 192 } as DOMRect);
+  el.requestUpdate();
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector<HTMLElement>('[part="resize-handle"]')!;
+  expect(handle.getAttribute('aria-valuenow')).to.equal('192');
+  expect(handle.getAttribute('aria-valuetext')).to.equal(
+    `العرض ${new Intl.NumberFormat('ar-EG').format(192)} بكسل`
+  );
+});
+
 it('starts a keyboard resize from the live rendered width when a column has no pixel width yet', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [
@@ -3067,21 +3098,21 @@ it('omits aria-label on the shadow-DOM grid element when the host has none', asy
 
 describe('accessible name (accessibleLabel / caption / dev warning)', () => {
   let originalWarn: typeof console.warn;
+  let originalIssuedWarnings: Set<string> | undefined;
   let warnings: unknown[][];
-  let originalProcess: unknown;
   beforeEach(() => {
     originalWarn = console.warn;
     warnings = [];
     console.warn = (...args: unknown[]) => warnings.push(args);
-    const runtime = globalThis as unknown as { process?: unknown };
-    originalProcess = runtime.process;
-    runtime.process = { env: { NODE_ENV: 'development' } };
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    originalIssuedWarnings = runtime.litIssuedWarnings;
+    runtime.litIssuedWarnings = new Set();
   });
   afterEach(() => {
     console.warn = originalWarn;
-    const runtime = globalThis as unknown as { process?: unknown };
-    if (originalProcess === undefined) delete runtime.process;
-    else runtime.process = originalProcess;
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
   });
 
   it('names the grid from accessibleLabel and does not warn', async () => {
@@ -3109,22 +3140,25 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     expect(warnings.length).to.equal(0);
   });
 
-  it('warns exactly once when the grid has no accessible name', async () => {
-    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
-    el.columns = columns;
-    el.rows = rows;
-    await el.updateComplete;
-    // Force additional renders — the warning must not repeat.
-    el.rows = [...rows];
-    await el.updateComplete;
+  it('warns once per page when grids have no accessible name', async () => {
+    const first = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    first.columns = columns;
+    first.rows = rows;
+    await first.updateComplete;
+    const second = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    second.columns = columns;
+    second.rows = rows;
+    await second.updateComplete;
+    // Force another render — the shared diagnostic must not repeat.
+    first.rows = [...rows];
+    await first.updateComplete;
     expect(warnings.length).to.equal(1);
     expect(String(warnings[0]![0])).to.include('no accessible name');
   });
 
-  it('does not warn in a production runtime', async () => {
-    (globalThis as unknown as { process?: unknown }).process = {
-      env: { NODE_ENV: 'production' },
-    };
+  it('does not warn when Lit development diagnostics are disabled', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    delete runtime.litIssuedWarnings;
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
@@ -3432,6 +3466,26 @@ describe('expandable rows', () => {
     const toggle = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLElement;
     expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
     expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+  });
+
+  it('inherits a live host font size into the row-expand toggle and its 1em glyph', async () => {
+    const el = (await fixture(
+      html`<lr-table style="font: 20px/1 monospace"></lr-table>`
+    )) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (row) => row.id;
+    el.expandedContent = (row) => html`<p>${row.name} details</p>`;
+    await el.updateComplete;
+
+    const table = el.shadowRoot!.querySelector<HTMLElement>('[part="table"]')!;
+    const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="row-expand-toggle"]')!;
+    const glyph = toggle.querySelector<SVGElement>('[part="row-expand-icon"] svg')!;
+    expect(getComputedStyle(table).fontSize).to.equal('20px');
+    expect(getComputedStyle(toggle).fontSize).to.equal('20px');
+    expect(getComputedStyle(toggle).fontFamily).to.equal(getComputedStyle(table).fontFamily);
+    expect(getComputedStyle(glyph).width).to.equal('20px');
+    expect(getComputedStyle(glyph).height).to.equal('20px');
   });
 
   it('renders an empty, non-interactive toggle cell for a row that fails canExpand', async () => {
@@ -7353,19 +7407,14 @@ describe('sticky + sortable header pointer feedback', () => {
   });
 });
 
-// `TableColumn.cell` is typed and documented required, but columns are supplied through a lit
-// `.columns=${[...]}` binding, and lit-html property bindings are NOT type-checked by tsc (only by
-// lit-analyzer, which many projects do not run). So required-ness was unenforced at author time AND
-// unguarded at run time. A column missing `cell` threw `col.cell is not a function` from inside
-// lit's repeat directive -- taking the whole table down, with a stack containing only lyra and
-// lit-html frames: no application frame, no column key, no table identity. One reporter carried it
-// undiagnosed across two releases as 16 unattributed unhandled rejections while their suite passed.
 describe('a column missing its cell renderer', () => {
   it('renders the rest of the table instead of throwing out of lit repeat', async () => {
+    const originalWarn = console.warn;
     const originalError = console.error;
+    console.warn = () => {};
     console.error = () => {};
     try {
-      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable;
+      const el = (await fixture(html`<lr-table aria-label="Test table"></lr-table>`)) as LyraTable;
       el.columns = [
         { key: 'ok', label: 'OK', cell: (row: { ok: string }) => row.ok },
         { key: 'broken', label: 'Broken' },
@@ -7378,53 +7427,77 @@ describe('a column missing its cell renderer', () => {
         'the well-formed column still renders',
       ).to.be.true;
     } finally {
+      console.warn = originalWarn;
       console.error = originalError;
     }
   });
 
-  it('names the column key and the tag so the failure is attributable', async () => {
+  it('uses one fixed dev-only warning without leaking caller data', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
     const originalError = console.error;
+    const originalWarn = console.warn;
     const messages: string[] = [];
-    console.error = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+    runtime.litIssuedWarnings = new Set();
+    console.error = () => {};
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
     try {
-      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable;
-      el.columns = [{ key: 'broken', label: 'Broken' }] as never;
-      el.rows = [{ ok: 'value' }] as never;
-      await el.updateComplete;
+      const first = (await fixture(html`<lr-table aria-label="Test table"></lr-table>`)) as LyraTable;
+      first.columns = [{ key: 'customer-42', label: 'Customer' }] as never;
+      first.rows = [{ privateRecord: 'do-not-log' }] as never;
+      await first.updateComplete;
 
-      const combined = messages.join('\n');
-      expect(combined, 'the offending column key').to.contain('broken');
-      expect(combined, 'the component that owns it').to.contain('lr-table');
-      expect(combined, 'the missing member').to.contain('cell');
+      const second = (await fixture(html`<lr-table aria-label="Test table"></lr-table>`)) as LyraTable;
+      second.columns = [{ key: 'account-99', label: 'Account' }] as never;
+      second.rows = [{ privateRecord: 'also-do-not-log' }] as never;
+      await second.updateComplete;
+
+      expect(messages.length).to.equal(1);
+      const diagnostic = messages.join('\n');
+      expect(diagnostic).to.contain('lr-table');
+      expect(diagnostic).to.contain('cell');
+      expect(diagnostic).to.not.contain('customer-42');
+      expect(diagnostic).to.not.contain('account-99');
+      expect(diagnostic).to.not.contain('do-not-log');
     } finally {
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+      console.warn = originalWarn;
       console.error = originalError;
     }
   });
 
-  it('reports each offending column once rather than once per row', async () => {
+  it('stays silent when Lit development diagnostics are disabled', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
     const originalError = console.error;
+    const originalWarn = console.warn;
     const messages: string[] = [];
+    delete runtime.litIssuedWarnings;
     console.error = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
     try {
-      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable;
-      el.columns = [{ key: 'broken', label: 'Broken' }] as never;
+      const el = (await fixture(html`<lr-table aria-label="Test table"></lr-table>`)) as LyraTable;
+      el.columns = [{ key: 'customer-42', label: 'Customer' }] as never;
       el.rows = [{ a: 1 }, { a: 2 }, { a: 3 }, { a: 4 }] as never;
       await el.updateComplete;
 
-      expect(
-        messages.filter((message) => message.includes('broken')).length,
-        'four rows must not mean four identical console errors',
-      ).to.equal(1);
+      expect(messages.length).to.equal(0);
     } finally {
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+      console.warn = originalWarn;
       console.error = originalError;
     }
   });
 
   it('sorts on a column missing its cell renderer instead of throwing out of sortedEntries', async () => {
+    const originalWarn = console.warn;
     const originalError = console.error;
+    console.warn = () => {};
     console.error = () => {};
     try {
-      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable;
+      const el = (await fixture(html`<lr-table aria-label="Test table"></lr-table>`)) as LyraTable;
       el.columns = [
         { key: 'ok', label: 'OK', cell: (row: { ok: string }) => row.ok },
         { key: 'broken', label: 'Broken', sortable: true },
@@ -7438,6 +7511,7 @@ describe('a column missing its cell renderer', () => {
         'the well-formed column still renders while sorting on the broken column',
       ).to.be.true;
     } finally {
+      console.warn = originalWarn;
       console.error = originalError;
     }
   });

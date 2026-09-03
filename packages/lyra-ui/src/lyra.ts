@@ -58,6 +58,7 @@ export type {
   MessageFeedbackRating,
   MessageFeedbackSubmitDetail,
   MessageFeedbackValue,
+  MessageFeedbackWrap,
   LyraMessageFeedbackEventMap,
 } from './components/conversation/message-feedback/message-feedback.class.js';
 export * from './components/conversation/message-parts/message-parts.class.js';
@@ -421,6 +422,7 @@ export type {
   LyraMultiSplitOrientationChangeDetail,
   LyraMultiSplitPanelConstraint,
   LyraMultiSplitResizeDetail,
+  LyraMultiSplitToggleDetail,
 } from './components/layout/multi-split/multi-split.class.js';
 export {
   LyraSplitPanel,
@@ -545,6 +547,7 @@ export { LyraHistogram } from './components/charts/chart/histogram.class.js';
 export type {
   LyraChartPoint,
   LyraChartSeries,
+  LyraChartStatistic,
   LyraChartInstance,
   LyraChartArea,
   LyraChartConfiguration,

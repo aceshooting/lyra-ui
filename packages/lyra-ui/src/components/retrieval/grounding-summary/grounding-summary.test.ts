@@ -677,3 +677,118 @@ it('omits blank and later duplicate claim and citation ids before composition, c
   );
   expect((await selected).detail).to.deep.equal({ citation: firstCitation });
 });
+
+it('projects descriptor-safe assessments and preserves opaque citation selection identity', async () => {
+  let descriptorReads = 0;
+  const assessment = new Proxy(
+    {
+      supportedClaims: 7,
+      unsupportedClaims: 2,
+      coverage: 0.75,
+      warnings: ['A descriptor-safe warning'],
+      claims: [
+        {
+          id: 'opaque-claim',
+          text: 'Nested selections retain their original source.',
+          status: 'supported' as const,
+          citationIds: ['opaque-citation'],
+        },
+      ],
+    },
+    {
+      ownKeys: () => {
+        throw new Error('enumeration must not be needed for a closed assessment schema');
+      },
+      getOwnPropertyDescriptor: (target, key) => {
+        descriptorReads += 1;
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    }
+  ) as GroundingAssessment;
+  const metadata = { requestId: 'opaque-metadata' };
+  const citation: Citation = {
+    id: 'opaque-citation',
+    sourceId: 'source',
+    label: 'Opaque evidence',
+    metadata,
+  };
+  const el = await fixture<LyraGroundingSummary>(html`
+    <lr-grounding-summary .assessment=${assessment} .citations=${[citation]}></lr-grounding-summary>
+  `);
+
+  expect(stats(el).map((stat) => stat.getAttribute('value'))).to.deep.equal([
+    '7',
+    '2',
+    '75%',
+  ]);
+  expect(el.shadowRoot!.textContent).to.contain('A descriptor-safe warning');
+  const readsAtAdmission = descriptorReads;
+  el.label = 'Re-render without source reads';
+  await el.updateComplete;
+  expect(descriptorReads).to.equal(readsAtAdmission);
+
+  const selected = oneEvent(el, 'lr-citation-select');
+  el.shadowRoot!.querySelector<HTMLElement>('lr-citation-badge')!.dispatchEvent(
+    new CustomEvent('lr-citation-activate', {
+      bubbles: true,
+      composed: true,
+      detail: { index: 1, sourceId: 'source' },
+    })
+  );
+  const detail = (await selected).detail.citation;
+  expect(detail === citation).to.equal(true);
+  expect(detail.metadata === metadata).to.equal(true);
+
+  const claims = el.shadowRoot!.querySelector('lr-claim-evidence') as HTMLElement & {
+    shadowRoot: ShadowRoot;
+    updateComplete: Promise<unknown>;
+  };
+  await claims.updateComplete;
+  const nestedSelected = oneEvent(el, 'lr-citation-select');
+  (
+    claims
+      .shadowRoot.querySelector('lr-citation-badge')!
+      .shadowRoot!.querySelector('button') as HTMLButtonElement
+  ).click();
+  expect((await nestedSelected).detail.citation === citation).to.equal(true);
+});
+
+it('contains malformed nested selection details without invoking their accessors', async () => {
+  const el = await fixture<LyraGroundingSummary>(html`
+    <lr-grounding-summary
+      .assessment=${{
+        supportedClaims: 1,
+        unsupportedClaims: 0,
+        coverage: 1,
+        claims: [
+          {
+            id: 'claim',
+            text: 'A claim',
+            status: 'supported' as const,
+            citationIds: ['citation'],
+          },
+        ],
+      }}
+      .citations=${[{ id: 'citation', sourceId: 'source' }]}
+    ></lr-grounding-summary>
+  `);
+  const claims = el.shadowRoot!.querySelector('lr-claim-evidence')!;
+  let selections = 0;
+  el.addEventListener('lr-citation-select', () => (selections += 1));
+  const detail = {};
+  Object.defineProperty(detail, 'citation', {
+    enumerable: true,
+    get: () => {
+      throw new Error('nested event details must not be dereferenced');
+    },
+  });
+
+  claims.dispatchEvent(
+    new CustomEvent('lr-citation-select', {
+      bubbles: true,
+      composed: true,
+      detail,
+    })
+  );
+  expect(selections).to.equal(0);
+});

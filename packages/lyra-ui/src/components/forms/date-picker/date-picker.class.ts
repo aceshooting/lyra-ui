@@ -15,7 +15,12 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
-import { isDateObject } from '../../../internal/dom-guards.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import {
+  MISSING_OWN_DATA_DESCRIPTOR,
+  UNSAFE_OWN_DATA_DESCRIPTOR,
+  getOwnDataDescriptor,
+} from '../../../internal/data-descriptors.js';
 import {
   dispatchNativeEvent,
   dispatchNativeInputEvent,
@@ -135,8 +140,128 @@ export interface LyraDateRangePreset {
   readonly end?: string;
 }
 
-function isDateRangePresetRecord(value: unknown): value is LyraDateRangePreset {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+interface CanonicalDateRangePreset {
+  readonly end?: string;
+  readonly label: string;
+  readonly source: LyraDateRangePreset;
+  readonly start?: string;
+}
+
+const canonicalPresetSnapshots = new WeakMap<
+  readonly unknown[],
+  readonly CanonicalDateRangePreset[]
+>();
+
+function isSafeArray(value: unknown): value is readonly unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+function isSafeNonArrayObject(value: unknown): value is object {
+  if (value === null || typeof value !== 'object') return false;
+  try {
+    return !Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reads the fields this component renders exactly once from own data descriptors. The original
+ * preset remains opaque after this boundary because `appliedPreset` is intentionally the caller's
+ * identity, not a structural clone.
+ */
+function projectDateRangePreset(value: unknown): CanonicalDateRangePreset | undefined {
+  if (!isSafeNonArrayObject(value)) return undefined;
+  const label = getOwnDataDescriptor(value, 'label');
+  const start = getOwnDataDescriptor(value, 'start');
+  const end = getOwnDataDescriptor(value, 'end');
+  if (
+    label === MISSING_OWN_DATA_DESCRIPTOR ||
+    label === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof label.value !== 'string' ||
+    start === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    end === UNSAFE_OWN_DATA_DESCRIPTOR
+  )
+    return undefined;
+  if (
+    (start !== MISSING_OWN_DATA_DESCRIPTOR &&
+      start.value !== undefined &&
+      typeof start.value !== 'string') ||
+    (end !== MISSING_OWN_DATA_DESCRIPTOR &&
+      end.value !== undefined &&
+      typeof end.value !== 'string')
+  )
+    return undefined;
+  return Object.freeze({
+    source: value as LyraDateRangePreset,
+    label: label.value,
+    start: start === MISSING_OWN_DATA_DESCRIPTOR ? undefined : start.value as string | undefined,
+    end: end === MISSING_OWN_DATA_DESCRIPTOR ? undefined : end.value as string | undefined,
+  });
+}
+
+function canonicalDateRangePresets(
+  values: readonly unknown[]
+): readonly CanonicalDateRangePreset[] {
+  const cached = canonicalPresetSnapshots.get(values);
+  if (cached) return cached;
+  const projected: CanonicalDateRangePreset[] = [];
+  for (const value of values) {
+    const preset = projectDateRangePreset(value);
+    if (preset) projected.push(preset);
+  }
+  const snapshot = Object.freeze(projected);
+  canonicalPresetSnapshots.set(values, snapshot);
+  return snapshot;
+}
+
+/** Returns a fresh local Date using the native Date slot, never an overridable instance method. */
+function copyNativeDate(value: unknown): Date | null {
+  if (value === null || typeof value !== 'object') return null;
+  try {
+    const epoch = Date.prototype.getTime.call(value);
+    return Number.isFinite(epoch) ? new Date(epoch) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A disabled-date assignment cannot turn a month render into an unbounded proxy walk. */
+const MAX_DISABLED_DATE_ENTRIES = 10_000;
+
+function projectDisabledDateKeys(value: unknown): readonly string[] {
+  if (typeof value === 'string') {
+    return Object.freeze(
+      value
+        .split(/[\s,]+/)
+        .map((entry) => parseISO(entry))
+        .filter((entry): entry is Date => entry !== null)
+        .map((entry) => formatISO(entry)),
+    );
+  }
+  if (!isSafeArray(value)) return Object.freeze([]);
+  const length = getOwnDataDescriptor(value, 'length');
+  if (
+    length === MISSING_OWN_DATA_DESCRIPTOR ||
+    length === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    typeof length.value !== 'number' ||
+    !Number.isSafeInteger(length.value) ||
+    length.value < 0
+  )
+    return Object.freeze([]);
+
+  const dates: string[] = [];
+  for (let index = 0; index < Math.min(length.value, MAX_DISABLED_DATE_ENTRIES); index += 1) {
+    const entry = getOwnDataDescriptor(value, String(index));
+    if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
+    const date = typeof entry.value === 'string' ? parseISO(entry.value) : copyNativeDate(entry.value);
+    if (date) dates.push(formatISO(date));
+  }
+  return Object.freeze(dates);
 }
 
 /**
@@ -203,8 +328,12 @@ function isDateRangePresetRecord(value: unknown): value is LyraDateRangePreset {
  *   quick-range button.
  * @cssprop --lr-date-picker-preset-active-bg - Pressed background of a quick-range button;
  *   defaults to a mix of the hover background with the shared active mix partner.
- * @cssprop [--lr-date-picker-preset-selected-bg=var(--lr-color-brand)] - Background and border of
- *   the quick-range button whose range is currently selected.
+ * @cssprop [--lr-date-picker-preset-selected-bg=var(--lr-color-brand)] - Background of the
+ *   quick-range button whose range is currently selected.
+ * @cssprop [--lr-date-picker-preset-selected-border=var(--lr-color-brand)] - Border color of the
+ *   selected quick-range button.
+ * @cssprop [--lr-date-picker-preset-selected-color=var(--lr-color-on-brand)] - Foreground color
+ *   of the selected quick-range button.
  * @csspart weeknumbers - The week-number column.
  * @csspart weeknumber - One week number.
  * @csspart footer - The footer region.
@@ -262,6 +391,11 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+
+  /** The sequence is bounded/detached/frozen while applying a preset still reports its exact
+   * caller-owned source identity through `appliedPreset`. */
+  protected static override readonly ownedCollectionProperties = Object.freeze(['presets']);
+  protected static override readonly identityCollectionProperties = Object.freeze(['presets']);
 
   /** ISO value: `YYYY-MM-DD` or `YYYY-MM-DD/YYYY-MM-DD`. */
   @property({ reflect: true }) value = '';
@@ -323,7 +457,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   }
   set presets(next: readonly LyraDateRangePreset[]) {
     const old = this._presets;
-    this._presets = Array.isArray(next) ? next : Object.freeze([]);
+    this._presets = isSafeArray(next) ? next : Object.freeze([]);
     this.requestUpdate('presets', old);
   }
 
@@ -352,7 +486,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    * to `min`/`max`. Returns null when an open bound has no corresponding limit -- there is simply no
    * date to use, and `value`'s `YYYY-MM-DD/YYYY-MM-DD` form has no unbounded spelling.
    */
-  private resolvePresetRange(preset: LyraDateRangePreset): { from: Date; to: Date } | null {
+  private resolvePresetRange(preset: Pick<CanonicalDateRangePreset, 'start' | 'end'>): { from: Date; to: Date } | null {
     const bound = (own: string | undefined, fallback: string): Date | null => {
       const text = typeof own === 'string' && own.trim() ? own : fallback;
       return text ? parseISO(text) : null;
@@ -471,11 +605,12 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   }
 
   set valueAsDate(next: Date | null) {
-    if (!isDateObject(next) || !Number.isFinite(next.getTime())) {
+    const date = copyNativeDate(next);
+    if (!date) {
       this.value = '';
       return;
     }
-    this.value = formatISO(next);
+    this.value = formatISO(date);
   }
 
   /** Date-range view of a range-mode value. Reversed endpoints are normalized. */
@@ -486,14 +621,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   }
 
   set valueAsRange(next: DateRange) {
-    let from =
-      isDateObject(next?.from) && Number.isFinite(next.from.getTime())
-        ? next.from
-        : null;
-    let to =
-      isDateObject(next?.to) && Number.isFinite(next.to.getTime())
-        ? next.to
-        : null;
+    let from = copyNativeDate(next?.from);
+    let to = copyNativeDate(next?.to);
     if (from && to && to < from) [from, to] = [to, from];
     this.value = from
       ? to
@@ -526,9 +655,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
     this.viewPeriodAvailabilityCache.clear();
-    const activeElement =
-      (this.renderRoot as { activeElement?: Element | null } | undefined)
-        ?.activeElement ?? null;
+    const activeElement = activeElementIn(this.renderRoot as ShadowRoot);
     const activeViewStart = activeElement?.matches('[part~="view-item"]')
       ? parseISO(activeElement.getAttribute('data-view-start') ?? '')
       : null;
@@ -573,18 +700,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     if (this.disabledDatesCacheSource === this.disabledDates)
       return this.disabledDatesCache;
     this.disabledDatesCacheSource = this.disabledDates;
-    const values = Array.isArray(this.disabledDates)
-      ? this.disabledDates
-      : String(this.disabledDates || '').split(/[\s,]+/);
-    this.disabledDatesCache = new Set(
-      values
-        .map((value) => (isDateObject(value) ? value : parseISO(String(value))))
-        .filter(
-          (value): value is Date =>
-            isDateObject(value) && Number.isFinite(value.getTime())
-        )
-        .map((value) => formatISO(value))
-    );
+    this.disabledDatesCache = new Set(projectDisabledDateKeys(this.disabledDates));
     return this.disabledDatesCache;
   }
 
@@ -1682,7 +1798,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   /** The quick-range row. Range mode only -- see `presets`. */
   private renderPresets(): TemplateResult | typeof nothing {
-    const presets = this.presets.filter(isDateRangePresetRecord);
+    const presets = canonicalDateRangePresets(this.presets);
     if (this.effectiveMode !== 'range' || presets.length === 0) return nothing;
     return html`<div part="presets">
       ${presets.map((preset) => {
@@ -1709,7 +1825,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    * event pair, the ISO serialization and the min/max clamping are identical -- a consumer's
    * change handler cannot tell the two apart, which is the point.
    */
-  private applyPreset(preset: LyraDateRangePreset): void {
+  private applyPreset(preset: CanonicalDateRangePreset): void {
     if (this.disabled || this.readonly) return;
     // A malformed preset is ignored rather than clearing the current value: a bad entry in a
     // config-driven preset list must not look like the user picked "nothing".
@@ -1717,7 +1833,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     if (!resolved) return;
     // Set BEFORE commit(), so a consumer reading `appliedPreset` inside the change handler that
     // commit() synchronously dispatches sees this preset rather than the previous one.
-    this._appliedPreset = preset;
+    this._appliedPreset = preset.source;
     this.setFocusedDate(resolved.from);
     this.commit(resolved.from, resolved.to, true);
   }

@@ -6,6 +6,11 @@ export type MouseCommand =
   | { type: 'down'; button?: MouseButton }
   | { type: 'up'; button?: MouseButton };
 
+export interface WheelCommand {
+  readonly deltaX: number;
+  readonly deltaY?: number;
+}
+
 interface CommandResponse {
   executed: boolean;
   result?: unknown;
@@ -23,7 +28,10 @@ interface WebSocketModule {
 const sessionId = new URL(window.location.href).searchParams.get('wtr-session-id');
 const webSocketModulePath = '/__web-dev-server__web-socket.js';
 
-async function executeMouseCommand(command: 'send-mouse' | 'reset-mouse', payload?: unknown): Promise<void> {
+async function executeMouseCommand(
+  command: 'send-mouse' | 'reset-mouse' | 'send-wheel',
+  payload?: unknown
+): Promise<void> {
   if (sessionId === null) {
     throw new Error('Mouse commands require a browser controlled by Web Test Runner.');
   }
@@ -43,6 +51,11 @@ async function executeMouseCommand(command: 'send-mouse' | 'reset-mouse', payloa
 
 export function sendMouse(command: MouseCommand): Promise<void> {
   return executeMouseCommand('send-mouse', command);
+}
+
+/** Sends a native wheel input through the active browser session. */
+export function sendWheel({ deltaX, deltaY = 0 }: WheelCommand): Promise<void> {
+  return executeMouseCommand('send-wheel', { deltaX, deltaY });
 }
 
 export function resetMouse(): Promise<void> {
