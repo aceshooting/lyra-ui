@@ -4,6 +4,7 @@ import {
   loadChartModule,
   type ChartJsModule,
 } from './chart-core-loader.js';
+import { notifyAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
 
 /** Peer-neutral Chart.js plugin capability used for registration and per-chart configuration. */
 export interface ChartPluginCapability {
@@ -319,6 +320,9 @@ export async function loadChartAndAnnotation(
     return { kind: 'feature-unavailable', mod };
   }
 
+  // Charts constructed before this registration carry no plugin state; let every live host
+  // rebuild before the plugin's next hook runs against them.
+  notifyAnnotationPluginRegistered();
   return { kind: 'available', mod, plugin };
 }
 

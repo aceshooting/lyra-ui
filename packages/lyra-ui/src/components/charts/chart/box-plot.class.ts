@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
+import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
 import { styles } from './box-plot.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
@@ -449,6 +450,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: BoxPlotChartRuntime;
+  private stopAnnotationRegistrationWatch?: () => void;
   private chartJsModule?: ChartJsModule;
   private loadGeneration = 0;
   private descriptionId = nextId('box-plot-description');
@@ -462,6 +464,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.stopAnnotationRegistrationWatch?.();
+    this.stopAnnotationRegistrationWatch = onAnnotationPluginRegistered(() =>
+      this.rebuildAfterAnnotationRegistration()
+    );
     this.syncAnnouncementSinks();
     this.visible = true;
     this.armReducedMotionWatcher();
@@ -532,6 +538,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.stopAnnotationRegistrationWatch?.();
+    this.stopAnnotationRegistrationWatch = undefined;
     this.releaseAnnouncementSinks();
     this.lastDataTruncationAnnouncement = '';
     this.isMounting = true;
@@ -871,6 +879,18 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   private drawIfVisible(): void {
     if (!this.isConnected || !this.visible) return;
     this.draw();
+  }
+
+  /**
+   * A sibling `<lr-chart>` registering `chartjs-plugin-annotation` globally leaves this instance
+   * without the plugin's per-chart state (created only in `beforeInit`), so the plugin would throw
+   * on the next update. Rebuild from the current configuration instead.
+   */
+  private rebuildAfterAnnotationRegistration(): void {
+    if (!this.chart) return;
+    this.chart.destroy();
+    this.chart = undefined;
+    this.drawIfVisible();
   }
 
   /** Re-reads canvas theme custom properties after an out-of-band ancestor theme change. */

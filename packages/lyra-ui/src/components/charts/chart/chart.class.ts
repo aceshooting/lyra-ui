@@ -8,6 +8,7 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
+import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
 import {
   loadChartJsWithZoom,
   loadChartJsWithZoomResult,
@@ -2391,6 +2392,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   // globally because annotation draws nothing without per-chart options and needs registry-owned
   // element defaults; this reference tracks feature availability for this instance.
   private annotationPlugin?: AnnotationPlugin;
+  private stopAnnotationRegistrationWatch?: () => void;
 
   @state() private zoomed = false;
 
@@ -2453,6 +2455,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.stopAnnotationRegistrationWatch?.();
+    this.stopAnnotationRegistrationWatch = onAnnotationPluginRegistered(() =>
+      this.rebuildAfterAnnotationRegistration()
+    );
     this.syncAnnouncementSinks();
     this.visible = true;
     this.armReducedMotionWatcher();
@@ -2545,6 +2551,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.stopAnnotationRegistrationWatch?.();
+    this.stopAnnotationRegistrationWatch = undefined;
     this.releaseAnnouncementSinks();
     this.lastDataTruncationAnnouncement = '';
     this.isMounting = true;
@@ -2751,6 +2759,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.builtType = undefined;
       this.builtPlugins = [];
     }
+    this.drawIfVisible();
+  }
+
+  /**
+   * `chartjs-plugin-annotation` creates its per-chart state only in `beforeInit`, so once it is
+   * registered globally every chart constructed earlier throws inside the plugin on its next
+   * update. A chart that requested the feature rebuilds through `applyAnnotationPlugin()`; every
+   * other live chart rebuilds here so a sibling's annotations cannot break it.
+   */
+  private rebuildAfterAnnotationRegistration(): void {
+    if (!this.chart || this.needsAnnotations) return;
+    this.discardChart(true);
+    this.builtType = undefined;
+    this.builtPlugins = [];
     this.drawIfVisible();
   }
 

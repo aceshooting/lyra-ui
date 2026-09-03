@@ -4,26 +4,30 @@ import {
   ROOT_BARREL_OPTIONAL_PEER_TAGS,
   ROOT_BARREL_TAGS,
 } from './internal/root-registration-allowlist.js';
+// Type-only imports resolve against the source tree: the test-tree type-check runs in CI before
+// any build exists, so a package self-reference here would fail on the missing `dist/` types. The
+// packaged route types are proven separately by the ATTW and packed-consumer gates; the runtime
+// assertions below still load every route through the real package exports.
 import type {
   AgentStatusPresentation,
   AgentStatusValue,
-} from '@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js';
+} from './components/agent-tools/agent-status-presentation.js';
 import type {
   ApprovalAction,
   ApprovalDecision,
-} from '@aceshooting/lyra-ui/components/agent-tools/approval-state.js';
+} from './components/agent-tools/approval-state.js';
 import type {
   StackFrame,
   StackGroup,
   StackTraceParseOptions,
   StackTraceParseResult,
-} from '@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace-parse.js';
+} from './components/agent-tools/stack-trace/stack-trace-parse.js';
 import type {
   LyraSpan,
   LyraSpanKind,
   LyraSpanProjection,
   LyraSpanStatus,
-} from '@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js';
+} from './components/agent-tools/trace-tree/span.js';
 
 type RealmImport = (specifier: string) => Promise<Record<string, unknown>>;
 type EntrypointImport = () => Promise<Record<string, unknown>>;

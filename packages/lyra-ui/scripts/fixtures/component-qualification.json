@@ -4103,7 +4103,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4140,6 +4140,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -4321,7 +4322,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4358,6 +4359,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -5248,7 +5250,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5285,6 +5287,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -6923,7 +6926,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6968,6 +6971,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -15048,7 +15052,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15085,6 +15089,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -22377,7 +22382,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -22414,6 +22419,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -25435,7 +25441,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25472,6 +25478,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -25648,7 +25655,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25685,6 +25692,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -32052,7 +32060,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32096,6 +32104,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -32256,7 +32265,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32293,6 +32302,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -34645,7 +34655,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -34682,6 +34692,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
@@ -38282,7 +38293,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38319,6 +38330,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
+          "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",

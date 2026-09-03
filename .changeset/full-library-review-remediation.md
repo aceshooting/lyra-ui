@@ -71,6 +71,10 @@ never set `hidden` on `::part(content)` yourself — the component now manages i
 - `lr-chart`, all eight chart variants, and `lr-box-plot` gained
   `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color)`).
 - `preloadCharts()` gained an `annotations` option/result field.
+- Charts that set no annotations, and `lr-box-plot`, no longer break when a sibling chart on the
+  same page loads `chartjs-plugin-annotation`: every live chart built before that global
+  registration now rebuilds its Chart.js instance instead of throwing inside the plugin on its
+  next update.
 - `lr-lite-chart`'s `selectedIndices` is now documented and enforced as **source category
   indices**, not positions in the (possibly sampled) rendered output.
 
