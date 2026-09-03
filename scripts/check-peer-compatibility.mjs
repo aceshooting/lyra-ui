@@ -3376,6 +3376,9 @@ async function collectInstalledFiles(root, current = root, files = []) {
       throw new Error(`Installed Lyra file inventory contains an internal symbolic link: ${target}.`);
     }
     if (metadata.isDirectory()) {
+      // A published tarball never carries `node_modules`; one inside the installed root is the
+      // package manager's own bookkeeping (pnpm's bin shims for the package and its peers).
+      if (entry.name === 'node_modules') continue;
       await collectInstalledFiles(root, target, files);
       continue;
     }
@@ -3394,6 +3397,30 @@ async function collectInstalledFiles(root, current = root, files = []) {
   return files;
 }
 
+/** Names the first differing entries so a remote failure is diagnosable from its log alone. */
+function describeInventoryDrift(expectedFiles, actualFiles, limit = 12) {
+  const expectedByPath = new Map(expectedFiles.map((file) => [file.path, file]));
+  const actualByPath = new Map(actualFiles.map((file) => [file.path, file]));
+  const lines = [];
+  for (const [path, expected] of expectedByPath) {
+    const actual = actualByPath.get(path);
+    if (!actual) lines.push(`missing after install: ${path}`);
+    else if (actual.sha256 !== expected.sha256 || actual.size !== expected.size) {
+      lines.push(
+        `content differs: ${path} (tarball ${expected.size} bytes ${expected.sha256.slice(0, 12)}, ` +
+          `installed ${actual.size} bytes ${actual.sha256.slice(0, 12)})`,
+      );
+    }
+  }
+  for (const path of actualByPath.keys()) {
+    if (!expectedByPath.has(path)) lines.push(`unexpected after install: ${path}`);
+  }
+  if (lines.length === 0) return ' (entries match; ordering differs)';
+  const shown = lines.slice(0, limit).map((line) => `\n  - ${line}`).join('');
+  const more = lines.length > limit ? `\n  ... ${lines.length - limit} more` : '';
+  return ` ${lines.length} difference(s):${shown}${more}`;
+}
+
 export async function verifyInstalledPeerInstallation(installedRoot, staged) {
   if (!isAbsolute(installedRoot) || !Array.isArray(staged?.files)) {
     throw new Error('Installed peer verification requires an absolute root and staged file authority.');
@@ -3406,7 +3433,10 @@ export async function verifyInstalledPeerInstallation(installedRoot, staged) {
   const expectedFiles = staged.files.map(({ path, sha256, size }) => ({ path, sha256, size }));
   const actualFiles = files.map(({ path, sha256, size }) => ({ path, sha256, size }));
   if (JSON.stringify(actualFiles) !== JSON.stringify(expectedFiles)) {
-    throw new Error('Installed Lyra file inventory/content digest does not match the validated tarball.');
+    throw new Error(
+      'Installed Lyra file inventory/content digest does not match the validated tarball.' +
+        describeInventoryDrift(expectedFiles, actualFiles),
+    );
   }
   const actualContentSha256 = contentDigest(files);
   if (actualContentSha256 !== staged.contentSha256) {
@@ -3615,6 +3645,8 @@ export function createConsumerCommandPlan({
         '--no-audit',
         '--no-fund',
       ];
+  // `pnpm list` reads the consumer's own node_modules and lockfile; install-only options such as
+  // `--store-dir` are rejected as unknown by the list command.
   const listArgs = packageManager === 'pnpm'
     ? [
         'list',
@@ -3622,8 +3654,6 @@ export function createConsumerCommandPlan({
         '0',
         '--config.auto-install-peers=false',
         '--config.force=false',
-        '--store-dir',
-        storeDirectory,
       ]
     : ['ls', '--depth=0', '--strict-peer-deps', '--legacy-peer-deps=false', '--force=false'];
   const stage = (id, stageCommand, args, timeoutMs) => Object.freeze({

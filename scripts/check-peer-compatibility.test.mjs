@@ -900,6 +900,14 @@ test('binds package-manager transport to private tar bytes across path swaps and
     );
     await writeFile(join(installedRoot, 'dist', 'lyra.js'), 'export {};\n');
     await verifyInstalledPeerInstallation(installedRoot, staged);
+    // pnpm materializes bin shims for the package's own `bin` and its peers inside the installed
+    // package directory (`<pkg>/node_modules/.bin/*`). That is package-manager bookkeeping, never
+    // published content, so it must not fail the inventory comparison.
+    const shimDirectory = join(installedRoot, 'node_modules', '.bin');
+    await mkdir(shimDirectory, { recursive: true });
+    await writeFile(join(shimDirectory, 'lyra-ui-migrate'), '#!/bin/sh\nexit 0\n');
+    await verifyInstalledPeerInstallation(installedRoot, staged);
+    await rm(join(installedRoot, 'node_modules'), { recursive: true });
     await writeFile(join(installedRoot, 'dist', 'lyra.js'), 'export const swapped = true;\n');
     await assert.rejects(
       verifyInstalledPeerInstallation(installedRoot, staged),
@@ -2080,6 +2088,11 @@ test('exports isolated strict npm/pnpm command plans and validates both exact au
     if (packageManager === 'pnpm') {
       assert.ok(install.args.includes('--config.auto-install-peers=false'));
       assert.ok(install.args.includes('--store-dir'));
+      // `pnpm list` rejects install-only options outright ("Unknown option: 'store-dir'"), and the
+      // tree it prints comes from the consumer's own node_modules, never the store.
+      const tree = plan.find(({ id }) => id === 'dependency tree');
+      assert.ok(tree, 'pnpm consumer plan must include a dependency tree stage');
+      assert.equal(tree.args.includes('--store-dir'), false, 'pnpm list must not receive --store-dir');
     }
   }
   assert.notEqual(
