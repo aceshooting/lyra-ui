@@ -2508,6 +2508,130 @@ test('upgrade protects managed peer floors before synchronizing package-manager 
   );
 });
 
+/** Run one helper from upgrade.sh's exact-Node activation block against a fixture tree. The block
+ *  is extracted rather than re-implemented so the test fails when the script's own resolution
+ *  changes, and the ambient host's real version-manager directories are replaced by the fixture. */
+function runUpgradeNodeHelper({ root, invocation, env = {} }) {
+  const source = readFileSync(path.join(repoRoot, 'scripts/upgrade.sh'), 'utf8');
+  const blockStart = source.indexOf('\nread_exact_node_patch() {');
+  const blockEnd = source.indexOf('\nactivate_exact_node\n', blockStart + 1);
+  assert.ok(
+    blockStart >= 0 && blockEnd > blockStart,
+    'upgrade must define its exact-Node helpers ahead of the top-level activation call',
+  );
+  const helperSource = source.slice(blockStart + 1, blockEnd);
+  const result = spawnSync(
+    'bash',
+    ['-c', `set -euo pipefail\nROOT_DIR="$PWD"\n${helperSource}\n${invocation}`, 'upgrade-fixture'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      env: {
+        PATH: `${path.join(root, 'bin')}:/usr/bin:/bin`,
+        HOME: root,
+        NVM_DIR: path.join(root, 'nvm'),
+        XDG_DATA_HOME: path.join(root, 'data'),
+        ...env,
+      },
+    },
+  );
+  return result;
+}
+
+test('upgrade activates the exact .nvmrc Node before the fail-closed authority check', () => {
+  const upgradeScript = readFileSync(path.join(repoRoot, 'scripts/upgrade.sh'), 'utf8');
+  const activationIndex = exactTopLevelShellCommandIndex(upgradeScript, 'activate_exact_node');
+  const authorityIndex = exactTopLevelShellCommandIndex(
+    upgradeScript,
+    'node scripts/check-node-version.mjs',
+  );
+
+  assert.ok(activationIndex >= 0, 'upgrade must activate the exact Node authority itself');
+  assert.ok(
+    authorityIndex > activationIndex,
+    'the exact Node check must stay the fail-closed authority after activation',
+  );
+});
+
+test('upgrade selects only an installed Node whose reported patch matches .nvmrc', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-upgrade-node-'));
+  try {
+    writeFileSync(path.join(root, '.nvmrc'), '22.23.2\n');
+    const nvmExact = path.join(root, 'nvm/versions/node/v22.23.2/bin/node');
+    writeFakeNode(nvmExact, '22.23.2');
+    // A deterministic wrong-runtime shell: the ambient host's own node must not decide the result.
+    writeFakeNode(path.join(root, 'bin/node'), '26.5.0');
+
+    assert.equal(
+      runUpgradeNodeHelper({ root, invocation: 'read_exact_node_patch' }).stdout.trim(),
+      '22.23.2',
+      'the pinned patch must be read from .nvmrc',
+    );
+    writeFileSync(path.join(root, '.nvmrc'), '22.23.2\r\n');
+    assert.equal(
+      runUpgradeNodeHelper({ root, invocation: 'read_exact_node_patch' }).stdout.trim(),
+      '22.23.2',
+      'a CRLF checkout must resolve the same pinned patch',
+    );
+    writeFileSync(path.join(root, '.nvmrc'), '22.23.2\n');
+
+    assert.equal(
+      runUpgradeNodeHelper({ root, invocation: 'find_exact_node_bin 22.23.2' }).stdout.trim(),
+      nvmExact,
+      'the installed exact patch must be selected from the version manager',
+    );
+
+    const override = path.join(root, 'override/node');
+    writeFakeNode(override, '22.23.2');
+    assert.equal(
+      runUpgradeNodeHelper({
+        root,
+        invocation: 'find_exact_node_bin 22.23.2',
+        env: { UPGRADE_SH_NODE_BIN: override },
+      }).stdout.trim(),
+      override,
+      'an explicit override must preempt version-manager layouts',
+    );
+    assert.equal(
+      runUpgradeNodeHelper({
+        root,
+        invocation: 'find_exact_node_bin 22.23.2',
+        env: { UPGRADE_SH_NODE_BIN: path.join(root, 'missing/node') },
+      }).stdout.trim(),
+      nvmExact,
+      'an override that is not installed must not shadow a real exact install',
+    );
+
+    rmSync(nvmExact);
+    writeFakeNode(nvmExact, '22.24.0');
+    assert.equal(
+      runUpgradeNodeHelper({ root, invocation: 'find_exact_node_bin 22.23.2' }).stdout.trim(),
+      '',
+      'a directory named for the pinned patch must never outrank the version it reports',
+    );
+
+    const activation = runUpgradeNodeHelper({ root, invocation: 'activate_exact_node' });
+    assert.equal(activation.status, 0, activation.stderr);
+    assert.match(
+      activation.stderr,
+      /No installed Node 22\.23\.2 found to activate \(active: 26\.5\.0\)/u,
+      'a host with no matching install must say so and leave the authority check to fail closed',
+    );
+
+    rmSync(nvmExact);
+    writeFakeNode(nvmExact, '22.23.2');
+    const selected = runUpgradeNodeHelper({ root, invocation: 'activate_exact_node; command -v node' });
+    assert.equal(selected.status, 0, selected.stderr);
+    assert.equal(
+      selected.stdout.trim().split('\n').pop(),
+      nvmExact,
+      'activation must put the exact interpreter ahead of the wrong active runtime on PATH',
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('hosted peer qualification stays primary-only and quality jobs alone read the exact Node file', () => {
   const workflow = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
   const qualityStart = workflow.indexOf('\n  build_and_coverage_quality:');

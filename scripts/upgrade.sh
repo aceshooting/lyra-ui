@@ -9,6 +9,81 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# The repository pins ONE exact Node patch in .nvmrc, and every generator this script runs below is
+# only reviewed against it. Previously a shell with any other runtime active stopped here with
+# "Exact Node check failed: ... active Node is <x>" and left the caller to run `nvm use` by hand --
+# pure friction, because the pinned patch is almost always already installed and this script knows
+# exactly which one it needs. Select that interpreter into PATH first; scripts/check-node-version.mjs
+# immediately after remains the single fail-closed authority on whatever is finally active, so a
+# host with no matching install still fails with the canonical message rather than a second one.
+read_exact_node_patch() {
+  local version
+  version="$(<"$ROOT_DIR/.nvmrc")"
+  version="${version%$'\r'}"
+  if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+    echo "$ROOT_DIR/.nvmrc does not contain one canonical exact Node patch" >&2
+    return 1
+  fi
+  printf '%s\n' "$version"
+}
+
+node_patch_for_binary() {
+  "$1" -p 'process.versions.node' 2>/dev/null || true
+}
+
+# Print the absolute path of an installed Node interpreter whose patch is exactly "$1", or nothing.
+# Candidate layouts cover the version managers that read .nvmrc; each candidate is confirmed by
+# asking the binary itself, so a same-named directory holding a different patch is never selected.
+find_exact_node_bin() {
+  local want="$1"
+  local candidate
+  local -a candidates=()
+
+  # An explicit override first, for a host whose layout none of the defaults describe.
+  [[ -n "${UPGRADE_SH_NODE_BIN:-}" ]] && candidates+=("$UPGRADE_SH_NODE_BIN")
+  local data_home="${XDG_DATA_HOME:-${HOME:-}/.local/share}"
+  candidates+=("${NVM_DIR:-${HOME:-}/.nvm}/versions/node/v$want/bin/node")
+  candidates+=("${FNM_DIR:-$data_home/fnm}/node-versions/v$want/installation/bin/node")
+  candidates+=("${VOLTA_HOME:-${HOME:-}/.volta}/tools/image/node/$want/bin/node")
+  candidates+=("${ASDF_DATA_DIR:-${HOME:-}/.asdf}/installs/nodejs/$want/bin/node")
+  candidates+=("${MISE_DATA_DIR:-$data_home/mise}/installs/node/$want/bin/node")
+
+  for candidate in "${candidates[@]}"; do
+    [[ -n "$candidate" && -f "$candidate" && -x "$candidate" ]] || continue
+    [[ "$(node_patch_for_binary "$candidate")" == "$want" ]] || continue
+    printf '%s\n' "$candidate"
+    return 0
+  done
+  return 0
+}
+
+activate_exact_node() {
+  local want active selected selected_dir
+  want="$(read_exact_node_patch)"
+  active="$(node -p 'process.versions.node' 2>/dev/null || true)"
+  [[ "$active" == "$want" ]] && return 0
+
+  selected="$(find_exact_node_bin "$want")"
+  if [[ -z "$selected" ]]; then
+    echo "No installed Node $want found to activate (active: ${active:-none})." >&2
+    echo "Install it (for example: nvm install $want) or set UPGRADE_SH_NODE_BIN=/path/to/node." >&2
+    return 0
+  fi
+
+  if ! selected_dir="$(cd -P -- "$(dirname -- "$selected")" 2>/dev/null && pwd)"; then
+    echo "Could not resolve the directory of $selected" >&2
+    return 0
+  fi
+  # Prepending is enough for every child process here: pnpm, npx and each `pnpm dlx` helper start
+  # through a `#!/usr/bin/env node` shebang or inherit process.execPath, so they all follow PATH.
+  PATH="$selected_dir:$PATH"
+  export PATH
+  hash -r
+  echo "==> Activated exact Node $want from $selected_dir (was ${active:-none})"
+}
+
+activate_exact_node
+
 node scripts/check-node-version.mjs
 
 if ! command -v pnpm >/dev/null 2>&1; then

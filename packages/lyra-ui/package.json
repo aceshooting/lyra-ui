@@ -2563,7 +2563,7 @@
     "katex": "^0.18.5",
     "libphonenumber-js": "^1.13.12",
     "mammoth": "^1.12.2",
-    "maplibre-gl": "^6.6.0",
+    "maplibre-gl": "^6.7.0",
     "marked": "^18.0.11",
     "oxc-parser": "^0.148.0",
     "papaparse": "^5.7.0",
