@@ -98,6 +98,9 @@ trap 'rm -f "$peer_manifest_before"' EXIT
 cp packages/lyra-ui/package.json "$peer_manifest_before"
 
 echo "==> Upgrading dependencies in the workspace root and all workspace packages"
+# Storybook stays pinned at 10.5.10: 10.6.0 leaves several stories unmounted past the docs
+# harnesses' readiness wait (storybook:check, visual regression, show-code all fail). Lift the
+# reject once the harness or the stories are adapted to the newer preview.
 pnpm dlx npm-check-updates@latest \
   --packageManager pnpm \
   --workspaces \
@@ -105,6 +108,7 @@ pnpm dlx npm-check-updates@latest \
   --dep prod,dev,optional,packageManager \
   --target latest \
   --install never \
+  --reject storybook,@storybook/addon-a11y,@storybook/addon-docs,@storybook/web-components,@storybook/web-components-vite \
   --upgrade
 
 pnpm dlx npm-check-updates@latest \

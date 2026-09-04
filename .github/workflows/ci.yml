@@ -41,7 +41,9 @@ jobs:
       max-parallel: 3
       matrix:
         shard: [1, 2, 3]
-    timeout-minutes: 10
+    # Shards finish in 4-6 minutes on an ordinary runner; a slow one has taken 7-9, and 10 cut one
+    # shard short on a release-adjacent push.
+    timeout-minutes: 15
     steps:
       # contract-policy's component-metadata gate reproduces immutable release-tag evidence and
       # intentionally fails closed in shallow clones. Every worker uses full history because the
