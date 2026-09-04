@@ -1,5 +1,5 @@
 import { fixture, expect, html } from "@open-wc/testing";
-import { LitElement, nothing, type PropertyValues } from "lit";
+import { LitElement, css, nothing, type PropertyValues } from "lit";
 import { property } from "lit/decorators.js";
 import {
   observeInheritedContext,
@@ -34,6 +34,23 @@ class Demo extends LyraElement {
   }
 }
 customElements.define(tag("demo-base"), Demo);
+
+class StyledDemo extends LyraElement {
+  static override styles = [
+    LyraElement.styles,
+    css`
+      :host {
+        display: block;
+        padding: 3px;
+      }
+    `,
+  ];
+
+  override render() {
+    return html`<span>styled</span>`;
+  }
+}
+customElements.define(tag('demo-styled'), StyledDemo);
 
 class WarnDemo extends LyraElement {
   @property({ reflect: true, attribute: 'chart-axis' }) chartAxis = '';
@@ -893,6 +910,34 @@ it("emit() normalizes an omitted no-payload detail to null", async () => {
   emit("lr-notification", undefined);
 
   expect(events.map((event) => event.detail)).to.deep.equal([null, null]);
+});
+
+it('renders a shadow root created in another document with inline styles instead of shared constructed sheets', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
+  // Upgraded in this document but never connected here, so its render root is created only
+  // once it lives in the other document (the same shape as a child an adopted element renders
+  // later). Constructed stylesheets belong to this document; Chromium refuses to adopt them
+  // into a shadow root of another document.
+  const adopted = document.createElement(tag('demo-styled')) as StyledDemo;
+  const local = (await fixture(html`<lr-demo-styled></lr-demo-styled>`)) as StyledDemo;
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(adopted));
+    await adopted.updateComplete;
+    expect(frameWindow.getComputedStyle(adopted).paddingTop, 'component styles reach the other document').to.equal('3px');
+    expect(adopted.shadowRoot!.adoptedStyleSheets.length, 'no constructed sheet crosses documents').to.equal(0);
+    expect(adopted.shadowRoot!.querySelectorAll('style').length > 0, 'inline style fallback').to.be.true;
+    expect(adopted.shadowRoot!.querySelector('span')?.textContent).to.equal('styled');
+    // The same-document path keeps the shared constructed sheets.
+    expect(local.shadowRoot!.adoptedStyleSheets.length > 0).to.be.true;
+    expect(local.shadowRoot!.querySelectorAll('style').length).to.equal(0);
+    expect(getComputedStyle(local).paddingTop).to.equal('3px');
+  } finally {
+    adopted.remove();
+    frame.remove();
+  }
 });
 
 it("emit() constructs events in the adopted owner document realm", async () => {

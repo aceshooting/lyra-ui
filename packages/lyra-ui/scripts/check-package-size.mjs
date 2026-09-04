@@ -42,10 +42,56 @@ export function validatePackageBudgets(budgets) {
       `package budget maximum.${metric} must be a positive integer`);
   }
   const reductionFactor = 1 - budgets.minimumUnpackedByteReductionPercent / 100;
-  assert.ok(
-    budgets.maximum.unpackedBytes <= Math.floor(budgets.baseline.unpackedBytes * reductionFactor),
-    'package budget maximum.unpackedBytes must enforce at least a 25% reduction from its baseline',
-  );
+  const unpackedTarget = Math.floor(budgets.baseline.unpackedBytes * reductionFactor);
+  const unpackedBudget = budgets.unpackedBudgetPolicy;
+  if (unpackedBudget === undefined) {
+    assert.ok(
+      budgets.maximum.unpackedBytes <= unpackedTarget,
+      'package budget maximum.unpackedBytes must enforce at least a 25% reduction from its baseline',
+    );
+  } else {
+    // The same measured exception the packed budget carries: allowed only while the complete
+    // required package genuinely exceeds the target, bound to an exact reviewed measurement with
+    // tight headroom, and never anywhere near the pre-8 baseline.
+    assert.equal(
+      unpackedBudget.strategy,
+      'measured-required-artifact-exception',
+      'package budget unpacked strategy must name the reviewed required-artifact exception',
+    );
+    assert.equal(
+      unpackedBudget.exceptionReason,
+      'required-public-artifacts-exceed-25-percent-target',
+      'package budget unpacked exception must retain its measured infeasibility reason',
+    );
+    for (const field of ['reviewedMeasurementBytes', 'headroomBytes', 'targetAt25PercentBytes']) {
+      assert.ok(
+        Number.isInteger(unpackedBudget[field]) && unpackedBudget[field] > 0,
+        `package budget unpackedBudgetPolicy.${field} must be a positive integer`,
+      );
+    }
+    assert.equal(
+      unpackedBudget.targetAt25PercentBytes,
+      unpackedTarget,
+      'package budget unpackedBudgetPolicy.targetAt25PercentBytes must match the baseline calculation',
+    );
+    assert.ok(
+      unpackedBudget.reviewedMeasurementBytes > unpackedTarget,
+      'package budget unpacked exception is only allowed while the reviewed measurement exceeds the 25% target',
+    );
+    assert.ok(
+      unpackedBudget.headroomBytes <= Math.ceil(unpackedBudget.reviewedMeasurementBytes * 0.005),
+      'package budget unpacked headroom must remain at or below 0.5% of the reviewed measurement',
+    );
+    assert.equal(
+      budgets.maximum.unpackedBytes,
+      unpackedBudget.reviewedMeasurementBytes + unpackedBudget.headroomBytes,
+      'package budget maximum.unpackedBytes must equal the reviewed measurement plus tight headroom',
+    );
+    assert.ok(
+      budgets.maximum.unpackedBytes < budgets.baseline.unpackedBytes,
+      'package budget maximum.unpackedBytes must remain below the pre-8 baseline',
+    );
+  }
 
   const packedBudget = budgets.packedBudgetPolicy;
   assert.equal(
@@ -186,7 +232,8 @@ export function formatPackageSummary(metrics, budgets) {
   return (
     `package: ${formatBytes(metrics.packedBytes)} packed ` +
     `(${packedReduction.toFixed(1)}% reduction; reviewed exception to the 25% target), ` +
-    `${formatBytes(metrics.unpackedBytes)} unpacked (${unpackedReduction.toFixed(1)}% reduction), ` +
+    `${formatBytes(metrics.unpackedBytes)} unpacked (${unpackedReduction.toFixed(1)}% reduction` +
+    `${budgets.unpackedBudgetPolicy ? '; reviewed exception to the 25% target' : ''}), ` +
     `${metrics.fileCount.toLocaleString('en')} files`
   );
 }

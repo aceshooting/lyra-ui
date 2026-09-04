@@ -39,6 +39,9 @@ export async function compactBuildJavaScript(directory) {
       minifyIdentifiers: false,
       minifySyntax: true,
       minifyWhitespace: true,
+      // ES modules are UTF-8; esbuild's default ASCII charset would rewrite every non-ASCII
+      // character (most of each translation catalog) as a six-byte `\uXXXX` escape.
+      charset: 'utf8',
       sourcemap: false,
       sourcefile: path.relative(directory, file),
       target: 'es2022',

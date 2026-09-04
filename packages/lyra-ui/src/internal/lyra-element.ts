@@ -1,6 +1,7 @@
 import {
   LitElement,
   type CSSResultGroup,
+  type CSSResultOrNative,
   type PropertyDeclaration,
   type PropertyValues,
   type ReactiveController,
@@ -1186,6 +1187,16 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
   }
 }
 
+/** The `adoptedStyleSheets` setter rejects a sheet constructed in another document. The exception
+ *  is raised in the shadow root's own realm, so it is matched by name rather than by prototype. */
+function isCrossDocumentStyleSheetRejection(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { name?: unknown }).name === 'NotAllowedError'
+  );
+}
+
 /**
  * Shared base for every Lyra component. Supplies the design-token layer
  * (`--lr-theme-*` theme-input properties with hardcoded `--lr-*` fallbacks).
@@ -1329,6 +1340,36 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     const internals = super.attachInternals();
     formInternalsHook?.(this, internals);
     return internals;
+  }
+
+  /**
+   * Lit caches one constructed `CSSStyleSheet` per class, built in this realm's global document.
+   * A shadow root created in another document (an element adopted into an iframe, or a child an
+   * adopted element renders later) cannot adopt those sheets: the engine rejects the assignment
+   * with `NotAllowedError`. Such roots receive inline `<style>` elements instead, the same
+   * fallback Lit itself takes where constructed stylesheets are unsupported. Every other root
+   * keeps the shared sheets.
+   */
+  protected override createRenderRoot(): HTMLElement | DocumentFragment {
+    try {
+      return super.createRenderRoot();
+    } catch (error) {
+      if (!isCrossDocumentStyleSheetRejection(error)) throw error;
+      const constructor = this.constructor as typeof LyraElement;
+      // The superclass attached the shadow root before the stylesheet assignment was rejected.
+      const renderRoot = this.shadowRoot ?? this.attachShadow(constructor.shadowRootOptions);
+      const owner = this.ownerDocument;
+      for (const style of constructor.elementStyles as readonly CSSResultOrNative[]) {
+        const element = owner.createElement('style');
+        element.textContent =
+          style instanceof CSSStyleSheet
+            ? Array.from(style.cssRules, (rule) => rule.cssText).join('\n')
+            : style.cssText;
+        renderRoot.appendChild(element);
+      }
+      this.renderOptions.renderBefore ??= renderRoot.firstChild;
+      return renderRoot;
+    }
   }
 
   override connectedCallback(): void {

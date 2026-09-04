@@ -271,9 +271,11 @@ assert.throws(
 const reviewedCeilingKeys = Object.keys(budgets)
   .filter((key) => key.startsWith('dist/') || key === '$componentP95GzipKb' || key === '$componentMaxGzipKb')
   .sort();
+// 30 KiB held until the base class gained its cross-document render-root fallback, which every
+// bundle shares; the canary moves one whole KiB and stays the tightest standalone ceiling.
 assert.ok(
-  budgets['dist/components/forms/button/button.js'] <= 30,
-  'the standalone button registration must remain at or below 30 KiB gzip',
+  budgets['dist/components/forms/button/button.js'] <= 31,
+  'the standalone button registration must remain at or below 31 KiB gzip',
 );
 assert.deepEqual(reviewedCeilingKeys, [
   '$componentMaxGzipKb',

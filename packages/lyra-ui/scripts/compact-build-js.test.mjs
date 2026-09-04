@@ -17,8 +17,14 @@ try {
     `// copied public executables are emitted after the main build\nexport function migrate(value) { return value ?? 'fallback'; }\n`,
   );
   await writeFile(path.join(nested, 'entry.d.ts'), '/** IDE documentation stays. */\nexport class ReadableName {}\n');
+  // Translation catalogs are mostly non-ASCII prose. ES modules are UTF-8 by definition, so the
+  // published bytes keep the characters themselves rather than six-byte `\\uXXXX` escapes.
+  await writeFile(
+    path.join(nested, 'strings.js'),
+    "export const strings = { noData: '\u0644\u0627 \u062a\u0648\u062c\u062f', ellipsis: '\u2026' };\n",
+  );
   const result = await compactBuildJavaScript(fixture);
-  assert.equal(result.files, 2);
+  assert.equal(result.files, 3);
   assert.ok(result.afterBytes < result.beforeBytes);
   const output = await readFile(path.join(nested, 'entry.js'), 'utf8');
   assert.doesNotMatch(output, /duplicate authored prose|sourceMappingURL/);
@@ -26,6 +32,10 @@ try {
   assert.match(output, /kept/);
   assert.doesNotMatch(output, /discarded/);
   assert.doesNotMatch(output, /true\s*\?/);
+  const stringsOutput = await readFile(path.join(nested, 'strings.js'), 'utf8');
+  assert.match(stringsOutput, /\u0644\u0627 \u062a\u0648\u062c\u062f/u, 'non-ASCII text ships as UTF-8');
+  assert.match(stringsOutput, /\u2026/u);
+  assert.doesNotMatch(stringsOutput, /\\u[0-9a-fA-F]{4}/u, 'no `\\uXXXX` escapes for printable characters');
   const cliOutput = await readFile(path.join(nested, 'cli.mjs'), 'utf8');
   assert.doesNotMatch(cliOutput, /copied public executables/);
   assert.ok(cliOutput.length < 70);

@@ -188,6 +188,11 @@ never set `hidden` on `::part(content)` yourself — the component now manages i
 - New registration-free helper modules, usable without registering their owning component: stack
   trace parsing, span projection, agent-status presentation, approval-state helpers, and the
   default widget-type registry (see `llms/shared.md` for exact import paths).
+- Every component can now be adopted into another document (for example an `<iframe>`) and keep
+  rendering there, including children it creates after adoption: a shadow root that lives in
+  another document receives inline `<style>` elements instead of the shared constructed
+  stylesheets that Chromium refuses to adopt across documents. Same-document rendering is
+  unchanged.
 - `attachInternalsSafely()` now inspects data descriptors without invoking accessors, returning
   safe fallback internals for a missing, accessor-backed, non-callable, or throwing
   `attachInternals` implementation.

@@ -85,6 +85,56 @@ test('enforces 25% unpacked reduction and an honest measured packed ceiling', ()
   );
 });
 
+test('accepts only an honest measured unpacked exception that mirrors the packed policy', () => {
+  const withException = {
+    ...budgets,
+    unpackedBudgetPolicy: {
+      strategy: 'measured-required-artifact-exception',
+      exceptionReason: 'required-public-artifacts-exceed-25-percent-target',
+      reviewedMeasurementBytes: 3_010,
+      headroomBytes: 10,
+      targetAt25PercentBytes: 3_000,
+    },
+    maximum: { ...budgets.maximum, unpackedBytes: 3_020 },
+  };
+  assert.doesNotThrow(() => validatePackageBudgets(withException));
+  const withPolicy = (policy, maximumUnpackedBytes = withException.maximum.unpackedBytes) => ({
+    ...withException,
+    unpackedBudgetPolicy: { ...withException.unpackedBudgetPolicy, ...policy },
+    maximum: { ...withException.maximum, unpackedBytes: maximumUnpackedBytes },
+  });
+  assert.throws(
+    () => validatePackageBudgets(withPolicy({ strategy: 'trust-me' })),
+    /unpacked strategy must name the reviewed required-artifact exception/,
+  );
+  assert.throws(
+    () => validatePackageBudgets(withPolicy({ targetAt25PercentBytes: 2_999 })),
+    /targetAt25PercentBytes must match the baseline calculation/,
+  );
+  // An exception is not a license: it exists only while the measurement really exceeds the target.
+  assert.throws(
+    () => validatePackageBudgets(withPolicy({ reviewedMeasurementBytes: 3_000, headroomBytes: 20 })),
+    /only allowed while the reviewed measurement exceeds the 25% target/,
+  );
+  assert.throws(
+    () => validatePackageBudgets(withPolicy({ headroomBytes: 17 }, 3_027)),
+    /unpacked headroom must remain at or below 0\.5%/,
+  );
+  assert.throws(
+    () => validatePackageBudgets(withPolicy({}, 3_021)),
+    /maximum\.unpackedBytes must equal the reviewed measurement plus tight headroom/,
+  );
+  assert.throws(
+    () => validatePackageBudgets(withPolicy({ reviewedMeasurementBytes: 3_999, headroomBytes: 1 }, 4_000)),
+    /maximum\.unpackedBytes must remain below the pre-8 baseline/,
+  );
+  const summary = formatPackageSummary(
+    { packedBytes: 884, unpackedBytes: 3_015, fileCount: 26, files: [] },
+    withException,
+  );
+  assert.match(summary, /unpacked \(24\.6% reduction; reviewed exception to the 25% target\)/);
+});
+
 test('reports byte, file-count, and dangling-map regressions', () => {
   assert.deepEqual(
     packageBudgetFindings(
