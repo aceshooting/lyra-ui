@@ -517,7 +517,11 @@ jobs:
   packed_consumer_contract:
     name: packed-consumer / contract
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Typically ~10 minutes, but this job packs, installs, and exercises the tarball through
+    # several consumers, and a slow hosted runner has spent four minutes in toolchain setup and
+    # seven in the contracts step alone before the peer matrix even started; 15 cut two release
+    # qualifications short at the peer-compatibility step.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
