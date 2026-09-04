@@ -60,9 +60,11 @@ test('models the raw core ceiling as the established baseline plus capability al
 
 test('keeps the packed button canary aligned with the authoritative granular hard budget', () => {
   const budgetPath = 'dist/components/forms/button/button.js';
+  // 31 KiB since the base class gained its cross-document render-root fallback (shared by every
+  // bundle); still the tightest standalone canary.
   assert.equal(
     bundleBudgets[budgetPath],
-    30,
+    31,
     'the granular button entry must retain an explicit KiB ceiling',
   );
   assert.match(
