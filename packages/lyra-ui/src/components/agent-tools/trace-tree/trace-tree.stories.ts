@@ -36,6 +36,7 @@ const spans: LyraSpan[] = [
 const meta: Meta = {
   title: 'Observability/Trace Tree',
   component: 'lr-trace-tree',
+  parameters: { docs: { description: { component: 'Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including surrounding whitespace. The first valid admitted duplicate continues to win.' } } },
   tags: ['autodocs'],
 };
 export default meta;

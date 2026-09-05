@@ -2516,6 +2516,20 @@ it('provides shadow-local layout for MapLibre canvas, markers, and popups withou
     expect(getComputedStyle(popup).pointerEvents).to.equal('none');
     expect(getComputedStyle(popupContent).pointerEvents).to.equal('auto');
     expect(getComputedStyle(popupClose).position).to.equal('absolute');
+    for (const direction of ['rtl', 'ltr']) {
+      el.dir = direction;
+      await el.updateComplete;
+      await aTimeout(0);
+      const origin = container.getBoundingClientRect();
+      for (const overlay of [marker, popup]) {
+        const style = getComputedStyle(overlay);
+        expect(style.transform).to.not.equal('none');
+        const transform = new DOMMatrix(style.transform);
+        const rect = overlay.getBoundingClientRect();
+        expect(rect.left - origin.left, `${direction} peer overlay origin`).to.be.closeTo(transform.e, 1);
+        expect(rect.top - origin.top, `${direction} peer overlay origin`).to.be.closeTo(transform.f, 1);
+      }
+    }
   } finally {
     setMapCanvasReadyCallback(el, null);
     el.remove();

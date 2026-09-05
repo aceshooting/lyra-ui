@@ -1178,6 +1178,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   promptStudioVariables: 'Variables',
   promptStudioVersions: 'Versions',
   promptStudioPreview: 'Resolved preview',
+  promptStudioPreviewLimit: 'Preview unavailable: expansion limit exceeded.',
   promptStudioRun: 'Run prompt',
   promptStudioSave: 'Save version',
   promptStudioAddMessage: 'Add message',

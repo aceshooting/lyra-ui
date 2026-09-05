@@ -61,6 +61,10 @@ export interface LyraSwatchPickerEventMap {
  * deliberately not form-associated (it submits nothing, carries no `name`, validity or reset
  * semantics), so an ancestor `<fieldset disabled>` does not cascade into it.
  *
+ * Own `disabled` takes effect immediately for host activation and focus, including calls made in
+ * the same task as the property change. Blocked activation leaves value and change events untouched;
+ * blocked focus keeps outside focus in place.
+ *
  * @customElement lr-swatch-picker
  * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value }`.
@@ -230,6 +234,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   }
 
   private select(option: SwatchPickerItem, index: number): void {
+    if (this.disabled) return;
     const previousIndex = this.resolveSelectedIndex();
     if (index === previousIndex && option.value === this.value) return;
     const previousValue = this.value;
@@ -241,6 +246,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   }
 
   private focusSwatch(index: number): void {
+    if (this.disabled) return;
     const button = this.renderRoot.querySelector(
       `[part="swatch"][data-index="${index}"]`
     ) as HTMLElement | null;
@@ -307,11 +313,13 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
    *  Without this, `HTMLElement.prototype.click()` on the host is a no-op: no click handler is
    *  bound to the host itself, only to the individual `[part="swatch"]` buttons. */
   override click(): void {
+    if (this.disabled) return;
     this.tabbableSwatch()?.click();
   }
 
   /** Moves focus to the tabbable swatch. */
   override focus(options?: FocusOptions): void {
+    if (this.disabled) return;
     this.tabbableSwatch()?.focus(options);
   }
 

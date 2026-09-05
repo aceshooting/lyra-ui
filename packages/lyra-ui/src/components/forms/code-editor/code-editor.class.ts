@@ -7,6 +7,10 @@ import {
   isBarredFromValidation,
 } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import {
+  acquireResolvedAriaRelationship,
+  type ResolvedAriaRelationshipLease,
+} from '../../../internal/aria-controls.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './code-editor.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -65,12 +69,18 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * its active `--lr-code-editor-min-block-size` floor.
  * The native textarea receives `required` and explicit stateful `aria-invalid`: visible error
  * chrome wins immediately, while intrinsic/custom invalidity is exposed only after interaction.
+ * Form reset restores the default and pristine interaction feedback while required and custom
+ * validity constraints remain. Removed label/hint/error attributes render as absent chrome.
+ * Host `aria-describedby` references resolve onto the native textarea before local error/hint
+ * guidance and remain current across target replacement, reconnect, and adoption.
  *
  * Tab-width precedence, highest first: an explicitly assigned `tabSize` (property or `tab-size`
  * attribute) wins over everything; otherwise a host-level `--lr-code-editor-tab-size` override
  * wins; otherwise the stylesheet's `:host` default of `2` applies. The property therefore stays the
  * primary knob, but it no longer silently shadows the token while it sits at its default -- see
  * `indentWidth` for how the same order drives the Tab key, not just the rendered tab stops.
+ * Native text and its private measurement use the same tab width. Soft/hard wrapping fits the
+ * editor allocation; unwrapped text and wrapped lines share the editor frame's scroll surface.
  * @customElement lr-code-editor
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
@@ -278,6 +288,53 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @query('.editor-caret-measure') private caretMeasure?: HTMLElement;
   @state() private gutterWindowStart = 0;
   @state() private caretOffset = 0;
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+  private wrappedGeometryObserver?: ResizeObserver;
+  private wrappedLineStarts?: { value: string; offsets: number[] };
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) {
+      this.syncExternalDescription();
+      this.observeWrappedGeometry();
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.wrappedGeometryObserver?.disconnect();
+    this.wrappedGeometryObserver = undefined;
+    this.releaseExternalDescription();
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    this.wrappedGeometryObserver?.disconnect();
+    this.wrappedGeometryObserver = undefined;
+    if (this.isConnected && this.hasUpdated) {
+      this.syncExternalDescription();
+      this.observeWrappedGeometry();
+    }
+  }
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const owner = this.textarea;
+    if (!owner) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(owner);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, owner, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
+  override formResetCallback(): void {
+    super.formResetCallback();
+    this.touched = false;
+  }
   /** The normalized live value. Native textarea line endings are always LF; the host, form state,
    * gutter and selection APIs use that same representation. */
   override get value(): string {
@@ -400,7 +457,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this.fitToContent();
   }
   /** Reads or sets the editor frame's physical scroll offsets. The private native textarea is
-   * deliberately sized to its unwrapped measurement layer, so it never owns a competing scroll
+   * deliberately sized to its matching text measurement layer, so it never owns a competing scroll
    * range that could desynchronize the line-number gutter or a programmatic scroll. */
   scrollPosition(position?: {
     top?: number;
@@ -558,6 +615,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     if (this.textarea && this.textarea.value !== this.value)
       this.textarea.value = this.value;
     if (
@@ -584,6 +642,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       this.fitToContent();
     }
     this.syncGutterInlinePosition();
+    this.observeWrappedGeometry();
+    this.syncWrappedGutter();
     if (changed.has('caretOffset') || changed.has('value'))
       this.scrollCaretIntoView();
   }
@@ -628,6 +688,85 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       `${finiteNumber(editor.scrollLeft, 0)}px`,
     );
   }
+  private get wrapsText(): boolean {
+    return this.wrap === 'soft' || this.wrap === 'hard';
+  }
+
+  private lineStarts(): number[] {
+    if (this.wrappedLineStarts?.value === this.value) return this.wrappedLineStarts.offsets;
+    const offsets = [0];
+    for (let index = 0; index < this.value.length; index++) {
+      if (this.value.charCodeAt(index) === 10) offsets.push(index + 1);
+    }
+    this.wrappedLineStarts = { value: this.value, offsets };
+    return offsets;
+  }
+
+  /** Measures logical line starts without creating one DOM node per source line. */
+  private wrappedLineOffset(offset: number): number {
+    const measure = this.renderRoot.querySelector<HTMLElement>('.editor-measure');
+    if (!measure) return 0;
+    const nodes = Array.from(measure.childNodes).filter((node) => node.nodeType === 3);
+    const range = this.ownerDocument.createRange();
+    const first = nodes.find((node) => (node.textContent?.length ?? 0) > 0);
+    if (!first) return 0;
+    range.setStart(first, 0);
+    range.setEnd(first, 1);
+    const firstTop = range.getBoundingClientRect().top;
+    let remaining = offset;
+    for (const node of nodes) {
+      const length = node.textContent?.length ?? 0;
+      if (remaining < length) {
+        range.setStart(node, remaining);
+        range.setEnd(node, remaining + 1);
+        return range.getBoundingClientRect().top - firstTop;
+      }
+      remaining -= length;
+    }
+    return 0;
+  }
+
+  private syncWrappedGutter(): void {
+    if (!this.lineNumbers) return;
+    const lines = this.renderRoot.querySelectorAll<HTMLElement>('.gutter-line');
+    const start = Math.min(this.gutterWindowStart, Math.max(0, this.countLines() - 1));
+    if (!this.wrapsText) {
+      this.gutter?.style.removeProperty('block-size');
+      lines.forEach((line, index) => {
+        line.style.insetBlockStart = `calc(var(--lr-code-editor-line-height, var(--_lr-code-editor-line-height)) * ${start + index}em)`;
+      });
+      return;
+    }
+    const offsets = this.lineStarts();
+    // Finish geometry reads before writing any row styles, keeping layout work in one phase.
+    const positions = Array.from(lines, (_line, index) => this.wrappedLineOffset(offsets[start + index] ?? 0));
+    const height = this.renderRoot.querySelector<HTMLElement>('.editor-measure')?.getBoundingClientRect().height;
+    if (height !== undefined) this.gutter?.style.setProperty('block-size', `${height}px`);
+    lines.forEach((line, index) => {
+      line.style.insetBlockStart = `${positions[index]}px`;
+    });
+  }
+
+  private observeWrappedGeometry(): void {
+    if (!this.wrapsText || !this.lineNumbers || !this.isConnected) {
+      this.wrappedGeometryObserver?.disconnect();
+      this.wrappedGeometryObserver = undefined;
+      return;
+    }
+    if (this.wrappedGeometryObserver) return;
+    const measure = this.renderRoot.querySelector<HTMLElement>('.editor-measure');
+    const ownerDocument = this.ownerDocument;
+    const Observer = ownerDocument.defaultView?.ResizeObserver;
+    if (!measure || !Observer) return;
+    const observer = new Observer(() => {
+      if (!this.isConnected || this.ownerDocument !== ownerDocument || this.wrappedGeometryObserver !== observer) return;
+      this.onEditorScroll();
+      this.syncWrappedGutter();
+    });
+    this.wrappedGeometryObserver = observer;
+    observer.observe(measure);
+  }
+
   private onEditorScroll = (): void => {
     this.syncGutterInlinePosition();
     if (!this.lineNumbers || !this.editor || !this.textarea) return;
@@ -638,10 +777,19 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       ? Number.parseFloat(computed.lineHeight)
       : Number.NaN;
     if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
-    const next = Math.max(
-      0,
-      Math.floor(this.editor.scrollTop / lineHeight) - 20,
-    );
+    let firstVisible = Math.floor(this.editor.scrollTop / lineHeight);
+    if (this.wrapsText) {
+      const offsets = this.lineStarts();
+      let low = 0;
+      let high = offsets.length - 1;
+      while (low < high) {
+        const middle = Math.ceil((low + high) / 2);
+        if (this.wrappedLineOffset(offsets[middle]!) <= this.editor.scrollTop) low = middle;
+        else high = middle - 1;
+      }
+      firstVisible = low;
+    }
+    const next = Math.max(0, firstVisible - 20);
     if (next !== this.gutterWindowStart) this.gutterWindowStart = next;
   };
   private gutterRows(lineCount: number): TemplateResult {
@@ -700,13 +848,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
         this.resize === 'auto'
           ? 'none'
           : sanitizeCssResize(this.resize, 'both'),
-      ...(this.tabSizeAssigned
-        ? { '--lr-code-editor-tab-size': String(this._tabSize) }
-        : {}),
     };
-    const hasLabel = this.hasLabelSlot || this.label.length > 0;
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const contentStyle = this.tabSizeAssigned
+      ? { '--lr-code-editor-tab-size': String(this._tabSize) }
+      : {};
+    const hasLabel = this.hasLabelSlot || (this.label ?? '').length > 0;
+    const hasHint = this.hasHintSlot || (this.hint ?? '').length > 0;
+    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
     const describedBy = [
       hasError ? 'textarea-error' : '',
       hasHint ? 'textarea-hint' : '',
@@ -736,7 +884,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
               ${this.gutterRows(lineCount)}
             </div>`
           : nothing}
-        <div class="editor-content">
+        <div class="editor-content" data-wrap=${this.wrap} style=${styleMap(contentStyle)}>
           <span class="editor-measure" data-wrap=${this.wrap} aria-hidden="true"
             >${this.value.slice(0, this.caretOffset)}<span
               class="editor-caret-measure"

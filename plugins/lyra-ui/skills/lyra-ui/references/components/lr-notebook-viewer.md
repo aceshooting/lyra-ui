@@ -32,7 +32,10 @@ are removed, and only inline base64 raster image sources render. Sanitized `imag
 is likewise network-silent and non-interactive: animation is removed and only same-document
 fragment references or inline base64 raster image references survive.
 Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `path[0]` as a cell
-index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, no editing, no
+index; `fragment` anchors resolve a cell's own `id`. For cells with IDs, successful public anchor
+navigation scrolls the matching virtual row into the notebook allocation and applies active-cell
+paint using that same ID. Repeating a target scrolls back to it after manual scrolling.
+`maxHeight` also bounds the child virtual viewport. No execution, no kernels, no editing, no
 ipywidgets.
 
 **Properties:** `src: string = ''` — URL to fetch and parse as a notebook; ignored while `notebook`

@@ -20,6 +20,9 @@ A selectable row representing one chat session in a history sidebar list. Usable
 `renderItem()` payload of `<lr-virtual-list>`; has no dependency on that (or any) other component.
 First-party invention (no Web Awesome equivalent).
 
+Inline rename keeps IME composition keys in the editor; ordinary Enter commits and Escape cancels
+after composition.
+
 **Properties:**
 
 - `conversationId: string = ''` (attribute `conversation-id`) — stable domain identity carried by

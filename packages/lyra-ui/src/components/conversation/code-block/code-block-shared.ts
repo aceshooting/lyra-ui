@@ -273,7 +273,7 @@ export async function scrollCodeBlockToAnchor(
       ? lineRangeAnchorById(host.highlights, target)
       : target;
   if (!anchor || anchor.kind !== 'line-range') return false;
-  if (anchor.start < 1 || anchor.start > codeBlockLineCount(host.code))
+  if (anchor.start < 1 || anchor.start > codeBlockLineCount(host.code ?? ''))
     return false;
   await host.updateComplete;
   const body = host.renderRoot.querySelector(
@@ -413,7 +413,7 @@ function codeBlockSelectionAnchor(
 }
 
 /** Every property whose change invalidates the cached `highlightedHtml`. */
-export function codeBlockNeedsHighlightResync(
+function codeBlockNeedsHighlightResync(
   changed: PropertyValues
 ): boolean {
   return (
@@ -903,6 +903,16 @@ export interface CodeBlockInteractionOptions {
 export class CodeBlockInteractionController {
   private copyTimer?: { owner: Window; handle: number };
   private copyGeneration = 0;
+  private highlightedLocale?: string;
+  private highlightedLineLabel?: string;
+
+  /** Localized gutter markup is cached with the effective catalog label and number locale. */
+  needsHighlightResync(changed: PropertyValues, locale: string, lineLabel: string): boolean {
+    const localizationChanged = this.highlightedLocale !== locale || this.highlightedLineLabel !== lineLabel;
+    this.highlightedLocale = locale;
+    this.highlightedLineLabel = lineLabel;
+    return localizationChanged || codeBlockNeedsHighlightResync(changed);
+  }
 
   constructor(private readonly options: CodeBlockInteractionOptions) {}
 
@@ -954,7 +964,7 @@ export class CodeBlockInteractionController {
     const action = codeBlockLineKeyAction(
       e.key,
       line,
-      codeBlockLineCount(host.code)
+      codeBlockLineCount(host.code ?? '')
     );
     if (action === null) return;
     e.preventDefault();
@@ -1010,7 +1020,7 @@ export class CodeBlockInteractionController {
   copy = async (): Promise<void> => {
     const { host } = this.options;
     const owner = host.isConnected ? host.ownerDocument.defaultView : null;
-    const text = host.code;
+    const text = host.code ?? '';
     const generation = ++this.copyGeneration;
     this.cancelCopyTimer();
     this.setCopyStatus('rest');

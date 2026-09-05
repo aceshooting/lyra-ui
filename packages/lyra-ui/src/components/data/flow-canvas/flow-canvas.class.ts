@@ -299,7 +299,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private _orientation: LyraOrientation = 'horizontal';
-  /** Downstream layout and handle axis. Invalid runtime/attribute values normalize to horizontal. */
+  /** Downstream layout and handle axis. Horizontal RTL reflects model coordinates while authored,
+   * generated and portable fallback cards retain readable content. Invalid runtime/attribute
+   * values normalize to horizontal. */
   @property({ reflect: true })
   get orientation(): LyraOrientation {
     return this._orientation;
@@ -371,7 +373,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   @property({ type: Number, attribute: 'node-gap' }) nodeGap = 24;
   private _decorations: FlowRunDecorations | null = null;
   /** Deeply snapshotted, frozen run decorations, bounded to 10,000 keys and a finite nested-data
-   * budget. Reassign the record to update. */
+   * budget. Invalid statuses and records with unreadable nested fields are omitted independently,
+   * retaining valid neighbors. Reassign the record to update. */
   @property({ attribute: false })
   get decorations(): FlowRunDecorations | null {
     return this._decorations;

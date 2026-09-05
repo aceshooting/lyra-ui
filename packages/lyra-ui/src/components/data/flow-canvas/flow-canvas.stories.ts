@@ -38,6 +38,16 @@ export const Default: Story = {
   `,
 };
 
+export const ReadableRtlCards: Story = {
+  render: () => html`
+    <div dir="rtl">
+      <lr-flow-canvas orientation="horizontal" style="width:100%;height:24rem" .nodes=${nodes} .edges=${edges}>
+        <lr-flow-node node-id="summarize" heading="Summarize"></lr-flow-node>
+      </lr-flow-canvas>
+    </div>
+  `,
+};
+
 export const DynamicAuthoredCardLease: Story = {
   name: 'Dynamic authored-card matching',
   parameters: {

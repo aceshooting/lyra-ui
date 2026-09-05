@@ -10,6 +10,7 @@ const meta: Meta = {
   tags: ['autodocs'],
   parameters: {
     docs: {
+      description: { component: 'An initial playing mount emits one start lifecycle; target changes, timing changes, reconnect and replay retain their own starts.' },
       source: { type: 'code' },
     },
   },

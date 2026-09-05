@@ -66,7 +66,8 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
    *  silently falling back to initials. */
   @property() image = '';
 
-  /** Accessible description matching the upstream avatar contract. A host `aria-label` wins. */
+  /** Accessible description matching the upstream avatar contract. A host `aria-label` wins.
+   * Attribute removal is consumed as an absent label without changing its null readback. */
   @property() label = '';
 
   /** Native `<img loading>` passthrough. `'lazy'` defers the request until the avatar approaches
@@ -249,9 +250,10 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     const showGlyph = !showImage && this.hasIconSlot;
     const showInitials = !showGlyph && !showImage;
     const explicitHostLabel = hostAriaLabel(this);
-    const accessibleName = explicitHostLabel ?? this.label;
+    const label = this.label ?? '';
+    const accessibleName = explicitHostLabel ?? label;
     const suppressFallbackSemantics =
-      explicitHostLabel !== null || this.label.length > 0;
+      explicitHostLabel !== null || label.length > 0;
     // Whenever `label` is set, [part='base'] needs a real accessible name
     // regardless of which fallback tier ends up rendering -- the glyph cases
     // (their content is aria-hidden) and the initials-fallback case (its

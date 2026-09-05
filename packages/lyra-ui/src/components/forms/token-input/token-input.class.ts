@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { activeElementIn } from '../../../internal/active-element.js';
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import {
   type ComposedFocusRepairSnapshot,
   captureComposedFocusRepair,
@@ -111,6 +112,12 @@ const stringArrayConverter = {
  * internal input is in a shadow root and has no form owner, so the platform can never do it here).
  * A `delimiter` keystroke stays purely a commit key and never submits. Tab commits a nonempty
  * draft without preventing the key, so native focus traversal still advances.
+ * Composing keyboard events, including legacy key code 229, remain with the draft or inline
+ * editor without adding, removing, committing or closing tokens.
+ * Host-root external descriptions precede local hint/error guidance on the native draft input
+ * and follow live source replacement, removal, reconnection and document adoption.
+ * Removing label, hint or error-text safely removes the copy without changing native
+ * attribute-removal property readback. Editable token labels keep their text vertically centered.
  * `select()`, the selection getters/setters, `setSelectionRange()`, and `setRangeText()` expose the
  * native draft input's editing surface. Range edits synchronize the pending draft without
  * emitting user events, so a later delimiter/Enter/Tab/blur commit consumes the edited text.
@@ -326,6 +333,22 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   // this one in DOM order, so a bare `input` selector would silently retarget `focus()`, `blur()`,
   // and the validity anchor at the editor while a token is being edited.
   @query('#input') private inputEl?: HTMLInputElement;
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+
+  private syncExternalDescription(): void {
+    const target = this.isConnected ? this.inputEl : undefined;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
@@ -448,12 +471,19 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.syncValidity();
   }
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     this.tokenFocusRepairPending = undefined;
     this.discardTransientState(true);
     super.disconnectedCallback();
+  }
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
   }
   get form(): HTMLFormElement | null {
     return getFormOwner(this.internals);
@@ -929,6 +959,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     relayNativeEvent(this, event);
   };
   private onEditKeyDown = (event: KeyboardEvent): void => {
+    if (event.isComposing || event.keyCode === 229) return;
     if (event.key === 'Enter') {
       event.preventDefault();
       this.commitEdit(true);
@@ -967,6 +998,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.draft = (event.target as HTMLInputElement).value;
   };
   private onKeyDown = (event: KeyboardEvent): void => {
+    if (event.isComposing || event.keyCode === 229) return;
     if (this.liveDisabled) return;
     if (
       event.key === 'Enter' ||
@@ -1073,6 +1105,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    */
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op today, but keeps a future mixin's updated reachable
+    this.syncExternalDescription();
     if (this.focusEditorPending) {
       this.focusEditorPending = false;
       const editor = this.renderRoot?.querySelector(
@@ -1172,11 +1205,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     >`;
   }
   override render(): TemplateResult {
-    const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const hasLabel = this.hasLabelSlot || (this.label ?? '').length > 0;
     const hasAccessibleLabel =
       this.hasAttribute('aria-label') || Boolean(this.accessibleLabel);
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const hasHint = this.hasHintSlot || (this.hint ?? '').length > 0;
+    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
     const described =
       [hasHint ? this.hintId : '', hasError ? this.errorId : '']
         .filter(Boolean)

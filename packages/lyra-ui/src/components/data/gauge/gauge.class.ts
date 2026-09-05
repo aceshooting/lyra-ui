@@ -1,3 +1,4 @@
+import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import type { PropertyValues } from 'lit';
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -101,6 +102,8 @@ export class LyraGauge extends LyraElement {
   @property({ type: Number }) max = 100;
   /** Visual geometry. Named `shape` because this Lyra-original component is not a native input. */
   @property({ reflect: true }) shape: GaugeShape = 'radial';
+  /** Optional visible label. Attribute removal omits the SVG label and restores the localized
+   * gauge name unless an author supplied aria-label; the property retains null readback. */
   @property() label = '';
   /** Displayed/announced value text, e.g. `'72°F'` for a raw `value` of `72`.
    * An empty string is treated the same as unset and falls back to the numeric `value`. */
@@ -155,7 +158,7 @@ export class LyraGauge extends LyraElement {
     renderedText: string,
     renderedLabel: string
   ): string {
-    if (renderedText === fullText && renderedLabel === this.label) return '';
+    if (renderedText === fullText && renderedLabel === (this.label ?? '')) return '';
     if (this.label && fullText) {
       return this.localize('gaugeValueLabel', undefined, {
         label: this.label,
@@ -225,7 +228,7 @@ export class LyraGauge extends LyraElement {
   private renderRadial(): TemplateResult {
     const fullText = this.displayText;
     const text = abbreviateSvgText(fullText, RADIAL_VALUE_CHARACTERS);
-    const label = abbreviateSvgText(this.label, RADIAL_LABEL_CHARACTERS);
+    const label = abbreviateSvgText(this.label ?? '', RADIAL_LABEL_CHARACTERS);
     const tooltip = this.truncatedTooltip(fullText, text, label);
     // Dashoffset counts down from the full arc length (nothing revealed) to 0
     // (whole sweep revealed) as ratio goes 0 -> 1 — the classic "draw an SVG
@@ -236,7 +239,7 @@ export class LyraGauge extends LyraElement {
       viewBox="0 0 100 100"
       aria-hidden="true"
     >
-      ${tooltip ? svg`<title>${tooltip}</title>` : nothing}
+      ${tooltip ? nativeSvgTitle(tooltip) : nothing}
       <path part="track" stroke-width=${STROKE} d=${RADIAL_ARC_D}></path>
       <path
         part="fill"
@@ -265,7 +268,7 @@ export class LyraGauge extends LyraElement {
   private renderLinear(): TemplateResult {
     const fullText = this.displayText;
     const text = abbreviateSvgText(fullText, LINEAR_VALUE_CHARACTERS);
-    const label = abbreviateSvgText(this.label, LINEAR_LABEL_CHARACTERS);
+    const label = abbreviateSvgText(this.label ?? '', LINEAR_LABEL_CHARACTERS);
     const tooltip = this.truncatedTooltip(fullText, text, label);
     const dashoffset = LINEAR_LENGTH * (1 - this.ratio);
     // Under RTL the meter must still visually fill and read in the same
@@ -282,7 +285,7 @@ export class LyraGauge extends LyraElement {
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      ${tooltip ? svg`<title>${tooltip}</title>` : nothing}
+      ${tooltip ? nativeSvgTitle(tooltip) : nothing}
       <line part="track" x1=${startX} y1=${LINEAR_BAR_Y} x2=${endX} y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
       <line
         part="fill"
@@ -314,7 +317,7 @@ export class LyraGauge extends LyraElement {
   private renderRing(): TemplateResult {
     const fullText = this.displayText;
     const text = abbreviateSvgText(fullText, RADIAL_VALUE_CHARACTERS);
-    const label = abbreviateSvgText(this.label, RADIAL_LABEL_CHARACTERS);
+    const label = abbreviateSvgText(this.label ?? '', RADIAL_LABEL_CHARACTERS);
     const tooltip = this.truncatedTooltip(fullText, text, label);
     const dashoffset = RING_CIRCUMFERENCE * (1 - this.ratio);
     return html`<svg
@@ -322,7 +325,7 @@ export class LyraGauge extends LyraElement {
       viewBox="0 0 100 100"
       aria-hidden="true"
     >
-      ${tooltip ? svg`<title>${tooltip}</title>` : nothing}
+      ${tooltip ? nativeSvgTitle(tooltip) : nothing}
       <circle part="track" cx=${CENTER} cy=${CENTER} r=${RADIUS} stroke-width=${STROKE}></circle>
       <circle
         part="fill"

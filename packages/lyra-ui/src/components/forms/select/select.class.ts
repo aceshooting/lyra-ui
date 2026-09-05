@@ -1,3 +1,4 @@
+import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -50,6 +51,7 @@ import {
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
   isOptionSelectedDirty,
+  isOptionSelectedWrite,
   wasOptionInitiallySelected,
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
@@ -156,6 +158,12 @@ export interface LyraSelectEventMap {
  * by element identity across reorders. If that option is removed or becomes unavailable, the
  * nearest available survivor takes over (preferring the following row on a tie); an empty
  * available collection clears `aria-activedescendant` instead of retaining an invalid index.
+ *
+ * Host `aria-describedby` targets supplement internal hint/error guidance on the semantic
+ * control, including live target replacement and document adoption. Removing label, hint, or
+ * error attributes safely omits their content while retaining native null property readback.
+ * Mounted option `selected` writes immediately update the live value and submission silently;
+ * reset defaults stay independent, and later default changes preserve a dirty selection.
  *
  * @customElement lr-select
  * @slot - `<lr-option>` elements.
@@ -481,6 +489,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // element identity separately so two same-valued rows never both become
   // selected and a click on the later occurrence cannot route to the first.
   private _selectedOptions: LyraOption[] = [];
+  // Preserve the value an occurrence owned at commit time. An option's value may change before
+  // its next synchronous selected write, while the committed value list still holds the old text.
+  private _selectedValuesByOption = new Map<LyraOption, string>();
   private _multiple = false;
   private _disabled = false;
   private _required = false;
@@ -588,8 +599,25 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return this.renderRoot?.querySelector('[part="trigger"]') ?? null;
   }
 
+  private localDescriptionIds = '';
+  private externalDescriptionLease?: NativeControlDescriptionLease;
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const target = this.renderRoot.querySelector<HTMLElement>('[part="trigger"]');
+    if (!target) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireNativeControlDescription(this, target, () => this.localDescriptionIds);
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.updateValidity();
     if (this.hasUpdated && this.open)
       queueMicrotask(() => this.reconnectOpenPopup());
@@ -880,7 +908,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const claimed = new Set<LyraOption>();
     const resolved: LyraOption[] = [];
     values.forEach((value, index) => {
-      const hint = preferred[index];
+      const hint = preferred.length === values.length
+        ? preferred[index]
+        : preferred.find((option) => option?.value === value && !claimed.has(option));
       const match =
         hint &&
         hint.value === value &&
@@ -1061,6 +1091,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     this.transitionToken++;
     super.disconnectedCallback();
     this.cleanup?.();
@@ -1083,6 +1114,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.cleanup?.();
     this.cleanup = undefined;
     this.positionedDirection = undefined;
@@ -1231,6 +1264,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       this._selected,
       this._selectedOptions
     );
+    this._selectedValuesByOption = new Map(
+      this._selectedOptions.map((option) => [option, option.value])
+    );
     const chosen = new Set(this._selectedOptions);
     for (const option of this.options) {
       option[SET_OPTION_SELECTED_FROM_OWNER](chosen.has(option));
@@ -1360,6 +1396,42 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // target, and the target's own listeners run before this slot listener.
   private onOptionChange = (e: Event): void => {
     e.stopPropagation();
+    const option = e.composedPath().find(isLyraOptionElement);
+    if (isLyraOptionElement(option) && this.options.includes(option) && isOptionSelectedWrite(e)) {
+      this._valueDirty = true;
+      this._restoredStateActive = false;
+      const selected = this._selectedOptions.includes(option);
+      if (option.selected === selected &&
+          (!selected || this._selectedValuesByOption.get(option) === option.value)) return;
+      if (option.selected && !this.multiple) {
+        this.setSelection([option.value], [option]);
+        return;
+      }
+      // Keep unmatched committed values in place and align each mounted occurrence with its
+      // own value entry before changing that occurrence. selectedOptions alone omits unmatched
+      // values and cannot reconstruct the full committed selection.
+      const remaining = [...this._selectedOptions];
+      const preferred = this._selected.map((value) => {
+        const index = remaining.findIndex((candidate) => this._selectedValuesByOption.get(candidate) === value);
+        return index < 0 ? undefined : remaining.splice(index, 1)[0];
+      });
+      const values = [...this._selected];
+      const index = preferred.indexOf(option);
+      if (option.selected) {
+        if (index < 0) {
+          values.push(option.value);
+          preferred.push(option);
+        } else {
+          values[index] = option.value;
+        }
+      } else {
+        if (index < 0) return;
+        values.splice(index, 1);
+        preferred.splice(index, 1);
+      }
+      this.setSelection(values, preferred);
+      return;
+    }
     const previousActive = this.activeOption;
     const previousActiveRawIndex = previousActive
       ? this.options.indexOf(previousActive)
@@ -1490,6 +1562,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
+    this.syncExternalDescription();
     const suppressOpenLifecycle =
       changed.has('open') &&
       this.suppressedOpenLifecycleGeneration === this.openStateGeneration;
@@ -2003,14 +2076,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const hasHint =
       this.slotPresence.has('hint') ||
       this.slotPresence.has('help-text') ||
-      this.hint.length > 0 ||
-      this.helpText.length > 0 ||
+      (this.hint ?? '').length > 0 ||
+      (this.helpText ?? '').length > 0 ||
       this.withHint;
     const hasError =
-      this.slotPresence.has('error') || this.errorText.length > 0;
+      this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const hasLabel =
-      this.slotPresence.has('label') || this.label.length > 0 || this.withLabel;
-    const describedBy = [
+      this.slotPresence.has('label') || (this.label ?? '').length > 0 || this.withLabel;
+    const describedBy = this.localDescriptionIds = [
       this.multiple && hasValue ? this.valueTextId : '',
       hasError ? 'select-error' : '',
       hasHint ? 'select-hint' : '',

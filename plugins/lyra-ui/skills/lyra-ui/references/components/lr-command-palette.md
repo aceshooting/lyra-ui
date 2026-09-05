@@ -20,6 +20,10 @@ Searchable application command menu. Renders nothing at all while closed. Uses t
 overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
 dismissal, ref-counted document scroll lock).
 
+Valid string keywords still participate in search alongside the command's label, description, and
+group. Unsafe keyword entries are skipped without invoking accessors, and selection returns the
+original command object.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — after the initial silent render, property and attribute

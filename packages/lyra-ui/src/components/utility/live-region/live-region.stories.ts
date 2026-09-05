@@ -76,13 +76,13 @@ export const Basic: Story = {
   render: () => {
     const connectLog = logRef();
     return html`
-      <div ${ref(connectLog)} style="display:flex; flex-direction:column; gap:0.75rem; max-width:28rem;">
+      <div data-live-region-basic ${ref(connectLog)} style="display:flex; flex-direction:column; gap:0.75rem; max-width:28rem;">
         <lr-live-region mode="polite"></lr-live-region>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
           <button
             @click=${(e: Event) =>
               (e.currentTarget as HTMLElement)
-                .closest('div')!
+                .closest('[data-live-region-basic]')!
                 .querySelector<LyraLiveRegion>('lr-live-region')!
                 .announce('3 new messages')}
           >
@@ -91,7 +91,7 @@ export const Basic: Story = {
           <button
             @click=${(e: Event) =>
               (e.currentTarget as HTMLElement)
-                .closest('div')!
+                .closest('[data-live-region-basic]')!
                 .querySelector<LyraLiveRegion>('lr-live-region')!
                 .announce('3 new messages')}
           >

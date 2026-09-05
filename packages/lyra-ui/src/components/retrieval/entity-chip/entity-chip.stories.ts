@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An inline entity mention whose button always receives a localized text/type name. An authored host aria-label intentionally names only the custom-element boundary and is not copied onto the shadow button.',
+          'An inline entity mention whose button always receives a localized text/type name, including after text or type attributes are removed. An authored host aria-label intentionally names only the custom-element boundary and is not copied onto the shadow button.',
       },
     },
   },

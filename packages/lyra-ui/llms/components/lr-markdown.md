@@ -24,6 +24,10 @@ instance on a page shares one load. `heading`/`code`/`blockquote`/`table`/`link`
 rendered through a `marked` renderer override that injects `part="..."` attributes directly into the
 produced HTML in a single pass (no second DOM walk after insertion).
 
+Removing `content` clears the document and its empty-document tab stop, including while streaming.
+The property keeps Lit's `null` readback after removal; an explicitly empty attribute remains an
+empty string. Later source text renders normally.
+
 If an instance disconnects and reconnects before that shared promise settles, only the current
 connection applies the result and reparses; the stale connection callback is generation-guarded.
 
@@ -92,10 +96,10 @@ uses for its own `[part="body"]`.
   than overflowing past the HTML heading levels. `0` (the default) preserves the original
   `<h${token.depth}>` output
 - `streaming: boolean = false` (reflected) — marks the host `aria-busy="true"` while partial Markdown
-  is still arriving and lets consumers target `lr-markdown[streaming]`; content updates while it is
-  true are coalesced to at most one parse per animation frame, while the final `streaming=false`
-  update flushes the latest content immediately; busy state also remains true while parser
-  dependencies are loading
+  is still arriving and lets consumers target `lr-markdown[streaming]`. Both `lr-markdown` and
+  `lr-markdown-core` display accumulated plain text without parsing or highlighting while it is
+  true. Setting `streaming=false` parses and renders the latest complete content; busy state also
+  remains true while parser dependencies are loading
 - `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
   blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
   peer is available; set `false` to keep plain output even when `shiki` is installed. No effect

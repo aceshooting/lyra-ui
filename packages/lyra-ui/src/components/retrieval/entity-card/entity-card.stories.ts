@@ -31,6 +31,19 @@ export const Empty: Story = {
   render: () => html`<lr-entity-card></lr-entity-card>`,
 };
 
+export const LiveHeadingLevel: Story = {
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => {
+        const card = (event.currentTarget as HTMLElement).nextElementSibling!;
+        if (card.hasAttribute('aria-level')) card.removeAttribute('aria-level');
+        else card.setAttribute('aria-level', '2');
+      }}>Toggle heading level 2 / default 3</button>
+      <lr-entity-card .entity=${entity} .types=${types()}></lr-entity-card>
+    </div>
+  `,
+};
+
 export const NoFocusButton: Story = {
   // `showFocusButton` defaults to `true` -- a boolean-attribute binding (`?show-focus-button=...`)
   // only ever toggles the attribute's *presence*, and removing an attribute that was never present

@@ -1197,6 +1197,7 @@ const strings: LyraLocaleStrings = {
   promptStudioVariables: 'משתנים',
   promptStudioVersions: 'גרסאות',
   promptStudioPreview: 'תצוגה מקדימה לאחר הצבה',
+  promptStudioPreviewLimit: 'התצוגה המקדימה אינה זמינה: חריגה ממגבלת הרחבת הטקסט.',
   promptStudioRun: 'הפעל הנחיה',
   promptStudioSave: 'שמור גרסה',
   promptStudioAddMessage: 'הוסף הודעה',

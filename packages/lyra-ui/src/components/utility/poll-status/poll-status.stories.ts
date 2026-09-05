@@ -98,3 +98,22 @@ export const PauseResume: Story = {
     `;
   },
 };
+
+
+export const NarrowLongLocalized: Story = {
+  name: '320px long localized labels (LTR and RTL)',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m);">
+      ${(['ltr', 'rtl'] as const).map((direction) => html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-poll-status .active=${false} .strings=${{
+            pollInactive: 'Hintergrundaktualisierungsverfügbarkeitsüberprüfung',
+          }}></lr-poll-status>
+          <lr-poll-status next-in-ms="0" .strings=${{
+            pollRefreshing: 'Hintergrundaktualisierungsverfügbarkeitsüberprüfung',
+          }}></lr-poll-status>
+        </div>
+      `)}
+    </div>
+  `,
+};

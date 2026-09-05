@@ -362,3 +362,8 @@ export const Narrow: Story = {
     </div>
   `,
 };
+
+export const PrimaryPointerGestures: StoryObj = {
+  parameters: { docs: { description: { story: 'Use the primary mouse button to seek or drag either handle. Right and middle presses leave the range unchanged. Touch and pen interaction remain available.' } } },
+  render: () => html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+};

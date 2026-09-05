@@ -32,6 +32,14 @@ control changes target; closing or filtering also retires a row-owned preview on
 control represents it. Does not synthesize speech, fetch catalogs, or persist selection; not a
 persona picker; `lr-model-select` stays for LLMs.
 
+Removing `label`, `hint`, or `error-text` clears that optional copy in both catalog and free-text
+modes. Removed string properties retain `null` readback, and later assignments restore their
+content.
+
+Composing key events (`isComposing` or legacy `keyCode === 229`) remain with the catalog query or
+custom-value editor: they do not navigate options, commit a selection or custom value, or close the
+popup. Ordinary keyboard behavior resumes after composition.
+
 **Exported types:** `LyraVoiceCatalogEntry extends LyraCatalogEntry { language?: string;
 description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
 `[part="option-meta"]` second line. Voice catalogs use the shared

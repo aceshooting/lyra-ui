@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html, svg } from 'lit'; import './command-palette.js'; import type { LyraCommandPalette } from './command-palette.js';
+import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html, svg } from 'lit'; import './command-palette.js'; import type { LyraCommand, LyraCommandPalette } from './command-palette.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 const meta: Meta = {
   title: 'Command Palette',
@@ -17,6 +17,20 @@ export default meta;
 type Story = StoryObj;
 const documentIcon = svg`<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h8l4 4v16H6zM13 3v4h4"></path></svg>`;
 export const Default: Story = { render: () => html`<button @click=${(e: Event) => ((e.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Open command palette</button><lr-command-palette hotkey="mod+k" .commands=${[{ commandId: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { commandId: 'search', label: 'Search workspace', group: 'Navigation' }]}></lr-command-palette>` };
+
+export const OptionalKeywords: Story = {
+  name: 'Tolerant optional keywords',
+  parameters: {
+    docs: { description: { story: 'Malformed optional keyword values are ignored while each valid command stays available. Search “draft” to match a valid keyword beside a malformed array member, or search either command label.' } },
+  },
+  render: () => html`
+    <button @click=${(event: Event) => ((event.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Open commands</button>
+    <lr-command-palette .commands=${[
+      { commandId: 'save', label: 'Save document', keywords: ['draft', 42] },
+      { commandId: 'close', label: 'Close document', keywords: null },
+    ] as unknown as readonly LyraCommand[]}></lr-command-palette>
+  `,
+};
 
 export const MixedCommandIcons: Story = {
   name: 'Mixed command icons',

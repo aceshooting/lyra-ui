@@ -28,6 +28,10 @@ Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default a
 `em` tall at a `4 / 1` aspect ratio, so it can sit directly in text; authored block size changes
 both dimensions through the aspect ratio.
 
+An empty or removed `data` attribute uses the `values` collection. With no usable fallback samples,
+no trend path is rendered. Attribute removal preserves `null` property readback, and supplying later
+space-separated samples restores the attribute-driven path.
+
 **Properties:**
 
 - `appearance: 'gradient'|'line'|'solid' = 'solid'` (reflected) — `solid` fills the area below the
@@ -110,6 +114,16 @@ manual refresh is needed.
 ## `lr-stat`
 
 KPI/stat card — value + unit + label + optional icon/trend/caption.
+
+Passive slotted content preserves normal pointer activation and Control/Meta/Shift intent. The
+platform primary modifier and Shift activate a new browsing context through the real anchor;
+listeners may cancel that activation. Nested interactive controls retain their own actions.
+Temporary target and relation values are restored after activation unless the listener changed those
+attributes itself.
+
+Removing `caption` or `sub` omits the attribute fallback without hiding assigned slot content.
+Removal retains `null` property readback; explicit empty strings remain empty and later supplied
+values render normally.
 
 **Renamed in 8.0.0 — breaking:** `appearance` is now `frame`. Library-wide, `appearance` means only
 "how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
@@ -255,6 +269,12 @@ Virtualized client/server data grid with multi-sort, column filters, global sear
 trees, row details, paging, pinning, resizing, reordering, selection, copy, and CSV export. Import
 the granular registration module when the root bundle is not already loaded:
 
+Repeated references to an admitted root row appear once in processed rows, pagination, facets, and
+CSV, matching rendered canonical identity. The retained occurrence remains the original caller-owned
+record. Clicking a supported interactive descendant, including a native control inside its open
+shadow root, runs that control without also emitting `lr-cell-click`. Passive cell content continues
+to activate the cell.
+
 ```js
 import "@aceshooting/lyra-ui/components/data/data-grid/data-grid.js";
 ```
@@ -349,7 +369,11 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
 
 **Methods:**
 
-- `autoSizeColumn(columnId)`, `autoSizeColumns()`, and `sizeColumnsToFit()` manage measured widths.
+- `autoSizeColumn(columnId)` and `autoSizeColumns()` manage measured widths. `sizeColumnsToFit()`
+  reserves visible effective zero-flex column widths and selection-control allocation before
+  dividing the remaining width proportionally among flexible columns. Fixed widths are preserved;
+  min/max clamps still apply, and an all-fixed grid is unchanged. Maximum clamps can leave unused
+  space, while incompatible minimum widths can still overflow.
 - `collapseAllRows()`, `collapseRow(key)`, `expandAllRows()`, and `expandRow(key)` update expansion
   without emitting the user-only row events.
 - `copySelectedRows(options?: DataGridCopyOptions)` copies selected rows (or all processed rows
@@ -520,6 +544,10 @@ add a trailing totals column mirroring `expandedContent`'s leading one — `rowT
 per-row, `grandTotal(rows)` renders at its intersection with the footer row — both sharing `footer`'s
 own "consumer computes/renders" contract rather than assuming addition.
 
+Effective locale changes recollate and filter the current view while keeping activation and edit
+lookups aligned with the rendered page. Direct row focus uses the same stable-key restoration rules;
+programmatic locale changes do not emit a row action.
+
 Header cells and body rows use separate roving tab stops. When a controlled `columns` or rendered
 row collection changes while one of those stops owns focus, the table keeps the same stable key if
 it survives and otherwise clamps focus to the nearest surviving index. Moving focus outside the
@@ -664,7 +692,9 @@ cell: (row) => unknown }` —
   facades; reassign a new set to update
 - `filterable: boolean = false` (attribute `filterable`, reflected) — renders a localized search
   field above the grid
-- `filterText: string = ''` (attribute `filter-text`) — controlled filter text
+- `filterText: string = ''` (attribute `filter-text`) — controlled filter text. Removing the
+  attribute clears the effective filter safely while retaining native removal readback; a later
+  supplied value filters normally.
 - `filter?: (row: T, text: string) => boolean` (attribute: false) — typed predicate used by the
   filter field; when omitted, rows are matched against their JSON representation
 - `filterLabel?: string` (attribute `filter-label`) and `filterPlaceholder?: string`
@@ -748,7 +778,9 @@ cell: (row) => unknown }` —
 - `hideColumnsLabel?: string` (attribute `hide-columns-label`) — the same button's label once
   the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
-  forces responsive priority columns visible and is updated by the built-in reveal button
+  forces responsive priority columns visible and is updated by the built-in reveal button.
+  Priority-hidden columns hide their header, body, and footer cells together at the existing
+  container breakpoints in either direction; revealing columns restores all three bands.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
   `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount. Unset
   (the default) touches storage not at all. Mirrors `lr-app-rail`'s identical `storage-key` pattern
@@ -1264,6 +1296,10 @@ pagination.hrefTemplate = (page) =>
 
 Dependency-free SVG radial, full-circle ring, or linear meter (no charting library).
 
+Removing `label` omits the visible SVG label in radial, linear, and ring shapes and restores the
+localized gauge name unless `aria-label` is authored. The property retains removal `null`;
+explicitly empty labels remain empty and later labels render normally.
+
 **Properties:**
 
 - `value: number = 0`
@@ -1335,6 +1371,10 @@ Dependency-free conversion funnel (no charting library): an ordered set of stage
 bar whose length is that stage's share of the **first** stage, read top-to-bottom as progressive
 drop-off. It sits beside `lr-gauge` and `lr-heatmap` as an analytics primitive rather than a general
 chart type.
+
+When a positive finite stage value divided by a positive finite baseline overflows to `Infinity`,
+the main or comparison data fill clamps to 100%. Nonfinite input normalization, nonpositive-baseline
+behavior, percentage and drop-off text, and overflow border styling keep their existing rules.
 
 It is deliberately not a sorted bar chart: it normalizes to the first stage rather than to the data
 maximum, draws no value axis, and reads as stage-to-stage retention rather than category comparison.
@@ -1459,6 +1499,10 @@ and repeated edge movements append repeated announcements even when their text i
 `[part="live-region"]` mirrors the latest text for styling/inspection but is `aria-hidden` and has
 no live-region role of its own. Pointer input resolves the nearest word from the adequately-sized
 SVG surface; the potentially tiny text glyphs are not independent hit targets.
+
+Pinned opposite-sign finite endpoints such as `[-1e308, 1e308]` produce bounded finite scale
+fractions and SVG geometry, including with reversed endpoints or square-root scaling. Word weights
+remain nonnegative; placement budgets, font-size limits, and the omitted-word policy are unchanged.
 
 **Properties:**
 
@@ -1593,6 +1637,19 @@ previous/next movement instead of swapping for RTL.
 Full canvas redraws pause while the host is outside the viewport. Data, locale, theme, resize, and
 DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
 environments without `IntersectionObserver` retain eager drawing.
+
+Focus-only updates repaint a bounded neighborhood around the old and new cells, restoring all
+intersected neighboring fills and overlays while preserving the focus-ring geometry. Calendar axis
+pixels intersected by the repaint are restored too.
+
+Changing `domain` or `midpoint` without replacing matrix data preserves absent and nullish cells as
+no data in paint, accessible text, callbacks, and cell events. Missing values still use `-1` in
+default unsigned mode and `NaN` in signed mode; supplied negative signed values remain data.
+
+Invalid authored ramp colors retain the default endpoint fallback. The public `resolveRgb()` helper
+likewise preserves its supplied fallback bytes. These authoring diagnostics are once-per-color
+development warnings and remain silent in production; the separate missing-canvas runtime warning is
+unchanged.
 
 Set `accessibleCells: true` (`accessible-cells`) to opt into a semantic grid backed by a bounded
 window of native buttons. It retains the complete `aria-rowcount`/`aria-colcount` and arrow-key
@@ -2151,6 +2208,11 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 An expand/collapse hierarchy (document/graph navigation tree). Mirrors `wa-tree`/`wa-tree-item` and
 `sl-tree`/`sl-tree-item`.
 
+An otherwise unnamed data row receives its stable `id` as a semantic name. Usable `accessibleLabel`,
+visible label, description, badge content and explicit host naming retain precedence; the fallback
+changes neither visible content nor installed data. Blank visible labels remain supported.
+Declarative items receive no automatic ID fallback.
+
 **Renamed in 8.0.0 — breaking:** the child element is `<lr-tree-item>` (class `LyraTreeItem`), not
 `<lr-tree-node>`/`LyraTreeNode`. It was the only child element in the library whose tag diverged
 from both upstreams, so `wa-tree-item`/`sl-tree-item` markup had nothing to rename to. The shared
@@ -2203,9 +2265,10 @@ deeply-nested node's own shadow root still reaches it).
 - `data: readonly LyraTreeNodeData[] = []` (attribute: false) — the object child model; ignored
   while any author-written `<lr-tree-item>` child is present. Assignment installs a detached,
   recursively frozen snapshot: mutate caller data only before assignment, then reassign after
-  changes. Normalization accepts at most 1,000 valid nodes and 64 descendant levels, never invokes
-  caller accessors, and exposes `dataTruncated = true` when malformed or over-budget input was
-  omitted. Collapsed branches do not instantiate descendants; disclosure projects only normalized
+  changes. Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
+  inspects at most 10,000 root/child array positions globally in depth-first order. It never
+  invokes caller accessors and exposes `dataTruncated = true` when malformed or over-budget input
+  was omitted or the inspected-position ceiling was reached. Collapsed branches do not instantiate descendants; disclosure projects only normalized
   children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
   `{ readonly id: string; readonly label: string; readonly children?: readonly LyraTreeNodeData[];
 readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
@@ -2219,7 +2282,7 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
   author-supplied host `aria-label` takes precedence by presence and is never overwritten or
   removed by later object refreshes; removing the author attribute restores the current data name.
   `id` is the event, roving-focus, reconciliation, and reorder identity and must be unique across
-  the complete reachable hierarchy; malformed/blank rows and later duplicates are omitted as described above
+  the complete reachable hierarchy; malformed rows, blank IDs and later duplicates are omitted as described above
 - `selection: 'single'|'multiple'|'leaf'|'leaf-multiple' = 'single'` — self-managed selection for
   both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
   checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
@@ -2344,7 +2407,8 @@ when assigned):
 - `isDisabled: boolean` — `item.disabled` in the data model, the `disabled` property in the
   declarative one
 - `nodeLabel: string` — this item's spoken name, used for the tree's reorder announcements: a host
-  `aria-label` is authoritative in both models; otherwise `item.accessibleLabel || item.label` in
+  `aria-label` is authoritative in both models
+  (including the component-owned stable-ID fallback for otherwise unnamed data rows); otherwise `item.accessibleLabel || item.label` in
   the data model, or flattened accessibility-visible slotted label text (nested items excluded)
   followed by the `label` fallback in the declarative one. Direct and forwarding-slot
   text/ARIA/visibility mutations update the name
@@ -2496,6 +2560,13 @@ connect interaction. It is readonly by default; opt into editor gestures with `n
 `connectable`, and `droppable`. The component snapshots model inputs instead of retaining mutable
 caller aliases, and reports edit intent for the host to apply.
 
+Input/output handle IDs are reserved only after their complete handle record is admitted; unreadable
+optional labels cannot suppress a later valid handle with the same ID.
+
+Horizontal RTL reflects the coordinate plane while authored cards, generated `lr-flow-node` cards,
+native portable fallback cards and SVG edge labels retain readable content. Explicit physical model
+coordinates remain unchanged.
+
 Flow records and companion payloads are readonly public contracts. Consumers that need the types
 without registering a component can import them from the side-effect-free module:
 
@@ -2554,7 +2625,7 @@ import type {
 - `decorations: FlowRunDecorations | null = null` (attribute: false) —
   `Record<nodeOrEdgeId, FlowRunDecoration>`, where `FlowRunDecoration` has `status` plus optional
   `progress`, `durationMs`, and `detail`; assignment is detached, deeply frozen, bounded to 10,000
-  keys plus finite nested depth/entry budgets, and invalid status entries are omitted. Reassign the
+  keys plus finite nested depth/entry budgets, and invalid statuses and records with unreadable `status`, `progress`, `durationMs` or `detail` fields are omitted independently, retaining valid neighbors. Reassign the
   record after changes. Usually supplied by `lr-flow-run-status`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `viewport` (readonly getter) — a frozen `{ x, y, zoom }` snapshot
@@ -2712,7 +2783,8 @@ owns none of that.
   previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
-  `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins;
+  `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
+  (a record rejected for an unreadable optional label does not reserve its ID);
   reassign a collection after changes
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`
@@ -2926,7 +2998,7 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `decorations: FlowRunDecorations = {}` (attribute: false) — a detached, deeply frozen readonly
   record bounded to 10,000 keys plus finite nested depth/entry budgets and pushed onto the resolved
-  canvas; invalid status entries are omitted, and consumers reassign the record after changes
+  canvas; invalid statuses and records with unreadable `status`, `progress`, `durationMs` or `detail` fields are omitted independently, retaining valid neighbors, and consumers reassign the record after changes
 - `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
   complete" strip, keeping only the decoration push
 - `label: string = ''` — accessible name for the summary strip
@@ -3095,6 +3167,11 @@ numbers, so the two circular-meter components in the library share one visual sc
 
 Responsive month calendar with event markers and an agenda view.
 
+Early ISO dates such as `0001`, `0099`, and `0100` retain their authored local year in the month
+grid and month navigation. Valid colored agenda actions preserve their foreground/background pairing
+through hover and press, with the existing state tokens remaining overridable. Arbitrary caller
+colors still require the caller to choose an accessible contrast pair.
+
 **Properties:**
 
 - `events: CalendarEvent[] = []` (attribute: false) — `{ readonly id?, readonly date, readonly
@@ -3167,6 +3244,12 @@ Items have no keyboard navigation or selection model: a passive record display, 
 item's `title`/`description` routinely hold focusable content, so wrapping the row in `role="button"`
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
+
+Horizontal time layouts using `collision="overlap"` or `collision="stack"` allocate their block size
+from the actual item content and lane offsets. The height follows content growth, shrinkage, and
+changes in lane count. `--lr-timeline-time-extent` still controls only the main-axis distance, and
+horizontal scrolling retains clipping on the cross axis. Cluster mode keeps its existing sizing
+behavior.
 
 **`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
@@ -3272,8 +3355,12 @@ former `--lr-timeline-item-*` plumbing names.
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
+An unreadable optional field rejects only that file record; it cannot reserve the path against a
+later valid occurrence. Valid siblings retain their source order within the existing depth and
+inspected-position budgets.
+
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
-cycle-safe snapshot omitting empty/blank paths and retaining the first duplicate path, bounded to
+cycle-safe snapshot omitting empty/blank paths and retaining the first successfully admitted occurrence of each path, bounded to
 the first 10,000 inspected source positions across 64 descendant levels; reassign after changes),
 `selectedPath: string | null = null` (attribute `selected-path`), and `label?: string` — an
 accessible-name override for the internal `<lr-tree>`, where omission reads back `undefined` and falls
@@ -3333,6 +3420,10 @@ Controlled searchable and filterable document inventory with versions, tags, own
 sorting, and bulk selection. It composes the table's bounded 100-row default, so a large document
 collection stays reachable through pagination without mounting an unbounded grid.
 
+Own `tags: undefined` is treated like omitted tags; malformed tag arrays and entries remain invalid.
+Removing `search-term` clears search filtering without rewriting its `null` property readback; an
+explicitly empty query also clears filtering and a later query applies normally.
+
 **9.0 migration:** `lr-filter-change.detail.text` is now `searchTerm`, backed by the public
 `searchTerm`/`search-term` axis. Replace `sortDirection: 'ascending'|'descending'` with
 `sortDir: 'asc'|'desc'`; document sorting now uses the same cancelable `lr-sort-request` followed
@@ -3374,6 +3465,12 @@ emits one documented host contract without also leaking a composed child event.
 
 Form-associated editor for a typed graph relationship/path query, including entity anchors,
 relationship and node-type filters, hop limits, validation, and saved queries.
+
+When the DOM cannot provide `activeElement`, the builder skips focus restoration while chip removal
+and saved-query updates continue normally. Each minimum/maximum-hop select choice updates the query
+once and emits one `lr-input` with the complete `{ value: GraphQuery }` snapshot. Native value
+events, prefixed value aliases and listbox show/hide lifecycle events from those child selects are
+contained. Programmatic query assignments remain silent.
 
 The normalized `value` present at the first update is the form reset default. Later property writes
 and user edits change only the live query; `form.reset()` restores that initial model, clears
@@ -3473,6 +3570,11 @@ being shadowed by a declaration on the component host.
 Composable flat condition builder for tabular or dashboard data: condition rows combined with an
 AND/OR combinator, distinct by name and model from `lr-graph-query-builder`.
 
+A field or operator select choice updates the builder once and emits one `lr-input` carrying the
+complete `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value
+aliases and listbox show/hide lifecycle events remain inside those pickers. Programmatic `value`
+assignments remain silent.
+
 **9.0 migration:** `lr-query-builder` / `LyraQueryBuilder` / `QueryBuilder*` were renamed without
 aliases to `lr-condition-builder` / `LyraConditionBuilder` / `ConditionBuilder*`. Update the tag,
 granular import path, class/type imports, selectors, and framework bindings together.
@@ -3546,547 +3648,619 @@ the nested `lr-select` triggers in both LTR and RTL; they do not widen the host 
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-data-calendar-calendar-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/calendar/calendar.class.js`.
   `CalendarEvent {
-  id: unknown;
-  date: unknown;
-  title: unknown;
-  color: unknown;
-  data: unknown;
-}`
+    readonly id?: string;
+    readonly date: string | number | Date;
+    readonly title: string;
+    readonly color?: string;
+    readonly data?: unknown;
+  }`
 
 - **`components-data-condition-builder-condition-builder-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/condition-builder/condition-builder.class.js`.
   `ConditionBuilderCondition {
-  id: unknown;
-  field: unknown;
-  operator: unknown;
-  value: unknown;
-}`
+    readonly id: string;
+    readonly field: string;
+    readonly operator: ConditionBuilderOperator | '';
+    readonly value?: string | number | boolean | readonly string[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/condition-builder/condition-builder.class.js`.
   `ConditionBuilderField {
-  name: unknown;
-  label: unknown;
-  type: unknown;
-  options: unknown;
-  operators: unknown;
-  placeholder: unknown;
-  min: unknown;
-  max: unknown;
-  step: unknown;
-}`
+    readonly name: string;
+    readonly label?: string;
+    readonly type: ConditionBuilderFieldType;
+    readonly options?: readonly ConditionBuilderFieldOption[];
+    readonly operators?: readonly ConditionBuilderOperator[];
+    readonly placeholder?: string;
+    readonly min?: number | string;
+    readonly max?: number | string;
+    readonly step?: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/condition-builder/condition-builder.class.js`.
   `ConditionBuilderFieldOption {
-  value: unknown;
-  label: unknown;
-}`
+    readonly value: string;
+    readonly label?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/condition-builder/condition-builder.class.js`.
   `ConditionBuilderValidationIssue {
-  conditionId: unknown;
-  code: unknown;
-}`
+    readonly conditionId: string;
+    readonly code: ConditionBuilderValidationIssueCode;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/condition-builder/condition-builder.class.js`.
   `ConditionBuilderValue {
-  combinator: unknown;
-  conditions: unknown;
-}`
+    readonly combinator: ConditionBuilderCombinator;
+    readonly conditions: readonly ConditionBuilderCondition[];
+  }`
 
 - **`components-data-context-meter-context-meter-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/context-meter/context-meter.class.js`.
   `ContextMeterSegment {
-  label: unknown;
-  value: unknown;
-  tone: unknown;
-  color: unknown;
-}`
+    label: string;
+    value: number;
+    tone?: ContextMeterTone;
+    color?: string;
+  }`
 
 - **`components-data-data-grid-data-grid-types-contracts`** — Supporting data types and helpers for this component family.
-  `DataGridCellContextMenuDetail {
-  originalEvent: unknown;
-  rowKey: unknown;
-  columnId: unknown;
-  column: unknown;
-  value: unknown;
-  row: unknown;
-  index: unknown;
-}`
-  `DataGridCellDetail {
-  rowKey: unknown;
-  columnId: unknown;
-  column: unknown;
-  value: unknown;
-  row: unknown;
-  index: unknown;
-}`
-  `DataGridColumn {
-  id: unknown;
-  field: unknown;
-  label: unknown;
-  align: unknown;
-  width: unknown;
-  minWidth: unknown;
-  maxWidth: unknown;
-  flex: unknown;
-  formatter: unknown;
-  value: unknown;
-  row: unknown;
-  sortable: unknown;
-  sortFn: unknown;
-  comparator: unknown;
-  left: unknown;
-  right: unknown;
-  leftRow: unknown;
-  rightRow: unknown;
-  sortDescFirst: unknown;
-  sortUndefined: unknown;
-  searchable: unknown;
-  filterable: unknown;
-  filterType: unknown;
-  filterFn: unknown;
-  filter: unknown;
-  hidden: unknown;
-  hideable: unknown;
-  resizable: unknown;
-  movable: unknown;
-  pinnable: unknown;
-  pinned: unknown;
-  footer: unknown;
-  rows: unknown;
-  aggregation: unknown;
-  aggregatedFormatter: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
+  `DataGridCellContextMenuDetail<Row = Record<string, unknown>> extends DataGridCellDetail<Row> {
+    readonly originalEvent: MouseEvent | KeyboardEvent;
+    // Inherited from DataGridCellDetail<Row>.
+    readonly rowKey: DataGridKey;
+    readonly columnId: string;
+    readonly column: DataGridColumn<Row>;
+    readonly value: unknown;
+    readonly row: Row;
+    readonly index: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
+  `DataGridCellDetail<Row = Record<string, unknown>> {
+    readonly rowKey: DataGridKey;
+    readonly columnId: string;
+    readonly column: DataGridColumn<Row>;
+    readonly value: unknown;
+    readonly row: Row;
+    readonly index: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
+  `DataGridColumn<Row = Record<string, unknown>> {
+    readonly id?: string;
+    readonly field?: string;
+    readonly label?: string;
+    readonly align?: 'left' | 'center' | 'right' | 'start' | 'end';
+    readonly width?: number;
+    readonly minWidth?: number;
+    readonly maxWidth?: number;
+    readonly flex?: number;
+    readonly formatter?: (value: unknown, row: Row) => string | TemplateResult | Node | unknown;
+    readonly value?: (row: Row) => unknown;
+    readonly sortable?: boolean;
+    readonly sortFn?: DataGridSortAlgorithm;
+    readonly comparator?: (left: unknown, right: unknown, leftRow: Row, rightRow: Row) => number;
+    readonly sortDescFirst?: boolean;
+    readonly sortUndefined?: 'first' | 'last' | 1 | -1;
+    readonly searchable?: boolean;
+    readonly filterable?: boolean;
+    readonly filterType?: DataGridFilterType;
+    readonly filterFn?: (value: unknown, filter: unknown, row: Row) => boolean;
+    readonly hidden?: boolean;
+    readonly hideable?: boolean;
+    readonly resizable?: boolean;
+    readonly movable?: boolean;
+    readonly pinnable?: boolean;
+    readonly pinned?: DataGridPinSide;
+    readonly footer?: string | ((rows: readonly Row[]) => unknown);
+    readonly aggregation?: DataGridAggregation<Row>;
+    readonly aggregatedFormatter?: (value: unknown, rows: readonly Row[]) => string | TemplateResult | Node | unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridColumnMoveDetail {
-  columnOrder: unknown;
-  columnId: unknown;
-  finished: unknown;
-}`
+    readonly columnOrder: readonly string[];
+    readonly columnId: string;
+    readonly finished: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridColumnPinDetail {
-  columnId: unknown;
-  side: unknown;
-}`
+    readonly columnId: string;
+    readonly side: DataGridPinSide;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridColumnResizeDetail {
-  columnId: unknown;
-  width: unknown;
-  finished: unknown;
-}`
+    readonly columnId: string;
+    readonly width: number;
+    readonly finished: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridColumnState {
-  order: unknown;
-  widths: unknown;
-  visibility: unknown;
-  pinning: unknown;
-}`
+    readonly order?: readonly string[];
+    readonly widths?: Readonly<Record<string, number>>;
+    readonly visibility?: Readonly<Record<string, boolean>>;
+    readonly pinning?: Readonly<Record<string, DataGridPinSide>>;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridColumnVisibilityDetail {
-  columnId: unknown;
-  visible: unknown;
-}`
+    readonly columnId: string;
+    readonly visible: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridCopyOptions {
-  columnIds: unknown;
-  includeHeaders: unknown;
-  format: unknown;
-  escapeFormulas: unknown;
-  delimiter: unknown;
-}`
+    readonly columnIds?: readonly string[];
+    readonly includeHeaders?: boolean;
+    readonly format?: 'tsv' | 'csv';
+    readonly escapeFormulas?: boolean;
+    readonly delimiter?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridCsvOptions {
-  delimiter: unknown;
-  includeHeaders: unknown;
-  columnIds: unknown;
-  escapeFormulas: unknown;
-}`
+    readonly delimiter?: string;
+    readonly includeHeaders?: boolean;
+    readonly columnIds?: readonly string[];
+    readonly escapeFormulas?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridDataErrorDetail {
-  error: unknown;
-  request: unknown;
-}`
-  `DataGridExportOptions {
-  fileName: unknown;
-  delimiter: unknown;
-  includeHeaders: unknown;
-  columnIds: unknown;
-  escapeFormulas: unknown;
-}`
+    readonly error: unknown;
+    readonly request: DataGridRequest;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
+  `DataGridExportOptions extends DataGridCsvOptions {
+    readonly fileName?: string;
+    // Inherited from DataGridCsvOptions.
+    readonly delimiter?: string;
+    readonly includeHeaders?: boolean;
+    readonly columnIds?: readonly string[];
+    readonly escapeFormulas?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridFacets {
-  uniqueValues: unknown;
-  minMax: unknown;
-}`
+    readonly uniqueValues: ReadonlyMap<unknown, number>;
+    readonly minMax?: readonly [number, number];
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridFilter {
-  id: unknown;
-  value: unknown;
-}`
-  `DataGridGroupDetail {
-  key: unknown;
-  columnId: unknown;
-  value: unknown;
-  rows: unknown;
-}`
+    readonly id: string;
+    readonly value: unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
+  `DataGridGroupDetail<Row = Record<string, unknown>> {
+    readonly key: string;
+    readonly columnId: string;
+    readonly value: unknown;
+    readonly rows: readonly Row[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridPageDetail {
-  page: unknown;
-  pageSize: unknown;
-}`
+    readonly page: number;
+    readonly pageSize: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridRequest {
-  sort: unknown;
-  filters: unknown;
-  search: unknown;
-  page: unknown;
-  pageSize: unknown;
-  signal: unknown;
-}`
-  `DataGridResponse {
-  rows: unknown;
-  total: unknown;
-}`
-  `DataGridRowDetail {
-  rowKey: unknown;
-  key: unknown;
-  row: unknown;
-}`
+    readonly sort: DataGridSortingState;
+    readonly filters: readonly DataGridFilter[];
+    readonly search: string;
+    readonly page: number;
+    readonly pageSize: number;
+    readonly signal: AbortSignal | undefined;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
+  `DataGridResponse<Row = Record<string, unknown>> {
+    readonly rows: readonly Row[];
+    readonly total: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
+  `DataGridRowDetail<Row = Record<string, unknown>> {
+    readonly rowKey: DataGridKey;
+    readonly key: DataGridKey;
+    readonly row: Row;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridScrollOptions {
-  align: unknown;
-}`
-  `DataGridSelectionDetail {
-  selectedRowKeys: unknown;
-  selectedKeys: unknown;
-  selectedRows: unknown;
-}`
+    readonly align?: 'start' | 'center' | 'end';
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
+  `DataGridSelectionDetail<Row = Record<string, unknown>> {
+    readonly selectedRowKeys: readonly DataGridKey[];
+    readonly selectedKeys: readonly DataGridKey[];
+    readonly selectedRows: readonly Row[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridSort {
-  id: unknown;
-  desc: unknown;
-}`
+    readonly id: string;
+    readonly desc: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridStateFilter {
-  id: unknown;
-  value: unknown;
-}`
-  `DataGridState {
-  sort: unknown;
-  filters: unknown;
-  search: unknown;
-  selectedRowKeys: unknown;
-  expandedRowKeys: unknown;
-  selectedKeys: unknown;
-  expandedKeys: unknown;
-  page: unknown;
-  pageSize: unknown;
-  order: unknown;
-  widths: unknown;
-  visibility: unknown;
-  pinning: unknown;
-}`
+    readonly id: string;
+    readonly value: DataGridJsonValue;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
+  `DataGridState extends DataGridColumnState {
+    readonly sort?: DataGridSortingState;
+    readonly filters?: readonly DataGridStateFilter[];
+    readonly search?: string;
+    readonly selectedRowKeys?: readonly DataGridKey[];
+    readonly expandedRowKeys?: readonly DataGridKey[];
+    readonly selectedKeys?: readonly DataGridKey[];
+    readonly expandedKeys?: readonly DataGridKey[];
+    readonly page?: number;
+    readonly pageSize?: number;
+    // Inherited from DataGridColumnState.
+    readonly order?: readonly string[];
+    readonly widths?: Readonly<Record<string, number>>;
+    readonly visibility?: Readonly<Record<string, boolean>>;
+    readonly pinning?: Readonly<Record<string, DataGridPinSide>>;
+  }`
 
 - **`components-data-document-library-document-library-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
   `DocumentLibraryFilterChangeDetail {
-  searchTerm: unknown;
-  tags: unknown;
-  matchCount: unknown;
-}`
+    readonly searchTerm: string;
+    readonly tags: readonly string[];
+    readonly matchCount: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
   `DocumentLibraryOpenDetail {
-  documentId: unknown;
-}`
+    readonly documentId: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
   `DocumentLibrarySelectionChangeDetail {
-  documentIds: unknown;
-}`
+    readonly documentIds: readonly string[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
   `DocumentLibrarySortCommitDetail {
-  phase: unknown;
-  sortKey: unknown;
-  sortDir: unknown;
-}`
+    readonly phase: 'commit';
+    readonly sortKey: LibraryDocumentSortKey;
+    readonly sortDir: TableSortDirection;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
   `DocumentLibrarySortRequestDetail {
-  phase: unknown;
-  sortKey: unknown;
-  sortDir: unknown;
-}`
-  `LibraryDocument {
-  tags: unknown;
-  owner: unknown;
-  updatedAt: unknown;
-  freshness: unknown;
-  id: unknown;
-  name: unknown;
-  mimeType: unknown;
-  uri: unknown;
-  version: unknown;
-}`
+    readonly phase: 'request';
+    readonly sortKey: LibraryDocumentSortKey;
+    readonly sortDir: TableSortDirection;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
+  `LibraryDocument extends DocumentRef {
+    tags?: readonly string[];
+    owner?: string;
+    updatedAt?: Date | string;
+    freshness?: LibraryDocumentFreshness;
+    // Inherited from DocumentRef.
+    id: string;
+    name: string;
+    mimeType?: string;
+    uri?: string;
+    version?: string;
+  }`
 
 - **`components-data-env-list-env-list-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/env-list/env-list.class.js`.
   `EnvEntry {
-  name: unknown;
-  value: unknown;
-  secret: unknown;
-}`
+    readonly name: string;
+    readonly value: string;
+    readonly secret?: boolean;
+  }`
 
 - **`components-data-file-tree-file-tree-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/file-tree/file-tree.class.js`.
   `FileTreeNode {
-  path: unknown;
-  name: unknown;
-  kind: unknown;
-  mimeType: unknown;
-  gitStatus: unknown;
-  additions: unknown;
-  deletions: unknown;
-  children: unknown;
-  hasChildren: unknown;
-}`
+    readonly path: string;
+    readonly name?: string;
+    readonly kind?: 'file' | 'directory';
+    readonly mimeType?: string;
+    readonly gitStatus?: GitStatus;
+    readonly additions?: number;
+    readonly deletions?: number;
+    readonly children?: readonly FileTreeNode[];
+    readonly hasChildren?: boolean;
+  }`
 
 - **`components-data-flow-canvas-flow-types-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowEdge {
-  id: unknown;
-  source: unknown;
-  target: unknown;
-  sourceHandle: unknown;
-  targetHandle: unknown;
-  label: unknown;
-  tone: unknown;
-}`
+    readonly id: string;
+    readonly source: string;
+    readonly target: string;
+    readonly sourceHandle?: string;
+    readonly targetHandle?: string;
+    readonly label?: string;
+    readonly tone?: LyraVariant;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowHandle {
-  id: unknown;
-  label: unknown;
-}`
+    readonly id: string;
+    readonly label?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowLayoutChangeDetail {
-  positions: unknown;
-  x: unknown;
-  y: unknown;
-  truncated: unknown;
-}`
+    readonly positions: Readonly<Record<string, Readonly<{
+      x: number;
+      y: number;
+    }>>>;
+    readonly truncated: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowNode {
-  id: unknown;
-  type: unknown;
-  position: unknown;
-  x: unknown;
-  y: unknown;
-  data: unknown;
-  accessibleLabel: unknown;
-  inputs: unknown;
-  outputs: unknown;
-}`
+    readonly id: string;
+    readonly type?: string;
+    readonly position?: Readonly<{
+      x: number;
+      y: number;
+    }>;
+    readonly data?: Readonly<Record<string, unknown>>;
+    readonly accessibleLabel?: string;
+    readonly inputs?: readonly FlowHandle[];
+    readonly outputs?: readonly FlowHandle[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowRunDecoration {
-  status: unknown;
-  progress: unknown;
-  durationMs: unknown;
-  detail: unknown;
-}`
+    readonly status: LyraToolStatus;
+    readonly progress?: number;
+    readonly durationMs?: number;
+    readonly detail?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowStructureEdgeSnapshot {
-  id: unknown;
-  source: unknown;
-  target: unknown;
-  status: unknown;
-}`
+    readonly id: string;
+    readonly source: string;
+    readonly target: string;
+    readonly status?: LyraToolStatus;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowStructureNodeSnapshot {
-  id: unknown;
-  x: unknown;
-  y: unknown;
-  width: unknown;
-  height: unknown;
-  status: unknown;
-}`
+    readonly id: string;
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    readonly status?: LyraToolStatus;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowStructureSnapshot {
-  nodes: unknown;
-  edges: unknown;
-  viewport: unknown;
-  locked: unknown;
-  orientation: unknown;
-  layerGap: unknown;
-  nodeGap: unknown;
-}`
+    readonly nodes: readonly FlowStructureNodeSnapshot[];
+    readonly edges: readonly FlowStructureEdgeSnapshot[];
+    readonly viewport: FlowViewportSnapshot;
+    readonly locked: boolean;
+    readonly orientation: LyraOrientation;
+    readonly layerGap: number;
+    readonly nodeGap: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowViewportSnapshot {
-  x: unknown;
-  y: unknown;
-  zoom: unknown;
-  width: unknown;
-  height: unknown;
-  minZoom: unknown;
-  maxZoom: unknown;
-}`
+    readonly x: number;
+    readonly y: number;
+    readonly zoom: number;
+    readonly width: number;
+    readonly height: number;
+    readonly minZoom: number;
+    readonly maxZoom: number;
+  }`
 
 - **`components-data-funnel-funnel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/funnel/funnel.class.js`.
   `LyraFunnelStage {
-  label: unknown;
-  value: unknown;
-  color: unknown;
-}`
+    readonly label: string;
+    readonly value: number;
+    readonly color?: string;
+  }`
 
 - **`components-data-graph-query-builder-graph-query-builder-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`.
   `GraphQueryDeleteDetail {
-  queryId: unknown;
-}`
+    readonly queryId: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`.
   `GraphQuery {
-  startId: unknown;
-  endId: unknown;
-  relationshipTypes: unknown;
-  nodeTypes: unknown;
-  direction: unknown;
-  minHops: unknown;
-  maxHops: unknown;
-}`
+    readonly startId: string;
+    readonly endId: string;
+    readonly relationshipTypes: readonly string[];
+    readonly nodeTypes: readonly string[];
+    readonly direction: GraphQueryDirection;
+    readonly minHops: number;
+    readonly maxHops: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`.
   `GraphQueryLoadDetail {
-  queryId: unknown;
-  query: unknown;
-}`
+    readonly queryId: string;
+    readonly query: GraphQuery;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`.
   `GraphQueryRunDetail {
-  query: unknown;
-}`
+    readonly query: GraphQuery;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`.
   `GraphQuerySaveDetail {
-  name: unknown;
-  query: unknown;
-}`
+    readonly name: string;
+    readonly query: GraphQuery;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`.
   `GraphQuerySavedItem {
-  id: unknown;
-  name: unknown;
-  query: unknown;
-}`
+    readonly id: string;
+    readonly name: string;
+    readonly query: GraphQuery;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`.
   `GraphQueryTypeOption {
-  value: unknown;
-  label: unknown;
-}`
+    readonly value: string;
+    readonly label?: string;
+  }`
 
 - **`components-data-heatmap-calendar-grid-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui`.
   `CalendarDay {
-  date: unknown;
-  value: unknown;
-}`
+    date: string;
+    value: number;
+  }`
 
 - **`components-data-heatmap-heatmap-scale-contracts`** — Supporting data types and helpers for this component family.
-  `linearAlpha(/* public names: value, lo, hi */): unknown`
-  `sqrtStep(/* public names: count, max, steps */): unknown`
+  Import: `@aceshooting/lyra-ui`.
+  `linearAlpha(value: number, lo: number, hi: number): number`
+  Import: `@aceshooting/lyra-ui`.
+  `sqrtStep(count: number, max: number, steps: number): number`
 
 - **`components-data-heatmap-heatmap-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
   `CalendarCellPos {
-  week: unknown;
-  weekday: unknown;
-  date: unknown;
-}`
+    week: number;
+    weekday: number;
+    date: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
   `HeatmapAnnotation {
-  row: unknown;
-  col: unknown;
-  date: unknown;
-  label: unknown;
-}`
+    row?: number;
+    col?: number;
+    date?: string;
+    label?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
   `HeatmapCalendarData {
-  kind: unknown;
-  days: unknown;
-  firstDayOfWeek: unknown;
-  columnX: unknown;
-  index: unknown;
-  rowY: unknown;
-  weekday: unknown;
-  weekdayLabelWidth: unknown;
-  weekdayLabelText: unknown;
-  jsWeekday: unknown;
-  monthLabelText: unknown;
-  jsMonth: unknown;
-  year: unknown;
-}`
+    readonly kind: 'calendar';
+    readonly days: readonly CalendarDay[];
+    readonly firstDayOfWeek?: number;
+    readonly columnX?: (index: number) => number;
+    readonly rowY?: (weekday: number) => number;
+    readonly weekdayLabelWidth?: number | 'auto';
+    readonly weekdayLabelText?: (jsWeekday: number) => string | undefined;
+    readonly monthLabelText?: (jsMonth: number, year: number) => string | undefined;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
   `HeatmapLegendStop {
-  value: unknown;
-  color: unknown;
-  label: unknown;
-  partOfRamp: unknown;
-}`
+    value: number;
+    color?: string;
+    label?: string;
+    partOfRamp?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
   `HeatmapMatrixData {
-  kind: unknown;
-  rowLabels: unknown;
-  colLabels: unknown;
-  values: unknown;
-}`
+    readonly kind: 'matrix';
+    readonly rowLabels: readonly string[];
+    readonly colLabels: readonly string[];
+    readonly values: readonly (readonly number[])[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
   `HeatmapSelectedCell {
-  row: unknown;
-  col: unknown;
-  date: unknown;
-}`
-  `hexToRgb(/* public names: hex */): unknown`
+    row?: number;
+    col?: number;
+    date?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
+  `hexToRgb(hex: string): [number, number, number, number] | null`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
   `MatrixCellPos {
-  row: unknown;
-  col: unknown;
-}`
-  `normalizeBucketCount(/* public names: bucketCount */): unknown`
-  `resolveRgb(/* public names: color, fallbackHex, ownerDocument */): unknown`
+    row: number;
+    col: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
+  `normalizeBucketCount(bucketCount: number): number`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
+  `resolveRgb(color: string, fallbackHex: string, ownerDocument?: Document): [number, number, number, number]`
 
 - **`components-data-pagination-pagination-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/pagination/pagination.class.js`.
   `LyraPaginationChangeDetail {
-  page: unknown;
-  pageSize: unknown;
-}`
+    readonly page: number;
+    readonly pageSize: number;
+  }`
 
 - **`components-data-sequence-strip-sequence-strip-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/sequence-strip/sequence-strip.class.js`.
   `LyraSequenceStripActivateDetail {
-  index: unknown;
-  id: unknown;
-  item: unknown;
-}`
+    readonly index: number;
+    readonly id: string;
+    readonly item: SequenceStripItem;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/sequence-strip/sequence-strip.class.js`.
   `SequenceStripCategory {
-  id: unknown;
-  color: unknown;
-  label: unknown;
-}`
+    readonly id: string;
+    readonly color: string;
+    readonly label?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/sequence-strip/sequence-strip.class.js`.
   `SequenceStripItem {
-  id: unknown;
-  categoryId: unknown;
-  marker: unknown;
-  label: unknown;
-}`
+    readonly id: string;
+    readonly categoryId: string;
+    readonly marker?: boolean;
+    readonly label?: string;
+  }`
 
 - **`components-data-stat-stat-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/stat/stat.class.js`.
   `StatRow {
-  label: unknown;
-  value: unknown;
-  exactValue: unknown;
-}`
+    readonly label: string;
+    readonly value: string;
+    readonly exactValue?: string;
+  }`
 
 - **`components-data-table-table-contracts`** — Supporting data types and helpers for this component family.
-  `TableColumn {
-  key: unknown;
-  label: unknown;
-  headerCell: unknown;
-  column: unknown;
-  width: unknown;
-  minWidth: unknown;
-  maxWidth: unknown;
-  resizable: unknown;
-  sortable: unknown;
-  sortValue: unknown;
-  row: unknown;
-  align: unknown;
-  priority: unknown;
-  sticky: unknown;
-  footer: unknown;
-  rows: unknown;
-  cellStyle: unknown;
-  cellTitle: unknown;
-  heatValue: unknown;
-  editTrigger: unknown;
-  editValue: unknown;
-  editType: unknown;
-  cell: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/data/table/table.class.js`.
+  `TableColumn<T> {
+    key: string;
+    label: string;
+    headerCell?: (column: TableColumn<T>) => unknown;
+    width?: string;
+    minWidth?: string;
+    maxWidth?: string;
+    resizable?: boolean;
+    sortable?: boolean;
+    sortValue?: (row: T) => string | number | null | undefined;
+    align?: TableEdgeAlign;
+    priority?: 'medium' | 'low';
+    sticky?: TableEdgeAlign;
+    footer?(rows: readonly T[]): unknown;
+    cellStyle?(row: T): Record<string, string> | undefined;
+    cellTitle?(row: T): string | undefined;
+    heatValue?(row: T): number | null | undefined;
+    editTrigger?: TableColumnEditTrigger;
+    editValue?: (row: T) => string | number;
+    editType?: 'text' | 'number';
+    cell: (row: T) => unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/table/table.class.js`.
   `TableSortCommitDetail {
-  phase: unknown;
-  sortKey: unknown;
-  sortDir: unknown;
-}`
+    readonly phase: 'commit';
+    readonly sortKey: string;
+    readonly sortDir: TableSortDirection;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/table/table.class.js`.
   `TableSortRequestDetail {
-  phase: unknown;
-  sortKey: unknown;
-  sortDir: unknown;
-}`
+    readonly phase: 'request';
+    readonly sortKey: string;
+    readonly sortDir: TableSortDirection;
+  }`
 
 - **`components-data-tree-tree-types-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/tree/tree.class.js`.
   `LyraTreeNodeData {
-  id: unknown;
-  label: unknown;
-  selected: unknown;
-  disabled: unknown;
-  lazy: unknown;
-  children: unknown;
-  badges: unknown;
-  icon: unknown;
-  description: unknown;
-  accessibleLabel: unknown;
-}`
+    readonly id: string;
+    readonly label: string;
+    readonly selected?: boolean;
+    readonly disabled?: boolean;
+    readonly lazy?: boolean;
+    readonly children?: readonly LyraTreeNodeData[];
+    readonly badges?: readonly TreeBadge[];
+    readonly icon?: unknown;
+    readonly description?: string;
+    readonly accessibleLabel?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/tree/tree.class.js`.
   `TreeBadge {
-  text: unknown;
-  tone: unknown;
-  label: unknown;
-}`
+    readonly text: string;
+    readonly tone?: LyraVariant;
+    readonly label?: string;
+  }`
 
 - **`components-data-word-cloud-word-cloud-layout-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/word-cloud/word-cloud.class.js`.
   `WordCloudWord {
-  text: unknown;
-  weight: unknown;
-  color: unknown;
-  group: unknown;
-}`
+    readonly text: string;
+    readonly weight: number;
+    readonly color?: string;
+    readonly group?: string;
+  }`
 
 - **`components-data-word-cloud-word-cloud-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/data/word-cloud/word-cloud.class.js`.
   `WordCloudLegendItem {
-  label: unknown;
-  color: unknown;
-}`
+    readonly label: string;
+    readonly color: string;
+  }`

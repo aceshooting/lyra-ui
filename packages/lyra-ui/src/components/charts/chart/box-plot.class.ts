@@ -259,6 +259,8 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * `<lr-box-plot>` — a box-and-whisker chart from precomputed five-number
  * summaries (no raw sample data is shipped to the browser). Beyond Web
  * Awesome's chart set — useful for summarizing distributions.
+ * With IntersectionObserver available, canvas construction waits for the first delivered
+ * visibility decision; without it, drawing starts as soon as the peers and canvas are ready.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -469,7 +471,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       this.rebuildAfterAnnotationRegistration()
     );
     this.syncAnnouncementSinks();
-    this.visible = true;
+    this.visible = !this.ownerWindow?.IntersectionObserver;
     this.armReducedMotionWatcher();
     const generation = ++this.loadGeneration;
     void loadBoxPlotPlugin().then((boxMod) => this.onBoxPlotPluginLoaded(boxMod, generation));

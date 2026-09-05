@@ -201,6 +201,9 @@ function containsElement(container: Element | null, value: unknown): value is El
  * Host `aria-labelledby` is deliberately not projected: the rendered visible label owns this
  * group's label relationship.
  *
+ * Removing label or hint safely omits that content while retaining native null property
+ * readback. Explicit empty strings remain empty.
+ *
  * @customElement lr-time-input
  * @event input - Native `InputEvent` fired for user edits.
  * @event change - Native `Event` fired when a complete value is committed.
@@ -1477,8 +1480,8 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override render(): TemplateResult {
-    const hasLabel = this.withLabel || this.label.length > 0 || this.hasLabelSlot;
-    const hasHint = this.withHint || this.hint.length > 0 || this.hasHintSlot;
+    const hasLabel = this.withLabel || (this.label ?? '').length > 0 || this.hasLabelSlot;
+    const hasHint = this.withHint || (this.hint ?? '').length > 0 || this.hasHintSlot;
     const shownError = this.errorText || (this.touched ? this.validationMessage : '');
     const hasError = this.hasErrorSlot || shownError.length > 0;
     const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');

@@ -135,7 +135,10 @@ passthrough). Not a subclass of `LyraChart`.
   percentage cap from its own ResizeObserver result would create a shrinking feedback loop. The
   gutter remains at logical start under RTL. Unset keeps exactly 36px.
 - `barGapRatio?: number` (attribute `bar-gap-ratio`) — overrides the internal 0.2 `BAR_GROUP_GAP`
-  fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2.
+  fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2. Internal
+  grouped-bar gaps are bounded within the remaining category width so supported multi-series groups
+  retain positive, nonoverlapping bars for ratios below 1. A ratio of 1 reserves the whole slot as
+  gap and leaves zero-width bars.
 - `scale: 'linear' | 'sqrt' | 'logarithmic' = 'linear'` — `'sqrt'` (**bar type only**) maps a bar's
   value to height via `Math.sqrt(value / domainMax)` instead of the standard linear `niceDomain`
   fraction (mirroring `lr-heatmap`'s matrix-mode `sqrt` scale), so a skewed dataset's smaller bars
@@ -144,13 +147,20 @@ passthrough). Not a subclass of `LyraChart`.
   `'logarithmic'` is the base-10 value axis for data spanning several orders of magnitude, where a
   linear axis collapses everything below the maximum into the baseline. Unlike `'sqrt'` it applies
   to **bars, line points and gridlines alike**, since a log axis whose gridlines stayed linear
-  would misrepresent the plot. Its lower bound is the smallest *positive* datum rather than the
+  would misrepresent the plot. Value ticks use positive, bounded steps within that same domain:
+  powers of ten across whole decades, with positive numeric steps for spans smaller than a decade.
+  Both domain bounds remain represented, with space reserved between interior ticks and the bounds.
+  Linear and square-root tick selection is unchanged. Its lower bound is the smallest *positive* datum rather than the
   linear `lo`: `beginAtZero` defaults to true, so `lo` is normally `0`, which has no logarithm —
   deriving the floor from the data is what makes a 1…1000 series span three even decades instead of
   collapsing onto one. Values at or below that floor (including zero and negatives, which have no
   real logarithm) pin to the axis floor rather than producing `-Infinity` geometry, and a degenerate
   domain falls back to the linear fraction. `lr-chart`'s own `scaleType` is the Chart.js-backed
-  equivalent for the full charts.
+  equivalent for the full charts. With `stacked` and `'logarithmic'`, the finite sum of positive
+  raw values determines the log-mapped total extent; positive raw fractions partition that extent.
+  Nonpositive segments have zero natural log height. With `minBarHeight` unset, the stack stays
+  within the plot and its top agrees with the log axis. The square-root mode retains its separate
+  signed-total compression and proportional allocation, with linear gridlines.
 - `withoutValueAxis: boolean = false` (attribute `without-value-axis`) — suppresses gridlines and
   value-axis tick labels; x-axis category labels remain.
 - `selectedIndices: readonly number[] = []` (attribute: false) — names **source category indices**,
@@ -169,7 +179,8 @@ passthrough). Not a subclass of `LyraChart`.
   collection.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values; finite input is capped at 1,000,000px before derived SVG geometry is
-  calculated
+  calculated. Authored floors can exceed the available plot height. Linear and logarithmic stacks
+  push subsequent segments along their signed pixel cursor; zero values remain unfloored.
 - `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
   oldest categories
 
@@ -184,6 +195,12 @@ markup. CSV rows cover the canonical record count — the maximum of `labels.len
 `dataset.data.length` — and use empty cells for missing labels/values, so a longer or ragged series
 is never truncated or shifted. The method does not download a file; pair it with
 `lr-export-button` for download UX.
+
+Axis titles retain their complete `xLabel`/`yLabel` values and accessible names. In the browser,
+visible titles fit their plot allocation using the rendered SVG font; long titles end with an
+ellipsis. If even the ellipsis cannot fit, the title remains accessible without painting text.
+Fitting refreshes after rendering, allocation changes, inherited or host font changes, font loading,
+and reconnection. Server rendering retains the original title until browser layout is available.
 
 The axis gutter/title and y-axis labels mirror to logical start under RTL. Built-in mark summaries
 are complete localized templates and format values with `effectiveLocale`.

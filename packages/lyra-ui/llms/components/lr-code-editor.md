@@ -20,6 +20,15 @@ Long translated form chrome wraps within the host, while long source stays reach
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
 (320px)` story covers both boundaries together.
 
+`form.reset()` restores the default value and pristine interaction feedback. Required and custom
+validity constraints remain; a required-empty editor is still invalid. Removing `label`, `hint`, or
+`error-text` treats the removed value as absent for rendering while retaining native
+attribute-removal property readback.
+
+Host `aria-describedby` references resolve in the host root onto the native textarea before its
+local error/hint guidance. Target replacement, removal, reinsertion, unresolved IDs, reconnect, and
+adoption keep that relationship current.
+
 Dependency-free, form-associated multiline code editor built around a native textarea, with an
 optional line-number gutter. No syntax highlighting: `language` is metadata only.
 
@@ -29,9 +38,11 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `lineNumbers: boolean = true` (attribute `line-numbers`, reflected) — renders the `gutter` part,
   one row per `\n`-separated line
-- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press, and the textarea's
-  inline `tab-size`. Sanitized on assignment to a finite integer clamped to `1..16`, so a
-  `NaN`/`Infinity` value can neither empty the insert nor throw out of `String.repeat()`
+- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press and the tab width
+  shared by the native textarea and text measurement. Explicit property/attribute assignment wins
+  over `--lr-code-editor-tab-size`; otherwise the token controls the rendered tab width. Sanitized
+  on assignment to a finite integer clamped to `1..16`, so a `NaN`/`Infinity` value can neither
+  empty the insert nor throw out of `String.repeat()`.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`),
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
@@ -47,8 +58,10 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   `lr-textarea`/`lr-input`/`lr-select`, accepting both spellings of every tier (`2xs`/`xs`/`s`/`m`/
   `l`/`xl` and `small`/`medium`/`large`). Governs the gutter's and textarea's padding and font size,
   plus the editor frame's minimum block size.
-- `wrap: 'off' | 'soft' | 'hard' = 'off'` — native textarea wrapping; `'off'` (the default) makes
-  the `editor` part the single horizontal scroll viewport. `hard` uses the owner realm's native
+- `wrap: 'off' | 'soft' | 'hard' = 'off'` — native textarea wrapping. `'off'` (the default) makes
+  the `editor` part the single horizontal scroll viewport. Soft/hard text wraps within the editor
+  allocation, with the caret and logical line-number gutter following the wrapped lines as the
+  allocation changes; the editor frame owns scrolling. `hard` uses the owner realm's native
   textarea serializer, so FormData receives platform-equivalent `cols` wrapping while the live
   `value` remains unwrapped.
 - `spellcheck: boolean = false` — off by default for code, and parsed with a string-aware converter

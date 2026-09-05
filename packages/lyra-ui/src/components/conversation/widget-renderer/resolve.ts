@@ -3,6 +3,7 @@
  * a capped snapshot exactly once before validation/resolution, so getters and sibling indices
  * outside the admitted prefix are never touched and later passes cannot observe mutation.
  */
+import { devWarn } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   isWidgetTypeRegistry,
   type LyraWidgetTypeDefinition,
@@ -281,6 +282,8 @@ export interface ResolveContext {
   bindingState: unknown;
   /** Warning keys retained for one renderer document/registry generation. */
   warned: Set<string>;
+  /** Explicit diagnostic callback, active in every runtime. Without one, authoring warnings
+   * are emitted only in development; keys and caps belong to this context generation. */
   warn?: (message: string) => void;
 }
 
@@ -298,13 +301,13 @@ function warnOnce(ctx: ResolveContext, key: string, message: string): void {
   if (ctx.warned.size >= WIDGET_MAX_WARNINGS) {
     if (ctx.warned.has(WARNING_SUPPRESSION_KEY)) return;
     ctx.warned.add(WARNING_SUPPRESSION_KEY);
-    (ctx.warn ?? console.warn)(
+    (ctx.warn ?? devWarn)(
       `[lr-widget-renderer] suppressed further diagnostics after ${WIDGET_MAX_WARNINGS} unique warnings`
     );
     return;
   }
   ctx.warned.add(key);
-  (ctx.warn ?? console.warn)(`[lr-widget-renderer] ${message}`);
+  (ctx.warn ?? devWarn)(`[lr-widget-renderer] ${message}`);
 }
 
 /** The resolve-pipeline form of `truncateWidgetString`: same ceiling, plus the one deduplicated

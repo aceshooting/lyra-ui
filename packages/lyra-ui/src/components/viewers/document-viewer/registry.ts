@@ -1,3 +1,4 @@
+import { rememberDocumentRendererRegistry } from './registry-ownership.js';
 import type { AnchorTargetCapabilities, LyraAnchor, LyraHighlight } from './anchors.js';
 import {
   snapshotLyraAvCues,
@@ -103,6 +104,7 @@ export function snapshotLyraDocumentRendererPayload(
 }
 
 const DOCUMENT_RENDERER_ADAPTER = Symbol('document-renderer-adapter');
+const factoryAdapters = new WeakMap<object, LyraDocumentRendererAdapter>();
 
 /** Type-erased adapter created by `createDocumentRendererAdapter()`. */
 export interface LyraDocumentRendererAdapter {
@@ -245,7 +247,7 @@ export function createDocumentRendererAdapter<K extends LyraDocumentRendererPayl
     }
     return payload as LyraDocumentRendererPayloadFor<K>;
   };
-  return Object.freeze({
+  const adapter = Object.freeze({
     [DOCUMENT_RENDERER_ADAPTER]: true as const,
     kind,
     adapt(file: DocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload {
@@ -258,16 +260,27 @@ export function createDocumentRendererAdapter<K extends LyraDocumentRendererPayl
       return render(assertKind(payload));
     },
   });
+  factoryAdapters.set(adapter.adapt, adapter);
+  return adapter;
 }
 
-function isDocumentRendererAdapter(value: unknown): value is LyraDocumentRendererAdapter {
-  if (value === null || typeof value !== 'object') return false;
-  const adapter = value as Partial<LyraDocumentRendererAdapter>;
-  return adapter[DOCUMENT_RENDERER_ADAPTER] === true
-    && (adapter.kind === 'document' || adapter.kind === 'av')
-    && typeof adapter.adapt === 'function'
-    && typeof adapter.capabilities === 'function'
-    && typeof adapter.render === 'function';
+function resolveDocumentRendererAdapter(value: unknown): LyraDocumentRendererAdapter | undefined {
+  if (value === null || typeof value !== 'object') return undefined;
+  try {
+    // Collection snapshots retain callback identities but omit private symbol properties. Match
+    // every own data field to a factory-created wrapper before recovering its frozen adapter.
+    const adapt = Object.getOwnPropertyDescriptor(value, 'adapt')?.value as unknown;
+    if (typeof adapt !== 'function') return undefined;
+    const trusted = factoryAdapters.get(adapt);
+    if (!trusted) return undefined;
+    for (const key of ['kind', 'capabilities', 'render'] as const) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !('value' in descriptor) || descriptor.value !== trusted[key]) return undefined;
+    }
+    return trusted;
+  } catch {
+    return undefined;
+  }
 }
 
 function validateDefinition(value: unknown): DocumentRendererDefinition {
@@ -292,7 +305,8 @@ function validateDefinition(value: unknown): DocumentRendererDefinition {
   if (candidate.matches !== undefined && typeof candidate.matches !== 'function') {
     throw new TypeError('A document renderer matcher must be a function.');
   }
-  if (hasAdapter && !isDocumentRendererAdapter(candidate.adapter)) {
+  const adapter = hasAdapter ? resolveDocumentRendererAdapter(candidate.adapter) : undefined;
+  if (hasAdapter && !adapter) {
     throw new TypeError('A document renderer adapter must be created with createDocumentRendererAdapter().');
   }
   if (hasAdapter && candidate.capabilities !== undefined) {
@@ -302,10 +316,10 @@ function validateDefinition(value: unknown): DocumentRendererDefinition {
   const base = {
     ...(candidate.matches ? { matches: candidate.matches as (file: DocumentFile) => boolean } : {}),
   };
-  const validated = hasAdapter
+  const validated = adapter
     ? Object.freeze({
         ...base,
-        adapter: candidate.adapter as LyraDocumentRendererAdapter,
+        adapter,
       })
     : hasRender
       ? Object.freeze({
@@ -366,6 +380,7 @@ class ImmutableDocumentRendererRegistry implements ReadonlyMap<string, DocumentR
 
   constructor(entries: Iterable<readonly [string, DocumentRendererDefinition]>) {
     this.#entries = new Map(entries);
+    rememberDocumentRendererRegistry(this, this.#entries);
   }
 
   get size(): number {

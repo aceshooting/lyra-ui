@@ -11,6 +11,8 @@ import {
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { composedContains } from '../../../internal/overlay-stack.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -217,6 +219,8 @@ interface PendingMessageFeedbackSubmission {
  * reassign a new detail record after changes. When the detail record enables a comment textarea,
  * its native `spellcheck`, `autocapitalize`, `autocorrect`, and `wrap` properties forward from
  * this element; no textarea exists, and those values have no rendered target, otherwise.
+ *
+ * Asynchronous finalization or reversion preserves focus on an outside control. Settlement retains the existing thumb/submit fallback when focus remains within the feedback or was lost as its pending controls became disabled.
  *
  * @customElement lr-message-feedback
  * @event lr-feedback-change - `detail: { rating }`. Fires whenever thumb interaction changes the
@@ -674,18 +678,26 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   ): void {
     const focusGeneration = ++this.focusGeneration;
     const lifecycleGeneration = transaction.lifecycleGeneration;
+    if (!this.ownsSettlementFocus()) return;
     void this.updateComplete.then(() => {
       if (
         focusGeneration !== this.focusGeneration ||
         lifecycleGeneration !== this.lifecycleGeneration ||
         !this.isConnected ||
         this.pending ||
-        this.pendingSubmission
+        this.pendingSubmission ||
+        !this.ownsSettlementFocus()
       )
         return;
       if (destination === 'submit' && this.panelOpen) this.submitButtonEl?.focus();
       else this.focusActiveThumb();
     });
+  }
+
+  private ownsSettlementFocus(): boolean {
+    const doc = this.ownerDocument;
+    const active = deepActiveElementIn(doc);
+    return active === null || active === doc.body || active === doc.documentElement || composedContains(this, active);
   }
 
   private settlePendingSubmission(

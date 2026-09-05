@@ -21,6 +21,9 @@ degree, community chip, plus a built-in "focus in graph" action. Never fetches o
 itself — `lr-entity-select` is a request a host routes into `lr-graph`'s own
 `focusNode(id, options?)`.
 
+The host `aria-level` attribute overrides the internal title heading live. Changing or removing it
+updates that heading without another property change; omission or an empty override uses level 3.
+
 **Properties:**
 
 - `entity: LyraEntity | null = null` (attribute: false) — `LyraEntity { id: string; label: string;

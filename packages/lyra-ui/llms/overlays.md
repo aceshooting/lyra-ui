@@ -389,6 +389,9 @@ its own custom-element registry; otherwise the returned `item` promise rejects e
 
 First-party "no data" state (no Web Awesome equivalent).
 
+Removing `heading` or `description` safely omits that text; explicit empty values remain empty and
+later values restore the corresponding content.
+
 **Properties:**
 
 - `heading: string = ''`
@@ -614,6 +617,10 @@ slide too and the reduced-motion flattening of the shared `--lr-duration-*` toke
 ## `lr-dialog` / `confirm()`
 
 General-purpose modal/overlay plus a promise-based confirmation helper built on top of it.
+
+Removing `label` safely omits its fallback title. Open dialog and drawer names follow supported name
+and exclusion attribute changes on direct unslotted headings, while host naming retains precedence;
+nested and `slot=""` headings remain outside automatic discovery.
 
 ### `lr-dialog`
 
@@ -942,6 +949,9 @@ clicking its remove (×) button only fires `lr-remove` — the chip never remove
 on its own interaction, the same contract `<lr-attachment-chip>`/`<lr-conversation-item>`
 already follow.
 
+Collapsed groups reapply `max-visible` when assigned children are replaced or reordered at the same
+count, preserving authored hidden/inert state and releasing departed visibility leases.
+
 **Two breaks in 8.0.0.** `tone` is now `variant`, with no alias — one concept, one spelling,
 library-wide. And a chip is **no longer a pill by default**: `--lr-chip-radius` used to be
 `var(--lr-radius-pill)` unconditionally, is now `var(--lr-radius)` (a rounded rectangle), and the
@@ -1195,6 +1205,9 @@ A small chip representing a keyboard shortcut, rendering the platform-appropriat
 cross-platform modifier keys (⌘ on macOS, "Ctrl" elsewhere) from a single platform-neutral `keys`
 string. First-party invention (no Web Awesome equivalent).
 
+Removing `keys` safely clears the shortcut. Unknown tokens, including `constructor` and `__proto__`,
+render and name themselves verbatim; recognized modifiers keep their localized labels.
+
 **Properties:**
 
 - `keys: string = ''` — a `+`-separated sequence of tokens, e.g. `"mod+k"` or `"mod+shift+p"`.
@@ -1298,8 +1311,9 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   under RTL. The shared positioner's physical coordinates remain authoritative in either
   direction, so RTL never stretches a fixed-width popup against an opposite logical inset.
 - `strategy: 'absolute' | 'fixed' = 'absolute'` (reflected) — the CSS positioning scheme. `fixed`
-  escapes every ancestor transform/filter/containment context; `absolute` positions against the
-  nearest positioned ancestor, so the popup scrolls with its containing content
+  normally positions relative to the viewport, but ancestors using transforms, filters or
+  containment can establish a different containing block, and ancestor clipping may still apply.
+  `absolute` positions relative to its containing block and scrolls with its containing content.
 - `distance: number = 0` — offset from the anchor along the placement axis, in px
 - `skidding: number = 0` — offset along the anchor's edge, in px
 - `flip: boolean = false` (not reflected), with `flipFallbackPlacements: string = ''` (attribute
@@ -1378,6 +1392,9 @@ from the shared positioner and caps its dimensions to the measured available spa
 ## `lr-popover`
 
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
+
+An open lr-popover repositions when its effective host or inherited text direction changes,
+preserving open state without emitting lifecycle events.
 
 **First-interaction registration.** A performance-sensitive navigation shell can keep a native
 `<details>` disclosure working before JavaScript, then load only the granular popover registration
@@ -1592,6 +1609,12 @@ fallbacks. Arrow size is half the square's width. Rendering the arrow switches `
 A tooltip for a consumer-owned trigger, positioned with the shared Floating UI positioner. Which
 interactions open it is configurable as of 8.0.0; by default it is still hover and focus.
 
+An open lr-tooltip repositions when its effective host or inherited text direction changes,
+preserving open state without emitting lifecycle events.
+
+Removing `content` safely omits tooltip fallback text while preserving `null` property readback;
+later text renders normally.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — assigning it runs the same lifecycle as `show()`/`hide()`.
@@ -1772,6 +1795,9 @@ nested submenu keyboard/pointer intent, and focus return without a second public
 consumer-supplied `lr-menu` in the default slot becomes that contained engine instead of being
 wrapped in another menu. This supports both Web Awesome's direct-item shape and Shoelace's
 consumer-menu shape.
+
+An open lr-dropdown repositions when its effective host or inherited text direction changes,
+preserving open state without emitting lifecycle events.
 
 **Direct mapped items.** `<lr-dropdown-item>` is the Web Awesome-compatible name for the same row
 implementation as `<lr-menu-item>`. Direct mapped items receive this dropdown's `size` and use its
@@ -2378,6 +2404,9 @@ that lives in this family rather than in `components/forms/` — if you came loo
 form controls, this is its section. Everything the "Form association" section says about `name`,
 submission, validity and the `user-*` custom states applies to it.
 
+Readonly transitions synchronize validity and `aria-invalid` in the same completed update. Form
+reset restores the independent `default-value` rather than the live `value` attribute.
+
 It is form-associated through `ElementInternals` directly rather than through the shared
 `FormAssociated` mixin, because its `value` is a number and the mixin's contract assumes a plain
 string — routing through it would force every consumer into string round-tripping for what is
@@ -2547,71 +2576,86 @@ host beyond its container.
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-overlays-chip-chip-group-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/chip/chip-group.class.js`.
   `ChipGroupOverflowToggleDetail {
-  expanded: unknown;
-}`
+    expanded: boolean;
+  }`
 
 - **`components-overlays-chip-chip-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/chip/chip.class.js`.
   `ChipRemoveDetail {
-  value: unknown;
-}`
+    value?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/overlays/chip/chip.class.js`.
   `ChipSelectDetail {
-  value: unknown;
-  selected: unknown;
-}`
+    value?: string;
+    selected: boolean;
+  }`
 
 - **`components-overlays-dialog-confirm-contracts`** — Supporting data types and helpers for this component family.
-  `confirm(/* public names: options */): unknown`
+  Import: `@aceshooting/lyra-ui/components/overlays/dialog/confirm.js`.
+  `confirm(options: ConfirmOptions): Promise<boolean>`
+  Import: `@aceshooting/lyra-ui/components/overlays/dialog/confirm.js`.
   `ConfirmOptions {
-  title: unknown;
-  description: unknown;
-  confirmLabel: unknown;
-  cancelLabel: unknown;
-  variant: unknown;
-}`
+    title: string;
+    description?: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    variant?: 'neutral' | 'danger';
+  }`
 
 - **`components-overlays-dialog-dialog-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/dialog/dialog.class.js`.
   `LyraDialogHideDetail {
-  source: unknown;
-}`
+    source: Element;
+  }`
+  Import: `@aceshooting/lyra-ui/components/overlays/dialog/dialog.class.js`.
   `LyraDialogModalController {
-  activateExternal: unknown;
-  deactivateExternal: unknown;
-}`
+    activateExternal(): void;
+    deactivateExternal(): void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/overlays/dialog/dialog.class.js`.
   `LyraDialogRequestCloseDetail {
-  source: unknown;
-}`
+    source: LyraDialogRequestCloseSource;
+  }`
 
 - **`components-overlays-kbd-kbd-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/kbd/kbd.class.js`.
   `KbdKeyLabel {
-  visual: unknown;
-  word: unknown;
-}`
-  `parseShortcut(/* public names: keys, isMac, localize */): unknown`
-  `shortcutTokenLabel(/* public names: rawToken, isMac, localize */): unknown`
+    visual: string;
+    word: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/overlays/kbd/kbd.class.js`.
+  `parseShortcut(keys: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel[]`
+  Import: `@aceshooting/lyra-ui/components/overlays/kbd/kbd.class.js`.
+  `shortcutTokenLabel(rawToken: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel`
 
 - **`components-overlays-toast-toast-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/toast/toast.class.js`.
   `LyraToastOptions {
-  message: unknown;
-  placement: unknown;
-  ownerDocument: unknown;
-  variant: unknown;
-  duration: unknown;
-  size: unknown;
-  withIcon: unknown;
-  icon: unknown;
-  action: unknown;
-  label: unknown;
-  onClick: unknown;
-  item: unknown;
-}`
+    message: string;
+    placement?: LyraToastPlacement;
+    ownerDocument?: Document;
+    variant?: LyraToastVariant;
+    duration?: number;
+    size?: LyraSize;
+    withIcon?: boolean;
+    icon?: LyraToastIcon;
+    action?: {
+      label: string;
+      onClick: (item: LyraToastItem) => void;
+    };
+  }`
+  Import: `@aceshooting/lyra-ui/components/overlays/toast/toast.class.js`.
   `LyraToastOverflowDetail {
-  count: unknown;
-}`
+    count: number;
+  }`
 
 - **`components-overlays-toast-toaster-contracts`** — Supporting data types and helpers for this component family.
-  `toast(/* public names: input */): unknown`
+  Import: `@aceshooting/lyra-ui/components/overlays/toast/toaster.js`.
+  `toast(input: LyraToastOptions | string): ToastHandle`
+  Import: `@aceshooting/lyra-ui/components/overlays/toast/toaster.js`.
   `ToastHandle {
-  item: unknown;
-  dismiss: unknown;
-}`
+    item: Promise<LyraToastItem>;
+    dismiss: () => void;
+  }`

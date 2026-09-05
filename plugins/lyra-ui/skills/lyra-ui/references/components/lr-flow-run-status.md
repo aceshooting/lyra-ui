@@ -26,7 +26,7 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `decorations: FlowRunDecorations = {}` (attribute: false) — a detached, deeply frozen readonly
   record bounded to 10,000 keys plus finite nested depth/entry budgets and pushed onto the resolved
-  canvas; invalid status entries are omitted, and consumers reassign the record after changes
+  canvas; invalid statuses and records with unreadable `status`, `progress`, `durationMs` or `detail` fields are omitted independently, retaining valid neighbors, and consumers reassign the record after changes
 - `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
   complete" strip, keeping only the decoration push
 - `label: string = ''` — accessible name for the summary strip

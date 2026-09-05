@@ -1,3 +1,4 @@
+import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
 import {
   html,
   nothing,
@@ -20,6 +21,7 @@ import {
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   closeIcon,
@@ -282,6 +284,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * tier (mirroring `lr-input`'s own password-toggle button), so only the field's density scales.
  * In a constrained row the editable input shrinks first, while each public `start`/`end`
  * adornment is capped at 40% so unbroken consumer content cannot widen the field.
+ *
+ * Host aria-describedby targets in the host root resolve onto the native combobox input before
+ * its local error and hint guidance, and follow target replacement, reconnect, and adoption.
  *
  * @customElement lr-date-input
  * @event {InputEvent} input - Fired on edits as a bubbling, composed, non-cancelable native event.
@@ -551,14 +556,29 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    * `checkValidity(input)` and `{ isValid, message, invalidKeys }` results. Object validators can
    * list host `observedAttributes` that should trigger live revalidation. */
   @property({ attribute: false }) validators: LyraDateInputValidator[] = [];
-  /** Accessible label for the clear button. Override for a non-English `locale`. */
-  @property({ attribute: 'clear-label' }) clearLabel = '';
-  /** Accessible label for the calendar-toggle button. Override for a non-English `locale`. */
-  @property({ attribute: 'open-label' }) openLabel = '';
-  /** Accessible name for the calendar popover dialog. Left at the built-in default it
-   *  routes through `this.localize()` so a locale/`.strings` override applies without
-   *  requiring this to be set; an explicit override wins verbatim. */
-  @property({ attribute: 'dialog-label' }) dialogLabel = 'Choose date';
+  /** Accessible label for the clear button. Omitted copy localizes; explicit text,
+   * including the built-in English label or an empty string, wins verbatim.
+   * @default ''
+   */
+  @property({ attribute: 'clear-label' })
+  clearLabel = '';
+  private clearLabelAuthored = false;
+
+  /** Accessible label for the calendar-toggle button. Omitted copy localizes; explicit text,
+   * including the built-in English label or an empty string, wins verbatim.
+   * @default ''
+   */
+  @property({ attribute: 'open-label' })
+  openLabel = '';
+  private openLabelAuthored = false;
+
+  /** Accessible label for the calendar popover dialog. Omitted copy localizes; explicit text,
+   * including the built-in English label or an empty string, wins verbatim.
+   * @default 'Choose date'
+   */
+  @property({ attribute: 'dialog-label' })
+  dialogLabel = 'Choose date';
+  private dialogLabelAuthored = false;
 
   @query('input[part="input"]') private inputElement?: HTMLInputElement;
   private validationTargetOverride?: HTMLElement;
@@ -589,11 +609,43 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     observer: MutationObserver;
     owner: Window;
   };
+  private localDescriptionIds = '';
+  private externalDescription?: NativeControlDescriptionLease;
   private inputId = nextId('date-input');
   private popupId = nextId('date-popup');
   // Set on the date input's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
+
+  static override get observedAttributes(): string[] {
+    const attributes = super.observedAttributes;
+    observeReactivePropertyWrites(this.prototype, ['clearLabel', 'openLabel', 'dialogLabel'], (instance: LyraDateInput, name, value) => {
+      const authored = value != null;
+      let ownershipChanged = false;
+      switch (name) {
+        case 'clearLabel':
+          // The field initializer precedes its ownership flag; later equal writes are authored.
+          if (instance.clearLabelAuthored === undefined) return;
+          ownershipChanged = authored !== instance.clearLabelAuthored;
+          instance.clearLabelAuthored = authored;
+          break;
+        case 'openLabel':
+          // The field initializer precedes its ownership flag; later equal writes are authored.
+          if (instance.openLabelAuthored === undefined) return;
+          ownershipChanged = authored !== instance.openLabelAuthored;
+          instance.openLabelAuthored = authored;
+          break;
+        case 'dialogLabel':
+          // The field initializer precedes its ownership flag; later equal writes are authored.
+          if (instance.dialogLabelAuthored === undefined) return;
+          ownershipChanged = authored !== instance.dialogLabelAuthored;
+          instance.dialogLabelAuthored = authored;
+          break;
+      }
+      if (ownershipChanged) instance.requestUpdate();
+    });
+    return attributes;
+  }
 
   constructor() {
     super();
@@ -1325,6 +1377,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncExternalDescription();
     this.bindVisibilityListener();
     this.syncInteractionListeners();
     this.syncValidatorAttributeObserver();
@@ -1448,6 +1501,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   override disconnectedCallback(): void {
+    this.externalDescription?.release();
+    this.externalDescription = undefined;
     this.transitionToken++;
     this.cleanupFn?.();
     this.cleanupFn = undefined;
@@ -1477,6 +1532,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.externalDescription?.release();
+    this.externalDescription = undefined;
+    this.syncExternalDescription();
     this.cleanupFn?.();
     this.cleanupFn = undefined;
     this.overlayHandle?.deactivate({ restoreFocus: false });
@@ -1486,8 +1544,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.disconnectValidatorAttributeObserver();
   }
 
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const input = this.renderRoot?.querySelector<HTMLInputElement>('input') ?? null;
+    if (this.externalDescription) this.externalDescription.update(input);
+    else this.externalDescription = acquireNativeControlDescription(this, input, () => this.localDescriptionIds);
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     if (
       changed.has('disabledDates') ||
       changed.has('disabledDaysOfWeek') ||
@@ -1982,12 +2048,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override render(): TemplateResult {
     const hasValue = this.value.length > 0;
-    const hasHint = this.withHint || this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const hasHint = this.withHint || this.hasHintSlot || (this.hint ?? '').length > 0;
+    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
     const hasLabel =
-      this.withLabel || this.hasLabelSlot || this.label.length > 0;
+      this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
     const invalid = this.touched && !this.internals.validity.valid;
-    const describedBy = [
+    const describedBy = this.localDescriptionIds = [
       hasError ? 'date-input-error' : '',
       hasHint ? 'date-input-hint' : '',
     ]
@@ -2063,10 +2129,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                     part="clear-button"
                     type="button"
                     ?disabled=${this.effectiveDisabled || this.readonly}
-                    aria-label=${this.localize(
-                      'clear',
-                      this.clearLabel || undefined
-                    )}
+                    aria-label=${this.clearLabelAuthored ? this.clearLabel : this.localize('clear')}
                     @click=${() => this.clear()}
                   >
                     <span aria-hidden="true" inert
@@ -2080,10 +2143,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
               <button
                 part="expand-button"
                 type="button"
-                aria-label=${this.localize(
-                  'openCalendar',
-                  this.openLabel || undefined
-                )}
+                aria-label=${this.openLabelAuthored ? this.openLabel : this.localize('openCalendar')}
                 aria-haspopup="dialog"
                 aria-expanded=${this.open ? 'true' : 'false'}
                 aria-controls=${this.popupId}
@@ -2102,12 +2162,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
               part="popup"
               role="dialog"
               aria-hidden=${this.open ? 'false' : 'true'}
-              aria-label=${this.localize(
-                'chooseDate',
-                this.dialogLabel === 'Choose date'
-                  ? undefined
-                  : this.dialogLabel
-              )}
+              aria-label=${this.dialogLabelAuthored ? this.dialogLabel : this.localize('chooseDate')}
             >
               <lr-date-picker
                 part="date-picker"

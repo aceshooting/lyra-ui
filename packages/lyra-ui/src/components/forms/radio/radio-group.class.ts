@@ -1,3 +1,4 @@
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import {
   html,
   nothing,
@@ -62,6 +63,9 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
  * A required but pristine group exposes `aria-invalid="false"`; intrinsic invalidity is projected
  * to the radiogroup only after user interaction or a native validity check (`checkValidity()`,
  * `reportValidity()`, or form-level validation), while explicit error chrome remains immediate.
+ *
+ * Host `aria-describedby` references resolve onto the internal radiogroup before local hint/error
+ * guidance. References track target replacement/removal, reconnect and document adoption.
  *
  * @customElement lr-radio-group
  * @slot - Radio controls.
@@ -318,8 +322,24 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     if (alias.defaultPrevented) event.preventDefault();
   };
 
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const target = this.renderRoot?.querySelector<HTMLElement>('[role="radiogroup"]') ?? null;
+    if (!target) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.syncSupportSlots();
     this.syncRadios();
     this.armMembershipObserver();
@@ -446,6 +466,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     });
   }
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     this.resetMembershipObserver();
     this.runResizeObserver?.disconnect();
     this.runResizeObserver = undefined;
@@ -461,6 +482,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.resetMembershipObserver();
   }
 
@@ -482,6 +505,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     this.syncRadios();
   }
 
@@ -555,7 +579,10 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     const match = radios.find((radio) => radio.value === desired);
     this.syncingRadios = true;
     try {
-      for (const radio of radios) radio.checked = radio === match;
+      // Owner synchronization leaves unchanged pristine options eligible for default propagation.
+      for (const radio of radios) {
+        if (radio.checked !== (radio === match)) radio.checked = radio === match;
+      }
     } finally {
       this.syncingRadios = false;
     }
@@ -581,7 +608,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       let checkedRadio: LyraRadio | undefined;
       if (this.pendingSelection !== undefined && radios.length > 0) {
         checkedRadio = radios.find((radio) => radio.value === this.pendingSelection);
-        for (const radio of radios) radio.checked = radio === checkedRadio;
+        for (const radio of radios) {
+          if (radio.checked !== (radio === checkedRadio)) radio.checked = radio === checkedRadio;
+        }
         checked = checkedRadio ? [checkedRadio] : [];
         this.pendingSelection = undefined;
       } else {
@@ -642,7 +671,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     this.hasInteracted = true;
     this.syncingRadios = true;
     try {
-      for (const candidate of this.radios()) candidate.checked = candidate === radio;
+      for (const candidate of this.radios()) {
+        if (candidate.checked !== (candidate === radio)) candidate.checked = candidate === radio;
+      }
     } finally {
       this.syncingRadios = false;
     }

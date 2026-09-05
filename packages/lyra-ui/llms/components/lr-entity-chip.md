@@ -20,6 +20,10 @@ An inline `@entity` mention for agent prose: flow content, keyboard-focusable, w
 preview popover. The knowledge-graph sibling of `lr-citation-badge`, reusing its interaction
 contract wholesale. Carries ids through events only — no entity data resolution, no navigation.
 
+Removing `text` or `type` leaves the property readback as `null` and treats it as absent when
+deriving the button name. Explicit empty strings stay empty, and later valid values restore the
+corresponding label/type text.
+
 **Properties:**
 
 - `entityId: string = ''` (attribute `entity-id`)

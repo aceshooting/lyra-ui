@@ -149,24 +149,31 @@ export const NormalizedLinkWidths: Story = {
       description: {
         story:
           'Link widths are normalized consistently in SVG, canvas paint, and canvas picking: ' +
-          'negative values clamp to zero and non-finite values use the 1.5 default.',
+          'negative values clamp to zero and non-finite values use the 1.5 default. Zero-width ' +
+          'links paint no stroke or arrowhead and stay outside keyboard navigation while their ' +
+          'topology remains in the accessible summary. Use the arrow keys to move past them.',
       },
     },
   },
-  render: () => html`
-    <lr-graph
-      width="480"
-      height="320"
-      seed="42"
-      style="height: 20rem"
-      .nodes=${nodes}
-      .links=${[
-        { source: 'a', target: 'b', width: Number.NaN },
-        { source: 'a', target: 'c', width: -4 },
-        { source: 'b', target: 'd', width: 2.5 },
-      ] satisfies LyraGraphLink[]}
-    ></lr-graph>
-  `,
+  render: () =>
+    html`${(['svg', 'canvas'] as const).map(
+      (renderer) => html`
+        <lr-graph
+          renderer=${renderer}
+          width="480"
+          height="320"
+          seed="42"
+          style="height: 20rem"
+          .nodes=${nodes}
+          .links=${[
+            { source: 'a', target: 'd', width: 0, directed: true },
+            { source: 'a', target: 'b', width: Number.NaN },
+            { source: 'a', target: 'c', width: -4 },
+            { source: 'b', target: 'd', width: 2.5 },
+          ] satisfies LyraGraphLink[]}
+        ></lr-graph>
+      `
+    )}`,
 };
 
 export const DimmedNeighborhood: Story = {
@@ -238,17 +245,44 @@ export const TunedForces: Story = {
 };
 
 export const BoundedZoom: Story = {
-  render: () => html`
-    <lr-graph
-      width="480"
-      height="320"
-      style="height: 20rem"
-      min-zoom="1"
-      max-zoom="2"
-      .nodes=${nodes}
-      .links=${links}
-    ></lr-graph>
-  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Change the mounted graph bounds, then use the wheel to reach the new limits. SVG and canvas both apply the latest minimum and maximum.',
+      },
+    },
+  },
+  render: () =>
+    html`${(['svg', 'canvas'] as const).map(
+      (renderer) => html`
+        <div>
+          <button
+            type="button"
+            @click=${(event: Event) => {
+              const graph = (
+                event.currentTarget as HTMLElement
+              ).parentElement!.querySelector<LyraGraph>('lr-graph')!;
+              const constrained = graph.maxZoom !== 2;
+              graph.minZoom = constrained ? 1 : 0.1;
+              graph.maxZoom = constrained ? 2 : 8;
+            }}
+          >
+            Toggle ${renderer} zoom bounds between 1–2 and 0.1–8
+          </button>
+          <lr-graph
+            renderer=${renderer}
+            width="480"
+            height="320"
+            style="height: 20rem"
+            min-zoom="1"
+            max-zoom="2"
+            .nodes=${nodes}
+            .links=${links}
+          ></lr-graph>
+        </div>
+      `
+    )}`,
 };
 
 export const SeededLayout: Story = {
@@ -366,6 +400,19 @@ export const CanvasLayeredCommunities: Story = {
     },
   },
   render: () => {
+    const showHover = (
+      event: CustomEvent<{ nodeId?: string; linkId?: string }>
+    ) => {
+      const output = (event.currentTarget as HTMLElement)
+        .closest('.graph-canvas-demo')
+        ?.querySelector('output');
+      if (output)
+        output.textContent = event.type.endsWith('-leave')
+          ? 'Hover a node or link'
+          : `Hovered ${event.detail.nodeId ? 'node' : 'link'}: ${
+              event.detail.nodeId ?? event.detail.linkId
+            }`;
+    };
     const applySelection = (
       event: CustomEvent<{ nodeIds: string[]; linkIds: string[] }>
     ) => {
@@ -399,6 +446,7 @@ export const CanvasLayeredCommunities: Story = {
         >
           Toggle canvas palette
         </button>
+        <output>Hover a node or link</output>
         <lr-graph
           aria-label="Layered retrieval pipeline"
           renderer="canvas"
@@ -414,6 +462,10 @@ export const CanvasLayeredCommunities: Story = {
           .communities=${communities}
           .selectedNodeIds=${['rank']}
           @lr-selection-change=${applySelection}
+          @lr-node-enter=${showHover}
+          @lr-node-leave=${showHover}
+          @lr-link-enter=${showHover}
+          @lr-link-leave=${showHover}
         ></lr-graph>
       </div>
     `;

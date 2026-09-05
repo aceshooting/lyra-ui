@@ -435,6 +435,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // onOptionKeyDown's own `if (this.renaming) return;` guard, which would
     // otherwise wrongly let the same Enter keystroke also fire lr-select.
     e.stopPropagation();
+    if (e.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter') {
       e.preventDefault();
       this.commitRename(true);

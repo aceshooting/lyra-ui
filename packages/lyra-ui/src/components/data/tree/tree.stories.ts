@@ -27,6 +27,30 @@ export const Default: Story = {
   render: () => html`<lr-tree style="max-width: 20rem" label="File explorer" .data=${data}></lr-tree>`,
 };
 
+export const UnnamedDataRows: Story = {
+  render: () => html`
+    <p>Rows without accessible content keep their blank visible labels and use stable data IDs as spoken names.</p>
+    <lr-tree label="Documents" .data=${[
+      { id: 'document-42', label: '' },
+      { id: 'description-only', label: '', description: 'Description supplies the name' },
+      { id: 'spoken-label', label: '', accessibleLabel: 'Authored spoken name' },
+    ] satisfies LyraTreeNodeData[]}></lr-tree>
+  `,
+};
+
+export const BoundedDataInspection: Story = {
+  render: () => {
+    const sparse = new Array<LyraTreeNodeData>(10_001);
+    sparse[0] = { id: 'first', label: 'First admitted row' };
+    sparse[9_999] = { id: 'last', label: 'Last row within the inspection budget' };
+    sparse[10_000] = { id: 'omitted', label: 'Beyond the inspection budget' };
+    return html`
+      <p>Normalization inspects at most 10,000 array positions and retains at most 1,000 valid nodes.</p>
+      <lr-tree label="Bounded projection" .data=${sparse}></lr-tree>
+    `;
+  },
+};
+
 /**
  * Data-model children live behind another shadow root at every depth. This one selector matches
  * only the generated top-level host, whose same-name part forwarding carries the theme through

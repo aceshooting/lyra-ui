@@ -52,6 +52,7 @@ export interface LyraTreeEventMap {
 
 const TREE_SELECTIONS = new Set<TreeSelection>(['single', 'multiple', 'leaf', 'leaf-multiple']);
 const TREE_BADGE_LIMIT = 100;
+const TREE_MAX_INSPECTED_POSITIONS = 10_000;
 const EMPTY_TREE_DATA = Object.freeze([]) as readonly LyraTreeNodeData[];
 
 type MutableTreeNodeData = {
@@ -126,28 +127,33 @@ function normalizeTreeData(input: unknown): {
   const rootLength = arrayLength(input);
   let truncated = false;
   let accepted = 0;
+  let inspected = 0;
   const seenIds = new Set<string>();
   const identityFilteredCollections = new Set<MutableTreeNodeData[]>();
   const jobs: Array<{
-    source: unknown;
+    source: object;
+    index: number;
+    length: number;
     target: MutableTreeNodeData[];
     parentPath: string;
     depth: number;
     ancestors: ReadonlySet<object>;
-  }> = [];
-  const rootScanLength = Math.min(rootLength, TREE_MAX_RENDER_NODES);
-  if (rootLength > rootScanLength) truncated = true;
-  for (let index = rootScanLength - 1; index >= 0; index--) {
-    jobs.push({ source: ownValue(input, String(index)), target: root, parentPath: '', depth: 0, ancestors: new Set() });
-  }
+  }> = [{ source: input, index: 0, length: rootLength, target: root, parentPath: '', depth: 0, ancestors: new Set() }];
 
   while (jobs.length > 0) {
-    if (accepted >= TREE_MAX_RENDER_NODES) {
+    // Keep one lazy collection cursor per depth, never one queued job per array position.
+    const job = jobs[jobs.length - 1]!;
+    if (job.index >= job.length) {
+      jobs.pop();
+      continue;
+    }
+    if (accepted >= TREE_MAX_RENDER_NODES || inspected >= TREE_MAX_INSPECTED_POSITIONS) {
       truncated = true;
       break;
     }
-    const job = jobs.pop()!;
-    const raw = job.source;
+    const raw = ownValue(job.source, String(job.index++));
+    inspected++;
+    if (inspected === TREE_MAX_INSPECTED_POSITIONS) truncated = true;
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
       truncated = true;
       identityFilteredCollections.add(job.target);
@@ -202,15 +208,15 @@ function normalizeTreeData(input: unknown): {
     node.children = children;
     const ancestors = new Set(job.ancestors);
     ancestors.add(raw);
-    for (let index = childCount - 1; index >= 0; index--) {
-      jobs.push({
-        source: ownValue(rawChildren as object, String(index)),
-        target: children,
-        parentPath: path,
-        depth: job.depth + 1,
-        ancestors,
-      });
-    }
+    jobs.push({
+      source: rawChildren as object,
+      index: 0,
+      length: childCount,
+      target: children,
+      parentPath: path,
+      depth: job.depth + 1,
+      ancestors,
+    });
   }
 
   for (let index = created.length - 1; index >= 0; index--) {
@@ -363,7 +369,10 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private declaredRootCount = 0;
   private _dataTruncated = false;
 
-  /** Clone-owned/frozen object child model.
+  /** Clone-owned/frozen object child model. Normalization retains at most 1,000 nodes over 64
+   * descendant levels and inspects at most 10,000 root/child array positions in depth-first order.
+   * An otherwise unnamed projected row uses its stable data ID as its semantic name, without
+   * changing its visible label or the installed data.
    * @default [] */
   @property({ attribute: false })
   get data(): readonly LyraTreeNodeData[] {

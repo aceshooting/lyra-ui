@@ -50,6 +50,22 @@ export const Default: Story = {
   render: () => html`<lr-rubric-form style="max-width: 28rem" .keys=${keys}></lr-rubric-form>`,
 };
 
+export const ControlledCategories: Story = {
+  parameters: {
+    docs: { description: { story: 'A replacement value updates the live category checkboxes and submitted review after user edits. The whole-form description belongs to the aggregate group; each field retains its own guidance.' } },
+  },
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-m); max-inline-size:var(--lr-size-28rem);">
+      <p id="rubric-controlled-guidance">Review the answer, then choose the applicable issues.</p>
+      <lr-rubric-form .keys=${keys} aria-describedby="rubric-controlled-guidance"></lr-rubric-form>
+      <button type="button" @click=${(event: Event) => {
+        const field = (event.currentTarget as HTMLElement).previousElementSibling;
+        if (field?.localName === 'lr-rubric-form') (field as HTMLElement & { value: RubricValue }).value = { issue: ['tone'] };
+      }}>Replace selected issues with Tone</button>
+    </div>
+  `,
+};
+
 export const RequiredMarkerTheme: Story = {
   name: 'Shared required-marker theme',
   render: () => html`

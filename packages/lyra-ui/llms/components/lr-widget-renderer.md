@@ -30,6 +30,15 @@ navigates (no `href` props are allowlisted anywhere). Controlled state binding i
 narrow: a versioned document may bind an allowlisted primitive prop to a JSON Pointer, and the host
 must apply every requested change itself.
 
+Default authoring diagnostics are silent outside Lit's development mode. An explicit expert
+`ResolveContext.warn` callback remains active in every runtime; warning keys and the suppression cap
+remain scoped to the current context generation. Runtime `lr-render-error` reporting is independent
+of this development diagnostic policy.
+
+`createWidgetDocument` validates authored trees immediately. To handle a received, untrusted
+document, pass its envelope to the renderer's `document` boundary; malformed envelopes clear prior
+output and emit `lr-render-error`. The malformed-stream example exercises this boundary.
+
 **Exported types:**
 
 - `LyraWidgetNode { readonly type: string; readonly id?: string; readonly props?:

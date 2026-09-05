@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 
 const meta: Meta = {
+  parameters: { docs: { description: { component: 'Removing heading or description safely omits that text; explicit empty values remain empty and later values restore the corresponding content.' } } },
   title: 'Empty',
   component: 'lr-empty',
   tags: ['autodocs'],

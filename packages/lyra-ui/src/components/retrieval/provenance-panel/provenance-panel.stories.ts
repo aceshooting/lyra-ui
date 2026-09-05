@@ -6,6 +6,7 @@ import type { LyraProvenance } from './provenance-panel.class.js';
 const meta: Meta = {
   title: 'Provenance Panel',
   component: 'lr-provenance-panel',
+  parameters: { docs: { description: { component: 'Entity type lookup ignores malformed rows while retaining later valid matching type labels.' } } },
 };
 export default meta;
 type Story = StoryObj;

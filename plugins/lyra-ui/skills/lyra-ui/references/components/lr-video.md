@@ -21,6 +21,10 @@ selectable captions, and bounded WebVTT thumbnail previews. It mirrors the publi
 API under the `lr-` prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/media/video/video.js'`.
 
+When progress is unavailable, the disabled native range input and its visible timeline track retain
+resting paint under hover and press. Once media duration makes progress available, the track retains
+its token-driven hover and press feedback.
+
 **Properties:** `autoplay: boolean = false`, `autoplayMuted: boolean = false` (attribute
 `autoplay-muted`), `autoplayOnVisible: boolean = false` (attribute `autoplay-on-visible`),
 `controls: 'none' | 'standard' | 'full' = 'standard'`, `currentTime: number = 0` (attribute

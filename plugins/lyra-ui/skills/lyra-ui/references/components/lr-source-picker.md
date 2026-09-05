@@ -21,6 +21,10 @@ type icons, search. **Not `FormAssociated`, deliberately**: this is a scoping pa
 control — the selection is immediate app state consumed by the next retrieval call, exactly the
 stance `lr-tool-select-dialog` already takes.
 
+Toggling search retains the query and selected source IDs. Re-enabling a retained filter repairs the
+active tree row so one visible usable Tab stop remains whenever rows are visible; focus already in
+the tree follows that repair, while focus outside is preserved.
+
 **Properties:**
 
 - `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:

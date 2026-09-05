@@ -316,11 +316,11 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part="remove-button"]:hover {
+  [part="remove-button"]:hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-text);
   }
-  [part="remove-button"]:active {
+  [part="remove-button"]:active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),

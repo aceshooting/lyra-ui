@@ -47,6 +47,22 @@ export const Default: Story = {
   render: () => html`<lr-condition-builder style="max-width: 42rem" .fields=${fields} .value=${value}></lr-condition-builder>`,
 };
 
+export const FieldAndOperatorEvents: Story = {
+  render: () => {
+    let changes = 0;
+    return html`<div>
+      <p>Choose a field or operator to receive one complete condition-model snapshot.</p>
+      <lr-condition-builder .fields=${fields} .value=${value}
+        @lr-input=${(event: CustomEvent<{ value: ConditionBuilderValue }>) => {
+          const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('pre');
+          if (output) output.textContent = JSON.stringify({ changes: ++changes, value: event.detail.value }, null, 2);
+        }}
+      ></lr-condition-builder>
+      <pre>Choose a field or operator.</pre>
+    </div>`;
+  },
+};
+
 /** No conditions yet -- the empty state prompts adding the first one. */
 export const Empty: Story = {
   render: () => html`<lr-condition-builder style="max-width: 42rem" .fields=${fields}></lr-condition-builder>`,

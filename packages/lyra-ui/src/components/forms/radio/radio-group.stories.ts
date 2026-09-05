@@ -102,3 +102,12 @@ export const HorizontalButtonsNarrow: StoryObj = {
     `;
   },
 };
+
+export const ExternalDescription: StoryObj = {
+  render: () => html`
+    <p id="radio-group-guidance">Choose one delivery method.</p>
+    <lr-radio-group label="Delivery" hint="You can change this later." aria-describedby="radio-group-guidance">
+      <lr-radio value="email">Email</lr-radio><lr-radio value="post">Post</lr-radio>
+    </lr-radio-group>
+  `,
+};

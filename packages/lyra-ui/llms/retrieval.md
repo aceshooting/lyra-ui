@@ -72,6 +72,12 @@ out of heading semantics entirely (renders plain text, no `role`/level).
 
 A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
+A zero-width canvas link paints neither a stroke nor an arrowhead; its relationship remains in the
+nonvisual topology summary.
+
+In both renderers, roving navigation transfers real focus through nodes, operable links, then
+community hulls; zero-width, fully transparent, and dangling links remain outside that focus order.
+
 **Properties:**
 
 - `nodes: LyraGraphNode[] = []` (attribute: false) — readonly `LyraGraphNode { id: string; label?: string;
@@ -165,7 +171,7 @@ camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local draw
 **Events:** `lr-node-click` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
 local drawing coordinates), `lr-link-click` (`detail: { sourceNodeId, targetNodeId,
 linkId? }`; the optional `linkId` is the stable `LyraGraphLink.id` supplied by the caller), `lr-node-enter`/
-`lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning),
+`lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning; canvas emits once per hit-identity transition or exit),
 `lr-link-enter`/`lr-link-leave` (`detail: { sourceNodeId, targetNodeId, linkId? }`, same hover contract),
 `lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-click`
@@ -276,7 +282,7 @@ localized `part="error"` alert. Install with
   force on the new midpoint and nudges the simulation via `alpha(0.1).restart()`, in addition to
   resizing the rendered `viewBox` — both branches apply independently, so setting `width` and
   `chargeStrength` in the same synchronous batch retunes both, not just one.
-- zoom is bounded via `minZoom`/`maxZoom` (`d3-zoom`'s `.scaleExtent(...)`, live-reactive); pan/
+- zoom is bounded via `minZoom`/`maxZoom` (`d3-zoom`'s `.scaleExtent(...)`, live-reactive in both SVG and canvas); pan/
   zoom/drag are still pointer-only with no keyboard equivalent. Links (`<line part="link">`) are now
   keyboard-operable too (`tabindex="0"`, `role="button"`, `aria-label`, Enter/Space), matching nodes.
 - while the `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers are resolving, the host shows an
@@ -354,6 +360,9 @@ it by keyboard. Never creates nodes or touches a canvas's data itself — the dr
 at `lr-node-add`/`lr-palette-place`; the host mutates `nodes`. Fully decoupled from
 `lr-flow-canvas` (no `for` resolution, unlike the other three companions) — it only needs to agree
 with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
+
+For `lr-palette-place`, create the node and assign the updated array to the target canvas's public
+`nodes` property. Updating a captured local array alone does not update an already rendered canvas.
 
 **Properties:**
 
@@ -504,6 +513,9 @@ degree, community chip, plus a built-in "focus in graph" action. Never fetches o
 itself — `lr-entity-select` is a request a host routes into `lr-graph`'s own
 `focusNode(id, options?)`.
 
+The host `aria-level` attribute overrides the internal title heading live. Changing or removing it
+updates that heading without another property change; omission or an empty override uses level 3.
+
 **Properties:**
 
 - `entity: LyraEntity | null = null` (attribute: false) — `LyraEntity { id: string; label: string;
@@ -581,6 +593,10 @@ from tokens.
 An inline `@entity` mention for agent prose: flow content, keyboard-focusable, with a hover/focus
 preview popover. The knowledge-graph sibling of `lr-citation-badge`, reusing its interaction
 contract wholesale. Carries ids through events only — no entity data resolution, no navigation.
+
+Removing `text` or `type` leaves the property readback as `null` and treats it as absent when
+deriving the button name. Explicit empty strings stay empty, and later valid values restore the
+corresponding label/type text.
 
 **Properties:**
 
@@ -934,6 +950,10 @@ type icons, search. **Not `FormAssociated`, deliberately**: this is a scoping pa
 control — the selection is immediate app state consumed by the next retrieval call, exactly the
 stance `lr-tool-select-dialog` already takes.
 
+Toggling search retains the query and selected source IDs. Re-enabling a retained filter repairs the
+active tree row so one visible usable Tab stop remains whenever rows are visible; focus already in
+the tree follows that repair, while focus outside is preserved.
+
 **Properties:**
 
 - `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:
@@ -1027,6 +1047,9 @@ set the step, not the depth. Plus shared tokens otherwise.
 The grounding breakdown for one answer: a sectioned disclosure panel (Entities / Relationships /
 Communities / Text chunks) composing this family's own pieces. The chat ↔ graph ↔ document glue
 component. Pure projection + event conduit: no fetching, no graph/viewer imports, no persistence.
+
+Malformed type rows are ignored during lookup, preserving valid later matching records and the
+existing immutable collection ownership.
 
 **Properties:**
 
@@ -1547,6 +1570,10 @@ its semantics survive list-style resets),
 Controlled list of documents moving through an ingestion pipeline: stage badge, progress, chunk/
 embedding counts, retry attempts, errors, and retry/cancel requests. Never ingests anything itself.
 
+Nonstring failure details use the localized failed-stage label for row text and fresh failure
+announcements. Omitted details stay omitted. Formatting uses the effective locale, and historical
+failures remain silent on mount.
+
 **Properties:**
 
 - `items: IngestionQueueItem[] = []` (attribute: false) — `IngestionQueueItem { id: string;
@@ -1698,6 +1725,13 @@ Orchestration-level knowledge-graph surface: the `lr-graph` canvas plus entity s
 neighborhood expansion, pinned nodes, path finding between pins, node selection, and a details
 overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-list`,
 `lr-path-strip`, and `lr-popover.showAt()`.
+
+Removing `search-query` retains `null` property readback while clearing the search input, results
+and search dimming; an explicitly empty value remains empty and later queries work normally.
+Path-node `lr-entity-activate` is consumed by the explorer and enters the same selection, graph
+focus and details flow as other entity activations, emitting one `lr-selection-change`.
+`lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
+`query`, `matchCount`, and `matchCountExact`.
 
 **Properties:** (host-supplied data, identity-normalized before rendering)
 
@@ -2419,378 +2453,411 @@ document-viewer-compatible `anchor` in `lr-chunk-open`.
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-retrieval-chunk-inspector-chunk-inspector-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/chunk-inspector/chunk-inspector.class.js`.
   `LyraChunk {
-  id: unknown;
-  text: unknown;
-  score: unknown;
-  sourceId: unknown;
-  title: unknown;
-  page: unknown;
-  anchor: unknown;
-}`
+    id: string;
+    text: string;
+    score: number;
+    sourceId: string;
+    title?: string;
+    page?: string | number;
+    anchor?: LyraChunkAnchor;
+  }`
 
 - **`components-retrieval-citation-badge-citation-badge-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/citation-badge/citation-badge.class.js`.
   `CitationActivateDetail {
-  sourceId: unknown;
-  index: unknown;
-}`
+    sourceId: string;
+    index: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/citation-badge/citation-badge.class.js`.
   `CitationOpenDetail {
-  sourceId: unknown;
-  index: unknown;
-  href: unknown;
-}`
+    sourceId: string;
+    index: number;
+    href?: string;
+  }`
 
 - **`components-retrieval-community-card-community-card-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/community-card/community-card.class.js`.
   `LyraCommunity {
-  id: unknown;
-  label: unknown;
-  summary: unknown;
-  memberCount: unknown;
-}`
+    id: string;
+    label: string;
+    summary?: string;
+    memberCount?: number;
+  }`
 
 - **`components-retrieval-embedding-explorer-embedding-explorer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/embedding-explorer/embedding-explorer.class.js`.
   `EmbeddingPoint {
-  id: unknown;
-  x: unknown;
-  y: unknown;
-  label: unknown;
-  sourceId: unknown;
-  cluster: unknown;
-}`
+    id: string;
+    x: number;
+    y: number;
+    label?: string;
+    sourceId?: string;
+    cluster?: string | number;
+  }`
 
 - **`components-retrieval-entity-card-entity-card-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/entity-card/entity-card.class.js`.
   `LyraEntity {
-  id: unknown;
-  label: unknown;
-  type: unknown;
-  description: unknown;
-  properties: unknown;
-  degree: unknown;
-  communityId: unknown;
-}`
+    id: string;
+    label: string;
+    type?: string;
+    description?: string;
+    properties?: Readonly<Record<string, string | number>>;
+    degree?: number;
+    communityId?: string;
+  }`
 
 - **`components-retrieval-entity-dossier-entity-dossier-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/entity-dossier/entity-dossier.class.js`.
   `LyraEntityDossierConfidence {
-  label: unknown;
-  value: unknown;
-  unit: unknown;
-  variant: unknown;
-  exactValue: unknown;
-  caption: unknown;
-  rows: unknown;
-}`
+    readonly label: string;
+    readonly value: string;
+    readonly unit?: string;
+    readonly variant?: LyraVariant;
+    readonly exactValue?: string;
+    readonly caption?: string;
+    readonly rows?: readonly StatRow[];
+  }`
 
 - **`components-retrieval-graph-legend-graph-legend-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph-legend/graph-legend.class.js`.
   `LyraGraphLegendVisibilityDetail {
-  hiddenTypes: unknown;
-}`
+    hiddenTypes: string[];
+  }`
 
 - **`components-retrieval-graph-graph-loader-contracts`** — Supporting data types and helpers for this component family.
-  `D3DragBehavior {
-  on: unknown;
-  type: unknown;
-  listener: unknown;
-  event: unknown;
-  active: unknown;
-  x: unknown;
-  y: unknown;
-  sourceEvent: unknown;
-  subject: unknown;
-  container: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `D3DragBehavior<ElementType extends Element, Datum> {
+    on(type: 'start' | 'drag' | 'end', listener: (event: {
+      active: number;
+      x: number;
+      y: number;
+      sourceEvent?: unknown;
+      subject?: Datum;
+      container?: ElementType;
+    }) => void): this;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
   `D3ForceCenter {
-  initialize: unknown;
-  nodes: unknown;
-}`
-  `D3ForceCollide {
-  radius: unknown;
-  value: unknown;
-  node: unknown;
-}`
-  `D3ForceLink {
-  distance: unknown;
-  value: unknown;
-  link: unknown;
-}`
-  `D3ForceManyBody {
-  strength: unknown;
-  value: unknown;
-  node: unknown;
-}`
+    initialize?(nodes: D3SimulationNodeDatum[]): void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `D3ForceCollide<Node extends D3SimulationNodeDatum> {
+    radius(value: number | ((node: Node) => number)): this;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `D3ForceLink<Node extends D3SimulationNodeDatum, Link extends D3SimulationLinkDatum<Node>> {
+    distance(value: number | ((link: Link) => number)): this;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `D3ForceManyBody<Node extends D3SimulationNodeDatum> {
+    strength(value: number | ((node: Node) => number)): this;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
   `D3Modules {
-  forceSimulation: unknown;
-  nodes: unknown;
-  forceLink: unknown;
-  links: unknown;
-  forceManyBody: unknown;
-  forceCenter: unknown;
-  x: unknown;
-  y: unknown;
-  forceCollide: unknown;
-  drag: unknown;
-  zoom: unknown;
-  zoomIdentity: unknown;
-  zoomTransform: unknown;
-  node: unknown;
-  select: unknown;
-}`
-  `D3Selection {
-  call: unknown;
-  behavior: unknown;
-  node: unknown;
-  datum: unknown;
-}`
-  `D3Simulation {
-  force: unknown;
-  name: unknown;
-  on: unknown;
-  type: unknown;
-  listener: unknown;
-  alphaTarget: unknown;
-  value: unknown;
-  restart: unknown;
-  stop: unknown;
-  alpha: unknown;
-  alphaMin: unknown;
-  tick: unknown;
-  iterations: unknown;
-}`
-  `D3SimulationLinkDatum {
-  source: unknown;
-  target: unknown;
-  index: unknown;
-}`
+    forceSimulation<Node extends D3SimulationNodeDatum, Link extends D3SimulationLinkDatum<Node>>(nodes: Node[]): D3Simulation<Node, Link>;
+    forceLink<Node extends D3SimulationNodeDatum, Link extends D3SimulationLinkDatum<Node>>(links: Link[]): D3ForceLink<Node, Link>;
+    forceManyBody<Node extends D3SimulationNodeDatum>(): D3ForceManyBody<Node>;
+    forceCenter(x?: number, y?: number): D3ForceCenter;
+    forceCollide<Node extends D3SimulationNodeDatum>(): D3ForceCollide<Node>;
+    drag<ElementType extends Element, Datum>(): D3DragBehavior<ElementType, Datum>;
+    zoom<ElementType extends Element, Datum>(): D3ZoomBehavior<ElementType, Datum>;
+    zoomIdentity: D3ZoomTransform;
+    zoomTransform(node: Element): D3ZoomTransform;
+    select<ElementType extends Element, Datum>(node: ElementType): D3Selection<ElementType, Datum>;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `D3Selection<ElementType extends Element, Datum> {
+    call(behavior: unknown): this;
+    node?(): ElementType | null;
+    datum?(): Datum;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `D3Simulation<Node extends D3SimulationNodeDatum, Link extends D3SimulationLinkDatum<Node>> {
+    force(name: string, force: D3ForceLink<Node, Link> | D3ForceManyBody<Node> | D3ForceCollide<Node> | D3ForceCenter): this;
+    on(type: 'tick', listener: () => void): this;
+    alphaTarget(value: number): this;
+    restart(): this;
+    stop(): this;
+    alpha(): number;
+    alpha(value: number): this;
+    alphaMin(): number;
+    tick(iterations?: number): this;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `D3SimulationLinkDatum<Node extends D3SimulationNodeDatum> {
+    source: Node | string | number;
+    target: Node | string | number;
+    index?: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
   `D3SimulationNodeDatum {
-  index: unknown;
-  x: unknown;
-  y: unknown;
-  vx: unknown;
-  vy: unknown;
-  fx: unknown;
-  fy: unknown;
-}`
-  `D3ZoomBehavior {
-  scaleExtent: unknown;
-  extent: unknown;
-  on: unknown;
-  type: unknown;
-  listener: unknown;
-  event: unknown;
-  transform: unknown;
-  selection: unknown;
-}`
+    index?: number;
+    x?: number;
+    y?: number;
+    vx?: number;
+    vy?: number;
+    fx?: number | null;
+    fy?: number | null;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `D3ZoomBehavior<ElementType extends Element, Datum> {
+    scaleExtent(extent: [number, number]): this;
+    on(type: 'start' | 'end', listener: () => void): this;
+    on(type: 'zoom', listener: (event: {
+      transform: D3ZoomTransform;
+    }) => void): this;
+    transform(selection: D3Selection<ElementType, Datum>, transform: D3ZoomTransform): void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
   `D3ZoomTransform {
-  k: unknown;
-  x: unknown;
-  y: unknown;
-  translate: unknown;
-  scale: unknown;
-  toString: unknown;
-}`
-  `loadD3(): unknown`
-  `loadD3Modules(/* public names: importForce, importDrag, importZoom, importSelection */): unknown`
+    readonly k: number;
+    readonly x: number;
+    readonly y: number;
+    translate(x: number, y: number): D3ZoomTransform;
+    scale(k: number): D3ZoomTransform;
+    toString(): string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `loadD3(): Promise<D3Modules | null>`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js`.
+  `loadD3Modules(importForce?: () => Promise<unknown>, importDrag?: () => Promise<unknown>, importZoom?: () => Promise<unknown>, importSelection?: () => Promise<unknown>): Promise<D3Modules | null>`
 
 - **`components-retrieval-graph-graph-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
   `LyraGraphCommunity {
-  id: unknown;
-  label: unknown;
-  memberIds: unknown;
-  color: unknown;
-}`
+    readonly id: string;
+    readonly label?: string;
+    readonly memberIds: readonly string[];
+    readonly color?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
   `LyraGraphLink {
-  id: unknown;
-  source: unknown;
-  target: unknown;
-  width: unknown;
-  label: unknown;
-  accessibleLabel: unknown;
-  description: unknown;
-  directed: unknown;
-  color: unknown;
-  dash: unknown;
-}`
+    readonly id?: string;
+    readonly source: string;
+    readonly target: string;
+    readonly width?: number;
+    readonly label?: string;
+    readonly accessibleLabel?: string;
+    readonly description?: string;
+    readonly directed?: boolean;
+    readonly color?: string;
+    readonly dash?: readonly number[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
   `LyraGraphNode {
-  id: unknown;
-  label: unknown;
-  accessibleLabel: unknown;
-  description: unknown;
-  radius: unknown;
-  color: unknown;
-  type: unknown;
-  expandable: unknown;
-  communityId: unknown;
-}`
+    readonly id: string;
+    readonly label?: string;
+    readonly accessibleLabel?: string;
+    readonly description?: string;
+    readonly radius?: number;
+    readonly color?: string;
+    readonly type?: string;
+    readonly expandable?: boolean;
+    readonly communityId?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
   `LyraScoreThresholds {
-  high: unknown;
-  medium: unknown;
-}`
+    readonly high: number;
+    readonly medium: number;
+  }`
 
 - **`components-retrieval-ingestion-queue-ingestion-queue-contracts`** — Supporting data types and helpers for this component family.
-  `IngestionCancelEventDetail {
-  itemId: unknown;
-  reason: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
+  `IngestionCancelEventDetail extends CancelEventDetail {
+    itemId: string;
+    // Inherited from CancelEventDetail.
+    reason?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
   `IngestionQueueItem {
-  id: unknown;
-  document: unknown;
-  stage: unknown;
-  progress: unknown;
-  chunkCount: unknown;
-  embeddedChunkCount: unknown;
-  attempts: unknown;
-  error: unknown;
-}`
-  `IngestionRetryEventDetail {
-  itemId: unknown;
-  attempt: unknown;
-  messageId: unknown;
-}`
+    id: string;
+    document: DocumentRef;
+    stage: IngestionStage;
+    progress?: number;
+    chunkCount?: number;
+    embeddedChunkCount?: number;
+    attempts?: number;
+    error?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
+  `IngestionRetryEventDetail extends RetryEventDetail {
+    itemId: string;
+    // Inherited from RetryEventDetail.
+    attempt: number;
+    messageId?: string;
+  }`
 
 - **`components-retrieval-knowledge-base-knowledge-base-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js`.
   `KnowledgeSource {
-  id: unknown;
-  name: unknown;
-  type: unknown;
-  syncStatus: unknown;
-  indexingHealth: unknown;
-  permission: unknown;
-  documentCount: unknown;
-  lastSyncedAt: unknown;
-  errorMessage: unknown;
-}`
+    id: string;
+    name: string;
+    type?: string;
+    syncStatus: KnowledgeSourceSyncStatus;
+    indexingHealth?: KnowledgeSourceIndexingHealth;
+    permission?: KnowledgeSourcePermission;
+    documentCount?: number;
+    lastSyncedAt?: Date | string;
+    errorMessage?: string;
+  }`
 
 - **`components-retrieval-memory-panel-memory-panel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js`.
   `LyraMemoryAddDetail {
-  memory: unknown;
-}`
+    memory: LyraMemoryItem;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js`.
   `LyraMemoryExpandDetail {
-  memoryId: unknown;
-  scope: unknown;
-  expanded: unknown;
-}`
+    memoryId: string;
+    scope: MemoryScope;
+    expanded: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js`.
   `LyraMemoryItem {
-  id: unknown;
-  text: unknown;
-  confidence: unknown;
-  provenance: unknown;
-}`
+    id: string;
+    text: string;
+    confidence?: number;
+    provenance?: LyraProvenance;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js`.
   `LyraMemoryRemoveDetail {
-  memoryId: unknown;
-  scope: unknown;
-}`
+    memoryId: string;
+    scope: MemoryScope;
+  }`
 
 - **`components-retrieval-mind-map-mind-map-layout-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/mind-map/mind-map.class.js`.
   `LyraTopic {
-  id: unknown;
-  label: unknown;
-  children: unknown;
-}`
+    id: string;
+    label: string;
+    children?: readonly LyraTopic[];
+  }`
 
 - **`components-retrieval-neighbor-list-neighbor-list-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/neighbor-list/neighbor-list.class.js`.
   `LyraNeighborRow {
-  relation: unknown;
-  direction: unknown;
-  node: unknown;
-}`
+    relation: string;
+    direction: 'in' | 'out' | 'both';
+    node: LyraEntity;
+  }`
 
 - **`components-retrieval-node-palette-node-palette-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/node-palette/node-palette.class.js`.
   `LyraPaletteItem {
-  type: unknown;
-  label: unknown;
-  description: unknown;
-  category: unknown;
-  keywords: unknown;
-  icon: unknown;
-  disabled: unknown;
-}`
+    type: string;
+    label: string;
+    description?: string;
+    category?: string;
+    keywords?: string[];
+    icon?: unknown;
+    disabled?: boolean;
+  }`
 
 - **`components-retrieval-provenance-panel-provenance-panel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/provenance-panel/provenance-panel.class.js`.
   `LyraProvenance {
-  entities: unknown;
-  relationships: unknown;
-  path: unknown;
-  communities: unknown;
-  chunks: unknown;
-}`
+    readonly entities?: readonly LyraEntity[];
+    readonly relationships?: readonly Readonly<{
+      path: readonly LyraPathElement[];
+    }>[];
+    readonly communities?: readonly LyraCommunity[];
+    readonly chunks?: readonly LyraChunk[];
+  }`
 
 - **`components-retrieval-rag-answer-rag-answer-contracts`** — Supporting data types and helpers for this component family.
-  `LyraRagCitationSelectDetail {
-  section: unknown;
-  citation: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/retrieval/rag-answer/rag-answer.class.js`.
+  `LyraRagCitationSelectDetail extends CitationSelectEventDetail {
+    section: 'answer' | 'grounding';
+    // Inherited from CitationSelectEventDetail.
+    citation: Citation;
+  }`
 
 - **`components-retrieval-rag-eval-dashboard-rag-eval-dashboard-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.class.js`.
   `LyraRagEvaluationMetric {
-  id: unknown;
-  label: unknown;
-  category: unknown;
-  format: unknown;
-}`
+    id: string;
+    label: string;
+    category: LyraRagEvaluationMetricCategory;
+    format?: LyraRagEvaluationMetricFormat;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.class.js`.
   `LyraRagEvaluationRun {
-  id: unknown;
-  label: unknown;
-  metrics: unknown;
-  slice: unknown;
-  timestamp: unknown;
-  metadata: unknown;
-}`
+    id: string;
+    label: string;
+    metrics: Record<string, number>;
+    slice?: string;
+    timestamp?: string;
+    metadata?: Record<string, unknown>;
+  }`
 
 - **`components-retrieval-retrieval-compare-retrieval-compare-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.class.js`.
   `RetrievalComparisonSet {
-  id: unknown;
-  label: unknown;
-  chunks: unknown;
-}`
+    id: string;
+    label: string;
+    chunks: RetrievalChunk[];
+  }`
 
 - **`components-retrieval-retrieval-results-retrieval-results-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/retrieval-results/retrieval-results.class.js`.
   `RetrievalResultsSelectDetail {
-  chunkIds: unknown;
-  chunks: unknown;
-}`
+    chunkIds: string[];
+    chunks: RetrievalChunk[];
+  }`
 
 - **`components-retrieval-retrieval-search-retrieval-search-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/retrieval-search/retrieval-search.class.js`.
   `RetrievalFiltersChangeDetail {
-  filters: unknown;
-  scope: unknown;
-}`
+    filters: Record<string, unknown>;
+    scope: string[];
+  }`
 
 - **`components-retrieval-retrieval-trace-retrieval-trace-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/retrieval-trace/retrieval-trace.class.js`.
   `RetrievalStageEvidence {
-  text: unknown;
-  chunks: unknown;
-  metadata: unknown;
-}`
+    text?: string;
+    chunks?: RetrievalChunk[];
+    metadata?: Record<string, unknown>;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/retrieval-trace/retrieval-trace.class.js`.
   `RetrievalStage {
-  id: unknown;
-  kind: unknown;
-  label: unknown;
-  startMs: unknown;
-  endMs: unknown;
-  status: unknown;
-  detail: unknown;
-  evidence: unknown;
-}`
+    id: string;
+    kind: RetrievalStageKind;
+    label?: string;
+    startMs: number;
+    endMs?: number;
+    status: 'pending' | 'running' | 'success' | 'error' | 'denied';
+    detail?: string;
+    evidence?: RetrievalStageEvidence;
+  }`
 
 - **`components-retrieval-source-card-source-card-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/source-card/source-card.class.js`.
   `SourceCardExpandDetail {
-  sourceId: unknown;
-  expanded: unknown;
-}`
+    sourceId: string;
+    expanded: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/source-card/source-card.class.js`.
   `SourceCardOpenDetail {
-  sourceId: unknown;
-  href: unknown;
-}`
+    sourceId: string;
+    href?: string;
+  }`
 
 - **`components-retrieval-source-list-source-list-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/source-list/source-list.class.js`.
   `SourceListToggleDetail {
-  expanded: unknown;
-}`
+    expanded: boolean;
+  }`
 
 - **`components-retrieval-source-picker-source-picker-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/retrieval/source-picker/source-picker.class.js`.
   `LyraSourceEntry {
-  id: unknown;
-  label: unknown;
-  mimeType: unknown;
-  name: unknown;
-  children: unknown;
-}`
+    id: string;
+    label: string;
+    mimeType?: string;
+    name?: string;
+    children?: readonly LyraSourceEntry[];
+  }`

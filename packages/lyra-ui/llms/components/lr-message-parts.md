@@ -18,8 +18,9 @@
 
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
-Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint, coalescing
-parse/highlight work; replacing that same-id part with `state: 'complete'` flushes the final content.
+Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint and displays
+accumulated plain text without parsing or highlighting. Replacing that same-id part with
+`state: 'complete'` parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 

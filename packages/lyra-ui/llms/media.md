@@ -281,6 +281,10 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 Steps a current index through `[0, itemCount)` on a fixed interval — explicit discrete-sequence
 playback for time-series scrubbing, without implying native audio/video playback.
 
+When fewer than two items are available, the disabled play button retains its resting border and
+background under hover and press. Enabled playback controls retain their token-driven pointer
+feedback.
+
 **Properties:**
 
 - `itemCount: number = 0` (attribute `item-count`)
@@ -374,6 +378,14 @@ and additive `dataLayers` — plain GeoJSON, natively clustered points, or a hea
 plus a peer-neutral `map` getter for common imperative operations. Its runtime value is the
 underlying MapLibre map. The component observes its own map-container allocation and calls the
 peer's `resize()` when that allocation changes.
+
+Markers and popups use the physical top-left origin required by MapLibre's projected transforms in
+both LTR and RTL. Their text and surrounding controls retain logical direction-aware layout.
+
+Live ancestor theme or token changes resolve the choropleth's stop colors and explicit or implicit
+step base color again, as well as its opacity. These are paint-only updates on the existing fill
+layer: the map instance, source, layer and viewport are preserved. Linear, logarithmic and step
+modes use the same expression semantics at initial render and after a theme change.
 
 **Properties:**
 
@@ -781,6 +793,13 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
 A form-associated drag-drop + click-to-browse file dropzone. It stores and renders raw `File[]`;
 no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the host).
 
+Removing `label` or `hint` consumes it as absent without changing the property's `null` readback. An
+explicit empty string remains empty. Text chrome and label/description associations disappear when
+no corresponding slot or explicit presence hint remains, and a later value restores them. Removing
+the label leaves the localized dropzone instruction available. Disabled file removal buttons,
+including fieldset disablement, retain resting foreground and background under hover and press;
+enabled buttons retain pointer feedback.
+
 **Properties:**
 
 - `multiple: boolean = false` (reflected)
@@ -1089,6 +1108,9 @@ Sandboxed iframe preview that mirrors Web Awesome's zoomable-frame contract. It 
 `<iframe>` through discrete controls without changing the document's own viewport, and fills its
 allocated inline size with a 16:9 aspect ratio by default (override `aspect-ratio` on the host).
 
+Focus on either zoom control does not enter the iframe browsing context, and `blur()` does not blur
+a focused zoom control.
+
 **Properties:**
 
 - `src: string = ''` — iframe URL. Relative, `http:`, `https:`, `blob:`, and exact `about:blank`
@@ -1114,7 +1136,7 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
   and carries no unsupported `aria-disabled` claim.
 - `accessibleLabel: string | null` (attribute `aria-label`) — a declarative attribute remains on
   the host while the iframe gets its localized purpose title, avoiding a duplicate name on two
-  semantic owners. A property-only value names the iframe. Explicit empty host naming is preserved
+  semantic owners. A property-only value names the iframe and updates reactively without creating a host attribute. Explicit empty host naming is preserved
   as an empty iframe title rather than replaced through truthiness.
 - readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
@@ -1142,7 +1164,7 @@ rather than a second interactive control; the native zoom buttons remain the sol
 actions.
 
 **Events:** internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
-`FocusEvent`s (bubbling and composed, preserving `relatedTarget`);
+`FocusEvent`s (bubbling and composed, preserving external `relatedTarget`; a transition to or from an internal zoom control uses `null` because retargeting that control to the host would suppress the relay);
 native `load` and `error` are relayed exactly once from the current iframe
 generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes
 replace the iframe, so a late event from an earlier document is ignored; detached frames do not
@@ -1151,7 +1173,7 @@ notify.
 **CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`. Real focus entry into
 the browsing context (Tab, pointer, or `focus()`) exposes `data-frame-focused` on the host and paints
 the shared focus ring around the iframe boundary; blur, navigation rekey, disablement, and removal
-clear it.
+clear it. Moving between the iframe and a zoom control clears or restores the marker and emits one matching native blur or focus relay; focusing a zoom control alone leaves the marker absent.
 
 **CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
 property and applied to the internal iframe scale; and `--lr-zoomable-frame-control-hover-background`
@@ -1202,8 +1224,7 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
   as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
 - `accessibleLabel: string | null` (attribute `aria-label`) — a declarative host label remains on
   the host while the focusable viewport receives the localized inspection-surface purpose name.
-  A property-only value can name the viewport. This avoids cloning one author label onto both the
-  outer component and nested `role="group"`.
+  A property-only value names the viewport and updates reactively without creating a host attribute. This avoids cloning one author label onto both the outer component and nested `role="group"`. An explicitly empty direct property remains empty; a present host attribute, including an empty one, leaves the viewport's localized purpose name intact.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
@@ -1258,6 +1279,12 @@ attachment metadata after a page reload, when no real `File` object exists any m
 wins when both are present. When a real `File` or `preview-src` is available, the chip offers a
 localized action that emits a plain, non-cancelable `lr-preview-request`; it never registers or owns a viewer
 or overlay, so the host composes the desired preview surface.
+
+An error already present at first mount or reconnection renders as existing state without an
+announcement, including a failure assigned while detached and reconnected before the next render. A
+new connected transition to error still appends one localized failure announcement; repeated
+connected failures remain separately announced, including a retry whose uploading and error writes
+coalesce into one update.
 
 **Properties:**
 
@@ -1479,6 +1506,10 @@ server-side-conversion state machine) and `lr-attachment-chip` (a pre-send queue
 upload progress). This component has neither concern; it only ever shows a `src` that's already
 final.
 
+Removing `mime-type` consumes the hint as absent and restores generic file detection unless `kind`
+explicitly selects a format. Property readback stays `null`; an explicit empty hint remains empty
+and later MIME values restore detection.
+
 **Properties:**
 
 - `src: string = ''` — the media URL. Always re-validated against a safe-scheme allowlist before
@@ -1495,8 +1526,7 @@ final.
   carve-out: an empty `alt` there still falls through to `filename`/the generic description, because
   an empty accessible name would leave an interactive player unnamed rather than mark it decorative.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — a declarative attribute names
-  the host as a whole while its nested button/link keeps a purpose-specific localized action name. A
-  property-only assignment can override the nested action when no host label is present. An explicit
+  the host as a whole while its nested button/link keeps a purpose-specific localized action name. A property-only assignment names the nested action and updates reactively when no host label is present, without creating a host attribute. An explicit
   empty string behaves like the unset `null` default — both fall through to the generated
   purpose-specific name. Image alt text and the native video's own purpose label remain independent;
   an explicitly empty host still leaves every interactive descendant named.
@@ -1712,6 +1742,10 @@ named `icon` slot, label and image-load error event) and adds this library's sha
 `variant` vocabulary. Purely presentational, with no built-in interactivity; wrap it in a
 `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
+Removing the attribute consumes the label as absent while preserving its `null` property readback.
+Explicit empty labels remain empty, host `aria-label` precedence remains intact, and later label
+values restore the image or fallback name.
+
 **Properties:**
 
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no glyph and no
@@ -1882,6 +1916,10 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 ## `lr-animation`
 
 Declaratively animates one slotted element through the native Web Animations API.
+
+An initial playing mount creates one native animation and emits one `lr-start`. A real target or
+timing change still rebuilds the animation, while replay and reconnect retain their normal
+start/finish lifecycle, including reduced motion.
 
 **Properties:**
 
@@ -2214,6 +2252,15 @@ landing surface for `region`-anchored citations. Distinct from `<lr-svg-viewer>`
 documents) and `<lr-image-comparer>` (before/after slotted surfaces). Adopts `DocumentAnchorTarget`
 with `anchorKinds: ['region']` only — no text selection is bound.
 
+Disabled fit, rotate and annotate controls retain their resting paint on hover and press. Enabled
+controls keep their token-driven feedback.
+
+The annotation wrapper displays the shared token-driven focus ring in keyboard modality. The ring
+sits inside the wrapper so an image filling the scroll viewport cannot clip it. Annotation commands
+apply when that wrapper itself owns keyboard input. Enter on a highlight button activates that
+highlight without starting or committing an annotation, whether or not a draft exists; wrapper arrow
+commands retain physical image-coordinate semantics in both directions.
+
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
 `contain`), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
@@ -2321,6 +2368,20 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 `DocumentAnchorTarget` with
 `anchorKinds: ['time-range']` only — no text selection is bound. The transcript virtualizes through
 `<lr-virtual-list>` the same way `lr-pdf-viewer` virtualizes pages.
+
+Removing `mime-type` consumes the absent hint safely and restores automatic video fallback unless
+`kind` explicitly selects audio. Attribute removal keeps its `null` property readback; an explicit
+empty hint remains empty, and a later audio MIME value restores audio detection.
+
+A cue with no `end` extends to the next strictly chronological applicable start, or remains
+open-ended when none exists. Equal starts do not end each other. The player indexes starts on cue
+assignment in at most O(n log n) work and reconciles each seek/time update in O(n) work. Caller
+order, first ID admission, explicit ends and overlap arbitration are retained; a paused seek uses
+replacement cues immediately, even before rendering. Duration changes preserve the same
+effective-start rules.
+
+An unavailable timeline keeps its resting border and background under hover and press. Enabled
+seeking retains token-driven pointer feedback.
 
 The default document-viewer renderer advertises `time-range` anchors but not search: the generic
 document payload has no cue/transcript field, so advertising search there would expose a control
@@ -2462,6 +2523,10 @@ Experimental inline native video player with custom controls, safe declarative s
 selectable captions, and bounded WebVTT thumbnail previews. It mirrors the public Web Awesome Video
 API under the `lr-` prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/media/video/video.js'`.
+
+When progress is unavailable, the disabled native range input and its visible timeline track retain
+resting paint under hover and press. Once media duration makes progress available, the track retains
+its token-driven hover and press feedback.
 
 **Properties:** `autoplay: boolean = false`, `autoplayMuted: boolean = false` (attribute
 `autoplay-muted`), `autoplayOnVisible: boolean = false` (attribute `autoplay-on-visible`),
@@ -2682,367 +2747,413 @@ records the stopped state but never changes selection; recovery and retry remain
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-media-animation-animation-catalog-contracts`** — Supporting data types and helpers for this component family.
-  `getAnimationNames(): unknown`
-  `getEasingNames(): unknown`
+  Import: `@aceshooting/lyra-ui/components/media/animation/animation.class.js`.
+  `getAnimationNames(): LyraMirrorAnimationName[]`
+  Import: `@aceshooting/lyra-ui/components/media/animation/animation.class.js`.
+  `getEasingNames(): LyraAnimationEasingName[]`
 
 - **`components-media-attachment-chip-attachment-chip-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/attachment-chip/attachment-chip.class.js`.
   `LyraAttachmentIdDetail {
-  attachmentId: unknown;
-}`
-  `LyraAttachmentPreviewRequestDetail {
-  name: unknown;
-  mimeType: unknown;
-  src: unknown;
-  attachmentId: unknown;
-}`
+    attachmentId: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/attachment-chip/attachment-chip.class.js`.
+  `LyraAttachmentPreviewRequestDetail extends LyraAttachmentIdDetail {
+    name: string;
+    mimeType: string;
+    src: string;
+    // Inherited from LyraAttachmentIdDetail.
+    attachmentId: string;
+  }`
 
 - **`components-media-attachment-trigger-attachment-trigger-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/attachment-trigger/attachment-trigger.class.js`.
   `LyraAttachmentFilesDetail {
-  capability: unknown;
-  files: unknown;
-}`
+    capability: LyraFileBackedCapability;
+    files: readonly File[];
+  }`
 
 - **`components-media-av-player-av-metadata-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/av-player/av-player.class.js`.
   `LyraAvCue {
-  cueId: unknown;
-  start: unknown;
-  end: unknown;
-  text: unknown;
-  speaker: unknown;
-}`
+    readonly cueId: string;
+    readonly start: number;
+    readonly end?: number;
+    readonly text: string;
+    readonly speaker?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/av-player/av-player.class.js`.
   `LyraAvTrack {
-  src: unknown;
-  kind: unknown;
-  srclang: unknown;
-  label: unknown;
-  default: unknown;
-}`
+    readonly src: string;
+    readonly kind: 'subtitles' | 'captions' | 'descriptions';
+    readonly srclang: string;
+    readonly label: string;
+    readonly default?: boolean;
+  }`
 
 - **`components-media-av-player-av-player-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/av-player/av-player.class.js`.
   `LyraAvCueChangeDetail {
-  cueId: unknown;
-  index: unknown;
-}`
+    readonly cueId: string | null;
+    readonly index: number;
+  }`
 
 - **`components-media-avatar-group-avatar-group-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/avatar-group/avatar-group.class.js`.
   `LyraAvatarGroupOverflowDetail {
-  hiddenCount: unknown;
-  hiddenAvatars: unknown;
-}`
+    readonly hiddenCount: number;
+    readonly hiddenAvatars: readonly LyraAvatar[];
+  }`
 
 - **`components-media-avatar-avatar-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/avatar/avatar.class.js`.
   `LyraAvatarErrorDetail {
-  image: unknown;
-}`
+    image: string;
+  }`
 
 - **`components-media-file-icon-file-type-metadata-contracts`** — Supporting data types and helpers for this component family.
-  `createFileTypeMetadataRegistry(/* public names: entries */): unknown`
-  `getFileTypeMetadata(/* public names: mimeType, fileName */): unknown`
+  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
+  `createFileTypeMetadataRegistry(entries?: readonly LyraFileTypeMetadataEntry[]): LyraFileTypeMetadataRegistry`
+  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
+  `getFileTypeMetadata(mimeType: string, fileName?: string): LyraResolvedFileTypeMetadata`
+  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
   `LyraFileTypeMetadataEntry {
-  mimeTypes: unknown;
-  metadata: unknown;
-}`
+    readonly mimeTypes: string | readonly string[];
+    readonly metadata: LyraFileTypeMetadata;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
   `LyraFileTypeMetadata {
-  label: unknown;
-  description: unknown;
-  icon: unknown;
-  category: unknown;
-  extensions: unknown;
-}`
+    readonly label: string;
+    readonly description?: string;
+    readonly icon: LyraFileTypeIcon;
+    readonly category: LyraFileTypeCategory;
+    readonly extensions?: readonly string[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
   `LyraFileTypeMetadataRegistry {
-  resolve: unknown;
-  mimeType: unknown;
-  fileName: unknown;
-}`
-  `LyraResolvedFileTypeMetadata {
-  provenance: unknown;
-  label: unknown;
-  description: unknown;
-  icon: unknown;
-  category: unknown;
-  extensions: unknown;
-}`
+    resolve(mimeType: string, fileName?: string): LyraResolvedFileTypeMetadata;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
+  `LyraResolvedFileTypeMetadata extends LyraFileTypeMetadata {
+    readonly provenance: 'builtin' | 'consumer';
+    // Inherited from LyraFileTypeMetadata.
+    readonly label: string;
+    readonly description?: string;
+    readonly icon: LyraFileTypeIcon;
+    readonly category: LyraFileTypeCategory;
+    readonly extensions?: readonly string[];
+  }`
 
 - **`components-media-file-input-file-input-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`.
   `LyraFileInputFilesDetail {
-  files: unknown;
-  rejected: unknown;
-}`
+    readonly files: readonly File[];
+    readonly rejected: readonly LyraFileInputRejectedFile[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`.
   `LyraFileInputObjectValidator {
-  observedAttributes: unknown;
-  checkValidity: unknown;
-  input: unknown;
-  message: unknown;
-}`
+    observedAttributes?: string[];
+    checkValidity: (input: never) => LyraFileInputObjectValidatorResult;
+    message?: string | ((input: never) => string);
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`.
   `LyraFileInputObjectValidatorResult {
-  message: unknown;
-  isValid: unknown;
-  invalidKeys: unknown;
-}`
+    message: string;
+    isValid: boolean;
+    invalidKeys: Exclude<keyof ValidityState, 'valid'>[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`.
   `LyraFileInputRejectedFile {
-  file: unknown;
-  reason: unknown;
-}`
+    readonly file: File;
+    readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit';
+  }`
 
 - **`components-media-flag-flag-peer-bulk-standard-contracts`** — Supporting data types and helpers for this component family.
-  `registerLyraFlagStandardBulkPeer(): unknown`
+  Import: `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk-standard.js`.
+  `registerLyraFlagStandardBulkPeer(): Promise<LyraFlagUrlResolver | null>`
 
 - **`components-media-flag-flag-peer-bulk-contracts`** — Supporting data types and helpers for this component family.
-  `registerLyraFlagBulkPeer(): unknown`
+  Import: `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk.js`.
+  `registerLyraFlagBulkPeer(): Promise<LyraFlagUrlResolver | null>`
 
 - **`components-media-flag-flag-peer-contracts`** — Supporting data types and helpers for this component family.
-  `registerLyraFlagPeer(): unknown`
+  Import: `@aceshooting/lyra-ui/components/media/flag/flag-peer.js`.
+  `registerLyraFlagPeer(): Promise<LyraFlagUrlResolver | null>`
 
 - **`components-media-flag-flag-contracts`** — Supporting data types and helpers for this component family.
-  `loadFlagUrl(/* public names: importFlags */): unknown`
-  `loadBulkFlagUrl(/* public names: importFlags */): unknown`
-  `setFlagUrlResolver(/* public names: value */): unknown`
+  Import: `@aceshooting/lyra-ui/components/media/flag/flag.class.js`.
+  `loadFlagUrl(importFlags: () => Promise<unknown>): Promise<LyraFlagUrlResolver | null>`
+  Import: `@aceshooting/lyra-ui/components/media/flag/flag.class.js`.
+  `loadBulkFlagUrl(importFlags: () => Promise<unknown>): Promise<LyraFlagUrlResolver | null>`
+  Import: `@aceshooting/lyra-ui/components/media/flag/flag.class.js`.
+  `setFlagUrlResolver(value: LyraFlagUrlResolver | Promise<LyraFlagUrlResolver | null> | null): void`
 
 - **`components-media-flag-language-map-contracts`** — Supporting data types and helpers for this component family.
-  `alpha3ToAlpha2(/* public names: code */): unknown`
-  `languageToCountry(/* public names: language */): unknown`
-  `localeNativeName(/* public names: tag */): unknown`
+  Import: `@aceshooting/lyra-ui/components/media/flag/language-map.js`.
+  `alpha3ToAlpha2(code: string): string | undefined`
+  Import: `@aceshooting/lyra-ui/components/media/flag/language-map.js`.
+  `languageToCountry(language: string): string | undefined`
+  Import: `@aceshooting/lyra-ui/components/media/flag/language-map.js`.
+  `localeNativeName(tag: string): string`
 
 - **`components-media-image-viewer-image-viewer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/image-viewer/image-viewer.class.js`.
   `LyraImageRegionRect {
-  x: unknown;
-  y: unknown;
-  width: unknown;
-  height: unknown;
-}`
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }`
 
 - **`components-media-lightbox-lightbox-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/lightbox/lightbox.class.js`.
   `LyraLightboxHideDetail {
-  source: unknown;
-}`
+    source: Element;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/lightbox/lightbox.class.js`.
   `LyraLightboxImage {
-  src: unknown;
-  alt: unknown;
-  caption: unknown;
-}`
+    readonly src: string;
+    readonly alt?: string;
+    readonly caption?: string;
+  }`
 
 - **`components-media-map-map-loader-contracts`** — Supporting data types and helpers for this component family.
-  `loadMaplibre(): unknown`
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
+  `loadMaplibre(): Promise<MaplibreModule | null>`
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreGeoJsonDiff {
-  remove: unknown;
-  add: unknown;
-  update: unknown;
-  id: unknown;
-  addOrUpdateProperties: unknown;
-  key: unknown;
-  value: unknown;
-  removeProperties: unknown;
-}`
+    readonly remove?: readonly (string | number)[];
+    readonly add?: readonly Feature[];
+    readonly update: readonly {
+      readonly id: string | number;
+      readonly addOrUpdateProperties: readonly {
+        readonly key: string;
+        readonly value: unknown;
+      }[];
+      readonly removeProperties: readonly string[];
+    }[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreGeoJsonSource {
-  setData: unknown;
-  data: unknown;
-  updateData: unknown;
-  diff: unknown;
-}`
+    setData(data: unknown): void;
+    updateData?(diff: MapLibreGeoJsonDiff): void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreMapCapability {
-  getCanvas: unknown;
-  getCenter: unknown;
-  lng: unknown;
-  lat: unknown;
-  getZoom: unknown;
-  setCenter: unknown;
-  center: unknown;
-  setZoom: unknown;
-  zoom: unknown;
-  resize: unknown;
-  setMaxBounds: unknown;
-  bounds: unknown;
-  remove: unknown;
-  on: unknown;
-  type: unknown;
-  listener: unknown;
-  event: unknown;
-  error: unknown;
-  point: unknown;
-  lngLat: unknown;
-  once: unknown;
-  setStyle: unknown;
-  style: unknown;
-  getSource: unknown;
-  id: unknown;
-  addSource: unknown;
-  source: unknown;
-  removeSource: unknown;
-  getLayer: unknown;
-  addLayer: unknown;
-  layer: unknown;
-  removeLayer: unknown;
-  setPaintProperty: unknown;
-  layerId: unknown;
-  name: unknown;
-  value: unknown;
-  queryRenderedFeatures: unknown;
-  options: unknown;
-  layers: unknown;
-}`
+    getCanvas(): HTMLCanvasElement;
+    getCenter(): {
+      lng: number;
+      lat: number;
+    };
+    getZoom(): number;
+    setCenter(center: [number, number]): unknown;
+    setZoom(zoom: number): unknown;
+    resize(): unknown;
+    setMaxBounds?(bounds: readonly [readonly [number, number], readonly [number, number]] | null): unknown;
+    remove(): void;
+    on(type: 'error', listener: (event: {
+      error?: unknown;
+    }) => void): this;
+    on(type: 'load', listener: () => void): this;
+    on(type: 'click', listener: (event: {
+      point: unknown;
+      lngLat: {
+        lng: number;
+        lat: number;
+      };
+    }) => void): this;
+    once(type: 'style.load', listener: () => void): this;
+    setStyle(style: unknown): this;
+    getSource(id: string): MapLibreGeoJsonSource | undefined;
+    addSource(id: string, source: unknown): this;
+    removeSource(id: string): this;
+    getLayer(id: string): unknown;
+    addLayer(layer: unknown): this;
+    removeLayer(id: string): this;
+    setPaintProperty(layerId: string, name: string, value: unknown): this;
+    queryRenderedFeatures(point: unknown, options?: {
+      layers?: string[];
+    }): unknown[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreMarkerCapability {
-  setLngLat: unknown;
-  lngLat: unknown;
-  setPopup: unknown;
-  popup: unknown;
-  getPopup: unknown;
-  addTo: unknown;
-  map: unknown;
-  remove: unknown;
-  getElement: unknown;
-}`
+    setLngLat(lngLat: [number, number]): this;
+    setPopup(popup?: MapLibrePopupCapability): this;
+    getPopup(): MapLibrePopupCapability | undefined;
+    addTo(map: MapLibreMapCapability): this;
+    remove(): void;
+    getElement?(): HTMLElement;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MaplibreModule {
-  Map: unknown;
-  Marker: unknown;
-  color: unknown;
-  Popup: unknown;
-  offset: unknown;
-}`
+    Map: new (options: Record<string, unknown>) => MapLibreMapCapability;
+    Marker: new (options?: {
+      color?: string;
+    }) => MapLibreMarkerCapability;
+    Popup: new (options?: {
+      offset?: number;
+    }) => MapLibrePopupCapability;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibrePopupCapability {
-  setHTML: unknown;
-  html: unknown;
-  setText: unknown;
-  text: unknown;
-  on: unknown;
-  type: unknown;
-  listener: unknown;
-  isOpen: unknown;
-  getElement: unknown;
-}`
+    setHTML(html: string): this;
+    setText(text: string): this;
+    on?(type: 'open' | 'close', listener: () => void): this;
+    isOpen?(): boolean;
+    getElement?(): HTMLElement | undefined;
+  }`
 
 - **`components-media-map-map-contracts`** — Supporting data types and helpers for this component family.
-  `buildGeoJsonPropertyDiff(/* public names: previous, next */): unknown`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `buildGeoJsonPropertyDiff(previous: unknown, next: unknown): MapLibreGeoJsonDiff | null`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapChoroplethLayer {
-  sourceId: unknown;
-  geojson: unknown;
-  field: unknown;
-  stops: unknown;
-  interpolation: unknown;
-  stepBaseColor: unknown;
-}`
+    readonly sourceId: string;
+    readonly geojson: FeatureCollection;
+    readonly field: string;
+    readonly stops: readonly (readonly [number, string])[];
+    readonly interpolation?: LyraMapChoroplethInterpolation;
+    readonly stepBaseColor?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapClusterOptions {
-  radius: unknown;
-  maxZoom: unknown;
-  radiusSteps: unknown;
-  colorSteps: unknown;
-  countFont: unknown;
-}`
+    readonly radius?: number;
+    readonly maxZoom?: number;
+    readonly radiusSteps?: readonly (readonly [number, number])[];
+    readonly colorSteps?: readonly (readonly [number, string])[];
+    readonly countFont?: readonly string[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapGeoJsonDataLayer {
-  sourceId: unknown;
-  geojson: unknown;
-  tone: unknown;
-  color: unknown;
-  strokeColor: unknown;
-  kind: unknown;
-  heatmap: unknown;
-  cluster: unknown;
-}`
+    readonly sourceId: string;
+    readonly geojson: Feature | FeatureCollection;
+    readonly tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
+    readonly color?: string;
+    readonly strokeColor?: string;
+    readonly kind?: LyraMapDataLayerKind;
+    readonly heatmap?: LyraMapHeatmapOptions;
+    readonly cluster?: LyraMapClusterOptions;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapHeatmapOptions {
-  weightField: unknown;
-  weightRange: unknown;
-  stops: unknown;
-  radius: unknown;
-  intensity: unknown;
-  opacity: unknown;
-}`
+    readonly weightField?: string;
+    readonly weightRange?: readonly [number, number];
+    readonly stops?: readonly (readonly [number, string])[];
+    readonly radius?: LyraMapHeatmapZoomValue;
+    readonly intensity?: LyraMapHeatmapZoomValue;
+    readonly opacity?: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapInstance {
-  getCanvas: unknown;
-  getCenter: unknown;
-  lng: unknown;
-  lat: unknown;
-  getZoom: unknown;
-  setCenter: unknown;
-  center: unknown;
-  setZoom: unknown;
-  zoom: unknown;
-  resize: unknown;
-  setMaxBounds: unknown;
-  bounds: unknown;
-}`
+    getCanvas(): HTMLCanvasElement;
+    getCenter(): {
+      lng: number;
+      lat: number;
+    };
+    getZoom(): number;
+    setCenter(center: [number, number]): unknown;
+    setZoom(zoom: number): unknown;
+    resize(): unknown;
+    setMaxBounds?(bounds?: unknown): unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapLegendEntry {
-  color: unknown;
-  label: unknown;
-  pattern: unknown;
-}`
+    readonly color: string;
+    readonly label: string;
+    readonly pattern: LyraMapLegendPattern;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapLegendProjection {
-  inputCount: unknown;
-  renderedCount: unknown;
-  omittedCount: unknown;
-  truncatedLabelCount: unknown;
-  truncated: unknown;
-}`
+    readonly inputCount: number;
+    readonly renderedCount: number;
+    readonly omittedCount: number;
+    readonly truncatedLabelCount: number;
+    readonly truncated: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapMarker {
-  id: unknown;
-  lngLat: unknown;
-  color: unknown;
-  label: unknown;
-  unsafeHtml: unknown;
-}`
+    readonly id?: string;
+    readonly lngLat: readonly [number, number];
+    readonly color?: string;
+    readonly label?: string;
+    readonly unsafeHtml?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapMarkerActivationDetail {
-  id: unknown;
-  lngLat: unknown;
-  marker: unknown;
-  source: unknown;
-}`
+    readonly id: string | undefined;
+    readonly lngLat: readonly [number, number];
+    readonly marker: LyraMapMarker;
+    readonly source: LyraMapMarkerActivationSource;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapStyleSpecification {
-  version: unknown;
-  sources: unknown;
-  layers: unknown;
-  name: unknown;
-  sprite: unknown;
-  id: unknown;
-  url: unknown;
-  glyphs: unknown;
-}`
+    readonly version: 8;
+    readonly sources: Readonly<Record<string, unknown>>;
+    readonly layers: readonly unknown[];
+    readonly name?: string;
+    readonly sprite?: string | readonly Readonly<{
+      id: string;
+      url: string;
+    }>[];
+    readonly glyphs?: string;
+  }`
 
 - **`components-media-media-card-media-card-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/media-card/media-card.class.js`.
   `LyraMediaCardOpenDetail {
-  src: unknown;
-  filename: unknown;
-}`
+    src: string;
+    filename: string;
+  }`
 
 - **`components-media-sequence-playback-sequence-playback-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/sequence-playback/sequence-playback.class.js`.
   `LyraSequencePlaybackStepDetail {
-  currentIndex: unknown;
-}`
+    currentIndex: number;
+  }`
 
 - **`components-media-video-playlist-video-playlist-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js`.
   `LyraVideoPlaylistChangeDetail {
-  previousIndex: unknown;
-  currentIndex: unknown;
-  video: unknown;
-}`
+    readonly previousIndex: number;
+    readonly currentIndex: number;
+    readonly video: LyraVideoPlaylistVideo;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js`.
   `LyraVideoPlaylistItem {
-  title: unknown;
-  poster: unknown;
-  duration: unknown;
-  unavailable: unknown;
-}`
+    readonly title: string;
+    readonly poster?: string;
+    readonly duration?: number;
+    readonly unavailable?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js`.
   `LyraVideoPlaylistSource {
-  src: unknown;
-  type: unknown;
-  media: unknown;
-}`
+    readonly src: string;
+    readonly type: string;
+    readonly media: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js`.
   `LyraVideoPlaylistTrack {
-  src: unknown;
-  kind: unknown;
-  srclang: unknown;
-  label: unknown;
-  default: unknown;
-}`
+    readonly src: string;
+    readonly kind: string;
+    readonly srclang: string;
+    readonly label: string;
+    readonly default: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js`.
   `LyraVideoPlaylistVideo {
-  title: unknown;
-  poster: unknown;
-  sources: unknown;
-  tracks: unknown;
-}`
+    readonly title: string;
+    readonly poster: string;
+    readonly sources: readonly LyraVideoPlaylistSource[];
+    readonly tracks: readonly LyraVideoPlaylistTrack[];
+  }`
 
 - **`components-media-video-video-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/video/video.class.js`.
   `VideoState {
-  playing: unknown;
-  currentTime: unknown;
-  duration: unknown;
-  volume: unknown;
-  muted: unknown;
-  playbackRate: unknown;
-}`
+    playing: boolean;
+    currentTime: number;
+    duration: number;
+    volume: number;
+    muted: boolean;
+    playbackRate: number;
+  }`

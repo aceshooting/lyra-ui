@@ -1186,6 +1186,7 @@ const strings: LyraLocaleStrings = {
   promptStudioVariables: '変数',
   promptStudioVersions: 'バージョン',
   promptStudioPreview: '解決後のプレビュー',
+  promptStudioPreviewLimit: 'テキスト展開の上限を超えたため、プレビューを表示できません。',
   promptStudioRun: 'プロンプトを実行',
   promptStudioSave: 'バージョンを保存',
   promptStudioAddMessage: 'メッセージを追加',

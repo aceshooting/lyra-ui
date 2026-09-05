@@ -7,7 +7,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { styles } from './reorder-item.styles.js';
-import { reorderOwnerUpdate, type ReorderOwnerState } from './reorder-owner.js';
+import { reorderIdentityChange, reorderOwnerUpdate, type ReorderIdentityOwner, type ReorderOwnerState } from './reorder-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp } from '../../../internal/default-strings.generated.js';
@@ -94,7 +94,8 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   /** Required unique, nonempty stable identifier included in the parent list's emitted
    * `lr-reorder` order array. An owning list excludes an item with a missing, whitespace-only, or
-   * duplicate value from movement until its identity becomes valid. */
+   * duplicate value from movement until its identity becomes valid. Direct property or attribute
+   * edits refresh the owner's movement boundaries. Removed standalone values render as absent. */
   @property() value = '';
 
   /** Explicit item identity used to correlate this row's repeated move actions. When absent, a
@@ -175,7 +176,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   private get moveUpDisabled(): boolean {
     const hasValidIdentity =
       this.owner === null
-        ? this.value.trim().length > 0
+        ? (this.value ?? '').trim().length > 0
         : this.ownerState.validIdentity;
     return (
       this.disabled ||
@@ -189,7 +190,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   private get moveDownDisabled(): boolean {
     const hasValidIdentity =
       this.owner === null
-        ? this.value.trim().length > 0
+        ? (this.value ?? '').trim().length > 0
         : this.ownerState.validIdentity;
     return (
       this.disabled ||
@@ -256,6 +257,9 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('value')) {
+      (this.owner as Partial<ReorderIdentityOwner> | null)?.[reorderIdentityChange]?.(this);
+    }
     this.setAttribute('role', 'listitem');
   }
 

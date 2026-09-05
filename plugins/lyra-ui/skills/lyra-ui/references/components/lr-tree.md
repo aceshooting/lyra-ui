@@ -20,6 +20,11 @@
 An expand/collapse hierarchy (document/graph navigation tree). Mirrors `wa-tree`/`wa-tree-item` and
 `sl-tree`/`sl-tree-item`.
 
+An otherwise unnamed data row receives its stable `id` as a semantic name. Usable `accessibleLabel`,
+visible label, description, badge content and explicit host naming retain precedence; the fallback
+changes neither visible content nor installed data. Blank visible labels remain supported.
+Declarative items receive no automatic ID fallback.
+
 **Renamed in 8.0.0 — breaking:** the child element is `<lr-tree-item>` (class `LyraTreeItem`), not
 `<lr-tree-node>`/`LyraTreeNode`. It was the only child element in the library whose tag diverged
 from both upstreams, so `wa-tree-item`/`sl-tree-item` markup had nothing to rename to. The shared
@@ -72,9 +77,10 @@ deeply-nested node's own shadow root still reaches it).
 - `data: readonly LyraTreeNodeData[] = []` (attribute: false) — the object child model; ignored
   while any author-written `<lr-tree-item>` child is present. Assignment installs a detached,
   recursively frozen snapshot: mutate caller data only before assignment, then reassign after
-  changes. Normalization accepts at most 1,000 valid nodes and 64 descendant levels, never invokes
-  caller accessors, and exposes `dataTruncated = true` when malformed or over-budget input was
-  omitted. Collapsed branches do not instantiate descendants; disclosure projects only normalized
+  changes. Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
+  inspects at most 10,000 root/child array positions globally in depth-first order. It never
+  invokes caller accessors and exposes `dataTruncated = true` when malformed or over-budget input
+  was omitted or the inspected-position ceiling was reached. Collapsed branches do not instantiate descendants; disclosure projects only normalized
   children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
   `{ readonly id: string; readonly label: string; readonly children?: readonly LyraTreeNodeData[];
 readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
@@ -88,7 +94,7 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
   author-supplied host `aria-label` takes precedence by presence and is never overwritten or
   removed by later object refreshes; removing the author attribute restores the current data name.
   `id` is the event, roving-focus, reconciliation, and reorder identity and must be unique across
-  the complete reachable hierarchy; malformed/blank rows and later duplicates are omitted as described above
+  the complete reachable hierarchy; malformed rows, blank IDs and later duplicates are omitted as described above
 - `selection: 'single'|'multiple'|'leaf'|'leaf-multiple' = 'single'` — self-managed selection for
   both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
   checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
@@ -213,7 +219,8 @@ when assigned):
 - `isDisabled: boolean` — `item.disabled` in the data model, the `disabled` property in the
   declarative one
 - `nodeLabel: string` — this item's spoken name, used for the tree's reorder announcements: a host
-  `aria-label` is authoritative in both models; otherwise `item.accessibleLabel || item.label` in
+  `aria-label` is authoritative in both models
+  (including the component-owned stable-ID fallback for otherwise unnamed data rows); otherwise `item.accessibleLabel || item.label` in
   the data model, or flattened accessibility-visible slotted label text (nested items excluded)
   followed by the `label` fallback in the declarative one. Direct and forwarding-slot
   text/ARIA/visibility mutations update the name

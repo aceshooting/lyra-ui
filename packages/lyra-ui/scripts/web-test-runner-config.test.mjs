@@ -201,12 +201,12 @@ test('caps coverage browser sessions without changing ordinary test concurrency'
   });
 });
 
-test('caps pointer-sensitive browser concurrency without increasing the low-core default', () => {
+test('isolates Firefox pages and preserves the bounded WebKit default', () => {
   const expectedConcurrency = Math.max(
     1,
     Math.min(4, Math.floor(availableParallelism() / 2)),
   );
-  assert.equal(inspectConfig({ browser: 'firefox' }).concurrency, expectedConcurrency);
+  assert.equal(inspectConfig({ browser: 'firefox' }).concurrency, 1);
   assert.equal(inspectConfig({ browser: 'webkit' }).concurrency, expectedConcurrency);
   assert.equal(inspectConfig({ browser: 'safari' }).concurrency, expectedConcurrency);
   assert.equal(inspectConfig({ browser: 'chromium' }).concurrency, null);
@@ -273,7 +273,9 @@ test('uses a validated explicit test-server port when a parallel lane assigns on
 
 test('uses validated opt-in concurrency without weakening the coverage ceiling', () => {
   assert.equal(inspectConfig({ concurrency: '4' }).concurrency, 4);
-  assert.equal(inspectConfig({ browser: 'firefox', concurrency: '2' }).concurrency, 2);
+  for (const concurrency of ['1', '2', '4', '8']) {
+    assert.equal(inspectConfig({ browser: 'firefox', concurrency }).concurrency, 1);
+  }
   assert.equal(inspectConfig({ browser: 'webkit', concurrency: '8' }).concurrency, 8);
   assert.equal(inspectConfig({ coverage: true, concurrency: '8' }).concurrency, 1);
 
@@ -281,6 +283,9 @@ test('uses validated opt-in concurrency without weakening the coverage ceiling',
     const result = runConfigInspection({ concurrency });
     assert.notEqual(result.status, 0, `WTR_CONCURRENCY=${concurrency} must be rejected`);
     assert.match(result.stderr, /WTR_CONCURRENCY must be a positive safe integer/u);
+    const firefoxResult = runConfigInspection({ browser: 'firefox', concurrency });
+    assert.notEqual(firefoxResult.status, 0, 'Firefox must validate an override before applying its ceiling');
+    assert.match(firefoxResult.stderr, /WTR_CONCURRENCY must be a positive safe integer/u);
   }
 });
 
@@ -382,10 +387,10 @@ test('caps aggregate-sweep browser sessions independently of the host CPU count'
   );
   assert.deepEqual(Object.keys(laneConcurrency).sort(), ['chromium', 'firefox', 'webkit']);
   assert.equal(laneConcurrency.chromium, 1, 'coverage must remain single-session');
-  assert.ok(laneConcurrency.firefox <= 4, 'Firefox must not consume half a high-core host');
+  assert.equal(laneConcurrency.firefox, 1, 'Firefox must isolate native pointer capture per process');
   assert.ok(laneConcurrency.webkit <= 4, 'WebKit must not consume half a high-core host');
   assert.ok(
-    Object.values(laneConcurrency).reduce((sum, value) => sum + value, 0) <= 9,
+    Object.values(laneConcurrency).reduce((sum, value) => sum + value, 0) <= 6,
     'parallel browser lanes must have a conservative aggregate session ceiling',
   );
 
@@ -401,5 +406,26 @@ test('caps aggregate-sweep browser sessions independently of the host CPU count'
       ),
       `${lane} must pass its assigned concurrency to Web Test Runner`,
     );
+  }
+});
+
+
+test('budgets aggregate shards from both unequal engine page allocations', () => {
+  const script = readFileSync(resolve(packageDirectory, '../../scripts/test.sh'), 'utf8');
+  const allocation = script.match(/declare -Ar WTR_LANE_CONCURRENCY=\([\s\S]*?\n\)/u)?.[0];
+  assert.ok(allocation, 'aggregate page allocations must be available');
+  const start = script.indexOf('if [[ "$ENGINE_SHARDS" != "1" ]]; then');
+  const end = script.indexOf('\n# One wtr process per engine shard.', start);
+  assert.ok(start >= 0 && end > start, 'aggregate shard clamp must be available');
+  const clamp = script.slice(start, end);
+  for (const [cpus, requested, expected] of [[4, 8, 1], [16, 8, 1], [32, 8, 3], [60, 8, 6], [80, 8, 8], [4, 1, 1]]) {
+    const result = spawnSync('bash', ['-c', `${allocation}
+      ENGINE_SHARDS=${requested}
+      nproc() { printf '%s\n' ${cpus}; }
+      ${clamp}
+      printf '%s\n' "$ENGINE_SHARDS"
+    `], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(Number(result.stdout.trim()), expected, `${cpus} CPUs, ${requested} requested shards`);
   }
 });

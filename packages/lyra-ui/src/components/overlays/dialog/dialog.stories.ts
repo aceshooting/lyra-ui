@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A general-purpose modal. `label` renders as a visible title and the close button is present by default; slot body content into the default slot and actions into `footer`.',
+          'A general-purpose modal. `label` renders as a visible title and the close button is present by default; slot body content into the default slot and actions into `footer`. Removing label safely omits its fallback title. Open dialog and drawer names follow supported name and exclusion attribute changes on direct unslotted headings, while host naming retains precedence; nested and slot-empty headings remain outside automatic discovery.',
       },
     },
   },

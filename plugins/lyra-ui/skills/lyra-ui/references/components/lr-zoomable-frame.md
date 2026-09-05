@@ -20,6 +20,9 @@ Sandboxed iframe preview that mirrors Web Awesome's zoomable-frame contract. It 
 `<iframe>` through discrete controls without changing the document's own viewport, and fills its
 allocated inline size with a 16:9 aspect ratio by default (override `aspect-ratio` on the host).
 
+Focus on either zoom control does not enter the iframe browsing context, and `blur()` does not blur
+a focused zoom control.
+
 **Properties:**
 
 - `src: string = ''` — iframe URL. Relative, `http:`, `https:`, `blob:`, and exact `about:blank`
@@ -45,7 +48,7 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
   and carries no unsupported `aria-disabled` claim.
 - `accessibleLabel: string | null` (attribute `aria-label`) — a declarative attribute remains on
   the host while the iframe gets its localized purpose title, avoiding a duplicate name on two
-  semantic owners. A property-only value names the iframe. Explicit empty host naming is preserved
+  semantic owners. A property-only value names the iframe and updates reactively without creating a host attribute. Explicit empty host naming is preserved
   as an empty iframe title rather than replaced through truthiness.
 - readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
@@ -73,7 +76,7 @@ rather than a second interactive control; the native zoom buttons remain the sol
 actions.
 
 **Events:** internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
-`FocusEvent`s (bubbling and composed, preserving `relatedTarget`);
+`FocusEvent`s (bubbling and composed, preserving external `relatedTarget`; a transition to or from an internal zoom control uses `null` because retargeting that control to the host would suppress the relay);
 native `load` and `error` are relayed exactly once from the current iframe
 generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes
 replace the iframe, so a late event from an earlier document is ignored; detached frames do not
@@ -82,7 +85,7 @@ notify.
 **CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`. Real focus entry into
 the browsing context (Tab, pointer, or `focus()`) exposes `data-frame-focused` on the host and paints
 the shared focus ring around the iframe boundary; blur, navigation rekey, disablement, and removal
-clear it.
+clear it. Moving between the iframe and a zoom control clears or restores the marker and emits one matching native blur or focus relay; focusing a zoom control alone leaves the marker absent.
 
 **CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
 property and applied to the internal iframe scale; and `--lr-zoomable-frame-control-hover-background`

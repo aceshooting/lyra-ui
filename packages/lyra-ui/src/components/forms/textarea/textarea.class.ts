@@ -93,6 +93,9 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * `readonly` keeps the value focusable, selectable, copyable, and form-submittable while barring
  * user edits and constraint validation, matching the native textarea contract.
  *
+ * Removing `label`, `hint`, `help-text` or `error-text` safely omits that content while preserving
+ * native null property readback. Explicit empty strings stay empty; later text renders normally.
+ *
  * @customElement lr-textarea
  * @event input - Native-style composed event fired on every user-driven edit.
  * @event change - Native-style composed event fired at the native `change` timing.
@@ -750,13 +753,13 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     const hasHint =
       this.slotPresence.has('hint') ||
       this.slotPresence.has('help-text') ||
-      this.hint.length > 0 ||
-      this.helpText.length > 0 ||
+      (this.hint ?? '').length > 0 ||
+      (this.helpText ?? '').length > 0 ||
       this.withHint;
     const hasError =
-      this.slotPresence.has('error') || this.errorText.length > 0;
+      this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const hasLabel =
-      this.slotPresence.has('label') || this.label.length > 0 || this.withLabel;
+      this.slotPresence.has('label') || (this.label ?? '').length > 0 || this.withLabel;
     const describedBy = [
       hasError ? 'textarea-error' : '',
       hasHint ? 'textarea-hint' : '',

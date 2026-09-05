@@ -4,7 +4,8 @@ import './tooltip.js';
 import '../../forms/icon-button/icon-button.js';
 import type { LyraTooltip } from './tooltip.js';
 
-const meta: Meta = { title: 'Overlay/Tooltip', component: 'lr-tooltip', tags: ['autodocs'] };
+const meta: Meta = {
+  parameters: { docs: { description: { component: 'Open popovers, dropdowns and tooltips reposition when their effective host or inherited text direction changes, preserving open state and lifecycle events. Removing content safely omits tooltip fallback text.' } } }, title: 'Overlay/Tooltip', component: 'lr-tooltip', tags: ['autodocs'] };
 export default meta;
 type Story = StoryObj;
 

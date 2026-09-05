@@ -10,6 +10,7 @@ import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-view
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { createAnsiParser, type AnsiStyles } from '../../../internal/ansi.js';
 import { loadNotebookSanitizer } from './dompurify-loader.js';
@@ -387,6 +388,8 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * scroll. `node-path` anchors resolve `path[0]` as a cell index; `fragment` anchors resolve a cell's
  * own `id`.
  *
+ * Identified virtual cells use the same key for active paint and navigation. Repeating an anchor
+ * returns to that cell after manual scrolling; max-height also bounds the virtual scroll viewport.
  * Adopts `DocumentAnchorTarget`: `scrollToAnchor()`/the declarative `anchor` property resolve
  * through the cell-granularity model above, and `highlights`/`activeHighlightId` resolve through
  * that exact same model (`resolveAnchorCellIndex()`), not a pixel-precise text range within a
@@ -581,9 +584,8 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   @state() private searchMatches: number[] = [];
   private searchMatchCountExact = true;
   @state() private activeSearchIndex = -1;
-  @query('lr-virtual-list') private virtualListEl?: HTMLElement & {
-    scrollToIndex(index: number, options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }): void;
-  };
+  @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
+  private readonly cellKey = (item: unknown, index: number): string | number => (item as NotebookCell).id ?? index;
   /** Cell index -> the highest-priority `highlights` entry resolved against it, recomputed by
    *  `repaintHighlights()` (called from `willUpdate()`, ahead of the render pass that same property
    *  change already triggers -- a plain field, not `@state()`, is enough since nothing else needs to
@@ -781,8 +783,24 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     const index = this.resolveAnchorCellIndex(anchor);
     if (index < 0) return false;
+    return this.activateCell(index, 'start');
+  }
+
+  private async activateCell(index: number, align: 'start' | 'auto'): Promise<boolean> {
+    const generation = this.generation;
+    const ownerDocument = this.ownerDocument;
     this.activeCellIndex = index;
-    return true;
+    if (!this.isConnected) return false;
+    await this.updateComplete;
+    if (!this.isConnected || this.ownerDocument !== ownerDocument || generation !== this.generation || this.activeCellIndex !== index) return false;
+    const list = this.virtualListEl;
+    if (!list) return false;
+    await list.updateComplete;
+    if (!this.isConnected || this.ownerDocument !== ownerDocument || generation !== this.generation || this.activeCellIndex !== index) return false;
+    // An explicit jump also scrolls when the target is already active and has no reactive change.
+    list.scrollToIndex(index, { align, behavior: 'auto' });
+    await list.updateComplete;
+    return this.isConnected && this.ownerDocument === ownerDocument && generation === this.generation && this.activeCellIndex === index;
   }
 
   /** Resolves an anchor to a cell index using this viewer's own addressable units -- `node-path`
@@ -862,7 +880,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       this.searchMatches = matches;
     }
     this.activeSearchIndex = this.searchMatches.length ? 0 : -1;
-    this.activateSearchMatch();
+    await this.activateSearchMatch();
     this.emitSearchChange();
     return this.searchMatches.length;
   }
@@ -874,7 +892,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   async searchNext(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % this.searchMatches.length;
-    this.activateSearchMatch();
+    await this.activateSearchMatch();
     this.emitSearchChange();
     return true;
   }
@@ -884,7 +902,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   async searchPrevious(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
-    this.activateSearchMatch();
+    await this.activateSearchMatch();
     this.emitSearchChange();
     return true;
   }
@@ -903,16 +921,9 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.activeSearchIndex = -1;
   }
 
-  private activateSearchMatch(): void {
+  private async activateSearchMatch(): Promise<void> {
     const index = this.searchMatches[this.activeSearchIndex];
-    if (index === undefined) return;
-    this.activeCellIndex = index;
-    this.scheduleAfterUpdate(() => {
-      this.virtualListEl?.scrollToIndex(index, {
-        align: 'auto',
-        behavior: 'auto',
-      });
-    });
+    if (index !== undefined) await this.activateCell(index, 'auto');
   }
 
   private emitSearchChange(): void {
@@ -1184,8 +1195,8 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
             exportparts="cell:cell, cell-active:cell-active, cell-highlighted:cell-highlighted, cell-highlighted-accent:cell-highlighted-accent, cell-highlighted-success:cell-highlighted-success, cell-highlighted-warning:cell-highlighted-warning, cell-highlighted-danger:cell-highlighted-danger, cell-highlighted-neutral:cell-highlighted-neutral, cell-highlight-active:cell-highlight-active, cell-gutter:cell-gutter, cell-source:cell-source, raw-source:raw-source, outputs:outputs, output:output, output-error:output-error, error-output-label:error-output-label, output-toggle:output-toggle"
             .items=${this.loadState.doc.cells}
             .renderItem=${this.renderCell}
-            .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}
-            .activeItemId=${this.activeCellIndex ?? ''}
+            .keyFunction=${this.cellKey}
+            .activeItemId=${this.activeCellIndex === null ? '' : this.loadState.doc.cells[this.activeCellIndex]?.id ?? this.activeCellIndex}
             @lr-visible-range-change=${this.stopOwnedEvent}
             @lr-virtual-scroll=${this.stopOwnedEvent}
           ></lr-virtual-list>`

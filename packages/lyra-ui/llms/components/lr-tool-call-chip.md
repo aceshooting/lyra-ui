@@ -23,6 +23,9 @@ focused) fires `lr-tool-call-chip-select`; a consumer wires that to opening a
 `<lr-tool-result-dialog>` (or anything else) at the call site, keeping the chip reusable wherever
 a compact call summary is useful, with or without a detail surface behind it.
 
+Removing `category` or `summary` hides that optional text; assigning either attribute again restores
+its content.
+
 **Properties:**
 
 - `name: string = ''` — the tool/function name, e.g. `web_search`
@@ -109,9 +112,8 @@ sub-1000ms `"820ms"`, else trimmed to at most one decimal of seconds (`"1.5s"`, 
 
 **Known gotchas:**
 
-- the default slot is checked for emptiness by scanning `Array.from(this.children)` for elements
-  once on first update, then kept in sync via `slotchange` — only _element_ children count (a bare
-  text node assigned to the default slot won't trigger the tooltip)
+- meaningful default-slot text or element content enables the preview tooltip; whitespace-only
+  text does not. A text preview needs no wrapper, and the preview remains inert and noninteractive
 - the native button always keeps its purpose-specific generated name (`"name — summary — Status —
 duration"`). A host `aria-label` remains on the host and is not cloned onto that button; even an
   explicit empty host label never leaves the actionable button unnamed

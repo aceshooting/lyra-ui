@@ -1,3 +1,4 @@
+import { utcDate } from '../../forms/date-picker/calendar-core.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -79,7 +80,7 @@ function parseCalendarTime(time: IcalTimeApi | undefined): {
     && Number.isInteger(time.month)
     && Number.isInteger(time.day)
   ) {
-    value = new Date(Date.UTC(time.year!, time.month! - 1, time.day!));
+    value = utcDate(time.year!, time.month! - 1, time.day!);
     if (
       value.getUTCFullYear() !== time.year
       || value.getUTCMonth() + 1 !== time.month
@@ -97,6 +98,7 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
 /**
  * Parses `.ics` calendars with the optional `ical.js` peer and renders each
  * VEVENT as plain text, preserving summaries, DATE/DATE-TIME semantics, locations, and details.
+ * Early all-day years retain UTC calendar semantics and the exclusive DTEND display boundary.
  * At most 250 events and 2 MiB of rendered event text are retained so search, selection and
  * text-quote anchors continue to cover the complete accepted document without eager 10k-row DOM.
  * The inherited fragment path performs an exact DOM `id` lookup, but generated event markup has

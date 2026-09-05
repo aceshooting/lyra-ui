@@ -106,12 +106,10 @@ function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
     if (!descriptor || !('value' in descriptor)) continue;
     const candidate = descriptor.value;
     if (typeof candidate !== 'object' || candidate === null || seenObjects.has(candidate)) continue;
-    seenObjects.add(candidate);
     try {
       const record = candidate as Record<string, unknown>;
       const path = record['path'];
       if (typeof path !== 'string' || path.trim().length === 0 || seenPaths.has(path)) continue;
-      seenPaths.add(path);
       const name = record['name'];
       const kind = record['kind'];
       const mimeType = record['mimeType'];
@@ -135,6 +133,8 @@ function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
       const childShape = boundedArrayShape(rawChildren);
       const childrenProvided = childShape.isArray;
       const draft: FileTreeDraft = { fields, children: [], childrenProvided };
+      seenObjects.add(candidate);
+      seenPaths.add(path);
       frame.output.push(draft);
       drafts.push(draft);
       if (childrenProvided && frame.depth < MAX_FILE_TREE_DEPTH) {
@@ -271,7 +271,8 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   private _nodes: readonly FileTreeNode[] = [];
   /** Clone-owned, cycle-safe readonly node snapshot. Empty/blank paths are omitted and duplicate
    * paths use the first valid node; projection inspects at most 10,000 source positions across 64
-   * descendant levels. Reassign after changes. */
+   * descendant levels. An unreadable optional field rejects only its node, without reserving the
+   * path against a later valid occurrence. Reassign after changes. */
   @property({ attribute: false })
   get nodes(): readonly FileTreeNode[] { return this._nodes; }
   set nodes(value: readonly FileTreeNode[]) {

@@ -22,6 +22,10 @@ import { styles } from './radio-button.styles.js';
  * the page. The leading, label, and trailing wrappers are hidden independently while empty, so a
  * missing region never contributes a dead `--lr-radio-button-gap`.
  *
+ * Host `aria-describedby` references resolve onto the internal radio and track target changes,
+ * reconnect and document adoption. Equal-value `checked` assignments retain the inherited dirty
+ * state contract: later defaults cannot replace the live selection until reset.
+ *
  * @customElement lr-radio-button
  * @slot - Label text.
  * @slot start - Content placed before the label, typically an icon.

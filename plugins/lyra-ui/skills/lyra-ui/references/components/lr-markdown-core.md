@@ -25,6 +25,10 @@ this component's own module never imports or calls that function at all; it only
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
+Removing `content` clears the document and its empty-document tab stop, including while streaming.
+The property keeps Lit's `null` readback after removal; an explicitly empty attribute remains an
+empty string. Later source text renders normally.
+
 A fenced code block whose language isn't a key in `languages` always renders the plain-text fallback
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
 rendering path as `<lr-code-block-core>`'s identical contract. A block that _is_ highlighted follows the

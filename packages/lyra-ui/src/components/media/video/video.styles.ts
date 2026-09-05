@@ -313,7 +313,7 @@ export const styles = css`
     cursor: not-allowed;
   }
 
-  [part='progress']:hover ~ [part='timeline-track'],
+  [part='progress']:hover:where(:not(:disabled)) ~ [part='timeline-track'],
   [part='progress']:focus-visible ~ [part='timeline-track'] {
     background: color-mix(
       in oklab,
@@ -322,7 +322,7 @@ export const styles = css`
     );
   }
 
-  [part='progress']:active ~ [part='timeline-track'] {
+  [part='progress']:active:where(:not(:disabled)) ~ [part='timeline-track'] {
     background: color-mix(
       in oklab,
       var(--lr-color-border-strong),

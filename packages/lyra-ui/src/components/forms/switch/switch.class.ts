@@ -1,3 +1,4 @@
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -62,6 +63,10 @@ export interface LyraSwitchEventMap {
  * Its wrapper follows flattened rendered assignment and updates through forwarding slots. Visual
  * elements, including decorative `aria-hidden` icons, retain the wrapper independently of their
  * accessibility-tree contribution.
+ *
+ * Host `aria-describedby` references resolve onto the internal switch before its local error/hint
+ * guidance, tracking target changes, reconnect and document adoption. Removing `hint`, `help-text`
+ * or `error-text` safely omits the content while preserving native null property readback.
  *
  * @customElement lr-switch
  * @slot - Label text, rendered next to the track. Clicking it toggles the
@@ -376,8 +381,29 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this[VALIDITY_ANCHOR]()?.blur();
   }
 
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const target = this[VALIDITY_ANCHOR]();
+    if (!target) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.syncExternalDescription();
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.updateValidity();
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.labelObserver = MutationObserverCtor
@@ -398,7 +424,14 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     }
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.hasUpdated) this.syncExternalDescription();
+  }
+
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
@@ -696,8 +729,8 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   override render(): TemplateResult {
     const hasHint = this.withHint || this.hasHintSlot || this.hasHelpTextSlot ||
-      this.hint.length > 0 || this.helpText.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+      (this.hint ?? '').length > 0 || (this.helpText ?? '').length > 0;
+    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
     const describedBy = [hasError ? 'switch-error' : '', hasHint ? 'switch-hint' : '']
       .filter(Boolean)
       .join(' ');

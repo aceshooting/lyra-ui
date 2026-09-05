@@ -125,6 +125,32 @@ Filterable single/multi-select combining a text input with a listbox. Mirrors th
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated** (hand-rolled internals, not the
 shared `FormAssociated` mixin — see gotchas).
 
+Consumer writes on mounted options immediately update the owning picker and its submission,
+without changing the reset default or emitting picker input/change events. Owner synchronization
+does not echo as a consumer selected write.
+
+A mounted `option.selected` assignment updates the live picker value and form submission
+immediately, including deselection and equal-value writes; it emits no user input/change event.
+
+When `multiple` becomes false, the public value, live option flags, and popup `aria-selected` expose
+one selected occurrence. The retained multiple-selection history returns if multiple is enabled
+again without another selection write.
+
+Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
+not navigate, select/create a value, or dismiss the popup.
+
+Source options with `inert`, including inherited inertness, are unavailable through the popup. Live
+inert changes refresh row availability. Text, insertion, replacement, removal, slot
+reassignment/removal, and relevant attributes of `start`/`end`/`prefix`/`suffix` adornments refresh
+the corresponding cloned presentation; unchanged presentation retains its clone identity while
+filtering.
+
+Host `aria-describedby` resolves external descriptions onto the native combobox filter before local
+error/hint guidance. References track missing targets, replacement, removal/reinsertion, reconnect,
+and adoption. Removing `label`, `hint`, or `error-text` safely omits the content while leaving
+removed string properties at their native `null` readback; explicit empty strings remain supplied
+empty strings.
+
 **First-interaction registration.** Where initial-route weight is stricter than a static combobox
 registration allows, keep a labelled native `<input list>` as the working pre-JavaScript control
 and import only the granular combobox registration on its first focus. Copy the native value after
@@ -310,9 +336,12 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
   `multiple` mode
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
-- `selectedRows: ComboboxSourceRow[]` (read-only getter) — structured rows for the current
-  selection, including any opaque `data` payload supplied by an async source. Selected async rows
-  remain available after the query changes or a later source result no longer contains them
+- `selectedRows` (read: `ComboboxSourceRow[]`; write: `readonly ComboboxSourceRow[]`) — structured
+  rows for the current selection, including any opaque `data` payload supplied by an async source.
+  Reads return detached row snapshots. Writes select stable row values resolved against the
+  current or deferred source, dropping duplicate and detached values without emitting selection
+  events. Selected async rows remain available after the query changes or a later source result
+  no longer contains them
 - `selectionStart`, `selectionEnd`, and `selectionDirection` — selection getters/setters forwarded
   to the internal input
 
@@ -368,7 +397,9 @@ selection. It is the supported way to read that text; reaching into the shadow r
 `[part="combobox-input"]`'s value is not. Named `lr-filter` rather than `lr-input` precisely because
 `lr-input`'s detail on `<lr-input>` is the committed value, and the two must not share a name while
 carrying different strings. It fires for user edits only. Picking a row, `form.reset()`, dismissing
-the listbox, a programmatic `value` write, and `setRangeText()` blank the filter silently.
+the listbox, and a programmatic `value` write blank the filter silently. `setRangeText()` silently
+replaces the requested or selected native text range, synchronizes the resulting query and visible
+options, and refreshes an async source when present; it preserves the committed selection.
 Activating the clear button is a user edit: when a query existed it emits `lr-filter` with
 `value: ''` before the clear transaction finishes.
 `lr-show` and `lr-hide` report the start of listbox visibility transitions. `lr-show` is a
@@ -635,6 +666,15 @@ shared nonmodal overlay stack.
 Session-history/autofill restoration assigns the stored string through the same synchronous
 value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
 `lr-change`.
+
+Mounted `option.selected` assignments update the picker value and form submission immediately,
+including deselection and equal-value writes. Duplicate-valued options retain their individual
+occurrence identities. These programmatic writes emit no user input/change event.
+
+Host `aria-describedby` resolves external guidance onto the trigger before internal value, error,
+and hint guidance. References track missing targets, replacement, removal/reinsertion, reconnect,
+and adoption. Removing `label`, `hint`, `help-text`, or `error-text` safely omits the content
+without changing native `null` property readback; explicit empty strings remain empty.
 
 There is no typing-to-filter and no `filter`/`source`/`empty-text`/`max-render` surface — reach for
 `<lr-combobox>` instead whenever any of those apply. Everything else a closed list needs is here:
@@ -958,8 +998,37 @@ Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Bo
 components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or
 `YYYY-MM-DD/YYYY-MM-DD` (range).
 
-The ISO model is proleptic Gregorian in every locale, including years `0000`–`0099` (no JavaScript
-`Date` 1900 remap). Month/day names and visible day/week digits follow the effective locale while
+For `lr-date-input`, host `aria-describedby` targets resolve in the host's root and describe the
+native combobox input through element references, before its existing error and hint descriptions.
+Replacement, removal, reinsertion, newly resolved IDs, reconnect, and adoption update those
+relationships. Removing `label`, `hint`, or `error-text` safely omits that copy while preserving
+`null` property readback; later supplied values render normally.
+
+`lr-date-input`'s `clearLabel`, `openLabel`, and `dialogLabel` retain their initial defaults (`''`,
+`''`, and `'Choose date'`). Omitted labels localize; explicitly supplied text, built-in English
+labels, and empty strings win over `.strings`. Attribute removal restores localization while
+preserving `null` readback. The composed calendar applies the same range endpoint and
+inclusive-length admission rules as the standalone picker.
+
+An authored host `aria-label` names an enclosing calendar group. Individual month and selection
+grids retain their distinct generated period names; changing or removing the purpose label updates
+the group without changing a caller-authored host role. Removing the `value` attribute renders an
+empty selection safely while preserving `null` readback; a subsequent valid value works normally.
+
+Live constraints repair roving state without moving focus from an unrelated control. If a focused
+cell becomes unavailable, focus recovers onto an enabled cell. Explicit distant bounds seed the
+bounded automatic search within the permitted domain; a genuinely empty domain has no enabled roving
+stop. Selected day and range-endpoint buttons retain their foreground/background pairing during
+hover and press; author state-token overrides remain available. Month/year/decade state buttons
+retain the common typography, padding, border reset, and minimum action size.
+
+The `calendar-core.ts` helper `formatISO()` returns an empty string for invalid dates or years
+outside `0000`–`9999`, so generated ISO anchors never advertise an unsupported signed or five-digit
+year.
+
+The ISO model is proleptic Gregorian in every locale and supports years `0000`–`9999`, including
+`0000`–`0099` without JavaScript's `Date` 1900 remap. Navigation anchors remain within that domain;
+moving past either boundary leaves a valid roving stop and does not change the selected value. Month/day names and visible day/week digits follow the effective locale while
 formatters explicitly select the Gregorian calendar. `lr-date-input` uses locale `formatRange()`
 for range presentation and normalizes locale digits plus bidi marks before parsing, so its own
 Arabic/Persian display round-trips to the same ISO value.
@@ -987,12 +1056,20 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   tell them apart. A reversed preset normalizes; a malformed one is ignored rather than clearing the
   current value, so a bad entry in a config-driven list never reads as "the user picked nothing".
   Non-array runtime assignments normalize to the empty collection, and null/non-object entries in
-  an otherwise valid array are omitted from the rendered row rather than aborting the calendar.
+  an otherwise valid array are omitted from the rendered row rather than aborting the calendar. Empty and
+  whitespace-only labels are also omitted, preserving named siblings. Explicit endpoints clamp to
+  `min`/`max` before admission. Both endpoints must be selectable, and the inclusive length must
+  satisfy `minRange`/`maxRange`; invalid outcomes render disabled and do not emit value events.
+  Interior dates need not all be enabled. A same-day manual completion obeys those same inclusive
+  length limits. Long preset labels wrap in narrow allocations, including unbroken text and RTL.
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
   `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
-  button produced the current `value`, or `undefined` when the range was picked by hand. Read it
+  button produced the current `value`, or `undefined` when the range was picked by hand, cleared, or changed externally.
+  `clear()` removes identity before synchronous `input`/`change` listeners run; an external value
+  change removes identity silently. An accepted preset retains its exact caller-owned source
+  identity through its own update. Read it
   inside your own `change`/`input` handler. It exists because a dashboard filter has to persist
   *which* preset is active rather than the pair it froze to: "Last 7 days" must still mean the last
   7 days after tomorrow's reload. That fact is not recoverable from `value` — re-deriving it by
@@ -1028,8 +1105,11 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`, reflected)
 - `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
-Lyra retains the additive `previousLabel`/`nextLabel` localized accessible-label overrides and
-the `selection` range getter.
+Lyra retains the additive `previousLabel`/`nextLabel` accessible-label overrides and the `selection`
+range getter. Their initial readback remains `'Previous month'` and `'Next month'`; omitted labels
+localize, while explicit text, the built-in English labels, and empty strings win over locale and
+`.strings` copy. Removing either label attribute restores localized omission while preserving
+`null` property readback.
 
 **Methods:** `clear()`, `focus(options?)`, `goToToday()`, and
 `goToDate(date: string | Date)`. Valid navigation dates are clamped to `min`/`max`; invalid values
@@ -1362,6 +1442,15 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 `reportValidity()`). Ships an opt-in `label`/`hint`/`errorText` form-control chrome mirroring
 `lr-select` -- left unset, none of it renders.
 
+Removing `label`, `hint`, `help-text`, or `error-text` safely omits the corresponding content while
+preserving native `null` property readback. Explicit empty strings stay empty; later supplied text
+renders normally.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
+
 ```html
 <lr-textarea placeholder="Notes" rows="4"></lr-textarea>
 <lr-textarea
@@ -1572,6 +1661,13 @@ light-DOM form's submission on its own. They remain default actions of the compo
 `click`: `preventDefault()` from any listener on that click path vetoes submit/reset before it
 runs, while `stopPropagation()` alone does not. Canceling the form's later `submit` or `reset`
 event remains an independent veto point.
+
+External descriptions follow the current source element identity when an element with the same ID
+replaces it, when a source is removed or reinserted, and when the control reconnects or moves to
+another document. Host-root lookup and ordering follow the current `aria-describedby` list,
+including unresolved IDs and duplicates. Switching between native button and anchor modes keeps the
+relationship on the current action. Existing accessible names and `aria-controls` relationships
+retain their separate contracts.
 
 Set `href` to a safe link URL and the root renders as a real `<a part="base" href=…>` instead — a
 link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
@@ -1889,9 +1985,10 @@ box no matter what tier or override is in play.
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
 - **`SubmitEvent.submitter` is not this element** whenever `name`/`value` or any `form*` override is
-  set: it is the transient native `<button>` described above, which has already been removed from
-  the DOM by the time a `submit` listener runs. Read the submitted entry from the `FormData`, or
-  the override off your own component, rather than identity-checking the submitter.
+  set: it is the transient native `<button>` described above. That native submitter remains
+  connected throughout synchronous `requestSubmit()` handling, so a `submit` listener can read
+  its `name`, `value` and `form*` fields and construct `FormData` with it. It is removed after
+  submission handling returns; its identity is distinct from the `lr-button` host.
 - The `form*` overrides and `type` are all inert while `href` renders the anchor — native navigation
   is the activation there, and an anchor has no submit/reset concept.
 
@@ -1904,6 +2001,13 @@ form-associated submitter; use `<lr-button circle type="submit|reset">` with an 
 slot when a form action is required. Because it is not form-associated, an ancestor
 `<fieldset disabled>` does not disable it and it is absent from `form.elements`; set `disabled`
 directly on each icon button.
+
+External descriptions follow the current source element identity when an element with the same ID
+replaces it, when a source is removed or reinserted, and when the control reconnects or moves to
+another document. Host-root lookup and ordering follow the current `aria-describedby` list,
+including unresolved IDs and duplicates. Switching between native button and anchor modes keeps the
+relationship on the current action. Existing accessible names and `aria-controls` relationships
+retain their separate contracts.
 
 Its public `--lr-icon-button-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override the built-in fallbacks; a value set directly on the element still wins.
@@ -2020,6 +2124,20 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 `label`/`hint`/`errorText` form-control chrome as `lr-textarea`/`lr-select`, and the same
 `size` scale as `lr-select`/`lr-combobox`.
 
+`stepUp()` and `stepDown()` use the current `value`, `step`, `min`, and `max` properties in the same
+synchronous call, including changes made immediately beforehand. They preserve native step alignment
+and bounds, update form submission silently, and remain no-ops before the native input has rendered
+or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
+
+Removing `label`, `hint`, `help-text`, or `error-text` safely omits that content while retaining
+native `null` property readback. Explicit empty strings remain empty and later supplied text renders
+normally. The same inherited behavior applies to `lr-number-input` and `lr-native-time-input`.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
+
 Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs;
 see "Enter-to-submit" below for the exact rules and for which controls deliberately opt out.
 
@@ -2060,9 +2178,9 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus
 - `withClear: boolean = false` (attribute `with-clear`) — Web Awesome's spelling of `clearable`;
-  either one shows the same action. Inherited by `lr-number-input`, where it is inert because that
-  type renders no clear action, and by `lr-time-input`, where it enables the segmented field's
-  localized clear action
+  either one shows the same action. Inherited by `lr-number-input` and `lr-native-time-input`,
+  where it is inert because their native types render no clear action. The separate segmented
+  `lr-time-input` implements its own `with-clear` action
 - `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `label: string = ''`
 - `hint: string = ''`
@@ -2094,7 +2212,7 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   `type="time"`. On `lr-input` itself the `min`/`max` _attributes_ are number-converted, so a
   non-numeric bound only survives a direct property assignment; the declared type also admits a
   string so a subclass can narrow the attribute parsing to its own native type's literal form —
-  `lr-time-input` does exactly that. Inert for the other types
+  `lr-native-time-input` does exactly that. Inert for the other types
 - `minlength?: number` / `maxlength?: number` (attributes `minlength`/`maxlength`) — text-length
   bounds forwarded to the native input and reported as `validity.tooShort`/`validity.tooLong`.
   Apply to the text-bearing types (`text`, `search`, `email`, `password`); the platform ignores
@@ -2202,8 +2320,8 @@ than the icon-beside-label gap the ladder is tuned for. `--lr-input-radius` (def
 `--lr-form-control-radius`, its corner radius) is retunable the same way but _does_ follow the tier:
 the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a
 lozenge. `pill` changes its private default to `--lr-radius-pill`; an inherited or direct public
-value still wins. `lr-number-input`/`lr-time-input` inherit both
-unchanged.
+value still wins. `lr-number-input`/`lr-native-time-input` inherit both
+unchanged. The separate segmented `lr-time-input` also consumes the documented input theme tokens.
 
 `--lr-input-fill` (default `transparent`) is the control row's background and
 `--lr-input-border-color` (default `var(--lr-color-border)`) its border color. `appearance` changes
@@ -2297,8 +2415,8 @@ submission must never shadow it: `lr-textarea` and `lr-code-editor` insert a new
 whole point of a multi-line surface; `lr-select`'s `role="combobox"` trigger opens the listbox (and
 then commits the active option), per the ARIA pattern; and `lr-date-picker` selects the focused day
 in the calendar grid. The controls that _do_ wire it are `lr-input` (and its `lr-number-input`/
-`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input` and
-`lr-otp-input`.
+`lr-native-time-input` subclasses), the separate segmented `lr-time-input`, `lr-combobox`,
+`lr-date-input`, `lr-phone-input`, `lr-token-input` and `lr-otp-input`.
 
 ### Exact-height hatches — the one rule that applies to all of them
 
@@ -2397,6 +2515,16 @@ A numeric field with the complete `lr-input` form, validation and native-editing
 own increment/decrement stepper pair. Its constructor and `connectedCallback()` both force
 `type = 'number'`; all inherited `lr-input` form and editing APIs remain available.
 
+`stepUp()` and `stepDown()` use the current `value`, `step`, `min`, and `max` properties in the same
+synchronous call, including changes made immediately beforehand. They preserve native step alignment
+and bounds, update form submission silently, and remain no-ops before the native input has rendered
+or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
+
 **Inherits:** all public surface from `lr-input`.
 
 The inherited `--lr-input-*` theme inputs keep `lr-input`'s ancestor-theme precedence; the number
@@ -2407,7 +2535,8 @@ action-height ladder as `lr-input` instead of remaining at the default tier for 
 **Properties:** `size` (`2xs`…`xl`), `appearance`, `pill`, `autofocus`, `placeholder`, `readonly`,
 `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
-`autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), `enterKeyHint` (`enterkeyhint`), and
+`autocorrect` (boolean readback; accepts `boolean | 'off' | 'on'` writes), `inputMode`
+(`inputmode`), `enterKeyHint` (`enterkeyhint`), and
 `min`/`max`/`step` (the native numeric constraint validation), all inherited from `lr-input` with
 identical meaning. This component changes the mapped defaults to `appearance='outlined'`,
 `inputMode='numeric'`, and `step=1`. `clearable` (and its `with-clear` spelling),
@@ -2523,6 +2652,9 @@ An incomplete draft remains visible for editing but submits `''` and raises `bad
 The clear/expand actions sit directly in the shared outer height ladder: compact tiers grow only
 enough for their hit targets, while `l` and `xl` retain the shared 48px and 56px heights rather
 than adding outer padding around the buttons.
+
+Removing `label` or `hint` safely omits that content while retaining native `null` property
+readback. Explicit empty strings remain empty; later supplied text renders normally.
 
 **Properties:**
 
@@ -2662,6 +2794,16 @@ forces its internal native input to `type="time"` on construction and reconnect,
 as numbers. Use it when the browser/OS picker is preferred; new `wa-time-input` migrations should
 use the segmented `lr-time-input` above.
 
+`stepUp()` and `stepDown()` use the current `value`, `step`, `min`, and `max` properties in the same
+synchronous call, including changes made immediately beforehand. They preserve native step alignment
+and bounds, update form submission silently, and remain no-ops before the native input has rendered
+or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
+
 **Inherits:** all public surface from `lr-input`.
 
 All `lr-input` properties, form methods, events, label/hint/error/start/end slots, parts, and theme
@@ -2701,6 +2843,14 @@ synchronous `LyraPhoneNumberAdapter`, or lazily create one from a `libphonenumbe
 with `loadLibphonenumberAdapter()`. Without an adapter, already-international E.164 input still
 normalizes and validates; national input remains editable with `incomplete` validity. The loader
 returns its discovered country catalog as a frozen array of frozen records.
+
+For `default-country`, removing the attribute safely uses the existing country fallback while
+leaving property   readback at native `null`; an existing selected country remains selected.
+Explicit empty   strings remain empty, and later valid default-country values work normally.
+
+Host `aria-describedby` references resolve onto the telephone input before its local hint/error
+guidance. References track missing IDs, target replacement, removal/reinsertion, reconnect, and
+adoption. The country selector keeps its separate existing accessible-name contract.
 
 The country selector keeps the real native `<select>` (localized full country names in its popup,
 native mobile pickers, keyboard type-ahead) but stretches it invisibly over a compact decorative
@@ -2801,13 +2951,20 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   removes it from the accessibility tree entirely.)
 - `phoneLabel: string = ''` (attribute `phone-label`) — explicit accessible-name override for the
   native telephone input.
-- `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name;
-  the untouched default routes through the shared localized `select` message.
+- `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name.
+  Omitted copy uses the localized `select` message. Explicit text, including `'Select'` and `''`,
+  wins over locale strings. Removing the attribute restores the declared `'Select'` property
+  readback and resumes localization.
 - `incompleteText: string = 'This phone number is incomplete.'` (attribute `incomplete-text`) —
-  validation message for dial-like input that can still become valid with more digits. The
-  untouched default routes through the localized `phoneInputIncomplete` message.
+  validation message for dial-like input that can still become valid with more digits. Omitted
+  copy uses the localized `phoneInputIncomplete` message. Explicit nonempty text, including the
+  English default, wins verbatim; an empty override retains the localized native error reason.
+  Removing the attribute restores its declared English property default and resumes localization.
 - `invalidText: string = 'The value is invalid.'` (attribute `invalid-text`) — completed-invalid
-  message, localized through the same shared key while left at its default.
+  validation message. Omitted copy uses localized `valueInvalid`; explicit nonempty text,
+  including the English default, wins verbatim. An empty override retains the localized native
+  error reason. Removing the attribute restores its declared English property default and resumes
+  localization.
 - `autocomplete: string = 'tel'`, `inputmode: 'tel'|'numeric'|'text' = 'tel'`,
   `enterkeyhint: string = ''` — forwarded to the internal `<input type="tel">`.
 - `readonly: boolean = false` (reflected) — forwards to the native telephone input, locks the
@@ -2961,6 +3118,11 @@ consumer-facing `disabled` property/attribute itself.
 The `base` part is an accessible `role="group"`: a non-empty host `aria-label` names the two-handle
 aggregate. A native external `<label for>` remains available through `labels`, but it does not cross
 into the shadow-root group. `startLabel` and `endLabel` continue to name the individual sliders.
+
+Only the primary mouse button starts seeking or dragging. Right and middle presses leave the range
+and input/change events untouched. Touch and pen gestures keep their existing behavior, including
+concurrent pointer support; pointer cancellation and capture cleanup retain their existing
+semantics.
 
 **Properties:**
 
@@ -3186,6 +3348,10 @@ shortcut list alongside a grid, a hue ramp and a text field that can still expre
 Arrow/Home/End navigation starts from the swatch that actually received the keyboard event, even
 when a controlled `value` write changed the selected or remembered roving item first.
 
+Own `disabled` changes take effect immediately for host `click()` and `focus()`, including calls in
+the same task as the property assignment. Blocked activation leaves value and `lr-change` untouched;
+blocked focus preserves outside focus and emits no native focus inside the picker.
+
 **Properties:**
 
 - `items: readonly SwatchPickerItem[] = []` (attribute: false) — `SwatchPickerItem { readonly value:
@@ -3322,6 +3488,9 @@ picker.value = "ruby";
 A boolean form control. `role="checkbox"` with an `aria-checked` that can also be `"mixed"`, and a
 visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associated via
 `ElementInternals`, click and Space toggle) but with checkbox semantics.
+
+Removing `error-text` safely omits the message while preserving native `null` property readback.
+Explicit empty text stays empty; later supplied text renders normally.
 
 **Properties:**
 
@@ -3501,6 +3670,12 @@ CSS parts), mirroring `<lr-select>`'s pattern for those two pieces — left unse
 Deliberately no separate top-of-field `label` prop/slot/part: the default slot already is this
 control's visible, clickable label (same as `<lr-checkbox>`).
 
+Host `aria-describedby` references resolve onto the internal `role="switch"` before its local
+error/hint guidance. The relationship tracks missing IDs, target replacement/removal/reinsertion,
+reconnect, and document adoption. Removing `hint`, `help-text`, or `error-text` safely omits that
+content while preserving native `null` property readback; explicit empty and later text work
+normally.
+
 **Properties:**
 
 - `checked: boolean = false` — the live, non-reflecting state
@@ -3626,11 +3801,21 @@ checkbox and does not emit `lr-change`.
 A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
 `ElementInternals`, because its public `value` is a number rather than the string assumed by the
 shared form mixin. `value`, `defaultValue`, and `valueAsNumber` are numeric; `valueAsString` is the
-explicit compatibility round-trip for code that still wants a serialized value. Clicking anywhere
+explicit compatibility round-trip for code that still wants a serialized value. A primary-button press anywhere
 on `[part~="base"]` (not just the thumb) jumps the
 thumb to that point and continues the same gesture as a drag, matching native `<input type=range>`
 click-to-seek — the thumb is also `.focus()`ed on that click, so keyboard interaction can continue
 seamlessly right after. Mirrors the core `<wa-slider>` API under the `lr-` prefix.
+
+Secondary mouse buttons leave the value and input/change events untouched. Primary mouse, touch and
+pen gestures remain supported, including concurrent pointers.
+
+Removing `label`, `hint`, `help-text` or `error-text` safely removes the corresponding copy; native
+attribute-removal property readback remains unchanged, including `null`. Supplying an empty string
+or later replacement remains supported. In single mode, host `aria-describedby` references resolve
+in the host's root and precede local error/hint descriptions on the slider handle. Target
+replacement, removal, reinsertion, host reconnection and document adoption update the relationship
+without losing local guidance.
 
 **Two-handle `range` mode.** `range` turns the control into a selection between `minValue` and
 `maxValue`, defaulting to `0`/`50`. Each handle is a separately focusable `role="slider"` with its
@@ -3721,9 +3906,11 @@ single numeric string entry.
 
 **Events:** native-style `input` (no detail), then `lr-input`, fire continuously during an active
 drag or keyboard step, including OS key-repeat while a key is held. Native-style `change` (no
-detail), then `lr-change`, fire once an interaction commits: on pointerup for a drag, or on keyup
-for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press fires both pairs, mirroring
-native `<input type=range>` timing.
+detail), then `lr-change`, fire once an interaction commits: on pointerup for an enabled drag,
+or on keyup or ordinary blur for a changed keyboard sequence. A later keyup cannot duplicate a
+blur commit. Own or fieldset disablement, and readonly, cancel unfinished gestures without
+reverting their live values or emitting a later change pair. Pointer cancellation, lost capture
+and disconnection also remain noncommitting.
 The focused handle's native `focus` and `blur` are re-dispatched from the host as bubbling,
 composed events.
 `lr-invalid` (no detail) fires when a validity check finds the slider invalid.
@@ -3897,6 +4084,15 @@ is present for upstream form-surface parity but adds no missing-value constraint
 
 A form-associated single-choice control. Use it alone or inside `lr-radio-group`.
 
+An explicit live `checked` assignment marks the state dirty even if its boolean value is unchanged.
+For example, assigning `checked = false` to an already-unchecked radio prevents a later
+`defaultChecked = true` from selecting it until form reset. Pristine default propagation and
+owning-group normalization retain their existing behavior.
+
+Host `aria-describedby` references resolve onto the internal `role="radio"`, tracking unresolved
+IDs, target replacement/removal/reinsertion, reconnect, and document adoption. The same behavior
+applies to the button appearance of `lr-radio`.
+
 **Properties:** live, non-reflecting `checked`; reflected `defaultChecked` (attribute `checked`);
 reflected `customError: string | null` (attribute `custom-error`); `disabled`, `required`, `name`,
 and `value`. A selected standalone radio submits its value through `ElementInternals`.
@@ -3996,15 +4192,24 @@ and scale.
 The same single-choice control as `lr-radio`, rendered as a button instead of a circle. Mirrors
 `sl-radio-button`.
 
+An explicit live `checked` assignment marks the state dirty even if its boolean value is unchanged.
+For example, assigning `checked = false` to an already-unchecked radio prevents a later
+`defaultChecked = true` from selecting it until form reset. Pristine default propagation and
+owning-group normalization retain their existing behavior.
+
+Host `aria-describedby` references resolve onto the internal `role="radio"`, tracking unresolved
+IDs, target replacement/removal/reinsertion, reconnect, and document adoption. The same behavior
+applies to the button appearance of `lr-radio`.
+
 Deliberately a **subclass of `LyraRadio`**: form association, validity, `form.reset()` restoration
 and the whole `lr-radio-group` ownership/roving-focus contract are inherited rather than
 reimplemented, so the two can never drift apart. Only the chrome differs. A `lr-radio-group` accepts
 either tag and the two can be mixed in one group.
 
-Consecutive `lr-radio-button` siblings collapse their shared borders into one segmented control
-automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-type` counts only
-`lr-radio-button` siblings, so a group's `slot="label"`/`slot="hint"` children never shift the ends,
-and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
+Inside a horizontal `lr-radio-group`, measured adjacent runs of `lr-radio-button` controls merge
+their touching borders and retain rounded outer corners. Separated or mixed controls, vertical
+layouts, wrapped rows and standalone buttons keep the corners appropriate to their actual layout;
+label and hint slots do not determine the segment endpoints.
 
 Standalone button chrome is allocation-safe too: unbroken labels wrap, and start/end (or retained
 prefix/suffix) adornments are each capped and truncate rather than widening the containing panel.
@@ -4094,6 +4299,16 @@ the only one of the set worth setting on this tag.
 
 A form-associated one-time-code field: several character segments that together hold one value.
 Mirrors `wa-otp-input`.
+
+Host `aria-describedby` references resolve onto the native control input before its local error and
+hint guidance. The relationship tracks missing IDs, target replacement, removal/reinsertion,
+reconnect, and document adoption. The decorative code segments do not receive a second copy of the
+descriptions.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
 
 The segments are **presentational**. A single real `<input>` sits transparently across them and owns
 focus, selection and the value. It remains the native integration point for SMS autofill
@@ -4275,6 +4490,11 @@ A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and the ori
 axis move focus and select the next enabled radio: Up/Down when vertical, Left/Right when
 horizontal. Horizontal direction mirrors under RTL, and disabled options are skipped.
 
+Host `aria-describedby` references resolve onto the internal `role="radiogroup"` before its local
+hint/error guidance. References track unresolved IDs, target replacement/removal/reinsertion,
+reconnect, and document adoption. Group descriptions remain on the group; child radios can carry
+their own separately authored descriptions.
+
 **Properties:** `label`, `hint`, `helpText` (`help-text`, Shoelace alias), `errorText`
 (`error-text`), `name` (empty by default, with the empty attribute omitted), live `value`, reflected
 `defaultValue` (attribute `value`; Shoelace's `default-value` is also accepted), `customError`
@@ -4444,6 +4664,20 @@ prevented, so focus still advances normally. Backspace removes the last token. `
 readonly owned `readonly string[]` snapshot and repeated values are submitted under `name`; mutate
 a new array and reassign it to change the list.
 
+Composing keyboard events (`isComposing` or legacy key code 229) remain with the native draft or
+inline editor without adding/removing tokens, committing an edit or closing the editor. Normal
+Enter, delimiter, Tab, Backspace and Escape behavior is unchanged after composition.
+
+Host `aria-describedby` references resolve in the host's root and precede local hint/error guidance
+on the native draft input. Live source replacement, removal, reinsertion, host reconnection and
+document adoption update the relationship. Removing `label`, `hint` or `error-text` safely removes
+that copy while preserving native attribute-removal property readback, including `null`; explicit
+empty and later replacement strings remain supported.
+
+Editable token labels vertically center their text within the existing pointer target while
+retaining narrow-content ellipsis, wrapping and alignment with the remove action. The ordinary
+noneditable token layout remains the default.
+
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,
@@ -4584,6 +4818,15 @@ Long translated form chrome wraps within the host, while long source stays reach
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
 (320px)` story covers both boundaries together.
 
+`form.reset()` restores the default value and pristine interaction feedback. Required and custom
+validity constraints remain; a required-empty editor is still invalid. Removing `label`, `hint`, or
+`error-text` treats the removed value as absent for rendering while retaining native
+attribute-removal property readback.
+
+Host `aria-describedby` references resolve in the host root onto the native textarea before its
+local error/hint guidance. Target replacement, removal, reinsertion, unresolved IDs, reconnect, and
+adoption keep that relationship current.
+
 Dependency-free, form-associated multiline code editor built around a native textarea, with an
 optional line-number gutter. No syntax highlighting: `language` is metadata only.
 
@@ -4593,9 +4836,11 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `lineNumbers: boolean = true` (attribute `line-numbers`, reflected) — renders the `gutter` part,
   one row per `\n`-separated line
-- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press, and the textarea's
-  inline `tab-size`. Sanitized on assignment to a finite integer clamped to `1..16`, so a
-  `NaN`/`Infinity` value can neither empty the insert nor throw out of `String.repeat()`
+- `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press and the tab width
+  shared by the native textarea and text measurement. Explicit property/attribute assignment wins
+  over `--lr-code-editor-tab-size`; otherwise the token controls the rendered tab width. Sanitized
+  on assignment to a finite integer clamped to `1..16`, so a `NaN`/`Infinity` value can neither
+  empty the insert nor throw out of `String.repeat()`.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`),
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
@@ -4611,8 +4856,10 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   `lr-textarea`/`lr-input`/`lr-select`, accepting both spellings of every tier (`2xs`/`xs`/`s`/`m`/
   `l`/`xl` and `small`/`medium`/`large`). Governs the gutter's and textarea's padding and font size,
   plus the editor frame's minimum block size.
-- `wrap: 'off' | 'soft' | 'hard' = 'off'` — native textarea wrapping; `'off'` (the default) makes
-  the `editor` part the single horizontal scroll viewport. `hard` uses the owner realm's native
+- `wrap: 'off' | 'soft' | 'hard' = 'off'` — native textarea wrapping. `'off'` (the default) makes
+  the `editor` part the single horizontal scroll viewport. Soft/hard text wraps within the editor
+  allocation, with the caret and logical line-number gutter following the wrapped lines as the
+  allocation changes; the editor frame owns scrolling. `hard` uses the owner realm's native
   textarea serializer, so FormData receives platform-equivalent `cols` wrapping while the live
   `value` remains unwrapped.
 - `spellcheck: boolean = false` — off by default for code, and parsed with a string-aware converter
@@ -4698,6 +4945,15 @@ A form-associated colour picker with label, hint and error chrome: a compact swa
 opens a popover holding a saturation/brightness grid, a hue slider, an optional alpha slider, a text
 field accepting any parseable CSS colour, an optional predefined palette, and — where the browser
 supports it — a screen eyedropper.
+
+Host `aria-describedby` references resolve in the host's root and precede the trigger's local error,
+hint and current-value guidance. Same-ID target replacement, removal, reinsertion, reconnection and
+document adoption keep those relationships current. Inline mode has no trigger.
+
+Own or fieldset disablement discards an unfinished native text draft without committing it and
+blocks palette/format actions immediately, including before disabled rendering settles. A valid
+enabled draft still commits on normal blur or Enter. Format changes retain their existing
+programmatic event silence. Pointer and eyedropper cancellation behavior remains unchanged.
 
 **Rewritten in 8.0.0.** It used to wrap a bare native `<input type="color">`; it is now a real
 picker built from the pieces above. Two consequences for existing code:
@@ -4972,6 +5228,17 @@ supplied (an explicit empty array still counts as supplied and skips the auto-lo
 When the filtered set reaches 200 items, the grid automatically windows its visible rows while
 preserving the full option count through `aria-setsize`/`aria-posinset`.
 
+Removing `label`, `hint`, or `error-text` treats the removed value as absent for rendering while
+preserving native attribute-removal property readback. Host `aria-describedby` references resolve in
+the host root onto the value-owning listbox before its local error/hint guidance. Target
+replacement, removal, reinsertion, reconnect, and adoption keep that relationship current. The
+search input keeps its separate description ownership.
+
+`form.reset()` restores the default value and pristine interaction feedback. Required constraints
+and persistent custom validity remain in force; a required-empty value remains invalid. Composing
+key events (`isComposing` or legacy key code 229) remain with text editing and do not navigate or
+pick an emoji.
+
 Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-select`/
 `lr-color-picker` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
 `error` CSS parts) — left unset, none of that chrome renders.
@@ -4983,11 +5250,14 @@ can override size-tier fallbacks; a value set directly on the element still wins
 (`custom-error`), `disabled`, and `required`, plus
 `groups: readonly EmojiPickerGroup[] = []` (attribute: false) — readonly `EmojiPickerGroup { key,
 label, emojis: readonly EmojiPickerItem[] }`, readonly `EmojiPickerItem { emoji, name,
-shortcodes? }`; assignment captures a bounded frozen owned snapshot. The search field matches
+shortcodes? }`; assignment captures a bounded frozen owned snapshot, including the current contents
+of reused source item objects. Earlier snapshots remain frozen and unchanged; in-place source edits
+become visible only after an explicit `groups` assignment. The search field matches
 `name` and every `shortcodes` entry, case-insensitively. Consumer group labels render verbatim.
 Groups returned by the built-in loader carry private provenance, letting their fixed emojibase
-headings follow `registerLyraLocale()`/`.strings` without exposing localization keys as consumer
-data. Empty (the default, before the auto-loader
+headings follow `registerLyraLocale()`/`.strings` through filtering and windowed rendering, including
+same-locale `.strings` changes, without exposing localization keys as consumer data. Caller-authored
+headings remain literal even when their keys match built-in groups. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
 forwards a host-supplied accessible name to the internal `role="listbox"` grid. Only omission falls
 back to the visible label or localized default; an explicit `aria-label=""` remains empty.
@@ -5117,6 +5387,18 @@ and error chrome is linked to that same-shadow role. A host `aria-label` wins by
 Both score branches format visible numeric labels with the effective locale (including non-Latin
 digits); segmented item values and submitted rubric values remain stable raw numbers/strings.
 
+Host `aria-describedby` references resolve in the host's root and precede local hint/error guidance
+on that aggregate group. Target replacement, removal, reinsertion, reconnection and document
+adoption keep the relationship current. Aggregate guidance is not copied to every child field; each
+retains its own description/error ownership. Removing `label` or `hint` safely removes the copy
+while retaining native attribute-removal property readback, including `null`; explicit empty and
+later replacement strings remain supported.
+
+Replacing `value` after a multiple-category user edit reconciles the actual checkbox checked states,
+group value and submitted JSON, including when replacement happens in the same task. These parent
+writes use live child state, leave child reset-default/dirty semantics intact, and emit no user-edit
+events.
+
 **Properties:** `keys: readonly RubricKey[] = []` (attribute: false), where the exported immutable
 discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. Keys use nonblank
 first-wins identity and retained valid spelling is not rewritten. Shared fields are
@@ -5210,6 +5492,12 @@ Web Awesome equivalent). With `locales` unset (the default), the offered rows ar
 plus `en` — kept live via `subscribeLyraLocaleRegistry()`. Built directly on `lr-select`'s
 trigger-button/`aria-activedescendant` listbox technique, not composed from it — a plain closed
 list, no filter/free-text mode.
+
+Host `aria-describedby` references resolve onto the role=combobox trigger before its local error and
+hint guidance. The relationship tracks missing IDs, target replacement, removal/reinsertion,
+reconnect, and document adoption. Removing `label`, `hint`, or `error-text` safely omits that
+content while leaving native `null` property readback unchanged; explicit empty strings remain empty
+and later supplied text renders normally.
 
 Public `--lr-locale-picker-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override size-tier fallbacks; a value set directly on the element still wins.
@@ -5364,204 +5652,232 @@ component's visible form label.
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-forms-color-picker-color-core-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/color-picker/color-picker.class.js`.
   `LyraColorHsva {
-  h: unknown;
-  s: unknown;
-  v: unknown;
-  a: unknown;
-}`
+    h: number;
+    s: number;
+    v: number;
+    a: number;
+  }`
 
 - **`components-forms-color-picker-color-picker-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/color-picker/color-picker.class.js`.
   `LyraColorPickerSwatch {
-  color: unknown;
-  label: unknown;
-}`
+    color: string;
+    label?: string;
+  }`
 
 - **`components-forms-combobox-combobox-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`.
   `ComboboxFilterDetail {
-  value: unknown;
-}`
+    value: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`.
   `ComboboxSourceResult {
-  rows: unknown;
-  total: unknown;
-}`
+    readonly rows: readonly ComboboxSourceRow[];
+    readonly total?: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`.
   `ComboboxSourceRow {
-  value: unknown;
-  label: unknown;
-  sub: unknown;
-  icon: unknown;
-  start: unknown;
-  end: unknown;
-  badge: unknown;
-  accessibleLabel: unknown;
-  data: unknown;
-  dotColor: unknown;
-  group: unknown;
-  disabled: unknown;
-}`
+    readonly value: string;
+    readonly label: string;
+    readonly sub?: string;
+    readonly icon?: unknown;
+    readonly start?: unknown;
+    readonly end?: unknown;
+    readonly badge?: string | number;
+    readonly accessibleLabel?: string;
+    readonly data?: unknown;
+    readonly dotColor?: string;
+    readonly group?: string;
+    readonly disabled?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`.
   `LyraComboboxObjectValidator {
-  observedAttributes: unknown;
-  checkValidity: unknown;
-  input: unknown;
-  message: unknown;
-}`
+    observedAttributes?: string[];
+    checkValidity: (input: never) => LyraComboboxObjectValidatorResult;
+    message?: string | ((input: never) => string);
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`.
   `LyraComboboxObjectValidatorResult {
-  message: unknown;
-  isValid: unknown;
-  invalidKeys: unknown;
-}`
+    message: string;
+    isValid: boolean;
+    invalidKeys: Exclude<keyof ValidityState, 'valid'>[];
+  }`
 
 - **`components-forms-date-picker-date-input-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/date-picker/date-input.class.js`.
   `LyraDateInputObjectValidator {
-  observedAttributes: unknown;
-  checkValidity: unknown;
-  input: unknown;
-  message: unknown;
-}`
+    observedAttributes?: string[];
+    checkValidity: (input: never) => LyraDateInputObjectValidatorResult;
+    message?: string | ((input: never) => string);
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/date-picker/date-input.class.js`.
   `LyraDateInputObjectValidatorResult {
-  message: unknown;
-  isValid: unknown;
-  invalidKeys: unknown;
-}`
+    message: string;
+    isValid: boolean;
+    invalidKeys: Exclude<keyof ValidityState, 'valid'>[];
+  }`
 
 - **`components-forms-date-picker-date-picker-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`.
   `DateRange {
-  from: unknown;
-  to: unknown;
-}`
+    from: Date | null;
+    to: Date | null;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`.
   `LyraDateRangePreset {
-  label: unknown;
-  start: unknown;
-  end: unknown;
-}`
+    readonly label: string;
+    readonly start?: string;
+    readonly end?: string;
+  }`
 
 - **`components-forms-emoji-picker-emoji-types-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.class.js`.
   `EmojiPickerGroup {
-  key: unknown;
-  label: unknown;
-  emojis: unknown;
-}`
+    readonly key: string;
+    readonly label: string;
+    readonly emojis: readonly EmojiPickerItem[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.class.js`.
   `EmojiPickerItem {
-  emoji: unknown;
-  name: unknown;
-  shortcodes: unknown;
-}`
+    readonly emoji: string;
+    readonly name: string;
+    readonly shortcodes?: readonly string[];
+  }`
 
 - **`components-forms-form-validator-contracts`** — Supporting data types and helpers for this component family.
-  `LyraFormValidator {
-  observedAttributes: unknown;
-  checkValidity: unknown;
-  element: unknown;
-  message: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/forms`.
+  `LyraFormValidator<T extends {
+    readonly validity: ValidityState;
+    readonly validationMessage: string;
+  }> {
+    observedAttributes?: string[];
+    checkValidity(element: T): LyraFormValidatorResult;
+    message?: string | ((element: T) => string);
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms`.
   `LyraFormValidatorResult {
-  isValid: unknown;
-  message: unknown;
-  invalidKeys: unknown;
-}`
+    isValid: boolean;
+    message: string;
+    invalidKeys: Exclude<keyof ValidityState, 'valid'>[];
+  }`
 
 - **`components-forms-locale-picker-locale-picker-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.class.js`.
   `LyraLocaleChangeDetail {
-  value: unknown;
-  previousValue: unknown;
-  direction: unknown;
-}`
+    value: string;
+    previousValue: string;
+    direction: LyraLocaleDirection;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.class.js`.
   `LyraLocaleEntry {
-  tag: unknown;
-  label: unknown;
-  country: unknown;
-}`
+    readonly tag: string;
+    readonly label?: string;
+    readonly country?: string;
+  }`
 
 - **`components-forms-phone-input-phone-input-contracts`** — Supporting data types and helpers for this component family.
-  `LibphonenumberModuleLike {
-  getCountries: unknown;
-  getCountryCallingCode: unknown;
-  country: unknown;
-  parsePhoneNumberFromString: unknown;
-  input: unknown;
-  defaultCountry: unknown;
-  validatePhoneNumberLength: unknown;
-}`
-  `loadLibphonenumberAdapter(/* public names: loader */): unknown`
+  Import: `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`.
+  `LibphonenumberModuleLike<CountryCode extends string = string> {
+    getCountries(): CountryCode[];
+    getCountryCallingCode(country: CountryCode): string;
+    parsePhoneNumberFromString(input: string, defaultCountry?: CountryCode): LibphonenumberPhoneLike | undefined;
+    validatePhoneNumberLength?(input: string, defaultCountry?: CountryCode): string | undefined;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`.
+  `loadLibphonenumberAdapter<CountryCode extends string = string>(loader: () => Promise<unknown>): Promise<LyraPhoneNumberAdapter>`
+  Import: `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`.
   `LyraPhoneCountry {
-  code: unknown;
-  callingCode: unknown;
-  label: unknown;
-}`
+    readonly code: string;
+    readonly callingCode: string;
+    readonly label?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`.
   `LyraPhoneInputEventDetail {
-  value: unknown;
-  inputValue: unknown;
-  country: unknown;
-  valid: unknown;
-  status: unknown;
-}`
+    value: string;
+    inputValue: string;
+    country: string;
+    valid: boolean;
+    status: LyraPhoneNumberStatus;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`.
   `LyraPhoneNumberAdapter {
-  countries: unknown;
-  parse: unknown;
-  input: unknown;
-  country: unknown;
-}`
+    readonly countries?: readonly LyraPhoneCountry[];
+    parse(input: string, country?: string): LyraPhoneNumberParseResult;
+  }`
 
 - **`components-forms-rubric-form-rubric-form-contracts`** — Supporting data types and helpers for this component family.
-  `CategoryRubricKey {
-  type: unknown;
-  options: unknown;
-  multiple: unknown;
-  key: unknown;
-  label: unknown;
-  description: unknown;
-  required: unknown;
-}`
-  `CommentRubricKey {
-  type: unknown;
-  placeholder: unknown;
-  key: unknown;
-  label: unknown;
-  description: unknown;
-  required: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`.
+  `CategoryRubricKey extends RubricKeyBase {
+    readonly type: 'category';
+    readonly options?: readonly RubricKeyOption[];
+    readonly multiple?: boolean;
+    // Inherited from RubricKeyBase.
+    readonly key: string;
+    readonly label?: string;
+    readonly description?: string;
+    readonly required?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`.
+  `CommentRubricKey extends RubricKeyBase {
+    readonly type: 'comment';
+    readonly placeholder?: string;
+    // Inherited from RubricKeyBase.
+    readonly key: string;
+    readonly label?: string;
+    readonly description?: string;
+    readonly required?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`.
   `RubricKeyOption {
-  value: unknown;
-  label: unknown;
-  description: unknown;
-}`
-  `ScoreRubricKey {
-  type: unknown;
-  min: unknown;
-  max: unknown;
-  step: unknown;
-  key: unknown;
-  label: unknown;
-  description: unknown;
-  required: unknown;
-}`
+    readonly value: string;
+    readonly label?: string;
+    readonly description?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`.
+  `ScoreRubricKey extends RubricKeyBase {
+    readonly type: 'score';
+    readonly min?: number;
+    readonly max?: number;
+    readonly step?: number;
+    // Inherited from RubricKeyBase.
+    readonly key: string;
+    readonly label?: string;
+    readonly description?: string;
+    readonly required?: boolean;
+  }`
 
 - **`components-forms-slider-slider-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/slider/slider.class.js`.
   `LyraSliderChangeDetail {
-  value: unknown;
-  minValue: unknown;
-  maxValue: unknown;
-  handle: unknown;
-}`
+    value: number;
+    minValue: number;
+    maxValue: number;
+    handle: SliderHandle;
+  }`
 
 - **`components-forms-swatch-picker-swatch-picker-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.class.js`.
   `SwatchPickerItem {
-  value: unknown;
-  color: unknown;
-  label: unknown;
-  icon: unknown;
-  gemstone: unknown;
-}`
+    readonly value: string;
+    readonly color: string;
+    readonly label: string;
+    readonly icon?: unknown;
+    readonly gemstone?: GemstoneKey;
+  }`
 
 - **`components-forms-textarea-textarea-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/textarea/textarea.class.js`.
   `TextareaScrollPosition {
-  top: unknown;
-  left: unknown;
-}`
+    top: number;
+    left: number;
+  }`
 
 - **`components-forms-time-range-time-range-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/time-range/time-range.class.js`.
   `TimeRangePreset {
-  label: unknown;
-  start: unknown;
-  end: unknown;
-}`
+    readonly label: string;
+    readonly start: number;
+    readonly end: number;
+  }`

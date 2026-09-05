@@ -180,3 +180,12 @@ export const EdgeCases: StoryObj = {
     </div>
   `,
 };
+
+/** Positive finite ratios that exceed the numeric range still fill their tracks. */
+export const ExtremeFiniteRatios: StoryObj = {
+  render: () => html`<lr-funnel label="Wide numeric range" .stages=${[
+    { label: 'Baseline', value: 1e-308 }, { label: 'Expanded', value: 1e308 },
+  ]} .comparison=${[
+    { label: 'Baseline', value: 1e-308 }, { label: 'Expanded', value: 1e308 },
+  ]}></lr-funnel>`,
+};

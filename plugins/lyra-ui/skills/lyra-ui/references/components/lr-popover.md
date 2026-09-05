@@ -18,6 +18,9 @@
 
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
 
+An open lr-popover repositions when its effective host or inherited text direction changes,
+preserving open state without emitting lifecycle events.
+
 **First-interaction registration.** A performance-sensitive navigation shell can keep a native
 `<details>` disclosure working before JavaScript, then load only the granular popover registration
 when that fallback first opens. The interaction that starts an async import is not replayed after

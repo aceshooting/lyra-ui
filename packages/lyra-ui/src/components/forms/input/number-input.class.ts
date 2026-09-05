@@ -48,6 +48,9 @@ export interface LyraNumberInputEventMap extends LyraInputEventMap {
  * larger control heights. The mirrored `small`, `medium`, and `large` spellings render exactly as
  * canonical `s`, `m`, and `l`, including row height, padding, and native-input font size.
  *
+ * Inherited stepUp/stepDown use pending value, step, min, and max properties synchronously
+ * and remain event-silent. Removed label/hint/help-text/error-text content is safely omitted.
+ *
  * @customElement lr-number-input
  * @event beforeinput - The internal native input's cancelable `InputEvent`, which bubbles and
  *   composes through the host. Calling `preventDefault()` on the host vetoes the edit.

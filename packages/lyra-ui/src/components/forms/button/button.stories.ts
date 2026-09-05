@@ -22,6 +22,27 @@ export const Default: Story = {
   render: () => html`<lr-button>Save</lr-button>`,
 };
 
+export const LiveDescription: Story = {
+  parameters: {
+    docs: { description: { story: 'External descriptions remain attached to the native action when their source element is replaced, removed or reinserted.' } },
+  },
+  render: () => html`
+    <div>
+      <p id="button-live-guidance">Saves the current draft.</p>
+      <lr-button aria-describedby="button-live-guidance">Save</lr-button>
+      <button type="button" @click=${(event: Event) => {
+        const source = (event.currentTarget as HTMLElement).parentElement?.querySelector('#button-live-guidance');
+        if (source) {
+          const replacement = source.ownerDocument.createElement('p');
+          replacement.id = source.id;
+          replacement.textContent = 'Saves the updated draft.';
+          source.replaceWith(replacement);
+        }
+      }}>Replace description</button>
+    </div>
+  `,
+};
+
 export const ReactiveAccessibleLabel: Story = {
   name: "Reactive accessible label",
   parameters: {

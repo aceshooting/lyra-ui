@@ -18,6 +18,24 @@ export const Default: Story = {
   </lr-carousel>`,
 };
 
+export const EditableSlides: Story = {
+  name: 'Editors keep their navigation keys',
+  parameters: {
+    docs: { description: { story: 'Arrow, Home, and End keys edit the focused field. Focus the carousel viewport to navigate slides with those keys.' } },
+  },
+  render: () => html`
+    <lr-carousel navigation pagination aria-label="Editable project previews">
+      <div style="padding: var(--lr-space-l);">
+        <label>Caption <input value="Project preview"></label>
+      </div>
+      <div style="padding: var(--lr-space-l);">
+        <label>Notes <textarea>Review the project details.</textarea></label>
+      </div>
+      <div style="padding: var(--lr-space-l);" contenteditable="true" role="textbox" aria-label="Project description">An editable project description.</div>
+    </lr-carousel>
+  `,
+};
+
 /** Web Awesome's published mixed-case `currentSlide` attribute is accepted after HTML normalizes
  * it to `currentslide`; Lyra's `current-slide` spelling remains the reflected canonical form. */
 export const UpstreamCurrentSlideSpelling: Story = {

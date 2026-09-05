@@ -37,7 +37,8 @@ export function registerDescriptionBaselineUpdater(updater: DescriptionBaselineU
   updaterHost(ownerWindow)[DESCRIPTION_BASELINE_UPDATER] = updater;
 }
 
-function updateDescriptionBaseline(target: HTMLElement, update: () => void): void {
+/** @internal Coordinates component-owned native description writes with transient owners. */
+export function updateDescriptionBaseline(target: HTMLElement, update: () => void): void {
   const updater = updaterHost(target.ownerDocument.defaultView)[DESCRIPTION_BASELINE_UPDATER];
   if (updater) updater(target, update);
   else update();

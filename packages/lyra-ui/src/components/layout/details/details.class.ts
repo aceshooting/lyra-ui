@@ -65,9 +65,9 @@ export interface LyraDetailsEventMap {
  * @event lr-after-hide - The panel is closed and its marker transition has finished.
  * @event lr-toggle - The disclosure state changed. `detail: { open, source }`, where `source` is
  *   `user` for summary activation, `programmatic` for `show()`/`hide()`/`open`, or `peer` when a
- *   named disclosure closes this panel. Kept alongside the four events above because it is the
- *   single event that reports which way the panel went, which `<lr-accordion>` uses to close the
- *   siblings of a newly-opened panel.
+ *   named disclosure closes this panel. Reports the direction and source of an accepted state
+ *   change. `<lr-accordion>` coordinates its direct `<lr-accordion-item>` children; Details
+ *   disclosures manage their own state and optional named-peer grouping.
  * @csspart base - Compatibility name for the outer disclosure container; use `details`.
  * @csspart details - The outer disclosure container. It is the same node as `base`.
  * @csspart header - The complete row containing the native summary and any header actions.

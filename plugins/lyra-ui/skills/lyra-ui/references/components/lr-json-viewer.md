@@ -29,6 +29,10 @@ being patched in place. A container value that self-references (directly or thro
 renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no
 stack overflow on cyclic `data`.
 
+Removing `search` clears matches while retaining null property readback. Before any match is active,
+`searchPrevious()` selects the final match; later next/previous navigation wraps. Navigation may
+reopen the selected match’s ancestors while unrelated manual collapse remains intact.
+
 **Properties:**
 
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)

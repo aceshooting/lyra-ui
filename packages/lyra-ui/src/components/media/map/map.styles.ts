@@ -55,8 +55,9 @@ export const styles = css`
   }
   .maplibregl-marker {
     position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
+    top: 0;
+    /* policy-allow(physical-css): MapLibre projects marker transforms from the canvas top-left. */
+    left: 0;
     inline-size: max-content;
     min-inline-size: var(--lr-size-1-5rem);
     min-block-size: var(--lr-size-1-5rem);
@@ -65,8 +66,9 @@ export const styles = css`
   }
   .maplibregl-popup {
     position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
+    top: 0;
+    /* policy-allow(physical-css): popup transforms share the peer's physical projection origin. */
+    left: 0;
     z-index: var(--lr-layer-content);
     display: flex;
     will-change: transform;

@@ -316,7 +316,8 @@ export interface LyraGraphEventMap {
  * via cssprops instead), no native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a
  * drawn focus ring instead of a CSS one. Keyboard roving/announcements are preserved through an
  * offscreen `part="cursor-item"` button per node/link/hull, driving the identical roving-tabindex
- * logic as `renderer="svg"`.
+ * logic as `renderer="svg"`. Both renderers skip nonoperable links when moving real keyboard
+ * focus. Zero-width links retain topology but paint neither a stroke nor an arrowhead.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -330,7 +331,8 @@ export interface LyraGraphEventMap {
  *   node's current coordinates in the graph's local drawing space.
  * @event lr-link-click - `detail: { sourceNodeId, targetNodeId, linkId? }`.
  * @event lr-node-enter - A node was hovered. `detail: { nodeId }`. Suppressed while dragging or
- *   panning. Also toggles a `data-hovered` attribute on that node's `[part="node"]` element for
+ *   panning. Canvas enter/leave events fire once per hit-identity transition or exit. In SVG,
+ *   also toggles a `data-hovered` attribute on that node's `[part="node"]` element for
  *   pure-CSS theming (not a substitute for this event — a consumer computing its own
  *   adjacency-based highlight needs the id, which only the event carries).
  * @event lr-node-leave - The hover from `lr-node-enter` ended. `detail: { nodeId }`.
@@ -538,9 +540,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     -300;
   /** Preferred link length for force layout and layer separation for layered layout. */
   @property({ type: Number, attribute: 'link-distance' }) linkDistance = 100;
-  /** Minimum camera scale accepted by zoom interactions. */
+  /** Minimum camera scale accepted by zoom interactions; updates live in both renderers. */
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.1;
-  /** Maximum camera scale accepted by zoom interactions. */
+  /** Maximum camera scale accepted by zoom interactions; updates live in both renderers. */
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 8;
   /** Accessible name for the graph. A present host `aria-label`, including an explicitly empty
    *  one, makes this host the sole graph owner; otherwise the SVG/canvas owns the localized name. */
@@ -733,6 +735,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  often than the display refreshes, and each hit test costs a bounding-rect read plus a
    *  pick-pixel readback, so hover resolution is coalesced to at most one per animation frame. */
   private pendingHover?: { x: number; y: number };
+  private canvasHover?:
+    | { kind: 'node'; id: string }
+    | {
+        kind: 'link';
+        id: string;
+        detail: LyraGraphEventMap['lr-link-enter']['detail'];
+      };
   private hoverRafId?: number;
   private hoverRafOwner?: BrowserWindow;
   /** Cached world-space draw scene, reused for camera-only repaints (pan/zoom moves the camera,
@@ -938,6 +947,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.hoverRafOwner = undefined;
     }
     this.pendingHover = undefined;
+    this.canvasHover = undefined;
+    this.canvasTooltipEl?.setAttribute('hidden', '');
     this.pendingGraphItemFocus = undefined;
     if (this.viewportChangeRafId != null) {
       this.viewportChangeRafOwner?.cancelAnimationFrame(
@@ -2054,6 +2065,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       const pending = this.pendingHover;
       this.pendingHover = undefined;
       if (!pending) return;
+      if (this.canvasHoverSuppressed()) return;
       // While the force simulation is still ticking, every tick invalidates the pick canvas, so
       // resolving hover here would re-render the full offscreen picking scene once per frame on
       // top of the per-tick visible redraw -- and the result would be stale a frame later anyway,
@@ -2062,6 +2074,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       if (this.pickDirty && this.simulationIsTicking()) return;
       const hit = this.hitTest(pending.x, pending.y);
       this.updateCanvasTooltip(hit, pending.x, pending.y);
+      this.updateCanvasHover(hit);
     });
   };
 
@@ -2168,7 +2181,49 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.hoverRafOwner = undefined;
     }
     this.updateCanvasTooltip(undefined, 0, 0);
+    if (this.canvasHoverSuppressed()) this.canvasHover = undefined;
+    else this.updateCanvasHover(undefined);
   };
+
+  private canvasHoverSuppressed(): boolean {
+    return (
+      !!this.canvasDragNode ||
+      this.isDragging ||
+      this.isPanning ||
+      this.isCameraTweening
+    );
+  }
+
+  private updateCanvasHover(
+    hit: (typeof this.pickItems)[number] | undefined
+  ): void {
+    const next: typeof this.canvasHover =
+      hit?.kind === 'node'
+        ? { kind: 'node', id: hit.node.id }
+        : hit?.kind === 'link'
+          ? {
+              kind: 'link',
+              id: this.linkKey(hit.link),
+              detail: this.linkHoverDetail(hit.link),
+            }
+          : undefined;
+    const previous = this.canvasHover;
+    if (previous?.kind === next?.kind && previous?.id === next?.id) return;
+    // Store the identity before notifying controlled consumers, whose handlers may synchronously
+    // remove the graph or change its renderer. Rebuilt pick objects alone are not a transition.
+    this.canvasHover = next;
+    if (previous?.kind === 'node')
+      this.emit('lr-node-leave', { nodeId: previous.id });
+    else if (previous?.kind === 'link') this.emit('lr-link-leave', previous.detail);
+    if (
+      !this.isConnected ||
+      this.renderer !== 'canvas' ||
+      this.canvasHover !== next
+    )
+      return;
+    if (next?.kind === 'node') this.emit('lr-node-enter', { nodeId: next.id });
+    else if (next?.kind === 'link') this.emit('lr-link-enter', next.detail);
+  }
 
   private onCanvasDblClick = (e: MouseEvent): void => {
     const hit = this.hitTest(e.clientX, e.clientY);
@@ -2541,6 +2596,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // firing markCanvasDirty() for as long as the element lives in svg mode).
       this.canvasResizeObserver?.disconnect();
       this.canvasResizeObserver = undefined;
+      this.canvasHover = undefined;
       this.zoomedEl = svgEl;
       // Both queries always find a match here: the outer <g> and the focus-halo <circle> are
       // unconditional parts of the same svg template that just produced svgEl above, not
@@ -2706,6 +2762,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.zoomedEl = this.canvasEl;
       this.setUpCanvasSurface();
     }
+    const bounds = this.effectiveZoomBounds;
+    this.zoomBehavior?.scaleExtent([bounds.min, bounds.max]);
     this.markCanvasDirty();
   }
 
@@ -3160,6 +3218,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private onLinkEnter(link: SimLink, e: MouseEvent): void {
     if (this.isDragging || this.isPanning || this.isCameraTweening) return;
     (e.currentTarget as SVGElement).setAttribute('data-hovered', '');
+    this.emit('lr-link-enter', this.linkHoverDetail(link));
+  }
+
+  private linkHoverDetail(
+    link: SimLink
+  ): LyraGraphEventMap['lr-link-enter']['detail'] {
     const source =
       typeof link.source === 'object'
         ? (link.source as SimNode).id
@@ -3168,29 +3232,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       typeof link.target === 'object'
         ? (link.target as SimNode).id
         : String(link.target);
-    this.emit('lr-link-enter', {
+    return {
       sourceNodeId: source,
       targetNodeId: target,
       ...(link.id ? { linkId: link.id } : {}),
-    });
+    };
   }
 
   private onLinkLeave(link: SimLink, e: MouseEvent): void {
     if (this.isDragging || this.isPanning || this.isCameraTweening) return;
     (e.currentTarget as SVGElement).removeAttribute('data-hovered');
-    const source =
-      typeof link.source === 'object'
-        ? (link.source as SimNode).id
-        : String(link.source);
-    const target =
-      typeof link.target === 'object'
-        ? (link.target as SimNode).id
-        : String(link.target);
-    this.emit('lr-link-leave', {
-      sourceNodeId: source,
-      targetNodeId: target,
-      ...(link.id ? { linkId: link.id } : {}),
-    });
+    this.emit('lr-link-leave', this.linkHoverDetail(link));
   }
 
   private nodeAccessibleText(node: LyraGraphNode): string {
@@ -3467,12 +3519,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // renderer="canvas" has no [part="node"]/[part="link"]/[part="hull"] elements at all -- the
     // roving tab stop lives on the offscreen [part="cursor-item"] buttons instead (see render()),
     // in the same flat nodes-then-links-then-hulls order.
+    // SVG keeps nonoperable links in the DOM without tabindex, matching navigableLinks()'s
+    // exclusion from the logical index space used by both renderers.
     const items = (
       this.renderer === 'canvas'
         ? Array.from(this.renderRoot.querySelectorAll('[part="cursor-item"]'))
         : [
             ...Array.from(this.renderRoot.querySelectorAll('[part="node"]')),
-            ...Array.from(this.renderRoot.querySelectorAll('[part="link"]')),
+            ...Array.from(
+              this.renderRoot.querySelectorAll('[part="link"][tabindex]')
+            ),
             ...Array.from(this.renderRoot.querySelectorAll('[part="hull"]')),
           ]
     ) as HTMLElement[];

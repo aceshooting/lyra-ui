@@ -1837,6 +1837,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/animation/animation-remediation.test.ts",
           "src/components/media/animation/animation.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -1899,8 +1900,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 1053,
+              "file": "src/components/layout/app-rail/app-rail-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -2032,6 +2033,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/app-rail/app-rail-item.test.ts",
+          "src/components/layout/app-rail/app-rail-remediation.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -2088,8 +2090,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 1053,
+              "file": "src/components/layout/app-rail/app-rail-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -2210,6 +2212,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/app-rail/app-rail-item.test.ts",
+          "src/components/layout/app-rail/app-rail-remediation.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -2883,6 +2886,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/attachment-chip/attachment-chip-remediation.test.ts",
           "src/components/media/attachment-chip/attachment-chip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -3405,6 +3409,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/av-player/av-player-remediation.test.ts",
           "src/components/media/av-player/av-player.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -3606,6 +3611,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/avatar/avatar-remediation.test.ts",
           "src/components/media/avatar/avatar.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -4103,7 +4109,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4145,6 +4151,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -4322,7 +4329,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4364,6 +4371,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -5250,7 +5258,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5292,6 +5300,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -5525,6 +5534,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/button/button-remediation.test.ts",
           "src/components/forms/button/button.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -5852,6 +5862,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/calendar/calendar-remediation.test.ts",
           "src/components/data/calendar/calendar.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -5973,7 +5984,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
-              "line": 10,
+              "line": 11,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6012,6 +6023,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/calendar-viewer/calendar-loader.test.ts",
+          "src/components/viewers/calendar-viewer/calendar-viewer-remediation.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -6463,8 +6475,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 337,
+              "file": "src/components/layout/carousel/carousel-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -6474,8 +6486,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 349,
+              "file": "src/components/layout/carousel/carousel-remediation.test.ts",
+              "line": 47,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -6585,6 +6597,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/carousel/carousel-item.test.ts",
+          "src/components/layout/carousel/carousel-remediation.test.ts",
           "src/components/layout/carousel/carousel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -6633,8 +6646,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 337,
+              "file": "src/components/layout/carousel/carousel-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -6644,8 +6657,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 349,
+              "file": "src/components/layout/carousel/carousel-remediation.test.ts",
+              "line": 47,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -6755,6 +6768,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/carousel/carousel-item.test.ts",
+          "src/components/layout/carousel/carousel-remediation.test.ts",
           "src/components/layout/carousel/carousel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -6926,7 +6940,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6976,6 +6990,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -7328,6 +7343,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/chat-message/chat-message-remediation.test.ts",
           "src/components/conversation/chat-message/chat-message.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -7702,6 +7718,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/checkbox/checkbox-remediation.test.ts",
           "src/components/forms/checkbox/checkbox.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -8324,6 +8341,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/chip/chip-group.test.ts",
+          "src/components/overlays/chip/chip-remediation.test.ts",
           "src/components/overlays/chip/chip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -8492,6 +8510,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/chip/chip-group.test.ts",
+          "src/components/overlays/chip/chip-remediation.test.ts",
           "src/components/overlays/chip/chip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -9049,7 +9068,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 970,
+              "line": 980,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9189,6 +9208,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/code-block/code-block-core.test.ts",
+          "src/components/conversation/code-block/code-block-remediation.test.ts",
           "src/components/conversation/code-block/code-block-shared.test.ts",
           "src/components/conversation/code-block/code-block.test.ts",
           "src/components/conversation/code-block/code-loader.test.ts",
@@ -9237,7 +9257,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 970,
+              "line": 980,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9366,6 +9386,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/code-block/code-block-core.test.ts",
+          "src/components/conversation/code-block/code-block-remediation.test.ts",
           "src/components/conversation/code-block/code-block-shared.test.ts",
           "src/components/conversation/code-block/code-block.test.ts",
           "src/components/conversation/code-block/code-loader.test.ts",
@@ -9422,8 +9443,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/code-editor/code-editor.test.ts",
-              "line": 1599,
+              "file": "src/components/forms/code-editor/code-editor-remediation.test.ts",
+              "line": 138,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -9439,8 +9460,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/code-editor/code-editor.test.ts",
-              "line": 124,
+              "file": "src/components/forms/code-editor/code-editor-remediation.test.ts",
+              "line": 202,
               "kind": "320px allocation test signal"
             }
           ]
@@ -9532,6 +9553,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/code-editor/code-editor-remediation.test.ts",
           "src/components/forms/code-editor/code-editor.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -9593,8 +9615,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/color-picker/color-picker.test.ts",
-              "line": 35,
+              "file": "src/components/forms/color-picker/color-picker-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9693,7 +9715,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 988,
+              "line": 1021,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9737,6 +9759,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/color-picker/color-core.test.ts",
+          "src/components/forms/color-picker/color-picker-remediation.test.ts",
           "src/components/forms/color-picker/color-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -9813,8 +9836,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 311,
+              "file": "src/components/forms/combobox/combobox-remediation.test.ts",
+              "line": 220,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9916,7 +9939,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2075,
+              "line": 2147,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9951,6 +9974,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/combobox/combobox-remediation.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts"
         ],
@@ -9981,28 +10005,28 @@
           "evidence": [
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 219,
+              "line": 220,
               "test": "is accessible while open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 435,
+              "line": 436,
               "test": "drops commands with empty or whitespace-only labels while retaining an accessible valid row",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 520,
+              "line": 521,
               "test": "owns grouped options through labeled ARIA groups",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 1049,
+              "line": 1050,
               "test": "is accessible with the active-command prop themed",
               "target": "el",
               "state": "populated"
@@ -10016,7 +10040,7 @@
           "evidence": [
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 153,
+              "line": 1,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -10039,7 +10063,7 @@
           "evidence": [
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 579,
+              "line": 580,
               "kind": "320px allocation test signal"
             }
           ]
@@ -10132,6 +10156,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/command-palette/command-palette-remediation.test.ts",
           "src/components/layout/command-palette/command-palette.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -10271,7 +10296,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.class.ts",
-              "line": 288,
+              "line": 289,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10308,6 +10333,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/commit-card/commit-card-remediation.test.ts",
           "src/components/agent-tools/commit-card/commit-card.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -10526,8 +10552,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/compare-panel/compare-panel.test.ts",
-              "line": 317,
+              "file": "src/components/agent-tools/compare-panel/compare-panel-remediation.test.ts",
+              "line": 37,
               "kind": "320px allocation test signal"
             }
           ]
@@ -10621,6 +10647,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/compare-panel/compare-panel-remediation.test.ts",
           "src/components/agent-tools/compare-panel/compare-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -10637,7 +10664,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -10667,9 +10693,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/condition-builder/condition-builder-remediation.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -10774,7 +10805,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -10787,6 +10817,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/condition-builder/condition-builder-remediation.test.ts",
           "src/components/data/condition-builder/condition-builder.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -11706,8 +11737,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
-              "line": 510,
+              "file": "src/components/conversation/conversation-item/conversation-item-remediation.test.ts",
+              "line": 21,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -11793,7 +11824,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 464,
+              "line": 465,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11829,6 +11860,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/conversation-item/conversation-item-remediation.test.ts",
           "src/components/conversation/conversation-item/conversation-item.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -12017,6 +12049,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/copy-button/copy-button-remediation.test.ts",
           "src/components/utility/copy-button/copy-button.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -12241,8 +12274,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
-              "line": 1105,
+              "file": "src/components/layout/dashboard-grid/dashboard-grid-remediation.test.ts",
+              "line": 8,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12351,6 +12384,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/dashboard-grid/dashboard-grid-remediation.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
           "src/components/layout/dashboard-grid/layout.test.ts"
         ],
@@ -12475,8 +12509,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 8407,
+              "file": "src/components/data/data-grid/data-grid-remediation.test.ts",
+              "line": 38,
               "kind": "320px allocation test signal"
             }
           ]
@@ -12539,7 +12573,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2314,
+              "line": 2337,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12573,6 +12607,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/data-grid/data-grid-remediation.test.ts",
           "src/components/data/data-grid/data-grid.native-scrollbar.test.ts",
           "src/components/data/data-grid/data-grid.test.ts"
         ],
@@ -12756,6 +12791,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/dataset-viewer/dataset-viewer-remediation.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -12942,6 +12978,7 @@
         "tests": [
           "src/components/forms/date-picker/calendar-core.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
+          "src/components/forms/date-picker/date-picker-remediation.test.ts",
           "src/components/forms/date-picker/date-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -13135,6 +13172,7 @@
         "tests": [
           "src/components/forms/date-picker/calendar-core.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
+          "src/components/forms/date-picker/date-picker-remediation.test.ts",
           "src/components/forms/date-picker/date-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -13544,6 +13582,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/dialog/confirm.test.ts",
+          "src/components/overlays/dialog/dialog-remediation.test.ts",
           "src/components/overlays/dialog/dialog.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -14369,6 +14408,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/document-library/document-library-remediation.test.ts",
           "src/components/data/document-library/document-library.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -14386,7 +14426,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -14465,9 +14504,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/document-preview/document-preview-remediation.test.ts",
+              "line": 46,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -14551,7 +14595,6 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -14563,6 +14606,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/document-preview/document-preview-remediation.test.ts",
           "src/components/viewers/document-preview/document-preview.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -14684,7 +14728,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.class.ts",
-              "line": 309,
+              "line": 332,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14726,7 +14770,10 @@
           "src/components/viewers/document-viewer/citation-to-document.test.ts",
           "src/components/viewers/document-viewer/document-viewer.test.ts",
           "src/components/viewers/document-viewer/msg-fallback.test.ts",
-          "src/components/viewers/document-viewer/registry.test.ts"
+          "src/components/viewers/document-viewer/registry-adapters.test.ts",
+          "src/components/viewers/document-viewer/registry-remediation.test.ts",
+          "src/components/viewers/document-viewer/registry.test.ts",
+          "src/components/viewers/document-viewer/remediation-routing.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -15052,7 +15099,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15094,6 +15141,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -15626,7 +15674,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 711,
+              "line": 719,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15662,6 +15710,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/overlay/dropdown.test.ts",
+          "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
@@ -15839,6 +15888,7 @@
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -16013,6 +16063,7 @@
         "tests": [
           "src/components/viewers/ebook-viewer/ebook-loader.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer-register.test.ts",
+          "src/components/viewers/ebook-viewer/ebook-viewer-remediation.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer.test.ts",
           "src/components/viewers/ebook-viewer/epub-resource-guard.test.ts"
         ],
@@ -16182,6 +16233,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/email-viewer/email-loader.test.ts",
+          "src/components/viewers/email-viewer/email-viewer-remediation.test.ts",
           "src/components/viewers/email-viewer/email-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -16394,8 +16446,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/emoji-picker/emoji-picker.test.ts",
-              "line": 497,
+              "file": "src/components/forms/emoji-picker/emoji-picker-remediation.test.ts",
+              "line": 79,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -16518,6 +16570,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/emoji-picker/emoji-data-loader.test.ts",
+          "src/components/forms/emoji-picker/emoji-picker-remediation.test.ts",
           "src/components/forms/emoji-picker/emoji-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -16645,7 +16698,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/empty/empty.class.ts",
-              "line": 106,
+              "line": 108,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16683,6 +16736,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/empty/empty-remediation.test.ts",
           "src/components/overlays/empty/empty.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -16857,6 +16911,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/entity-card/entity-card-remediation.test.ts",
           "src/components/retrieval/entity-card/entity-card.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -17020,6 +17075,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/entity-chip/entity-chip-remediation.test.ts",
           "src/components/retrieval/entity-chip/entity-chip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18325,6 +18381,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/file-input/accept.test.ts",
+          "src/components/media/file-input/file-input-remediation.test.ts",
           "src/components/media/file-input/file-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18478,6 +18535,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/file-tree/file-tree-remediation.test.ts",
           "src/components/data/file-tree/file-tree.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18618,7 +18676,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 847,
+              "line": 859,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18653,6 +18711,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/filter-bar/filter-bar-remediation.test.ts",
           "src/components/layout/filter-bar/filter-bar.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18861,8 +18920,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 790,
+              "file": "src/components/data/flow-canvas/flow-canvas-remediation.test.ts",
+              "line": 101,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -18981,6 +19040,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/flow-canvas/flow-canvas-remediation.test.ts",
           "src/components/data/flow-canvas/flow-canvas.test.ts",
           "src/components/data/flow-canvas/flow-companion-controller.test.ts",
           "src/components/data/flow-canvas/flow-model.test.ts"
@@ -19783,6 +19843,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/format/format-remediation.test.ts",
           "src/components/utility/format/format.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -19942,6 +20003,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/format/format-remediation.test.ts",
           "src/components/utility/format/format.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -20094,6 +20156,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/format/format-remediation.test.ts",
           "src/components/utility/format/format.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -20147,8 +20210,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/funnel/funnel.test.ts",
-              "line": 234,
+              "file": "src/components/data/funnel/funnel-remediation.test.ts",
+              "line": 5,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -20169,8 +20232,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/funnel/funnel.test.ts",
-              "line": 289,
+              "file": "src/components/data/funnel/funnel-remediation.test.ts",
+              "line": 7,
               "kind": "320px allocation test signal"
             }
           ]
@@ -20271,6 +20334,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/funnel/funnel-remediation.test.ts",
           "src/components/data/funnel/funnel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -20447,6 +20511,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/gauge/gauge-remediation.test.ts",
           "src/components/data/gauge/gauge.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -20604,6 +20669,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/generation-metrics/generation-metrics-remediation.test.ts",
           "src/components/conversation/generation-metrics/generation-metrics.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -21037,8 +21103,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/graph/graph.test.ts",
-              "line": 362,
+              "file": "src/components/retrieval/graph/graph-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -21141,7 +21207,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph.class.ts",
-              "line": 895,
+              "line": 904,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21181,6 +21247,7 @@
           "src/components/retrieval/graph/graph-hull.test.ts",
           "src/components/retrieval/graph/graph-identity.test.ts",
           "src/components/retrieval/graph/graph-loader.test.ts",
+          "src/components/retrieval/graph/graph-remediation.test.ts",
           "src/components/retrieval/graph/graph.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -21364,7 +21431,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -21388,9 +21454,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/graph-query-builder/graph-query-builder-remediation.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -21473,7 +21544,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 921,
+              "line": 924,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21496,7 +21567,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -21510,6 +21580,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/graph-query-builder/graph-query-builder-remediation.test.ts",
           "src/components/data/graph-query-builder/graph-query-builder.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -21924,8 +21995,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 271,
+              "file": "src/components/data/heatmap/heatmap-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -22065,6 +22136,7 @@
           "src/components/data/heatmap/calendar-grid.test.ts",
           "src/components/data/heatmap/heatmap-i18n.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas.test.ts",
+          "src/components/data/heatmap/heatmap-remediation.test.ts",
           "src/components/data/heatmap/heatmap-rtl.test.ts",
           "src/components/data/heatmap/heatmap-scale.test.ts",
           "src/components/data/heatmap/heatmap.test.ts"
@@ -22382,7 +22454,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -22424,6 +22496,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -23169,8 +23242,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 10,
+              "file": "src/components/media/image-viewer/image-viewer-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -23197,8 +23270,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1787,
+              "file": "src/components/media/image-viewer/image-viewer-remediation.test.ts",
+              "line": 12,
               "kind": "320px allocation test signal"
             }
           ]
@@ -23290,6 +23363,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/image-viewer/image-viewer-remediation.test.ts",
           "src/components/media/image-viewer/image-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -23449,6 +23523,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/include/include-remediation.test.ts",
           "src/components/viewers/include/include.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -23616,6 +23691,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/ingestion-queue/ingestion-queue-remediation.test.ts",
           "src/components/retrieval/ingestion-queue/ingestion-queue.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -23796,6 +23872,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
@@ -24285,6 +24362,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/json-viewer/json-viewer-remediation.test.ts",
           "src/components/utility/json-viewer/json-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -24444,6 +24522,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/kbd/kbd-remediation.test.ts",
           "src/components/overlays/kbd/kbd.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -24828,8 +24907,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1286,
+              "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -24920,7 +24999,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 505,
+              "line": 506,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24955,6 +25034,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-remediation.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -25088,7 +25168,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.class.ts",
-              "line": 432,
+              "line": 442,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25123,6 +25203,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/known-date/known-date-remediation.test.ts",
           "src/components/utility/known-date/known-date.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -25441,7 +25522,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25483,6 +25564,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -25655,7 +25737,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25697,6 +25779,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -25856,6 +25939,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/live-region/live-region-remediation.test.ts",
           "src/components/utility/live-region/live-region.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -25993,7 +26077,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 935,
+              "line": 961,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26029,6 +26113,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/locale-picker/locale-picker-remediation.test.ts",
           "src/components/forms/locale-picker/locale-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -26088,7 +26173,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3149,
+              "line": 3163,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26104,8 +26189,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map.test.ts",
-              "line": 3143,
+              "file": "src/components/media/map/map-remediation.test.ts",
+              "line": 20,
               "kind": "320px allocation test signal"
             }
           ]
@@ -26185,7 +26270,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 2493,
+              "line": 2495,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26221,6 +26306,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/map/map-loader.test.ts",
+          "src/components/media/map/map-remediation.test.ts",
           "src/components/media/map/map.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -26412,6 +26498,7 @@
           "src/components/conversation/markdown/katex-loader.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
+          "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
           "src/components/conversation/markdown/markdown.test.ts"
         ],
@@ -26601,6 +26688,7 @@
           "src/components/conversation/markdown/katex-loader.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
+          "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
           "src/components/conversation/markdown/markdown.test.ts"
         ],
@@ -26946,6 +27034,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/media-card/media-card-remediation.test.ts",
           "src/components/media/media-card/media-card.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -27166,8 +27255,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/utility/mention-popover/mention-popover.test.ts",
-              "line": 201,
+              "file": "src/components/utility/mention-popover/mention-popover-remediation.test.ts",
+              "line": 46,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -27248,7 +27337,7 @@
           "evidence": [
             {
               "file": "src/components/utility/mention-popover/mention-popover.class.ts",
-              "line": 926,
+              "line": 927,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27285,6 +27374,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/mention-popover/mention-popover-remediation.test.ts",
           "src/components/utility/mention-popover/mention-popover.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -27545,6 +27635,7 @@
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -27781,6 +27872,7 @@
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -27957,6 +28049,7 @@
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -28000,8 +28093,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/message-actions/message-actions.test.ts",
-              "line": 486,
+              "file": "src/components/conversation/message-actions/message-actions-remediation.test.ts",
+              "line": 25,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -28011,8 +28104,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/message-actions/message-actions.test.ts",
-              "line": 694,
+              "file": "src/components/conversation/message-actions/message-actions-remediation.test.ts",
+              "line": 8,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -28087,7 +28180,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 807,
+              "line": 809,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28123,6 +28216,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/message-actions/message-actions-remediation.test.ts",
           "src/components/conversation/message-actions/message-actions.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -28287,6 +28381,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/message-feedback/message-feedback-remediation.test.ts",
           "src/components/conversation/message-feedback/message-feedback.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -28840,6 +28935,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/model-select/model-select-remediation.test.ts",
           "src/components/conversation/model-select/model-select.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -29030,14 +29126,14 @@
           "evidence": [
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 4824,
+              "line": 4825,
               "test": "is accessible with a viewport-basis breakpoint set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 5215,
+              "line": 5216,
               "test": "is accessible in the rail state under viewport basis",
               "target": "el",
               "state": "populated"
@@ -29061,8 +29157,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 439,
+              "file": "src/components/layout/multi-split/multi-split-remediation.test.ts",
+              "line": 6,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29182,6 +29278,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/multi-split/multi-split-remediation.test.ts",
           "src/components/layout/multi-split/multi-split.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -29507,6 +29604,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
@@ -29755,7 +29853,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/node-palette/node-palette.test.ts",
+              "file": "src/components/retrieval/node-palette/node-palette-remediation.test.ts",
               "line": 2,
               "kind": "component keyboard assertion signal"
             }
@@ -29868,6 +29966,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/node-palette/node-palette-remediation.test.ts",
           "src/components/retrieval/node-palette/node-palette.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -30053,6 +30152,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/notebook-viewer/dompurify-loader.test.ts",
+          "src/components/viewers/notebook-viewer/notebook-viewer-remediation.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -30223,6 +30323,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
@@ -30290,8 +30391,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 311,
+              "file": "src/components/forms/combobox/combobox-remediation.test.ts",
+              "line": 220,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30382,7 +30483,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2075,
+              "line": 2147,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30417,6 +30518,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/combobox/combobox-remediation.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts"
         ],
@@ -30576,7 +30678,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 281,
+              "line": 286,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31372,6 +31474,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/pan-zoom/pan-zoom-remediation.test.ts",
           "src/components/media/pan-zoom/pan-zoom.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -31911,6 +32014,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/phone-input/phone-input-remediation.test.ts",
           "src/components/forms/phone-input/phone-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -32060,7 +32164,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32109,6 +32213,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -32265,7 +32370,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32307,6 +32412,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -32497,9 +32603,7 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "reducedMotion",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -32528,9 +32632,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/utility/poll-status/poll-status-remediation.test.ts",
+              "line": 5,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -32540,9 +32649,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/utility/poll-status/poll-status-remediation.test.ts",
+              "line": 7,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -32620,9 +32734,7 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -32634,6 +32746,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/poll-status/poll-status-remediation.test.ts",
           "src/components/utility/poll-status/poll-status.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -32812,7 +32925,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 711,
+              "line": 719,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32848,6 +32961,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/overlay/dropdown.test.ts",
+          "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
@@ -33994,6 +34108,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/prompt-studio/prompt-studio-remediation.test.ts",
           "src/components/agent-tools/prompt-studio/prompt-studio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -34157,6 +34272,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/provenance-panel/provenance-panel-remediation.test.ts",
           "src/components/retrieval/provenance-panel/provenance-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -34321,6 +34437,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/push-to-talk/push-to-talk-remediation.test.ts",
           "src/components/conversation/push-to-talk/push-to-talk.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -34655,7 +34772,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -34697,6 +34814,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -34903,6 +35021,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/radio/radio-button.test.ts",
+          "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -35084,6 +35203,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/radio/radio-button.test.ts",
+          "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -35265,6 +35385,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/radio/radio-button.test.ts",
+          "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -35934,6 +36055,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/rating/rating-remediation.test.ts",
           "src/components/overlays/rating/rating.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -36239,6 +36361,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/format/format-remediation.test.ts",
           "src/components/utility/format/format.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -36401,7 +36524,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 249,
+              "line": 255,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36437,6 +36560,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/reorder-list/reorder-item.test.ts",
+          "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
           "src/components/layout/reorder-list/reorder-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -36571,7 +36695,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 249,
+              "line": 255,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36607,6 +36731,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/reorder-list/reorder-item.test.ts",
+          "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
           "src/components/layout/reorder-list/reorder-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -37125,6 +37250,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/result-card/result-card-remediation.test.ts",
           "src/components/agent-tools/result-card/result-card.test.ts",
           "src/components/agent-tools/result-card/result-field.test.ts"
         ],
@@ -37293,6 +37419,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/result-card/result-card-remediation.test.ts",
           "src/components/agent-tools/result-card/result-card.test.ts",
           "src/components/agent-tools/result-card/result-field.test.ts"
         ],
@@ -38144,6 +38271,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/rubric-form/rubric-form-remediation.test.ts",
           "src/components/forms/rubric-form/rubric-form.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -38293,7 +38421,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 512,
+              "line": 514,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38335,6 +38463,7 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -39227,6 +39356,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/sequence-playback/sequence-playback-remediation.test.ts",
           "src/components/media/sequence-playback/sequence-playback.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -39657,8 +39787,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/slider/slider.test.ts",
-              "line": 508,
+              "file": "src/components/forms/slider/slider-remediation.test.ts",
+              "line": 204,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -39760,7 +39890,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 745,
+              "line": 782,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39795,6 +39925,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/slider/slider-remediation.test.ts",
           "src/components/forms/slider/slider.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -40188,8 +40319,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 264,
+              "file": "src/components/retrieval/source-picker/source-picker-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -40280,7 +40411,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 497,
+              "line": 499,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40315,6 +40446,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/source-picker/source-picker-remediation.test.ts",
           "src/components/retrieval/source-picker/source-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -40665,6 +40797,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/sparkline/sparkline-remediation.test.ts",
           "src/components/data/sparkline/sparkline.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -40888,8 +41021,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 15,
+              "file": "src/components/layout/split-panel/split-panel-remediation.test.ts",
+              "line": 22,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -41020,6 +41153,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/split-panel/split-panel-remediation.test.ts",
           "src/components/layout/split-panel/split-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -41364,6 +41498,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/agent-tools/stack-trace/stack-trace-parse.test.ts",
+          "src/components/agent-tools/stack-trace/stack-trace-remediation.test.ts",
           "src/components/agent-tools/stack-trace/stack-trace.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -41428,8 +41563,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/stat/stat.test.ts",
-              "line": 7,
+              "file": "src/components/data/stat/stat-remediation.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -41545,6 +41680,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/stat/stat-remediation.test.ts",
           "src/components/data/stat/stat.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -42423,7 +42559,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -42476,9 +42611,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/svg-viewer/svg-viewer-remediation.test.ts",
+              "line": 10,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -42569,7 +42709,6 @@
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -42582,6 +42721,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/svg-viewer/dompurify-loader.test.ts",
+          "src/components/viewers/svg-viewer/svg-viewer-remediation.test.ts",
           "src/components/viewers/svg-viewer/svg-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -42777,6 +42917,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/swatch-picker/swatch-picker-remediation.test.ts",
           "src/components/forms/swatch-picker/swatch-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -42978,6 +43119,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/switch/switch-remediation.test.ts",
           "src/components/forms/switch/switch.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -43075,8 +43217,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 52,
+              "file": "src/components/layout/tab-group/tab-group-remediation.test.ts",
+              "line": 17,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -43200,6 +43342,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/tab-group/tab-group-remediation.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -43303,8 +43446,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 52,
+              "file": "src/components/layout/tab-group/tab-group-remediation.test.ts",
+              "line": 17,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -43440,6 +43583,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/tab-group/tab-group-remediation.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -43551,8 +43695,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 52,
+              "file": "src/components/layout/tab-group/tab-group-remediation.test.ts",
+              "line": 17,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -43676,6 +43820,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/tab-group/tab-group-remediation.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -43773,7 +43918,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/table/table.test.ts",
+              "file": "src/components/data/table/table-remediation.test.ts",
               "line": 2,
               "kind": "component keyboard assertion signal"
             }
@@ -43784,8 +43929,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/table/table.test.ts",
-              "line": 1116,
+              "file": "src/components/data/table/table-remediation.test.ts",
+              "line": 64,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -43905,6 +44050,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/table/table-remediation.test.ts",
           "src/components/data/table/table.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -44398,7 +44544,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 782,
+              "line": 783,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44434,6 +44580,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/terminal/terminal-remediation.test.ts",
           "src/components/agent-tools/terminal/terminal.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -44780,6 +44927,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/textarea/textarea-remediation.test.ts",
           "src/components/forms/textarea/textarea.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -45158,6 +45306,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/thread-list/thread-list-remediation.test.ts",
           "src/components/conversation/thread-list/thread-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -45328,6 +45477,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
@@ -45516,6 +45666,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/time-range/time-range-remediation.test.ts",
           "src/components/forms/time-range/time-range.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -45576,8 +45727,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 205,
+              "file": "src/components/data/timeline/timeline-remediation.test.ts",
+              "line": 7,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -45593,8 +45744,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 144,
+              "file": "src/components/data/timeline/timeline-remediation.test.ts",
+              "line": 10,
               "kind": "320px allocation test signal"
             }
           ]
@@ -45657,7 +45808,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.class.ts",
-              "line": 800,
+              "line": 848,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45693,6 +45844,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/timeline/timeline-item.test.ts",
+          "src/components/data/timeline/timeline-remediation.test.ts",
           "src/components/data/timeline/timeline.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -45760,8 +45912,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 205,
+              "file": "src/components/data/timeline/timeline-remediation.test.ts",
+              "line": 7,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -45777,8 +45929,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 144,
+              "file": "src/components/data/timeline/timeline-remediation.test.ts",
+              "line": 10,
               "kind": "320px allocation test signal"
             }
           ]
@@ -45841,7 +45993,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.class.ts",
-              "line": 800,
+              "line": 848,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45877,6 +46029,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/timeline/timeline-item.test.ts",
+          "src/components/data/timeline/timeline-remediation.test.ts",
           "src/components/data/timeline/timeline.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -46274,8 +46427,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 36,
+              "file": "src/components/forms/token-input/token-input-remediation.test.ts",
+              "line": 18,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -46285,8 +46438,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 2108,
+              "file": "src/components/forms/token-input/token-input-remediation.test.ts",
+              "line": 173,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -46302,8 +46455,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 1138,
+              "file": "src/components/forms/token-input/token-input-remediation.test.ts",
+              "line": 176,
               "kind": "320px allocation test signal"
             }
           ]
@@ -46395,6 +46548,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/token-input/token-input-remediation.test.ts",
           "src/components/forms/token-input/token-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -46759,6 +46913,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-call-chip/tool-call-chip-remediation.test.ts",
           "src/components/agent-tools/tool-call-chip/tool-call-chip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -46915,6 +47070,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-param-form/tool-param-form-remediation.test.ts",
           "src/components/agent-tools/tool-param-form/tool-param-form.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -47082,6 +47238,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-result-dialog/tool-result-dialog-remediation.test.ts",
           "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -47432,6 +47589,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-select-dialog/tool-select-dialog-remediation.test.ts",
           "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -47748,7 +47906,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 711,
+              "line": 719,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47784,6 +47942,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/overlay/dropdown.test.ts",
+          "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
@@ -48138,6 +48297,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/trace-tree/trace-tree-remediation.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -48298,6 +48458,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/transcript-feed/transcript-feed-remediation.test.ts",
           "src/components/conversation/transcript-feed/transcript-feed.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -48357,6 +48518,20 @@
               "file": "src/components/data/tree/tree-presentation-rich-content.test.ts",
               "line": 5,
               "test": "renders a structured icon and secondary description without adding another interactive row",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/tree/tree-remediation.test.ts",
+              "line": 67,
+              "test": "names an otherwise unnamed data row by ID with visible label ${JSON.stringify(label)}",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/tree/tree-remediation.test.ts",
+              "line": 87,
+              "test": "preserves usable data names and name-from-content, including description and badge-only rows",
               "target": "el",
               "state": "populated"
             },
@@ -48481,7 +48656,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 731,
+              "line": 744,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48533,6 +48708,7 @@
           "src/components/data/tree/tree-presentation-toggle-icon.test.ts",
           "src/components/data/tree/tree-presentation-toggle-placeholder.test.ts",
           "src/components/data/tree/tree-presentation-zero-badge.test.ts",
+          "src/components/data/tree/tree-remediation.test.ts",
           "src/components/data/tree/tree-reorderable.test.ts",
           "src/components/data/tree/tree-selection-lazy.test.ts",
           "src/components/data/tree/tree.test.ts"
@@ -48700,7 +48876,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 731,
+              "line": 744,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48752,6 +48928,7 @@
           "src/components/data/tree/tree-presentation-toggle-icon.test.ts",
           "src/components/data/tree/tree-presentation-toggle-placeholder.test.ts",
           "src/components/data/tree/tree-presentation-zero-badge.test.ts",
+          "src/components/data/tree/tree-remediation.test.ts",
           "src/components/data/tree/tree-reorderable.test.ts",
           "src/components/data/tree/tree-selection-lazy.test.ts",
           "src/components/data/tree/tree.test.ts"
@@ -48917,6 +49094,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/typing-indicator/typing-indicator-remediation.test.ts",
           "src/components/conversation/typing-indicator/typing-indicator.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -48958,8 +49136,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/usage-badge/usage-badge.test.ts",
-              "line": 6,
+              "file": "src/components/conversation/usage-badge/usage-badge-overlay-lifecycle.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -49079,6 +49257,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/usage-badge/usage-badge-overlay-lifecycle.test.ts",
+          "src/components/conversation/usage-badge/usage-badge-overlay-loading.test.ts",
+          "src/components/conversation/usage-badge/usage-badge-remediation.test.ts",
           "src/components/conversation/usage-badge/usage-badge.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -49287,6 +49468,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/video/video-remediation.test.ts",
           "src/components/media/video/video.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -49994,6 +50176,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/voice-picker/voice-picker-remediation.test.ts",
           "src/components/conversation/voice-picker/voice-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -50216,6 +50399,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/widget/widget-remediation.test.ts",
           "src/components/layout/widget/widget.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -50379,6 +50563,7 @@
         "tests": [
           "src/components/conversation/widget-renderer/registry.test.ts",
           "src/components/conversation/widget-renderer/resolve.test.ts",
+          "src/components/conversation/widget-renderer/widget-renderer-remediation.test.ts",
           "src/components/conversation/widget-renderer/widget-renderer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -50560,6 +50745,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/word-cloud/word-cloud-layout.test.ts",
+          "src/components/data/word-cloud/word-cloud-remediation.test.ts",
           "src/components/data/word-cloud/word-cloud.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -50751,6 +50937,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/xml-viewer/xml-viewer-remediation.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -50799,7 +50986,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/zoomable-frame/zoomable-frame.test.ts",
+              "file": "src/components/media/zoomable-frame/zoomable-frame-remediation.test.ts",
               "line": 2,
               "kind": "component keyboard assertion signal"
             }
@@ -50891,7 +51078,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 352,
+              "line": 357,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50926,6 +51113,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/zoomable-frame/zoomable-frame-remediation.test.ts",
           "src/components/media/zoomable-frame/zoomable-frame.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

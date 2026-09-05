@@ -153,6 +153,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   @property() hash = '';
+  /** Commit subject and optional body. Removing the attribute clears both displayed sections. */
   @property() message = '';
   @property() author = '';
   @property({ type: Number, attribute: false }) timestamp?: number;
@@ -216,11 +217,11 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   }
 
   private get subject(): string {
-    return this.message.split('\n')[0] ?? '';
+    return (this.message ?? '').split('\n')[0] ?? '';
   }
 
   private get body(): string {
-    return this.message.split('\n').slice(1).join('\n').trim();
+    return (this.message ?? '').split('\n').slice(1).join('\n').trim();
   }
 
   /** `timestamp` normalized to a finite, non-negative epoch-ms value -- `undefined` while unset or

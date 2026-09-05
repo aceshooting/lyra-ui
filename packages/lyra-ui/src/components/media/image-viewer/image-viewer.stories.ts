@@ -8,7 +8,7 @@ const meta: Meta = {
   title: 'DocumentViewer/ImageViewer',
   component: 'lr-image-viewer',
   tags: ['autodocs'],
-  parameters: { docs: { description: { component: 'Full pan/zoom raster-image viewer with labeled region highlights whose activation emits `{ highlightId }`, plus opt-in region annotation. Malformed, empty, blank, and later duplicate highlight IDs are omitted first-wins before focus, active state, and events.' } } },
+  parameters: { docs: { description: { component: 'Annotation keyboard commands stay with the focused image wrapper, whose focus ring is visible; highlight buttons keep their own activation. Unavailable toolbar controls retain their resting paint. Full pan/zoom raster-image viewer with labeled region highlights whose activation emits `{ highlightId }`, plus opt-in region annotation. Malformed, empty, blank, and later duplicate highlight IDs are omitted first-wins before focus, active state, and events.' } } },
 };
 export default meta;
 type Story = StoryObj;

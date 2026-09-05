@@ -23,6 +23,9 @@ resource or paint-server references before insertion, preventing fetched SVG con
 the viewer's paint box or starting secondary requests. Local `url(#id)` paint servers and embedded
 raster data remain available.
 
+Fitting SVG content stays centered. In a capped nonzoomable viewer, overflowing content begins
+inside the body's reachable scroll range, keeping both its top and bottom available.
+
 Adopts `DocumentAnchorTarget` (the same shared mixin `lr-pdf-viewer`/`lr-csv-viewer` use): a `region`
 anchor addresses one `highlights` entry, matched by reference or by structural equality of its `rect`
 (and optional `page`). Assigning `anchor` or calling `scrollToAnchor()` scrolls the matching

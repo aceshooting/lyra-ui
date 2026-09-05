@@ -26,6 +26,10 @@ add a trailing totals column mirroring `expandedContent`'s leading one — `rowT
 per-row, `grandTotal(rows)` renders at its intersection with the footer row — both sharing `footer`'s
 own "consumer computes/renders" contract rather than assuming addition.
 
+Effective locale changes recollate and filter the current view while keeping activation and edit
+lookups aligned with the rendered page. Direct row focus uses the same stable-key restoration rules;
+programmatic locale changes do not emit a row action.
+
 Header cells and body rows use separate roving tab stops. When a controlled `columns` or rendered
 row collection changes while one of those stops owns focus, the table keeps the same stable key if
 it survives and otherwise clamps focus to the nearest surviving index. Moving focus outside the
@@ -170,7 +174,9 @@ cell: (row) => unknown }` —
   facades; reassign a new set to update
 - `filterable: boolean = false` (attribute `filterable`, reflected) — renders a localized search
   field above the grid
-- `filterText: string = ''` (attribute `filter-text`) — controlled filter text
+- `filterText: string = ''` (attribute `filter-text`) — controlled filter text. Removing the
+  attribute clears the effective filter safely while retaining native removal readback; a later
+  supplied value filters normally.
 - `filter?: (row: T, text: string) => boolean` (attribute: false) — typed predicate used by the
   filter field; when omitted, rows are matched against their JSON representation
 - `filterLabel?: string` (attribute `filter-label`) and `filterPlaceholder?: string`
@@ -254,7 +260,9 @@ cell: (row) => unknown }` —
 - `hideColumnsLabel?: string` (attribute `hide-columns-label`) — the same button's label once
   the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
-  forces responsive priority columns visible and is updated by the built-in reveal button
+  forces responsive priority columns visible and is updated by the built-in reveal button.
+  Priority-hidden columns hide their header, body, and footer cells together at the existing
+  container breakpoints in either direction; revealing columns restores all three bands.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
   `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount. Unset
   (the default) touches storage not at all. Mirrors `lr-app-rail`'s identical `storage-key` pattern

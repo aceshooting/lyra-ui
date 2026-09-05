@@ -486,6 +486,9 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * via epub.js's own `item.find()`, aborting a superseded scan when a newer search or a `src`
  * change supersedes it.
  *
+ * Genuine native selections from a chapter iframe use platform Selection accessors; arbitrary
+ * peer accessors remain uninvoked. Selected text and rectangles retain the shared bounded limits.
+ *
  * @customElement lr-ebook-viewer
  * @event lr-render-error - Fired when fetching, opening, or rendering fails.
  * @event lr-location-change - The reading location changed (from `rendition`'s own `relocated`
@@ -835,11 +838,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
           const contentsWindow = inheritedDataValue(contents, 'window') as Window | undefined;
           const getSelection = savedCallable(contentsWindow, 'getSelection');
           const selection = getSelection?.();
-          const rangeCount = inheritedDataValue(selection, 'rangeCount');
-          const getRangeAt = savedCallable(selection, 'getRangeAt');
-          const range = typeof rangeCount === 'number' && rangeCount > 0 && getRangeAt
-            ? getRangeAt(0) as Range
-            : null;
+          const range = this.selectedRange(selection);
           if (!range) return;
           const text = boundedSelectionText(range);
           if (!text) return;
@@ -862,6 +861,25 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       if (isAbortError(error) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       this.failCurrentLoad(error);
     }
+  }
+
+  /** Native Selection accessors brand-check their receiver across realms. Calling the owner's
+   * platform capabilities directly admits chapter selections without invoking peer-owned getters. */
+  private selectedRange(selection: unknown): Range | null {
+    const prototype = this.ownerDocument.defaultView?.Selection.prototype;
+    if (prototype) {
+      try {
+        const count = Object.getOwnPropertyDescriptor(prototype, 'rangeCount')?.get?.call(selection);
+        if (typeof count === 'number') {
+          return count > 0 ? prototype.getRangeAt.call(selection, 0) : null;
+        }
+      } catch {
+        // Non-native peer records continue through the descriptor-only compatibility path.
+      }
+    }
+    const count = inheritedDataValue(selection, 'rangeCount');
+    const getRangeAt = savedCallable(selection, 'getRangeAt');
+    return typeof count === 'number' && count > 0 && getRangeAt ? getRangeAt(0) as Range : null;
   }
 
   private failWithLocalizedMessage(message: string): void {

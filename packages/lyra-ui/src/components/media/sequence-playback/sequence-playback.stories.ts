@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Discrete sequence playback controls with `itemCount`/`currentIndex` and native `FocusEvent` relays from the active internal control.',
+          'The play button retains its disabled resting paint when too few items are available; enabled pointer feedback remains visible. Discrete sequence playback controls with `itemCount`/`currentIndex` and native `FocusEvent` relays from the active internal control.',
       },
     },
   },

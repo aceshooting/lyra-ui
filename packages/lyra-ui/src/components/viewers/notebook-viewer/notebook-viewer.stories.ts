@@ -51,3 +51,19 @@ export const ThemedActiveCell: Story = {
     ></lr-notebook-viewer>
   `,
 };
+
+export const FarCellAnchors: Story = {
+  parameters: { docs: { description: { story: 'Jump to an identified cell outside the initial virtual window. Scroll away and repeat the same jump to return to its active row inside the capped notebook viewport.' } } },
+  render: () => html`
+    <div>
+      <button type="button" @click=${(event: Event) => {
+        const viewer = (event.currentTarget as HTMLElement).parentElement?.querySelector('lr-notebook-viewer');
+        void viewer?.scrollToAnchor({ kind: 'fragment', id: 'cell-90' });
+      }}>Jump to cell 90</button>
+      <lr-notebook-viewer max-height="160px" .notebook=${{
+        nbformat: 4, nbformat_minor: 5,
+        cells: Array.from({ length: 100 }, (_, index) => ({ cell_type: 'raw', id: `cell-${index}`, source: `Cell ${index}`, metadata: {} })),
+      }}></lr-notebook-viewer>
+    </div>
+  `,
+};

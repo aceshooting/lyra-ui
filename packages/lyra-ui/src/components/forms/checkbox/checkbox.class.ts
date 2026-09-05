@@ -109,6 +109,9 @@ export interface LyraCheckboxEventMap {
  * The internal checkbox role exposes explicit stateful `aria-invalid`: visible error chrome wins
  * immediately, while intrinsic/custom invalidity is exposed only after user interaction.
  *
+ * Removing `error-text` safely omits the message while preserving native null property readback.
+ * Explicit empty text stays empty; later supplied text renders normally.
+ *
  * @customElement lr-checkbox
  * @slot - Label text, rendered next to the box. Clicking it toggles the
  * checkbox, the same as clicking a native checkbox's associated `<label>`.
@@ -821,7 +824,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   override render(): TemplateResult {
     const mixed = this.indeterminate;
     const hasHint = this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText);
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
     const controlParts = [
       'box',
       'control',

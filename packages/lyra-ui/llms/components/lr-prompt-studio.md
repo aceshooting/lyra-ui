@@ -21,6 +21,13 @@ versions, resolved preview, and save/run intents. Message and variable edits emi
 `lr-change` proposal carrying their complete next state before updating the component's current
 arrays; persistence and execution remain host-owned.
 
+Variable values resolve recursively; undefined and cyclic placeholders remain literal within preview
+bounds. Each preview projection permits at most 64 nested variable resolutions, 10,000 placeholder
+substitutions, and 1,048,576 UTF-16 code units each of aggregate resolved message output and
+aggregate memoized intermediate text. Limits are checked before constructing oversized text.
+Exceeding a limit replaces the resolved preview with a localized visible fallback; raw messages,
+variables, editing and save/run payloads are unchanged.
+
 **Properties:** `messages: readonly PromptStudioMessage[] = []` and
 `variables: readonly PromptStudioVariable[] = []` are property-only editor state: user edits emit a
 cancelable `lr-change` before updating the current arrays, while the host remains responsible for

@@ -19,6 +19,12 @@
 A tooltip for a consumer-owned trigger, positioned with the shared Floating UI positioner. Which
 interactions open it is configurable as of 8.0.0; by default it is still hover and focus.
 
+An open lr-tooltip repositions when its effective host or inherited text direction changes,
+preserving open state without emitting lifecycle events.
+
+Removing `content` safely omits tooltip fallback text while preserving `null` property readback;
+later text renders normally.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — assigning it runs the same lifecycle as `show()`/`hide()`.

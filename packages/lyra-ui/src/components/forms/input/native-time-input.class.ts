@@ -17,6 +17,9 @@ const timeBoundConverter = {
  * Use this control when the platform's own `input[type=time]` UI is preferred. The segmented,
  * locale-aware Web Awesome-compatible field is `<lr-time-input>`.
  *
+ * Inherited stepUp/stepDown use pending value, step, min, and max properties synchronously
+ * and remain event-silent. Removed label/hint/help-text/error-text content is safely omitted.
+ *
  * @customElement lr-native-time-input
  * @csspart base - Compatibility name for the control row; use `time-input`.
  * @csspart time-input - The native time control row. It is the same node as `base` and the

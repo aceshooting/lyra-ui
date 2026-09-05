@@ -39,7 +39,7 @@ export class LyraResultField extends LyraElement {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The field name, e.g. "Status". Leave unset to render a value with no label. */
+  /** The field name, e.g. "Status". Leave unset or remove the attribute to render a value with no label. */
   @property() label = '';
 
   /** Plain-text value, e.g. "200 OK". Ignored once the default slot carries
@@ -65,7 +65,7 @@ export class LyraResultField extends LyraElement {
   };
 
   override render(): TemplateResult {
-    const hasLabel = this.label.length > 0;
+    const hasLabel = (this.label ?? '').length > 0;
     return html`
       <div part="base">
         ${hasLabel

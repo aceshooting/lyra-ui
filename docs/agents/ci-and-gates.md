@@ -310,12 +310,12 @@ the same checksum-pinned actionlint workflow gate as `static-checks`.
   Node 22/pnpm 11 toolchain. The 5-browser Node 22 sweep is Firefox, Chromium, Chrome, Edge, and
   Safari. It is useful for broad installed-browser coverage, but it is not the sharded two-Node CI
   matrix.
-- When no explicit `WTR_CONCURRENCY` is assigned, the runner preserves Chromium's automatic
-  concurrency and caps Firefox/WebKit/Safari at the smaller of four pages or half the available
-  CPUs. This preserves low-core hosted-runner behavior while preventing a high-core machine from
-  opening dozens of timing-sensitive pointer pages in one process. The shared mouse-command bridge
-  foregrounds the requesting page before each Firefox/Chromium pointer action, but leaves WebKit
-  pages alone so one test cannot suspend a sibling page by stealing foreground.
+- Firefox runs one test page per browser process, including when `WTR_CONCURRENCY` requests more.
+  Its native pointer capture crosses separate browser contexts, so concurrent page gestures can
+  release or intercept each other's input. Existing process shards retain parallel execution.
+  When no explicit concurrency is assigned, Chromium retains its automatic default and
+  WebKit/Safari retain the smaller of four pages or half the available CPUs. The aggregate runner
+  budgets shard pages from the sum of Firefox's one-page and WebKit's four-page allocations.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then the exact
   local counterpart of CI's platform matrix. Its 11 legs are source-derived: Node 20 runs Firefox
   (1 shard) and Safari (1 shard); Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),
@@ -360,12 +360,12 @@ hover/paint flakiness described above.
 **Shards multiply here; they divide in CI.** Each CI shard owns its own runner, so its
 `WTR_CONCURRENCY` is everything that machine runs -- which is why 8 shards per browser is fine
 there. Locally every shard is another process on the SAME host, so the concurrent page count is
-`shards x 2 engines x per-lane concurrency`. Setting `TEST_SH_ENGINE_SHARDS=8` on a 60-core box
-therefore asks for 64 pages and was measured at load 71, i.e. exactly the overcommit that makes
-those hover assertions fail spuriously. The script now derives a ceiling from the host CPU count
-(budgeting about half the CPUs as browser pages) and clamps an over-large request with a warning
-rather than failing, so matching CI's shard *numbering* never costs you a machine-sized
-mistake -- on a 60-core host that ceiling is 3. `test:platform`'s 26-file subset
+`shards x (Firefox pages + WebKit pages)`. The former four-page allocation for both engines made
+`TEST_SH_ENGINE_SHARDS=8` request 64 pages on a 60-core box and was measured at load 71. The current
+one-page Firefox and four-page WebKit allocations request 40 pages for eight shards. The script
+budgets about half the host's CPUs as browser pages and clamps an over-large request with a warning
+rather than failing. On a 60-core host the current ceiling is six shards per engine, or 30 pages;
+all positive shard counts are supported. `test:platform`'s 26-file subset
 is a strict subset of this run, so it is not run separately here.
 
 Because it's heavy (three full browser-engine sweeps), it is meant to run before publishing a
@@ -532,41 +532,44 @@ alongside the floors.
 ## Package-delivery budget
 
 `pnpm --filter @aceshooting/lyra-ui check:package-size` measures `npm pack --dry-run --json
---ignore-scripts` after a build and fails closed against `scripts/package-budgets.json`. The
+--ignore-scripts` after a build and fails closed against `scripts/package-budgets.json`. The fixed
 pre-8.0.0 baseline is 7,829,794 packed bytes, 38,510,084 unpacked bytes, and 4,441 files. The 25%
-unpacked reduction is a hard requirement: its ceiling may not exceed 28,882,563 bytes. Source and
-map rejection is independent, so staying below a byte ceiling can never excuse a dangling map or a
-published TypeScript source file.
+targets remain 5,872,345 packed bytes and 28,882,563 unpacked bytes. Both byte budgets currently
+use explicit measured required-public-artifact exceptions; the gate reports those exceptions
+instead of claiming either mathematical target was met. Without the unpacked exception, its
+ceiling must satisfy the 25% target. Source, map, fixture, test, and story rejection remains
+independent of every size ceiling.
 
-The packed 25% target remains recorded as 5,872,345 bytes, but it has one explicit measured
-exception; the gate never claims that target was met. A deliberately favorable lower-bound probe
-kept all required consumer docs, editor data, and custom-elements metadata, fully
-identifier-minified the runtime JavaScript, and omitted declarations, CSS, and other required
-runtime artifacts. Even that incomplete package was 6,088,928 packed bytes — 216,583 bytes over
-the target before restoring the omitted public artifacts. Deleting those artifacts or weakening
-their content is not an acceptable package-size fix.
+The packed exception retains its favorable lower-bound probe: all required consumer docs, editor
+data, and custom-elements metadata plus fully identifier-minified runtime JavaScript still packed
+to 6,088,928 bytes, already 216,583 bytes above its mathematical target before restoring omitted
+declarations, CSS, and other required runtime artifacts. Deleting those public artifacts or
+weakening their content is not an acceptable package-size fix.
 
-The exception therefore uses a hard measurement-derived regression ceiling. Initial authored
-documentation corrections and canonical regeneration grew the required public payload by 3,688
-packed bytes and 14,084 unpacked bytes from the prior reviewed complete package, including the
-14,080-byte growth of `llms-full.txt`, producing a 6,929,625-byte reviewed measurement. Later
-integrated generated output consumed part of that headroom. The final manifest-driven IDL-default
-documentation sweep adds 4,394 required unpacked bytes across `llms-full.txt` and 17 self-contained
-component references without adding package files. Exact Node 22.23.2/npm 10.9.8 packs move from
-6,932,102 packed / 28,851,327 unpacked bytes at the parent commit to 6,933,420 packed / 28,855,721
-unpacked bytes now. The complete required package is therefore re-reviewed at 6,933,420 packed
-bytes, and its 6,936,335-byte ceiling retains exactly 2,915 bytes (0.042%) of tool/version headroom.
-`validatePackageBudgets()` rejects a missing/renamed exception, a probe that does not exceed the
-mathematical target, headroom over 0.5%, or a ceiling that is not exactly the reviewed measurement
-plus headroom. Any future ceiling increase needs a new reproducible measurement and review
-rationale; never edit the number merely to make a red check green.
+The complete 14.1.0 package, measured with exact Node 22.23.2/npm 10.9.8, contains
+7,114,110 packed bytes and 29,347,941 unpacked bytes (9.1% and 23.8% below the fixed
+baselines). Compared with a same-tool repack of published 14.0.0, required documentation,
+editor/CEM data, CHANGELOG, and other text add 299,844 unpacked bytes; runtime and declarations
+add 99,302 bytes. Every prior public path remains. The existing compaction pipeline already
+preserves declaration JSDoc and readable runtime names while removing redundant runtime syntax,
+comments, and whitespace. Required public documentation and declarations remain part of the package.
 
-The file-count ceiling is derived, not an already-consumed snapshot: 2,500 base artifacts, two
-emitted files for each of the 285 stable tag aliases, the measured 82-file entrypoint remainder,
-and seven non-alias files reserved for the next component scaffold. Incrementing the stable alias
-count budgets that component's two alias files separately. Validation requires the reserve to be
-positive and the 3,159-file ceiling to equal that derivation, so a legitimate new component has
-room while unrelated inventory growth still fails closed.
+The byte ceilings remain exact reviewed measurements plus the existing 34,000 packed and
+140,000 unpacked headroom bytes: 7,148,110 and 29,487,941 bytes respectively.
+`validatePackageBudgets()` rejects a missing or renamed exception, an unpacked reviewed measurement
+that no longer exceeds its mathematical target, a packed measurement at or below the favorable
+probe, headroom above 0.5%, a ceiling that differs from measurement plus headroom, and a ceiling at or
+above its pre-8 baseline. A future increase requires a reproducible complete-package measurement
+and review rationale; changing the ceiling merely to clear a red gate is not sufficient.
+
+The file ceiling is derived from 2,500 base artifacts, two emitted files for each of the
+285 stable tag aliases, a measured 94-file non-alias remainder, and 7 files reserved for the
+next component scaffold: 3,171 files. The 3,164-file measured inventory adds 12 required JavaScript/
+declaration artifacts for native descriptions, registry ownership, reactive property writes,
+overlay ordering, the deferred usage overlay runtime, and native SVG titles. These additions update
+the measured remainder while retaining the positive scaffold reserve. A new stable alias separately contributes
+its two emitted files. Validation requires the ceiling to equal this derivation and remain below
+the pre-8 file count.
 
 ## `tsconfig.build.json` and dist hygiene
 

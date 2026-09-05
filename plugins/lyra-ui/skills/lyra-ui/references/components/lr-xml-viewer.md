@@ -25,6 +25,10 @@ matching. Every document type declaration is rejected before `DOMParser`, preven
 entity access and browser-specific internal-entity expansion. Not `lr-json-viewer` (JS values); not `lr-html-viewer`
 (sanitized _rendered_ HTML). No XPath/XSLT evaluation, no editing, no schema validation.
 
+The registration entry also matches extensionless `application/*+xml` MIME essences, ignoring
+parameters, case and outer whitespace. Exact registered MIME keys retain precedence over this
+fallback matcher.
+
 **Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
 string` (property only) — raw XML text to parse and render; wins over `src`, and setting it parses
 synchronously. Assigning `undefined` relinquishes inline authority and immediately resumes an
@@ -43,8 +47,11 @@ attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are 
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
 `clearSearch()`), accepting at most 4,096 query code units and scanning at most 4,000,000 code
 units while retaining 10,000 matches; `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
-`clearSearch()` clears the query and matches. All three resolve only after the newly active match's
-row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
+`clearSearch()` clears the query and matches. Imperative `search()`, `searchNext()` and
+`searchPrevious()` reopen the selected match and its ancestors, including manually collapsed
+nodes, before scrolling. Other explicit collapse choices remain in effect, and later manual
+collapse still takes precedence over default expansion. All three resolve only after the newly
+active match's row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
 `prefers-reduced-motion`) — before 9.0.0 they moved `data-active-match` without ever scrolling, so
 on a document taller than the viewport the reader never saw the match they had stepped to. Replacing
 the XML source clears document-relative matches and emits the canonical empty `lr-search-change`;

@@ -9,7 +9,7 @@ export const Agenda: Story = {
       view="agenda"
       view-date="2026-07-01"
       .events=${[
-        { date: '2026-07-15', title: 'Planning review' },
+        { date: '2026-07-15', title: 'Planning review', color: 'var(--lr-color-brand)' },
         { date: '2026-07-22', title: 'Release' },
       ]}
     ></lr-calendar>
@@ -98,4 +98,10 @@ export const StateThemeHooks: Story = {
       ></lr-calendar>
     </div>
   `,
+};
+
+
+/** Early ISO years remain in the authored month while navigating. */
+export const EarlyYear: Story = {
+  render: () => html`<lr-calendar view-date="0099-07-01" .events=${[{ date: '0099-07-15', title: 'Historical event' }]}></lr-calendar>`,
 };

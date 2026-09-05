@@ -349,3 +349,22 @@ export const Disabled: Story = {
     </div>
   `,
 };
+
+export const ImmediateDisable: StoryObj = {
+  render: () => html`
+    <div>
+      <lr-swatch-picker aria-label="Accent" .items=${accents()}></lr-swatch-picker>
+      <button @click=${(event: Event) => {
+        const button = event.currentTarget as HTMLElement;
+        button.focus();
+        const picker = button.parentElement!.querySelector('lr-swatch-picker')!;
+        picker.disabled = true;
+        picker.click();
+        picker.focus();
+      }}>Disable and keep focus here</button>
+      <button @click=${(event: Event) => {
+        (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-swatch-picker')!.disabled = false;
+      }}>Enable picker</button>
+    </div>
+  `,
+};

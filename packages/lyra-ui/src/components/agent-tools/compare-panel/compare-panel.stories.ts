@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The allowed-vote sequence is a bounded clone-owned frozen snapshot; create and reassign a new array after changing the choices.',
+          'Disabled vote buttons retain their resting colors during hover and press, including an existing selected vote. At narrow widths, stacked response panes size to their content up to the configured maximum height. The allowed-vote sequence is a bounded clone-owned frozen snapshot; create and reassign a new array after changing the choices.',
       },
     },
   },

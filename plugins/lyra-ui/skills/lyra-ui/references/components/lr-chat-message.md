@@ -27,6 +27,10 @@ else). No built-in copy button is rendered — slot a copy control into `actions
 `<lr-code-block>`'s copy-affordance contract for anything listening at the conversation-surface
 level).
 
+Compose `lr-copy-button` in `actions` with its `value` set to the intended message source. The shell
+does not infer that source or write the clipboard itself; the composed control emits success only
+after the write fulfills.
+
 **Properties:**
 
 - `messageRole: ChatMessageRole = 'assistant'` (`'user' | 'assistant' | 'system'`, attribute

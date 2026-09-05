@@ -4,7 +4,8 @@ import './popover.js';
 import '../../forms/button/button.js';
 import type { LyraPopover } from './popover.js';
 
-const meta: Meta = { title: 'Overlay/Popover', component: 'lr-popover', tags: ['autodocs'] };
+const meta: Meta = {
+  parameters: { docs: { description: { component: 'Open popovers, dropdowns and tooltips reposition when their effective host or inherited text direction changes, preserving open state and lifecycle events.' } } }, title: 'Overlay/Popover', component: 'lr-popover', tags: ['autodocs'] };
 export default meta;
 type Story = StoryObj;
 

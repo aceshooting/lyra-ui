@@ -9,7 +9,7 @@ defineElement('xml-viewer', LyraXmlViewer);
 const XML_EXTENSIONS = ['.xml', '.xsd', '.xsl', '.xslt', '.rss', '.atom'];
 
 const xmlRendererDef: DocumentRendererDefinition = {
-  matches: (file: DocumentFile) => file.mimeType.toLowerCase().endsWith('+xml') || XML_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)),
+  matches: (file: DocumentFile) => file.mimeType.split(';', 1)[0]!.trim().toLowerCase().endsWith('+xml') || XML_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)),
   capabilities: { anchors: ['node-path'], search: true },
   render: (file: DocumentFile) => html`<lr-xml-viewer
     src=${file.src}

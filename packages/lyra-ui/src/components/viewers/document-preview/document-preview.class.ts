@@ -63,8 +63,8 @@ type TextFetchState =
 
 const IDLE_TEXT_FETCH: TextFetchState = { kind: 'idle' };
 
-function classifyFormat(mimeType: string): PreviewFormat {
-  const mt = mimeType.trim().toLowerCase();
+function classifyFormat(mimeType: string | null): PreviewFormat {
+  const mt = (mimeType ?? '').split(';', 1)[0]!.trim().toLowerCase();
   if (mt.startsWith('text/') || mt === 'application/json') return 'text';
   if (mt.startsWith('image/')) return 'image';
   return 'generic';
@@ -309,7 +309,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
    *  absent while, e.g., a conversion is still in progress. */
   @property() src = '';
 
-  /** Drives format dispatch — see the class doc. */
+  /** Drives format dispatch using the case-insensitive MIME essence before parameters.
+   * Removing the attribute is treated as an absent format at render time. */
   @property({ attribute: 'mime-type' }) mimeType = '';
 
   /** Shown in the header and used as the download link's suggested filename. */
@@ -337,7 +338,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   /** A CSS length (e.g. `"24rem"`); once set, `[part="body"]` scrolls
    *  internally past this height instead of growing the page — same
-   *  contract as `<lr-json-viewer>`'s identically-named prop. Invalid values are ignored. */
+   *  contract as `<lr-json-viewer>`'s identically-named prop. Fitting images stay centered;
+   *  oversized images start inside the reachable scroll range. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Wraps the rendered image (image format only) in an internal `<lr-pan-zoom>`. `false`

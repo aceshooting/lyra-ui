@@ -96,7 +96,8 @@ export interface LyraChartSeries {
    * Per-segment (the line between two consecutive points) border color, indexed by the
    * *starting* point of each segment — e.g. `['red', 'green']` on 3 points colors the first
    * segment red and the second green. Wired to Chart.js's `segment.borderColor`, and cycled
-   * when shorter than the segment count. Only meaningful for line-type series.
+   * when shorter than the segment count. Sampled segments retain the original source starting
+   * point's palette index. Only meaningful for line-type series.
    */
   readonly segmentColors?: readonly string[];
   readonly type?: 'line' | 'bar';
@@ -1554,6 +1555,8 @@ function chartDatasetAxis(dataset: unknown): 'y' | 'y2' {
  * are independent implementations. Requires the optional peer dep `chart.js`; `chartjs-plugin-zoom`
  * (for `zoom`) and `chartjs-plugin-datalabels` (for `data-labels`/`stack-totals`)
  * are further optional peers loaded only on demand.
+ * With IntersectionObserver available, canvas construction waits for the first delivered
+ * visibility decision; without it, drawing starts as soon as the peer and canvas are ready.
  *
  * **API mirror note:** the real `wa-chart` docs page
  * (https://webawesome.com/docs/components/chart/) documents a `config:
@@ -1885,6 +1888,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /**
    * Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible
    * table cells from one callback.
+   * Horizontal scalar tooltips use parsed x, including a raw config indexAxis override;
+   * structured points retain their y-value contract. The context-object formatter shares this rule.
    * Never runs against the categorical x-axis's own labels (line/bar's `labels` strings) —
    * Chart.js's category scale passes the tick index to `ticks.callback`, not the label text,
    * so formatting it would corrupt the axis.
@@ -2460,7 +2465,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.rebuildAfterAnnotationRegistration()
     );
     this.syncAnnouncementSinks();
-    this.visible = true;
+    // Loading and accessible DOM can settle while the first visibility decision is pending.
+    this.visible = !this.ownerWindow?.IntersectionObserver;
     this.armReducedMotionWatcher();
     const ownerWindow = this.ownerWindow;
     const ResizeObserverCtor = ownerWindow?.ResizeObserver;
@@ -3036,8 +3042,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const backgroundColor = colors ?? sliceFillColors ?? fillFallback;
     const datasetType = series.type ?? effectiveType;
     const authoredSegmentColors =
-      series.segmentColors && rowIndexes
-      ? rowIndexes.map((rowIndex) => series.segmentColors![rowIndex] ?? '')
+      series.segmentColors?.length && rowIndexes
+      ? rowIndexes.map((rowIndex) => series.segmentColors![rowIndex % series.segmentColors!.length]!)
       : series.segmentColors;
     const segmentColors = authoredSegmentColors
       ? resolveCanvasColors(
@@ -3894,11 +3900,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     });
   }
 
-  private tooltipLabel(context: ChartTooltipContext): string | undefined {
+  private tooltipLabel(context: ChartTooltipContext, horizontal = false): string | undefined {
     const parsed = projectChartDatum(chartDatasetValue(context, 'parsed'));
     const raw = projectChartDatum(chartDatasetValue(context, 'raw'));
     const parsedPoint = normalizedChartPoint(parsed);
-    const rawValue = parsedPoint?.y ?? parsed ?? raw;
+    // Scalar cartesian data uses the effective value axis. Structured points keep their y-value
+    // contract, and partial/radial parsed shapes retain the existing numeric fallback.
+    const rawValue = (horizontal && !normalizedChartPoint(raw) ? parsedPoint?.x : parsedPoint?.y) ??
+      parsed ?? raw;
     const formatted = this.formatValue(rawValue, 'tooltip');
     if (formatted === rawValue || formatted === undefined) return undefined;
     const label = chartDatasetLabel(chartDatasetValue(context, 'dataset'));
@@ -4008,6 +4017,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // (e.g. line -> radar) ships with the wrong axis shape (categorical x/y
     // instead of a radial r scale).
     const effectiveType = this.effectiveType();
+    let tooltipIndexAxis = this.effectiveIndexAxis();
     const palette = this.seriesPalette();
     const chartStyle = this.chartStyleOptions(palette);
     const rawDataEscapeHatch = this.hasExplicitConfigData();
@@ -4111,7 +4121,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ...(this.formatter || this.valueFormatter
               ? {
                   callbacks: {
-                    label: (context: ChartTooltipContext) => this.tooltipLabel(context),
+                    label: (context: ChartTooltipContext) =>
+                      this.tooltipLabel(context, tooltipIndexAxis === 'y'),
                   },
                 }
               : {}),
@@ -4170,6 +4181,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // single nested key (e.g. `config.options.scales.y.min`) without
     // clobbering the rest of the generated sibling object.
     const merged = deepMerge(generated, effectiveConfig);
+    tooltipIndexAxis = merged.options['indexAxis'] === 'y' ? 'y' : 'x';
     // `deepMerge` replaces arrays wholesale, so a consumer `config.plugins`
     // would drop the per-instance data-labels plugin the generated config added
     // (silently disabling `data-labels`/`stack-totals`). Concatenate it back —

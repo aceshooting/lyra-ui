@@ -466,11 +466,12 @@ const detailRows: DetailRow[] = [
 const priorityColumns: TableColumn<DetailRow>[] = [
   { key: 'name', label: 'Name', sortable: true, sticky: 'start', cell: (r) => r.name },
   { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
-  { key: 'region', label: 'Region', priority: 'medium', cell: (r) => r.region },
-  { key: 'updated', label: 'Updated', priority: 'low', cell: (r) => r.updated },
+  { key: 'region', label: 'Region', priority: 'medium', cell: (r) => r.region, footer: () => 'All regions' },
+  { key: 'updated', label: 'Updated', priority: 'low', cell: (r) => r.updated, footer: () => 'Latest updates' },
 ];
 
 export const PriorityAndSticky: Story = {
+  parameters: { docs: { description: { story: 'Priority columns hide their header, body, and footer cells together. Reveal columns to restore all three bands.' } } },
   render: () =>
     html`<div style="max-width: 420px;">
       <lr-table .columns=${priorityColumns} .rows=${detailRows}></lr-table>
@@ -706,6 +707,28 @@ export const AncestorThemeHooks: Story = {
         .rows=${pivotRows}
         .rowKey=${(row: PivotRow) => row.id}
       ></lr-table>
+    </div>
+  `,
+};
+
+export const LiveLocalePage: Story = {
+  parameters: { docs: { description: { story: 'Switch German and Swedish collation while keeping the same source rows. The current page remains activatable and editable; locale changes emit no row action.' } } },
+  render: () => html`
+    <div>
+      <lr-button @click=${(event: Event) => {
+        const table = (event.currentTarget as HTMLElement).parentElement?.querySelector('lr-table');
+        if (table) table.lang = table.lang === 'de' ? 'sv' : 'de';
+      }}>Switch locale</lr-button>
+      <lr-table lang="de" caption="Locale-sorted names" sort-key="name" page-size="1"
+        .rowKey=${(row: { id: string }) => row.id}
+        .rows=${[{ id: 'ä', name: 'ä' }, { id: 'z', name: 'z' }]}
+        .columns=${[{ key: 'name', label: 'Name', sortable: true, cell: (row: { name: string }) => row.name, editTrigger: 'double-click', editValue: (row: { name: string }) => row.name }]}
+        @lr-row-click=${(event: CustomEvent<{ row: { name: string } }>) => {
+          const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('output');
+          if (output) output.textContent = `Activated ${event.detail.row.name}`;
+        }}
+      ></lr-table>
+      <output aria-live="polite">Activate the displayed row</output>
     </div>
   `,
 };

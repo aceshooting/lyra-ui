@@ -52,7 +52,7 @@ export class LyraResultCard extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
   /** Small visible heading for the card. Leave unset for an untitled card.
-   *  This is deliberately separate from the host's native `title` tooltip. */
+   *  This is deliberately separate from the host's native `title` tooltip. Removing the attribute clears its displayed text. */
   @property() heading = '';
 
   /** Tighter header/body padding for dense contexts (a card rendered as a row in a transcript or
@@ -96,7 +96,7 @@ export class LyraResultCard extends LyraElement {
   };
 
   override render(): TemplateResult {
-    const hasHeading = this.heading.length > 0;
+    const hasHeading = (this.heading ?? '').length > 0;
     const hasActions = this.withActions || this.hasActionsSlot;
     const hasHeader = hasHeading || hasActions;
     return html`

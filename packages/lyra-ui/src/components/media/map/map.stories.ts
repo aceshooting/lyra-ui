@@ -64,7 +64,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Requires an explicit `mapStyle`; the deterministic default story uses a network-silent inlined raster tile, while the opt-in live story demonstrates OpenStreetMap tiles. Explicit marker IDs and `dataLayers[].sourceId` values are trimmed, nonempty, and first-wins; idless colocated markers remain distinct by occurrence. Peer/custom markers retain a 24px minimum target in both axes even without intrinsic content size.',
+          'Markers and popups keep the physical geographic projection origin in both text directions. Live ancestor theme changes refresh choropleth stop/base colors and opacity without rebuilding sources or layers. Requires an explicit `mapStyle`; the deterministic default story uses a network-silent inlined raster tile, while the opt-in live story demonstrates OpenStreetMap tiles. Explicit marker IDs and `dataLayers[].sourceId` values are trimmed, nonempty, and first-wins; idless colocated markers remain distinct by occurrence. Peer/custom markers retain a 24px minimum target in both axes even without intrinsic content size.',
       },
     },
   },

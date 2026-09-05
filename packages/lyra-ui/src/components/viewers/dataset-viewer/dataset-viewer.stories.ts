@@ -49,6 +49,7 @@ export const Narrow320: Story = {
 /** Hands an uncapped dataset's sticky header to the document scrollport. Use the default `self`
  *  mode instead when horizontal containment is more important than page-level sticky behavior. */
 export const PageScrolling: Story = {
+  parameters: { docs: { description: { story: 'Scroll the page while the populated table extends below the header. Page mode preserves the border and rounded corners without creating a competing scroll container.' } } },
   render: () => html`
     <lr-dataset-viewer
       src=${pageSrc}

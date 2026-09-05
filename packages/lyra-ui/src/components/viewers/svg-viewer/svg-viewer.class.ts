@@ -156,7 +156,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
    * region when zoom controls or highlight actions make it interactive. */
   @property() name = '';
 
-  /** CSS length that caps the scrollable body. Invalid values are ignored. */
+  /** CSS length that caps the scrollable body. Fitting content stays centered; overflowing
+   * SVG content starts inside the reachable scroll range. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Wraps the rendered content in an internal `<lr-pan-zoom>`. `false` (the default)

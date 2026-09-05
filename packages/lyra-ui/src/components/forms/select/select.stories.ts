@@ -470,3 +470,22 @@ export const Placement: PlacementStory = {
     </div>
   `,
 };
+
+export const MountedOptionSelection: Story = {
+  parameters: { docs: { description: { story: 'Each mounted selected write immediately updates the live value and submitted option occurrences without firing user change events. Reset restores the declared default. External guidance supplements the trigger’s local hint.' } } },
+  render: () => html`
+    <form>
+      <p id="mounted-select-guidance">The two entries share a submitted value and remain distinct selections.</p>
+      <lr-select name="choice" label="Entries" hint="Select one or both entries" aria-describedby="mounted-select-guidance" multiple>
+        <lr-option value="same" selected>First entry</lr-option>
+        <lr-option value="same">Second entry</lr-option>
+      </lr-select>
+      <button type="button" @click=${(event: Event) => {
+        const form = (event.currentTarget as HTMLElement).closest('form')!;
+        const option = form.querySelectorAll<LyraOption>('lr-option')[1]!;
+        option.selected = !option.selected;
+      }}>Toggle second entry</button>
+      <button type="reset">Reset selection</button>
+    </form>
+  `,
+};

@@ -109,14 +109,11 @@ it('resolves a genuinely empty array as [] rather than folding it into the malfo
   expect(result!.length).to.equal(0);
 });
 
-it('caches the result across repeated loadEmojiDataCached() calls', async () => {
+it('imports independently on repeated uncached loadEmojiData() calls', async () => {
   let callCount = 0;
   clearEmojiDataCache();
-  // loadEmojiDataCached() uses the real default import internally, which this test cannot swap out
-  // without a dependency-injection seam on the cached wrapper itself -- this test instead verifies
-  // the shape of the caching contract using loadEmojiData() directly with an injected counter, since
-  // loadEmojiDataCached()'s own single-flight behavior mirrors pdf-loader.ts's loadPdfJs()
-  // byte-for-byte and doesn't need re-proving per component.
+  // The uncached loader invokes its importer on every call. Shared in-flight caching belongs to
+  // the separate loadEmojiDataCached() wrapper.
   const importFn = () => {
     callCount++;
     return Promise.resolve([]);

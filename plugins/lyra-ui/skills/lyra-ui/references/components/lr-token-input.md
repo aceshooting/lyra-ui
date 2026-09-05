@@ -21,6 +21,20 @@ prevented, so focus still advances normally. Backspace removes the last token. `
 readonly owned `readonly string[]` snapshot and repeated values are submitted under `name`; mutate
 a new array and reassign it to change the list.
 
+Composing keyboard events (`isComposing` or legacy key code 229) remain with the native draft or
+inline editor without adding/removing tokens, committing an edit or closing the editor. Normal
+Enter, delimiter, Tab, Backspace and Escape behavior is unchanged after composition.
+
+Host `aria-describedby` references resolve in the host's root and precede local hint/error guidance
+on the native draft input. Live source replacement, removal, reinsertion, host reconnection and
+document adoption update the relationship. Removing `label`, `hint` or `error-text` safely removes
+that copy while preserving native attribute-removal property readback, including `null`; explicit
+empty and later replacement strings remain supported.
+
+Editable token labels vertically center their text within the existing pointer target while
+retaining narrow-content ellipsis, wrapping and alignment with the remove action. The ordinary
+noneditable token layout remains the default.
+
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,

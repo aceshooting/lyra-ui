@@ -27,6 +27,12 @@ own splice/resort logic. `lr-reorder` is cancelable — a listener calling `prev
 the move open (mirroring `lr-confirm-bar`'s cancelable approve/deny pattern) until the host calls
 `finalizePendingMove()`/`revertPendingMove()`.
 
+Direct item `value` property or attribute edits refresh the owning list's valid identities and
+movement boundaries. Correcting a missing or duplicate identity re-enables the corresponding
+controls; making it invalid disables them. Identity edits do not emit a reorder event. Removing the
+value attribute from a standalone item renders it as absent while preserving `null` readback; an
+explicit empty string remains supplied and later valid values recover.
+
 ### `lr-reorder-list`
 
 **Properties:**

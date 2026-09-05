@@ -151,6 +151,8 @@ export interface LyraTooltipEventMap {
  * Bubbling `focusin`/`focusout` observes those real composed targets, and moving focus within the
  * trigger or between interactive popup controls does not spuriously close the tooltip.
  *
+ * Open popovers, dropdowns and tooltips reposition when their effective host or inherited text direction changes, preserving open state and lifecycle events. Removing content safely omits tooltip fallback text.
+ *
  * @customElement lr-tooltip
  * @slot trigger - Web Awesome shape: the highest-priority interaction/ARIA owner.
  * @slot - Web Awesome shape: tooltip content; Shoelace shape: the trigger when no named trigger
@@ -276,6 +278,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'top';
   @state() private anchorPositioned = false;
   private positionedAnchor?: Element | VirtualAnchor;
+  private positioningDirection?: 'ltr' | 'rtl';
+  private directionChanged = false;
   private observedDirectAnchor?: Element;
   private observedDirectAnchorWasConnected = false;
   private stopAnchorIdentityObservation?: () => void;
@@ -341,7 +345,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const children = Array.from(this.children);
     const hasNamedTrigger = children.some((child) => child.getAttribute('slot') === 'trigger');
     const hasShoelaceContent =
-      this.content.length > 0 || children.some((child) => child.getAttribute('slot') === 'content');
+      (this.content ?? '').length > 0 || children.some((child) => child.getAttribute('slot') === 'content');
     const next = hasNamedTrigger || !hasShoelaceContent;
     if (next === this.namedTriggerMode) return;
     const old = this.namedTriggerMode;
@@ -363,6 +367,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const direction = this.effectiveDirection;
+    this.directionChanged = direction !== this.positioningDirection;
+    this.positioningDirection = direction;
     this.syncNamedTriggerMode(false);
     if ((changed.has('manual') || changed.has('trigger')) && this.isManual) this.cancelPendingTransition();
     if (changed.has('disabled') && this.disabled) {
@@ -404,6 +411,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       this.syncAnchorIdentityObservation();
     }
     if (
+      this.directionChanged ||
       changed.has('open') ||
       changed.has('placement') ||
       changed.has('distance') ||

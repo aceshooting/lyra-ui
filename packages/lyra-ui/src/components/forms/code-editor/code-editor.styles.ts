@@ -61,7 +61,7 @@ export const styles = css`
      template: a stylesheet marker is suppressible and retunable by a consumer, and generated
      content can never leak into the label's accessible name the way a real element can. */
   ${formControlRequiredMarker}
-  /* The editor frame is the one scroll viewport. A private unwrapped measurement layer sizes the
+  /* The editor frame is the one scroll viewport. A private text measurement layer sizes the
      content track, then the real textarea fills that track instead of retaining its own native
      scroll range. That keeps caret, wheel, API scrolling, and the gutter on one coordinate system. */
   [part='editor'] {
@@ -85,6 +85,7 @@ export const styles = css`
     background: var(--lr-color-surface);
   }
   [part='gutter'] {
+    box-sizing: border-box;
     grid-area: 1 / 1;
     align-self: start;
     position: relative;
@@ -143,8 +144,13 @@ export const styles = css`
     user-select: none;
     opacity: 0;
   }
-  .editor-measure[data-wrap='soft'],
-  .editor-measure[data-wrap='hard'] {
+  .editor-content:where([data-wrap='soft'], [data-wrap='hard']) {
+    inline-size: 100%;
+    block-size: max-content;
+    min-block-size: 100%;
+  }
+  .editor-measure:where([data-wrap='soft'], [data-wrap='hard']) {
+    inline-size: 100%;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
   }
@@ -170,7 +176,8 @@ export const styles = css`
     inset-inline: 0;
   }
   /* --lr-code-editor-tab-size is the single channel for tab width: the class writes that token
-     inline on this part only when tabSize was explicitly assigned, so an untouched tabSize leaves
+     on the shared content wrapper only when tabSize was explicitly assigned, so both native text
+     and measurement inherit the same width. An untouched tabSize leaves
      a host-level override in charge instead of losing to an inline tab-size declaration. */
   [part='textarea'] {
     display: block;

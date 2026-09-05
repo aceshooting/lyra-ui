@@ -191,9 +191,18 @@ export const ErrorChrome: Story = {
 };
 
 export const Interactive: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Primary mouse, touch and pen gestures publish live input followed by one change on release. A changed keyboard sequence commits on keyup or when focus leaves the handle. Disablement or readonly cancels unfinished gestures while keeping the live value. External descriptions precede the slider’s local hint and error guidance.',
+      },
+    },
+  },
   render: () => html`
+    <p id="slider-interaction-guidance">Choose a temperature between 0 and 1.</p>
     <lr-slider
       label="Temperature"
+      aria-describedby="slider-interaction-guidance"
       min="0"
       max="1"
       step="0.1"
@@ -208,6 +217,7 @@ export const Interactive: Story = {
         if (out) out.textContent = `change (committed): ${e.detail.value}`;
       }}
     ></lr-slider>
+    <button type="button">Move focus here to finish a keyboard edit</button>
     <p id="slider-log" style="font-family: monospace; margin-top: 0.5rem;">input: 0.7</p>
   `,
 };

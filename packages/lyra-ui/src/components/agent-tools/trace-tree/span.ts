@@ -49,6 +49,7 @@ export function normalizeLyraSpanStatus(value: unknown): LyraSpanStatus {
  * views of one trace, never two separate data shapes.
  */
 export interface LyraSpan {
+  /** Nonblank stable identity. Surrounding whitespace in a nonblank ID is preserved. */
   id: string;
   /** A span whose `parentId` is missing or doesn't resolve to another span in the same array renders as a root — never dropped. */
   parentId?: string;
@@ -129,7 +130,7 @@ function projectLyraSpan(value: unknown): CanonicalLyraSpan | undefined {
     const end = descriptor('endMs');
     if (
       typeof id !== 'string' ||
-      id.length === 0 ||
+      id.trim().length === 0 ||
       typeof start !== 'number' ||
       !Number.isFinite(start) ||
       (end != null && (typeof end !== 'number' || !Number.isFinite(end)))

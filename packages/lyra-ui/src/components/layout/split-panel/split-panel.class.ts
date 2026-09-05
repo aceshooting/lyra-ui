@@ -199,7 +199,8 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @slot divider - Optional decorative content rendered inside the draggable divider. Assigned
  *   content is inert, so the separator remains the sole resize control.
  * @event lr-reposition-request - A cancelable proposed divider position from a pointer drag or
- *   keyboard interaction. Call `preventDefault()` to keep `position` unchanged. Not fired when a
+ *   keyboard interaction. Both detail values measure from the selected primary edge and match
+ *   accepted public readback. Call `preventDefault()` to keep `position` unchanged. Not fired when a
  *   consumer sets `position` or `positionInPixels` directly. `detail: LyraSplitPanelRepositionDetail`.
  * @event lr-reposition - Non-cancelable post-commit notification after a pointer or keyboard
  *   interaction moves the divider. Not fired when a consumer sets `position` or
@@ -541,7 +542,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     const oldPixels = this.positionInPixels;
     const primaryPixels = this.resolvePrimaryPixels(requestedPixels, useSnap, oldPixels);
     const primaryPercent = (primaryPixels / this.availableSize) * 100;
-    const position = this.primary === 'end' ? 100 - primaryPercent : primaryPercent;
+    const position = primaryPercent;
     if (nearlyEqual(oldPosition, position) && nearlyEqual(oldPixels, primaryPixels)) return false;
 
     const request = this.emit(

@@ -107,7 +107,9 @@ export interface LyraTreeItemEventMap {
  * text is resolved separately from accessibility-visible assigned content and updates through
  * forwarding slots; a host `aria-label` keeps precedence by presence in both models. A data
  * item's `accessibleLabel` is reflected only while the component owns that attribute, so an
- * initial or later author override survives object refreshes.
+ * initial or later author override survives object refreshes. A data item with no usable spoken
+ * label, visible label, description or badge name uses its stable ID as a semantic fallback.
+ * This leaves the visible content unchanged and does not apply to declarative items.
  * Every documented CSS part is forwarded under the same name through recursively rendered data-
  * model children. A consumer selector on the outer item therefore reaches matching row, label,
  * state, checkbox, badge, and disclosure parts at every rendered depth. Declarative children stay
@@ -358,7 +360,18 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     const current = this.getAttribute('aria-label');
     if (this.managedItemAriaLabel === null && current !== null) return;
 
-    const next = this.item?.accessibleLabel || null;
+    const item = this.item;
+    let next = item?.accessibleLabel || null;
+    if (
+      item &&
+      !this.hasAttribute('aria-labelledby') &&
+      !next?.trim() &&
+      !item.label.trim() &&
+      !item.description?.trim() &&
+      !item.badges?.some((badge) => (badge.label?.trim() || badge.text.trim()))
+    ) {
+      next = item.id;
+    }
     if (next === null) {
       if (this.managedItemAriaLabel !== null && current === this.managedItemAriaLabel) {
         this.writingItemAriaLabel = true;

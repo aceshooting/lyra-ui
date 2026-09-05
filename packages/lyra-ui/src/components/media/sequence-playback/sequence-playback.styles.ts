@@ -37,10 +37,10 @@ export const styles = css`
       var(--_lr-sequence-playback-icon-size)
     );
   }
-  [part="play-button"]:hover {
+  [part="play-button"]:hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
-  [part="play-button"]:active {
+  [part="play-button"]:active:where(:not(:disabled)) {
     border-color: var(
       --lr-sequence-playback-play-button-active-border-color,
       var(--lr-color-brand)

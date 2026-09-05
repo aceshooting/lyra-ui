@@ -23,6 +23,15 @@ const meta: Meta = {
     },
   },
 };
+
+export const TolerantSchema: StoryObj = {
+  parameters: { docs: { description: { story: 'Malformed choice entries and a custom definition without a callable renderer are omitted. Valid choices and sibling filters remain available.' } } },
+  render: () => html`<lr-filter-bar .filters=${[
+    { filterId: 'bad', label: 'Unsupported custom', type: 'custom', custom: { adapter: { clearValue: '' } } },
+    { filterId: 'status', label: 'Status', type: 'select', options: [null, { value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' }] },
+    { filterId: 'query', label: 'Search', type: 'text' },
+  ] as unknown as LyraFilterBarFilterDefinition[]}></lr-filter-bar>`,
+};
 export default meta;
 type Story = StoryObj;
 
@@ -127,8 +136,8 @@ export const StrictDateChipFormatting: Story = {
 export const RequiredFilter: Story = {
   render: () => {
     const filters: LyraFilterBarFilterDefinition[] = [
-      { ...dashboardFilters[0], required: true },
-      dashboardFilters[1],
+      { ...dashboardFilters[0]!, required: true },
+      dashboardFilters[1]!,
     ];
     const onRun = (e: Event) => {
       const host = (e.target as HTMLElement).closest('.demo')!;
@@ -186,8 +195,8 @@ export const ForeignFalseBuiltInValue: Story = {
 export const ResetWithDefaults: Story = {
   render: () => {
     const filters: LyraFilterBarFilterDefinition[] = [
-      { ...dashboardFilters[0], defaultValue: 'open' },
-      dashboardFilters[1],
+      { ...dashboardFilters[0]!, defaultValue: 'open' },
+      dashboardFilters[1]!,
     ];
     return html`
       <lr-filter-bar

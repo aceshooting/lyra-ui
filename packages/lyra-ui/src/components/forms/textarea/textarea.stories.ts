@@ -191,3 +191,15 @@ export const HorizontalResize: Story = {
 export const Disabled: Story = {
   render: () => html`<lr-textarea placeholder="Can't type here" disabled></lr-textarea>`,
 };
+
+export const RemovableGuidance: StoryObj = {
+  render: () => html`
+    <div>
+      <lr-textarea aria-label="Notes" label="Notes" hint="Optional guidance" help-text="Compatibility guidance" error-text="Review these notes"></lr-textarea>
+      <button @click=${(event: Event) => {
+        const control = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-textarea')!;
+        for (const attribute of ['label', 'hint', 'help-text', 'error-text']) control.removeAttribute(attribute);
+      }}>Remove guidance</button>
+    </div>
+  `,
+};

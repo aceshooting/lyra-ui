@@ -237,6 +237,7 @@ export const Horizontal: Story = {
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
+        .valueFormatter=${(value: number) => `$${value}`}
       ></lr-chart>
     `;
   },
@@ -492,5 +493,36 @@ export const HoverOutlineToken: Story = {
       .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
       .datasets=${[{ label: 'Revenue', data: [12, 19, 14, 22] }]}
     ></lr-chart>
+  `,
+};
+
+/** Sampling keeps each segment's source starting-point index in the repeating palette. */
+export const SampledSegmentPalette: Story = {
+  render: () => {
+    const labels = Array.from({ length: 1001 }, (_, index) => String(index));
+    const palette = seriesPalette(document.documentElement);
+    return html`
+      <lr-chart
+        type="line" height="16rem" without-animation
+        style="inline-size: 32rem; max-inline-size: 100%;"
+        .labels=${labels}
+        .datasets=${[{ label: 'Signal', data: labels.map((_, index) => index % 20), segmentColors: palette.slice(0, 3) }]}
+      ></lr-chart>
+    `;
+  },
+};
+
+/** Scroll to the chart to let its first visibility decision construct the canvas peer. */
+export const DrawWhenVisible: Story = {
+  render: () => html`
+    <div style="block-size: 20rem; overflow: auto;">
+      <p style="block-size: 24rem;">Scroll down to reveal the chart.</p>
+      <lr-chart
+        type="bar" height="16rem"
+        style="inline-size: 26rem; max-inline-size: 100%;"
+        .labels=${['Q1', 'Q2']}
+        .datasets=${[{ label: 'Revenue', data: [30, 60] }]}
+      ></lr-chart>
+    </div>
   `,
 };

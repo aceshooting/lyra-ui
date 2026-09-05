@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { captureComposedFocusRepair, applyComposedFocusRepair } from '../../../internal/focus-navigation.js';
 import { styles } from './transcript-feed.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
@@ -56,6 +57,8 @@ export interface LyraTranscriptFeedEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
+ * Activating the focused jump action resumes follow and transfers focus to the scroll base when the action disappears, unless a newer outside focus move takes precedence.
  *
  * @customElement lr-transcript-feed
  * @slot empty - Custom empty state. Default: the localized "No transcript yet".
@@ -268,9 +271,15 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
    *  itself emit) and emits only when clicking it actually changed `follow` -- identical shape to
    *  `lr-terminal`'s `jumpToLatest()`. */
   private onJumpClick = (): void => {
+    const jump = this.renderRoot.querySelector<HTMLElement>('[part="jump-button"]');
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    const repair = jump ? captureComposedFocusRepair(jump, base) : null;
     const changed = !this.follow;
     this.scrollToBottom();
     if (changed) this.emit('lr-follow-change', { following: true });
+    if (repair) void this.updateComplete.then(() => {
+      if (this.isConnected && this.follow) applyComposedFocusRepair(repair);
+    });
   };
 
   private showSpeakerFor(list: LyraTranscriptEntry[], index: number): boolean {

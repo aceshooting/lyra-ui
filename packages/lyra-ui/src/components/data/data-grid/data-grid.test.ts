@@ -5890,7 +5890,7 @@ it("ignores scrollToIndex before the body element has ever been rendered", () =>
   expect(() => element.scrollToIndex(0)).to.not.throw();
 });
 
-it("avoids dividing by zero when every flexible column resolves to zero flex", async () => {
+it('preserves widths when every column resolves to fixed zero flex', async () => {
   const invalidFlexColumns: DataGridColumn<Person>[] = [
     { field: "name", label: "Name", flex: -1 },
     { field: "team", label: "Team", flex: -1 },
@@ -5912,8 +5912,8 @@ it("avoids dividing by zero when every flexible column resolves to zero flex", a
   expect(() => element.sizeColumnsToFit()).to.not.throw();
   expect(
     element.getState().widths,
-    "a zero-flex total falls back to the column count instead of NaN"
-  ).to.deep.equal({ name: 0, team: 0 });
+    'effective zero-flex columns retain the all-fixed no-op contract'
+  ).to.deep.equal({});
 });
 
 it("copies with a fallback textarea even when the owner document has no body", async () => {

@@ -317,7 +317,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   /** Pins the weight-to-font-size input domain to `[min, max]`, so separate clouds can share one
    * scale instead of each deriving it from its own lightest/heaviest word. Reversed endpoints are
-   * normalized; a degenerate or non-finite pair falls back to the data-derived range. */
+   * normalized; a degenerate or non-finite pair falls back to the data-derived range. Scaling
+   * stays finite when opposite-sign finite endpoints would overflow on subtraction. */
   @property({ attribute: false }) domain?: [number, number];
 
   private _scale: WordCloudScale = 'linear';

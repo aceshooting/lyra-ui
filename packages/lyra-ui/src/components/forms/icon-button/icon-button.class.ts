@@ -3,7 +3,8 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   syncAriaControlsElements,
-  syncAriaDescribedByElements,
+  acquireResolvedAriaRelationship,
+  type ResolvedAriaRelationshipLease,
 } from '../../../internal/aria-controls.js';
 import { styles } from './icon-button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -71,6 +72,8 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *
  * Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
  * native button. Host `aria-describedby` IDREFs are resolved through `ariaDescribedByElements`.
+ * Description targets follow same-ID replacement, removal, reinsertion, reconnection and document
+ * adoption, including transitions between the native button and anchor.
  * When host `aria-controls` names elements in the host's own root, the controls relationship is
  * resolved onto that focused control through the reflected element-reference API so it remains
  * valid across this component's shadow boundary. Assigning that relationship intentionally clears
@@ -153,7 +156,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   };
 
   private _disabled = false;
-  private hasSyncedDescribedByElements = false;
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
 
   get disabled(): boolean {
     return this._disabled;
@@ -230,6 +233,22 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     this.hasBareGeometry = assigned.some((el) => needsSvgNamespaceFallback(el));
   };
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncDescribedByElements();
+  }
+
+  override disconnectedCallback(): void {
+    this.releaseExternalDescription();
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.isConnected && this.hasUpdated) this.syncDescribedByElements();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
@@ -239,12 +258,18 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   }
 
   private syncDescribedByElements(): void {
-    if (!this.triggerDescribedBy && !this.hasSyncedDescribedByElements) return;
-    this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
-      this,
-      this.baseEl,
-      this.triggerDescribedBy,
-    );
+    const target = this.isConnected ? this.baseEl : undefined;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
   }
 
   /** Mirrors `<lr-icon>`'s own `syncCustomNodes()`: repopulates `[part="fallback"]` from scratch

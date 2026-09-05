@@ -24,6 +24,14 @@ with `loadLibphonenumberAdapter()`. Without an adapter, already-international E.
 normalizes and validates; national input remains editable with `incomplete` validity. The loader
 returns its discovered country catalog as a frozen array of frozen records.
 
+For `default-country`, removing the attribute safely uses the existing country fallback while
+leaving property   readback at native `null`; an existing selected country remains selected.
+Explicit empty   strings remain empty, and later valid default-country values work normally.
+
+Host `aria-describedby` references resolve onto the telephone input before its local hint/error
+guidance. References track missing IDs, target replacement, removal/reinsertion, reconnect, and
+adoption. The country selector keeps its separate existing accessible-name contract.
+
 The country selector keeps the real native `<select>` (localized full country names in its popup,
 native mobile pickers, keyboard type-ahead) but stretches it invisibly over a compact decorative
 trigger showing the selected alpha-2 code plus a design-system chevron — long country names never
@@ -123,13 +131,20 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   removes it from the accessibility tree entirely.)
 - `phoneLabel: string = ''` (attribute `phone-label`) — explicit accessible-name override for the
   native telephone input.
-- `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name;
-  the untouched default routes through the shared localized `select` message.
+- `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name.
+  Omitted copy uses the localized `select` message. Explicit text, including `'Select'` and `''`,
+  wins over locale strings. Removing the attribute restores the declared `'Select'` property
+  readback and resumes localization.
 - `incompleteText: string = 'This phone number is incomplete.'` (attribute `incomplete-text`) —
-  validation message for dial-like input that can still become valid with more digits. The
-  untouched default routes through the localized `phoneInputIncomplete` message.
+  validation message for dial-like input that can still become valid with more digits. Omitted
+  copy uses the localized `phoneInputIncomplete` message. Explicit nonempty text, including the
+  English default, wins verbatim; an empty override retains the localized native error reason.
+  Removing the attribute restores its declared English property default and resumes localization.
 - `invalidText: string = 'The value is invalid.'` (attribute `invalid-text`) — completed-invalid
-  message, localized through the same shared key while left at its default.
+  validation message. Omitted copy uses localized `valueInvalid`; explicit nonempty text,
+  including the English default, wins verbatim. An empty override retains the localized native
+  error reason. Removing the attribute restores its declared English property default and resumes
+  localization.
 - `autocomplete: string = 'tel'`, `inputmode: 'tel'|'numeric'|'text' = 'tel'`,
   `enterkeyhint: string = ''` — forwarded to the internal `<input type="tel">`.
 - `readonly: boolean = false` (reflected) — forwards to the native telephone input, locks the

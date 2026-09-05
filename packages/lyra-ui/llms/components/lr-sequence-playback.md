@@ -19,6 +19,10 @@
 Steps a current index through `[0, itemCount)` on a fixed interval — explicit discrete-sequence
 playback for time-series scrubbing, without implying native audio/video playback.
 
+When fewer than two items are available, the disabled play button retains its resting border and
+background under hover and press. Enabled playback controls retain their token-driven pointer
+feedback.
+
 **Properties:**
 
 - `itemCount: number = 0` (attribute `item-count`)

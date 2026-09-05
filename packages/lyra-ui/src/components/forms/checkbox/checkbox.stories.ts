@@ -297,3 +297,14 @@ export const NarrowLongContent: Story = {
     </div>
   `,
 };
+
+export const RemovableError: StoryObj = {
+  render: () => html`
+    <div>
+      <lr-checkbox error-text="Review this choice">Accept updates</lr-checkbox>
+      <button @click=${(event: Event) => {
+        (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-checkbox')!.removeAttribute('error-text');
+      }}>Remove error message</button>
+    </div>
+  `,
+};

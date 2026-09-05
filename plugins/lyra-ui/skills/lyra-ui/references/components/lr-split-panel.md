@@ -21,6 +21,10 @@ component when migrated markup has named `start` and `end` panes. The separate `
 Lyra's multi-panel layout: its direct default-slot children, responsive collapse modes, and
 multi-divider events are intentionally a different API.
 
+Both `lr-reposition-request` detail fields `position` and `positionInPixels` measure from the
+selected primary edge and agree with accepted public property readback, including `primary="end"`.
+Canceling preserves both prior values; direct property writes remain silent.
+
 **Properties:**
 
 - `position: number = 50` (reflected) — divider position from the selected `primary` pane's edge,

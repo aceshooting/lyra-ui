@@ -27,6 +27,11 @@ cross-root string IDREF is never left behind. Later localized result-count and a
 changes are announced once through the shared polite region; opening markup and unchanged state are
 silent.
 
+Forward native input keydown events to `handleKeyDown()` as usual. Events with `isComposing` or
+legacy `keyCode === 229` return false without preventing default, moving the active suggestion,
+selecting, or closing the popover. Removing `query` uses the unfiltered empty-query behavior while
+preserving null readback; an explicitly empty query remains empty.
+
 **Properties:**
 
 - `anchor?: HTMLElement` (attribute: false) — the element to position the popup relative to. A

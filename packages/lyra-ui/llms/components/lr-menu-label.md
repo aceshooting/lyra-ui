@@ -25,9 +25,10 @@ name (`lr-menu-item` or `lr-dropdown-item`), not `instanceof`, so an adopted sam
 foreign-realm item remains enrollable. A label matches neither tag, is never enrolled in the roving
 tabindex, and can never become a focus stop; nothing on `<lr-menu>` has to know this element exists.
 
-To announce a _named group_ rather than a caption, wrap the labelled items in an element with
-`role="group"` and give it a matching `aria-label`. `aria-labelledby` pointing at this element's
-internals would not resolve — idrefs do not cross a shadow boundary.
+Keep selectable items directly assigned to the menu's default slot, or forward them through a
+slot, with `lr-menu-label` as a sibling visual caption. Arbitrary `role="group"` wrappers do not
+provide a supported menu-group API. `aria-labelledby` cannot reference this element's shadow
+internals because idrefs do not cross a shadow boundary.
 
 **Properties:** none. **Events:** none. **Slots:** default (the heading text).
 **CSS parts:** `base` (the heading row).

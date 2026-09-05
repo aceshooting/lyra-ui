@@ -21,6 +21,32 @@ Filterable single/multi-select combining a text input with a listbox. Mirrors th
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated** (hand-rolled internals, not the
 shared `FormAssociated` mixin — see gotchas).
 
+Consumer writes on mounted options immediately update the owning picker and its submission,
+without changing the reset default or emitting picker input/change events. Owner synchronization
+does not echo as a consumer selected write.
+
+A mounted `option.selected` assignment updates the live picker value and form submission
+immediately, including deselection and equal-value writes; it emits no user input/change event.
+
+When `multiple` becomes false, the public value, live option flags, and popup `aria-selected` expose
+one selected occurrence. The retained multiple-selection history returns if multiple is enabled
+again without another selection write.
+
+Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
+not navigate, select/create a value, or dismiss the popup.
+
+Source options with `inert`, including inherited inertness, are unavailable through the popup. Live
+inert changes refresh row availability. Text, insertion, replacement, removal, slot
+reassignment/removal, and relevant attributes of `start`/`end`/`prefix`/`suffix` adornments refresh
+the corresponding cloned presentation; unchanged presentation retains its clone identity while
+filtering.
+
+Host `aria-describedby` resolves external descriptions onto the native combobox filter before local
+error/hint guidance. References track missing targets, replacement, removal/reinsertion, reconnect,
+and adoption. Removing `label`, `hint`, or `error-text` safely omits the content while leaving
+removed string properties at their native `null` readback; explicit empty strings remain supplied
+empty strings.
+
 **First-interaction registration.** Where initial-route weight is stricter than a static combobox
 registration allows, keep a labelled native `<input list>` as the working pre-JavaScript control
 and import only the granular combobox registration on its first focus. Copy the native value after
@@ -206,9 +232,12 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
   `multiple` mode
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
-- `selectedRows: ComboboxSourceRow[]` (read-only getter) — structured rows for the current
-  selection, including any opaque `data` payload supplied by an async source. Selected async rows
-  remain available after the query changes or a later source result no longer contains them
+- `selectedRows` (read: `ComboboxSourceRow[]`; write: `readonly ComboboxSourceRow[]`) — structured
+  rows for the current selection, including any opaque `data` payload supplied by an async source.
+  Reads return detached row snapshots. Writes select stable row values resolved against the
+  current or deferred source, dropping duplicate and detached values without emitting selection
+  events. Selected async rows remain available after the query changes or a later source result
+  no longer contains them
 - `selectionStart`, `selectionEnd`, and `selectionDirection` — selection getters/setters forwarded
   to the internal input
 
@@ -264,7 +293,9 @@ selection. It is the supported way to read that text; reaching into the shadow r
 `[part="combobox-input"]`'s value is not. Named `lr-filter` rather than `lr-input` precisely because
 `lr-input`'s detail on `<lr-input>` is the committed value, and the two must not share a name while
 carrying different strings. It fires for user edits only. Picking a row, `form.reset()`, dismissing
-the listbox, a programmatic `value` write, and `setRangeText()` blank the filter silently.
+the listbox, and a programmatic `value` write blank the filter silently. `setRangeText()` silently
+replaces the requested or selected native text range, synchronizes the resulting query and visible
+options, and refreshes an async source when present; it preserves the committed selection.
 Activating the clear button is a user edit: when a query existed it emits `lr-filter` with
 `value: ''` before the clear transaction finishes.
 `lr-show` and `lr-hide` report the start of listbox visibility transitions. `lr-show` is a

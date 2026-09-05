@@ -1222,6 +1222,7 @@ const strings: LyraLocaleStrings = {
   promptStudioVariables: 'Variables',
   promptStudioVersions: 'Versions',
   promptStudioPreview: 'Aperçu résolu',
+  promptStudioPreviewLimit: 'Aperçu indisponible : la limite d’expansion du texte a été dépassée.',
   promptStudioRun: 'Exécuter le prompt',
   promptStudioSave: 'Enregistrer la version',
   promptStudioAddMessage: 'Ajouter un message',

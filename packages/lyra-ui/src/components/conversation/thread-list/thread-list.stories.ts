@@ -16,7 +16,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The conversation sidebar: a grouped, searchable list of chat sessions with unique nonempty, nonblank first-wins IDs, pin/archive/delete/rename affordances, and lr-virtual-list virtualization. Invalid-only data does not suppress valid slotted rows, and custom grouping omits rows whose callback does not return a nonblank group ID.',
+          'A conversation row with slot="" belongs to the default slot exactly like a row with no slot attribute, including after reconnect. Named slots retain their distinct roles. The conversation sidebar: a grouped, searchable list of chat sessions with unique nonempty, nonblank first-wins IDs, pin/archive/delete/rename affordances, and lr-virtual-list virtualization. Invalid-only data does not suppress valid slotted rows, and custom grouping omits rows whose callback does not return a nonblank group ID.',
       },
     },
   },

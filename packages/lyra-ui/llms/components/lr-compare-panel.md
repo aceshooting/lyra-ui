@@ -19,6 +19,13 @@
 Side-by-side A/B output comparison with a winner vote (LMSYS-arena / LangSmith-pairwise style): two
 slotted panes, a vote bar, synchronized reading.
 
+Disabled vote buttons retain their resting colors during hover and press, including an existing
+selected vote.
+
+At narrow widths, stacked response panes size to their content up to
+`--lr-compare-panel-max-height`. Short responses remain fully readable; longer responses retain the
+configured height limit and scrolling.
+
 **Properties:** `labelA: string = ''` (attribute `label-a`) and `labelB: string = ''` (attribute
 `label-b`) — pane headings. `vote: 'a' | 'b' | 'tie' | 'both-bad' | null = null` (reflected) — the
 recorded winner, host-writable to reflect a previously-recorded vote back. `itemId: string = ''`

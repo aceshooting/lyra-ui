@@ -122,8 +122,10 @@ vetoing that one would leave `open` stuck `true` in a mode where it's meaningles
 `preventDefault()` to keep the overlay as it is for the other triggers),
 `lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
-`railWidthPx` — call `preventDefault()` to keep the current width. It is not fired when a consumer
-sets `railWidthPx` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
+`railWidthPx` — call `preventDefault()` to keep the current width. A synchronous request listener
+that disables resizing, leaves full mode, or disconnects the rail also cancels the proposal,
+preserving any width the listener assigned and publishing no accepted resize. Assigning only
+`railWidthPx` does not veto the proposal. It is not fired when a consumer sets `railWidthPx` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
 `{ widthPx: number }`; non-cancelable committed width, emitted immediately for a genuine keyboard
 step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/lost gestures, and
 consumer property writes emit no committed event).

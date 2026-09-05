@@ -18,6 +18,10 @@
 
 Dependency-free SVG radial, full-circle ring, or linear meter (no charting library).
 
+Removing `label` omits the visible SVG label in radial, linear, and ring shapes and restores the
+localized gauge name unless `aria-label` is authored. The property retains removal `null`;
+explicitly empty labels remain empty and later labels render normally.
+
 **Properties:**
 
 - `value: number = 0`

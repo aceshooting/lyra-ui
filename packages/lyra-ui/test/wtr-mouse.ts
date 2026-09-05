@@ -29,7 +29,7 @@ const sessionId = new URL(window.location.href).searchParams.get('wtr-session-id
 const webSocketModulePath = '/__web-dev-server__web-socket.js';
 
 async function executeMouseCommand(
-  command: 'send-mouse' | 'reset-mouse' | 'send-wheel',
+  command: 'send-mouse' | 'send-wheel',
   payload?: unknown
 ): Promise<void> {
   if (sessionId === null) {
@@ -49,17 +49,41 @@ async function executeMouseCommand(
   }
 }
 
+const heldMouseButtons = new Set<MouseButton>();
+let pendingMouseAction: Promise<void> = Promise.resolve();
+
+/** Keep native pointer actions ordered and each reset atomic, including after a failed command. */
+function queueMouseAction(action: () => Promise<void>): Promise<void> {
+  const result = pendingMouseAction.then(action);
+  pendingMouseAction = result.catch(() => undefined);
+  return result;
+}
+
 export function sendMouse(command: MouseCommand): Promise<void> {
-  return executeMouseCommand('send-mouse', command);
+  return queueMouseAction(async () => {
+    const button = 'button' in command ? command.button ?? 'left' : 'left';
+    // A transport failure can arrive after native down. Retain cleanup ownership until a
+    // successful release or completed click confirms that the button is no longer held.
+    if (command.type === 'down' || command.type === 'click') heldMouseButtons.add(button);
+    await executeMouseCommand('send-mouse', command);
+    if (command.type === 'up' || command.type === 'click') heldMouseButtons.delete(button);
+  });
 }
 
 /** Sends a native wheel input through the active browser session. */
 export function sendWheel({ deltaX, deltaY = 0 }: WheelCommand): Promise<void> {
-  return executeMouseCommand('send-wheel', { deltaX, deltaY });
+  return queueMouseAction(() => executeMouseCommand('send-wheel', { deltaX, deltaY }));
 }
 
+/** Release held buttons without synthesizing an idle middle release, which can paste a selection. */
 export function resetMouse(): Promise<void> {
-  return executeMouseCommand('reset-mouse');
+  return queueMouseAction(async () => {
+    for (const button of heldMouseButtons) {
+      await executeMouseCommand('send-mouse', { type: 'up', button });
+      heldMouseButtons.delete(button);
+    }
+    await executeMouseCommand('send-mouse', { type: 'move', position: [0, 0] });
+  });
 }
 
 /**

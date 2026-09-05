@@ -405,9 +405,8 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
     // Set for the synchronous duration of a `disabled`-attribute mutation this instance itself
     // performs (own property setter, or an external `?disabled=${...}` binding calling
     // toggleAttribute() directly) — see the three overrides below and formDisabledCallback().
-    // Cleared on the next microtask, i.e. after the platform has finished delivering every
-    // reaction to that one mutation, however many there are and in whatever order the engine
-    // chooses to fire them.
+    // Restored when the native mutation returns, after its synchronous reactions. Nested
+    // attribute/property reflection retains the outer guard without hiding later fieldset changes.
     private _reflectingDisabledAttribute = false;
 
     // Hand-written accessor (mirrors `value`/`required` below): native form
@@ -708,6 +707,12 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       // FACE omission and barred validation are driven by the live host
       // attribute, so reflection must happen before same-tick form APIs run.
       this.toggleAttribute('disabled', this._disabled);
+      // A fieldset may become disabled while our own attribute already bars the control,
+      // producing no separate effective-state reaction. Once the own attribute is absent,
+      // the native pseudo-class reveals the remaining cascade, including the first legend.
+      if (!this._disabled && typeof this.matches === 'function') {
+        this._fieldsetDisabled = this.matches(':disabled');
+      }
       // Disabling bars constraint validation, so the intrinsic violation and the `invalid`/
       // `user-invalid` states have to go with it — synchronously, for the same reason the
       // attribute does.
@@ -730,18 +735,17 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * the reentrant-update warning this file's `formDisabledCallback` doc comment describes.
      * The flag itself is order-independent: it is set before the
      * underlying native mutation runs, so every reaction the platform delivers for it — in any
-     * order — observes it `true`, and it clears only once the whole synchronous reaction burst has
-     * finished (the next microtask).
+     * order — observes it `true`. Restoring the prior flag as the mutation returns preserves
+     * nested reflection while allowing a later fieldset mutation in the same task through.
      */
     override toggleAttribute(qualifiedName: string, force?: boolean): boolean {
       if (qualifiedName !== 'disabled') return super.toggleAttribute(qualifiedName, force);
+      const wasReflecting = this._reflectingDisabledAttribute;
       this._reflectingDisabledAttribute = true;
       try {
         return super.toggleAttribute(qualifiedName, force);
       } finally {
-        queueMicrotask(() => {
-          this._reflectingDisabledAttribute = false;
-        });
+        this._reflectingDisabledAttribute = wasReflecting;
       }
     }
 
@@ -750,13 +754,12 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
         super.setAttribute(qualifiedName, value);
         return;
       }
+      const wasReflecting = this._reflectingDisabledAttribute;
       this._reflectingDisabledAttribute = true;
       try {
         super.setAttribute(qualifiedName, value);
       } finally {
-        queueMicrotask(() => {
-          this._reflectingDisabledAttribute = false;
-        });
+        this._reflectingDisabledAttribute = wasReflecting;
       }
     }
 
@@ -765,13 +768,12 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
         super.removeAttribute(qualifiedName);
         return;
       }
+      const wasReflecting = this._reflectingDisabledAttribute;
       this._reflectingDisabledAttribute = true;
       try {
         super.removeAttribute(qualifiedName);
       } finally {
-        queueMicrotask(() => {
-          this._reflectingDisabledAttribute = false;
-        });
+        this._reflectingDisabledAttribute = wasReflecting;
       }
     }
 
@@ -919,7 +921,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * a consumer's explicit `disabled` must survive the fieldset re-enabling.
      *
      * Skipped entirely while `_reflectingDisabledAttribute` is set — this call is then guaranteed
-     * to be a same-tick echo of a `disabled`-attribute mutation this instance itself is performing
+     * to be a synchronous echo of a `disabled`-attribute mutation this instance itself is performing
      * (see the flag's own doc comment above `toggleAttribute()`), regardless of whether the
      * platform delivered it before or after this element's own `disabled` property setter ran.
      *

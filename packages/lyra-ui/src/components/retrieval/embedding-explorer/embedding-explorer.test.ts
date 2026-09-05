@@ -728,3 +728,23 @@ describe('selected point pointer/focus feedback', () => {
     }
   });
 });
+
+it('preserves literal native point tooltip text and label updates', async () => {
+  const text = 'Literal </title><script>throw 42</script> &amp; < > \r\n العربية 😀';
+  const el = (await fixture(html`<lr-embedding-explorer
+    .points=${[{ id: 'p', x: 1, y: 2, label: text }]}
+  ></lr-embedding-explorer>`)) as LyraEmbeddingExplorer;
+
+  const assertTitle = (expected: string) => {
+    const title = el.shadowRoot!.querySelector('title')!;
+    expect(title.textContent).to.equal(expected);
+    expect(title.namespaceURI).to.equal('http://www.w3.org/2000/svg');
+    expect(title.childElementCount).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('script').length).to.equal(0);
+  };
+  assertTitle(`${text}, embedding point 1`);
+  expect(el.shadowRoot!.querySelector('[part="point"]')!.getAttribute('aria-label')).to.contain(text);
+  el.points = [{ id: 'p', x: 1, y: 2, label: `Updated ${text}` }];
+  await el.updateComplete;
+  assertTitle(`Updated ${text}, embedding point 1`);
+});

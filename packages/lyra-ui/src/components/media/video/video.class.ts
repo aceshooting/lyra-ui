@@ -220,7 +220,7 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * @csspart controls-overlay - Bottom controls positioning layer.
  * @csspart poster-overlay - Poster positioning layer.
  * @csspart poster-play-button - Poster play action.
- * @csspart progress - Native range input used to scrub.
+ * @csspart progress - Native range input used to scrub. When disabled, its timeline track retains resting paint.
  * @csspart thumbnail - Active WebVTT thumbnail preview.
  * @csspart timeline - Timeline wrapper.
  * @csspart timeline-indicator - Played portion of the timeline.

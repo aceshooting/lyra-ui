@@ -366,12 +366,9 @@ function formatRgb([r, g, b, a]: [number, number, number, number]): string {
     : `rgba(${r}, ${g}, ${b}, ${Math.round(alpha * 1000) / 1000})`;
 }
 
-const warnedInvalidColors = new Set<string>();
-
 function warnInvalidColor(color: string): void {
-  if (warnedInvalidColors.has(color)) return;
-  warnedInvalidColors.add(color);
-  console.warn(
+  devWarnOnce(
+    `heatmap-invalid-color:${color}`,
     `<lr-heatmap> could not parse "${color}" (set via --lr-heatmap-scale-lo/-hi) as a CSS ` +
       'color; falling back to the default ramp endpoint.'
   );
@@ -463,7 +460,7 @@ const bucketCountConverter = {
  * normalizes through that instead. Assigning an unparsable string to
  * `fillStyle` is a spec'd no-op (the previous value is kept, it never
  * throws), so a sentinel round-trip is used to detect that case and fall
- * back to `fallbackHex` (with a one-time `console.warn`) instead of
+ * back to `fallbackHex` (with a one-time development diagnostic) instead of
  * silently drawing the wrong color.
  */
 export function resolveRgb(
@@ -554,7 +551,8 @@ export interface LyraHeatmapEventMap {
  * `heatmap.styles.ts`) so hosts can retheme it — canvas can't consume
  * `var()` directly, so they're resolved once per draw via
  * `getComputedStyle`, then normalized to RGB by `resolveRgb()` (any valid
- * CSS color syntax, not just hex — see its doc comment).
+ * CSS color syntax, not just hex — see its doc comment). Invalid authored colors keep the
+ * default ramp endpoint and issue a deduplicated diagnostic only in development.
  *
  * Every cell is independently addressable: a `pointermove` hit test over the
  * canvas shows `[part="tooltip"]` with that cell's label + value (hidden on
@@ -565,7 +563,8 @@ export interface LyraHeatmapEventMap {
  * calendar); and a click, or Enter/Space on the focused cell, fires
  * `lr-cell-click`. `annotations` additionally strokes a ring around
  * specific cells (e.g. to call out an anomaly), each one optionally
- * surfaced in the legend too via `[part="legend-annotation"]`.
+ * surfaced in the legend too via `[part="legend-annotation"]`. Focus-only updates restore
+ * intersected neighboring fills and overlays without redrawing the entire canvas.
  *
  * Both grid modes deliberately retain physical LTR geometry under `dir="rtl"`:
  * matrix column 0 and calendar week 0 remain at the physical left. ArrowLeft
@@ -1108,6 +1107,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * signed, at which point silently dropping the whole negative half (32.7% of cells in the report
    * that prompted this) is the defect, not the feature. In signed mode only a non-finite value is
    * no-data; an absent matrix cell reads as `NaN`, so it stays no-data in both modes.
+   * Live domain or midpoint changes refresh this sentinel without requiring replacement data.
    */
   private get signedDomain(): boolean {
     return this.domain !== undefined || this.midpoint !== undefined;
@@ -1673,7 +1673,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('data') || !this.hasUpdated)
+    if (changed.has('data') || changed.has('domain') || changed.has('midpoint') || !this.hasUpdated)
       this.rebuildCanonicalMatrixData();
     if (
       changed.has('annotations') ||
@@ -2939,11 +2939,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     row: number,
     col: number,
     cellSize: number,
-    cs: CSSStyleDeclaration
+    cs: CSSStyleDeclaration,
+    state: 'annotation' | 'selected' | 'focus'
   ): void {
     const x = this.matrixPadLeft + col * cellSize;
     const y = this.matrixPadTop + row * cellSize;
-    if (this.cachedMatrixAnnotationPositions.has(`${row}:${col}`)) {
+    if (state === 'annotation' && this.cachedMatrixAnnotationPositions.has(`${row}:${col}`)) {
       this.strokeCellState(
         ctx,
         x,
@@ -2953,7 +2954,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         this.annotationColor(cs)
       );
     }
-    if (this.selectedCell?.row === row && this.selectedCell.col === col) {
+    if (state === 'selected' && this.selectedCell?.row === row && this.selectedCell.col === col) {
       this.strokeCellState(
         ctx,
         x,
@@ -2964,6 +2965,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       );
     }
     if (
+      state === 'focus' &&
       this.focusedCell &&
       'row' in this.focusedCell &&
       this.focusedCell.row === row &&
@@ -2980,6 +2982,29 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
   }
 
+  private focusRepaintBounds(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    cellSize: number
+  ): { left: number; top: number; width: number; height: number; radius: number } {
+    const padding = RING_LINE_WIDTH + 1;
+    const dpr = ctx.getTransform().a;
+    // Fractional clipping and clearing blend edge pixels twice. Clear whole device pixels
+    // so repainting antialiased fills and rings produces the same result as a full draw.
+    const left = Math.floor((x - padding) * dpr) / dpr;
+    const top = Math.floor((y - padding) * dpr) / dpr;
+    const right = Math.ceil((x + cellSize + padding) * dpr) / dpr;
+    const bottom = Math.ceil((y + cellSize + padding) * dpr) / dpr;
+    return {
+      left,
+      top,
+      width: right - left,
+      height: bottom - top,
+      radius: Math.ceil((2 * padding + 1 / dpr) / cellSize),
+    };
+  }
+
   private repaintMatrixFocusCell(pos: MatrixCellPos | null): void {
     if (!pos || !this.canvas) return;
     const rows = this.matrixRowLabels.length;
@@ -2991,24 +3016,39 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const y = this.matrixPadTop + pos.row * cellSize;
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(
-      x - RING_LINE_WIDTH - 1,
-      y - RING_LINE_WIDTH - 1,
-      cellSize + 2 * (RING_LINE_WIDTH + 1),
-      cellSize + 2 * (RING_LINE_WIDTH + 1)
-    );
     const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
     if (!cs) return;
-    this.paintMatrixCell(
-      ctx,
-      pos.row,
-      pos.col,
-      cellSize,
-      cs,
-      this.colorRamp(RAMP_STEPS, cs),
-      this.noDataFill(cs)
-    );
-    this.paintMatrixFocusOverlays(ctx, pos.row, pos.col, cellSize, cs);
+    const { left, top, width, height, radius } = this.focusRepaintBounds(ctx, x, y, cellSize);
+    // Include neighboring fills and rings intersected by the clear, even at the minimum cell
+    // size. Clip restoration to the dirty rectangle so those neighbors cannot disturb pixels
+    // outside it. The neighborhood stays bounded independently of the matrix dimensions.
+    const firstRow = Math.max(0, pos.row - radius);
+    const lastRow = Math.min(rows - 1, pos.row + radius);
+    const firstCol = Math.max(0, pos.col - radius);
+    const lastCol = Math.min(cols - 1, pos.col + radius);
+    const ramp = this.colorRamp(RAMP_STEPS, cs);
+    const noData = this.noDataFill(cs);
+    ctx.save();
+    try {
+      ctx.beginPath();
+      ctx.rect(left, top, width, height);
+      ctx.clip();
+      ctx.clearRect(left, top, width, height);
+      for (let row = firstRow; row <= lastRow; row++) {
+        for (let col = firstCol; col <= lastCol; col++) {
+          this.paintMatrixCell(ctx, row, col, cellSize, cs, ramp, noData);
+        }
+      }
+      for (const state of ['annotation', 'selected', 'focus'] as const) {
+        for (let row = firstRow; row <= lastRow; row++) {
+          for (let col = firstCol; col <= lastCol; col++) {
+            this.paintMatrixFocusOverlays(ctx, row, col, cellSize, cs, state);
+          }
+        }
+      }
+    } finally {
+      ctx.restore();
+    }
   }
 
   private paintCalendarCell(
@@ -3051,14 +3091,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     week: number,
     weekday: number,
     cellSize: number,
-    cs: CSSStyleDeclaration
+    cs: CSSStyleDeclaration,
+    state: 'annotation' | 'selected' | 'focus'
   ): void {
     const date = this.calendarDateAt(week, weekday);
     const x = this.columnXFor(week);
     const y = this.rowYFor(weekday);
     const matches = (candidate: { date?: string } | undefined): boolean =>
       candidate?.date === date;
-    if (this.cachedCalendarAnnotationDates.has(date)) {
+    if (state === 'annotation' && this.cachedCalendarCellsByDate.has(date) && this.cachedCalendarAnnotationDates.has(date)) {
       this.strokeCellState(
         ctx,
         x,
@@ -3068,7 +3109,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         this.annotationColor(cs)
       );
     }
-    if (matches(this.selectedCell ?? undefined)) {
+    if (state === 'selected' && this.cachedCalendarCellsByDate.has(date) && matches(this.selectedCell ?? undefined)) {
       this.strokeCellState(
         ctx,
         x,
@@ -3079,6 +3120,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       );
     }
     if (
+      state === 'focus' &&
       this.focusedCell &&
       'week' in this.focusedCell &&
       this.focusedCell.week === week &&
@@ -3110,37 +3152,40 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const y = this.rowYFor(pos.weekday);
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(
-      x - RING_LINE_WIDTH - 1,
-      y - RING_LINE_WIDTH - 1,
-      cellSize + 2 * (RING_LINE_WIDTH + 1),
-      cellSize + 2 * (RING_LINE_WIDTH + 1)
-    );
     const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
     if (!cs) return;
-    const ramp = this.colorRamp(
-      normalizeBucketCount(this.bucketCount),
-      cs
-    ).colors;
-    this.paintCalendarCell(
-      ctx,
-      pos.week,
-      pos.weekday,
-      cellSize,
-      cs,
-      ramp,
-      this.noDataFill(cs)
-    );
-    this.paintCalendarFocusOverlays(ctx, pos.week, pos.weekday, cellSize, cs);
-    // The first calendar row sits close to the month-axis baseline; redraw the small axis labels
-    // after clearing a focus rectangle so a ring move cannot erase adjacent label pixels.
-    this.paintCalendarAxisLabels(
-      ctx,
-      cellSize,
-      cs,
-      firstWeekStart,
-      this.cachedCalendarGrid.monthLabels
-    );
+    const { left, top, width, height, radius } = this.focusRepaintBounds(ctx, x, y, cellSize);
+    // Calendar positions are monotonic and separated by at least one cell size, including
+    // custom spacing, so this bounded neighborhood contains every intersecting fill or ring.
+    const firstWeek = Math.max(0, pos.week - radius);
+    const lastWeek = Math.min(weekCount - 1, pos.week + radius);
+    const firstDay = Math.max(0, pos.weekday - radius);
+    const lastDay = Math.min(6, pos.weekday + radius);
+    const ramp = this.colorRamp(normalizeBucketCount(this.bucketCount), cs).colors;
+    const noData = this.noDataFill(cs);
+    ctx.save();
+    try {
+      ctx.beginPath();
+      ctx.rect(left, top, width, height);
+      ctx.clip();
+      ctx.clearRect(left, top, width, height);
+      for (let week = firstWeek; week <= lastWeek; week++) {
+        for (let day = firstDay; day <= lastDay; day++) {
+          this.paintCalendarCell(ctx, week, day, cellSize, cs, ramp, noData);
+        }
+      }
+      for (const state of ['annotation', 'selected', 'focus'] as const) {
+        for (let week = firstWeek; week <= lastWeek; week++) {
+          for (let day = firstDay; day <= lastDay; day++) {
+            this.paintCalendarFocusOverlays(ctx, week, day, cellSize, cs, state);
+          }
+        }
+      }
+      // Restore the month-axis pixels intersected by the first row's dirty rectangle too.
+      this.paintCalendarAxisLabels(ctx, cellSize, cs, firstWeekStart, this.cachedCalendarGrid.monthLabels);
+    } finally {
+      ctx.restore();
+    }
   }
 
   private drawMatrix(): void {

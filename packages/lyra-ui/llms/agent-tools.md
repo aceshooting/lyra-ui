@@ -41,6 +41,9 @@ focused) fires `lr-tool-call-chip-select`; a consumer wires that to opening a
 `<lr-tool-result-dialog>` (or anything else) at the call site, keeping the chip reusable wherever
 a compact call summary is useful, with or without a detail surface behind it.
 
+Removing `category` or `summary` hides that optional text; assigning either attribute again restores
+its content.
+
 **Properties:**
 
 - `name: string = ''` — the tool/function name, e.g. `web_search`
@@ -127,9 +130,8 @@ sub-1000ms `"820ms"`, else trimmed to at most one decimal of seconds (`"1.5s"`, 
 
 **Known gotchas:**
 
-- the default slot is checked for emptiness by scanning `Array.from(this.children)` for elements
-  once on first update, then kept in sync via `slotchange` — only _element_ children count (a bare
-  text node assigned to the default slot won't trigger the tooltip)
+- meaningful default-slot text or element content enables the preview tooltip; whitespace-only
+  text does not. A text preview needs no wrapper, and the preview remains inert and noninteractive
 - the native button always keeps its purpose-specific generated name (`"name — summary — Status —
 duration"`). A host `aria-label` remains on the host and is not cloned onto that button; even an
   explicit empty host label never leaves the actionable button unnamed
@@ -373,6 +375,10 @@ so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lr-tab-g
 child scan expects real projected content, while its modal behavior participates in the shared
 overlay stack.
 
+Assigning `accessibleLabel` directly names the inner dialog when no host `aria-label` is present. A
+host `aria-label` retains its separate host ownership, and an empty direct value uses the tool
+title.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — whether the dialog is open; set it directly or use the
@@ -494,6 +500,10 @@ A category-grouped, filterable, searchable tool-enablement dialog for picking wh
 available in a conversation. It keeps its own panel template rather than nesting `<lr-dialog>`, so
 it has no dependency on the general-purpose dialog, while its modal behavior participates in the
 shared overlay stack. First-party invention (no Web Awesome equivalent).
+
+Programmatic `selectedToolIds` and `useDefaults` replacements synchronize the live checkbox and
+switch state after user edits without emitting change events. Removing `search-placeholder` restores
+localized copy, while an explicitly empty placeholder stays empty.
 
 **Exported types:**
 
@@ -768,6 +778,9 @@ cause"/"During handling" separators) into separate groups. Frames matching `inte
 behind a count-labeled toggle. A malformed or non-safe-integer location remains visible as raw,
 non-activatable text. Falls back to verbatim raw text when nothing parses. First-party invention
 (no Web Awesome equivalent).
+
+Removing the `trace` attribute clears parsed content and copies empty text; the property retains
+`null` until assigned again.
 
 **Properties:**
 
@@ -1050,6 +1063,10 @@ can name the form-associated host. A non-empty host `aria-label` remains on the 
 aggregate semantic owner, so `base` omits its duplicate role/name. The individual generated fields
 keep their own purpose-specific names in every case.
 
+Choosing Boolean Unset keeps an explicit `undefined` value when a schema default exists; deleting
+that key or replacing the value with an absent key restores default materialization. Without a
+schema default, Unset removes the key.
+
 **Supported schema subset:** a _flat_ object whose properties use one primitive `type`
 (`'string'`, `'number'`, `'integer'`, or `'boolean'`), `required` property presence, string `enum`,
 primitive `const`, and the `title`/`description`/`default` annotations. Nested objects, arrays, type
@@ -1279,6 +1296,9 @@ label/value row" visual language, without each one hand-rolling its own box. Nei
 any code dependency on the tool-result-view registry itself — they're generically usable anywhere a
 small card/field shell is useful.
 
+Removing `heading` or a result field `label` hides that text while preserving the card actions and
+field value.
+
 ### `lr-result-card`
 
 A small bordered card shell. Purely visual, with no state of its own beyond slot-presence tracking.
@@ -1381,6 +1401,13 @@ around either the slotted content or the plain `value` text).
 Side-by-side A/B output comparison with a winner vote (LMSYS-arena / LangSmith-pairwise style): two
 slotted panes, a vote bar, synchronized reading.
 
+Disabled vote buttons retain their resting colors during hover and press, including an existing
+selected vote.
+
+At narrow widths, stacked response panes size to their content up to
+`--lr-compare-panel-max-height`. Short responses remain fully readable; longer responses retain the
+configured height limit and scrolling.
+
 **Properties:** `labelA: string = ''` (attribute `label-a`) and `labelB: string = ''` (attribute
 `label-b`) — pane headings. `vote: 'a' | 'b' | 'tie' | 'both-bad' | null = null` (reflected) — the
 recorded winner, host-writable to reflect a previously-recorded vote back. `itemId: string = ''`
@@ -1420,6 +1447,9 @@ selected vote button without changing shared brand tokens.
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
 axis, one row per span in start order, status-toned bars (Langfuse timeline / Temporal
 event-history style).
+
+Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+surrounding whitespace. The first valid admitted duplicate continues to win.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — `LyraSpan { id: string; parentId?:
 string; name: string; kind: 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
@@ -1561,6 +1591,9 @@ A read-only ANSI console for streamed agent/tool output. Not a PTY: no stdin/key
 cursor-addressed full-screen apps. An ANSI sequence split across chunks retains at most 4,096
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
 clean parser boundary.
+
+A search with no matches clears earlier rendered match markers. Removing the `content` attribute
+clears output and preserves the normal `null` property readback.
 
 **Properties:** `content: string = ''` — initial/replaceable buffer content, parsed for ANSI/SGR
 codes. `replace(content: string): void` synchronously replaces the parsed buffer and reactive
@@ -1708,6 +1741,9 @@ A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tre
 name, status, an inline duration bar on the shared trace time scale, and optional tokens/cost
 columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 
+Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+surrounding whitespace. The first valid admitted duplicate continues to win.
+
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — the same `LyraSpan` shape documented
 under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy comes from
 `parentId`, and a span whose `parentId` is missing or doesn't resolve within the same array renders
@@ -1832,6 +1868,9 @@ tall the expanded body grows before it scrolls internally; and
 
 A compact commit summary (subject, author/time, diffstat, per-file changes) that links file rows out
 to a diff view.
+
+Removing the `message` attribute clears the displayed subject and body; the property retains the
+normal `null` readback of a removed string attribute.
 
 **Properties:** `hash: string = ''`, `message: string = ''`, `author: string = ''`, `timestamp?:
 number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []` (attribute: false) —
@@ -2300,6 +2339,9 @@ ancestor_ — one rule on a run list retunes every compact run inside it.
 
 Provider-neutral agent/LLM trace view combining span-kind filters, handoff quick-jumps, and a
 hierarchical trace tree from one shared `spans` array.
+
+Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+surrounding whitespace. The first valid admitted duplicate continues to win.
 
 **Properties:**
 
@@ -2849,6 +2891,13 @@ versions, resolved preview, and save/run intents. Message and variable edits emi
 `lr-change` proposal carrying their complete next state before updating the component's current
 arrays; persistence and execution remain host-owned.
 
+Variable values resolve recursively; undefined and cyclic placeholders remain literal within preview
+bounds. Each preview projection permits at most 64 nested variable resolutions, 10,000 placeholder
+substitutions, and 1,048,576 UTF-16 code units each of aggregate resolved message output and
+aggregate memoized intermediate text. Limits are checked before constructing oversized text.
+Exceeding a limit replaces the resolved preview with a localized visible fallback; raw messages,
+variables, editing and save/run payloads are unchanged.
+
 **Properties:** `messages: readonly PromptStudioMessage[] = []` and
 `variables: readonly PromptStudioVariable[] = []` are property-only editor state: user edits emit a
 cancelable `lr-change` before updating the current arrays, while the host remains responsible for
@@ -2987,8 +3036,9 @@ parents remain renderable instead of recursing forever.
 accessible-name override for the `role="tree"` element, where omission reads back `undefined` and
 localizes the default while any supplied string, including `''`, renders verbatim.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
-string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
-Record<string, unknown> }`.
+string; model?: string; readonly progressRatio?: number; startedAt?: number; endedAt?: number;
+metadata?: Record<string, unknown> }`. `progressRatio` represents completion from `0` to `1`,
+inclusive.
 Empty/blank run ids are omitted and later duplicate ids are ignored before hierarchy, focus,
 counts, selection, and events.
 
@@ -3059,436 +3109,515 @@ import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-pane
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-agent-tools-activity-feed-activity-feed-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/activity-feed/activity-feed.class.js`.
   `ActivityEntry {
-  id: unknown;
-  text: unknown;
-  icon: unknown;
-  timestamp: unknown;
-  variant: unknown;
-}`
+    id: string;
+    text: string;
+    icon?: string;
+    timestamp?: Date | string;
+    variant?: LyraVariant;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/activity-feed/activity-feed.class.js`.
   `ActivityFeedFollowChangeDetail {
-  following: unknown;
-}`
+    following: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/activity-feed/activity-feed.class.js`.
   `ActivityFeedToggleDetail {
-  expanded: unknown;
-}`
+    expanded: boolean;
+  }`
 
 - **`components-agent-tools-agent-eval-dashboard-agent-eval-dashboard-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js`.
   `AgentEvaluationDashboardRun {
-  id: unknown;
-  label: unknown;
-  status: unknown;
-  metrics: unknown;
-}`
+    readonly id: string;
+    readonly label: string;
+    readonly status: AgentStatusValue;
+    readonly metrics?: Readonly<Record<string, number>>;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js`.
   `AgentEvaluationMetric {
-  id: unknown;
-  label: unknown;
-  value: unknown;
-  format: unknown;
-}`
+    readonly id: string;
+    readonly label: string;
+    readonly value: number;
+    readonly format?: EvaluationMetricFormat;
+  }`
 
 - **`components-agent-tools-agent-run-agent-run-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-run/agent-run.class.js`.
   `AgentRunMetric {
-  id: unknown;
-  label: unknown;
-  value: unknown;
-  variant: unknown;
-}`
+    id: string;
+    label: string;
+    value: string | number;
+    variant?: BadgeVariant;
+  }`
 
 - **`components-agent-tools-agent-status-presentation-contracts`** — Supporting data types and helpers for this component family.
-  `agentStatusKind(/* public names: status */): unknown`
-  `agentStatusLabel(/* public names: status */): unknown`
-  `agentStatusMessage(/* public names: status */): unknown`
-  `AgentStatusPresentation {
-  label: unknown;
-  variant: unknown;
-  terminal: unknown;
-  active: unknown;
-  kind: unknown;
-  message: unknown;
-}`
-  `agentStatusVariant(/* public names: status, fallback */): unknown`
-  `isAgentStatusActive(/* public names: status */): unknown`
-  `isAgentStatusTerminal(/* public names: status */): unknown`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js`.
+  `agentStatusKind(status: AgentStatusValue): AgentStatusKind`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js`.
+  `agentStatusLabel(status: AgentStatusValue): string | undefined`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js`.
+  `agentStatusMessage(status: AgentStatusValue): string | undefined`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js`.
+  `AgentStatusPresentation extends AgentStatus {
+    label?: string;
+    variant?: BadgeVariant;
+    terminal?: boolean;
+    active?: boolean;
+    // Inherited from AgentStatus.
+    kind: AgentStatusKind;
+    message?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js`.
+  `agentStatusVariant(status: AgentStatusValue, fallback: BadgeVariant): BadgeVariant`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js`.
+  `isAgentStatusActive(status: AgentStatusValue): boolean`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-status-presentation.js`.
+  `isAgentStatusTerminal(status: AgentStatusValue): boolean`
 
 - **`components-agent-tools-approval-queue-approval-queue-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/approval-queue/approval-queue.class.js`.
   `ToolApprovalRequest {
-  id: unknown;
-  toolName: unknown;
-  args: unknown;
-  status: unknown;
-}`
+    id: string;
+    toolName: string;
+    args: unknown;
+    status?: ApprovalRequestStatus;
+  }`
 
 - **`components-agent-tools-approval-state-contracts`** — Supporting data types and helpers for this component family.
-  `approvalAction(/* public names: decision */): unknown`
-  `approvalDecision(/* public names: action */): unknown`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/approval-state.js`.
+  `approvalAction(decision: ApprovalDecision): ApprovalAction`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/approval-state.js`.
+  `approvalDecision(action: ApprovalAction): ApprovalDecision`
 
 - **`components-agent-tools-artifact-panel-artifact-panel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/artifact-panel/artifact-panel.class.js`.
   `ArtifactVersion {
-  id: unknown;
-  label: unknown;
-}`
+    id: string;
+    label?: string;
+  }`
 
 - **`components-agent-tools-browser-frame-browser-frame-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/browser-frame/browser-frame.class.js`.
   `BrowserPing {
-  id: unknown;
-  x: unknown;
-  y: unknown;
-  kind: unknown;
-}`
+    id: string;
+    x: number;
+    y: number;
+    kind: 'click' | 'type' | 'scroll' | 'move';
+  }`
 
 - **`components-agent-tools-commit-card-commit-card-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/commit-card/commit-card.class.js`.
   `CommitFileChange {
-  path: unknown;
-  additions: unknown;
-  deletions: unknown;
-  status: unknown;
-}`
+    path: string;
+    additions: number;
+    deletions: number;
+    status?: GitStatus;
+  }`
 
 - **`components-agent-tools-context-inspector-context-inspector-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/context-inspector/context-inspector.class.js`.
   `ContextInspectorRedaction {
-  start: unknown;
-  end: unknown;
-  reason: unknown;
-}`
+    start: number;
+    end: number;
+    reason?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/context-inspector/context-inspector.class.js`.
   `ContextInspectorSegment {
-  id: unknown;
-  label: unknown;
-  text: unknown;
-  tokens: unknown;
-  tone: unknown;
-  citation: unknown;
-  truncated: unknown;
-  omittedTokens: unknown;
-  redactions: unknown;
-}`
+    id: string;
+    label: string;
+    text: string;
+    tokens: number;
+    tone?: ContextMeterTone;
+    citation?: Citation;
+    truncated?: boolean;
+    omittedTokens?: number;
+    redactions?: readonly ContextInspectorRedaction[];
+  }`
 
 - **`components-agent-tools-eval-dataset-eval-dataset-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/eval-dataset/eval-dataset.class.js`.
   `EvalExample {
-  id: unknown;
-  input: unknown;
-  expectedOutput: unknown;
-  tags: unknown;
-  metadata: unknown;
-}`
+    id: string;
+    input: string;
+    expectedOutput?: string;
+    tags?: readonly string[];
+    metadata?: Record<string, unknown>;
+  }`
 
 - **`components-agent-tools-eval-result-eval-result-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/eval-result/eval-result.class.js`.
   `EvalRunResult {
-  id: unknown;
-  label: unknown;
-  model: unknown;
-  promptVersion: unknown;
-  output: unknown;
-  scores: unknown;
-  review: unknown;
-}`
+    readonly id: string;
+    readonly label: string;
+    readonly model?: string;
+    readonly promptVersion?: string;
+    readonly output: string;
+    readonly scores?: RubricValue;
+    readonly review?: RubricValue;
+  }`
 
 - **`components-agent-tools-evaluation-run-evaluation-run-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`.
   `EvalCitationSelectDetail {
-  exampleId: unknown;
-  citation: unknown;
-}`
+    exampleId: string;
+    citation: Citation;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`.
   `EvalClaimSelectDetail {
-  exampleId: unknown;
-  claim: unknown;
-}`
+    exampleId: string;
+    claim: GroundedClaim;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`.
   `EvalContent {
-  text: unknown;
-  format: unknown;
-  language: unknown;
-}`
+    text: string;
+    format?: EvalContentFormat;
+    language?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`.
   `EvalExampleResult {
-  id: unknown;
-  label: unknown;
-  status: unknown;
-  input: unknown;
-  output: unknown;
-  grounding: unknown;
-  citations: unknown;
-  toolTrace: unknown;
-}`
+    id: string;
+    label?: string;
+    status: AgentStatusPresentation;
+    input: EvalContent;
+    output: EvalContent;
+    grounding?: GroundingAssessment;
+    citations?: readonly Citation[];
+    toolTrace?: readonly ToolTimelineEntry[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`.
   `EvalExampleToggleDetail {
-  exampleId: unknown;
-  expanded: unknown;
-}`
-  `EvalToolActivateDetail {
-  exampleId: unknown;
-  invocationId: unknown;
-  sourceKey: unknown;
-}`
-  `EvalToolApprovalDetail {
-  exampleId: unknown;
-  args: unknown;
-  sourceKey: unknown;
-  invocationId: unknown;
-  approved: unknown;
-}`
-  `EvalToolRenderErrorDetail {
-  exampleId: unknown;
-  toolName: unknown;
-  error: unknown;
-  invocationId: unknown;
-  sourceKey: unknown;
-}`
+    exampleId: string;
+    expanded: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`.
+  `EvalToolActivateDetail extends ToolTimelineActivateDetail {
+    exampleId: string;
+    // Inherited from ToolTimelineActivateDetail.
+    invocationId: string;
+    sourceKey?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`.
+  `EvalToolApprovalDetail extends ToolTimelineApprovalDetail {
+    exampleId: string;
+    // Inherited from ToolTimelineApprovalDetail.
+    args?: unknown;
+    sourceKey?: string;
+    invocationId: string;
+    approved: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`.
+  `EvalToolRenderErrorDetail extends ToolTimelineRenderErrorDetail {
+    exampleId: string;
+    // Inherited from ToolTimelineRenderErrorDetail.
+    toolName: string;
+    error: unknown;
+    invocationId: string;
+    sourceKey?: string;
+  }`
 
 - **`components-agent-tools-mcp-app-mcp-app-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.class.js`.
   `McpAppCsp {
-  connectDomains: unknown;
-  resourceDomains: unknown;
-  frameDomains: unknown;
-}`
+    readonly connectDomains?: readonly string[];
+    readonly resourceDomains?: readonly string[];
+    readonly frameDomains?: readonly string[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.class.js`.
   `McpAppPermissions {
-  camera: unknown;
-  microphone: unknown;
-  geolocation: unknown;
-  clipboardRead: unknown;
-  clipboardWrite: unknown;
-}`
+    readonly camera?: boolean;
+    readonly microphone?: boolean;
+    readonly geolocation?: boolean;
+    readonly clipboardRead?: boolean;
+    readonly clipboardWrite?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.class.js`.
   `McpAppToolCallDetail {
-  requestId: unknown;
-  name: unknown;
-  args: unknown;
-  frameGeneration: unknown;
-}`
+    requestId?: string;
+    name: string;
+    args: unknown;
+    frameGeneration: number;
+  }`
 
 - **`components-agent-tools-policy-summary-policy-summary-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/policy-summary/policy-summary.class.js`.
   `PolicyDecision {
-  id: unknown;
-  category: unknown;
-  label: unknown;
-  state: unknown;
-  explanation: unknown;
-  detail: unknown;
-}`
+    id: string;
+    category: PolicyDecisionCategory;
+    label: string;
+    state: PolicyDecisionState;
+    explanation: string;
+    detail?: string;
+  }`
 
 - **`components-agent-tools-prompt-studio-prompt-studio-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.class.js`.
   `PromptStudioMessage {
-  id: unknown;
-  role: unknown;
-  content: unknown;
-  name: unknown;
-}`
+    id: string;
+    role: PromptStudioRole;
+    content: string;
+    name?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.class.js`.
   `PromptStudioMessageReorderDetail {
-  messages: unknown;
-  messageId: unknown;
-  fromIndex: unknown;
-  toIndex: unknown;
-}`
+    readonly messages: readonly PromptStudioMessage[];
+    readonly messageId: string;
+    readonly fromIndex: number;
+    readonly toIndex: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.class.js`.
   `PromptStudioState {
-  messages: unknown;
-  variables: unknown;
-}`
+    messages: PromptStudioMessage[];
+    variables: PromptStudioVariable[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.class.js`.
   `PromptStudioVariable {
-  name: unknown;
-  value: unknown;
-  description: unknown;
-}`
+    name: string;
+    value: string;
+    description?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.class.js`.
   `PromptStudioVersion {
-  id: unknown;
-  label: unknown;
-  messages: unknown;
-  variables: unknown;
-  createdAt: unknown;
-}`
+    id: string;
+    label: string;
+    messages: readonly PromptStudioMessage[];
+    variables?: readonly PromptStudioVariable[];
+    createdAt?: string;
+  }`
 
 - **`components-agent-tools-run-events-contracts`** — Supporting data types and helpers for this component family.
-  `AgentRunActivateDetail {
-  runId: unknown;
-  run: unknown;
-}`
+  Import: `@aceshooting/lyra-ui`.
+  `AgentRunActivateDetail<TRun = unknown> {
+    readonly runId: string;
+    readonly run?: TRun;
+  }`
 
 - **`components-agent-tools-schema-viewer-schema-viewer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js`.
   `JsonSchemaNode {
-  $ref: unknown;
-  type: unknown;
-  title: unknown;
-  description: unknown;
-  properties: unknown;
-  items: unknown;
-  required: unknown;
-  enum: unknown;
-  const: unknown;
-  default: unknown;
-  examples: unknown;
-  oneOf: unknown;
-  anyOf: unknown;
-  allOf: unknown;
-}`
+    readonly $ref?: string;
+    readonly type?: string | readonly string[];
+    readonly title?: string;
+    readonly description?: string;
+    readonly properties?: Readonly<Record<string, JsonSchemaNode>>;
+    readonly items?: JsonSchemaNode | readonly JsonSchemaNode[];
+    readonly required?: readonly string[];
+    readonly enum?: readonly unknown[];
+    readonly const?: unknown;
+    readonly default?: unknown;
+    readonly examples?: readonly unknown[];
+    readonly oneOf?: readonly JsonSchemaNode[];
+    readonly anyOf?: readonly JsonSchemaNode[];
+    readonly allOf?: readonly JsonSchemaNode[];
+    readonly [key: string]: unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js`.
   `SchemaValidationIssue {
-  path: unknown;
-  message: unknown;
-  severity: unknown;
-}`
+    path: string;
+    message: string;
+    severity?: 'error' | 'warning' | 'info';
+  }`
 
 - **`components-agent-tools-stack-trace-stack-trace-parse-contracts`** — Supporting data types and helpers for this component family.
-  `parseStackTrace(/* public names: trace, options */): unknown`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace-parse.js`.
+  `parseStackTrace(trace: string, options?: StackTraceParseOptions): StackTraceParseResult`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace-parse.js`.
   `StackFrame {
-  functionName: unknown;
-  file: unknown;
-  line: unknown;
-  column: unknown;
-  internal: unknown;
-  raw: unknown;
-}`
+    functionName?: string;
+    file?: string;
+    line?: number;
+    column?: number;
+    internal: boolean;
+    raw: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace-parse.js`.
   `StackGroup {
-  message: unknown;
-  frames: unknown;
-}`
+    message: string;
+    frames: StackFrame[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace-parse.js`.
   `StackTraceParseOptions {
-  internalPatterns: unknown;
-}`
+    internalPatterns?: readonly (string | RegExp)[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace-parse.js`.
   `StackTraceParseResult {
-  groups: unknown;
-  truncated: unknown;
-  source: unknown;
-}`
+    groups: StackGroup[];
+    truncated: boolean;
+    source: string;
+  }`
 
 - **`components-agent-tools-subagent-panel-subagent-panel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.class.js`.
   `SubagentRun {
-  id: unknown;
-  parentId: unknown;
-  label: unknown;
-  status: unknown;
-  task: unknown;
-  model: unknown;
-  progressRatio: unknown;
-  startedAt: unknown;
-  endedAt: unknown;
-  metadata: unknown;
-}`
+    readonly id: string;
+    readonly parentId?: string;
+    readonly label: string;
+    readonly status: AgentStatusKind;
+    readonly task?: string;
+    readonly model?: string;
+    readonly progressRatio?: number;
+    readonly startedAt?: number;
+    readonly endedAt?: number;
+    readonly metadata?: Readonly<Record<string, unknown>>;
+  }`
 
 - **`components-agent-tools-task-list-task-list-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/task-list/task-list.class.js`.
   `TaskItem {
-  id: unknown;
-  label: unknown;
-  status: unknown;
-  detail: unknown;
-  children: unknown;
-}`
+    id: string;
+    label: string;
+    status: TaskStatus;
+    detail?: string;
+    children?: readonly TaskItem[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/task-list/task-list.class.js`.
   `TaskListToggleDetail {
-  expanded: unknown;
-}`
+    expanded: boolean;
+  }`
 
 - **`components-agent-tools-test-results-test-results-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js`.
   `TestCaseResult {
-  id: unknown;
-  name: unknown;
-  status: unknown;
-  durationMs: unknown;
-  message: unknown;
-}`
-  `testResultDetailSlotName(/* public names: suiteId, testId */): unknown`
+    id: string;
+    name: string;
+    status: TestStatus;
+    durationMs?: number;
+    message?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js`.
+  `testResultDetailSlotName(suiteId: string, testId: string): string`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js`.
   `TestSuiteResult {
-  id: unknown;
-  name: unknown;
-  tests: unknown;
-}`
+    id: string;
+    name: string;
+    tests: readonly TestCaseResult[];
+  }`
 
 - **`components-agent-tools-thinking-panel-thinking-panel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/thinking-panel/thinking-panel.class.js`.
   `ThinkingPanelToggleDetail {
-  expanded: unknown;
-}`
+    expanded: boolean;
+  }`
 
 - **`components-agent-tools-tool-call-chip-tool-call-chip-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.class.js`.
   `ToolChipSelectDetail {
-  name: unknown;
-  callId: unknown;
-}`
+    name: string;
+    callId: string;
+  }`
 
 - **`components-agent-tools-tool-result-view-registry-contracts`** — Supporting data types and helpers for this component family.
-  `DirectToolRendererDefinition {
-  render: unknown;
-  result: unknown;
-  args: unknown;
-  context: unknown;
-  load: unknown;
-  matches: unknown;
-  payload: unknown;
-}`
-  `findToolRenderer(/* public names: toolName, payload, registry */): unknown`
-  `getDefaultToolRendererRegistry(): unknown`
-  `LazyToolRendererDefinition {
-  render: unknown;
-  load: unknown;
-  default: unknown;
-  matches: unknown;
-  payload: unknown;
-}`
-  `loadToolRenderer(/* public names: def */): unknown`
-  `registerToolRenderer(/* public names: name, def */): unknown`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js`.
+  `DirectToolRendererDefinition extends ToolRendererDefinitionBase {
+    readonly render: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown;
+    readonly load?: never;
+    // Inherited from ToolRendererDefinitionBase.
+    readonly matches?: (payload: unknown) => boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js`.
+  `findToolRenderer(toolName: string, payload: unknown, registry?: ToolRendererRegistry): ToolRendererDefinition | undefined`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js`.
+  `getDefaultToolRendererRegistry(): ToolRendererRegistry`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js`.
+  `LazyToolRendererDefinition extends ToolRendererDefinitionBase {
+    readonly render?: never;
+    readonly load: () => Promise<DirectToolRendererDefinition | {
+      default: DirectToolRendererDefinition;
+    }>;
+    // Inherited from ToolRendererDefinitionBase.
+    readonly matches?: (payload: unknown) => boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js`.
+  `loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToolRendererDefinition>`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js`.
+  `registerToolRenderer(name: string, def: ToolRendererDefinition): void`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js`.
   `ToolRenderContext {
-  reportStatus: unknown;
-  status: unknown;
-}`
+    reportStatus: (status: ToolResultStatus) => void;
+  }`
 
 - **`components-agent-tools-tool-select-dialog-tool-select-dialog-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-select-dialog/tool-select-dialog.class.js`.
   `ToolSelectDialogTool {
-  id: unknown;
-  name: unknown;
-  description: unknown;
-  category: unknown;
-  icon: unknown;
-  disabled: unknown;
-  disabledReason: unknown;
-}`
+    id: string;
+    name: string;
+    description?: string;
+    category?: string;
+    icon?: string;
+    disabled?: boolean;
+    disabledReason?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-select-dialog/tool-select-dialog.class.js`.
   `ToolSelectionChangeDetail {
-  selectedToolIds: unknown;
-  useDefaults: unknown;
-}`
+    readonly selectedToolIds: readonly string[];
+    readonly useDefaults: boolean;
+  }`
 
 - **`components-agent-tools-tool-timeline-tool-timeline-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-timeline/tool-timeline.class.js`.
   `ToolTimelineActivateDetail {
-  invocationId: unknown;
-  sourceKey: unknown;
-}`
-  `ToolTimelineApprovalDetail {
-  args: unknown;
-  sourceKey: unknown;
-  invocationId: unknown;
-  approved: unknown;
-}`
-  `ToolTimelineEntry {
-  sourceKey: unknown;
-  icon: unknown;
-  startedAt: unknown;
-  endedAt: unknown;
-  retryCount: unknown;
-  redactedFields: unknown;
-  needsApproval: unknown;
-  approved: unknown;
-  id: unknown;
-  name: unknown;
-  args: unknown;
-  status: unknown;
-  result: unknown;
-  error: unknown;
-}`
-  `ToolTimelineRenderErrorDetail {
-  toolName: unknown;
-  error: unknown;
-  invocationId: unknown;
-  sourceKey: unknown;
-}`
+    invocationId: string;
+    sourceKey?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-timeline/tool-timeline.class.js`.
+  `ToolTimelineApprovalDetail extends ToolApprovalEventDetail {
+    args?: unknown;
+    sourceKey?: string;
+    // Inherited from ToolApprovalEventDetail.
+    invocationId: string;
+    approved: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-timeline/tool-timeline.class.js`.
+  `ToolTimelineEntry extends ToolInvocation {
+    sourceKey?: string;
+    icon?: string;
+    startedAt?: number;
+    endedAt?: number;
+    retryCount?: number;
+    redactedFields?: readonly string[];
+    needsApproval?: boolean;
+    approved?: boolean;
+    // Inherited from ToolInvocation.
+    id: string;
+    name: string;
+    args: Record<string, unknown>;
+    status: ToolCallStatus;
+    result?: unknown;
+    error?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-timeline/tool-timeline.class.js`.
+  `ToolTimelineRenderErrorDetail extends ToolTimelineActivateDetail {
+    toolName: string;
+    error: unknown;
+    // Inherited from ToolTimelineActivateDetail.
+    invocationId: string;
+    sourceKey?: string;
+  }`
 
 - **`components-agent-tools-trace-tree-span-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
   `LyraSpan {
-  id: unknown;
-  parentId: unknown;
-  name: unknown;
-  kind: unknown;
-  startMs: unknown;
-  endMs: unknown;
-  status: unknown;
-  tokensIn: unknown;
-  tokensOut: unknown;
-  costText: unknown;
-  detail: unknown;
-}`
+    id: string;
+    parentId?: string;
+    name: string;
+    kind: LyraSpanKind;
+    startMs: number;
+    endMs?: number;
+    status: LyraSpanStatus;
+    tokensIn?: number;
+    tokensOut?: number;
+    costText?: string;
+    detail?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
   `LyraSpanProjection {
-  spans: unknown;
-  byId: unknown;
-  truncated: unknown;
-}`
-  `normalizeLyraSpanKind(/* public names: value */): unknown`
-  `normalizeLyraSpans(/* public names: values, activeSpanId */): unknown`
-  `normalizeLyraSpanStatus(/* public names: value */): unknown`
+    spans: LyraSpan[];
+    byId: Map<string, LyraSpan>;
+    truncated: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
+  `normalizeLyraSpanKind(value: unknown): LyraSpanKind`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
+  `normalizeLyraSpans(values: readonly unknown[], activeSpanId?: string | null): LyraSpanProjection`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
+  `normalizeLyraSpanStatus(value: unknown): LyraSpanStatus`

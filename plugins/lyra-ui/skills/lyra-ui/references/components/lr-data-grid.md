@@ -20,6 +20,12 @@ Virtualized client/server data grid with multi-sort, column filters, global sear
 trees, row details, paging, pinning, resizing, reordering, selection, copy, and CSV export. Import
 the granular registration module when the root bundle is not already loaded:
 
+Repeated references to an admitted root row appear once in processed rows, pagination, facets, and
+CSV, matching rendered canonical identity. The retained occurrence remains the original caller-owned
+record. Clicking a supported interactive descendant, including a native control inside its open
+shadow root, runs that control without also emitting `lr-cell-click`. Passive cell content continues
+to activate the cell.
+
 ```js
 import "@aceshooting/lyra-ui/components/data/data-grid/data-grid.js";
 ```
@@ -114,7 +120,11 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
 
 **Methods:**
 
-- `autoSizeColumn(columnId)`, `autoSizeColumns()`, and `sizeColumnsToFit()` manage measured widths.
+- `autoSizeColumn(columnId)` and `autoSizeColumns()` manage measured widths. `sizeColumnsToFit()`
+  reserves visible effective zero-flex column widths and selection-control allocation before
+  dividing the remaining width proportionally among flexible columns. Fixed widths are preserved;
+  min/max clamps still apply, and an all-fixed grid is unchanged. Maximum clamps can leave unused
+  space, while incompatible minimum widths can still overflow.
 - `collapseAllRows()`, `collapseRow(key)`, `expandAllRows()`, and `expandRow(key)` update expansion
   without emitting the user-only row events.
 - `copySelectedRows(options?: DataGridCopyOptions)` copies selected rows (or all processed rows

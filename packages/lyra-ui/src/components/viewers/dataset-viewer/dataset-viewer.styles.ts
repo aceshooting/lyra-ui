@@ -27,6 +27,14 @@ export const styles = css`
   /* A scroll container clips both axes and becomes the sticky header's containing block even when
      it has no height cap and therefore never scrolls. Page mode accepts page-level horizontal
      overflow in exchange for keeping an uncapped header pinned to the page scrollport. */
+  :host([scroll-mode='page']) [part='base'] {
+    overflow: visible;
+  }
+  :host([scroll-mode='page']) [part='header-row'] {
+    border-start-start-radius: calc(var(--lr-radius) - var(--lr-border-width-thin));
+    border-start-end-radius: calc(var(--lr-radius) - var(--lr-border-width-thin));
+    overflow: clip;
+  }
   :host([scroll-mode='page']) [part='body'] {
     overflow: visible;
     max-block-size: none;

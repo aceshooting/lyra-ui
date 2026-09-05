@@ -60,6 +60,7 @@ interface ResolvedStage {
  *   omitted, every bar is zero-length, and the absolute values still render.
  * - A stage larger than its predecessor (funnel re-entry) reports its true share above 100% in
  *   text while its bar clamps to the track, carrying the extra bar-overflow part token.
+ *   Finite values whose positive ratio overflows also fill the main or comparison track.
  * - A comparison series of a different length pairs by index: extra comparison entries are
  *   ignored, and stages past its end simply get no comparison bar.
  * - Malformed/non-record entries and records without a string `label` are omitted while later
@@ -211,7 +212,7 @@ export class LyraFunnel extends LyraElement {
 
   /** Clamped bar length as a CSS percentage; a share above 1 fills the track without spilling. */
   private barLength(share: number | null): string {
-    const ratio = share === null ? 0 : Math.min(1, Math.max(0, finiteNumber(share, 0)));
+    const ratio = share === null ? 0 : finiteNumber(Math.min(1, Math.max(0, share)), 0);
     return `${ratio * 100}%`;
   }
 

@@ -29,8 +29,7 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
   as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
 - `accessibleLabel: string | null` (attribute `aria-label`) — a declarative host label remains on
   the host while the focusable viewport receives the localized inspection-surface purpose name.
-  A property-only value can name the viewport. This avoids cloning one author label onto both the
-  outer component and nested `role="group"`.
+  A property-only value names the viewport and updates reactively without creating a host attribute. This avoids cloning one author label onto both the outer component and nested `role="group"`. An explicitly empty direct property remains empty; a present host attribute, including an empty one, leaves the viewport's localized purpose name intact.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the

@@ -5,6 +5,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
+import { createTextQuoteIndex, scopeFromElement, TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
 import {
   isAbortError,
   isResourceLimitError,
@@ -441,16 +442,20 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
    *  preserves today's exact body rendering. */
   @property({ type: Boolean, attribute: 'fold-quotes' }) foldQuotes = false;
   /** Shared text search and anchor-target API for message headers/body text. Searching for text
-   * inside a folded quote reveals every matching quote before navigating the active match. */
+   * inside a folded quote reveals matching quotes before navigating the active match, using the
+   * same bounded Unicode/whitespace normalization and locale matching as the shared text index. */
   override async search(query: string): Promise<number> {
-    if (this.foldQuotes && this.fetchState.kind === 'loaded' && query.trim()) {
-      const normalizedQuery = query.toLocaleLowerCase(this.effectiveLocale);
+    if (this.foldQuotes && this.fetchState.kind === 'loaded' && query.trim()
+      && query.length <= TEXT_QUOTE_LIMITS.maxQueryCodeUnits) {
+      const budget = { remainingCodeUnits: TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits };
+      const matchesQuote = (block: Element): boolean =>
+        createTextQuoteIndex(scopeFromElement(block), this.effectiveLocale).search(query, budget).length > 0;
       const { bodyHtml, bodyText } = this.fetchState.email;
       if (bodyHtml !== null) {
         const doc = parseHtmlDocument(bodyHtml, this.ownerDocument);
         const next = new Set(this.expandedHtmlQuoteIndices);
         doc?.body.querySelectorAll(QUOTE_SELECTOR).forEach((block, index) => {
-          if ((block.textContent ?? '').toLocaleLowerCase(this.effectiveLocale).includes(normalizedQuery)) {
+          if (matchesQuote(block)) {
             next.add(index);
           }
         });
@@ -464,11 +469,9 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
         }
       } else if (bodyText !== null) {
         const split = splitTrailingQuoteBlock(bodyText);
-        if (
-          split
-          && split.quoted.toLocaleLowerCase(this.effectiveLocale).includes(normalizedQuery)
-          && !this.textQuoteExpanded
-        ) {
+        const quote = this.ownerDocument.createElement('pre');
+        quote.textContent = split?.quoted ?? '';
+        if (split && !this.textQuoteExpanded && matchesQuote(quote)) {
           this.textQuoteExpanded = true;
           await this.updateComplete;
         }

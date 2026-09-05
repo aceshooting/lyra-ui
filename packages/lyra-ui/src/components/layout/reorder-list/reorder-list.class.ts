@@ -7,6 +7,7 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import {
   releaseReorderOwnerState,
+  reorderIdentityChange,
   updateReorderOwnerState,
 } from './reorder-owner.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -171,6 +172,11 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       this.revertPendingMove();
     this.syncBoundaryState();
   };
+
+  /** @internal Reconciles only a directly owned item's live identity edit. */
+  [reorderIdentityChange](item: LyraReorderItem): void {
+    if (item.parentElement === this) this.onSlotChange();
+  }
 
   private refreshItemObserver(): void {
     this.itemObserver?.disconnect();

@@ -2,7 +2,8 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
-import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { reserveOverlayOrder, type OverlayOrderReservation } from '../../../internal/overlay-order.js';
+import type { UsageBadgeOverlayHandle } from './usage-badge-overlay-runtime.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './usage-badge.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -35,6 +36,8 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilli
  * (removed in 9.0.0) selected `Intl.NumberFormat`'s `notation: 'compact'` here while meaning
  * visual density on every other component that spells it, so the name was moved to what it
  * actually does. A stale `compact` attribute is inert.
+ *
+ * Removing cost-text or summary safely omits that content; explicit empty values remain empty and later values restore it. An open tooltip participates in shared Escape ordering even while only hovered, and dismissal preserves focus elsewhere.
  *
  * @customElement lr-usage-badge
  * @slot summary - Visible summary shown when no built-in segment is set. The `summary` property is
@@ -120,7 +123,10 @@ export class LyraUsageBadge extends LyraElement {
   @state() private detailsText = '';
 
   private readonly tooltipId = nextId('usage-badge-tooltip');
-  private cleanupPositioner?: () => void;
+  private tooltipOverlay?: UsageBadgeOverlayHandle;
+  private tooltipRuntime?: typeof import('./usage-badge-overlay-runtime.js');
+  private tooltipOrder?: OverlayOrderReservation;
+  private tooltipOpening?: { readonly ready: Promise<void>; readonly cancel: () => void };
   private hovering = false;
   private focused = false;
 
@@ -149,29 +155,26 @@ export class LyraUsageBadge extends LyraElement {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('tooltipOpen')) {
-      this.cleanupPositioner?.();
-      this.cleanupPositioner = undefined;
-      if (this.tooltipOpen) {
-        const anchor = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
-        const tooltip = this.renderRoot.querySelector('[part="tooltip"]') as HTMLElement | null;
-        if (anchor && tooltip) this.cleanupPositioner = place(anchor, tooltip, { placement: 'top-start' });
+      this.tooltipOverlay?.deactivate({ restoreFocus: false });
+      this.tooltipOverlay = undefined;
+      if (this.tooltipOpen && this.isConnected) {
+        this.tooltipOverlay = this.tooltipRuntime?.activateUsageBadgeOverlay(
+          this, () => this.hideTooltip(), this.tooltipOrder,
+        );
+        this.tooltipOrder = undefined;
       }
     }
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.cleanupPositioner?.();
-    this.cleanupPositioner = undefined;
     // Reset so a reconnect (e.g. a drag-drop reparent or a list re-render that detaches and
     // reattaches this node) re-triggers `updated()`'s `tooltipOpen`-driven branch -- without
     // this, `tooltipOpen` stays `true` across the disconnect/reconnect and
     // `changed.has('tooltipOpen')` never fires again, leaving the tooltip rendered open at a
     // stale, frozen position with no live positioner attached. Mirrors `<lr-tool-call-chip>`'s
     // own disconnectedCallback.
-    this.tooltipOpen = false;
-    this.hovering = false;
-    this.focused = false;
+    this.closeTooltipLifecycle();
   }
 
   private onDetailsSlotChange = (e: Event): void => {
@@ -205,7 +208,7 @@ export class LyraUsageBadge extends LyraElement {
     return this.tokensOut != null && Number.isFinite(this.tokensOut);
   }
   private get hasCost(): boolean {
-    return this.costText.length > 0;
+    return (this.costText ?? '').length > 0;
   }
   /** `latencyMs` normalized to a finite, non-negative duration -- `undefined` while unset or
    *  non-finite (the `latency` segment/tooltip row is omitted entirely). */
@@ -221,7 +224,7 @@ export class LyraUsageBadge extends LyraElement {
     return this.hasTokensIn || this.hasTokensOut || this.hasCost || this.hasLatency;
   }
   private get hasVisibleSummary(): boolean {
-    return this.summary.length > 0 || this.hasSummarySlot;
+    return (this.summary ?? '').length > 0 || this.hasSummarySlot;
   }
   private get hasDisplayContent(): boolean {
     return this.hasVisibleContent || this.hasVisibleSummary;
@@ -248,21 +251,68 @@ export class LyraUsageBadge extends LyraElement {
     return this.localize(duration.key, undefined, { value });
   }
 
+  private loadTooltipOverlayRuntime(): Promise<typeof import('./usage-badge-overlay-runtime.js')> {
+    return import('./usage-badge-overlay-runtime.js');
+  }
+
+  protected override getUpdateComplete(): Promise<boolean> {
+    if (!this.tooltipOpening) return super.getUpdateComplete();
+    return this.waitForTooltipOpening();
+  }
+
+  private async waitForTooltipOpening(): Promise<boolean> {
+    let complete = await super.getUpdateComplete();
+    while (this.tooltipOpening) {
+      await this.tooltipOpening.ready;
+      complete = await super.getUpdateComplete();
+    }
+    return complete;
+  }
+
+  private cancelTooltipOpening(): void {
+    this.tooltipOpening?.cancel();
+    this.tooltipOpening = undefined;
+    this.tooltipOrder = undefined;
+  }
+
   private showTooltip(): void {
-    if (!this.hasInteractiveTooltip || this.tooltipOpen) return;
-    this.tooltipOpen = true;
+    if (!this.hasInteractiveTooltip || this.tooltipOpen || this.tooltipOpening || !this.isConnected) return;
+    const document = this.ownerDocument;
+    const order = reserveOverlayOrder(document);
+    if (this.tooltipRuntime) {
+      this.tooltipOrder = order;
+      this.tooltipOpen = true;
+      return;
+    }
+    let settle!: () => void;
+    const ready = new Promise<void>((resolve) => { settle = resolve; });
+    const opening = { ready, cancel: settle };
+    this.tooltipOpening = opening;
+    void this.loadTooltipOverlayRuntime().then((runtime) => {
+      if (
+        this.tooltipOpening !== opening || !this.isConnected || this.ownerDocument !== document ||
+        !this.hasInteractiveTooltip || (!this.hovering && !this.focused) ||
+        !this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.getClientRects().length
+      ) return;
+      this.tooltipRuntime = runtime;
+      this.tooltipOrder = order;
+      this.tooltipOpen = true;
+    }, () => undefined).finally(() => {
+      if (this.tooltipOpening === opening) this.tooltipOpening = undefined;
+      settle();
+    });
   }
   private hideTooltip(): void {
-    if (!this.tooltipOpen) return;
+    this.cancelTooltipOpening();
     this.tooltipOpen = false;
+    this.tooltipOverlay?.deactivate({ restoreFocus: false });
+    this.tooltipOverlay = undefined;
   }
 
   private closeTooltipLifecycle(): void {
-    this.tooltipOpen = false;
+    this.hideTooltip();
     this.hovering = false;
     this.focused = false;
-    this.cleanupPositioner?.();
-    this.cleanupPositioner = undefined;
   }
 
   private onMouseEnter = (): void => {
@@ -284,7 +334,9 @@ export class LyraUsageBadge extends LyraElement {
     this.hideTooltip();
   };
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && this.tooltipOpen) {
+    if (e.key !== 'Escape' || e.isComposing || e.keyCode === 229) return;
+    if (this.tooltipOpening) this.cancelTooltipOpening();
+    if (this.tooltipOpen && this.tooltipOverlay?.isTopmost()) {
       e.stopPropagation();
       this.hideTooltip();
     }

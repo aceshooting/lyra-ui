@@ -105,6 +105,17 @@ function isSvgElement(element: Element): boolean {
   return element.namespaceURI === 'http://www.w3.org/2000/svg';
 }
 
+function elementsIncludingTemplateContents(root: ParentNode): Element[] {
+  const elements = [...root.querySelectorAll('*')];
+  for (let index = 0; index < elements.length; index++) {
+    const element = elements[index]!;
+    if (element.localName === 'template' && 'content' in element) {
+      for (const child of (element as HTMLTemplateElement).content.querySelectorAll('*')) elements.push(child);
+    }
+  }
+  return elements;
+}
+
 /**
  * Applies the network-silent, non-interactive half of embedded-markup sanitization after the
  * required DOMPurify pass. DOMPurify remains the parser/XSS boundary; this second pass narrows
@@ -132,7 +143,7 @@ export function sanitizePassiveMarkup(
   const template = ownerDocument.createElement('template');
   template.innerHTML = purified;
 
-  for (const element of [...template.content.querySelectorAll('*')]) {
+  for (const element of elementsIncludingTemplateContents(template.content)) {
     const localName = element.localName.toLowerCase();
     if (REMOVED_ENTIRELY.has(localName)) {
       element.remove();

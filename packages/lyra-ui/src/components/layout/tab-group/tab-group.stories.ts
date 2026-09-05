@@ -522,3 +522,18 @@ export const ManualActivation: StoryObj = {
     </lr-tab-group>
   `,
 };
+
+export const ManualFocusRemoval: StoryObj = {
+  parameters: { docs: { description: { story: 'Use ArrowRight to focus the unselected second tab, then Delete to close it. Focus returns to a surviving tab while the first panel remains selected, without show/hide notifications.' } } },
+  render: () => html`<lr-tab-group activation="manual" @lr-close=${(event: Event) => {
+    const tab = event.target as HTMLElement;
+    const group = event.currentTarget as HTMLElement;
+    const name = tab.getAttribute('panel');
+    tab.remove();
+    for (const panel of group.querySelectorAll('lr-tab-panel')) {
+      if (panel.getAttribute('name') === name) panel.remove();
+    }
+  }}><lr-tab panel="a">First</lr-tab><lr-tab panel="b" closable>Close me</lr-tab><lr-tab panel="c">Third</lr-tab>
+    <lr-tab-panel name="a">First panel</lr-tab-panel><lr-tab-panel name="b">Second panel</lr-tab-panel><lr-tab-panel name="c">Third panel</lr-tab-panel>
+  </lr-tab-group>`,
+};

@@ -94,13 +94,13 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
-  [part="vote-button"]:hover {
+  [part="vote-button"]:where(:not(:disabled)):hover {
     background: var(--lr-color-brand-quiet);
   }
   /* Pressed pushes the hovered tint a further --lr-color-mix-active toward --lr-color-mix-partner,
      which follows the text colour, so it is a deeper step than hover in both themes, not a repeat.
      */
-  [part="vote-button"]:active {
+  [part="vote-button"]:where(:not(:disabled)):active {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
@@ -132,7 +132,7 @@ export const styles = css`
      answers by advancing to the next pair, so the press must land visibly; losing the hover tint
      there is the deliberate half of the trade. Mixes from --lr-compare-panel-selected-background so
      a retinted selection gets a deeper tier of itself, not the stock token. */
-  [part="vote-button"][data-selected]:active {
+  [part="vote-button"][data-selected]:where(:not(:disabled)):active {
     background: color-mix(
       in oklab,
       var(
@@ -154,6 +154,10 @@ export const styles = css`
   @container (max-inline-size: 639.98px) {
     [part="panes"] {
       flex-direction: column;
+    }
+    [part="pane-a"],
+    [part="pane-b"] {
+      flex-basis: auto;
     }
   }
 `;

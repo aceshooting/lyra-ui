@@ -113,7 +113,9 @@ export interface LyraTabGroupEventMap {
  * Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right
  * (swapped under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection
  * together; with `activation="manual"` they move focus only and Enter/Space commits, which the APG
- * requires whenever revealing a panel is expensive. Home/End jump to the first/last enabled tab,
+ * requires whenever revealing a panel is expensive. Removing a focused unselected tab silently
+ * rehomes focus to a survivor while retaining a valid selection and preserving outside focus.
+ * Home/End jump to the first/last enabled tab,
  * and a roving `tabindex` follows the focused tab. An enabled closable `<lr-tab>` adds
  * `aria-keyshortcuts="Delete"` to that same real tab button; Delete routes the close request through
  * the descriptor so `lr-close` still targets `<lr-tab>`. The visual close affordance stays
@@ -759,11 +761,19 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!changed.has('tabs') && !changed.has('active')) return;
+    // Manual activation can focus an unselected occurrence: its removal needs focus repair even
+    // while the selected tab remains valid. Inspect the old button before keyed rendering removes it.
+    const focused = activeElementIn(this.renderRoot as ShadowRoot);
+    const focusedSlot = focused?.getAttribute('part') === 'tab'
+      ? focused.getAttribute('data-slot')
+      : null;
+    if (focusedSlot !== null && !this.tabs.some((tab) => tab.slotName === focusedSlot && this.isNavigable(tab))) {
+      this.rehomeTabFocus = true;
+      this.focusedTab = this.active;
+    }
     const current = this.tabs.find((t) => t.slotName === this.active);
     if (current && this.isNavigable(current)) return;
-    this.rehomeTabFocus =
-      activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute('part') ===
-      'tab';
+    this.rehomeTabFocus = this.rehomeTabFocus || focusedSlot !== null;
     this.active = this.tabs.find((t) => this.isNavigable(t))?.slotName ?? '';
     this.focusedTab = this.active;
   }

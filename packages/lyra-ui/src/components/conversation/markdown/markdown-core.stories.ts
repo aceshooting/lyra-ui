@@ -101,7 +101,7 @@ export const InstanceParserRefresh: Story = {
           const markdown = (event.currentTarget as HTMLElement).nextElementSibling as LyraMarkdownCore;
           const parser = markdown.marked;
           if (!parser) return;
-          const originalDefaults = parser.defaults;
+          const originalDefaults = { ...parser.defaults };
           try {
             parser.use({
               hooks: {
@@ -110,7 +110,8 @@ export const InstanceParserRefresh: Story = {
             });
             markdown.renderMarkdown();
           } finally {
-            parser.defaults = originalDefaults;
+            for (const key of Object.keys(parser.defaults)) delete parser.defaults[key];
+            Object.assign(parser.defaults, originalDefaults);
           }
         }}
       >
@@ -139,6 +140,20 @@ export const TabWidth: Story = {
         content=${'```\n\tone tab\n\t\ttwo tabs\n```'}
         style="--lr-code-block-tab-size: 8"
       ></lr-markdown-core>
+    </div>
+  `,
+};
+
+/** Content removal clears the document without changing the native attribute readback. */
+export const ClearContent: Story = {
+  render: () => html`
+    <div>
+      <button type="button" @click=${(event: Event) => {
+        const markdown = (event.currentTarget as HTMLElement).nextElementSibling!;
+        if (markdown.hasAttribute('content')) markdown.removeAttribute('content');
+        else markdown.setAttribute('content', '**Restored document**');
+      }}>Clear or restore content</button>
+      <lr-markdown-core content="**Visible document**"></lr-markdown-core>
     </div>
   `,
 };

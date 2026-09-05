@@ -22,6 +22,13 @@ connect interaction. It is readonly by default; opt into editor gestures with `n
 `connectable`, and `droppable`. The component snapshots model inputs instead of retaining mutable
 caller aliases, and reports edit intent for the host to apply.
 
+Input/output handle IDs are reserved only after their complete handle record is admitted; unreadable
+optional labels cannot suppress a later valid handle with the same ID.
+
+Horizontal RTL reflects the coordinate plane while authored cards, generated `lr-flow-node` cards,
+native portable fallback cards and SVG edge labels retain readable content. Explicit physical model
+coordinates remain unchanged.
+
 Flow records and companion payloads are readonly public contracts. Consumers that need the types
 without registering a component can import them from the side-effect-free module:
 
@@ -80,7 +87,7 @@ import type {
 - `decorations: FlowRunDecorations | null = null` (attribute: false) —
   `Record<nodeOrEdgeId, FlowRunDecoration>`, where `FlowRunDecoration` has `status` plus optional
   `progress`, `durationMs`, and `detail`; assignment is detached, deeply frozen, bounded to 10,000
-  keys plus finite nested depth/entry budgets, and invalid status entries are omitted. Reassign the
+  keys plus finite nested depth/entry budgets, and invalid statuses and records with unreadable `status`, `progress`, `durationMs` or `detail` fields are omitted independently, retaining valid neighbors. Reassign the
   record after changes. Usually supplied by `lr-flow-run-status`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `viewport` (readonly getter) — a frozen `{ x, y, zoom }` snapshot

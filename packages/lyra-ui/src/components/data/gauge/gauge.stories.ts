@@ -51,3 +51,12 @@ export const AuthoredRoleAndLongText: Story = {
 export const NonzeroMin: Story = {
   render: () => html`<lr-gauge value="18" min="-20" max="40" label="Outdoor Temp"></lr-gauge>`,
 };
+
+export const LabelRemoval: Story = {
+  render: () => html`
+    <div>
+      <button type="button" @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelectorAll('lr-gauge').forEach((gauge) => gauge.removeAttribute('label'))}>Remove labels</button>
+      ${['radial', 'linear', 'ring'].map((shape) => html`<lr-gauge shape=${shape} label="CPU" value="42"></lr-gauge>`)}
+    </div>
+  `,
+};

@@ -142,3 +142,10 @@ export const ProgrammaticBarExtension: Story = {
     ></lr-sparkline>
   `,
 };
+
+export const DataRemovalUsesValues: Story = {
+  render: () => html`<div>
+    <button type="button" @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-sparkline')!.removeAttribute('data')}>Use fallback values</button>
+    <lr-sparkline label="Trend" data="1 2 3" .values=${[3, 1, 2]}></lr-sparkline>
+  </div>`,
+};

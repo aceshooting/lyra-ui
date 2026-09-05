@@ -140,3 +140,24 @@ export const Sizes: StoryObj = {
     </div>
   `,
 };
+
+export const ExternalDescription: StoryObj = {
+  render: () => html`
+    <p id="radio-guidance">Choose this option when it matches your preference.</p>
+    <lr-radio aria-describedby="radio-guidance">Preferred option</lr-radio>
+  `,
+};
+
+export const LiveCheckedDefault: StoryObj = {
+  render: () => html`
+    <form>
+      <lr-radio name="choice" value="a">Alpha</lr-radio>
+      <button type="button" @click=${(event: Event) => {
+        const radio = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-radio')!;
+        radio.checked = false;
+        radio.defaultChecked = true;
+      }}>Keep unchecked until reset</button>
+      <button type="reset">Restore default</button>
+    </form>
+  `,
+};

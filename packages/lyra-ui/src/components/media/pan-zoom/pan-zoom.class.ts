@@ -6,7 +6,6 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './pan-zoom.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -184,7 +183,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     const zoom = this.safeZoom;
     const min = this.safeMinZoom;
     const max = this.safeMaxZoom;
-    const explicitHostLabel = hostAriaLabel(this);
+    const explicitHostLabel = this.getAttribute('aria-label');
     const viewportLabel = explicitHostLabel !== null
       ? this.localize('zoomableFrameLabel')
       : this.accessibleLabel ?? this.localize('zoomableFrameLabel');

@@ -130,6 +130,9 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * shared `--lr-icon-button-size` hit target. The `l` and `xl` tiers retain their larger shared
  * control heights.
  *
+ * Removing label, hint, help-text, or error-text safely omits the content while retaining
+ * native null property readback. Explicit empty strings remain empty.
+ *
  * @customElement lr-input
  * @event input - Native-style composed event fired on every user-driven edit.
  * @event change - Native-style composed event fired at the native `change` timing.
@@ -606,7 +609,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   /**
    * Increments the value by `steps` × the effective `step`, through the native `<input>`'s own
    * `stepUp()` — so `min`/`max` clamping and decimal handling stay the platform's, not a
-   * hand-rolled reimplementation.
+   * hand-rolled reimplementation. Pending `step`, `min`, `max`, and `value` property changes
+   * apply synchronously, without waiting for a render.
    *
    * Silent, like the native method: it updates `value`, the submitted form value, and validity,
    * but emits no `input`/`change`. A stepper *button* is a user edit and emits them itself.
@@ -625,6 +629,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     if (!native || this.effectiveDisabled || this.readonly) return;
     const count = finiteCount(steps, 1);
     if (count === 0) return;
+    // Property writes can precede Lit's render. Native stepping must use those current constraints
+    // and the current live value in the same call, including removal of a previous bound.
+    native.type = this.type;
+    native.min = this.min == null ? '' : String(this.min);
+    native.max = this.max == null ? '' : String(this.max);
+    native.step = this.step == null ? '' : String(this.step);
+    native.value = this.value;
     try {
       if (direction === 'up') native.stepUp(count);
       else native.stepDown(count);
@@ -871,13 +882,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     const hasHint =
       this.slotPresence.has('hint') ||
       this.slotPresence.has('help-text') ||
-      this.hint.length > 0 ||
-      this.helpText.length > 0 ||
+      (this.hint ?? '').length > 0 ||
+      (this.helpText ?? '').length > 0 ||
       this.withHint;
     const hasError =
-      this.slotPresence.has('error') || this.errorText.length > 0;
+      this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const hasLabel =
-      this.slotPresence.has('label') || this.label.length > 0 || this.withLabel;
+      this.slotPresence.has('label') || (this.label ?? '').length > 0 || this.withLabel;
     const describedBy = [
       hasError ? 'input-error' : '',
       hasHint ? 'input-hint' : '',

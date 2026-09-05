@@ -12,7 +12,7 @@ import { styles } from './prompt-studio.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioRemoveMessage, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioPreviewLimit, LYRA_DEFAULT_promptStudioRemoveMessage, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -60,6 +60,10 @@ export interface LyraPromptStudioEventMap {
 
 type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
 
+const PREVIEW_MAX_DEPTH = 64;
+const PREVIEW_MAX_SUBSTITUTIONS = 10_000;
+const PREVIEW_MAX_TEXT_LENGTH = 1_048_576;
+
 /**
  * `<lr-prompt-studio>` — a provider-neutral prompt-development workbench for ordered role
  * messages, `{{variable}}` substitution, version selection, preview, save, and run intents.
@@ -69,7 +73,11 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * semantics. Variable rows are
  * occurrence-addressed because their names are editable and may temporarily be empty or repeated;
  * duplicate names remain independently editable while placeholder resolution uses the first one.
- * Variable values resolve recursively; undefined and cyclic placeholders remain intact.
+ * Variable values resolve recursively; undefined and cyclic placeholders remain intact within
+ * preview bounds. One preview projection allows at most 64 nested variable resolutions, 10,000
+ * placeholder substitutions, and 1,048,576 UTF-16 code units each of aggregate preview output and
+ * aggregate memoized intermediate text. A localized visible fallback replaces the preview when
+ * a limit would be exceeded; raw editor state and save/run payloads are unchanged.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -128,6 +136,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     promptStudioMessageRole: LYRA_DEFAULT_promptStudioMessageRole,
     promptStudioMessages: LYRA_DEFAULT_promptStudioMessages,
     promptStudioPreview: LYRA_DEFAULT_promptStudioPreview,
+    promptStudioPreviewLimit: LYRA_DEFAULT_promptStudioPreviewLimit,
     promptStudioRemoveMessage: LYRA_DEFAULT_promptStudioRemoveMessage,
     promptStudioRoleAssistant: LYRA_DEFAULT_promptStudioRoleAssistant,
     promptStudioRoleSystem: LYRA_DEFAULT_promptStudioRoleSystem,
@@ -354,25 +363,71 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     if (action && !action.disabled) action.focus();
   }
 
-  private resolve(content: string): string {
+  private resolvePreviews(
+    messages: readonly PromptStudioMessage[],
+    variableItems: readonly PromptStudioVariable[],
+  ): string[] | null {
     const variables = new Map<string, string>();
-    for (const variable of this.variableItems()) {
+    for (const variable of variableItems) {
       if (variable.name !== '' && !variables.has(variable.name)) variables.set(variable.name, variable.value);
     }
-    const resolved = new Map<string, string>();
-    const visiting = new Set<string>();
-    const resolveName = (name: string): string => {
-      const cached = resolved.get(name);
-      if (cached !== undefined) return cached;
-      const value = variables.get(name);
-      if (value === undefined || visiting.has(name)) return `{{${name}}}`;
-      visiting.add(name);
-      const next = value.replace(/\{\{([^{}]+)\}\}/g, (_match, nested: string) => resolveName(nested));
-      visiting.delete(name);
-      resolved.set(name, next);
-      return next;
-    };
-    return content.replace(/\{\{([^{}]+)\}\}/g, (_match, name: string) => resolveName(name));
+    let substitutions = 0;
+    let outputLength = 0;
+    let memoLength = 0;
+    const previews: string[] = [];
+
+    for (const message of messages) {
+      // Each message keeps its own cycle context, preserving literal cyclic placeholders even
+      // when different messages enter the same cycle through different variable names.
+      const resolved = new Map<string, string>();
+      const visiting = new Set<string>();
+      const resolveText = (content: string, remaining: () => number): string | null => {
+        const parts: string[] = [];
+        let length = 0;
+        let position = 0;
+        const appendLiteral = (end: number): boolean => {
+          const size = end - position;
+          if (size > remaining() - length) return false;
+          if (size > 0) parts.push(content.slice(position, end));
+          length += size;
+          return true;
+        };
+        const placeholders = /\{\{([^{}]+)\}\}/g;
+        let match: RegExpExecArray | null;
+        while ((match = placeholders.exec(content)) !== null) {
+          if (!appendLiteral(match.index) || substitutions >= PREVIEW_MAX_SUBSTITUTIONS) return null;
+          substitutions++;
+          const next = resolveName(match[1]!, match[0]);
+          // Nested resolutions can consume memo budget while this text is still being built.
+          // Check its current remainder before retaining a fragment or constructing the result.
+          if (next === null || next.length > remaining() - length) return null;
+          if (next.length > 0) parts.push(next);
+          length += next.length;
+          position = placeholders.lastIndex;
+        }
+        if (!appendLiteral(content.length)) return null;
+        return parts.join('');
+      };
+      const resolveName = (name: string, literal: string): string | null => {
+        const cached = resolved.get(name);
+        if (cached !== undefined) return cached;
+        const value = variables.get(name);
+        if (value === undefined || visiting.has(name)) return literal;
+        if (visiting.size >= PREVIEW_MAX_DEPTH) return null;
+        visiting.add(name);
+        const next = resolveText(value, () => PREVIEW_MAX_TEXT_LENGTH - memoLength);
+        visiting.delete(name);
+        if (next === null) return null;
+        memoLength += next.length;
+        resolved.set(name, next);
+        return next;
+      };
+      const preview = resolveText(message.content, () => PREVIEW_MAX_TEXT_LENGTH - outputLength);
+      if (preview === null) return null;
+      outputLength += preview.length;
+      previews.push(preview);
+    }
+    return previews;
   }
 
   // Native focus/blur events don't bubble and don't cross the shadow boundary on their own, so
@@ -466,6 +521,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     const messages = this.uniqueMessages();
     const variables = this.variableItems();
     const versions = this.uniqueVersions();
+    const previews = this.resolvePreviews(messages, variables);
     return html`
       <section part="base" aria-label=${overallSemanticLabel(this, label) ?? nothing}>
         <header part="toolbar">
@@ -554,9 +610,11 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
         </div>
         <section part="preview" aria-label=${this.localize('promptStudioPreview')}>
           <h3>${this.localize('promptStudioPreview')}</h3>
-          ${messages.map(
-            (message) => html`<article><strong>${this.roleLabel(message.role)}</strong><pre>${this.resolve(message.content)}</pre></article>`,
-          )}
+          ${previews === null
+            ? html`<p>${this.localize('promptStudioPreviewLimit')}</p>`
+            : messages.map(
+                (message, index) => html`<article><strong>${this.roleLabel(message.role)}</strong><pre>${previews[index]}</pre></article>`,
+              )}
         </section>
       </section>
     `;

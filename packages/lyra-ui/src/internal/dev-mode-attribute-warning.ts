@@ -85,6 +85,12 @@ function litDevWarnings(): Set<string> | undefined {
   return (globalThis as LitWarningGlobal).litIssuedWarnings;
 }
 
+/** Emits a development diagnostic when Lit's development signal is present. Callers retain
+ * their own bounded deduplication state when warnings belong to one document generation. */
+export function devWarn(message: string): void {
+  if (litDevWarnings()) console.warn(message);
+}
+
 /**
  * Dev-mode-only: emits `message` at most once per `key` for the page. Shares the exact gate and
  * dedupe store `warnUnknownAttributes` uses below, so a diagnostic added by a component behaves

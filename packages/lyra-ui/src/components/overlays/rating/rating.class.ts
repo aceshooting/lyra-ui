@@ -125,6 +125,8 @@ function starSolid(): SVGTemplateResult {
  * label text. A rating is a row of symbols with no field frame of its own, so a consumer wanting a
  * labeled field wraps this element in their own layout, exactly as `<lr-slider>` does.
  *
+ * Readonly transitions synchronize validity and aria-invalid in the same completed update. Form reset restores the independent default-value rather than the live value attribute.
+ *
  * @customElement lr-rating
  * @event change - Bubbling, composed native `Event` emitted when a user commits a new value,
  * immediately before `lr-change`. Programmatic writes and no-op gestures are silent.
@@ -917,7 +919,10 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // recompute from. It has to be recomputed *after* `update()` rather than in `willUpdate()`:
     // the platform reads the reflected `readonly` *attribute* when it answers
     // `internals.willValidate`, and that attribute is only current once reflection has run.
-    if (changed.has('readonly')) this.updateValidity();
+    if (changed.has('readonly')) {
+      this.updateValidity();
+      this.syncHostSemantics();
+    }
   }
 
   /** One symbol: the consumer's `getSymbol` when set, otherwise the built-in star. */

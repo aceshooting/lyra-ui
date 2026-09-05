@@ -10,7 +10,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { nextId } from '../../../internal/a11y.js';
-import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
 import { styles } from './graph-query-builder.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
@@ -266,6 +266,8 @@ export interface LyraGraphQueryBuilderEventMap {
  * The start-entity input carries native `required`, matching the aggregate builder's
  * `valueMissing` rule. Host `focus()`/`click()` reach the first rendered field, and `blur()`
  * releases whichever nested field owns deep focus.
+ * An unavailable DOM focus getter skips restoration without preventing chip removal or saved-query
+ * updates. Ordinary focused removal still follows the adjacent control and leaves outside focus alone.
  *
  * Run, save, load, and delete use the same two-phase action contract: a cancelable
  * `lr-before-query-*` request precedes any local effect, followed by a non-cancelable
@@ -282,7 +284,8 @@ export interface LyraGraphQueryBuilderEventMap {
  * @slot label - Visible label for the complete form control.
  * @slot hint - Supporting text for the complete form control.
  * @slot error - Error text for the complete form control.
- * @event lr-input - `detail: { value }` — any field changed; the full current query.
+ * @event lr-input - `detail: { value }` — any field changed; the full current query. Hop select
+ *   choices emit it once; child native/prefixed value and listbox lifecycle aliases are contained.
  * @event lr-validity-change - Frozen `detail: { valid, errors }` from effective native validity,
  *   including custom errors and validation barring; fired only on an actual change.
  * @event lr-before-query-run - Cancelable request emitted after `reportValidity()` passes, before
@@ -831,7 +834,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   }
 
   private captureChipRemovalFocus(group: 'relationship' | 'node-type', value: string, selected: readonly string[]): void {
-    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
     const expectedPart = group === 'relationship' ? 'relationship-chips' : 'node-type-chips';
     if (
       active?.localName !== 'lr-chip' ||
@@ -898,7 +901,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     super.willUpdate(changed);
     if (!this.hasUpdated) this.captureDefaultValue();
     if (!changed.has('savedQueries')) return;
-    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
     if (active?.getAttribute('part') !== 'saved-delete-button') return;
     const focusedId = active.closest<HTMLElement>('[data-query-id]')?.dataset['queryId'];
     if (!focusedId || this.savedQueries.some((item) => item.id === focusedId)) return;
@@ -974,6 +977,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   private labelForType(options: readonly GraphQueryTypeOption[], value: string): string {
     return options.find((o) => o.value === value)?.label ?? value;
+  }
+
+  private containSelectEvent(event: Event): void {
+    event.stopPropagation();
   }
 
   private renderTypeFilter(
@@ -1088,6 +1095,13 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             label=${this.localize('graphQueryMinHopsLabel')}
             .value=${String(value.minHops)}
             ?disabled=${disabled}
+            @input=${this.containSelectEvent}
+            @lr-input=${this.containSelectEvent}
+            @lr-change=${this.containSelectEvent}
+            @lr-show=${this.containSelectEvent}
+            @lr-after-show=${this.containSelectEvent}
+            @lr-hide=${this.containSelectEvent}
+            @lr-after-hide=${this.containSelectEvent}
             @change=${(e: Event) => {
               e.stopPropagation();
               this.setValue({
@@ -1104,6 +1118,13 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             .value=${String(value.maxHops)}
             error-text=${hasHopError ? this._errors['max-hops'] : ''}
             ?disabled=${disabled}
+            @input=${this.containSelectEvent}
+            @lr-input=${this.containSelectEvent}
+            @lr-change=${this.containSelectEvent}
+            @lr-show=${this.containSelectEvent}
+            @lr-after-show=${this.containSelectEvent}
+            @lr-hide=${this.containSelectEvent}
+            @lr-after-hide=${this.containSelectEvent}
             @change=${(e: Event) => {
               e.stopPropagation();
               this.setValue({

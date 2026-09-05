@@ -809,7 +809,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   }
 
   private get hasVisibleLabel(): boolean {
-    return this.label.length > 0 || this.slotPresence.has('label');
+    return (this.label ?? '').length > 0 || this.slotPresence.has('label');
   }
 
   /** `part="form-control-label"` — see `label`'s doc comment for host `aria-label` precedence. */
@@ -837,8 +837,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this.value.length > 0;
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.slotPresence.has('hint') || this.hint.length > 0;
-    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
+    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
+    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
       .filter(Boolean)
       .join(' ');
@@ -879,8 +879,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.slotPresence.has('hint') || this.hint.length > 0;
-    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
+    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
+    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
       .filter(Boolean)
       .join(' ');

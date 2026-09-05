@@ -21,6 +21,15 @@ opens a popover holding a saturation/brightness grid, a hue slider, an optional 
 field accepting any parseable CSS colour, an optional predefined palette, and — where the browser
 supports it — a screen eyedropper.
 
+Host `aria-describedby` references resolve in the host's root and precede the trigger's local error,
+hint and current-value guidance. Same-ID target replacement, removal, reinsertion, reconnection and
+document adoption keep those relationships current. Inline mode has no trigger.
+
+Own or fieldset disablement discards an unfinished native text draft without committing it and
+blocks palette/format actions immediately, including before disabled rendering settles. A valid
+enabled draft still commits on normal blur or Enter. Format changes retain their existing
+programmatic event silence. Pointer and eyedropper cancellation behavior remains unchanged.
+
 **Rewritten in 8.0.0.** It used to wrap a bare native `<input type="color">`; it is now a real
 picker built from the pieces above. Two consequences for existing code:
 

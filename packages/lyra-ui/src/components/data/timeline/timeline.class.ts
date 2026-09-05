@@ -191,7 +191,9 @@ function itemEpochMs(element: Element): number | null {
  * @cssprop [--lr-timeline-time-extent=var(--lr-size-20rem)] - Distance the `scale="time"` axis
  *   distributes items along: `block-size` when vertical, `inline-size` when horizontal. Time-scaled
  *   items are absolutely positioned, and a percentage offset against an auto-sized track resolves
- *   to zero, so the axis needs a definite extent. Ignored in the default `scale="flow"`.
+ *   to zero, so the axis needs a definite extent. Horizontal overlap and stack modes measure
+ *   actual item/lane height independently and update it when content changes. Ignored in the
+ *   default `scale="flow"`.
  * @cssprop [--lr-scroll-fade-size=2rem] - Inline size of each edge fade while a
  *   horizontal timeline overflows. Forced-colors mode disables the masks while retaining native
  *   scrolling.
@@ -328,6 +330,8 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   private readonly timestampObservedItems = new Set<LyraTimelineItem>();
   private clusterMeasurementFrame?: number;
   private clusterMeasurementView?: Window;
+  private timeExtentFrame?: number;
+  private timeExtentView?: Window;
   private focusRepairGeneration = 0;
 
   /** Gates the horizontal [part='base'] edge fade on the strip genuinely overflowing, with
@@ -341,6 +345,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     this,
     () => this.renderRoot.querySelector('[part="base"]'),
     () => {
+      this.scheduleTimeExtentMeasurement();
       if (this.scale === 'time' && this.collision === 'cluster') {
         this.scheduleClusterMeasurement();
       }
@@ -359,6 +364,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   override disconnectedCallback(): void {
     this.cancelClusterMeasurement();
+    this.cancelTimeExtentMeasurement();
     this.focusRepairGeneration += 1;
     this.restoreClusterPresentation();
     this.restoreClusterVisibility();
@@ -401,6 +407,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     // join that observer because their public size token can change without the fixed time axis's
     // own border box changing; their footprint directly controls collision membership.
     this.scrollOverflow.observeExtra(this.timelineItems());
+    this.scheduleTimeExtentMeasurement();
     if (changed.has('orientation') && this.getAttribute('orientation') !== this.orientation) {
       this.setAttribute('orientation', this.orientation);
     }
@@ -524,6 +531,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
    * and cluster visibility marker are presentation-only and are removed when their modes end.
    */
   private applyTimeScale(): void {
+    this.scheduleTimeExtentMeasurement();
     const items = this.timelineItems();
     this.syncTimestampObservers(items);
     if (this.scale !== 'time') {
@@ -678,6 +686,46 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       TIMELINE_COLLISION_THRESHOLD,
       markerExtent / axisExtent
     );
+  }
+
+  /** Absolute time items do not contribute intrinsic height. Measure their layout boxes and
+   * lane offsets after layout, sharing the existing item ResizeObserver for later content changes. */
+  private scheduleTimeExtentMeasurement(): void {
+    const view = this.ownerDocument?.defaultView;
+    if (!view) return;
+    if (this.timeExtentFrame !== undefined && this.timeExtentView === view) return;
+    this.cancelTimeExtentMeasurement();
+    this.timeExtentView = view;
+    this.timeExtentFrame = view.requestAnimationFrame(() => {
+      this.timeExtentFrame = undefined;
+      this.timeExtentView = undefined;
+      if (!this.isConnected || this.ownerDocument.defaultView !== view) return;
+      const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+      if (!base) return;
+      if (this.scale !== 'time' || this.orientation !== 'horizontal' || this.collision === 'cluster') {
+        base.style.removeProperty('--_lr-timeline-content-height');
+        return;
+      }
+      let extent = 0;
+      for (const item of this.timelineItems()) {
+        if (!item.getClientRects().length) continue;
+        // Integer layout APIs avoid applying author transforms twice; one pixel covers their
+        // rounding. Include native horizontal scrollbar space so clientHeight covers every item.
+        extent = Math.max(extent, item.offsetTop + item.offsetHeight + 1);
+      }
+      const height = `${extent + Math.max(0, base.offsetHeight - base.clientHeight)}px`;
+      if (base.style.getPropertyValue('--_lr-timeline-content-height') !== height) {
+        base.style.setProperty('--_lr-timeline-content-height', height);
+      }
+    });
+  }
+
+  private cancelTimeExtentMeasurement(): void {
+    if (this.timeExtentFrame !== undefined && this.timeExtentView) {
+      this.timeExtentView.cancelAnimationFrame(this.timeExtentFrame);
+    }
+    this.timeExtentFrame = undefined;
+    this.timeExtentView = undefined;
   }
 
   /** Coalesces ResizeObserver-driven membership writes into the next owner-realm frame. Updating

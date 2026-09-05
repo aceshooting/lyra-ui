@@ -23,7 +23,13 @@ export const Single: Story = {
 };
 
 export const Range: Story = {
-  render: () => html`<lr-date-picker mode="range" months="2"></lr-date-picker>`,
+  render: () => html`<lr-date-picker
+        mode="range"
+        months="2"
+        min="2026-07-01"
+        max="2026-07-31"
+        .presets=${[{ label: 'A full month with a long descriptive range label' }, { label: 'LongUnbrokenCalendarPresetLabel'.repeat(6) }]}
+      ></lr-date-picker>`,
 };
 
 export const ControlledSelection: Story = {
@@ -298,5 +304,32 @@ export const RangePresets: Story = {
         { label: 'This month', start: '2026-08-01', end: '2026-08-31' },
       ]}
     ></lr-date-picker>
+  `,
+};
+
+/** Accepted shortcuts obey the same endpoint and inclusive-length constraints as manual ranges. */
+export const ConstrainedRangePresets: Story = {
+  render: () => html`
+    <lr-date-picker
+      aria-label="Departure window"
+      mode="range"
+      min="2026-07-10"
+      max="2026-07-20"
+      min-range="3"
+      max-range="7"
+      disabled-dates="2026-07-13"
+      .presets=${[
+        { label: 'Three days', start: '2026-07-15', end: '2026-07-17' },
+        { label: 'Unavailable endpoint', start: '2026-07-13', end: '2026-07-17' },
+        { label: 'Below minimum length', start: '2026-07-15', end: '2026-07-15' },
+      ]}
+    ></lr-date-picker>
+  `,
+};
+
+export const SupportedYearBoundaries: Story = {
+  render: () => html`
+    <lr-date-picker aria-label="Earliest supported year" value="0000-01-01"></lr-date-picker>
+    <lr-date-picker aria-label="Latest supported year" value="9999-12-31"></lr-date-picker>
   `,
 };

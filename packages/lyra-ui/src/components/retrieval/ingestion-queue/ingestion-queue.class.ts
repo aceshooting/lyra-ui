@@ -202,6 +202,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * rendering, or actions. The first item for an id wins. Missing and unrecognized runtime `stage`
  * values render as a localized, neutral, inert unknown state so a newer backend stage never
  * becomes a blank or misleadingly actionable row.
+ * Nonstring failure details use the localized failed-stage label before rendering and fresh
+ * failure announcements. Omitted details stay omitted; historical failures remain silent on mount.
  *
  * @customElement lr-ingestion-queue
  * @event lr-retry - A row's retry affordance was activated (only rendered for `stage="failed"`
@@ -324,6 +326,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
           })
         : [],
       (item) => item.id
+    ).map((item) =>
+      item.error == null || typeof item.error === 'string'
+        ? item
+        : { ...item, error: this.localize('ingestionStageFailed') }
     );
   }
 

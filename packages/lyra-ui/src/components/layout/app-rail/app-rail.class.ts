@@ -310,7 +310,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
    *  `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` to persist the fields selected by
    *  `persist`; otherwise listen for `lr-rail-resize` and persist its committed `widthPx` yourself.
-   *  Call `preventDefault()` on `lr-rail-resize-request` to keep the current width. `false` (the
+   *  Call `preventDefault()` on `lr-rail-resize-request` to keep the current width. A request
+   *  listener that disables resizing, leaves full mode, or disconnects the rail also cancels the
+   *  pending proposal without overwriting listener state. `false` (the
    *  default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token exactly
    *  as before this property existed. */
   @property({ type: Boolean, reflect: true }) resizable = false;
@@ -886,8 +888,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** Emits the cancelable proposal before committing, so a vetoed gesture never mutates width or
    *  triggers the existing post-commit resize notification. */
   private requestRailResize(next: number, commit = true): boolean {
+    if (!this.resizable || this._mode !== 'full' || !this.isConnected) return false;
     if (next === this.effectiveRailWidthPx) return false;
     const event = this.emit('lr-rail-resize-request', { widthPx: next }, { cancelable: true });
+    if (!this.resizable || this._mode !== 'full' || !this.isConnected) {
+      this.endResizerGesture();
+      return false;
+    }
     if (event.defaultPrevented) return false;
     this.railWidthPx = next;
     if (commit) this.emit('lr-rail-resize', { widthPx: next });

@@ -3,7 +3,7 @@ import { html } from 'lit';
 import '../../data/flow-canvas/flow-canvas.js';
 import './node-palette.js';
 import type { LyraPaletteItem } from './node-palette.js';
-import type { FlowNode } from '../../data/flow-canvas/flow-canvas.js';
+import type { FlowNode, LyraFlowCanvas } from '../../data/flow-canvas/flow-canvas.js';
 
 const items: LyraPaletteItem[] = [
   { type: 'http-request', label: 'HTTP Request', category: 'Data', description: 'Call an external API', keywords: ['fetch', 'api'] },
@@ -61,12 +61,16 @@ export const Reorderable: Story = {
   },
 };
 
+/** Each placement commits a new public canvas nodes array; the canvas renders that controlled model. */
 export const WithCanvas: Story = {
   render: () => {
     let nodes: FlowNode[] = [];
     const onPlace = (e: Event) => {
       const type = (e as CustomEvent<{ type: string }>).detail.type;
       nodes = [...nodes, { id: `${type}-${nodes.length}`, type }];
+      const palette = e.currentTarget as HTMLElement;
+      const canvas = palette.parentElement?.nextElementSibling as LyraFlowCanvas | null;
+      if (canvas) canvas.nodes = nodes;
     };
     return html`
       <div style="display:flex;height:20rem;gap:1rem">

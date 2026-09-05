@@ -1,6 +1,7 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
@@ -702,7 +703,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
         <lr-checkbox
           part="tool-checkbox"
           value=${tool.id}
-          ?checked=${selectedIds.has(tool.id)}
+          .checked=${live(selectedIds.has(tool.id))}
           ?disabled=${rowDisabled}
           @input=${this.stopNestedControlEvent}
           @lr-input=${this.stopNestedControlEvent}
@@ -753,7 +754,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     const selectedIds = new Set(selectedToolIds);
     const hasTools = tools.length > 0;
     const label = this.label === undefined ? this.localize('selectTools') : this.label;
-    const searchPlaceholder = this.searchPlaceholder === undefined
+    const searchPlaceholder = this.searchPlaceholder == null
       ? this.localize('searchToolsPlaceholder')
       : this.searchPlaceholder;
     const searchAccessibleName = searchPlaceholder.trim().length > 0
@@ -811,7 +812,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
         <div part="defaults-row">
           <lr-switch
             part="defaults-toggle"
-            ?checked=${this.useDefaults}
+            .checked=${live(this.useDefaults)}
             @input=${this.stopNestedControlEvent}
             @lr-input=${this.stopNestedControlEvent}
             @change=${this.stopNestedControlEvent}

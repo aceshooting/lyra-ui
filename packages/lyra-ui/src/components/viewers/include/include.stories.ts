@@ -86,3 +86,12 @@ export const Narrow320: Story = {
     </div>
   `,
 };
+
+
+export const NestedRemoteTemplate: Story = {
+  parameters: { docs: { description: { story: 'Remote fragment selection can reach an ordinary section inside nested templates. Passive text survives; presentation hooks and controls are removed before caching or insertion, and permitted local links are rebased.' } } },
+  render: () => {
+    const markup = '<main><template><template><section id="nested"><h2 id="title">Nested summary</h2><p style="color:blue" part="sample">Passive text remains.</p><form><span>Form text remains.</span><input type="hidden"></form><a href="#title">Summary heading</a></section></template></template></main>';
+    return html`<lr-include src=${`data:text/html,${encodeURIComponent(markup)}#nested`}></lr-include>`;
+  },
+};

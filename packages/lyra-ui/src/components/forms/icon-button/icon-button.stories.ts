@@ -1,6 +1,27 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './icon-button.js'; import '../button/button.js'; import '../../media/flag/flag-peer.js';
 const meta: Meta = { title: 'Icon Button', component: 'lr-icon-button', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
 export const Actions: Story = { render: () => html`<div style="display:flex;gap:0.5rem"><lr-icon-button icon="search" aria-label="Search"></lr-icon-button><lr-icon-button icon="close" aria-label="Close"></lr-icon-button></div>` };
+export const LiveDescription: Story = {
+  parameters: {
+    docs: { description: { story: 'External description targets stay current when their source element is replaced, removed or reinserted, including native link mode.' } },
+  },
+  render: () => html`
+    <div>
+      <p id="icon-button-live-guidance">Searches the current collection.</p>
+      <lr-icon-button icon="search" label="Search" aria-describedby="icon-button-live-guidance"></lr-icon-button>
+      <button type="button" @click=${(event: Event) => {
+        const source = (event.currentTarget as HTMLElement).parentElement?.querySelector('#icon-button-live-guidance');
+        if (source) {
+          const replacement = source.ownerDocument.createElement('p');
+          replacement.id = source.id;
+          replacement.textContent = 'Searches the updated collection.';
+          source.replaceWith(replacement);
+        }
+      }}>Replace description</button>
+    </div>
+  `,
+};
+
 export const BorderedTinted: Story = {
   name: 'Bordered and tinted',
   render: () => html`

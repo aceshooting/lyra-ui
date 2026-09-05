@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets against the measured pre-8.0.0 baseline. Machine-consumed editor and design-token JSON is deterministically compact; emitted declaration, CSS, JavaScript, and public-CLI whitespace is compacted without removing JSDoc, type text, public paths, or readable runtime names. That brings unpacked bytes below the approved 25% reduction target while preserving every published docs/editor/CEM/declaration path. Packed bytes use the explicit required-artifact infeasibility exception documented below: a deliberately favorable probe containing all required consumer docs/editor/CEM assets plus fully identifier-minified runtime JavaScript, but omitting every declaration, CSS file, and other required runtime artifact, still packs to 6,088,928 bytes -- 216,583 bytes above the mathematical 25% target of 5,872,345 before the omitted required artifacts are restored. Initial authored documentation corrections and their canonical required-public-asset regeneration added 3,688 packed bytes and 14,084 unpacked bytes to the prior reviewed complete package, including the 14,080-byte llms-full.txt growth, producing a 6,929,625-byte reviewed measurement. Later integrated generated output consumed part of that headroom. The final manifest-driven IDL-default documentation sweep adds 4,394 required unpacked bytes across llms-full.txt and 17 self-contained component references without adding package files. Exact Node 22.23.2/npm 10.9.8 packs move from 6,932,102 packed / 28,851,327 unpacked bytes at the parent commit to 6,933,420 packed / 28,855,721 unpacked bytes now. The complete required package is therefore re-reviewed at 6,933,420 packed bytes; its 6,936,335-byte ceiling retains exactly 2,915 bytes (0.042%) of tool/version headroom, and validation rejects headroom above 0.5%. The file ceiling is the prior 2,500-artifact base plus two emitted files for each of 285 stable lr-* alias entries, the measured 82-file entrypoint remainder, and seven non-alias artifacts of next-component scaffold headroom; incrementing the stable alias count budgets that component's two alias files separately. Source/map rejection remains independent. The 14.0.0 library-wide correctness/accessibility/hardening pass grows emitted runtime JavaScript by about 254 KB unpacked (bounded projections, descriptor-safe boundaries, owner-realm lifecycle guards across the component families) plus about 100 KB of manifest, editor-data, and llms documentation for the same surfaces; in the same change the published JavaScript compaction switched esbuild to the utf8 charset, so the translation catalogs ship their characters instead of six-byte escapes, recovering about 300 KB unpacked. Exact Node 22.23.2 packs of the complete required package now measure 6,989,321 packed / 28,935,133 unpacked bytes: 24.9% below the unpacked baseline, 52,570 bytes past the mathematical 25% target of 28,882,563 with every published docs/editor/CEM/declaration path retained, so unpacked bytes now carry the same measured required-artifact exception as packed bytes. Both ceilings keep 0.5%-bounded headroom (34,000 packed / 140,000 unpacked bytes) sized for the release commit's CHANGELOG and package-metadata growth and tool/version variance; validation still rejects headroom above 0.5%, an exception whose reviewed measurement does not exceed the target, and any ceiling at or above the pre-8 baseline.",
+  "$comment": "Hard npm-tarball budgets against the fixed pre-8.0.0 baseline. Machine-consumed editor and design-token JSON, emitted JavaScript, CSS, declarations, and public CLI whitespace are compacted while retaining public paths, type text, declaration JSDoc, and readable runtime names. Both byte ceilings use the existing measured required-public-artifact exception; neither claims the mathematical 25% target was met. The favorable incomplete-package probe retained required docs/editor/CEM assets plus fully identifier-minified runtime JavaScript but omitted declarations, CSS, and other required runtime artifacts; it still packed to 6,088,928 bytes, above the 5,872,345-byte packed target. The complete 14.1.0 package measured with Node 22.23.2/npm 10.9.8 contains 7,114,110 packed bytes and 29,347,941 unpacked bytes, reductions of 9.1% and 23.8% from the fixed baseline. Against the same-tool repack of published 14.0.0, required docs/editor/CEM/CHANGELOG and other text grow by 299,844 unpacked bytes and runtime/declarations by 99,302 bytes, with every prior public path retained. The 12 added files are JavaScript/declaration pairs for native descriptions, registry ownership, reactive property writes, overlay ordering, the deferred usage overlay runtime, and native SVG titles. Byte ceilings retain the existing 34,000 packed / 140,000 unpacked headroom bytes, each below 0.5%, and equal the exact reviewed measurement plus that allowance. The file ceiling is 2,500 base artifacts + 285 stable aliases times 2 files + 94 measured non-alias remainder + 7 next-component files = 3,171. The positive scaffold reserve remains available. Fixed targets/baselines, the measured exception reason, exact ceiling equality, the 0.5% headroom bound, and source/map/test/fixture/story rejection remain independently enforced.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,7 +10,7 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 6989321,
+    "reviewedMeasurementBytes": 7114110,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928
@@ -18,7 +18,7 @@
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 28935133,
+    "reviewedMeasurementBytes": 29347941,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563
   },
@@ -26,13 +26,13 @@
     "baseArtifactCeiling": 2500,
     "stableTagAliasCount": 285,
     "emittedFilesPerAlias": 2,
-    "measuredEntrypointRemainder": 82,
+    "measuredEntrypointRemainder": 94,
     "nextComponentArtifactHeadroom": 7,
-    "entrypointHeadroom": 89
+    "entrypointHeadroom": 101
   },
   "maximum": {
-    "packedBytes": 7023321,
-    "unpackedBytes": 29075133,
-    "fileCount": 3159
+    "packedBytes": 7148110,
+    "unpackedBytes": 29487941,
+    "fileCount": 3171
   }
 }

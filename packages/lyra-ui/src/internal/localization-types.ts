@@ -1135,6 +1135,7 @@ export type LyraMessageKey =
   | 'promptStudioVariables'
   | 'promptStudioVersions'
   | 'promptStudioPreview'
+  | 'promptStudioPreviewLimit'
   | 'promptStudioRun'
   | 'promptStudioSave'
   | 'promptStudioAddMessage'

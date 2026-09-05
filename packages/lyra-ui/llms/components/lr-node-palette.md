@@ -22,6 +22,9 @@ at `lr-node-add`/`lr-palette-place`; the host mutates `nodes`. Fully decoupled f
 `lr-flow-canvas` (no `for` resolution, unlike the other three companions) — it only needs to agree
 with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
 
+For `lr-palette-place`, create the node and assign the updated array to the target canvas's public
+`nodes` property. Updating a captured local array alone does not update an already rendered canvas.
+
 **Properties:**
 
 - `items: LyraPaletteItem[] = []` (attribute: false) — `LyraPaletteItem { type: string; label: string;

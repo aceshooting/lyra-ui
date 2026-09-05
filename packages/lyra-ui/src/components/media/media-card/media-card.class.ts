@@ -3,7 +3,6 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 export type { LyraFrame } from '../../../internal/variants.js';
 import { expandIcon, fileIcon } from '../../../internal/icons.js';
@@ -175,7 +174,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   /** Explicit format dispatch. Leave unset to auto-detect from `mime-type`. */
   @property({ reflect: true }) kind?: LyraMediaCardKind;
 
-  /** Drives auto-detection when `kind` is unset. */
+  /** Drives auto-detection when `kind` is unset. Attribute removal is consumed as an absent hint. */
   @property({ attribute: 'mime-type' }) mimeType = '';
 
   /** Shown in the file-chip fallback, used as the download link's suggested
@@ -211,7 +210,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   /** Effective kind used for rendering — `kind` if explicitly set,
    *  otherwise detected from `mime-type`. */
   private get resolvedKind(): LyraMediaCardKind {
-    return this.kind ?? detectKind(this.mimeType);
+    return this.kind ?? detectKind(this.mimeType ?? '');
   }
 
   private get displayFilename(): string {
@@ -221,7 +220,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   /** Accessible name for the card's own actionable element (`base` or, for
    *  video, `open-button`) — always phrased as the action it performs. */
   private get actionLabel(): string {
-    const hostLabel = hostAriaLabel(this);
+    const hostLabel = this.getAttribute('aria-label');
     // A present host label already controls the component itself. Keep the nested action's
     // purpose-specific generated name instead of cloning one label onto two semantic owners; an
     // explicitly unnamed host does not make its still-interactive nested button/link unnamed.

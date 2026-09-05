@@ -3916,6 +3916,7 @@ export type LyraEntityCardVueProps = LyraVueCustomElement<
   | '--lr-entity-card-compact-gap'
   | '--lr-entity-card-compact-padding',
   {
+    'aria-level'?: LyraAttributeValue<string | number | null>;
     'community-label'?: LyraEntityCard['communityLabel'];
     'show-focus-button'?: LyraEntityCard['showFocusButton'];
   }

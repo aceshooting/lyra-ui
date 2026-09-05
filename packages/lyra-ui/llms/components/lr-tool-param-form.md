@@ -24,6 +24,10 @@ can name the form-associated host. A non-empty host `aria-label` remains on the 
 aggregate semantic owner, so `base` omits its duplicate role/name. The individual generated fields
 keep their own purpose-specific names in every case.
 
+Choosing Boolean Unset keeps an explicit `undefined` value when a schema default exists; deleting
+that key or replacing the value with an absent key restores default materialization. Without a
+schema default, Unset removes the key.
+
 **Supported schema subset:** a _flat_ object whose properties use one primitive `type`
 (`'string'`, `'number'`, `'integer'`, or `'boolean'`), `required` property presence, string `enum`,
 primitive `const`, and the `title`/`description`/`default` annotations. Nested objects, arrays, type

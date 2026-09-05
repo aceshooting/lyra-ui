@@ -20,6 +20,9 @@ The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` co
 axis, one row per span in start order, status-toned bars (Langfuse timeline / Temporal
 event-history style).
 
+Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+surrounding whitespace. The first valid admitted duplicate continues to win.
+
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — `LyraSpan { id: string; parentId?:
 string; name: string; kind: 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
 startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied';

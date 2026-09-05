@@ -18,6 +18,15 @@
 
 A form-associated single-choice control. Use it alone or inside `lr-radio-group`.
 
+An explicit live `checked` assignment marks the state dirty even if its boolean value is unchanged.
+For example, assigning `checked = false` to an already-unchecked radio prevents a later
+`defaultChecked = true` from selecting it until form reset. Pristine default propagation and
+owning-group normalization retain their existing behavior.
+
+Host `aria-describedby` references resolve onto the internal `role="radio"`, tracking unresolved
+IDs, target replacement/removal/reinsertion, reconnect, and document adoption. The same behavior
+applies to the button appearance of `lr-radio`.
+
 **Properties:** live, non-reflecting `checked`; reflected `defaultChecked` (attribute `checked`);
 reflected `customError: string | null` (attribute `custom-error`); `disabled`, `required`, `name`,
 and `value`. A selected standalone radio submits its value through `ElementInternals`.

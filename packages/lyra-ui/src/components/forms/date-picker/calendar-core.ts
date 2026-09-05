@@ -74,8 +74,9 @@ export function parseISO(s: string): Date | null {
   return d;
 }
 
-/** Format a Date as local `YYYY-MM-DD`. */
+/** Format a supported Date as local `YYYY-MM-DD`, or an empty string outside years 0000–9999. */
 export function formatISO(d: Date): string {
+  if (!Number.isFinite(d.getTime()) || d.getFullYear() < 0 || d.getFullYear() > 9999) return '';
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${String(d.getFullYear()).padStart(4, '0')}-${mm}-${dd}`;

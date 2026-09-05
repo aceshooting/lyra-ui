@@ -142,7 +142,8 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   /** Provenance model whose entity, relationship, community, and chunk sections are rendered. */
   @property({ attribute: false }) provenance: Readonly<LyraProvenance> | null =
     null;
-  /** `lr-graph` `nodeTypes` pass-through; resolves each `entity.type` for the entity chips' `typeLabel`. */
+  /** `lr-graph` `nodeTypes` pass-through; resolves each `entity.type` for the entity chips' `typeLabel`.
+   *  Malformed type rows are ignored so later valid matching records remain available. */
   @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Score boundaries forwarded to the composed chunk inspector. */
   @property({ attribute: false }) thresholds: LyraScoreThresholds = {
@@ -259,7 +260,8 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           html`<div part="entity-row" class="entity-row">
             ${entities.map((entity) => {
               const typeLabel =
-                this.types.find((t) => t.id === entity.type)?.label ??
+                firstByRetrievalIdentity(this.types, (type) => type?.id)
+                  .find((type) => type.id === entity.type)?.label ??
                 entity.type ??
                 '';
               return html`<lr-entity-chip

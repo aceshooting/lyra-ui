@@ -160,7 +160,9 @@ function elementWithId(root: ParentNode, id: string): Element | null {
  * A `src` beginning with `#` clones the matching same-page element's children
  * without fetching. A remote URL may carry the same kind of fragment; the
  * fragmentless response is byte-capped and sanitized before the target is
- * selected. Cloned ids are rebased per instance so repeated includes do not
+ * selected. The passive profile covers nested template contents before cache retention as well
+ * as live insertion; template text and supported fragment selection remain available.
+ * Cloned ids are rebased per instance so repeated includes do not
  * introduce duplicate document ids.
  *
  * `mode` deliberately defaults to `'same-origin'` rather than the `'cors'`

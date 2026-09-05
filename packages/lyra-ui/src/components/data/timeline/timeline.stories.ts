@@ -164,3 +164,17 @@ export const NarrowLongContent: Story = {
       `;
     }),
 };
+
+export const HorizontalTimeContentHeight: Story = {
+  render: () => html`<div>
+    <button type="button" @click=${(event: Event) => {
+      const content = (event.currentTarget as HTMLElement).parentElement!.querySelector<HTMLElement>('[data-expandable]')!;
+      content.textContent = content.textContent!.includes('Additional') ? 'Review' : 'Review: Additional details about the review, decisions, and follow-up work.';
+    }}>Toggle event details</button>
+    <lr-timeline orientation="horizontal" scale="time" collision="stack" aria-label="Project history">
+      <lr-timeline-item .timestamp=${new Date('2024-01-01T00:00:00Z')}>Created</lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2024-01-01T00:00:00Z')}><div data-expandable style="max-inline-size: var(--lr-size-8rem)">Review</div></lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2025-01-01T00:00:00Z')}>Completed</lr-timeline-item>
+    </lr-timeline>
+  </div>`,
+};

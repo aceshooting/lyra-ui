@@ -21,6 +21,9 @@ A throttled screen-reader announcement helper, split into a DOM-free coalescing 
 and a real custom element that composes both. The two helpers are public — part of the curated,
 semver-covered `utilities/` surface documented in `llms/shared.md`, not internals:
 
+The Basic example’s controls announce through its sibling live region; both first and repeated
+messages appear in the visible log and the light-DOM announcement sink.
+
 ```ts
 import {
   Announcer,

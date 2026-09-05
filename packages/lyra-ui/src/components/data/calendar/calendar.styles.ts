@@ -67,13 +67,17 @@ export const styles = css`
      -- so pointer feedback is a background-IMAGE overlay. It composites over whatever fill the
      chip carries, including the pure white or pure black that the filter: brightness() it
      replaces left unchanged, and paints under the label instead of recolouring it. */
-  [part='event']:hover {
+  [part='agenda-event']:hover { background: var(--lr-calendar-agenda-event-hover-bg, var(--_lr-calendar-agenda-event-background, var(--lr-color-brand-quiet))); }
+  [part='agenda-event']:active { background: var(--lr-calendar-agenda-event-active-bg, var(--_lr-calendar-agenda-event-background, color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)))); }
+  [part='event']:hover,
+  [part='agenda-event']:hover {
     background-image: linear-gradient(
       color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
       color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
     );
   }
-  [part='event']:active {
+  [part='event']:active,
+  [part='agenda-event']:active {
     background-image: linear-gradient(
       color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
       color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
@@ -85,8 +89,6 @@ export const styles = css`
   }
   [part='agenda'] { display: grid; gap: var(--lr-space-s); }
   [part='agenda-event'] { padding: var(--lr-space-s); border: 0; border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--_lr-calendar-agenda-event-background, var(--lr-color-surface)); color: var(--_lr-calendar-agenda-event-foreground, var(--lr-color-text)); font: inherit; text-align: start; cursor: pointer; }
-  [part='agenda-event']:hover { background: var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)); }
-  [part='agenda-event']:active { background: var(--lr-calendar-agenda-event-active-bg, color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
   @container (max-inline-size: 28rem) { [part='day'] { min-block-size: var(--lr-calendar-day-min-block-size-narrow, var(--lr-size-4rem)); } [part='event'] { font-size: var(--lr-font-size-xs); } }
   :host(:dir(rtl)) [part='nav-glyph'] { transform: scaleX(-1); }
 

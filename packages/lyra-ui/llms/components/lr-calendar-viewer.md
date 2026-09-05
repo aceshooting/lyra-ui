@@ -21,6 +21,10 @@ plain text, including its title, start/end time, location, and description. RFC 
 remain all-day dates rather than fabricated midnight times, and an all-day `DTEND` is displayed as
 the exclusive boundary it represents (14–17 renders as 14–16). No HTML is injected.
 
+Valid early all-day dates, including years `0001`, `0099`, and `0100`, retain their UTC calendar
+year when parsed through `ical.js`; the exclusive `DTEND` display rule remains unchanged. The peer
+may normalize malformed raw date fields before Lyra receives them.
+
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes

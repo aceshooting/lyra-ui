@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "../../forms/input/input.js";
 import { tag } from "../../../internal/prefix.js";
 import "./widget-renderer.js";
-import { createWidgetDocument, type LyraWidgetNode } from "./resolve.js";
+import { createWidgetDocument, type LyraWidgetNode, type LyraWidgetDocument } from "./resolve.js";
 import { createWidgetTypeRegistry } from "./registry.js";
 import type { LyraWidgetRenderer } from "./widget-renderer.js";
 
@@ -103,10 +103,10 @@ export const MalformedTreeFailsClosed: Story = {
           const renderer =
             wrapper?.querySelector<LyraWidgetRenderer>("lr-widget-renderer");
           if (renderer)
-            renderer.document = createWidgetDocument({
-              type: "row",
-              children: [null],
-            } as unknown as LyraWidgetNode);
+            renderer.document = {
+              version: '2',
+              root: { type: 'row', children: [null] },
+            } as unknown as LyraWidgetDocument;
         }}
       >
         Stream malformed tree

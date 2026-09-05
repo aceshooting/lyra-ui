@@ -2,7 +2,7 @@
   "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
-    "lyraVersion": "14.0.0",
+    "lyraVersion": "14.1.0",
     "webawesome": {
       "version": "3.11.0",
       "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf"
@@ -24670,6 +24670,15 @@
             ]
           },
           {
+            "name": "formResetCallback",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "formStateRestoreCallback",
             "overloads": [
               {
@@ -45083,6 +45092,15 @@
             ]
           },
           {
+            "name": "formResetCallback",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "formStateRestoreCallback",
             "overloads": [
               {
@@ -45443,6 +45461,15 @@
       "counterparts": [],
       "surface": {
         "attributes": [
+          {
+            "name": "aria-level",
+            "property": "aria-level",
+            "type": "string | number | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "community-label",
             "property": "communityLabel",

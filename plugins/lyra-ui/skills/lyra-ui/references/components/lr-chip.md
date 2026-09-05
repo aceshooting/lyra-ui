@@ -24,6 +24,9 @@ clicking its remove (×) button only fires `lr-remove` — the chip never remove
 on its own interaction, the same contract `<lr-attachment-chip>`/`<lr-conversation-item>`
 already follow.
 
+Collapsed groups reapply `max-visible` when assigned children are replaced or reordered at the same
+count, preserving authored hidden/inert state and releasing departed visibility leases.
+
 **Two breaks in 8.0.0.** `tone` is now `variant`, with no alias — one concept, one spelling,
 library-wide. And a chip is **no longer a pill by default**: `--lr-chip-radius` used to be
 `var(--lr-radius-pill)` unconditionally, is now `var(--lr-radius)` (a rounded rectangle), and the

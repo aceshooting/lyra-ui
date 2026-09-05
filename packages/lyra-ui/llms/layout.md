@@ -62,6 +62,13 @@ auto-inserted between each adjacent pair. Panels participating in persistence ca
 nonempty, whitespace-stable `panel-id`; this business identity stays independent from the platform
 `id` attribute and is never rewritten.
 
+Feasible `minPx` floors also constrain flex shrinking after the divider target gutters take their
+allocation: a 600px split with a 40px divider can render panels of 300px and 260px. If the floors
+cannot fit, the remaining panel space is shared proportionally instead of overflowing. The budget
+follows allocation and the actual divider geometry, including font-relative tokens resolved in the
+divider's own font context. Panel font sizes do not change that gutter budget; stored percentages,
+initialization precedence, and resize event values retain their existing meaning.
+
 Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
 `LyraSplit` → `LyraMultiSplit`, generic container authoring types → the corresponding
@@ -69,10 +76,10 @@ The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-
 `--lr-split-*` hooks/storage keys → `--lr-multi-split-*`/`lr-multi-split:*`. The separate mirrored
 `lr-split-panel`, its `LyraSplitPanel` class, `SnapFunction`, and `SNAP_NONE` are unchanged.
 
-With a definite block size, each direct panel owns a native `overflow: auto` scroll surface and has
-`min-block-size: 0`, so long content stays inside the split rather than escaping into following
-content. Set `overflow` directly on an individual panel when its content needs a different scrolling
-surface.
+With a definite block size, each direct panel owns a native `overflow: auto` scroll surface.
+Unconstrained panels have a zero block minimum, so long content stays inside the split rather than
+escaping into following content. Set `overflow` directly on an individual panel when its content
+needs a different scrolling surface.
 
 **Properties:**
 
@@ -350,6 +357,10 @@ component when migrated markup has named `start` and `end` panes. The separate `
 Lyra's multi-panel layout: its direct default-slot children, responsive collapse modes, and
 multi-divider events are intentionally a different API.
 
+Both `lr-reposition-request` detail fields `position` and `positionInPixels` measure from the
+selected primary edge and agree with accepted public property readback, including `primary="end"`.
+Canceling preserves both prior values; direct property writes remain silent.
+
 **Properties:**
 
 - `position: number = 50` (reflected) — divider position from the selected `primary` pane's edge,
@@ -452,8 +463,10 @@ position) survives the transition.
 
 **Properties:**
 
-- `label: string = ''`
-- `sublabel: string = ''`
+- `label: string = ''` — header title; a removed attribute renders as absent while preserving
+  `null` readback. Supplied empty strings remain empty and later values recover normally.
+- `sublabel: string = ''` — secondary header copy with the same removal, empty-string and recovery
+  behavior.
 - `collapsible: boolean = false` (reflected — shows the collapse/expand chevron button)
 - `collapsed: boolean = false` (reflected)
 - `expandable: boolean = false` (reflected — shows the fullscreen toggle button)
@@ -620,6 +633,11 @@ native or authored semantics, and an explicit `role`, `aria-roledescription`, or
 `hidden`, `inert`, or `aria-hidden` remain in effect across carousel updates. The carousel
 temporarily makes off-page slides inert and aria-hidden, then restores their retained author state
 when they become visible, are removed, or the carousel disconnects.
+
+**Keyboard:** focus the `scroll-container` viewport to navigate with Arrow keys (horizontal LTR/RTL
+or vertical), Home, and End. Keys originating in a native input, textarea, contenteditable surface,
+or supported custom control remain owned by that editor, including when the editor is the assigned
+slide itself; they do not change the active slide or move focus away from it.
 
 **Properties:**
 
@@ -884,6 +902,10 @@ upstream-named props), and win when both spellings are set.
 ## `lr-tab-group`
 
 A tab strip. Mirrors `wa-tab-group` / `sl-tab-group`.
+
+With manual activation, removing the focused unselected tab rehomes actual focus to a valid survivor
+while retaining a valid selected tab and panel. This repair emits no show/hide events and preserves
+focus already held by an outside control.
 
 **Renamed in 8.0.0.** This element used to be `<lr-tabs>`. The tag is now `<lr-tab-group>`, its
 single `lr-tabs-change` event is now the `lr-tab-hide` → `lr-tab-show` pair below, and every
@@ -1398,6 +1420,12 @@ own splice/resort logic. `lr-reorder` is cancelable — a listener calling `prev
 the move open (mirroring `lr-confirm-bar`'s cancelable approve/deny pattern) until the host calls
 `finalizePendingMove()`/`revertPendingMove()`.
 
+Direct item `value` property or attribute edits refresh the owning list's valid identities and
+movement boundaries. Correcting a missing or duplicate identity re-enables the corresponding
+controls; making it invalid disables them. Identity edits do not emit a reorder event. Removing the
+value attribute from a standalone item renders it as absent while preserving `null` readback; an
+explicit empty string remains supplied and later valid values recover.
+
 ### `lr-reorder-list`
 
 **Properties:**
@@ -1739,7 +1767,9 @@ the `lr-virtual-scroll` detail shape.
 `groupByRecency(items, options?)` is a DOM-free helper that returns non-empty
 Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket, and accepts
 a timestamp extractor, reference date, and label overrides. Import it from its granular subpath —
-the package root re-exports it too, but that entry pulls in the eager registration barrel:
+the package root also re-exports it without registering custom elements, while the granular
+route limits the named-export module graph. `@aceshooting/lyra-ui/all.js` is the separate eager
+registration entry:
 
 ```ts
 import { groupByRecency } from "@aceshooting/lyra-ui/utilities/group-by-recency.js";
@@ -1908,11 +1938,11 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   Each row carries `will-change: transform` (a compositor hint for the per-frame translate), which
   makes every row its own stacking context. Rows otherwise carry no `z-index`, so they paint in DOM
   order and each one paints over the previous. Anything a row renders that overflows its own box —
-  an `<lr-menu>` popup in a row-action menu, a tooltip, an outward focus ring — is therefore painted
+  an `<lr-dropdown>` popup containing a row-action menu, a tooltip, an outward focus ring — is therefore painted
   _underneath_ every following row, no matter how high its own `z-index` is: that `z-index` only
   orders siblings inside the row's own context. The last row always looks correct, which is exactly
   why the failure tends to hide in short lists. A row lifts to `--lr-layer-content` while something
-  inside it holds focus or while it contains an open `lr-menu`. The explicit menu-open branch covers
+  inside it holds focus or while it contains an open `lr-dropdown`. The explicit dropdown-open branch covers
   imperative opening and virtual measurement/render cycles, where focus can temporarily return to
   the document while the popup remains visible. The value deliberately _matches_
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order
@@ -2027,8 +2057,10 @@ vetoing that one would leave `open` stuck `true` in a mode where it's meaningles
 `preventDefault()` to keep the overlay as it is for the other triggers),
 `lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
-`railWidthPx` — call `preventDefault()` to keep the current width. It is not fired when a consumer
-sets `railWidthPx` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
+`railWidthPx` — call `preventDefault()` to keep the current width. A synchronous request listener
+that disables resizing, leaves full mode, or disconnects the rail also cancels the proposal,
+preserving any width the listener assigned and publishing no accepted resize. Assigning only
+`railWidthPx` does not veto the proposal. It is not fired when a consumer sets `railWidthPx` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
 `{ widthPx: number }`; non-cancelable committed width, emitted immediately for a genuine keyboard
 step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/lost gestures, and
 consumer property writes emit no committed event).
@@ -2348,9 +2380,10 @@ name (`lr-menu-item` or `lr-dropdown-item`), not `instanceof`, so an adopted sam
 foreign-realm item remains enrollable. A label matches neither tag, is never enrolled in the roving
 tabindex, and can never become a focus stop; nothing on `<lr-menu>` has to know this element exists.
 
-To announce a _named group_ rather than a caption, wrap the labelled items in an element with
-`role="group"` and give it a matching `aria-label`. `aria-labelledby` pointing at this element's
-internals would not resolve — idrefs do not cross a shadow boundary.
+Keep selectable items directly assigned to the menu's default slot, or forward them through a
+slot, with `lr-menu-label` as a sibling visual caption. Arbitrary `role="group"` wrappers do not
+provide a supported menu-group API. `aria-labelledby` cannot reference this element's shadow
+internals because idrefs do not cross a shadow boundary.
 
 **Properties:** none. **Events:** none. **Slots:** default (the heading text).
 **CSS parts:** `base` (the heading row).
@@ -2373,6 +2406,10 @@ The inline semantic menu mapped from Shoelace's `sl-menu`, plus its action-row e
 `<lr-menu>` is always visible and owns the named `role="menu"` list, real roving DOM focus,
 wrapping keyboard navigation, type-ahead, and one canonical selection event. It deliberately has no
 trigger, positioned popup, root open state, placement API, or overlay lifecycle.
+
+Removing or disabling the remembered active item repairs the roving stop without taking focus from
+outside controls or the menu's header/footer. If the changed item held actual focus, focus moves to
+a valid survivor or through the existing owner dismissal path when none remain.
 
 For a menu button or other anchored overlay, compose the semantic controller inside
 `<lr-dropdown>`:
@@ -2869,6 +2906,10 @@ Searchable application command menu. Renders nothing at all while closed. Uses t
 overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
 dismissal, ref-counted document scroll lock).
 
+Valid string keywords still participate in search alongside the command's label, description, and
+group. Unsafe keyword entries are skipped without invoking accessors, and selection returns the
+original command object.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — after the initial silent render, property and attribute
@@ -2954,6 +2995,10 @@ mode, presentation, lifecycle events, and roving focus, while each item renders 
 and animated panel. The two components intentionally keep distinct vocabularies: accordion items
 use `expanded`, `label`, and `expand()`/`collapse()`/`toggle()`, while `open`, `summary`, and
 `show()`/`hide()` belong only to Details.
+
+`lr-toggle` reports the direction and source of an accepted Details transition. Accordion
+coordinates only its direct `lr-accordion-item` children; Details retains independent state and
+optional grouping through a shared non-empty `name`.
 
 **Breaking in 9.0.0:** an accordion coordinates direct `lr-accordion-item` children only. Direct
 `lr-details` panels used to be accepted as well; they are not any more. A `lr-details` slotted into
@@ -3235,6 +3280,11 @@ unset, it retains the former transparent active mix.
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
 move, resize, collision, and layout-change requests; the host owns persistence and applies updates.
 
+Pointer move and resize gestures measure the rendered column/row pitch, including the gutter, so
+movement by four painted tracks proposes four logical columns in either LTR or RTL. Row-height and
+gap overrides also govern vertical pointer snapping. The component continues to emit controlled
+layout proposals; the caller accepts them by assigning `layout`.
+
 **Properties:** `layout: readonly LyraDashboardCell[] = []` (attribute: false, never mutated by the component),
 `columns: number = 12`, `rowHeight: number = 80` (px, also the row snap pitch), `gap: number = 8`
 (px, both axes), `collision: 'reject' | 'push' | 'overlap' = 'reject'`, `cellsDraggable: boolean = false`
@@ -3372,6 +3422,11 @@ that category's composed children.
 ## `lr-filter-bar`
 
 Dashboard filter row that composes Lyra inputs and removable chips, with reset and loading states.
+
+Choice option entries must expose string `value` and `label` data fields; malformed entries are
+omitted independently, while supplied empty strings remain valid. A custom definition requires its
+adapter and a callable `render`; a rejected definition does not reserve its filter ID. Valid
+siblings remain available. Exceptions thrown by an admitted trusted renderer still propagate.
 
 **Properties:**
 
@@ -3739,393 +3794,470 @@ import "@aceshooting/lyra-ui/components/layout/page/page.js";
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-layout-app-rail-app-rail-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js`.
   `LyraAppRailModeChangeDetail {
-  mode: unknown;
-}`
+    mode: LyraAppRailMode;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js`.
   `LyraAppRailResizeDetail {
-  widthPx: unknown;
-}`
+    widthPx: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js`.
   `LyraAppRailToggleDetail {
-  open: unknown;
-}`
-  `computeAppRailMode(/* public names: iconOnlyMatches, mobileMatches, preferredMode */): unknown`
+    open: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js`.
+  `computeAppRailMode(iconOnlyMatches: boolean, mobileMatches: boolean, preferredMode?: LyraAppRailPreferredMode | null): LyraAppRailMode`
 
 - **`components-layout-command-palette-command-palette-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js`.
   `LyraCommand {
-  commandId: unknown;
-  label: unknown;
-  description: unknown;
-  group: unknown;
-  shortcut: unknown;
-  keywords: unknown;
-  disabled: unknown;
-  icon: unknown;
-  onSelect: unknown;
-}`
+    commandId: string;
+    label: string;
+    description?: string;
+    group?: string;
+    shortcut?: string;
+    keywords?: readonly string[];
+    disabled?: boolean;
+    icon?: unknown;
+    onSelect?: () => void;
+  }`
 
 - **`components-layout-dashboard-grid-dashboard-grid-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.class.js`.
   `LyraDashboardCellMoveDetail {
-  cellId: unknown;
-  position: unknown;
-  x: unknown;
-  y: unknown;
-  previous: unknown;
-}`
+    readonly cellId: string;
+    readonly position: Readonly<{
+      x: number;
+      y: number;
+    }>;
+    readonly previous: Readonly<{
+      x: number;
+      y: number;
+    }>;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.class.js`.
   `LyraDashboardCellResizeDetail {
-  cellId: unknown;
-  size: unknown;
-  w: unknown;
-  h: unknown;
-  previous: unknown;
-}`
+    readonly cellId: string;
+    readonly size: Readonly<{
+      w: number;
+      h: number;
+    }>;
+    readonly previous: Readonly<{
+      w: number;
+      h: number;
+    }>;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.class.js`.
   `LyraDashboardCollisionDetail {
-  cellId: unknown;
-  collidedCellIds: unknown;
-  policy: unknown;
-  accepted: unknown;
-}`
+    readonly cellId: string;
+    readonly collidedCellIds: readonly string[];
+    readonly policy: LyraDashboardCollisionPolicy;
+    readonly accepted: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.class.js`.
   `LyraDashboardLayoutChangeDetail {
-  layout: unknown;
-}`
+    readonly layout: readonly LyraDashboardCell[];
+  }`
 
 - **`components-layout-dashboard-grid-layout-types-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.js`.
   `LyraDashboardCell {
-  cellId: unknown;
-  x: unknown;
-  y: unknown;
-  w: unknown;
-  h: unknown;
-  minW: unknown;
-  minH: unknown;
-  maxW: unknown;
-  maxH: unknown;
-  locked: unknown;
-  widget: unknown;
-  label: unknown;
-}`
+    readonly cellId: string;
+    readonly x: number;
+    readonly y: number;
+    readonly w: number;
+    readonly h: number;
+    readonly minW?: number;
+    readonly minH?: number;
+    readonly maxW?: number;
+    readonly maxH?: number;
+    readonly locked?: boolean;
+    readonly widget?: LyraWidgetNode | null;
+    readonly label?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.js`.
   `LyraDashboardPlacementResult {
-  accepted: unknown;
-  layout: unknown;
-  collidedCellIds: unknown;
-}`
+    readonly accepted: boolean;
+    readonly layout: readonly LyraDashboardCell[];
+    readonly collidedCellIds: readonly string[];
+  }`
 
 - **`components-layout-dashboard-grid-layout-contracts`** — Supporting data types and helpers for this component family.
-  `resolveLyraDashboardPlacement(/* public names: layout, candidateCellId, requested, x, y, w, h, columns, policy */): unknown`
+  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.js`.
+  `resolveLyraDashboardPlacement(layout: readonly LyraDashboardCell[], candidateCellId: string, requested: Readonly<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }>, columns: number, policy: LyraDashboardCollisionPolicy): LyraDashboardPlacementResult`
 
 - **`components-layout-details-accordion-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/details/accordion.class.js`.
   `LyraAccordionEventDetail {
-  item: unknown;
-}`
+    readonly item: LyraAccordionItem;
+  }`
 
 - **`components-layout-details-details-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/details/details.class.js`.
   `LyraDetailsToggleDetail {
-  open: unknown;
-  source: unknown;
-}`
+    open: boolean;
+    source: LyraDetailsToggleSource;
+  }`
 
 - **`components-layout-dock-panel-dock-panel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/dock-panel/dock-panel.class.js`.
   `LyraDockPanelCollapseChangeDetail {
-  collapsed: unknown;
-}`
+    readonly collapsed: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/dock-panel/dock-panel.class.js`.
   `LyraDockPanelResizeDetail {
-  extent: unknown;
-}`
+    readonly extent: string;
+  }`
 
 - **`components-layout-drilldown-panel-drilldown-panel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownCategoryChangeDetail {
-  nodeId: unknown;
-  category: unknown;
-  previousCategory: unknown;
-}`
+    readonly nodeId: string;
+    readonly category: LyraDrilldownCategory;
+    readonly previousCategory: LyraDrilldownCategory;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownDocumentDownloadDetail {
-  nodeId: unknown;
-  documentId: unknown;
-  src: unknown;
-  filename: unknown;
-}`
+    readonly nodeId: string;
+    readonly documentId: string;
+    readonly src: string;
+    readonly filename: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownDocumentHighlightActivateDetail {
-  nodeId: unknown;
-  documentId: unknown;
-  highlightId: unknown;
-}`
+    readonly nodeId: string;
+    readonly documentId: string;
+    readonly highlightId: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownDocument {
-  documentId: unknown;
-  name: unknown;
-  mimeType: unknown;
-  uri: unknown;
-  version: unknown;
-}`
+    readonly documentId: string;
+    readonly name: string;
+    readonly mimeType?: string;
+    readonly uri?: string;
+    readonly version?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownDocumentRenderErrorDetail {
-  nodeId: unknown;
-  documentId: unknown;
-  error: unknown;
-}`
+    readonly nodeId: string;
+    readonly documentId: string;
+    readonly error: unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownEntityActivateDetail {
-  nodeId: unknown;
-  entityId: unknown;
-}`
+    readonly nodeId: string;
+    readonly entityId: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownEntity {
-  entityId: unknown;
-  label: unknown;
-  type: unknown;
-  description: unknown;
-  properties: unknown;
-  degree: unknown;
-  communityId: unknown;
-}`
+    readonly entityId: string;
+    readonly label: string;
+    readonly type?: string;
+    readonly description?: string;
+    readonly properties?: Readonly<Record<string, string | number>>;
+    readonly degree?: number;
+    readonly communityId?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownEvidenceExpandDetail {
-  nodeId: unknown;
-  evidenceId: unknown;
-  expanded: unknown;
-}`
+    readonly nodeId: string;
+    readonly evidenceId: string;
+    readonly expanded: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownEvidenceItem {
-  evidenceId: unknown;
-  title: unknown;
-  page: unknown;
-  href: unknown;
-  excerpt: unknown;
-  full: unknown;
-}`
+    readonly evidenceId: string;
+    readonly title: string;
+    readonly page?: string | number;
+    readonly href?: string;
+    readonly excerpt?: string;
+    readonly full?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownEvidenceOpenDetail {
-  nodeId: unknown;
-  evidenceId: unknown;
-  href: unknown;
-}`
+    readonly nodeId: string;
+    readonly evidenceId: string;
+    readonly href?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownNavigateDetail {
-  nodeId: unknown;
-  index: unknown;
-}`
+    readonly nodeId: string;
+    readonly index: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`.
   `LyraDrilldownNode {
-  nodeId: unknown;
-  label: unknown;
-  evidence: unknown;
-  documents: unknown;
-  entities: unknown;
-}`
+    readonly nodeId: string;
+    readonly label: string;
+    readonly evidence?: readonly LyraDrilldownEvidenceItem[];
+    readonly documents?: readonly LyraDrilldownDocument[];
+    readonly entities?: readonly LyraDrilldownEntity[];
+  }`
 
 - **`components-layout-filter-bar-filter-bar-contracts`** — Supporting data types and helpers for this component family.
-  `LyraFilterBarComboboxDefinition {
-  type: unknown;
-  options: unknown;
-  multiple: unknown;
-  filterId: unknown;
-  label: unknown;
-  placeholder: unknown;
-  required: unknown;
-  defaultValue: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
+  `LyraFilterBarComboboxDefinition extends LyraFilterBarDefinitionBase {
+    readonly type: 'combobox';
+    readonly options: readonly LyraFilterBarOption[];
+    readonly multiple?: boolean;
+    // Inherited from LyraFilterBarDefinitionBase.
+    readonly filterId: string;
+    readonly label: string;
+    readonly placeholder?: string;
+    readonly required?: boolean;
+    readonly defaultValue?: string | readonly string[] | boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
   `LyraFilterBarCustomControlAdapter {
-  valueFromEvent: unknown;
-  event: unknown;
-  clearValue: unknown;
-  isEmpty: unknown;
-  value: unknown;
-  formatValue: unknown;
-}`
+    readonly valueFromEvent: (event: Event) => LyraFilterBarFieldValue;
+    readonly clearValue: LyraFilterBarFieldValue;
+    readonly isEmpty?: (value: LyraFilterBarFieldValue) => boolean;
+    readonly formatValue?: (value: LyraFilterBarFieldValue) => string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
   `LyraFilterBarCustomControlContext {
-  filterId: unknown;
-  label: unknown;
-  definition: unknown;
-  value: unknown;
-  disabled: unknown;
-  required: unknown;
-  errorText: unknown;
-  signal: unknown;
-  generation: unknown;
-  setValue: unknown;
-  onValueChange: unknown;
-  event: unknown;
-  onInput: unknown;
-  onChange: unknown;
-  onFocusout: unknown;
-}`
+    readonly filterId: string;
+    readonly label: string;
+    readonly definition: LyraFilterBarCustomDefinition;
+    readonly value: LyraFilterBarFieldValue;
+    readonly disabled: boolean;
+    readonly required: boolean;
+    readonly errorText: string;
+    readonly signal: AbortSignal;
+    readonly generation: number;
+    readonly setValue: (value: LyraFilterBarFieldValue) => void;
+    readonly onValueChange: (event: Event) => void;
+    readonly onInput: (event: Event) => void;
+    readonly onChange: (event: Event) => void;
+    readonly onFocusout: () => void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
   `LyraFilterBarCustomControl {
-  render: unknown;
-  context: unknown;
-  adapter: unknown;
-}`
-  `LyraFilterBarCustomDefinition {
-  type: unknown;
-  custom: unknown;
-  filterId: unknown;
-  label: unknown;
-  placeholder: unknown;
-  required: unknown;
-  defaultValue: unknown;
-}`
-  `LyraFilterBarDateDefinition {
-  type: unknown;
-  min: unknown;
-  max: unknown;
-  filterId: unknown;
-  label: unknown;
-  placeholder: unknown;
-  required: unknown;
-  defaultValue: unknown;
-}`
-  `LyraFilterBarDateRangeDefinition {
-  type: unknown;
-  presets: unknown;
-  min: unknown;
-  max: unknown;
-  filterId: unknown;
-  label: unknown;
-  placeholder: unknown;
-  required: unknown;
-  defaultValue: unknown;
-}`
+    readonly render: (context: LyraFilterBarCustomControlContext) => TemplateResult;
+    readonly adapter: LyraFilterBarCustomControlAdapter;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
+  `LyraFilterBarCustomDefinition extends LyraFilterBarDefinitionBase {
+    readonly type: 'custom';
+    readonly custom: LyraFilterBarCustomControl;
+    // Inherited from LyraFilterBarDefinitionBase.
+    readonly filterId: string;
+    readonly label: string;
+    readonly placeholder?: string;
+    readonly required?: boolean;
+    readonly defaultValue?: string | readonly string[] | boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
+  `LyraFilterBarDateDefinition extends LyraFilterBarDateDefinitionBase {
+    readonly type: 'date';
+    // Inherited from LyraFilterBarDateDefinitionBase.
+    readonly min?: string;
+    readonly max?: string;
+    readonly filterId: string;
+    readonly label: string;
+    readonly placeholder?: string;
+    readonly required?: boolean;
+    readonly defaultValue?: string | readonly string[] | boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
+  `LyraFilterBarDateRangeDefinition extends LyraFilterBarDateDefinitionBase {
+    readonly type: 'date-range';
+    readonly presets?: readonly LyraDateRangePreset[];
+    // Inherited from LyraFilterBarDateDefinitionBase.
+    readonly min?: string;
+    readonly max?: string;
+    readonly filterId: string;
+    readonly label: string;
+    readonly placeholder?: string;
+    readonly required?: boolean;
+    readonly defaultValue?: string | readonly string[] | boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
   `LyraFilterBarInputDetail {
-  value: unknown;
-  filterId: unknown;
-  appliedPreset: unknown;
-}`
+    readonly value: LyraFilterBarValue;
+    readonly filterId?: string;
+    readonly appliedPreset?: LyraDateRangePreset;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
   `LyraFilterBarOption {
-  value: unknown;
-  label: unknown;
-  icon: unknown;
-}`
+    readonly value: string;
+    readonly label: string;
+    readonly icon?: unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
   `LyraFilterBarResetDetail {
-  value: unknown;
-}`
-  `LyraFilterBarSelectDefinition {
-  type: unknown;
-  options: unknown;
-  filterId: unknown;
-  label: unknown;
-  placeholder: unknown;
-  required: unknown;
-  defaultValue: unknown;
-}`
-  `LyraFilterBarTextDefinition {
-  type: unknown;
-  debounce: unknown;
-  filterId: unknown;
-  label: unknown;
-  placeholder: unknown;
-  required: unknown;
-  defaultValue: unknown;
-}`
+    readonly value: LyraFilterBarValue;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
+  `LyraFilterBarSelectDefinition extends LyraFilterBarDefinitionBase {
+    readonly type: 'select';
+    readonly options: readonly LyraFilterBarOption[];
+    // Inherited from LyraFilterBarDefinitionBase.
+    readonly filterId: string;
+    readonly label: string;
+    readonly placeholder?: string;
+    readonly required?: boolean;
+    readonly defaultValue?: string | readonly string[] | boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
+  `LyraFilterBarTextDefinition extends LyraFilterBarDefinitionBase {
+    readonly type: 'text';
+    readonly debounce?: number;
+    // Inherited from LyraFilterBarDefinitionBase.
+    readonly filterId: string;
+    readonly label: string;
+    readonly placeholder?: string;
+    readonly required?: boolean;
+    readonly defaultValue?: string | readonly string[] | boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
   `LyraFilterBarValidityDetail {
-  valid: unknown;
-  invalidFilterIds: unknown;
-}`
+    readonly valid: boolean;
+    readonly invalidFilterIds: readonly string[];
+  }`
 
 - **`components-layout-menu-menu-item-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/menu/menu-item.class.js`.
   `MenuItemChangeDetail {
-  value: unknown;
-  checked: unknown;
-}`
+    value: string;
+    checked: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/menu/menu-item.class.js`.
   `MenuItemStateChangeDetail {
-  disabled: unknown;
-  hidden: unknown;
-  inert: unknown;
-}`
+    disabled: boolean;
+    hidden: boolean;
+    inert: boolean;
+  }`
 
 - **`components-layout-menu-menu-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/menu/menu.class.js`.
   `MenuItemSelectDetail {
-  item: unknown;
-}`
+    readonly item: LyraMenuItem;
+  }`
 
 - **`components-layout-multi-split-multi-split-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
   `LyraMultiSplitCollapseChangeDetail {
-  state: unknown;
-}`
+    readonly state: LyraMultiSplitCollapseState;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
   `LyraMultiSplitToggleDetail {
-  readonly open: boolean;
-}`
+    readonly open: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
   `LyraMultiSplitConstraintIssueDetail {
-  reason: unknown;
-  panelCount: unknown;
-  minimumTotal: unknown;
-  maximumTotal: unknown;
-  containerSize: unknown;
-}`
+    readonly reason: LyraMultiSplitConstraintIssueReason;
+    readonly panelCount: number;
+    readonly minimumTotal: number;
+    readonly maximumTotal: number | null;
+    readonly containerSize: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
   `LyraMultiSplitOrientationChangeDetail {
-  orientation: unknown;
-}`
+    readonly orientation: LyraOrientation;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
   `LyraMultiSplitPanelConstraint {
-  minPx: unknown;
-  maxPx: unknown;
-  minPercent: unknown;
-  maxPercent: unknown;
-}`
+    readonly minPx?: number;
+    readonly maxPx?: number;
+    readonly minPercent?: number;
+    readonly maxPercent?: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
   `LyraMultiSplitResizeDetail {
-  sizes: unknown;
-}`
+    readonly sizes: readonly number[];
+  }`
 
 - **`components-layout-reorder-list-reorder-list-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/reorder-list/reorder-list.class.js`.
   `LyraReorderDetail {
-  order: unknown;
-  fromIndex: unknown;
-  toIndex: unknown;
-}`
+    readonly order: readonly string[];
+    readonly fromIndex: number;
+    readonly toIndex: number;
+  }`
 
 - **`components-layout-responsive-panel-responsive-panel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/responsive-panel/responsive-panel.class.js`.
   `LyraResponsivePanelModeChangeDetail {
-  mode: unknown;
-}`
-  `resolveResponsivePanelEffectiveMode(/* public names: mode, belowBreakpoint */): unknown`
+    mode: LyraResponsivePanelEffectiveMode;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/responsive-panel/responsive-panel.class.js`.
+  `resolveResponsivePanelEffectiveMode(mode: LyraResponsivePanelMode, belowBreakpoint: boolean): LyraResponsivePanelEffectiveMode`
 
 - **`components-layout-segmented-segmented-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/segmented/segmented.class.js`.
   `LyraSegmentedItem {
-  value: unknown;
-  label: unknown;
-  icon: unknown;
-  disabled: unknown;
-}`
+    value: string;
+    label: string;
+    icon?: unknown;
+    disabled?: boolean;
+  }`
 
 - **`components-layout-split-panel-split-panel-contracts`** — Supporting data types and helpers for this component family.
-  `SNAP_NONE(/* public names: options, pos, size, snapThreshold */): unknown`
+  Import: `@aceshooting/lyra-ui/components/layout/split-panel/split-panel.class.js`.
+  `SNAP_NONE(options: { pos: number; size: number; snapThreshold: number; }): number`
+  Import: `@aceshooting/lyra-ui/components/layout/split-panel/split-panel.class.js`.
   `LyraSplitPanelSnapFunctionParams {
-  pos: unknown;
-  size: unknown;
-  snapThreshold: unknown;
-}`
+    pos: number;
+    size: number;
+    snapThreshold: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/split-panel/split-panel.class.js`.
   `LyraSplitPanelRepositionDetail {
-  position: unknown;
-  positionInPixels: unknown;
-}`
+    position: number;
+    positionInPixels: number;
+  }`
 
 - **`components-layout-stepper-stepper-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/stepper/stepper.class.js`.
   `LyraStepItem {
-  stepId: unknown;
-  label: unknown;
-  state: unknown;
-  disabled: unknown;
-  title: unknown;
-  icon: unknown;
-}`
+    stepId: string;
+    label: string;
+    state: LyraStepState;
+    disabled?: boolean;
+    title?: string;
+    icon?: unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/stepper/stepper.class.js`.
   `LyraStepperOrientationChangeDetail {
-  orientation: unknown;
-}`
+    orientation: LyraOrientation;
+  }`
 
 - **`components-layout-virtual-list-virtual-list-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js`.
   `LyraVirtualListGroup {
-  key: unknown;
-  label: unknown;
-  startIndex: unknown;
-}`
-  `LyraVirtualListIndexedSource {
-  count: unknown;
-  itemAt: unknown;
-  index: unknown;
-  keyAt: unknown;
-  indexOfKey: unknown;
-  key: unknown;
-}`
+    key: string | number;
+    label?: string;
+    startIndex: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js`.
+  `LyraVirtualListIndexedSource<T = unknown> {
+    readonly count: number;
+    itemAt(index: number): T;
+    keyAt?(index: number): string | number;
+    indexOfKey?(key: string | number): number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js`.
   `LyraVirtualListRange {
-  start: unknown;
-  end: unknown;
-}`
+    start: number;
+    end: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js`.
   `LyraVirtualListScroll {
-  scrollTop: unknown;
-  viewportHeight: unknown;
-}`
+    scrollTop: number;
+    viewportHeight: number;
+  }`
 
 - **`components-layout-widget-widget-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/widget/widget.class.js`.
   `LyraWidgetView {
-  viewId: unknown;
-  label: unknown;
-  icon: unknown;
-  ariaLabel: unknown;
-}`
+    viewId: string;
+    label?: string;
+    icon?: unknown;
+    ariaLabel?: string;
+  }`

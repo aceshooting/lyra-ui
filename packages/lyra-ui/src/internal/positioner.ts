@@ -29,10 +29,11 @@ export interface PlacementResult {
 }
 
 /**
- * Which CSS positioning scheme the popup is laid out with. `fixed` (this library's default) keeps
- * the popup out of every ancestor's transform/filter/containment context and survives scrolling
- * containers; `absolute` positions against the nearest positioned ancestor instead, which is what a
- * caller wants when the popup must scroll away with the content it belongs to.
+ * Which CSS positioning scheme the popup is laid out with. `fixed` (this library's default)
+ * normally positions against the viewport, but transformed, filtered or containing ancestors can
+ * establish its containing block and clipping still applies. It does not guarantee escape from
+ * every ancestor. `absolute` positions against its containing block and can scroll with that
+ * content; choose the strategy to match the surrounding layout.
  */
 export type PlaceStrategy = 'absolute' | 'fixed';
 

@@ -16,7 +16,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A compact inline status pill for one tool/function call an agent made mid-conversation. It renders no interactive detail surface of its own — clicking it fires `lr-tool-call-chip-select`, and the consumer decides what to do (typically opening a `<lr-tool-result-dialog>`). Its default slot is a read-only, inert tooltip preview; actions belong in that selected detail surface.',
+          'Removing category or summary hides that optional text; assigning either attribute again restores its content. A compact inline status pill for one tool/function call an agent made mid-conversation. It renders no interactive detail surface of its own — clicking it fires `lr-tool-call-chip-select`, and the consumer decides what to do (typically opening a `<lr-tool-result-dialog>`). Its default slot is a read-only, inert tooltip preview; actions belong in that selected detail surface.',
       },
     },
   },

@@ -74,6 +74,7 @@ export const SelectionChanges: Story = {
 };
 
 export const WithPinsAndPath: Story = {
+  parameters: { docs: { description: { story: 'Activate a path node to select it, focus it in the graph, and open its details. Relation activation remains available to the host.' } } },
   render: () => html`
     <lr-knowledge-graph-explorer
       .nodes=${nodes}
@@ -117,11 +118,12 @@ export const Empty: Story = {
 export const PresetSearchQuery: Story = {
   render: () => {
     const handleSearchChange = (
-      event: CustomEvent<{ searchQuery: string }>
+      event: CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean }>
     ) => {
       const explorer = event.currentTarget as HTMLElement;
-      const output = explorer.nextElementSibling?.querySelector("output");
-      if (output) output.textContent = event.detail.searchQuery || "(empty)";
+      const outputs = explorer.nextElementSibling?.querySelectorAll('output');
+      if (outputs?.[0]) outputs[0].textContent = event.detail.query || '(empty)';
+      if (outputs?.[1]) outputs[1].textContent = `${event.detail.matchCount} (${event.detail.matchCountExact ? 'exact' : 'estimated'})`;
     };
     return html`
       <lr-knowledge-graph-explorer
@@ -132,7 +134,7 @@ export const PresetSearchQuery: Story = {
         style="height: 32rem;"
         @lr-search-change=${handleSearchChange}
       ></lr-knowledge-graph-explorer>
-      <p>Search query: <output>curie</output></p>
+      <p>Search query: <output>curie</output>. Matches: <output>2 (exact)</output></p>
     `;
   },
 };

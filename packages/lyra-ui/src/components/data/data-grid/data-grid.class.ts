@@ -584,6 +584,8 @@ function normalizedGroupBy(
  *   page, page-size, and abort-signal state.
  * @event lr-cell-click - Fired when a data cell is activated with canonical `rowKey` and
  *   `columnId` identity.
+ *   Clicking a supported interactive descendant, including its inner open-shadow native control,
+ *   runs that control without also emitting lr-cell-click; passive cell content retains activation.
  * @event lr-cell-contextmenu - Fired before a native cell context menu. Cancelable; preventing
  *   default suppresses the native menu. Detail includes canonical `rowKey` and `columnId`.
  * @event lr-column-move - Fired while and after a user column move; `detail.finished` marks commit.
@@ -1477,7 +1479,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   private get canonicalRootRows(): readonly Row[] {
     const canonical = new Set(this.allSourceRows);
-    return this.data.filter((row) => canonical.has(row));
+    return this.data.filter((row) => canonical.delete(row));
   }
 
   private sourceIndexMap(
@@ -1833,7 +1835,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this.delimitedRows(this.getProcessedRows(), options);
   }
 
-  /** Returns all filtered and sorted rows before pagination. */
+  /** Returns all filtered and sorted rows before pagination, with each admitted source-row
+   * occurrence retained once, matching facets, CSV, and rendered identity. */
   getProcessedRows(): readonly Row[] {
     return frozenArray(this.processedClientRows);
   }
@@ -2087,7 +2090,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.pageSize = finiteCount(state.pageSize);
   }
 
-  /** Distributes the available body width across visible columns. */
+  /** Reserves visible fixed columns and selection controls, then divides the remaining width
+   * proportionally across flexible columns, preserving each column's min/max bounds. */
   sizeColumnsToFit(): void {
     const body = this.bodyElement;
     if (!body || this.visibleColumns.length === 0) return;
@@ -2096,11 +2100,30 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           host: this,
         }) ?? 0
       : 0;
-    const available = Math.max(0, body.clientWidth - selectionWidth);
-    const flexible = this.visibleColumns.filter(
-      ({ column }) => column.flex !== 0
+    const visible = this.visibleColumns;
+    const flexible = visible.filter(
+      ({ column }) => finiteRange(column.flex ?? 1, 1, 0) > 0
     );
     if (flexible.length === 0) return;
+    const measuredWidths = new Map(
+      [...this.renderRoot.querySelectorAll<HTMLElement>('[role="columnheader"][data-column-id]')]
+        .map((header) => [
+          header.dataset['columnId'],
+          resolveCssLength(this.ownerDocument.defaultView?.getComputedStyle(header).width ?? '', { host: this }) ?? 0,
+        ] as const)
+    );
+    const fixedWidth = visible.reduce((total, { column, id }) => {
+      if (finiteRange(column.flex ?? 1, 1, 0) > 0) return total;
+      const bounds = this.columnBounds(column);
+      const explicit = this.columnWidths.get(id) ?? column.width;
+      const fallback = explicit !== undefined && explicit > 0
+        ? this.estimatedColumnWidth(column, id)
+        : Number.isFinite(column.maxWidth) && (column.maxWidth ?? 0) > 0
+          ? bounds.maximum
+          : bounds.minimum || this.estimatedColumnWidth(column, id);
+      return total + finiteRange(measuredWidths.get(id) || fallback, fallback, 0);
+    }, 0);
+    const available = Math.max(0, body.clientWidth - selectionWidth - fixedWidth);
     const flexValues = flexible.map(({ column }) =>
       finiteRange(column.flex ?? 1, 1, 0)
     );
@@ -3437,17 +3460,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     columnIdValue: string,
     index: number
   ): void {
-    const target = event.target;
-    const interactive = isElementValue(target)
-      ? target.closest(INTERACTIVE_SELECTOR)
-      : null;
-    if (
-      interactive &&
-      interactive !== event.currentTarget &&
-      isElementValue(event.currentTarget) &&
-      event.currentTarget.contains(interactive)
-    )
-      return;
+    for (const target of event.composedPath()) {
+      if (target === event.currentTarget) break;
+      if (isElementValue(target) && target.matches(INTERACTIVE_SELECTOR)) return;
+    }
     this.emit(
       'lr-cell-click',
       Object.freeze({

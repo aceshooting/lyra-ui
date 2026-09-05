@@ -1,10 +1,12 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { nextId } from '../../../internal/a11y.js';
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './rubric-form.styles.js';
@@ -371,6 +373,8 @@ export interface LyraRubricFormEventMap {
  * supplied default records its rendered, snapped midpoint in both the default and live value;
  * segmented scores remain unselected. `defaultValue` is the explicit reset baseline; reads return
  * defensive snapshots.
+ * Replacing the parent value reconciles live multiple-category checkbox state, even immediately
+ * after a user edit, without changing child reset defaults or emitting user-edit events.
  *
  * Optional native `<form>` participation is implemented via `ElementInternals`
  * attached directly (this component's value is a whole object, not a plain
@@ -385,6 +389,10 @@ export interface LyraRubricFormEventMap {
  * presence (including an explicitly empty value), while each rubric field keeps its own
  * field-level name. When `errorText` is empty, a consumer `setCustomValidity()` message is rendered
  * in the aggregate error region so a blocking whole-form error is never silent.
+ * Host-root external descriptions precede the aggregate hint/error guidance and follow live source
+ * identity changes, reconnection and adoption. They stay on the aggregate group; child fields keep
+ * their own guidance. Removing label or hint safely removes that copy while retaining native
+ * attribute-removal property readback.
  *
  * @customElement lr-rubric-form
  * @slot label - Aggregate rubric label rendered before all fields.
@@ -995,8 +1003,42 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this.focusFirstControl();
   }
 
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+
+  private syncExternalDescription(): void {
+    const target = this.isConnected ? this.renderRoot.querySelector<HTMLElement>('[part="base"][role="group"]') : null;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
+  }
+
+  override disconnectedCallback(): void {
+    this.releaseExternalDescription();
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     this.publishValiditySnapshot();
       if (this.pendingFocusFirst) {
       this.pendingFocusFirst = false;
@@ -1086,7 +1128,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         ${description} ${error}
         ${options.map(
           (opt) =>
-            html`<lr-checkbox value=${opt.value} ?checked=${selected.includes(opt.value)} ?disabled=${disabled}
+            html`<lr-checkbox value=${opt.value} .checked=${live(selected.includes(opt.value))} ?disabled=${disabled}
               ><span
                 >${opt.label ?? opt.value}${opt.description
                   ? html`<small class="option-description">${opt.description}</small>`
@@ -1181,11 +1223,11 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
 
   override render(): TemplateResult {
-    const hasLabel = this.withLabel || this.hasLabelSlot || this.label.length > 0;
+    const hasLabel = this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
     const hasHint =
       this.withHint ||
       this.hasHintSlot ||
-      this.hint.length > 0;
+      (this.hint ?? '').length > 0;
     const aggregateError = this.errorText || this.customError || '';
     const hasError = this.hasErrorSlot || aggregateError.length > 0;
     const hostLabel = this.getAttribute('aria-label');

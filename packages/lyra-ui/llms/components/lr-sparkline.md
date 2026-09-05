@@ -20,6 +20,10 @@ Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default a
 `em` tall at a `4 / 1` aspect ratio, so it can sit directly in text; authored block size changes
 both dimensions through the aspect ratio.
 
+An empty or removed `data` attribute uses the `values` collection. With no usable fallback samples,
+no trend path is rendered. Attribute removal preserves `null` property readback, and supplying later
+space-separated samples restores the attribute-driven path.
+
 **Properties:**
 
 - `appearance: 'gradient'|'line'|'solid' = 'solid'` (reflected) — `solid` fills the area below the

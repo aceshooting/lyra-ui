@@ -75,3 +75,12 @@ export const ThemedActiveRegion: Story = {
     ></lr-svg-viewer>
   `,
 };
+
+
+export const CappedTallSvg: Story = {
+  parameters: { docs: { description: { story: 'The capped nonzoomable SVG begins at the reachable scroll origin, keeping its start and end available. Fitting content stays centered.' } } },
+  render: () => {
+    const markup = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="1000"><rect width="200" height="1000" fill="LinkText"/><text x="24" y="36" fill="Canvas">Start</text><text x="24" y="972" fill="Canvas">End</text></svg>';
+    return html`<lr-svg-viewer style="inline-size:320px" max-height="160px" src=${`data:image/svg+xml,${encodeURIComponent(markup)}`} name="Tall diagram"></lr-svg-viewer>`;
+  },
+};

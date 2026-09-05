@@ -22,6 +22,14 @@ plus a peer-neutral `map` getter for common imperative operations. Its runtime v
 underlying MapLibre map. The component observes its own map-container allocation and calls the
 peer's `resize()` when that allocation changes.
 
+Markers and popups use the physical top-left origin required by MapLibre's projected transforms in
+both LTR and RTL. Their text and surrounding controls retain logical direction-aware layout.
+
+Live ancestor theme or token changes resolve the choropleth's stop colors and explicit or implicit
+step base color again, as well as its opacity. These are paint-only updates on the existing fill
+layer: the map instance, source, layer and viewport are preserved. Linear, logarithmic and step
+modes use the same expression semantics at initial render and after a theme change.
+
 **Properties:**
 
 - `center: [number, number] = [0, 0]`

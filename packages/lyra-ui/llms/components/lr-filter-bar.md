@@ -18,6 +18,11 @@
 
 Dashboard filter row that composes Lyra inputs and removable chips, with reset and loading states.
 
+Choice option entries must expose string `value` and `label` data fields; malformed entries are
+omitted independently, while supplied empty strings remain valid. A custom definition requires its
+adapter and a callable `render`; a rejected definition does not reserve its filter ID. Valid
+siblings remain available. Exceptions thrown by an admitted trusted renderer still propagate.
+
 **Properties:**
 
 - `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in

@@ -161,6 +161,9 @@ export interface LyraTimeRangeEventMap {
  * `aria-label`; native external `<label for>` associations remain available through `labels` but do
  * not cross into the shadow-root group. The two handles retain their individual names.
  *
+ * Only the primary mouse button starts seeking or dragging. Right/middle presses leave values
+ * and input/change events untouched; touch and pen gestures retain their existing pointer behavior.
+ *
  * @customElement lr-time-range
  * @event input - Native event fired continuously while a user moves either handle.
  * @event change - Native event fired when a handle interaction or preset commits.
@@ -855,7 +858,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     e: PointerEvent,
     captureTarget: HTMLElement,
   ): DragState | undefined {
-    if (this.liveDisabled) return undefined;
+    if (e.button !== 0 || this.liveDisabled) return undefined;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
     const dragWindow = base?.ownerDocument.defaultView;
     if (!base || !this.isConnected || !dragWindow) return undefined;

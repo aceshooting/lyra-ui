@@ -314,7 +314,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   /** The search filter applied to node labels/types. Presettable (e.g. to restore a query from a
    *  URL on load) as well as self-managed on every keystroke in the toolbar's search box. `''`
-   *  (the default) renders no search-result list at all and applies no search dimming. */
+   *  (the default) renders no search-result list at all and applies no search dimming. Removing
+   *  the attribute uses this empty-filter behavior while retaining null property readback. */
   @property({ attribute: 'search-query' }) searchQuery = '';
   @state() private pinLiveText = '';
   /** Currently pointer-hovered node id, set only while `highlight === 'hover'` (see
@@ -438,7 +439,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     // `connectedCallback()`/`canActivateNode()` above already gate on it the same way.
     if (
       this.hasUpdated &&
-      this.searchQuery.trim() &&
+      (this.searchQuery ?? '').trim() &&
       (changed.has('searchQuery') ||
         changed.has('nodes') ||
         changed.has('hiddenTypes') ||
@@ -701,7 +702,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   private matchingNodes(): LyraGraphNode[] | undefined {
-    const q = this.searchQuery.trim().toLocaleLowerCase(this.effectiveLocale);
+    const q = (this.searchQuery ?? '').trim().toLocaleLowerCase(this.effectiveLocale);
     if (!q) return undefined;
     return this.graphModel.nodes.filter((node) => {
       const label = typeof node.label === 'string' ? node.label : '';
@@ -836,7 +837,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     });
   };
 
-  /** Bound to `lr-entity-select` on the composed `lr-entity-card`/`lr-neighbor-list`. */
+  /** Handles the composed entity-card/neighbor selection and path-strip entity activation. */
   private onEntityActivate = (
     event: CustomEvent<{ entityId: string }>
   ): void => {
@@ -1011,7 +1012,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           <lr-input
             part="search"
             type="search"
-            .value=${this.searchQuery}
+            .value=${this.searchQuery ?? ''}
             placeholder=${this.localize('graphExplorerSearchPlaceholder')}
             @lr-input=${this.onSearchInput}
           ></lr-input>
@@ -1078,7 +1079,11 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           : nothing}
         <div class="sr-only" aria-hidden="true">${this.pinLiveText}</div>
         ${this.path.length
-          ? html`<lr-path-strip part="path" .path=${this.path}></lr-path-strip>`
+          ? html`<lr-path-strip
+              part="path"
+              .path=${this.path}
+              @lr-entity-activate=${this.onEntityActivate}
+            ></lr-path-strip>`
           : nothing}
         <lr-graph
           part="graph"

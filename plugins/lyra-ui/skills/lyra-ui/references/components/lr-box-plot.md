@@ -19,6 +19,12 @@
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 
+With `IntersectionObserver` available, canvas construction waits for its first delivered visibility
+decision. An off-screen box plot stays unconstructed until visible. Without the observer, drawing
+starts when the peers and canvas are ready; an empty delivered callback retains the visible
+fallback. Peer loading and accessible DOM can settle while visibility is pending. These rules also
+apply when the component reconnects.
+
 **Properties:**
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly

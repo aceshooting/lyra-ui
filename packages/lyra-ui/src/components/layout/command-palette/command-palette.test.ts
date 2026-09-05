@@ -1,3 +1,4 @@
+import { sendKeys } from '@web/test-runner-commands';
 import {
   fixture,
   expect,
@@ -5,7 +6,7 @@ import {
   oneEvent,
   waitUntil,
 } from "@open-wc/testing";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import "./command-palette.js";
 import type { LyraCommandPalette } from "./command-palette.js";
 import { styles } from "./command-palette.styles.js";
@@ -1459,35 +1460,11 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
     return value;
   }
 
-  /** See the first pressed-feedback poll for why this is not the 1s default. */
+  /** Each native state transition retains the existing input-arrival budget. */
   const POINTER_STATE_TIMEOUT = 15_000;
-  /** Mocha's own per-test budget has to EXCEED the poll budget above, or the poll can never run to
-   *  completion: mocha kills the test first and reports a generic "Timeout of 6000ms exceeded"
-   *  instead of the poll's own meaningful failure. Both of these tests polled for 15s inside a 6s
-   *  test, so under any real load they failed for a reason that said nothing about the component.
-   *  Observed reproducibly when the suite runs at high concurrency, and never in isolation --
-   *  which is exactly the signature of a budget mismatch rather than a component defect. */
-  const POINTER_TEST_TIMEOUT = POINTER_STATE_TIMEOUT + 5_000;
-
-  async function nextFrames(): Promise<void> {
-    await new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve))
-    );
-  }
-
-  async function moveMouseTo(target: HTMLElement): Promise<void> {
-    target.scrollIntoView({ block: "center", inline: "center" });
-    await nextFrames();
-    const rect = target.getBoundingClientRect();
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
-    await nextFrames();
-  }
+  // Reserve five seconds for hover admission (four 1.2s attempts), plus five seconds for
+  // fixture setup, native commands and cleanup outside the state poll.
+  const POINTER_TEST_TIMEOUT = POINTER_STATE_TIMEOUT + 10_000;
 
   async function openThemed(): Promise<LyraCommandPalette> {
     const wrapper = (await fixture(html`
@@ -1528,7 +1505,8 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
 
     try {
       await resetMouse();
-      await moveMouseTo(row);
+      await hoverUntilMatched(row, "the pointer must reach the highlighted row");
+      expect(row.isConnected, "the highlighted row must remain mounted").to.equal(true);
       // mouseenter keeps the hovered row the highlighted one, so this is still the
       // data-active row -- exactly the combination the press rule has to out-rank.
       expect(row.getAttribute("data-active")).to.equal("true");
@@ -1540,7 +1518,8 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
       // fill is exact immediately; the only thing being waited on is the event arriving. Under a
       // fully-parallel 490-file run this exceeded 1s and failed two separate release attempts.
       await waitUntil(
-        () => getComputedStyle(row).backgroundColor === pressed,
+        () => row.isConnected && row.getAttribute("data-active") === "true" &&
+          row.matches(":active") && getComputedStyle(row).backgroundColor === pressed,
         "the highlighted row kept its resting fill while held",
         { timeout: POINTER_STATE_TIMEOUT }
       );
@@ -1551,7 +1530,8 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
   });
 
   it("restores the highlighted row's resting fill once the pointer is released", async function () {
-    this.timeout(POINTER_TEST_TIMEOUT);
+    // Both sequential state polls retain their existing budget.
+    this.timeout(POINTER_TEST_TIMEOUT + POINTER_STATE_TIMEOUT);
     if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
       this.skip();
     const el = await openThemed();
@@ -1562,18 +1542,162 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
     const row = el.shadowRoot!.querySelector(
       '[part="command"][data-active="true"]'
     ) as HTMLElement;
+    const pressed = resolvedInShadow(
+      el,
+      "background: color-mix(in oklab, rgb(0, 51, 102), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+      "background-color"
+    );
+    expect(pressed).to.not.equal("rgb(0, 51, 102)");
     try {
       await resetMouse();
-      await moveMouseTo(row);
+      await hoverUntilMatched(row, "the pointer must reach the highlighted row");
+      expect(row.isConnected, "the highlighted row must remain mounted").to.equal(true);
+      expect(row.getAttribute("data-active")).to.equal("true");
       await sendMouse({ type: "down" });
-      await sendMouse({ type: "up" });
-      expect(el.open).to.equal(true);
       await waitUntil(
-        () => getComputedStyle(row).backgroundColor === "rgb(0, 51, 102)",
+        () => row.isConnected && row.getAttribute("data-active") === "true" &&
+          row.matches(":active") && getComputedStyle(row).backgroundColor === pressed,
+        "the highlighted row must show its held fill before release",
+        { timeout: POINTER_STATE_TIMEOUT }
+      );
+      await sendMouse({ type: "up" });
+      await waitUntil(
+        () => row.isConnected && row.getAttribute("data-active") === "true" &&
+          !row.matches(":active") && getComputedStyle(row).backgroundColor === "rgb(0, 51, 102)",
         "the highlighted row never returned to its resting fill",
         { timeout: POINTER_STATE_TIMEOUT }
       );
+      expect(el.open).to.equal(true);
     } finally {
+      await resetMouse();
+    }
+  });
+});
+
+describe('native pointer cleanup', () => {
+  async function pointerTarget(): Promise<HTMLButtonElement> {
+    const target = await fixture<HTMLButtonElement>(html`<button style="inline-size: 120px; block-size: 48px">Pointer target</button>`);
+    target.addEventListener('contextmenu', event => event.preventDefault());
+    await hoverUntilMatched(target, 'the native pointer must reach its cleanup target');
+    target.focus();
+    return target;
+  }
+
+  it('leaves a focused palette and its rows unchanged when no mouse button is held', async () => {
+    const selection = await fixture<HTMLInputElement>(html`<input value="alpha">`);
+    selection.focus();
+    await sendKeys({ press: 'Home' });
+    for (let index = 0; index < 3; index += 1) await sendKeys({ press: 'Shift+ArrowRight' });
+    expect(selection.value.slice(selection.selectionStart!, selection.selectionEnd!)).to.equal('alp');
+    selection.remove();
+    const palette = await fixture<LyraCommandPalette>(html`<lr-command-palette .commands=${[{ commandId: 'save', label: 'Save' }]}></lr-command-palette>`);
+    palette.openPalette();
+    await palette.updateComplete;
+    const input = palette.shadowRoot!.querySelector<HTMLInputElement>('input')!;
+    input.focus();
+    const row = palette.shadowRoot!.querySelector<HTMLElement>('[part="command"]')!;
+    const released: number[] = [];
+    const inputTypes: string[] = [];
+    const onRelease = (event: MouseEvent) => released.push(event.button);
+    const onInput = (event: Event) => inputTypes.push((event as InputEvent).inputType);
+    window.addEventListener('mouseup', onRelease, true);
+    input.addEventListener('input', onInput);
+    try {
+      await resetMouse();
+      await resetMouse();
+      await settlePointer();
+      expect(released, 'idle cleanup must not synthesize native releases').to.deep.equal([]);
+      expect(inputTypes, 'idle cleanup must not paste into the focused search').to.deep.equal([]);
+      expect(input.value).to.equal('');
+      expect(palette.shadowRoot!.activeElement === input).to.equal(true);
+      expect(row.isConnected).to.equal(true);
+      expect(palette.shadowRoot!.querySelector('[part="command"]') === row).to.equal(true);
+    } finally {
+      window.removeEventListener('mouseup', onRelease, true);
+      input.removeEventListener('input', onInput);
+      await resetMouse();
+    }
+  });
+
+  for (const [button, nativeButton] of [['left', 0], ['middle', 1], ['right', 2]] as const) {
+    it(`releases a held ${button} button exactly once and retains explicit releases`, async () => {
+      const target = await pointerTarget();
+      const down: number[] = [];
+      const up: number[] = [];
+      target.addEventListener('mousedown', event => down.push(event.button));
+      target.addEventListener('mouseup', event => up.push(event.button));
+      try {
+        await sendMouse({ type: 'down', button });
+        await waitUntil(() => down.length === 1, 'the native button must be held');
+        await resetMouse();
+        await waitUntil(() => up.length === 1, 'cleanup must release the held native button');
+        await resetMouse();
+        await settlePointer();
+        expect(up).to.deep.equal([nativeButton]);
+        await hoverUntilMatched(target, 'the target must remain usable after cleanup');
+        await sendMouse({ type: 'down', button });
+        await sendMouse({ type: 'up', button });
+        await resetMouse();
+        await settlePointer();
+        expect(down).to.deep.equal([nativeButton, nativeButton]);
+        expect(up).to.deep.equal([nativeButton, nativeButton]);
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
+
+  it('releases a real three-button chord only once across concurrent resets', async () => {
+    const target = await pointerTarget();
+    const released: { button: number; buttons: number }[] = [];
+    target.addEventListener('mouseup', event => released.push({ button: event.button, buttons: event.buttons }));
+    try {
+      for (const button of ['left', 'middle', 'right'] as const) await sendMouse({ type: 'down', button });
+      await Promise.all([resetMouse(), resetMouse()]);
+      await waitUntil(() => released.length === 3, 'every held native button must be released');
+      expect(released.map(event => event.button)).to.deep.equal([0, 1, 2]);
+      expect(released[2]!.buttons).to.equal(0);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('keeps pending presses and cleanup in invocation order', async () => {
+    const target = await pointerTarget();
+    const events: string[] = [];
+    const onDown = (event: MouseEvent) => events.push(`down:${event.button}`);
+    const onUp = (event: MouseEvent) => events.push(`up:${event.button}`);
+    window.addEventListener('mousedown', onDown, true);
+    window.addEventListener('mouseup', onUp, true);
+    try {
+      const first = sendMouse({ type: 'down', button: 'left' });
+      const clean = resetMouse();
+      const second = sendMouse({ type: 'down', button: 'right' });
+      await Promise.all([first, clean, second]);
+      await resetMouse();
+      await waitUntil(() => events.length === 4, 'queued native press and release commands must complete');
+      expect(events).to.deep.equal(['down:0', 'up:0', 'down:2', 'up:2']);
+      expect(target.isConnected).to.equal(true);
+    } finally {
+      window.removeEventListener('mousedown', onDown, true);
+      window.removeEventListener('mouseup', onUp, true);
+      await resetMouse();
+    }
+  });
+
+  it('does not release a completed native click again during cleanup', async () => {
+    const target = await pointerTarget();
+    const rect = target.getBoundingClientRect();
+    const up: number[] = [];
+    window.addEventListener('mouseup', onUp, true);
+    function onUp(event: MouseEvent): void { up.push(event.button); }
+    try {
+      await sendMouse({ type: 'click', position: [Math.round(rect.x + rect.width / 2), Math.round(rect.y + rect.height / 2)] });
+      await resetMouse();
+      await settlePointer();
+      expect(up).to.deep.equal([0]);
+    } finally {
+      window.removeEventListener('mouseup', onUp, true);
       await resetMouse();
     }
   });

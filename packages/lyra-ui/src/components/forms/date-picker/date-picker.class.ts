@@ -1,3 +1,4 @@
+import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
 import {
   html,
   nothing,
@@ -8,7 +9,7 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -183,6 +184,7 @@ function projectDateRangePreset(value: unknown): CanonicalDateRangePreset | unde
     label === MISSING_OWN_DATA_DESCRIPTOR ||
     label === UNSAFE_OWN_DATA_DESCRIPTOR ||
     typeof label.value !== 'string' ||
+    label.value.trim().length === 0 ||
     start === UNSAFE_OWN_DATA_DESCRIPTOR ||
     end === UNSAFE_OWN_DATA_DESCRIPTOR
   )
@@ -283,6 +285,10 @@ function projectDisabledDateKeys(value: unknown): readonly string[] {
  * first and last enabled periods, and Enter or Space drills into the focused period.
  * A period is enabled only when it contains a date selectable under the current bounds,
  * past/future, date-list, weekday, predicate, and pending-range constraints.
+ *
+ * An authored host aria-label names an enclosing group while each grid retains its own period
+ * name. Live constraints repair roving state without moving unrelated focus. Day and period
+ * navigation stay within the supported ISO years 0000–9999.
  *
  * @customElement lr-date-picker
  * @event {Event} change - The user committed a value. Bubbling, composed, and non-cancelable.
@@ -443,10 +449,12 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    * Range mode only — a preset names two dates, so it has no meaning for a single-date picker and
    * is ignored there rather than rendering a row that cannot do anything. Unset renders nothing at
    * all, so an existing picker is unchanged. Non-array runtime assignments normalize to the same
-   * empty collection instead of reaching the render path.
+   * empty collection instead of reaching the render path. Blank labels are omitted; inadmissible
+   * ranges render disabled. Interior days do not all need to be enabled.
    *
    * Applying one commits the range exactly as a two-click selection would (clamped to `min`/`max`,
-   * then `input` followed by `change`), so a consumer's existing change handling needs no special
+   * then admitted against endpoint and inclusive `minRange`/`maxRange` constraints before
+   * `input` followed by `change`), so a consumer's existing change handling needs no special
    * case. The active preset carries `aria-pressed="true"` and `data-active`, mirroring
    * `<lr-time-range>`'s already-shipped preset row.
    */
@@ -465,7 +473,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   /**
    * The preset whose button produced the current `value`, or `undefined` when the range was picked
-   * by hand. Read it inside your own `change`/`input` handler.
+   * by hand, cleared, or changed externally. Clearing removes identity before value events;
+   * external changes clear it silently. Read it inside your own `change`/`input` handler.
    *
    * Exists because a dashboard filter has to persist WHICH preset is active, not the pair it froze
    * to: "Last 7 days" must still mean the last 7 days after tomorrow's reload. That fact is not
@@ -491,10 +500,16 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       const text = typeof own === 'string' && own.trim() ? own : fallback;
       return text ? parseISO(text) : null;
     };
-    const from = bound(preset.start, this.min);
-    const to = bound(preset.end, this.max);
-    if (!from || !to) return null;
-    return from.getTime() <= to.getTime() ? { from, to } : { from: to, to: from };
+    const min = parseISO(this.min);
+    const max = parseISO(this.max);
+    if (min && max && min > max) return null;
+    const start = bound(preset.start, this.min);
+    const end = bound(preset.end, this.max);
+    if (!start || !end) return null;
+    let from = clampDate(start, min, max);
+    let to = clampDate(end, min, max);
+    if (to < from) [from, to] = [to, from];
+    return this.admitsRange(from, to, min, max, this.resolvedToday()) ? { from, to } : null;
   }
   @property({ type: Number, attribute: 'min-range', reflect: true })
   minRange = 0;
@@ -506,14 +521,21 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   @property({ attribute: 'focused-date', reflect: true }) focusedDate = '';
   @property({ reflect: true, converter: viewConverter })
   view: LyraDatePickerView = 'days';
-  /** Accessible label for the previous-month button. Left at the built-in default it
-   *  routes through `this.localize()` so a locale/`.strings` override applies without
-   *  requiring this to be set; an explicit override wins verbatim. */
-  @property({ attribute: 'previous-label' }) previousLabel = 'Previous month';
-  /** Accessible label for the next-month button. Left at the built-in default it
-   *  routes through `this.localize()` so a locale/`.strings` override applies without
-   *  requiring this to be set; an explicit override wins verbatim. */
-  @property({ attribute: 'next-label' }) nextLabel = 'Next month';
+  /** Accessible label for the previous-month button. Omitted copy localizes; explicit text,
+   * including the built-in English label or an empty string, wins verbatim.
+   * @default 'Previous month'
+   */
+  @property({ attribute: 'previous-label' })
+  previousLabel = 'Previous month';
+  private previousLabelAuthored = false;
+
+  /** Accessible label for the next-month button. Omitted copy localizes; explicit text,
+   * including the built-in English label or an empty string, wins verbatim.
+   * @default 'Next month'
+   */
+  @property({ attribute: 'next-label' })
+  nextLabel = 'Next month';
+  private nextLabelAuthored = false;
 
   @state() private viewDate = localDate(
     new Date().getFullYear(),
@@ -547,7 +569,32 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   // know the right date is on-screen (it's the cell the user just clicked, or
   // the view the user navigated to), so they must not force the view back to
   // `selection.from`'s month -- only an externally-set `value` should do that.
-  private suppressViewSync = false;
+  private committedValue: string | undefined;
+  private constraintFocusOwner: Element | undefined;
+
+  static override get observedAttributes(): string[] {
+    const attributes = super.observedAttributes;
+    observeReactivePropertyWrites(this.prototype, ['previousLabel', 'nextLabel'], (instance: LyraDatePicker, name, value) => {
+      const authored = value != null;
+      let ownershipChanged = false;
+      switch (name) {
+        case 'previousLabel':
+          // The field initializer precedes its ownership flag; later equal writes are authored.
+          if (instance.previousLabelAuthored === undefined) return;
+          ownershipChanged = authored !== instance.previousLabelAuthored;
+          instance.previousLabelAuthored = authored;
+          break;
+        case 'nextLabel':
+          // The field initializer precedes its ownership flag; later equal writes are authored.
+          if (instance.nextLabelAuthored === undefined) return;
+          ownershipChanged = authored !== instance.nextLabelAuthored;
+          instance.nextLabelAuthored = authored;
+          break;
+      }
+      if (ownershipChanged) instance.requestUpdate();
+    });
+    return attributes;
+  }
 
   constructor() {
     super();
@@ -591,7 +638,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   /** Parsed range view of `value`. Writes share `valueAsRange` normalization and stay silent. */
   get selection(): DateRange {
-    const parts = this.value.split('/');
+    const parts = (this.value ?? '').split('/');
     return { from: parseISO(parts[0] ?? ''), to: parseISO(parts[1] ?? '') };
   }
 
@@ -660,8 +707,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       ? parseISO(activeElement.getAttribute('data-view-start') ?? '')
       : null;
     if (changed.has('value')) {
-      const external = !this.suppressViewSync;
-      this.suppressViewSync = false;
+      const external = this.committedValue !== this.value;
+      this.committedValue = undefined;
+      if (external) this._appliedPreset = undefined;
       if (external && this.value) {
         const from = this.selection.from;
         if (from)
@@ -679,6 +727,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const min = parseISO(this.min);
     const max = parseISO(this.max);
     const today = this.resolvedToday();
+    this.viewDate = this.clampViewAnchor(this.viewDate);
     this.normalizeFocusedDate(min, max, today);
     this.clampViewDateToEnabledPeriod();
     this.syncCustomStates();
@@ -757,8 +806,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     d: Date,
     min: Date | null,
     max: Date | null,
-    today: Date
+    today: Date,
+    pendingRange = true
   ): boolean {
+    if (!Number.isFinite(d.getTime()) || d.getFullYear() < 0 || d.getFullYear() > 9999) return true;
     if (this.disabled || this.readonly) return true;
     if (min && d < min) return true;
     if (max && d > max) return true;
@@ -771,7 +822,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     } catch {
       // A consumer predicate is advisory. A thrown predicate must not make the calendar unusable.
     }
-    if (this.effectiveMode === 'range') {
+    if (pendingRange && this.effectiveMode === 'range') {
       const { from, to } = this.selection;
       if (from && !to && !isSameDay(from, d)) {
         const length = this.rangeLength(from, d);
@@ -795,6 +846,12 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     max: Date | null,
     today: Date
   ): Date | null {
+let lower = min ?? localDate(0);
+    let upper = max ?? localDate(9999, 11, 31);
+    if (this.disablePast && today > lower) lower = today;
+    if (this.disableFuture && today < upper) upper = today;
+    if (lower > upper) return null;
+    anchor = clampDate(anchor, lower, upper);
     if (!this.isDisabled(anchor, min, max, today))
       return new Date(anchor.getTime());
     for (let distance = 1; distance <= 732; distance++) {
@@ -834,7 +891,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     max: Date | null,
     today: Date
   ): void {
-    const anchor = this.focusedDateValue ?? this.selection.from;
+    const anchor = this.focusedDateValue ?? this.selection.from ??
+      (this.effectiveView === 'days' ? this.viewDate : null);
     if (!anchor) return;
 
     const disabled = this.isDisabled(anchor, min, max, today);
@@ -858,7 +916,11 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     // steal focus off whatever the user is actually operating (a nav button,
     // or nothing at all); onGridKey and goToDate already arm focusPending
     // explicitly for the keyboard-driven paths that should take focus.
-    if (disabled) this.focusPending = true;
+const active = activeElementIn(this.renderRoot as ShadowRoot);
+    if (disabled && active?.matches('[part~="day"]')) {
+      this.constraintFocusOwner = active;
+      this.focusPending = true;
+    }
   }
 
   /** The first enabled day at/after the first visible month's start, scanning
@@ -886,6 +948,15 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     return null;
   }
 
+  /** Completed ranges admit endpoints and inclusive length independently of a pending start. */
+  private admitsRange(from: Date, to: Date, min: Date | null, max: Date | null, today: Date): boolean {
+    if (this.isDisabled(from, min, max, today, false) || this.isDisabled(to, min, max, today, false)) return false;
+    const length = this.rangeLength(from, to);
+    const minimum = finiteCount(this.minRange, 0);
+    const maximum = finiteCount(this.maxRange, 0);
+    return (minimum === 0 || length >= minimum) && (maximum === 0 || length <= maximum);
+  }
+
   private commit(from: Date | null, to: Date | null, fire: boolean): void {
     const next =
       this.effectiveMode === 'range'
@@ -900,7 +971,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     // Only arm the suppression when `value` is actually about to change --
     // that's the only case `willUpdate` will see `changed.has('value')` and
     // get a chance to consume (and clear) the flag.
-    if (next !== this.value) this.suppressViewSync = true;
+    if (next !== this.value) this.committedValue = next;
     this.value = next;
     dispatchNativeInputEvent(this);
     if (fire) dispatchNativeEvent(this, 'change');
@@ -911,6 +982,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const max = parseISO(this.max);
     const today = this.resolvedToday();
     if (this.isDisabled(date, min, max, today)) return;
+    const pending = this.selection;
+    if (this.effectiveMode === 'range' && pending.from && !pending.to &&
+      !this.admitsRange(pending.from, date, min, max, today)) return;
     // A hand-picked range did not come from a preset, even when it happens to land on the same
     // pair -- that coincidence is exactly why `appliedPreset` exists instead of value matching.
     this._appliedPreset = undefined;
@@ -932,6 +1006,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   /** Clear the selection and emit input + change. */
   clear(): void {
+    this._appliedPreset = undefined;
     this.commit(null, null, true);
   }
 
@@ -952,15 +1027,19 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     // focus back to yesterday. parseISO()-parsed strings are already
     // midnight, so this only ever changes a `Date` argument's clock time.
     const midnight = localDate(d.getFullYear(), d.getMonth(), d.getDate());
-    const clamped = clampDate(midnight, parseISO(this.min), parseISO(this.max));
+    const clamped = clampDate(midnight, parseISO(this.min) ?? localDate(0), parseISO(this.max) ?? localDate(9999, 11, 31));
     this.viewDate = localDate(clamped.getFullYear(), clamped.getMonth(), 1);
     this.setFocusedDate(clamped);
     this.focusPending = true;
   }
 
+  private clampViewAnchor(date: Date): Date {
+    return clampDate(date, localDate(0), localDate(9999, 12 - this.visibleMonths, 1));
+  }
+
   private nav(delta: number): void {
     const page = this.pageBy === 'single' ? 1 : this.visibleMonths;
-    this.viewDate = addMonths(this.viewDate, delta * page);
+    this.viewDate = this.clampViewAnchor(addMonths(this.viewDate, delta * page));
   }
 
   /** Focus the current roving day (or the first item in a non-day view). */
@@ -998,9 +1077,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       const start = addMonths(pageStart, index * span);
       return {
         start,
-        end: localDate(start.getFullYear(), start.getMonth() + span, 0),
+        end: clampDate(localDate(start.getFullYear(), start.getMonth() + span, 0), null, localDate(9999, 11, 31)),
       };
-    });
+    }).filter((period) => period.start.getFullYear() <= 9999);
   }
 
   /** Keeps an all-disabled selection page on a page with an enabled period. */
@@ -1025,9 +1104,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const forward = min && last.end < min;
     const backward = max && first.start > max;
     const next = forward
-      ? this.firstEnabledViewPeriod(addMonths(last.start, span), 1)
+      ? this.firstEnabledViewPeriod(this.viewPeriodStart(min), 1)
       : backward
-      ? this.firstEnabledViewPeriod(addMonths(first.start, -span), -1)
+      ? this.firstEnabledViewPeriod(this.viewPeriodStart(max), -1)
       : this.firstEnabledViewPeriod(addMonths(last.start, span), 1) ??
         this.firstEnabledViewPeriod(addMonths(first.start, -span), -1);
     if (!next) return null;
@@ -1078,6 +1157,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const span = this.viewPeriodMonths();
     let candidate = this.viewPeriodStart(start);
     for (let index = 0; index < 366; index++) {
+      if (candidate.getFullYear() < 0 || candidate.getFullYear() > 9999) return null;
       const end = localDate(
         candidate.getFullYear(),
         candidate.getMonth() + span,
@@ -1207,6 +1287,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const firstEnabledFrom = (base: Date, dayStep: number): Date | null => {
       let d = base;
       for (let i = 0; i < 366; i++) {
+        if (d.getFullYear() < 0 || d.getFullYear() > 9999) return null;
         if (!this.isDisabled(d, min, max, today)) return d;
         d = step(d, dayStep);
       }
@@ -1278,11 +1359,11 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    * that's already on-screen.
    */
   private viewDateForFocus(next: Date): Date {
-    const firstMonth = localDate(
+    const firstMonth = this.clampViewAnchor(localDate(
       this.viewDate.getFullYear(),
       this.viewDate.getMonth(),
       1
-    );
+    ));
     const nextMonth = localDate(next.getFullYear(), next.getMonth(), 1);
     const lastMonth = addMonths(firstMonth, this.visibleMonths - 1);
     if (nextMonth < firstMonth) return nextMonth;
@@ -1295,6 +1376,13 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     const focusedDate = this.focusedDateValue;
+    const repairOwner = this.constraintFocusOwner;
+    this.constraintFocusOwner = undefined;
+    const active = activeElementIn(this.renderRoot as ShadowRoot);
+    if (repairOwner && active !== repairOwner &&
+      (active !== null || activeElementIn(this.ownerDocument) !== this.ownerDocument.body)) {
+      this.focusPending = false;
+    }
     if (this.focusPending && focusedDate) {
       this.focusPending = false;
       const iso = formatISO(focusedDate);
@@ -1338,7 +1426,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const outside = date.getMonth() !== shownMonth;
     // Outside-month days are empty placeholders by default (matches WA), keeping the
     // 6-row grid aligned without low-contrast faded numbers.
-    if (outside && !this.withOutsideDays) {
+    if (date.getFullYear() < 0 || date.getFullYear() > 9999 || (outside && !this.withOutsideDays)) {
       // role="gridcell" stays either way. A trailing week can land entirely
       // outside the shown month (monthMatrix always emits 6 rows of 7), and
       // ARIA's row role requires at least one visible gridcell descendant --
@@ -1473,12 +1561,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
               ? html`<button
                   part="previous"
                   type="button"
-                  aria-label=${this.localize(
-                    'previousMonth',
-                    this.previousLabel === 'Previous month'
-                      ? undefined
-                      : this.previousLabel
-                  )}
+                  aria-label=${this.previousLabelAuthored ? this.previousLabel : this.localize('previousMonth')}
                   ?disabled=${this.disabled || this.readonly}
                   @click=${() => this.nav(-1)}
                 >
@@ -1501,10 +1584,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
               ? html`<button
                   part="next"
                   type="button"
-                  aria-label=${this.localize(
-                    'nextMonth',
-                    this.nextLabel === 'Next month' ? undefined : this.nextLabel
-                  )}
+                  aria-label=${this.nextLabelAuthored ? this.nextLabel : this.localize('nextMonth')}
                   ?disabled=${this.disabled || this.readonly}
                   @click=${() => this.nav(1)}
                 >
@@ -1678,7 +1758,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
         : this.effectiveView === 'years'
         ? 144
         : 1440;
-    this.viewDate = addMonths(this.viewDate, delta * months);
+    this.viewDate = this.clampViewAnchor(addMonths(this.viewDate, delta * months));
   }
 
   private renderView(today: Date): TemplateResult {
@@ -1703,7 +1783,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       }));
     } else if (view === 'years') {
       title = `${yearFormatter.format(pageStart)}–${yearFormatter.format(
-        periods[11]!.start
+        periods[periods.length - 1]!.start
       )}`;
       items = periods.map((period) => ({
         ...period,
@@ -1711,7 +1791,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       }));
     } else {
       title = `${yearFormatter.format(pageStart)}–${yearFormatter.format(
-        periods[11]!.end
+        periods[periods.length - 1]!.end
       )}`;
       items = periods.map((period) => ({
         ...period,
@@ -1732,12 +1812,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
             <button
               part="previous"
               type="button"
-              aria-label=${this.localize(
-                'previousMonth',
-                this.previousLabel === 'Previous month'
-                  ? undefined
-                  : this.previousLabel
-              )}
+              aria-label=${this.previousLabelAuthored ? this.previousLabel : this.localize('previousMonth')}
               ?disabled=${this.disabled || this.readonly}
               @click=${() => this.navView(-1)}
             >
@@ -1758,10 +1833,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
             <button
               part="next"
               type="button"
-              aria-label=${this.localize(
-                'nextMonth',
-                this.nextLabel === 'Next month' ? undefined : this.nextLabel
-              )}
+              aria-label=${this.nextLabelAuthored ? this.nextLabel : this.localize('nextMonth')}
               ?disabled=${this.disabled || this.readonly}
               @click=${() => this.navView(1)}
             >
@@ -1884,7 +1956,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
         );
       }
     }
-    return html`<div part="base date-picker">
+    return html`<div part="base date-picker" role=${hostAriaLabel(this) === null ? nothing : 'group'} aria-label=${hostAriaLabel(this) ?? nothing}>
       <div class="content">
         ${this.renderPresets()}
         ${this.effectiveView === 'days'

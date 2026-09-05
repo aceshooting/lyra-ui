@@ -3,15 +3,24 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
     display: inline-flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     align-items: center;
     gap: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
+  [part='countdown'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
   [part='indicator'] {
+    flex-shrink: 0;
     display: inline-block;
     inline-size: var(--lr-size-0-375rem);
     block-size: var(--lr-size-0-375rem);
@@ -43,6 +52,7 @@ export const styles = css`
     }
   }
   [part='pause-button'] {
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;

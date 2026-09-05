@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A purely presentational "assistant is responding" presence cue — three visual variants, no events, no interactivity. Mount it while a response is being generated and remove it once real content arrives.',
+          'Removing label restores the localized thinking name while preserving an explicit host aria-label. Later label assignments remain reactive. A purely presentational "assistant is responding" presence cue — three visual variants, no events, no interactivity. Mount it while a response is being generated and remove it once real content arrives.',
       },
     },
   },

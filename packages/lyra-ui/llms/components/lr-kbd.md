@@ -20,6 +20,9 @@ A small chip representing a keyboard shortcut, rendering the platform-appropriat
 cross-platform modifier keys (⌘ on macOS, "Ctrl" elsewhere) from a single platform-neutral `keys`
 string. First-party invention (no Web Awesome equivalent).
 
+Removing `keys` safely clears the shortcut. Unknown tokens, including `constructor` and `__proto__`,
+render and name themselves verbatim; recognized modifiers keep their localized labels.
+
 **Properties:**
 
 - `keys: string = ''` — a `+`-separated sequence of tokens, e.g. `"mod+k"` or `"mod+shift+p"`.

@@ -6,6 +6,7 @@ import type { CommitFileChange } from './commit-card.class.js';
 const meta: Meta = {
   title: 'Commit Card',
   component: 'lr-commit-card',
+  parameters: { docs: { description: { component: 'Removing the message attribute clears the displayed subject and body; the property retains the normal null readback of a removed string attribute.' } } },
   tags: ['autodocs'],
 };
 export default meta;

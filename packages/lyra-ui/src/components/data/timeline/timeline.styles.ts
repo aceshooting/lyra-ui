@@ -43,7 +43,7 @@ export const styles = css`
     block-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
   }
   :host([scale='time'][orientation='horizontal']) [part='base'] {
-    block-size: auto;
+    block-size: var(--_lr-timeline-content-height, auto);
     inline-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
   }
   :host([scale='time']) ::slotted(*) {

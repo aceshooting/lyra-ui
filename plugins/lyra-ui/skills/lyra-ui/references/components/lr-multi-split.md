@@ -21,6 +21,13 @@ auto-inserted between each adjacent pair. Panels participating in persistence ca
 nonempty, whitespace-stable `panel-id`; this business identity stays independent from the platform
 `id` attribute and is never rewritten.
 
+Feasible `minPx` floors also constrain flex shrinking after the divider target gutters take their
+allocation: a 600px split with a 40px divider can render panels of 300px and 260px. If the floors
+cannot fit, the remaining panel space is shared proportionally instead of overflowing. The budget
+follows allocation and the actual divider geometry, including font-relative tokens resolved in the
+divider's own font context. Panel font sizes do not change that gutter budget; stored percentages,
+initialization precedence, and resize event values retain their existing meaning.
+
 Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
 `LyraSplit` → `LyraMultiSplit`, generic container authoring types → the corresponding
@@ -28,10 +35,10 @@ The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-
 `--lr-split-*` hooks/storage keys → `--lr-multi-split-*`/`lr-multi-split:*`. The separate mirrored
 `lr-split-panel`, its `LyraSplitPanel` class, `SnapFunction`, and `SNAP_NONE` are unchanged.
 
-With a definite block size, each direct panel owns a native `overflow: auto` scroll surface and has
-`min-block-size: 0`, so long content stays inside the split rather than escaping into following
-content. Set `overflow` directly on an individual panel when its content needs a different scrolling
-surface.
+With a definite block size, each direct panel owns a native `overflow: auto` scroll surface.
+Unconstrained panels have a zero block minimum, so long content stays inside the split rather than
+escaping into following content. Set `overflow` directly on an individual panel when its content
+needs a different scrolling surface.
 
 **Properties:**
 

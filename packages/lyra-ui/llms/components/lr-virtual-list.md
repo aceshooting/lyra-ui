@@ -134,7 +134,9 @@ the `lr-virtual-scroll` detail shape.
 `groupByRecency(items, options?)` is a DOM-free helper that returns non-empty
 Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket, and accepts
 a timestamp extractor, reference date, and label overrides. Import it from its granular subpath —
-the package root re-exports it too, but that entry pulls in the eager registration barrel:
+the package root also re-exports it without registering custom elements, while the granular
+route limits the named-export module graph. `@aceshooting/lyra-ui/all.js` is the separate eager
+registration entry:
 
 ```ts
 import { groupByRecency } from "@aceshooting/lyra-ui/utilities/group-by-recency.js";
@@ -303,11 +305,11 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   Each row carries `will-change: transform` (a compositor hint for the per-frame translate), which
   makes every row its own stacking context. Rows otherwise carry no `z-index`, so they paint in DOM
   order and each one paints over the previous. Anything a row renders that overflows its own box —
-  an `<lr-menu>` popup in a row-action menu, a tooltip, an outward focus ring — is therefore painted
+  an `<lr-dropdown>` popup containing a row-action menu, a tooltip, an outward focus ring — is therefore painted
   _underneath_ every following row, no matter how high its own `z-index` is: that `z-index` only
   orders siblings inside the row's own context. The last row always looks correct, which is exactly
   why the failure tends to hide in short lists. A row lifts to `--lr-layer-content` while something
-  inside it holds focus or while it contains an open `lr-menu`. The explicit menu-open branch covers
+  inside it holds focus or while it contains an open `lr-dropdown`. The explicit dropdown-open branch covers
   imperative opening and virtual measurement/render cycles, where focus can temporarily return to
   the document while the popup remains visible. The value deliberately _matches_
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order

@@ -1,6 +1,6 @@
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
-import { resetMouse, sendKeys, sendMouse } from '@web/test-runner-commands';
-import { hoverUntilMatched } from '../../../../test/wtr-mouse.js';
+import { sendKeys } from '@web/test-runner-commands';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 import { styles } from './voice-picker.styles.js';

@@ -19,8 +19,12 @@
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
+An unreadable optional field rejects only that file record; it cannot reserve the path against a
+later valid occurrence. Valid siblings retain their source order within the existing depth and
+inspected-position budgets.
+
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
-cycle-safe snapshot omitting empty/blank paths and retaining the first duplicate path, bounded to
+cycle-safe snapshot omitting empty/blank paths and retaining the first successfully admitted occurrence of each path, bounded to
 the first 10,000 inspected source positions across 64 descendant levels; reassign after changes),
 `selectedPath: string | null = null` (attribute `selected-path`), and `label?: string` — an
 accessible-name override for the internal `<lr-tree>`, where omission reads back `undefined` and falls

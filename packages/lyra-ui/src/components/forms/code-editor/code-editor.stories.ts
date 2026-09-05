@@ -143,3 +143,33 @@ export const SingleEditorScrollport: Story = {
     </div>
   `,
 };
+
+export const WrappedSource: Story = {
+  parameters: {
+    docs: { description: { story: 'Soft and hard text wraps within the allocation. The textarea, caret measurement, and logical line-number gutter follow the same wrapping and tab width; the editor frame owns scrolling.' } },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); inline-size: 320px; max-inline-size: 100%;">
+      ${(['soft', 'hard'] as const).map((wrap) => html`
+        <lr-code-editor label=${`${wrap} wrapping`} wrap=${wrap} tab-size="8" resize="none"
+          style="block-size: 200px"
+          .value=${`const sentence = "${'A longer source sentence. '.repeat(12)}";\n\treturn sentence;`}
+        ></lr-code-editor>
+      `)}
+    </div>
+  `,
+};
+
+export const DescribedRequiredEditor: Story = {
+  parameters: {
+    docs: { description: { story: 'External guidance describes the native text editor alongside its hint. Blur the empty editor, then reset: interaction feedback becomes pristine while required validity remains.' } },
+  },
+  render: () => html`
+    <form>
+      <p id="code-editor-story-guidance">Provide the source for this configuration.</p>
+      <lr-code-editor label="Source" required aria-describedby="code-editor-story-guidance"
+        hint="Enter code in the editor."></lr-code-editor>
+      <button type="reset">Reset</button>
+    </form>
+  `,
+};

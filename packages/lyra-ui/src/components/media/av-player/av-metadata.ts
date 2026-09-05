@@ -1,7 +1,8 @@
 import { finiteNumber } from '../../../internal/numbers.js';
 
-/** One synced transcript entry. `end` is exclusive; an omitted `end` extends to the next cue (or
- * forever, for the last one). Cue collections require a trimmed nonempty `cueId` and retain the
+/** One synced transcript entry. `end` is exclusive; an omitted `end` extends to the next strictly chronological
+ * start (or forever, for the last one). Equal starts do not end one another; caller order is
+ * retained. The player indexes starts on assignment so playback reconciliation stays linear. Cue collections require a trimmed nonempty `cueId` and retain the
  * first occurrence when IDs repeat. */
 export interface LyraAvCue {
   readonly cueId: string;

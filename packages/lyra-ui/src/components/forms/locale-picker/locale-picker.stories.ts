@@ -188,3 +188,13 @@ export const AncestorTheme: Story = {
     </div>
   `,
 };
+
+export const ExternalDescription: StoryObj = {
+  parameters: { docs: { description: { story: 'External guidance is resolved onto the value control before its local hint; changing the referenced content keeps the relationship current.' } } },
+  render: () => html`
+    <div>
+      <p id="lr-locale-picker-external-guidance">Use the details associated with your account.</p>
+      <lr-locale-picker label="Language" hint="Choose the language used for the interface" aria-describedby="lr-locale-picker-external-guidance"></lr-locale-picker>
+    </div>
+  `,
+};

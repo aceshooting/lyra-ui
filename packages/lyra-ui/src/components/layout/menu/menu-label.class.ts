@@ -11,9 +11,9 @@ import { styles } from './menu-label.styles.js';
  * still reads normally in reading order, and `<lr-menu>`'s roving tabindex skips this element
  * because it is not a `LyraMenuItem` — a label is never a focus stop.
  *
- * To announce a *named group* rather than a caption, wrap the labelled items in an element with
- * `role="group"` and point its `aria-label` at the same text; idrefs cannot cross the shadow
- * boundary, so `aria-labelledby` against this element's internals would not resolve.
+ * Keep selectable items directly assigned or forwarded into the menu's default slot, with this
+ * label as a sibling visual caption. Arbitrary group wrappers do not enroll their nested items
+ * in the menu's keyboard navigation or selection handling.
  *
  * @customElement lr-menu-label
  * @slot - The heading text.

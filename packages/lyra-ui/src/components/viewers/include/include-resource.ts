@@ -22,7 +22,7 @@ export type IncludeResourceErrorReason =
 export const MAX_INCLUDE_BYTES = 2 * 1024 * 1024;
 
 const INCLUDE_CACHE_ENTRIES = 32;
-const SANITIZE_PROFILE = 'transclusion-v2';
+const SANITIZE_PROFILE = 'transclusion-v3';
 type IncludeOwner = OwnerFetchTarget['view'];
 let resourcesByOwner = new WeakMap<IncludeOwner, BoundedResourceCache<string>>();
 

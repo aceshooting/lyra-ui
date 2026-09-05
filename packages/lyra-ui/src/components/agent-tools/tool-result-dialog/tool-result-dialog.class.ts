@@ -11,7 +11,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -436,7 +436,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   override render(): TemplateResult {
     const durationMs = this.safeDurationMs;
-    const panelLabel = hostAriaLabel(this) === null && this.accessibleLabel ? this.accessibleLabel : null;
+    const panelLabel = !this.hasAttribute('aria-label') && this.accessibleLabel ? this.accessibleLabel : null;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div

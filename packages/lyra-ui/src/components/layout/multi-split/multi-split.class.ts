@@ -112,7 +112,7 @@ interface ConstraintResolution {
 // rule, which now owns them as ordinary (overridable) stylesheet rules instead. Only genuinely
 // live, per-render-computed properties stay here: `inline-size` mirrors the panel's own live,
 // draggable `sizes[i]` percent (by design, so there's no visual jump un-floating -- see updated()).
-const OWNED_PANEL_STYLE_PROPERTIES = ['flex', 'order', 'inline-size'] as const;
+const OWNED_PANEL_STYLE_PROPERTIES = ['flex', 'order', 'inline-size', '--_lr-multi-split-panel-min'] as const;
 
 type OwnedPanelStyleProperty = (typeof OWNED_PANEL_STYLE_PROPERTIES)[number];
 
@@ -368,7 +368,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  `null`/missing entry leaves that panel purely percent-based (the
    *  existing `min`-only behavior). `sizes`, the `lr-resize` payload, and
    *  localStorage persistence stay percent-based regardless — only the
-   *  effective clamp bounds change for a constrained panel. */
+   *  effective clamp bounds change for a constrained panel. Feasible pixel minimums survive flex
+   *  shrink after divider gutters. When those floors cannot fit, panels share the remaining space
+   *  proportionally instead of overflowing; percentage state remains unchanged. Gutter geometry
+   *  follows the actual divider, including live font-unit and token changes. */
   @property({ attribute: false })
   panelConstraints: readonly (LyraMultiSplitPanelConstraint | null)[] = [];
   /** Opts a pane in to responsive collapse: `'start'` is the first light-DOM
@@ -494,6 +497,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private collapseObservedElement?: HTMLElement;
   private collapseObserverOwnerDocument?: Document;
   private collapseObserverGeneration = 0;
+  private gutterResizeObserver?: ResizeObserver;
+  private gutterObserverDocument?: Document;
+  private gutterObservedDividers: HTMLElement[] = [];
+  private gutterObservedContainerSize = 0;
   /** Owns breakpoint resolution, basis selection, and the viewport `MediaQueryList` lifecycle
    *  (including teardown on disconnect) — see `OrientationBreakpointController`. */
   private orientationBreakpoints = new OrientationBreakpointController(
@@ -554,6 +561,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     // Clean up any remaining event listeners from an in-flight drag.
     this.endDragGestures();
     this.resetCollapseObserver();
+    this.resetGutterObserver();
     this.overlayHandle?.suspend();
     this.releaseOwnedPanels();
   }
@@ -562,6 +570,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     super.adoptedCallback();
     this.endDragGestures();
     this.resetCollapseObserver();
+    this.resetGutterObserver();
     this.releaseOwnedPanels();
   }
 
@@ -1390,6 +1399,74 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       : this.baseEl.clientWidth;
   }
 
+  private resetGutterObserver(): void {
+    this.gutterResizeObserver?.disconnect();
+    this.gutterResizeObserver = undefined;
+    this.gutterObserverDocument = undefined;
+    this.gutterObservedDividers = [];
+    this.baseEl?.style.removeProperty('--_lr-multi-split-gutters');
+  }
+
+  /** Read CSS box dimensions in the divider's own font context, before any visual transform.
+   *  Panels can have different fonts, so inheriting an unresolved em token would change its size. */
+  private updateGutterBudget(): void {
+    const view = this.ownerDocument.defaultView;
+    const base = this.baseEl;
+    if (!view || !base) return;
+    const vertical = this.effectiveOrientation === 'vertical';
+    const gutters = this.gutterObservedDividers.reduce((total, divider) => {
+      const style = view.getComputedStyle(divider);
+      const properties = vertical
+        ? ['height', 'padding-top', 'padding-bottom', 'border-top-width', 'border-bottom-width']
+        : ['width', 'padding-left', 'padding-right', 'border-left-width', 'border-right-width'];
+      const boxProperties = style.boxSizing === 'border-box' ? properties.slice(0, 1) : properties;
+      return total + boxProperties.reduce((size, property) =>
+        size + finiteRange(parseFloat(style.getPropertyValue(property)), 0, 0), 0);
+    }, 0);
+    const value = `${gutters}px`;
+    if (base.style.getPropertyValue('--_lr-multi-split-gutters') !== value) {
+      base.style.setProperty('--_lr-multi-split-gutters', value);
+    }
+  }
+
+  private syncGutterObserver(enabled: boolean): void {
+    const base = this.baseEl;
+    if (!enabled || !this.isConnected || !base) {
+      this.resetGutterObserver();
+      return;
+    }
+    const ownerDocument = this.ownerDocument;
+    const dividers = [...base.querySelectorAll<HTMLElement>('[part="divider"]')];
+    if (
+      this.gutterResizeObserver &&
+      this.gutterObserverDocument === ownerDocument &&
+      dividers.length === this.gutterObservedDividers.length &&
+      dividers.every((divider, index) => divider === this.gutterObservedDividers[index])
+    ) {
+      this.updateGutterBudget();
+      return;
+    }
+    this.resetGutterObserver();
+    this.gutterObservedDividers = dividers;
+    this.gutterObserverDocument = ownerDocument;
+    this.gutterObservedContainerSize = this.getContainerSize();
+    this.updateGutterBudget();
+    const ResizeObserverConstructor = ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverConstructor) return;
+    const observer = new ResizeObserverConstructor(() => {
+      if (this.gutterResizeObserver !== observer || !this.isConnected || this.ownerDocument !== ownerDocument) return;
+      this.updateGutterBudget();
+      const size = this.getContainerSize();
+      if (size !== this.gutterObservedContainerSize) {
+        this.gutterObservedContainerSize = size;
+        this.requestUpdate();
+      }
+    });
+    this.gutterResizeObserver = observer;
+    observer.observe(base, { box: 'border-box' });
+    for (const divider of dividers) observer.observe(divider, { box: 'border-box' });
+  }
+
   /** The physical panel index `collapse: 'start' | 'end'` resolves to, or
    *  `-1` when collapse is off (`'none'`) or there are fewer than 2 panels
    *  to collapse one of. Panels are laid out via ascending inline `order`
@@ -2050,6 +2127,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     // its normal `'wide'` state, so every panel below falls straight through
     // to the exact pre-existing (non-collapse) styling in either case.
     const collapsingIndex = this.collapseActive ? this.collapsingIndex : -1;
+    this.syncGutterObserver(collapsingIndex === -1 && this.panelConstraints.some(
+      (constraint) => finiteRange(constraint?.minPx ?? 0, 0, 0) > 0
+    ));
+    const pixelMinimumTotal = constraintResolution.usePanelConstraints
+      ? this.panelConstraints.slice(0, this.panelCount).reduce((total, constraint) => total + finiteRange(constraint?.minPx ?? 0, 0, 0), 0)
+      : 0;
     // Percent-space bounds are already known before layout: resolveConstraintBounds()
     // above converted each panel's minPx/maxPx into a percent range using this same
     // containerSize. Clamp each panel's raw sizes[i] against its own bounds to find how
@@ -2097,6 +2180,16 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       const constraint = constraintResolution.usePanelConstraints
         ? this.panelConstraints[i]
         : undefined;
+      const pixelMinimum = finiteRange(constraint?.minPx ?? 0, 0, 0);
+      if (collapsingIndex === -1 && pixelMinimum > 0 && pixelMinimumTotal > 0) {
+        // Flex shrink must stop at a feasible pixel floor. If the allocation becomes too small,
+        // share the space left after the real target gutters proportionally instead of overflowing.
+        // The measured gutter budget stays independent of each panel's own font size.
+        this.applyOwnedPanelStyleValue(panel, snapshot, '--_lr-multi-split-panel-min',
+          `min(${pixelMinimum}px, max(0px, calc((100% - var(--_lr-multi-split-gutters, 0px)) * ${pixelMinimum / pixelMinimumTotal})))`);
+      } else {
+        this.applyOwnedPanelStyle(panel, snapshot, '--_lr-multi-split-panel-min', snapshot.styles.get('--_lr-multi-split-panel-min')!);
+      }
       // Collapse-only inline style is always cleared first, then re-applied
       // below only for the panel that needs it this pass. `position`/`inset-*`
       // no longer go through this owned-inline path at all — see

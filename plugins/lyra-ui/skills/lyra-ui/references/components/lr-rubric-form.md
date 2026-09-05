@@ -26,6 +26,18 @@ and error chrome is linked to that same-shadow role. A host `aria-label` wins by
 Both score branches format visible numeric labels with the effective locale (including non-Latin
 digits); segmented item values and submitted rubric values remain stable raw numbers/strings.
 
+Host `aria-describedby` references resolve in the host's root and precede local hint/error guidance
+on that aggregate group. Target replacement, removal, reinsertion, reconnection and document
+adoption keep the relationship current. Aggregate guidance is not copied to every child field; each
+retains its own description/error ownership. Removing `label` or `hint` safely removes the copy
+while retaining native attribute-removal property readback, including `null`; explicit empty and
+later replacement strings remain supported.
+
+Replacing `value` after a multiple-category user edit reconciles the actual checkbox checked states,
+group value and submitted JSON, including when replacement happens in the same task. These parent
+writes use live child state, leave child reset-default/dirty semantics intact, and emit no user-edit
+events.
+
 **Properties:** `keys: readonly RubricKey[] = []` (attribute: false), where the exported immutable
 discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. Keys use nonblank
 first-wins identity and retained valid spelling is not rewritten. Shared fields are

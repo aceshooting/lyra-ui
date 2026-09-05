@@ -472,7 +472,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     return parseMarkdownDocument({
       marked,
       content: normalizeMarkdownLeadingTabs(
-        this.content,
+        this.content ?? '',
         finiteInteger(this.tabSize, 4, 1, 32)
       ),
       markedConfigurations: [
@@ -606,7 +606,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   override render(): TemplateResult {
     return renderMarkdownContent({
-      content: this.content,
+      content: this.content ?? '',
       sanitized: normalizeMarkdownHtmlMode(this.htmlMode) === 'sanitize',
       renderedHtml: this.renderedHtml,
       hostAriaLabel: this.getAttribute('aria-label'),

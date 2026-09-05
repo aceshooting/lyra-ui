@@ -306,7 +306,8 @@ export interface LyraMapChoroplethLayer {
   /**
    * `[value, color]` pairs, ascending by `value`, fed to a maplibre-gl `interpolate` or `step`
    * expression. CSS custom-property references are resolved against the host before they reach
-   * MapLibre's WebGL canvas. Must contain at least one pair -- an empty array can't build a valid
+   * MapLibre's WebGL canvas and refreshed on live ancestor theme changes without rebuilding map
+   * sources or layers. Must contain at least one pair -- an empty array can't build a valid
    * expression, so it's ignored (the existing fill layer, if any, is left as-is) rather than
    * applied.
    */
@@ -331,7 +332,8 @@ export interface LyraMapChoroplethLayer {
    *
    * Defaults to the first stop's own color, which makes the common case (a legend whose first band
    * starts at the data's minimum) need no extra configuration. CSS custom-property references are
-   * resolved against the host before reaching MapLibre. Set it when the map should distinguish
+   * resolved against the host before reaching MapLibre and refreshed with the stop colors on
+   * live theme changes. Set it when the map should distinguish
    * "below the lowest advertised band" from the lowest band itself.
    */
   readonly stepBaseColor?: string;
@@ -2844,6 +2846,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!this._map || !this._styleLoaded) return;
     const fillOpacity = choroplethFillOpacity(this);
     if (this._appliedFillLayerId) {
+      const choropleth = this.canonicalChoropleth;
+      if (choropleth && choropleth.stops.length > 0) {
+        this._map.setPaintProperty(this._appliedFillLayerId, 'fill-color', this.choroplethColorExpression(choropleth) as never);
+      }
       this._map.setPaintProperty(this._appliedFillLayerId, 'fill-opacity', fillOpacity);
     }
     const dataLayersBySourceId = new Map(
@@ -2866,7 +2872,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.removeChoropleth();
       return;
     }
-    const { geojson, geojsonProjection, field, stops } = choropleth;
+    const { geojson, geojsonProjection, stops } = choropleth;
     const sourceId = this.resolveChoroplethSourceId(choropleth.sourceId);
     const fillLayerId = `${sourceId}-fill`;
 
@@ -2906,6 +2912,23 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // exists (if any) untouched until `stops` is non-empty again.
     if (stops.length === 0) return;
 
+    const colorExpr = this.choroplethColorExpression(choropleth);
+    if (this._map.getLayer(fillLayerId)) {
+      this._map.setPaintProperty(fillLayerId, 'fill-color', colorExpr as never);
+      this._map.setPaintProperty(fillLayerId, 'fill-opacity', choroplethFillOpacity(this));
+    } else {
+      this._map.addLayer({
+        id: fillLayerId,
+        type: 'fill',
+        source: sourceId,
+        paint: { 'fill-color': colorExpr as never, 'fill-opacity': choroplethFillOpacity(this) },
+      });
+    }
+    this._appliedFillLayerId = fillLayerId;
+  }
+
+  private choroplethColorExpression(choropleth: CanonicalMapChoropleth): unknown[] {
+    const { field, stops } = choropleth;
     // `['step', input, base, threshold, color, …]` -- discrete bands, not a ramp. The base output
     // (values below the first threshold) defaults to the first stop's own color, so a legend whose
     // first band starts at the data minimum needs no extra configuration.
@@ -2931,18 +2954,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       for (const [value, color] of resolvedStops) colorExpr.push(value, color);
     }
 
-    if (this._map.getLayer(fillLayerId)) {
-      this._map.setPaintProperty(fillLayerId, 'fill-color', colorExpr as never);
-      this._map.setPaintProperty(fillLayerId, 'fill-opacity', choroplethFillOpacity(this));
-    } else {
-      this._map.addLayer({
-        id: fillLayerId,
-        type: 'fill',
-        source: sourceId,
-        paint: { 'fill-color': colorExpr as never, 'fill-opacity': choroplethFillOpacity(this) },
-      });
-    }
-    this._appliedFillLayerId = fillLayerId;
+    return colorExpr;
   }
 
   /**

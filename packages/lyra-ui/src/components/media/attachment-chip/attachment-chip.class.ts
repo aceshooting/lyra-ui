@@ -3,6 +3,7 @@ import {
   nothing,
   svg,
   type PropertyValues,
+  type PropertyDeclaration,
   type TemplateResult,
   type SVGTemplateResult,
 } from 'lit';
@@ -247,7 +248,8 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   })
   previewable = true;
 
-  /** Lifecycle state — drives the accent tint and which of `progress`/`spinner`/`retry-button` renders. */
+  /** Lifecycle state — drives the accent tint and which of `progress`/`spinner`/`retry-button` renders.
+   * Failures already present on reconnect render silently; new connected failures announce once. */
   @property({ reflect: true }) status: LyraAttachmentUploadStatus = 'pending';
 
   /** Upload completion, 0-100. Only meaningful while `status="uploading"`;
@@ -378,8 +380,19 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     this.objectUrlFile = undefined;
   }
 
+  private connectedStatusTransition = false;
+
+  override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: PropertyDeclaration): void {
+    // Record connected writes before Lit coalesces an uploading→error retry into one update.
+    if (name === 'status' && this.isConnected && this.hasUpdated && oldValue !== this.status) {
+      this.connectedStatusTransition = true;
+    }
+    super.requestUpdate(name, oldValue, options);
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    this.connectedStatusTransition = false;
     // Acquired on connect, not on the first failure: assistive tech has to have been observing a
     // live region *before* text arrives for the change to be announced at all.
     this.syncAnnouncementSink();
@@ -412,12 +425,14 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     if (changed.has('status') && this.status !== this.effectiveStatus)
       this.status = this.effectiveStatus;
     // Only a *transition* into `error` announces: a chip that mounts already failed is history a
-    // user can read at their own pace, and re-announcing every render would be spam. Announced
+    // user can read at their own pace. Reconnection captures detached changes as that same
+    // historical baseline; a new connected failure still announces. Announced
     // from the transition rather than from rendered text, so a retry that fails the same way twice
     // is read twice instead of the second failure being a silent no-op.
-    if (this.hasUpdated && changed.has('status') && this.status === 'error') {
+    if (this.isConnected && this.hasUpdated && this.connectedStatusTransition && this.status === 'error') {
       this.sink?.announce(this.localizedUploadFailedLabel);
     }
+    this.connectedStatusTransition = false;
     // Prepare or revoke the non-reactive cache before render. This keeps URL
     // allocation out of the render phase and also handles a file changing to
     // a non-image or to undefined, where no thumbnail render would otherwise

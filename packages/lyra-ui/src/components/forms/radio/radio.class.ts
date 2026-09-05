@@ -1,4 +1,5 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -75,6 +76,10 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  * In `appearance="button"`, the same `start`/`prefix` and `end`/`suffix` adornment aliases as
  * `<lr-radio-button>` render around the label. Empty leading, label, and trailing wrappers stay
  * hidden so only present content contributes the button's flex gaps.
+ *
+ * Host `aria-describedby` references resolve onto the internal radio, including button appearance,
+ * and track live target changes, reconnect and document adoption. Explicit `checked` assignments
+ * mark live state dirty even when unchanged; later default changes affect live state only after reset.
  *
  * @customElement lr-radio
  * @slot - Label content, including forwarded or element-only visuals.
@@ -253,8 +258,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   set checked(value: boolean) {
     const old = this._checked;
     const next = Boolean(value);
-    if (old === next) return;
     if (!this.settingDefaultChecked) this._checkedDirty = true;
+    if (old === next) return;
     this._checked = next;
     this.syncFormState();
     this.requestUpdate('checked', old);
@@ -398,8 +403,29 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     return this.renderRoot?.querySelector('[part~="base"]') ?? null;
   }
 
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const target = this[VALIDITY_ANCHOR]();
+    if (!target) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.syncExternalDescription();
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.labelObserver = MutationObserverCtor
       ? new MutationObserverCtor(() => {
@@ -417,7 +443,14 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.group();
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.hasUpdated) this.syncExternalDescription();
+  }
+
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.removeEventListener('slotchange', this.onAdornmentSlotChange);
     this.labelObserver?.disconnect();

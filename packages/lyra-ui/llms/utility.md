@@ -160,6 +160,12 @@ A standalone copy-to-clipboard affordance for a plain text `value` or a source e
 settles; a consumer-provided default-slot trigger can replace that button. The component takes no
 positioning opinion of its own.
 
+The CopyFailure example temporarily supplies a denied clipboard operation during click capture,
+including after a held pointer press, then restores the original own property descriptor or removes
+its temporary override when the clipboard was inherited. Pointer gestures that end without a click
+do not install an override. This example does not change the clipboard contract of ordinary copy
+buttons.
+
 **Properties:**
 
 - `value: string = ''` — the plain text to copy.
@@ -416,6 +422,10 @@ being patched in place. A container value that self-references (directly or thro
 renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no
 stack overflow on cyclic `data`.
 
+Removing `search` clears matches while retaining null property readback. Before any match is active,
+`searchPrevious()` selects the final match; later next/previous navigation wraps. Navigation may
+reopen the selected match’s ancestors while unrelated manual collapse remains intact.
+
 **Properties:**
 
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
@@ -547,6 +557,9 @@ A throttled screen-reader announcement helper, split into a DOM-free coalescing 
 `Announcer` class), the shared light-DOM region a flush writes into (`acquireAnnouncementSink()`),
 and a real custom element that composes both. The two helpers are public — part of the curated,
 semver-covered `utilities/` surface documented in `llms/shared.md`, not internals:
+
+The Basic example’s controls announce through its sibling live region; both first and repeated
+messages appear in the visible log and the light-DOM announcement sink.
 
 ```ts
 import {
@@ -712,6 +725,10 @@ First-party invention (no Web Awesome equivalent); the closest existing componen
 scheduled-interval countdown — this mirrors its internal `<lr-live-region>` composition for
 accessible phase-transition announcements.
 
+Long localized status labels, including unbroken words, wrap within the component’s allocated inline
+size in LTR and RTL. The indicator and pause/resume action retain their size; the 320px example
+shows both inactive and refreshing states.
+
 **Properties:**
 
 - `nextInMs?: number` (attribute `next-in-ms`) — milliseconds until the next scheduled action, as of
@@ -791,6 +808,11 @@ Textarea ARIA/AOM values are restored on close, anchor replacement, disconnect, 
 cross-root string IDREF is never left behind. Later localized result-count and active-position
 changes are announced once through the shared polite region; opening markup and unchanged state are
 silent.
+
+Forward native input keydown events to `handleKeyDown()` as usual. Events with `isComposing` or
+legacy `keyCode === 229` return false without preventing default, moving the active suggestion,
+selecting, or closing the popover. Removing `query` uses the unfiltered empty-query behavior while
+preserving null readback; an explicitly empty query remains empty.
 
 **Properties:**
 
@@ -1343,6 +1365,10 @@ parent that actually has a resolved height.
 
 `Intl.NumberFormat` output.
 
+Removing `currency` preserves the removal readback while formatting with the declared USD fallback.
+An explicitly blank currency also keeps its existing USD formatting fallback, and a later valid
+currency takes effect normally.
+
 Shared by all four formatters (`lr-format-number`, `lr-format-date`, `lr-format-bytes`,
 `lr-relative-time`): each is text-only — a `display: inline` host with **no CSS parts, no events, and
 no themeable custom properties of its own** — rendering one formatted string into its shadow root.
@@ -1466,6 +1492,13 @@ A form-associated control for a date the user already knows (a birthdate, a pass
 collected as three plain day/month/year number fields in the locale's natural order rather than a
 calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is always canonical ISO
 8601 (`YYYY-MM-DD`), or `''` while any field is blank or the combination isn't a real calendar date.
+
+Host `aria-describedby` resolves external guidance onto the aggregate date fieldset and follows live
+target replacement/removal/reinsertion and document adoption. Each native field retains the
+component’s local hint and error guidance. Removed `label` and `hint` render as absent. Removing
+`day-label`, `month-label`, or `year-label` restores that field’s localized omitted default; an
+explicitly empty label remains empty. Own or fieldset disablement preserves each field’s resting
+paint on hover and press.
 
 **Properties:**
 
@@ -1872,93 +1905,114 @@ rather than per component.
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-utility-diff-view-diff-line-diff-contracts`** — Supporting data types and helpers for this component family.
-  `computeLineDiff(/* public names: oldLines, newLines */): unknown`
+  Import: `@aceshooting/lyra-ui`.
+  `computeLineDiff(oldLines: string[], newLines: string[]): LyraDiffOp[]`
+  Import: `@aceshooting/lyra-ui`.
   `LyraDiffOp {
-  type: unknown;
-  text: unknown;
-}`
+    type: 'equal' | 'add' | 'remove';
+    text: string;
+  }`
 
 - **`components-utility-export-button-csv-contracts`** — Supporting data types and helpers for this component family.
-  `buildCsv(/* public names: rows, columns */): unknown`
-  `downloadBlob(/* public names: content, filename, mime, ownerDocument */): unknown`
-  `escapeCsvField(/* public names: value */): unknown`
+  Import: `@aceshooting/lyra-ui/components/utility/export-button/csv.js`.
+  `buildCsv(rows: readonly Readonly<Record<string, unknown>>[], columns: readonly LyraCsvColumn[]): string`
+  Import: `@aceshooting/lyra-ui/components/utility/export-button/csv.js`.
+  `downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Document): void`
+  Import: `@aceshooting/lyra-ui/components/utility/export-button/csv.js`.
+  `escapeCsvField(value: unknown): string`
+  Import: `@aceshooting/lyra-ui/components/utility/export-button/csv.js`.
   `LyraCsvColumn {
-  key: unknown;
-  label: unknown;
-}`
+    readonly key: string;
+    readonly label: string;
+  }`
 
 - **`components-utility-export-button-export-button-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/utility/export-button/export-button.class.js`.
   `LyraExportFormatDescriptor {
-  formatId: unknown;
-  label: unknown;
-  description: unknown;
-  extension: unknown;
-}`
+    readonly formatId: string;
+    readonly label: string;
+    readonly description?: string;
+    readonly extension?: string;
+  }`
 
 - **`components-utility-icon-icon-library-contracts`** — Supporting data types and helpers for this component family.
-  `getIconLibrary(/* public names: name */): unknown`
-  `LyraIconLibrary {
-  name: unknown;
-  resolver: unknown;
-  mutator: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
+  `getIconLibrary(name: string): LyraIconLibrary | undefined`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
+  `LyraIconLibrary extends LyraIconLibraryOptions {
+    readonly name: string;
+    // Inherited from LyraIconLibraryOptions.
+    resolver: LyraIconLibraryResolver;
+    mutator?: LyraIconLibraryMutator;
+  }`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
   `LyraIconLibraryOptions {
-  resolver: unknown;
-  mutator: unknown;
-}`
-  `registerIconLibrary(/* public names: name, options */): unknown`
-  `unregisterIconLibrary(/* public names: name */): unknown`
+    resolver: LyraIconLibraryResolver;
+    mutator?: LyraIconLibraryMutator;
+  }`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
+  `registerIconLibrary(name: string, options: LyraIconLibraryOptions): void`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
+  `unregisterIconLibrary(name: string): void`
 
 - **`components-utility-known-date-known-date-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js`.
   `LyraKnownDateEventDetail {
-  value: unknown;
-  day: unknown;
-  month: unknown;
-  year: unknown;
-  field: unknown;
-}`
+    value: string;
+    day: string;
+    month: string;
+    year: string;
+    field: LyraKnownDateField;
+  }`
+  Import: `@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js`.
   `LyraKnownDateParts {
-  day: unknown;
-  month: unknown;
-  year: unknown;
-}`
+    day: string;
+    month: string;
+    year: string;
+  }`
 
 - **`components-utility-mention-popover-mention-popover-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/utility/mention-popover/mention-popover.class.js`.
   `LyraMentionFocusOptions {
-  ownsFocus: unknown;
-}`
+    readonly ownsFocus?: () => boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/utility/mention-popover/mention-popover.class.js`.
   `LyraMentionItem {
-  suggestionId: unknown;
-  label: unknown;
-  description: unknown;
-  icon: unknown;
-}`
+    readonly suggestionId: string;
+    readonly label: string;
+    readonly description?: string;
+    readonly icon?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/utility/mention-popover/mention-popover.class.js`.
   `LyraMentionSelectDetail {
-  suggestionId: unknown;
-  index: unknown;
-  label: unknown;
-}`
+    readonly suggestionId: string;
+    readonly index: number;
+    readonly label: string;
+  }`
 
 - **`components-utility-tour-tour-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/utility/tour/tour.class.js`.
   `LyraTourStep {
-  stepId: unknown;
-  target: unknown;
-  heading: unknown;
-  content: unknown;
-  placement: unknown;
-  spotlightPadding: unknown;
-  interactiveTarget: unknown;
-  hidePrevious: unknown;
-}`
+    readonly stepId: string;
+    readonly target: LyraTourTarget;
+    readonly heading: string;
+    readonly content?: string;
+    readonly placement?: Placement;
+    readonly spotlightPadding?: number;
+    readonly interactiveTarget?: boolean;
+    readonly hidePrevious?: boolean;
+  }`
 
 - **`internal-clipboard-contracts`** — Shared utility contracts.
+  Import: `@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js`.
   `LyraClipboardWriteFailure {
-  ok: unknown;
-  text: unknown;
-  reason: unknown;
-  error: unknown;
-}`
+    readonly ok: false;
+    readonly text: string;
+    readonly reason: LyraCopyErrorReason;
+    readonly error: unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js`.
   `LyraClipboardWriteSuccess {
-  ok: unknown;
-  text: unknown;
-}`
+    readonly ok: true;
+    readonly text: string;
+  }`

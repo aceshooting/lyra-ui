@@ -25,6 +25,20 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 `anchorKinds: ['time-range']` only — no text selection is bound. The transcript virtualizes through
 `<lr-virtual-list>` the same way `lr-pdf-viewer` virtualizes pages.
 
+Removing `mime-type` consumes the absent hint safely and restores automatic video fallback unless
+`kind` explicitly selects audio. Attribute removal keeps its `null` property readback; an explicit
+empty hint remains empty, and a later audio MIME value restores audio detection.
+
+A cue with no `end` extends to the next strictly chronological applicable start, or remains
+open-ended when none exists. Equal starts do not end each other. The player indexes starts on cue
+assignment in at most O(n log n) work and reconciles each seek/time update in O(n) work. Caller
+order, first ID admission, explicit ends and overlap arbitration are retained; a paused seek uses
+replacement cues immediately, even before rendering. Duration changes preserve the same
+effective-start rules.
+
+An unavailable timeline keeps its resting border and background under hover and press. Enabled
+seeking retains token-driven pointer feedback.
+
 The default document-viewer renderer advertises `time-range` anchors but not search: the generic
 document payload has no cue/transcript field, so advertising search there would expose a control
 whose result is always empty. Standalone `<lr-av-player>` search remains available whenever the

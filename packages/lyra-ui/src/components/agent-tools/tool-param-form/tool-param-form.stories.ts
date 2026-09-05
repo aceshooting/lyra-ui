@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Schema and value records are detached, deeply frozen, and synchronously bounded at assignment (100 fields/required keys, 500 enum choices, and finite nested-value budgets). Create and reassign a new record after changes; input and validity events expose detached frozen details.',
+          'Choosing Boolean Unset keeps an explicit undefined value when a schema default exists; deleting that key or replacing the value with an absent key restores default materialization. Without a schema default, Unset removes the key. Schema and value records are detached, deeply frozen, and synchronously bounded at assignment (100 fields/required keys, 500 enum choices, and finite nested-value budgets). Create and reassign a new record after changes; input and validity events expose detached frozen details.',
       },
     },
   },

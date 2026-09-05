@@ -91,6 +91,23 @@ export const Editable: Story = {
   `,
 };
 
+export const CssTrackGeometry: Story = {
+  name: 'Pointer snapping with CSS track geometry',
+  parameters: {
+    docs: { description: { story: 'The public CSS column, row-height, and gap overrides determine the painted pointer pitch. This controlled example applies each proposed layout; drag or resize in either text direction to follow the visible tracks and gutters.' } },
+  },
+  render: () => html`
+    <lr-dashboard-grid cells-draggable cells-resizable collision="overlap"
+      style="inline-size: 100%; --lr-dashboard-grid-columns: 8; --lr-dashboard-grid-row-height: 40px; --lr-dashboard-grid-gap: 12px;"
+      .layout=${[{ cellId: 'preview', x: 0, y: 0, w: 2, h: 2, label: 'Preview' }]}
+      @lr-layout-change=${(event: CustomEvent<LyraDashboardLayoutChangeDetail>) => {
+        (event.currentTarget as LyraDashboardGrid).layout = event.detail.layout;
+      }}>
+      <div cell-id="preview">Drag or resize this preview.</div>
+    </lr-dashboard-grid>
+  `,
+};
+
 export const ThemedInteractionElevation: Story = {
   name: "Themed drag/resize elevation",
   parameters: {

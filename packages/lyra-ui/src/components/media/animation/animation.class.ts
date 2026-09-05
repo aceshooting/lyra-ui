@@ -275,7 +275,8 @@ function resolveTimingToken(
  * native Web Animations API: a small curated preset catalog (`name`) or fully
  * custom `keyframes`, explicit WAAPI timing controls, an optional
  * `playOnVisible` trigger, and a `lr-start`/`lr-finish`/`lr-cancel` event
- * contract.
+ * contract. An initial playing mount creates one animation and emits one start; later target or
+ * timing changes still rebuild, and replay keeps its normal lifecycle.
  *
  * `keyframes`, when set, always wins over `name`. The `iterations` default is
  * `Infinity` (mirrors the upstream Web Awesome/Shoelace animation contract
@@ -370,6 +371,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   @property({ attribute: false }) root: Element | null = null;
 
   private animation?: Animation;
+  private animationTarget?: Element;
   private hasStarted = false;
   private visibilityObserver?: IntersectionObserver;
   private motionQuery?: MediaQueryList;
@@ -432,7 +434,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     super.connectedCallback();
     this.bindMotionPreference();
     this.scheduleAfterUpdate(() => {
-      this.createAnimation();
+      if (!this.animation) this.createAnimation();
       this.syncVisibilityObserver();
     });
   }
@@ -454,7 +456,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     if (!this.isConnected) return;
     this.bindMotionPreference();
     this.scheduleAfterUpdate(() => {
-      this.createAnimation();
+      if (!this.animation) this.createAnimation();
       this.syncVisibilityObserver();
     });
   }
@@ -526,7 +528,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   }
 
   private onSlotChange = (): void => {
-    this.createAnimation();
+    if (this.currentTarget() !== this.animationTarget) this.createAnimation();
     this.syncVisibilityObserver();
   };
 
@@ -656,6 +658,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     this.animation.removeEventListener('finish', this.onAnimationFinish);
     this.animation.cancel();
     this.animation = undefined;
+    this.animationTarget = undefined;
     this.hasStarted = false;
   }
 
@@ -726,6 +729,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
         return;
       }
     }
+    this.animationTarget = target;
     this.animation.playbackRate = this.safePlaybackRate;
     this.animation.addEventListener('cancel', this.onAnimationCancel);
     this.animation.addEventListener('finish', this.onAnimationFinish);

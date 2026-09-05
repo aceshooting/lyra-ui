@@ -135,18 +135,22 @@ export const CopyFailure: Story = {
     <lr-copy-button
       value="this write will be refused"
       feedback-duration="4000"
-      @pointerdown=${() => {
-        // Installed on pointerdown (before the button's own click handler reads it) and put back
-        // on the next macrotask, so the rest of the docs page keeps the real clipboard.
+      @click=${{ capture: true, handleEvent: () => {
+        // Capture runs before the internal button copies, including after a held pointer press.
+        // No override is installed for a pointer gesture that ends without a click.
         const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
-        Object.defineProperty(navigator, 'clipboard', {
-          value: { writeText: () => Promise.reject(new DOMException('Denied', 'NotAllowedError')) },
-          configurable: true,
-        });
-        setTimeout(() => {
-          if (original) Object.defineProperty(navigator, 'clipboard', original);
-        }, 0);
-      }}
+        try {
+          Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: () => Promise.reject(new DOMException('Denied', 'NotAllowedError')) },
+            configurable: true,
+          });
+        } finally {
+          setTimeout(() => {
+            if (original) Object.defineProperty(navigator, 'clipboard', original);
+            else Reflect.deleteProperty(navigator, 'clipboard');
+          }, 0);
+        }
+      } }}
       @lr-copy-error=${(e: CustomEvent<LyraClipboardWriteFailure>) => {
         const out = document.getElementById('copy-button-error-log');
         if (out) out.textContent = `lr-copy-error: ${e.detail.reason}`;

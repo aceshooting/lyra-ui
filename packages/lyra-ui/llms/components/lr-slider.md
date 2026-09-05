@@ -19,11 +19,21 @@
 A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
 `ElementInternals`, because its public `value` is a number rather than the string assumed by the
 shared form mixin. `value`, `defaultValue`, and `valueAsNumber` are numeric; `valueAsString` is the
-explicit compatibility round-trip for code that still wants a serialized value. Clicking anywhere
+explicit compatibility round-trip for code that still wants a serialized value. A primary-button press anywhere
 on `[part~="base"]` (not just the thumb) jumps the
 thumb to that point and continues the same gesture as a drag, matching native `<input type=range>`
 click-to-seek — the thumb is also `.focus()`ed on that click, so keyboard interaction can continue
 seamlessly right after. Mirrors the core `<wa-slider>` API under the `lr-` prefix.
+
+Secondary mouse buttons leave the value and input/change events untouched. Primary mouse, touch and
+pen gestures remain supported, including concurrent pointers.
+
+Removing `label`, `hint`, `help-text` or `error-text` safely removes the corresponding copy; native
+attribute-removal property readback remains unchanged, including `null`. Supplying an empty string
+or later replacement remains supported. In single mode, host `aria-describedby` references resolve
+in the host's root and precede local error/hint descriptions on the slider handle. Target
+replacement, removal, reinsertion, host reconnection and document adoption update the relationship
+without losing local guidance.
 
 **Two-handle `range` mode.** `range` turns the control into a selection between `minValue` and
 `maxValue`, defaulting to `0`/`50`. Each handle is a separately focusable `role="slider"` with its
@@ -114,9 +124,11 @@ single numeric string entry.
 
 **Events:** native-style `input` (no detail), then `lr-input`, fire continuously during an active
 drag or keyboard step, including OS key-repeat while a key is held. Native-style `change` (no
-detail), then `lr-change`, fire once an interaction commits: on pointerup for a drag, or on keyup
-for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press fires both pairs, mirroring
-native `<input type=range>` timing.
+detail), then `lr-change`, fire once an interaction commits: on pointerup for an enabled drag,
+or on keyup or ordinary blur for a changed keyboard sequence. A later keyup cannot duplicate a
+blur commit. Own or fieldset disablement, and readonly, cancel unfinished gestures without
+reverting their live values or emitting a later change pair. Pointer cancellation, lost capture
+and disconnection also remain noncommitting.
 The focused handle's native `focus` and `blur` are re-dispatched from the host as bubbling,
 composed events.
 `lr-invalid` (no detail) fires when a validity check finds the slider invalid.

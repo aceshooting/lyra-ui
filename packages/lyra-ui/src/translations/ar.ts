@@ -1237,6 +1237,7 @@ const strings: LyraLocaleStrings = {
   promptStudioVariables: 'المتغيّرات',
   promptStudioVersions: 'الإصدارات',
   promptStudioPreview: 'المعاينة النهائية',
+  promptStudioPreviewLimit: 'المعاينة غير متاحة: تم تجاوز حد توسيع النص.',
   promptStudioRun: 'تشغيل المُوجّه',
   promptStudioSave: 'حفظ الإصدار',
   promptStudioAddMessage: 'إضافة رسالة',

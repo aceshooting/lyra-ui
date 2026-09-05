@@ -23,6 +23,9 @@ behind a count-labeled toggle. A malformed or non-safe-integer location remains 
 non-activatable text. Falls back to verbatim raw text when nothing parses. First-party invention
 (no Web Awesome equivalent).
 
+Removing the `trace` attribute clears parsed content and copies empty text; the property retains
+`null` until assigned again.
+
 **Properties:**
 
 - `trace: string = ''` — the raw stack trace text to parse and render.

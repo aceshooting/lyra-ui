@@ -365,3 +365,27 @@ export const LogarithmicScaleCanary: Story = {
     </div>
   `,
 };
+
+/** Dense groups keep visible, nonoverlapping bars within the remaining category width. */
+export const ManyGroupedSeries: Story = {
+  render: () => html`
+    <lr-lite-chart
+      type="bar" height="16rem" bar-gap-ratio="0.8" show-data-table
+      style="inline-size: 32rem; max-inline-size: 100%;"
+      .labels=${['Current', 'Previous']}
+      .datasets=${Array.from({ length: 12 }, (_, index) => ({ label: `Series ${index + 1}`, data: [index + 1, 12 - index] }))}
+    ></lr-lite-chart>
+  `,
+};
+
+/** Each positive total is mapped onto the log axis once, then divided by raw segment share. */
+export const LogarithmicStacks: Story = {
+  render: () => html`
+    <lr-lite-chart
+      type="bar" scale="logarithmic" stacked legend show-data-table height="16rem"
+      style="inline-size: 26rem; max-inline-size: 100%;"
+      .labels=${['Small total', 'Large total']}
+      .datasets=${[{ label: 'First', data: [1, 10] }, { label: 'Second', data: [1, 30] }]}
+    ></lr-lite-chart>
+  `,
+};

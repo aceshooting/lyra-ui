@@ -24,6 +24,10 @@ and animated panel. The two components intentionally keep distinct vocabularies:
 use `expanded`, `label`, and `expand()`/`collapse()`/`toggle()`, while `open`, `summary`, and
 `show()`/`hide()` belong only to Details.
 
+`lr-toggle` reports the direction and source of an accepted Details transition. Accordion
+coordinates only its direct `lr-accordion-item` children; Details retains independent state and
+optional grouping through a shared non-empty `name`.
+
 **Breaking in 9.0.0:** an accordion coordinates direct `lr-accordion-item` children only. Direct
 `lr-details` panels used to be accepted as well; they are not any more. A `lr-details` slotted into
 an accordion today is ordinary content owning its own disclosure lifecycle — the group applies

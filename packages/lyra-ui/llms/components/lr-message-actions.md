@@ -34,6 +34,9 @@ becomes unavailable, focus moves to the nearest survivor or the stable toolbar, 
 newer external focus move. Keyboard movement starts from the action that actually received the event,
 even after a controlled state write changed the remembered stop.
 
+ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor remain native editing keys.
+Roving navigation still operates on the actual toolbar and thumb actions.
+
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins
 render, in that order. Duplicate names are omitted first-wins before rendering, roving focus, or

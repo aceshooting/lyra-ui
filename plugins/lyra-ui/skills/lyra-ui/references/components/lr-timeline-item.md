@@ -26,6 +26,12 @@ item's `title`/`description` routinely hold focusable content, so wrapping the r
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
 
+Horizontal time layouts using `collision="overlap"` or `collision="stack"` allocate their block size
+from the actual item content and lane offsets. The height follows content growth, shrinkage, and
+changes in lane count. `--lr-timeline-time-extent` still controls only the main-axis distance, and
+horizontal scrolling retains clipping on the cross axis. Cluster mode keeps its existing sizing
+behavior.
+
 **`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
 `accessibleLabel?: string` (attribute `aria-label`) overrides the localized `"Timeline"` name —

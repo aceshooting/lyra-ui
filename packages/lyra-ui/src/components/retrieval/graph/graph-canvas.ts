@@ -242,6 +242,9 @@ export function drawGraphScene(
 
   const dimmedOpacity = scene.dimmedOpacity ?? 1;
   for (const link of scene.links) {
+    // Canvas ignores lineWidth=0 and retains the preceding stroke width. Skip both the stroke
+    // and its arrowhead while the caller keeps the link in the graph's topology.
+    if (link.width <= 0) continue;
     ctx.strokeStyle = link.selected ? scene.selectedColor : link.color;
     ctx.lineWidth = link.width;
     ctx.setLineDash(link.dash ? [...link.dash] : []);

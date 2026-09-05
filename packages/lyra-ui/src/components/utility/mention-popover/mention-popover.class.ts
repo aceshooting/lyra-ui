@@ -365,7 +365,8 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   /** The text typed since the trigger character (`@`/`/`/…) — drives the
-   *  built-in internal filtering (see `filter` to override it). */
+   *  built-in internal filtering (see `filter` to override it). Removing the attribute
+   *  uses the unfiltered empty-query behavior without changing null readback. */
   @property() query = '';
 
   /** Whether the popover is shown. */
@@ -839,7 +840,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  remaining `items` are filtered by `query` via `filter` (or the built-in default). */
   get filteredItems(): readonly Readonly<LyraMentionItem>[] {
     const locale = this.effectiveLocale;
-    const q = this.query.trim().toLocaleLowerCase(locale);
+    const q = (this.query ?? '').trim().toLocaleLowerCase(locale);
     return this.items.filter((item) => {
       if (typeof item.label !== 'string') return false;
       if (!q) return true;
@@ -997,12 +998,13 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    * popover is open. Returns `true` when the key was intercepted
    * (`preventDefault()` already called) and the host should not also act on
    * it; `false` when the host's normal handling should proceed untouched --
+   * including composing events and the legacy keyCode 229 marker,
    * including ArrowDown/ArrowUp/Enter/Tab when there are zero filtered rows
    * to act on, so e.g. the host's own textarea still moves its caret a line
    * normally rather than having the keystroke silently eaten.
    */
   handleKeyDown(e: KeyboardEvent): boolean {
-    if (!this.open) return false;
+    if (!this.open || e.isComposing || e.keyCode === 229) return false;
     const rows = this.filteredItems;
     switch (e.key) {
       case 'ArrowDown':

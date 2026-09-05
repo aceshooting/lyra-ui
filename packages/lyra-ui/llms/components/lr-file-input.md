@@ -20,6 +20,13 @@
 A form-associated drag-drop + click-to-browse file dropzone. It stores and renders raw `File[]`;
 no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the host).
 
+Removing `label` or `hint` consumes it as absent without changing the property's `null` readback. An
+explicit empty string remains empty. Text chrome and label/description associations disappear when
+no corresponding slot or explicit presence hint remains, and a later value restores them. Removing
+the label leaves the localized dropzone instruction available. Disabled file removal buttons,
+including fieldset disablement, retain resting foreground and background under hover and press;
+enabled buttons retain pointer feedback.
+
 **Properties:**
 
 - `multiple: boolean = false` (reflected)

@@ -1191,6 +1191,7 @@ const strings: LyraLocaleStrings = {
   promptStudioVariables: 'متغیرها',
   promptStudioVersions: 'نسخه‌ها',
   promptStudioPreview: 'پیش‌نمایش پردازش‌شده',
+  promptStudioPreviewLimit: 'پیش‌نمایش در دسترس نیست: گسترش متن از حد مجاز فراتر رفته است.',
   promptStudioRun: 'اجرای درخواست',
   promptStudioSave: 'ذخیرهٔ نسخه',
   promptStudioAddMessage: 'افزودن پیام',

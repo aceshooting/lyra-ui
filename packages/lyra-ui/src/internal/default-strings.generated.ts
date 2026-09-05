@@ -915,6 +915,7 @@ export const LYRA_DEFAULT_promptStudioMessageContent: LyraMessage = 'Message {in
 export const LYRA_DEFAULT_promptStudioMessageRole: LyraMessage = 'Message {index} role ({role})';
 export const LYRA_DEFAULT_promptStudioMessages: LyraMessage = 'Prompt messages';
 export const LYRA_DEFAULT_promptStudioPreview: LyraMessage = 'Resolved preview';
+export const LYRA_DEFAULT_promptStudioPreviewLimit: LyraMessage = 'Preview unavailable: expansion limit exceeded.';
 export const LYRA_DEFAULT_promptStudioRemoveMessage: LyraMessage = 'Remove message';
 export const LYRA_DEFAULT_promptStudioRoleAssistant: LyraMessage = 'Assistant';
 export const LYRA_DEFAULT_promptStudioRoleSystem: LyraMessage = 'System';

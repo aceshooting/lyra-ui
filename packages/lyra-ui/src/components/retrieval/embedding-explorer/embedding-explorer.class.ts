@@ -1,3 +1,4 @@
+import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import {
   html,
   nothing,
@@ -278,7 +279,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       <circle class="point-marker" r="6" fill=${
         PALETTE[(clusterIndices.get(cluster) ?? 0) % PALETTE.length]
       }></circle>
-      <title>${label}</title>
+      ${nativeSvgTitle(label)}
     </g>`;
   }
 

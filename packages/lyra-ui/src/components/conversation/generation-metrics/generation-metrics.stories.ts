@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { ref } from 'lit/directives/ref.js';
 import './generation-metrics.js';
 import type { LyraGenerationMetrics } from './generation-metrics.js';
 
@@ -106,47 +107,46 @@ export const NoStopButton: Story = {
 export const LiveDerivedThroughput: Story = {
   name: 'Live demo — derived throughput, no host-supplied rate',
   render: () => {
-    function wire(root: HTMLElement): void {
-      const status = root.querySelector<LyraGenerationMetrics>('lr-generation-metrics')!;
-      if (status.hasAttribute('data-wired')) return;
-      status.setAttribute('data-wired', '');
-
-      status.addEventListener('lr-stop', () => {
-        status.status = "complete";
-      });
-
-      // Simulates a host streaming ~6 tokens/sec, feeding only `token-count`
-      // and letting this component derive `tokens-per-second` itself once
-      // enough elapsed time has accumulated (see the class doc).
-      let tokens = 0;
-      const timer = setInterval(() => {
-        if (status.status !== 'running') {
-          clearInterval(timer);
+    let status: LyraGenerationMetrics | undefined;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const retireTimer = (): void => {
+      if (timer !== undefined) clearInterval(timer);
+      timer = undefined;
+    };
+    const start = (): void => {
+      retireTimer();
+      const current = status;
+      if (!current?.isConnected) return;
+      current.tokenCount = 0;
+      current.startedAt = Date.now();
+      current.status = 'running';
+      // The host supplies only the token count; throughput is derived by the component.
+      timer = setInterval(() => {
+        if (!current.isConnected || current.status !== 'running') {
+          retireTimer();
           return;
         }
-        tokens += 6;
-        status.tokenCount = tokens;
+        current.tokenCount = (current.tokenCount ?? 0) + 6;
       }, 1000);
-
-      root.querySelector('[data-restart]')!.addEventListener('click', () => {
-        tokens = 0;
-        status.tokenCount = 0;
-        status.startedAt = undefined;
-        status.status = "complete";
-        requestAnimationFrame(() => {
-          status.status = "running";
-        });
-      });
-    }
+    };
+    const attach = (element?: Element): void => {
+      retireTimer();
+      status = element as LyraGenerationMetrics | undefined;
+      if (element) queueMicrotask(() => { if (status === element) start(); });
+    };
+    const stop = (): void => {
+      retireTimer();
+      if (status) status.status = 'complete';
+    };
 
     return html`
       <div
         style="display:flex; flex-direction:column; gap:0.75rem; align-items:flex-start;"
-        @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
       >
-        <lr-generation-metrics status="running"></lr-generation-metrics>
+        <lr-generation-metrics ${ref(attach)} status="running" @lr-stop=${stop}></lr-generation-metrics>
         <button
           data-restart
+          @click=${start}
           style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lr-color-border); border-radius:0.375rem; background:var(--lr-color-surface); cursor:pointer;"
         >
           Restart
@@ -154,7 +154,7 @@ export const LiveDerivedThroughput: Story = {
         <p style="margin:0; font-size:0.8125rem; color:var(--lr-color-text-quiet); max-width:28rem;">
           Clicking the built-in Stop button here completes and freezes the readout (sets
           <code>status = 'complete'</code>) — a
-          real host would also cancel its in-flight request. Clicking "Restart" begins a fresh run.
+          real host would also cancel its in-flight request. Clicking "Restart" begins a fresh run and retires the previous token timer. Token updates begin as soon as this example mounts.
         </p>
       </div>
     `;

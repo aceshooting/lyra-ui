@@ -48,7 +48,7 @@ export interface LyraSequencePlaybackEventMap {
  * @event {FocusEvent} focus - Relayed once from an internal playback control as a bubbling,
  *   composed native event.
  * @csspart base - The playback controls wrapper.
- * @csspart play-button - The play/pause button.
+ * @csspart play-button - The play/pause button; disabled resting paint is retained under hover and press.
  * @csspart slider - The playback position slider.
  * @cssprop [--lr-sequence-playback-icon-size=calc(var(--lr-icon-button-size) * 0.35)] - Font size of the
  *   play/pause glyph, derived from the shared icon-button hit-target size.

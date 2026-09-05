@@ -19,6 +19,11 @@
 Composable flat condition builder for tabular or dashboard data: condition rows combined with an
 AND/OR combinator, distinct by name and model from `lr-graph-query-builder`.
 
+A field or operator select choice updates the builder once and emits one `lr-input` carrying the
+complete `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value
+aliases and listbox show/hide lifecycle events remain inside those pickers. Programmatic `value`
+assignments remain silent.
+
 **9.0 migration:** `lr-query-builder` / `LyraQueryBuilder` / `QueryBuilder*` were renamed without
 aliases to `lr-condition-builder` / `LyraConditionBuilder` / `ConditionBuilder*`. Update the tag,
 granular import path, class/type imports, selectors, and framework bindings together.

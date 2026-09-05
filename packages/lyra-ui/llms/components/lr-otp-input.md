@@ -19,6 +19,16 @@
 A form-associated one-time-code field: several character segments that together hold one value.
 Mirrors `wa-otp-input`.
 
+Host `aria-describedby` references resolve onto the native control input before its local error and
+hint guidance. The relationship tracks missing IDs, target replacement, removal/reinsertion,
+reconnect, and document adoption. The decorative code segments do not receive a second copy of the
+descriptions.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
+
 The segments are **presentational**. A single real `<input>` sits transparently across them and owns
 focus, selection and the value. It remains the native integration point for SMS autofill
 (`autocomplete` defaults to `one-time-code`), IME composition and mobile keyboards, and keeps the

@@ -557,7 +557,8 @@ function snapshotCollectionValue(
   return OMIT_COLLECTION_VALUE;
 }
 
-function snapshotPublicCollection(
+/** @internal Applies the shared bounded collection snapshot at a component-owned accessor. */
+export function snapshotPublicCollection(
   value: unknown,
   view?: Window | null
 ): unknown {

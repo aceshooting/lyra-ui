@@ -22,6 +22,10 @@ The inline semantic menu mapped from Shoelace's `sl-menu`, plus its action-row e
 wrapping keyboard navigation, type-ahead, and one canonical selection event. It deliberately has no
 trigger, positioned popup, root open state, placement API, or overlay lifecycle.
 
+Removing or disabling the remembered active item repairs the roving stop without taking focus from
+outside controls or the menu's header/footer. If the changed item held actual focus, focus moves to
+a valid survivor or through the existing owner dismissal path when none remain.
+
 For a menu button or other anchored overlay, compose the semantic controller inside
 `<lr-dropdown>`:
 

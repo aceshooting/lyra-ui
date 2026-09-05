@@ -135,14 +135,14 @@ const AV_PAYLOAD: LyraDocumentRendererPayload = {
   },
   cues: [
     {
-      id: "intro",
+      cueId: "intro",
       start: 0,
       end: 1,
       speaker: "Host",
       text: "Welcome to the searchable transcript.",
     },
     {
-      id: "topic",
+      cueId: "topic",
       start: 1,
       end: 2,
       speaker: "Guest",

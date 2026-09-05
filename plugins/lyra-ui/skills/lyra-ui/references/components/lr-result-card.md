@@ -23,6 +23,9 @@ label/value row" visual language, without each one hand-rolling its own box. Nei
 any code dependency on the tool-result-view registry itself — they're generically usable anywhere a
 small card/field shell is useful.
 
+Removing `heading` or a result field `label` hides that text while preserving the card actions and
+field value.
+
 ### `lr-result-card`
 
 A small bordered card shell. Purely visual, with no state of its own beyond slot-presence tracking.

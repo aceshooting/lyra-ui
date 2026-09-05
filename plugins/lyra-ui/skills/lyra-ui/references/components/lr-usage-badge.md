@@ -23,6 +23,10 @@ The tooltip reuses `lr-tool-call-chip`'s hover/focus/Escape/`aria-describedby` c
 Not `lr-context-meter` (occupancy of a fixed capacity); not `lr-generation-metrics` (live, with a
 Stop button) — this is static after the fact.
 
+Removing `cost-text` or `summary` safely omits that content; explicit empty values remain empty and
+later values restore it. An open tooltip participates in shared Escape ordering even while only
+hovered, and dismissal preserves focus elsewhere.
+
 **Properties:** `tokensIn?: number` (attribute `tokens-in`) — input tokens, normalized to a
 non-negative integer, locale-formatted; segment omitted while unset/non-finite. `tokensOut?: number`
 (attribute `tokens-out`) — same rules. `costText: string = ''` (attribute `cost-text`) —

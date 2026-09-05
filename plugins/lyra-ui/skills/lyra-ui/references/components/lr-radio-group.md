@@ -21,6 +21,11 @@ A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and the ori
 axis move focus and select the next enabled radio: Up/Down when vertical, Left/Right when
 horizontal. Horizontal direction mirrors under RTL, and disabled options are skipped.
 
+Host `aria-describedby` references resolve onto the internal `role="radiogroup"` before its local
+hint/error guidance. References track unresolved IDs, target replacement/removal/reinsertion,
+reconnect, and document adoption. Group descriptions remain on the group; child radios can carry
+their own separately authored descriptions.
+
 **Properties:** `label`, `hint`, `helpText` (`help-text`, Shoelace alias), `errorText`
 (`error-text`), `name` (empty by default, with the empty attribute omitted), live `value`, reflected
 `defaultValue` (attribute `value`; Shoelace's `default-value` is also accepted), `customError`

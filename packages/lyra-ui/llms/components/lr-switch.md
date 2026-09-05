@@ -25,6 +25,12 @@ CSS parts), mirroring `<lr-select>`'s pattern for those two pieces — left unse
 Deliberately no separate top-of-field `label` prop/slot/part: the default slot already is this
 control's visible, clickable label (same as `<lr-checkbox>`).
 
+Host `aria-describedby` references resolve onto the internal `role="switch"` before its local
+error/hint guidance. The relationship tracks missing IDs, target replacement/removal/reinsertion,
+reconnect, and document adoption. Removing `hint`, `help-text`, or `error-text` safely omits that
+content while preserving native `null` property readback; explicit empty and later text work
+normally.
+
 **Properties:**
 
 - `checked: boolean = false` — the live, non-reflecting state

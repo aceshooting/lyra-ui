@@ -110,8 +110,15 @@ export const FocusRepairAfterShrink: Story = {
   `,
 };
 
-/** The inline editor relays native focus/blur and their prefixed aliases like the draft input. */
+/** The inline editor relays native focus/blur like the draft input. */
 export const EditableLifecycleEvents: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'The draft input and inline token editor relay native focus and blur events. Composing keyboard events stay with text editing; normal Enter commits an edit and Escape cancels it. Editable token labels center their text within the pointer target.',
+      },
+    },
+  },
   render: () => {
     const report = (event: Event): void => {
       const output = (event.currentTarget as HTMLElement).nextElementSibling as HTMLOutputElement | null;
@@ -126,8 +133,6 @@ export const EditableLifecycleEvents: Story = {
           .value=${['Ada', 'Grace']}
           @focus=${report}
           @blur=${report}
-          @lr-focus=${report}
-          @lr-blur=${report}
         ></lr-token-input>
         <output aria-live="polite">No lifecycle event received yet.</output>
       </div>

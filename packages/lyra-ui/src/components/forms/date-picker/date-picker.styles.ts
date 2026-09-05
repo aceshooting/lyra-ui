@@ -313,10 +313,10 @@ export const styles = css`
     font: inherit;
     border-radius: var(--lr-date-picker-radius, var(--_lr-date-picker-radius));
   }
-  [part~="day"]:hover:not(:disabled) {
+  :where([part~="day"]):hover:not(:disabled) {
     background: var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet));
   }
-  [part~="day"]:active:not(:disabled) {
+  :where([part~="day"]):active:not(:disabled) {
     background: var(
       --lr-date-picker-day-active-bg,
       color-mix(
@@ -361,6 +361,24 @@ export const styles = css`
     background: var(--lr-date-picker-selected-bg, var(--lr-color-brand));
     color: var(--lr-date-picker-selected-color, var(--lr-color-on-brand));
   }
+  :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):hover:not(:disabled),
+  :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):active:not(:disabled) {
+    color: var(--lr-date-picker-selected-color, var(--lr-color-on-brand));
+  }
+  :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):hover:not(:disabled) {
+    background-color: var(--lr-date-picker-day-hover-bg, var(--lr-date-picker-selected-bg, var(--lr-color-brand)));
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
+  }
+  :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):active:not(:disabled) {
+    background-color: var(--lr-date-picker-day-active-bg, var(--lr-date-picker-day-hover-bg, var(--lr-date-picker-selected-bg, var(--lr-color-brand))));
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+  }
   [part~="day"]:disabled {
     color: var(--lr-date-picker-disabled-color, var(--lr-color-text-quiet));
     opacity: var(--lr-date-picker-disabled-opacity, var(--lr-opacity-disabled));
@@ -379,7 +397,7 @@ export const styles = css`
     grid-template-columns: repeat(4, minmax(var(--lr-size-3rem), 1fr));
     gap: var(--lr-space-xs);
   }
-  [part="view-item"] {
+  [part~="view-item"] {
     inline-size: 100%;
     min-block-size: var(--lr-icon-button-size);
     border: none;
@@ -443,7 +461,9 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
     white-space: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part~="preset-button"]:hover:not(:disabled) {
     background: var(--lr-date-picker-preset-hover-bg, var(--lr-color-brand-quiet));

@@ -26,6 +26,12 @@ wins when both are present. When a real `File` or `preview-src` is available, th
 localized action that emits a plain, non-cancelable `lr-preview-request`; it never registers or owns a viewer
 or overlay, so the host composes the desired preview surface.
 
+An error already present at first mount or reconnection renders as existing state without an
+announcement, including a failure assigned while detached and reconnected before the next render. A
+new connected transition to error still appends one localized failure announcement; repeated
+connected failures remain separately announced, including a retry whose uploading and error writes
+coalesce into one update.
+
 **Properties:**
 
 - `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType`/the

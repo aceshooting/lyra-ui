@@ -24,6 +24,13 @@ Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer
 fallback is the _default_ rendering path, not a degraded one: unhighlighted code is perfectly usable,
 and it's what every instance renders at zero extra bytes until shiki resolves.
 
+Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
+an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
+`null` property readback; an explicitly empty attribute stays an empty string, and a later value
+resumes normal rendering. Highlighted gutter labels and locale-formatted line numbers follow live
+`.strings` and inherited or explicit locale changes. Unrelated updates retain the existing
+highlighted markup.
+
 **Properties:**
 
 - `code: string = ''` — the raw source text

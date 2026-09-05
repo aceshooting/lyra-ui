@@ -16,7 +16,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Experimental inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and owner-realm capability-gated picture in picture. `getState()` returns the mirrored canonical `VideoState` snapshot. Poster and control-bar play actions are mutually exclusive, and all strong-overlay text defaults to the semantic `--lr-color-on-strong-overlay` foreground. Play-control focus transitions relay exactly one native `FocusEvent`.',
+          'An unavailable progress control and its visible timeline track retain resting paint on hover and press; enabled controls retain feedback. Experimental inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and owner-realm capability-gated picture in picture. `getState()` returns the mirrored canonical `VideoState` snapshot. Poster and control-bar play actions are mutually exclusive, and all strong-overlay text defaults to the semantic `--lr-color-on-strong-overlay` foreground. Play-control focus transitions relay exactly one native `FocusEvent`.',
       },
     },
   },

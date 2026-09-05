@@ -18,6 +18,8 @@ export const styles = css`
     );
   }
   [part="base"] {
+    --_lr-multi-split-panel-min: 0;
+    --_lr-multi-split-gutters: 0;
     display: flex;
     /* Anchor for the absolutely-positioned 'floating' overlay panel, set inline by updated(). */
     position: relative;
@@ -30,7 +32,7 @@ export const styles = css`
     /* No-JS/first-hydration fallback; an inline flex value replaces it once child count and live
        sizes are observable. */
     flex: 1 1 0;
-    min-inline-size: 0;
+    min-inline-size: var(--_lr-multi-split-panel-min, 0);
     max-inline-size: 100%;
     /* Panels own their overflow. The zero block minimum lets a fixed-height split shrink flex
        items rather than let long content expand the base into following content. */
@@ -41,6 +43,15 @@ export const styles = css`
   }
   :host([orientation="vertical"]) [part="base"] {
     flex-direction: column;
+  }
+  :host([orientation="vertical"]) ::slotted(*),
+  :host([data-effective-orientation="vertical"]) ::slotted(*) {
+    min-inline-size: 0;
+    min-block-size: var(--_lr-multi-split-panel-min, 0);
+  }
+  :host([data-effective-orientation="horizontal"]) ::slotted(*) {
+    min-inline-size: var(--_lr-multi-split-panel-min, 0);
+    min-block-size: 0;
   }
   [part="divider"] {
     position: relative;

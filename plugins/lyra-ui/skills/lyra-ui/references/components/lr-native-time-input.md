@@ -22,6 +22,16 @@ forces its internal native input to `type="time"` on construction and reconnect,
 as numbers. Use it when the browser/OS picker is preferred; new `wa-time-input` migrations should
 use the segmented `lr-time-input` above.
 
+`stepUp()` and `stepDown()` use the current `value`, `step`, `min`, and `max` properties in the same
+synchronous call, including changes made immediately beforehand. They preserve native step alignment
+and bounds, update form submission silently, and remain no-ops before the native input has rendered
+or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
+
 **Inherits:** all public surface from `lr-input`.
 
 All `lr-input` properties, form methods, events, label/hint/error/start/end slots, parts, and theme

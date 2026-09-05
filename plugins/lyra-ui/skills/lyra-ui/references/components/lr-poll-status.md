@@ -23,6 +23,10 @@ First-party invention (no Web Awesome equivalent); the closest existing componen
 scheduled-interval countdown — this mirrors its internal `<lr-live-region>` composition for
 accessible phase-transition announcements.
 
+Long localized status labels, including unbroken words, wrap within the component’s allocated inline
+size in LTR and RTL. The indicator and pause/resume action retain their size; the 320px example
+shows both inactive and refreshing states.
+
 **Properties:**
 
 - `nextInMs?: number` (attribute `next-in-ms`) — milliseconds until the next scheduled action, as of

@@ -24,6 +24,10 @@ read-only display). Activating the pressed thumb while its detail panel is open 
 activating the still-pressed thumb reopens it with the surviving draft. A thumbs-only control always
 uses the ordinary re-activate-to-clear toggle.
 
+Asynchronous finalization or reversion preserves focus on an outside control. Settlement retains the
+existing thumb/submit fallback when focus remains within the feedback or was lost as its pending
+controls became disabled.
+
 **Properties:** `rating: MessageFeedbackValue = null` (`'up' | 'down' | null`, reflected),
 `detail?: MessageFeedbackDetailConfiguration` (attribute: false) — one configuration with optional
 `reasons?: readonly { id, label }[]` and `commentable?: boolean`; omit it for thumbs-only feedback.

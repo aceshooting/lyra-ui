@@ -19,6 +19,9 @@
 Provider-neutral agent/LLM trace view combining span-kind filters, handoff quick-jumps, and a
 hierarchical trace tree from one shared `spans` array.
 
+Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+surrounding whitespace. The first valid admitted duplicate continues to win.
+
 **Properties:**
 
 - `spans: LyraSpan[] = []` (attribute: false) — the full, unfiltered array; identical contract to

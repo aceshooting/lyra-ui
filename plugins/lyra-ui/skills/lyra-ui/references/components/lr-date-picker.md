@@ -21,8 +21,37 @@ Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Bo
 components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or
 `YYYY-MM-DD/YYYY-MM-DD` (range).
 
-The ISO model is proleptic Gregorian in every locale, including years `0000`–`0099` (no JavaScript
-`Date` 1900 remap). Month/day names and visible day/week digits follow the effective locale while
+For `lr-date-input`, host `aria-describedby` targets resolve in the host's root and describe the
+native combobox input through element references, before its existing error and hint descriptions.
+Replacement, removal, reinsertion, newly resolved IDs, reconnect, and adoption update those
+relationships. Removing `label`, `hint`, or `error-text` safely omits that copy while preserving
+`null` property readback; later supplied values render normally.
+
+`lr-date-input`'s `clearLabel`, `openLabel`, and `dialogLabel` retain their initial defaults (`''`,
+`''`, and `'Choose date'`). Omitted labels localize; explicitly supplied text, built-in English
+labels, and empty strings win over `.strings`. Attribute removal restores localization while
+preserving `null` readback. The composed calendar applies the same range endpoint and
+inclusive-length admission rules as the standalone picker.
+
+An authored host `aria-label` names an enclosing calendar group. Individual month and selection
+grids retain their distinct generated period names; changing or removing the purpose label updates
+the group without changing a caller-authored host role. Removing the `value` attribute renders an
+empty selection safely while preserving `null` readback; a subsequent valid value works normally.
+
+Live constraints repair roving state without moving focus from an unrelated control. If a focused
+cell becomes unavailable, focus recovers onto an enabled cell. Explicit distant bounds seed the
+bounded automatic search within the permitted domain; a genuinely empty domain has no enabled roving
+stop. Selected day and range-endpoint buttons retain their foreground/background pairing during
+hover and press; author state-token overrides remain available. Month/year/decade state buttons
+retain the common typography, padding, border reset, and minimum action size.
+
+The `calendar-core.ts` helper `formatISO()` returns an empty string for invalid dates or years
+outside `0000`–`9999`, so generated ISO anchors never advertise an unsupported signed or five-digit
+year.
+
+The ISO model is proleptic Gregorian in every locale and supports years `0000`–`9999`, including
+`0000`–`0099` without JavaScript's `Date` 1900 remap. Navigation anchors remain within that domain;
+moving past either boundary leaves a valid roving stop and does not change the selected value. Month/day names and visible day/week digits follow the effective locale while
 formatters explicitly select the Gregorian calendar. `lr-date-input` uses locale `formatRange()`
 for range presentation and normalizes locale digits plus bidi marks before parsing, so its own
 Arabic/Persian display round-trips to the same ISO value.
@@ -50,12 +79,20 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   tell them apart. A reversed preset normalizes; a malformed one is ignored rather than clearing the
   current value, so a bad entry in a config-driven list never reads as "the user picked nothing".
   Non-array runtime assignments normalize to the empty collection, and null/non-object entries in
-  an otherwise valid array are omitted from the rendered row rather than aborting the calendar.
+  an otherwise valid array are omitted from the rendered row rather than aborting the calendar. Empty and
+  whitespace-only labels are also omitted, preserving named siblings. Explicit endpoints clamp to
+  `min`/`max` before admission. Both endpoints must be selectable, and the inclusive length must
+  satisfy `minRange`/`maxRange`; invalid outcomes render disabled and do not emit value events.
+  Interior dates need not all be enabled. A same-day manual completion obeys those same inclusive
+  length limits. Long preset labels wrap in narrow allocations, including unbroken text and RTL.
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
   `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
-  button produced the current `value`, or `undefined` when the range was picked by hand. Read it
+  button produced the current `value`, or `undefined` when the range was picked by hand, cleared, or changed externally.
+  `clear()` removes identity before synchronous `input`/`change` listeners run; an external value
+  change removes identity silently. An accepted preset retains its exact caller-owned source
+  identity through its own update. Read it
   inside your own `change`/`input` handler. It exists because a dashboard filter has to persist
   *which* preset is active rather than the pair it froze to: "Last 7 days" must still mean the last
   7 days after tomorrow's reload. That fact is not recoverable from `value` — re-deriving it by
@@ -91,8 +128,11 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`, reflected)
 - `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
-Lyra retains the additive `previousLabel`/`nextLabel` localized accessible-label overrides and
-the `selection` range getter.
+Lyra retains the additive `previousLabel`/`nextLabel` accessible-label overrides and the `selection`
+range getter. Their initial readback remains `'Previous month'` and `'Next month'`; omitted labels
+localize, while explicit text, the built-in English labels, and empty strings win over locale and
+`.strings` copy. Removing either label attribute restores localized omission while preserving
+`null` property readback.
 
 **Methods:** `clear()`, `focus(options?)`, `goToToday()`, and
 `goToDate(date: string | Date)`. Valid navigation dates are clamped to `min`/`max`; invalid values

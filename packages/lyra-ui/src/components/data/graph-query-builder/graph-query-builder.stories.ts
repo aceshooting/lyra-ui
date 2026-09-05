@@ -57,6 +57,22 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const HopSelectionEvents: Story = {
+  render: () => {
+    let changes = 0;
+    return html`<div>
+      <p>Change either hop limit to receive one complete query snapshot.</p>
+      <lr-graph-query-builder
+        @lr-input=${(event: CustomEvent<{ value: GraphQuery }>) => {
+          const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('pre');
+          if (output) output.textContent = JSON.stringify({ changes: ++changes, value: event.detail.value }, null, 2);
+        }}
+      ></lr-graph-query-builder>
+      <pre>Choose a hop limit.</pre>
+    </div>`;
+  },
+};
+
 export const Default: Story = {
   render: () => html`
     <lr-graph-query-builder

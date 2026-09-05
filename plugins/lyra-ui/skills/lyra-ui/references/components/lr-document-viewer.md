@@ -20,6 +20,11 @@ A dialog-hosted, format-dispatching full viewer for one document or attachment. 
 renderer registry and falls back to `<lr-document-preview>` when no renderer matches the file's MIME
 type. First-party invention.
 
+MIME matching uses the case-insensitive essence before parameters and ignores outer whitespace. An
+extensionless `application/*+xml` file selects the XML renderer when it is registered, including a
+value such as ` APPLICATION/ATOM+XML ; charset=utf-8 `. Exact registry keys retain precedence,
+filename extensions remain a fallback, and the renderer receives the original MIME value.
+
 A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty
 value, without suppressing the visible `name` heading.
 
@@ -35,9 +40,10 @@ value, without suppressing the visible `name` heading.
   anchors/highlights, and download; the scalar `name`, `mimeType`, `src`, `anchor`, `highlights`,
   and `alt` properties resume their legacy behavior when `payload` is reset to `undefined`.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry
-  override. A native map assignment is copied behind a frozen readonly facade; definition records
-  are cloned and frozen while callback identities are retained. Later source-map or definition
-  mutation is not observed. When unset, the
+  override. Assign either a native map or the result of `createDocumentRendererRegistry()`; both
+  use the same bounded snapshot behind a frozen readonly facade. Definition records are cloned and
+  frozen while callback identities are retained. Later source-map or definition mutation is not
+  observed. Reassigning the same source or retained snapshot leaves the snapshot unchanged. When unset, the
   instance owns an immutable snapshot of the built-ins registered when it was constructed. A later
   module import/registration cannot mutate an existing viewer. A throwing consumer matcher or
   renderer is contained as the localized error state rather than escaping the update.

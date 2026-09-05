@@ -21,6 +21,12 @@ A standalone copy-to-clipboard affordance for a plain text `value` or a source e
 settles; a consumer-provided default-slot trigger can replace that button. The component takes no
 positioning opinion of its own.
 
+The CopyFailure example temporarily supplies a denied clipboard operation during click capture,
+including after a held pointer press, then restores the original own property descriptor or removes
+its temporary override when the clipboard was inherited. Pointer gestures that end without a click
+do not install an override. This example does not change the clipboard contract of ordinary copy
+buttons.
+
 **Properties:**
 
 - `value: string = ''` — the plain text to copy.

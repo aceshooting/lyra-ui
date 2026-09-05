@@ -35,3 +35,17 @@ export const AncestorTheme: StoryObj = {
     </div>
   `,
 };
+
+export const PendingStepConstraints: StoryObj = {
+  parameters: { docs: { description: { story: 'Native stepping uses newly assigned constraints immediately and remains silent for programmatic edits.' } } },
+  render: () => html`
+    <div>
+      <lr-native-time-input  label="Start time" value="09:06"></lr-native-time-input>
+      <button type="button" @click=${(event: Event) => {
+        const input = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-native-time-input')!;
+        input.step = 180;
+        input.stepUp();
+      }}>Advance by three minutes</button>
+    </div>
+  `,
+};

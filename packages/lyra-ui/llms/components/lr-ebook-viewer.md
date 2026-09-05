@@ -22,6 +22,10 @@ chapter content. A usable book exposes `ready`, `renderTo()`, and `destroy()`, a
 exposes `display()`, `prev()`, `next()`, `on()`, and `annotations.highlight()`/`remove()`; an absent
 required capability is terminal. Navigation and spine data are optional.
 
+Genuine native `Selection`/`Range` objects from the current chapter iframe are accepted through
+platform accessors, including across document realms. Arbitrary peer-owned accessors remain
+uninvoked, and callbacks from replaced or disconnected books cannot emit stale selections.
+
 **Properties:** `src: string = ''` and `name: string = ''`. A plain `aria-label` attribute on the
 host overrides the reading region's accessible name — by attribute presence, so an explicitly empty
 `aria-label=""` still wins over `name`. (There is no matching JS property: the `accessibleLabel`

@@ -129,6 +129,8 @@ export interface LyraMenuEventMap {
  * single canonical `lr-select` event. Wrap it in `<lr-dropdown>` when a trigger, positioned popup,
  * open state, lifecycle events, or imperative overlay methods are required; those concerns belong
  * to the dropdown shell rather than being duplicated on the menu.
+ * Background item removal or disablement repairs the roving stop without taking focus from
+ * outside controls or the header/footer. Displacing the focused item rehomes actual focus.
  *
  * An `<lr-menu-item>` with `<lr-menu slot="submenu">` uses a private, symbol-keyed presentation
  * controller. ArrowRight steps into the submenu and ArrowLeft returns (mirrored under RTL),
@@ -589,7 +591,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // Nothing left to preserve: the active item is gone, or nothing had
         // claimed the roving focus yet (the "open from the start" race that
         // onTriggerSlotChange's reposition() call also covers).
-        this.focusRoving(this.pendingFocus);
+        const successor = this.items.find((item) => this.isNavigable(item));
+        if (previouslyActive && successor) this.setActiveItem(successor, activeItemLostFocus);
+        else this.focusRoving(this.pendingFocus);
         if (
           activeItemLostFocus &&
           !this.items.some((item) => this.isNavigable(item))
@@ -600,7 +604,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         const active = activeElementIn(this.ownerDocument);
         const containsActive =
           isUsableActiveElement(active) && this.contains(active);
-        if (!containsActive) {
+        if (!containsActive && activeItemLostFocus) {
           // Reordering an item moves the node, which blurs it and drops focus out
           // to <body> -- beyond reach of the list keydown handler, leaving an open
           // menu keyboard-dead. The guard keeps this from stealing focus a user
@@ -643,7 +647,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     for (const item of this.items) item.size = this.dropdownSize;
   }
 
-  /** Rehomes roving focus immediately when an active item becomes disabled or hidden. */
+  /** Repairs the roving stop when an active item becomes unavailable; move actual focus only
+   * when that item held it, preserving outside and slotted region focus during background edits. */
   private onItemStateChange = (event?: Event): void => {
     // This is private item-to-owner coordination. Let the owning menu repair its roving stop,
     // then contain the implementation event so it cannot appear to originate from a composite
@@ -666,7 +671,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         navigable.find((item) => this.items.indexOf(item) > current) ??
         navigable.find((item) => this.items.indexOf(item) < current);
       if (next) {
-        this.setActiveItem(next);
+        this.setActiveItem(next, displacedHadFocus);
       } else {
         this.activeIndex = -1;
         this.applyRovingTabIndex();
@@ -732,13 +737,13 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.setActiveItem(item);
   }
 
-  private setActiveItem(item: LyraMenuItem): void {
+  private setActiveItem(item: LyraMenuItem, moveFocus = true): void {
     this.activeIndex = this.items.indexOf(item);
     this.applyRovingTabIndex();
     // Moving the roving highlight off a submenu parent closes what it opened: at most one submenu
     // per level is ever open, and the keyboard is the authority on which one.
     this.closeSubmenus(item);
-    item.focus();
+    if (moveFocus) item.focus();
   }
 
   /** Closes every open submenu at this level except `keep`. */

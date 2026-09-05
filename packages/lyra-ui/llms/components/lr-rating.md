@@ -21,6 +21,9 @@ that lives in this family rather than in `components/forms/` — if you came loo
 form controls, this is its section. Everything the "Form association" section says about `name`,
 submission, validity and the `user-*` custom states applies to it.
 
+Readonly transitions synchronize validity and `aria-invalid` in the same completed update. Form
+reset restores the independent `default-value` rather than the live `value` attribute.
+
 It is form-associated through `ElementInternals` directly rather than through the shared
 `FormAssociated` mixin, because its `value` is a number and the mixin's contract assumes a plain
 string — routing through it would force every consumer into string round-tripping for what is

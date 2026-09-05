@@ -528,3 +528,18 @@ export const FrozenAxes: Story = {
     `;
   },
 };
+
+export const LiveSignedDomain: Story = {
+  parameters: { docs: { description: { story: 'Toggle a signed domain without replacing matrix data. The missing cell remains no data; the supplied negative value enters the color ramp. Keyboard focus preserves neighboring cell fills. Invalid authored colors retain the default ramp fallback and report diagnostics only in development.' } } },
+  render: () => html`
+    <div>
+      <lr-button @click=${(event: Event) => {
+        const heatmap = (event.currentTarget as HTMLElement).parentElement?.querySelector<LyraHeatmap>('lr-heatmap');
+        if (heatmap) heatmap.domain = heatmap.domain ? undefined : [-5, 5];
+      }}>Toggle signed domain</lr-button>
+      <lr-heatmap accessible-cells
+        .data=${{ kind: 'matrix', rowLabels: ['Values'], colLabels: ['Missing', 'Negative', 'Positive'], values: [[undefined, -2, 3]] }}
+      ></lr-heatmap>
+    </div>
+  `,
+};

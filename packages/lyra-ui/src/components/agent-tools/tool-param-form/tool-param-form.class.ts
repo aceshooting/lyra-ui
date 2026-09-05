@@ -1457,9 +1457,13 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     if (value === '') {
       if (this.effectiveDisabled) return;
       this.hasInteracted = true;
-      const next = { ...this.value };
-      Reflect.deleteProperty(next, key);
-      this.value = next;
+      if (this.schemaProperties[key]?.default !== undefined) {
+        this.value = { ...this.value, [key]: undefined };
+      } else {
+        const next = { ...this.value };
+        Reflect.deleteProperty(next, key);
+        this.value = next;
+      }
       this.emit('lr-input', { value: this.effectiveValue });
       return;
     }

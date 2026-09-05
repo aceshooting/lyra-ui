@@ -167,7 +167,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     converter: trueDefaultBooleanConverter,
   })
   showSelectAll = true;
-  /** Whether the built-in source filter is rendered. */
+  /** Whether the built-in source filter is rendered. Toggling retains the query and selection,
+   *  while keeping a visible tree entry available whenever rows remain. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter })
   searchable = true;
   /** Visible/fallback accessible label for the source tree. Omitting it falls back to a
@@ -394,7 +395,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     if (
       !changed.has('sources') &&
       !changed.has('query') &&
-      !changed.has('expandedIds')
+      !changed.has('expandedIds') &&
+      !changed.has('searchable')
     )
       return;
 

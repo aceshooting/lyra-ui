@@ -20,6 +20,9 @@ A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tre
 name, status, an inline duration bar on the shared trace time scale, and optional tokens/cost
 columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 
+Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+surrounding whitespace. The first valid admitted duplicate continues to win.
+
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — the same `LyraSpan` shape documented
 under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy comes from
 `parentId`, and a span whose `parentId` is missing or doesn't resolve within the same array renders

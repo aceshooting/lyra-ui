@@ -28,6 +28,9 @@ export interface LyraPollStatusEventMap {
  * phases, a different concern from a scheduled-interval countdown -- this mirrors its internal
  * `<lr-live-region>` composition for accessible phase-transition announcements.
  *
+ * Long translated labels wrap within the allocated inline size while the pause/resume
+ * action retains its minimum target size.
+ *
  * @customElement lr-poll-status
  * @event lr-poll-due - Fired once when the countdown reaches zero (not fired while `paused`).
  * @event lr-pause-change - Fired when `paused` changes via the built-in button.

@@ -183,6 +183,8 @@ export interface LyraDashboardGridEventMap {
  * it and persist `event.detail.layout` however it likes (`localStorage`, a network call, neither).
  * Success is announced only after a controlled `layout` assignment applies the requested target
  * geometry; a host that ignores a request produces no false move/resize confirmation.
+ * Pointer movement snaps to the rendered track-plus-gutter pitch, including public CSS column,
+ * row-height, and gap overrides in either text direction.
  *
  * Responsive: below a ~40rem container allocation (`@container`, not the viewport -- a dashboard
  * grid is commonly embedded in a panel of varying width), cells stack into a single flowing
@@ -888,13 +890,38 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       '[part="base"]'
     ) as HTMLElement | null;
     if (!baseEl) return null;
+    const ownerWindow = baseEl.ownerDocument.defaultView;
+    if (!ownerWindow) return null;
     const rect = baseEl.getBoundingClientRect();
+    const computed = ownerWindow.getComputedStyle(baseEl);
     const columns = this.safeColumns;
-    const gap = this.safeGap;
-    const rawColPitch = (rect.width - gap * (columns - 1)) / columns;
+    const contentWidth = rect.width - finiteRange(Number.parseFloat(computed.borderLeftWidth), 0, 0)
+      - finiteRange(Number.parseFloat(computed.borderRightWidth), 0, 0)
+      - finiteRange(Number.parseFloat(computed.paddingLeft), 0, 0)
+      - finiteRange(Number.parseFloat(computed.paddingRight), 0, 0);
+    const contentHeight = rect.height - finiteRange(Number.parseFloat(computed.borderTopWidth), 0, 0)
+      - finiteRange(Number.parseFloat(computed.borderBottomWidth), 0, 0)
+      - finiteRange(Number.parseFloat(computed.paddingTop), 0, 0)
+      - finiteRange(Number.parseFloat(computed.paddingBottom), 0, 0);
+    const resolveGap = (value: string, basis: number): number => {
+      if (value === 'normal') return 0;
+      const magnitude = Number.parseFloat(value);
+      return finiteRange(value.endsWith('%') ? magnitude * basis / 100 : magnitude, this.safeGap, 0);
+    };
+    const columnGap = resolveGap(computed.columnGap, contentWidth);
+    const rowGap = resolveGap(computed.rowGap, contentHeight);
+    // Grid's resolved track list contains the used pixel widths, including CSS column overrides.
+    const columnWidth = finiteRange(
+      Number.parseFloat(computed.gridTemplateColumns),
+      Math.max(0, (contentWidth - columnGap * (columns - 1)) / columns),
+      0
+    );
+    const rowHeight = finiteRange(Number.parseFloat(computed.gridAutoRows), this.safeRowHeight, 0);
+    const colPitch = columnWidth + columnGap;
+    const rowPitch = rowHeight + rowGap;
     return {
-      colPitch: rawColPitch > 0 ? rawColPitch : 1,
-      rowPitch: this.safeRowHeight + gap,
+      colPitch: colPitch > 0 ? colPitch : 1,
+      rowPitch: rowPitch > 0 ? rowPitch : 1,
     };
   }
 

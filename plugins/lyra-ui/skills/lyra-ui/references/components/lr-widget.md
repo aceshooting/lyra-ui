@@ -23,8 +23,10 @@ position) survives the transition.
 
 **Properties:**
 
-- `label: string = ''`
-- `sublabel: string = ''`
+- `label: string = ''` — header title; a removed attribute renders as absent while preserving
+  `null` readback. Supplied empty strings remain empty and later values recover normally.
+- `sublabel: string = ''` — secondary header copy with the same removal, empty-string and recovery
+  behavior.
 - `collapsible: boolean = false` (reflected — shows the collapse/expand chevron button)
 - `collapsed: boolean = false` (reflected)
 - `expandable: boolean = false` (reflected — shows the fullscreen toggle button)

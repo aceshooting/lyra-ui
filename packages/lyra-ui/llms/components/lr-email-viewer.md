@@ -29,6 +29,11 @@ An attachment with no filename uses the localized `emailViewerUnnamedAttachment`
 `lr-attachment-open` detail. The fallback resolves while rendering, so changing the locale or
 per-instance `strings` after the message loads updates it without reparsing the message.
 
+When `foldQuotes` is enabled, `search(query)` reveals matching supported plain-text and HTML quoted
+replies before navigating. Reveal uses the shared text index's Unicode normalization, whitespace
+collapse, soft-hyphen removal, locale matching, and query/work bounds, so padded or normalized
+queries reveal the same quote as ordinary matching text. Folding remains opt-in.
+
 Parser output is admitted through a bounded direct-data projection: malformed optional fields,
 recipients, and attachment entries are omitted without discarding later valid siblings. Accepted
 string, `Uint8Array`, and `ArrayBuffer` attachment bytes are copied before use, and every

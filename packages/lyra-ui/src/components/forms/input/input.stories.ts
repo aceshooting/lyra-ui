@@ -281,3 +281,17 @@ export const NarrowRightToLeft: Story = {
     </div>
   `,
 };
+
+export const PendingStepConstraints: StoryObj = {
+  parameters: { docs: { description: { story: 'Native stepping uses newly assigned constraints immediately and remains silent for programmatic edits.' } } },
+  render: () => html`
+    <div>
+      <lr-input type="number" label="Quantity" value="6"></lr-input>
+      <button type="button" @click=${(event: Event) => {
+        const input = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-input')!;
+        input.step = 3;
+        input.stepUp();
+      }}>Increase by three</button>
+    </div>
+  `,
+};

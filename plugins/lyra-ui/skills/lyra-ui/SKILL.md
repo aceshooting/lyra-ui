@@ -99,17 +99,19 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
 
 ## Migrating from Web Awesome or Shoelace
 
-`references/migration.md` holds the generated `wa-*` → `lr-*` and `sl-*` → `lr-*` tables plus the
-import-specifier rewrites. For a mirrored component the migration is a mechanical tag/import rename;
-intentional differences are called out in that component's own `references/components/<tag>.md`
-section (for example, Lyra's combobox uses `clearable` where Web Awesome uses `with-clear`). A tag
-absent from the tables has no documented counterpart — check `references/index.md` for a Lyra
-component covering the same job under a different name.
+`references/migration.md` holds source-specific `wa-*` and `sl-*` mappings, import rewrites,
+classifications and warnings. Determine the actual source ecosystem and installed version for each
+occurrence; coinstallation does not change its provenance. Apply only verified automatic mappings
+and their documented rewrites. Manual and warning-required cases need their stated follow-up,
+including include sanitization/same-origin differences and Shoelace alert lifecycle timing and
+cancellation semantics. Classification coverage is not a blanket automatic rewrite guarantee.
 
-Run `/lyra-ui:migrate-legacy` to apply the rename across a project automatically (mechanical for
-`wa-*`, best-effort for `sl-*`), or `/lyra-ui:update` for the broader periodic audit (bump to
-latest, sweep for remaining `wa-*`/hand-rolled UI, migrate what's adoptable, file genuine gaps
-upstream).
+Read `references/components/<tag>.md` for the target's actual contract. Lyra combobox accepts both
+`clearable` and `with-clear`; both are supported spellings. A tag absent from the tables has no
+documented counterpart; check `references/index.md` for a component covering the same need.
+
+Run `/lyra-ui:migrate-legacy` for verified rewrites and a report of manual/unresolved occurrences,
+or `/lyra-ui:update` for the broader periodic review. Migration is best-effort for both ecosystems.
 
 ## Report gaps, bugs, and improvement ideas on a user's behalf
 

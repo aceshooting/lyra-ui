@@ -91,7 +91,7 @@ export const StreamingTextAndReasoning: Story = {
     docs: {
       description: {
         story:
-          'Both built-in Markdown paths receive each part’s streaming state, coalescing parse/highlight work until the host replaces the same-id part with `state: "complete"`.',
+          'Both built-in Markdown paths show accumulated plain text while streaming. Markdown parsing and syntax highlighting are deferred until the host replaces the same-id part with `state: "complete"`.',
       },
     },
   },

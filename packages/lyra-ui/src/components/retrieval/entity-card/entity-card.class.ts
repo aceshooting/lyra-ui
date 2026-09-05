@@ -74,13 +74,16 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-entity-card
+ * @attr {string | number | null} aria-level - Heading level forwarded to the title. An absent or empty value
+ *   uses level 3.
  * @slot - Extra body content below the property rows (e.g. a `lr-neighbor-list`).
  * @slot actions - Extra header actions alongside the built-in focus button.
  * @event lr-entity-select - The built-in focus button was activated. `detail: { entityId }`.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row wrapping the type badge, title, and actions.
  * @csspart type-badge - The resolved entity-type badge.
- * @csspart title - The entity's label, `role="heading" aria-level="3"` by default.
+ * @csspart title - The entity's label, `role="heading" aria-level="3"` by default. The host's
+ *   existing `aria-level` override updates live; removing it restores level 3.
  * @csspart description - The entity's description text.
  * @csspart properties - The wrapper around every property/degree/community row.
  * @csspart property - One key/value dossier row.
@@ -108,6 +111,15 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
     untitledEntity: LYRA_DEFAULT_untitledEntity,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  static override get observedAttributes(): string[] {
+    return [...super.observedAttributes, 'aria-level'];
+  }
+
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (name === 'aria-level' && oldValue !== value) this.requestUpdate();
+  }
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'entity',

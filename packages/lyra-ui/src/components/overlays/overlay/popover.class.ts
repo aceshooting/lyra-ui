@@ -115,6 +115,8 @@ export interface LyraPopoverEventMap {
  * Activating an enabled, non-inert light-DOM descendant with `data-popover="close"` requests this
  * closest owning popover to close. Nested popovers consume their own close actions.
  *
+ * Open popovers, dropdowns and tooltips reposition when their effective host or inherited text direction changes, preserving open state and lifecycle events.
+ *
  * @customElement lr-popover
  * @slot trigger - The highest-priority interaction/ARIA owner; toggles the popover even when
  *   positioning uses `anchor` or `for`.
@@ -267,6 +269,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
   @state() private anchorPositioned = false;
   private positionedAnchor?: Element | VirtualAnchor;
+  private positioningDirection?: 'ltr' | 'rtl';
+  private directionChanged = false;
   private observedDirectAnchor?: Element;
   private observedDirectAnchorWasConnected = false;
   private stopAnchorIdentityObservation?: () => void;
@@ -390,6 +394,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const direction = this.effectiveDirection;
+    this.directionChanged = direction !== this.positioningDirection;
+    this.positioningDirection = direction;
     const lostDirectAnchorProperty =
       changed.has('anchor')
       && changed.get('anchor') === this.observedDirectAnchor
@@ -419,6 +426,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     }
     if (changed.has('for')) this.syncInteractionTrigger();
     if (
+      this.directionChanged ||
       changed.has('open') ||
       changed.has('placement') ||
       changed.has('distance') ||

@@ -1,3 +1,5 @@
+import { finiteRatio } from '../../../internal/numbers.js';
+
 /** One word to place, before layout. */
 export interface WordCloudWord {
   readonly text: string;
@@ -36,7 +38,8 @@ export interface WordCloudLayoutOptions {
   readonly minFontSize: number;
   readonly maxFontSize: number;
   /** Optional weight-domain endpoints. A valid pair pins the input scale instead of deriving it
-   * from this cloud's own lightest/heaviest eligible words. */
+   * from this cloud's own lightest/heaviest eligible words. Opposite-sign finite endpoints
+   * retain bounded fractions even when their subtraction would overflow. */
   readonly domain?: readonly [number, number];
   readonly scale: WordCloudScale;
   readonly wordRotation: WordCloudRotation;
@@ -151,8 +154,7 @@ function heapReplaceWorst(heap: DecoratedWord[], value: DecoratedWord): Decorate
 }
 
 function scaledWeight(weight: number, minWeight: number, maxWeight: number, scale: WordCloudScale): number {
-  const span = maxWeight - minWeight || 1;
-  const t = Math.min(1, Math.max(0, (weight - minWeight) / span));
+  const t = finiteRatio(weight, minWeight, maxWeight);
   return scale === 'sqrt' ? Math.sqrt(t) : t;
 }
 

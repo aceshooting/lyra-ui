@@ -248,3 +248,17 @@ export const CanvasHoverOutline: Story = {
     ></lr-box-plot>
   `,
 };
+
+/** Canvas construction waits for the first visible observer result as this panel scrolls. */
+export const DrawWhenVisible: Story = {
+  render: () => html`
+    <div style="block-size: 20rem; overflow: auto;">
+      <p style="block-size: 24rem;">Scroll down to reveal the distribution.</p>
+      <lr-box-plot
+        height="16rem" style="inline-size: 26rem; max-inline-size: 100%;"
+        .labels=${['Response time']}
+        .datasets=${[{ label: 'Production', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }]}
+      ></lr-box-plot>
+    </div>
+  `,
+};

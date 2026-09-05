@@ -80,7 +80,7 @@ export function numberFormatOptions(input: NumberFormatInputs): Intl.NumberForma
   // it forces separators in locales that ordinarily leave four-digit values ungrouped.
   if (input.withoutGrouping || input.noGrouping) options.useGrouping = false;
   if (type === 'currency') {
-    options.currency = input.currency.trim() || 'USD';
+    options.currency = (input.currency ?? 'USD').trim() || 'USD';
     options.currencyDisplay = currencyDisplay;
   }
 

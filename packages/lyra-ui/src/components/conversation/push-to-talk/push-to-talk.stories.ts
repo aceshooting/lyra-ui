@@ -50,19 +50,19 @@ export const Narrow320: Story = {
 };
 
 export const MicrophoneIconAliases: Story = {
-  name: 'Microphone icon slot aliases',
+  name: 'Microphone icon customization',
   parameters: {
     docs: {
       description: {
         story:
-          'Use the purpose-named `microphone-icon` slot for a replacement mic glyph. The established `icon` slot remains available and is used when `microphone-icon` is empty.',
+          'Use the purpose-named `microphone-icon` slot for a replacement mic glyph. Use `recording-icon` separately to customize the recording state.',
       },
     },
   },
   render: () => html`
     <div style="display: flex; align-items: center; gap: var(--lr-space-m);">
       <lr-push-to-talk mode="toggle"><span slot="microphone-icon">🎙</span></lr-push-to-talk>
-      <lr-push-to-talk mode="toggle"><span slot="icon">MIC</span></lr-push-to-talk>
+      <lr-push-to-talk mode="toggle"><span slot="microphone-icon">MIC</span></lr-push-to-talk>
     </div>
   `,
 };
@@ -72,7 +72,7 @@ export const MicrophoneIconAliases: Story = {
 export const HitFloorWithCustomIcon: Story = {
   render: () => html`
     <lr-push-to-talk style="--lr-push-to-talk-size:var(--lr-size-1rem);">
-      <span slot="icon" style="font-size:var(--lr-font-size-xs);">MIC</span>
+      <span slot="microphone-icon" style="font-size:var(--lr-font-size-xs);">MIC</span>
     </lr-push-to-talk>
   `,
 };

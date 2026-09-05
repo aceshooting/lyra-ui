@@ -163,7 +163,7 @@ export const styles = css`
      lr-color-picker's own bordered [part='input']:hover.
      no-pressed-state: a press on a number field lands the caret, so a pressed tint would last only
      for the mousedown before the persistent :focus-visible ring replaced it. */
-  [part="field-input"]:hover {
+  [part="field-input"]:where(:not(:disabled)):hover {
     border-color: var(--lr-color-brand);
   }
   [part="field-input"]:focus-visible {

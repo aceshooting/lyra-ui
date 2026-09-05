@@ -22,6 +22,9 @@ microphone — no SDK, no LiveKit/ElevenLabs import, native browser APIs only. `
 default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop with
 `aria-pressed`. Escape cancels the in-progress take in either mode.
 
+For example, `<lr-push-to-talk><span slot="microphone-icon">MIC</span></lr-push-to-talk>` replaces
+the idle microphone glyph. Use `recording-icon` separately for the recording state.
+
 While recording, the optional elapsed timer uses the effective locale's decimal digits, suppresses
 grouping, and pads its seconds field to two locale-aware digits.
 

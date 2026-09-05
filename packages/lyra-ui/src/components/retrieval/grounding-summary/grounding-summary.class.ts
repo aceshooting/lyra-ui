@@ -378,9 +378,7 @@ function projectAssessment(value: unknown): CanonicalAssessment | undefined {
  * `<lr-citation-badge>` for each evidence entry -- this component defines no numeric-badge or
  * citation-link markup of its own.
  *
- * `<lr-citation-badge>`'s own `lr-citation-activate` event (`detail: { sourceId, index }`) still
- * bubbles through unmodified, same as every other Lyra component composing a child that emits its
- * own events. This component additionally listens for it and re-emits the richer
+ * This component contains `<lr-citation-badge>`'s raw `lr-citation-activate` event and emits the richer
  * `lr-citation-select` (`detail: { citation }`, `CitationSelectEventDetail` from `src/ai/types.ts`)
  * carrying the full `Citation` -- including its `span` -- since a bare `sourceId`/`index` pair
  * can't by itself tell a host which exact evidence span to jump to.

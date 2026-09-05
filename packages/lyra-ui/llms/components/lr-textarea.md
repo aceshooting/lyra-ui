@@ -21,6 +21,15 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 `reportValidity()`). Ships an opt-in `label`/`hint`/`errorText` form-control chrome mirroring
 `lr-select` -- left unset, none of it renders.
 
+Removing `label`, `hint`, `help-text`, or `error-text` safely omits the corresponding content while
+preserving native `null` property readback. Explicit empty strings stay empty; later supplied text
+renders normally.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
+
 ```html
 <lr-textarea placeholder="Notes" rows="4"></lr-textarea>
 <lr-textarea

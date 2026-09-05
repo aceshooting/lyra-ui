@@ -34,6 +34,10 @@ Chart.js wrapper used directly and by the eight typed Chart.js tags plus `lr-his
 series surface and a raw Chart.js `config` passthrough (mirrors Web Awesome's `wa-chart` `config`
 property).
 
+For horizontal scalar bars, tooltip values come from parsed x rather than the category y, including
+an effective raw `config.options.indexAxis` override. Both formatter APIs follow this rule;
+structured points retain their y-value formatting.
+
 **Properties:**
 - `type: LyraChartType = 'bar'` — `LyraChartType = 'line' | 'bar' | 'scatter' | 'pie' | 'doughnut' |
   'radar' | 'polarArea' | 'bubble'` — every named default used by a typed `lr-*-chart` is
@@ -99,7 +103,9 @@ property).
     splitting the series in two.
   - `segmentColors` colors each *segment* (the line drawn between two consecutive points) by the
     segment's **starting** point index, so `['red', 'green']` over 3 points paints the first
-    segment red and the second green; a shorter array cycles. Wired to Chart.js's
+    segment red and the second green; a shorter array cycles. When rows are sampled, each
+    represented segment retains the original source starting-point index modulo the palette length.
+    Wired to Chart.js's
     `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
     Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
     empty array) emits no `segment` key at all, leaving line rendering exactly as before.
@@ -440,9 +446,12 @@ announced. In particular, unavailable data labels do not remove generated table 
   The raw `config` passthrough is deep-merged with `__proto__`/`constructor`/`prototype` keys skipped
   unconditionally, so a JSON-sourced `config` (e.g. parsed from an API response) can't reach up and
   pollute `Object.prototype` through the merge.
-- lazy-redraw + change gating: an `IntersectionObserver` gates `draw()` — while the host is scrolled
-  off-screen, property changes that would otherwise trigger a Chart.js redraw are skipped (and a
-  single redraw fires once it re-enters the viewport). Independently, `updated()` only reaches
+- lazy-redraw + change gating: with `IntersectionObserver` available, canvas construction waits
+  for its first delivered visibility decision. Off-screen charts remain unconstructed until
+  visible, and later off-screen property changes skip redraws until visibility returns. Without
+  the observer, drawing starts when the peer and canvas are ready. An empty delivered callback
+  retains the visible fallback. Peer loading and accessible DOM may settle while visibility is
+  pending. Independently, `updated()` only reaches
   Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `indexAxis`,
   `label`, `hiddenDatasets`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
   position, `valueFormatter`, `formatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
@@ -582,7 +591,10 @@ passthrough). Not a subclass of `LyraChart`.
   percentage cap from its own ResizeObserver result would create a shrinking feedback loop. The
   gutter remains at logical start under RTL. Unset keeps exactly 36px.
 - `barGapRatio?: number` (attribute `bar-gap-ratio`) — overrides the internal 0.2 `BAR_GROUP_GAP`
-  fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2.
+  fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2. Internal
+  grouped-bar gaps are bounded within the remaining category width so supported multi-series groups
+  retain positive, nonoverlapping bars for ratios below 1. A ratio of 1 reserves the whole slot as
+  gap and leaves zero-width bars.
 - `scale: 'linear' | 'sqrt' | 'logarithmic' = 'linear'` — `'sqrt'` (**bar type only**) maps a bar's
   value to height via `Math.sqrt(value / domainMax)` instead of the standard linear `niceDomain`
   fraction (mirroring `lr-heatmap`'s matrix-mode `sqrt` scale), so a skewed dataset's smaller bars
@@ -591,13 +603,20 @@ passthrough). Not a subclass of `LyraChart`.
   `'logarithmic'` is the base-10 value axis for data spanning several orders of magnitude, where a
   linear axis collapses everything below the maximum into the baseline. Unlike `'sqrt'` it applies
   to **bars, line points and gridlines alike**, since a log axis whose gridlines stayed linear
-  would misrepresent the plot. Its lower bound is the smallest *positive* datum rather than the
+  would misrepresent the plot. Value ticks use positive, bounded steps within that same domain:
+  powers of ten across whole decades, with positive numeric steps for spans smaller than a decade.
+  Both domain bounds remain represented, with space reserved between interior ticks and the bounds.
+  Linear and square-root tick selection is unchanged. Its lower bound is the smallest *positive* datum rather than the
   linear `lo`: `beginAtZero` defaults to true, so `lo` is normally `0`, which has no logarithm —
   deriving the floor from the data is what makes a 1…1000 series span three even decades instead of
   collapsing onto one. Values at or below that floor (including zero and negatives, which have no
   real logarithm) pin to the axis floor rather than producing `-Infinity` geometry, and a degenerate
   domain falls back to the linear fraction. `lr-chart`'s own `scaleType` is the Chart.js-backed
-  equivalent for the full charts.
+  equivalent for the full charts. With `stacked` and `'logarithmic'`, the finite sum of positive
+  raw values determines the log-mapped total extent; positive raw fractions partition that extent.
+  Nonpositive segments have zero natural log height. With `minBarHeight` unset, the stack stays
+  within the plot and its top agrees with the log axis. The square-root mode retains its separate
+  signed-total compression and proportional allocation, with linear gridlines.
 - `withoutValueAxis: boolean = false` (attribute `without-value-axis`) — suppresses gridlines and
   value-axis tick labels; x-axis category labels remain.
 - `selectedIndices: readonly number[] = []` (attribute: false) — names **source category indices**,
@@ -616,7 +635,8 @@ passthrough). Not a subclass of `LyraChart`.
   collection.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values; finite input is capped at 1,000,000px before derived SVG geometry is
-  calculated
+  calculated. Authored floors can exceed the available plot height. Linear and logarithmic stacks
+  push subsequent segments along their signed pixel cursor; zero values remain unfloored.
 - `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
   oldest categories
 
@@ -631,6 +651,12 @@ markup. CSV rows cover the canonical record count — the maximum of `labels.len
 `dataset.data.length` — and use empty cells for missing labels/values, so a longer or ragged series
 is never truncated or shifted. The method does not download a file; pair it with
 `lr-export-button` for download UX.
+
+Axis titles retain their complete `xLabel`/`yLabel` values and accessible names. In the browser,
+visible titles fit their plot allocation using the rendered SVG font; long titles end with an
+ellipsis. If even the ellipsis cannot fit, the title remains accessible without painting text.
+Fitting refreshes after rendering, allocation changes, inherited or host font changes, font loading,
+and reconnection. Server rendering retains the original title until browser layout is available.
 
 The axis gutter/title and y-axis labels mirror to logical start under RTL. Built-in mark summaries
 are complete localized templates and format values with `effectiveLocale`.
@@ -905,6 +931,12 @@ their semantics, defaults, and gotchas.
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 
+With `IntersectionObserver` available, canvas construction waits for its first delivered visibility
+decision. An off-screen box plot stays unconstructed until visible. Without the observer, drawing
+starts when the peers and canvas are ready; an empty delivered callback retains the visible
+fallback. Peer loading and accessible DOM can settle while visibility is pending. These rules also
+apply when the component reconnects.
+
 **Properties:**
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly
@@ -1068,39 +1100,47 @@ optional annotation peer loads.
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-charts-chart-box-plot-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`.
   `LyraBoxPlotPointDetail {
-    datasetIndex: unknown;
-    index: unknown;
-    label: unknown;
-    value: unknown;
+    datasetIndex: number;
+    index: number;
+    label: string | undefined;
+    value: LyraBoxPlotSummary | null;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`.
   `LyraBoxPlotSeries {
-    label: unknown;
-    data: unknown;
-    color: unknown;
+    readonly label: string;
+    readonly data: readonly LyraBoxPlotSummary[];
+    readonly color?: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`.
   `LyraBoxPlotSummary {
-    min: unknown;
-    q1: unknown;
-    median: unknown;
-    q3: unknown;
-    max: unknown;
+    readonly min: number;
+    readonly q1: number;
+    readonly median: number;
+    readonly q3: number;
+    readonly max: number;
   }`
 
 - **`components-charts-chart-chart-colors-contracts`** — Supporting data types and helpers for this component family.
-  `seriesPalette(/* public names: element */): unknown`
-  `translucentAreaColor(/* public names: scope, color */): unknown`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-colors.js`.
+  `seriesPalette(element?: Element | null): string[]`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-colors.js`.
+  `translucentAreaColor(scope: Element, color: string): string`
 
 - **`components-charts-chart-chart-core-loader-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-core-loader.js`.
   `ChartJsModule {
-    LogarithmicScale: unknown;
-    Chart: unknown;
-    defaults: unknown;
-    plugins: unknown;
-    legend: unknown;
-    labels: unknown;
-    generateLabels: unknown;
-    chart: unknown;
+    Chart: ChartConstructorCapability;
+    defaults: {
+      plugins?: {
+        legend?: {
+          labels?: {
+            generateLabels?: (chart: object) => unknown[];
+          };
+        };
+      };
+    };
     LineController: unknown;
     BarController: unknown;
     ScatterController: unknown;
@@ -1116,187 +1156,228 @@ These named interfaces and helper signatures are available to typed integrations
     LinearScale: unknown;
     CategoryScale: unknown;
     RadialLinearScale: unknown;
+    LogarithmicScale: unknown;
     Filler: unknown;
     Tooltip: unknown;
     Legend: unknown;
   }`
-  `loadAndRegisterChartModule(/* public names: importChart, register, mod */): unknown`
-  `loadChartJs(): unknown`
-  `loadChartModule(/* public names: importChart */): unknown`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-core-loader.js`.
+  `loadAndRegisterChartModule(importChart?: () => Promise<unknown>, register?: (mod: ChartJsModule) => void): Promise<ChartJsModule | null>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-core-loader.js`.
+  `loadChartJs(): Promise<ChartJsModule | null>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-core-loader.js`.
+  `loadChartModule(importChart?: () => Promise<unknown>): Promise<ChartJsModule | null>`
 
 - **`components-charts-chart-chart-feature-loader-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
   `ChartPluginCapability {
-    id: unknown;
+    id: string;
+    [key: string]: unknown;
   }`
-  `loadAnnotationPlugin(/* public names: importAnnotation */): unknown`
-  `loadChartAndAnnotation(/* public names: loadChart, importAnnotation */): unknown`
-  `loadChartJsWithAnnotationResult(/* public names: importAnnotation */): unknown`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadAnnotationPlugin(importAnnotation?: () => Promise<unknown>): Promise<AnnotationPlugin | undefined>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadChartAndAnnotation(loadChart: () => Promise<ChartJsModule | null>, importAnnotation?: () => Promise<unknown>): Promise<ChartFeatureLoadResult<AnnotationPlugin>>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadChartJsWithAnnotationResult(importAnnotation?: () => Promise<unknown>): Promise<ChartFeatureLoadResult<AnnotationPlugin>>`
 
 - **`components-charts-chart-chart-legend-visibility-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartLegendVisibilityChangeDetail {
-    datasetIndex: unknown;
-    visible: unknown;
-    hiddenDatasets: unknown;
+    readonly datasetIndex: number;
+    readonly visible: boolean;
+    readonly hiddenDatasets: readonly number[];
   }`
 
 - **`components-charts-chart-chart-loader-contracts`** — Supporting data types and helpers for this component family.
-  `loadChartAndZoom(/* public names: importChart, importZoom, needsZoom, mod, zoomPlugin */): unknown`
-  `loadChartAndDataLabels(/* public names: loadChart, importDataLabels */): unknown`
-  `loadChartAndRegisterZoom(/* public names: loadChart, importZoom */): unknown`
-  `loadChartJsWithDataLabels(/* public names: importDataLabels, mod, plugin */): unknown`
-  `loadChartJsWithDataLabelsResult(/* public names: importDataLabels */): unknown`
-  `loadChartJsWithZoom(/* public names: importZoom */): unknown`
-  `loadChartJsWithZoomResult(/* public names: importZoom */): unknown`
-  `loadDataLabelsPlugin(/* public names: importDataLabels */): unknown`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadChartAndZoom(importChart?: () => Promise<unknown>, importZoom?: () => Promise<unknown>, needsZoom?: boolean): Promise<{
+    mod: ChartJsModule;
+    zoomPlugin: ZoomPlugin | undefined;
+  } | null>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadChartAndDataLabels(loadChart: () => Promise<ChartJsModule | null>, importDataLabels?: () => Promise<unknown>): Promise<ChartFeatureLoadResult<DataLabelsPlugin>>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadChartAndRegisterZoom(loadChart: () => Promise<ChartJsModule | null>, importZoom?: () => Promise<unknown>): Promise<ChartFeatureLoadResult<ZoomPlugin>>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadChartJsWithDataLabels(importDataLabels?: () => Promise<unknown>): Promise<{
+    mod: ChartJsModule;
+    plugin: DataLabelsPlugin | undefined;
+  } | null>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadChartJsWithDataLabelsResult(importDataLabels?: () => Promise<unknown>): Promise<ChartFeatureLoadResult<DataLabelsPlugin>>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadChartJsWithZoom(importZoom?: () => Promise<unknown>): Promise<ChartJsModule | null>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadChartJsWithZoomResult(importZoom?: () => Promise<unknown>): Promise<ChartFeatureLoadResult<ZoomPlugin>>`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
+  `loadDataLabelsPlugin(importDataLabels?: () => Promise<unknown>): Promise<DataLabelsPlugin | undefined>`
 
 - **`components-charts-chart-chart-preload-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-preload.js`.
   `LyraChartPreloadOptions {
-    zoom: unknown;
-    dataLabels: unknown;
-    annotations: unknown;
-    boxPlot: unknown;
+    readonly zoom?: boolean;
+    readonly dataLabels?: boolean;
+    readonly annotations?: boolean;
+    readonly boxPlot?: boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-preload.js`.
   `LyraChartPreloadResult {
-    core: unknown;
-    zoom: unknown;
-    dataLabels: unknown;
-    annotations: unknown;
-    boxPlot: unknown;
+    readonly core: boolean;
+    readonly zoom?: boolean;
+    readonly dataLabels?: boolean;
+    readonly annotations?: boolean;
+    readonly boxPlot?: boolean;
   }`
-  `preloadCharts(/* public names: options */): unknown`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-preload.js`.
+  `preloadCharts(options?: LyraChartPreloadOptions): Promise<LyraChartPreloadResult>`
 
 - **`components-charts-chart-chart-contracts`** — Supporting data types and helpers for this component family.
-  `lockChartType(/* public names: ctor, value */): unknown`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartAnnotation {
-    axis: unknown;
-    value: unknown;
-    from: unknown;
-    to: unknown;
-    label: unknown;
-    tone: unknown;
+    readonly axis?: LyraChartIndexAxis;
+    readonly value?: number;
+    readonly from?: number;
+    readonly to?: number;
+    readonly label?: string;
+    readonly tone?: LyraVariant;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartArea {
-    top: unknown;
-    left: unknown;
-    right: unknown;
-    bottom: unknown;
-    width: unknown;
-    height: unknown;
+    readonly top: number;
+    readonly left: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly width: number;
+    readonly height: number;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartConfiguration {
-    type: unknown;
-    data: unknown;
-    options: unknown;
-    plugins: unknown;
+    type?: string;
+    data?: LyraChartDataConfiguration;
+    options?: object;
+    plugins?: LyraChartPlugin[];
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartDataConfiguration {
-    labels: unknown;
-    datasets: unknown;
+    labels?: unknown[];
+    datasets?: LyraChartDatasetConfiguration[];
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartDatasetConfiguration {
-    type: unknown;
-    label: unknown;
-    data: unknown;
-    hidden: unknown;
-    axis: unknown;
-    yAxisID: unknown;
-    noTooltip: unknown;
-    fill: unknown;
-    backgroundColor: unknown;
-    borderColor: unknown;
-    borderRadius: unknown;
-    borderWidth: unknown;
-    borderDash: unknown;
-    color: unknown;
-    pointStyle: unknown;
-    pointBackgroundColor: unknown;
-    pointRadius: unknown;
-    segment: unknown;
+    type?: string;
+    label?: unknown;
+    data?: unknown[];
+    hidden?: boolean;
+    axis?: string;
+    yAxisID?: string;
+    noTooltip?: boolean;
+    fill?: unknown;
+    backgroundColor?: unknown;
+    borderColor?: unknown;
+    borderRadius?: unknown;
+    borderWidth?: unknown;
+    borderDash?: unknown;
+    color?: unknown;
+    pointStyle?: unknown;
+    pointBackgroundColor?: unknown;
+    pointRadius?: unknown;
+    segment?: unknown;
   }`
-  `LyraChartDatumActivateDetail {
-    kind: unknown;
-    datasetIndex: unknown;
-    index: unknown;
-    label: unknown;
-    value: unknown;
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
+  `LyraChartDatumActivateDetail<TKind extends LyraChartDatumKind = LyraChartDatumKind, TValue = unknown> {
+    readonly kind: TKind;
+    readonly datasetIndex: number;
+    readonly index: number;
+    readonly label: string | undefined;
+    readonly value: TValue;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartFormatterContext {
-    value: unknown;
-    surface: unknown;
-    datasetIndex: unknown;
-    index: unknown;
-    label: unknown;
-    seriesLabel: unknown;
-    statistic: unknown;
+    readonly value: number;
+    readonly surface: LyraChartFormatSurface;
+    readonly datasetIndex?: number;
+    readonly index?: number;
+    readonly label?: string;
+    readonly seriesLabel?: string;
+    readonly statistic?: LyraChartStatistic;
   }`
-  `LyraChartInstance {
-    data: unknown;
-    labels: unknown;
-    datasets: unknown;
-    options: unknown;
-    config: unknown;
-    type: unknown;
-    legend: unknown;
-    chartArea: unknown;
-    destroy: unknown;
-    update: unknown;
-    mode: unknown;
-    toBase64Image: unknown;
-    getElementsAtEventForMode: unknown;
-    event: unknown;
-    useFinalPosition: unknown;
-    getDatasetMeta: unknown;
-    index: unknown;
-    hidden: unknown;
-    isDatasetVisible: unknown;
-    setDatasetVisibility: unknown;
-    visible: unknown;
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
+  `LyraChartInstance extends RuntimeChart {
+    // Inherited from RuntimeChart.
+    data: {
+      labels?: unknown[];
+      datasets: LyraChartDatasetConfiguration[];
+    };
+    options: Record<string, unknown>;
+    config: {
+      type?: unknown;
+    };
+    legend?: unknown;
+    chartArea?: LyraChartArea;
+    destroy(): void;
+    update(mode?: string): void;
+    toBase64Image?(): string;
+    getElementsAtEventForMode(event: Event, mode: string, options: Record<string, unknown>, useFinalPosition: boolean): ChartHit[];
+    getDatasetMeta?(index: number): {
+      hidden: boolean | null;
+    };
+    isDatasetVisible(index: number): boolean;
+    setDatasetVisibility(index: number, visible: boolean): void;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartPlugin {
-    id: unknown;
+    readonly id: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartPoint {
-    x: unknown;
-    y: unknown;
-    r: unknown;
-    label: unknown;
+    readonly x: number;
+    readonly y: number;
+    readonly r?: number;
+    readonly label?: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartSeries {
-    label: unknown;
-    data: unknown;
-    points: unknown;
-    color: unknown;
-    fill: unknown;
-    width: unknown;
-    dash: unknown;
-    noTooltip: unknown;
-    axis: unknown;
-    pointColors: unknown;
-    pointRadius: unknown;
-    segmentColors: unknown;
-    type: unknown;
+    readonly label: string;
+    readonly data?: readonly (number | null)[];
+    readonly points?: readonly LyraChartPoint[];
+    readonly color?: string | readonly string[];
+    readonly fill?: boolean;
+    readonly width?: number;
+    readonly dash?: boolean;
+    readonly noTooltip?: boolean;
+    readonly axis?: 'y' | 'y2';
+    readonly pointColors?: readonly string[];
+    readonly pointRadius?: number | readonly number[];
+    readonly segmentColors?: readonly string[];
+    readonly type?: 'line' | 'bar';
   }`
 
 - **`components-charts-chart-histogram-bin-contracts`** — Supporting data types and helpers for this component family.
-  `binValues(/* public names: values, binCount, locale */): unknown`
+  Import: `@aceshooting/lyra-ui`.
+  `binValues(values: readonly number[], binCount: number, locale?: string): HistogramBucket[]`
+  Import: `@aceshooting/lyra-ui`.
   `HistogramBucket {
-    label: unknown;
-    count: unknown;
+    label: string;
+    count: number;
   }`
 
 - **`components-charts-chart-histogram-contracts`** — Supporting data types and helpers for this component family.
-  `binnedBuckets(/* public names: el */): unknown`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/histogram.class.js`.
+  `binnedBuckets(el: LyraHistogram): HistogramBucket[]`
 
 - **`components-charts-chart-lite-chart-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/charts/chart/lite-chart.class.js`.
   `LyraLiteChartSeries {
-    label: unknown;
-    data: unknown;
-    color: unknown;
+    readonly label: string;
+    readonly data: readonly (number | null)[];
+    readonly color?: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/lite-chart.class.js`.
   `LyraLiteChartTableCellContext {
-    kind: unknown;
-    datasetIndex: unknown;
-    index: unknown;
-    label: unknown;
-    seriesLabel: unknown;
+    kind: LyraLiteChartTableCellKind;
+    datasetIndex: number | null;
+    index: number;
+    label: string;
+    seriesLabel: string | null;
   }`

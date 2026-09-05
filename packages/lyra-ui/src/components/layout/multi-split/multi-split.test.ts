@@ -5,7 +5,7 @@ import {
   elementUpdated,
   oneEvent,
 } from "@open-wc/testing";
-import { sendMouse } from '@web/test-runner-commands';
+import { sendMouse } from '../../../../test/wtr-mouse.js';
 import "./multi-split.js";
 import type {
   LyraMultiSplit,
@@ -3189,11 +3189,12 @@ it("honors a sibling panel's own panelConstraints while its neighbor is rail-col
     )) as LyraMultiSplit;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     mockWidth(base, 500);
+    expect(spy.callbacks.length).to.equal(1);
+    const collapseResize = spy.callbacks[0]!;
     el.panelConstraints = [null, { minPx: 40, maxPx: 120 }];
     await elementUpdated(el);
-    expect(spy.callbacks.length).to.equal(1);
 
-    fireCollapseResize(spy.callbacks[0]!, 500); // between floatBreakpoint(400) and railBreakpoint(640) -> rail
+    fireCollapseResize(collapseResize, 500); // between floatBreakpoint(400) and railBreakpoint(640) -> rail
     await elementUpdated(el);
 
     const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];

@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A compact, static resource strip for one message or run — tokens in/out, cost, latency — with a hover/focus tooltip breakdown.',
+          'A compact, static resource strip for one message or run — tokens in/out, cost, latency — with a hover/focus tooltip breakdown. Removing cost-text or summary safely omits that content; explicit empty values remain empty and later values restore it. An open tooltip participates in shared Escape ordering even while only hovered, and dismissal preserves focus elsewhere.',
       },
     },
   },

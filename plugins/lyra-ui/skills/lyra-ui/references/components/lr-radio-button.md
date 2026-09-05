@@ -19,15 +19,24 @@
 The same single-choice control as `lr-radio`, rendered as a button instead of a circle. Mirrors
 `sl-radio-button`.
 
+An explicit live `checked` assignment marks the state dirty even if its boolean value is unchanged.
+For example, assigning `checked = false` to an already-unchecked radio prevents a later
+`defaultChecked = true` from selecting it until form reset. Pristine default propagation and
+owning-group normalization retain their existing behavior.
+
+Host `aria-describedby` references resolve onto the internal `role="radio"`, tracking unresolved
+IDs, target replacement/removal/reinsertion, reconnect, and document adoption. The same behavior
+applies to the button appearance of `lr-radio`.
+
 Deliberately a **subclass of `LyraRadio`**: form association, validity, `form.reset()` restoration
 and the whole `lr-radio-group` ownership/roving-focus contract are inherited rather than
 reimplemented, so the two can never drift apart. Only the chrome differs. A `lr-radio-group` accepts
 either tag and the two can be mixed in one group.
 
-Consecutive `lr-radio-button` siblings collapse their shared borders into one segmented control
-automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-type` counts only
-`lr-radio-button` siblings, so a group's `slot="label"`/`slot="hint"` children never shift the ends,
-and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
+Inside a horizontal `lr-radio-group`, measured adjacent runs of `lr-radio-button` controls merge
+their touching borders and retain rounded outer corners. Separated or mixed controls, vertical
+layouts, wrapped rows and standalone buttons keep the corners appropriate to their actual layout;
+label and hint slots do not determine the segment endpoints.
 
 Standalone button chrome is allocation-safe too: unbroken labels wrap, and start/end (or retained
 prefix/suffix) adornments are each capped and truncate rather than widening the containing panel.

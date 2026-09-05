@@ -315,3 +315,25 @@ export const ThemedActiveRegion: Story = {
     ></lr-document-preview>
   `,
 };
+
+
+export const ParameterizedJson: Story = {
+  parameters: { docs: { description: { story: 'JSON MIME parameters, case and surrounding whitespace do not change text-preview dispatch. Removing mime-type returns to the absent-format fallback.' } } },
+  render: () => html`<lr-document-preview src=${textDataUrl} mime-type=" APPLICATION/JSON ; charset=utf-8 " filename="metadata.json"></lr-document-preview>`,
+};
+
+export const CappedTallImage: Story = {
+  parameters: { docs: { description: { story: 'The nonzoomable image starts at the reachable scroll origin; scroll to reach its bottom. Images that fit remain centered.' } } },
+  render: () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 200;
+    canvas.height = 1000;
+    const context = canvas.getContext('2d')!;
+    context.fillRect(0, 0, 200, 1000);
+    context.fillStyle = 'white';
+    context.font = '24px sans-serif';
+    context.fillText('Start', 24, 36);
+    context.fillText('End', 24, 972);
+    return html`<lr-document-preview style="inline-size:320px" max-height="160px" mime-type="image/png" src=${canvas.toDataURL()} filename="Tall image"></lr-document-preview>`;
+  },
+};

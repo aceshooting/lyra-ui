@@ -3,7 +3,7 @@ import { html } from 'lit';
 import type { LyraOption } from './option.js';
 import './option.js';
 
-const meta: Meta = { title: 'Combobox/Option', component: 'lr-option', tags: ['autodocs'] };
+const meta: Meta = { title: 'Combobox/Option', component: 'lr-option', tags: ['autodocs'], parameters: { docs: { description: { component: 'The selected property changes live state. When mounted in a select or combobox it immediately updates the owner and submission while preserving the selected attribute and reset default. Named adornment content changes refresh combobox proxy rows.' } } } };
 export default meta;
 
 export const Default: StoryObj = {

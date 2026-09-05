@@ -5,6 +5,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
+import { detectPlatform } from '../../../internal/platform.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -73,7 +74,8 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  *   visual. `lr-stat` only reserves the slot; it doesn't render one itself.
  * @slot sub - Rich sub-line content (overrides the `sub` attribute).
  * When linked, every consumer slot remains a sibling of the stretched anchor so an interactive
- * slotted descendant is never nested inside the whole-card link.
+ * slotted descendant is never nested inside the whole-card link. Passive slotted content forwards
+ * pointer modifiers; the platform primary modifier and Shift preserve new-context activation.
  * @csspart base - The component's root wrapper (`<div>`, or a stretched real `<a>` when `href` is safe).
  * @csspart icon - Container for the leading icon slot.
  * @csspart label - The label text. Hidden (and collapsed) whenever `label` is empty, so a
@@ -167,6 +169,7 @@ export class LyraStat extends LyraElement {
     this.requestUpdate('deltaPercent', old);
   }
 
+  /** Caption fallback. Removing the attribute omits it without hiding assigned caption content. */
   @property() caption = '';
   /** Which trend direction counts as "good" — inverts arrow/color polarity for
    *  cost/latency/error-rate-style metrics where a decrease is the win. */
@@ -206,6 +209,7 @@ export class LyraStat extends LyraElement {
   @property({ attribute: 'exact-value' }) exactValue = '';
   /** A secondary line distinct from `caption` (e.g. a comparison-period label), rendered between the
    *  trend pill and the caption. */
+  /** Sub-line fallback. Removing the attribute omits it without hiding assigned sub content. */
   @property() sub = '';
   /** Renders `value` as smaller/lighter prose (e.g. a loading/status message) instead of the bold
    *  numeric headline style, and hides `unit`. */
@@ -298,7 +302,52 @@ export class LyraStat extends LyraElement {
       if (node === event.currentTarget) break;
       if (isElementNode(node) && node.matches(NESTED_CONTROL_SELECTOR)) return;
     }
-    this.shadowRoot?.querySelector<HTMLAnchorElement>('[part="base"][href]')?.click();
+    if (event.defaultPrevented) return;
+    const anchor = this.shadowRoot?.querySelector<HTMLAnchorElement>('[part="base"][href]');
+    const MouseEventConstructor = this.ownerDocument.defaultView?.MouseEvent;
+    if (!anchor) return;
+    if (MouseEventConstructor && event instanceof MouseEventConstructor) {
+      const platform = detectPlatform(this.ownerDocument.defaultView?.navigator);
+      const newContext = event.shiftKey || (platform === 'mac' ? event.metaKey : event.ctrlKey);
+      const previousTarget = anchor.getAttribute('target');
+      const previousRel = anchor.getAttribute('rel');
+      // Some engines ignore modifiers on synthetic activation. A temporary native target keeps
+      // the current page intact while click listeners still own cancellation of the real anchor.
+      if (newContext) {
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+      }
+      try {
+        anchor.dispatchEvent(new MouseEventConstructor('click', {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          view: event.view,
+          detail: event.detail,
+          button: event.button,
+          buttons: event.buttons,
+          clientX: event.clientX,
+          clientY: event.clientY,
+          screenX: event.screenX,
+          screenY: event.screenY,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          shiftKey: event.shiftKey,
+          altKey: event.altKey,
+        }));
+      } finally {
+        if (newContext) {
+          if (anchor.getAttribute('target') === '_blank') {
+            if (previousTarget === null) anchor.removeAttribute('target');
+            else anchor.setAttribute('target', previousTarget);
+          }
+          if (anchor.getAttribute('rel') === 'noopener noreferrer') {
+            if (previousRel === null) anchor.removeAttribute('rel');
+            else anchor.setAttribute('rel', previousRel);
+          }
+        }
+      }
+    } else anchor.click();
   };
 
   /** Activates the real whole-card anchor when this stat is linked. */
@@ -320,8 +369,8 @@ export class LyraStat extends LyraElement {
     // shared chevronIcon(), rotated per direction via CSS on the wrapping
     // [part='trend'].
     const arrow = rawDirection === 'flat' ? '–' : chevronIcon();
-    const hasCaption = this.hasCaptionSlot || this.caption.length > 0;
-    const hasSub = this.hasSubSlot || this.sub.length > 0;
+    const hasCaption = this.hasCaptionSlot || (this.caption ?? '').length > 0;
+    const hasSub = this.hasSubSlot || (this.sub ?? '').length > 0;
     const formattedTrend = getNumberFormat(this.effectiveLocale, {
       style: 'percent',
       maximumFractionDigits: 20,

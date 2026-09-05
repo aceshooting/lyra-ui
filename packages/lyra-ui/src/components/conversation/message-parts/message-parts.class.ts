@@ -59,6 +59,9 @@ export interface LyraMessagePartsEventMap
  * citation ranks, retry payloads, and error announcements all consume that same projection.
  * Streaming text and reasoning parts forward that state into their nested Markdown renderer, so
  * parsing/highlighting coalesces until the same-id part becomes complete.
+ * Streaming text and reasoning show accumulated plain text; Markdown parsing and syntax
+ * highlighting wait until that part completes.
+ *
  * Citation ranks are derived in one linear render prepass, including for mixed streaming arrays.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new

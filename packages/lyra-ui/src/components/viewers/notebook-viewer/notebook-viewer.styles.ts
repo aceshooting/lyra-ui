@@ -17,6 +17,9 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
   }
+  lr-virtual-list::part(base) {
+    max-block-size: calc(var(--lr-notebook-viewer-max-height, none) - 2 * var(--lr-border-width-thin));
+  }
   /* Every cell part below is emitted by renderCell()/renderOutput() but committed into
      <lr-virtual-list>'s OWN shadow root, so a bare [part='...'] selector here resolves against
      this component's tree and never reaches it; the one-shadow-hop ::part() form does, and

@@ -1,5 +1,5 @@
 import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
-import { sendKeys, sendMouse } from '@web/test-runner-commands';
+import { sendKeys } from '@web/test-runner-commands';
 import './chart.js';
 import './doughnut-chart.js';
 import {
@@ -12,7 +12,7 @@ import { loadChartAndZoom } from './chart-feature-loader.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { resolveLyraLocale } from '../../../localization.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.

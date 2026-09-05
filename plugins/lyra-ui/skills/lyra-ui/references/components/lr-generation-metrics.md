@@ -20,6 +20,11 @@ A compact, ticking status readout shown alongside an in-progress AI response: el
 count, and token-throughput, plus a built-in Stop button. First-party invention (no Web Awesome
 equivalent). Renders as e.g. `12.3s · 340 tokens · 27 tok/s [Stop]`.
 
+The host handles `lr-stop` by stopping its own producer and setting `status` to `complete`. A
+restart supplies a fresh `startedAt`, resets its token count, and retires the previous producer
+timer. The live example wires this lifecycle on mount, so its first Stop and every Restart take
+effect immediately.
+
 **9.0 identity migration:** `lr-generation-status` → `lr-generation-metrics`,
 `LyraGenerationStatus` → `LyraGenerationMetrics`, and `LyraGenerationStatusEventMap` →
 `LyraGenerationMetricsEventMap`. The old tag, class, event-map name, registration route, and

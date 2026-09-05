@@ -11,6 +11,14 @@ export interface ReorderOwnerState {
 /** @internal Private owner-to-item state bridge. */
 export const reorderOwnerUpdate = Symbol('lyra-reorder-owner-update');
 
+/** @internal Private item-to-owner identity notification. */
+export const reorderIdentityChange = Symbol('lyra-reorder-identity-change');
+
+/** @internal */
+export interface ReorderIdentityOwner {
+  [reorderIdentityChange](item: ReorderOwnedItem): void;
+}
+
 /** @internal */
 export interface ReorderOwnedItem {
   [reorderOwnerUpdate](owner: object, state?: unknown): void;

@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A small platform-aware chip for a keyboard shortcut. `keys` is a `+`-separated token sequence (`"mod+k"`, `"mod+shift+p"`); `mod` resolves to ⌘ on macOS and "Ctrl" everywhere else. `platform="auto"` detects the browser platform, while `mac`, `windows`, and `linux` make rendering deterministic. The rendered `aria-label` always spells the shortcut out in words.',
+          'A small platform-aware chip for a keyboard shortcut. `keys` is a `+`-separated token sequence (`"mod+k"`, `"mod+shift+p"`); `mod` resolves to ⌘ on macOS and "Ctrl" everywhere else. `platform="auto"` detects the browser platform, while `mac`, `windows`, and `linux` make rendering deterministic. The rendered `aria-label` always spells the shortcut out in words. Removing keys safely clears the shortcut. Unknown tokens, including constructor and __proto__, render and name themselves verbatim; recognized modifiers keep their localized labels.',
       },
     },
   },

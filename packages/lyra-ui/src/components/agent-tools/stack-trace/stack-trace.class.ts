@@ -145,7 +145,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The raw stack trace text to parse and render. */
+  /** The raw stack trace text to parse and render. Removing the attribute clears its displayed text. */
   @property() trace = '';
 
   /** Folds runs of internal frames (matching `internalPatterns`) behind a toggle. */
@@ -244,7 +244,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('trace') || changed.has('internalPatterns')) {
-      const result = parseStackTrace(this.trace, { internalPatterns: this.internalPatterns });
+      const result = parseStackTrace(this.trace ?? '', { internalPatterns: this.internalPatterns });
       this.groups = result.groups;
       this.boundedSource = result.source;
       this.parseTruncated = result.truncated;
@@ -266,7 +266,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   };
 
   private async copyTrace(): Promise<void> {
-    const text = this.trace;
+    const text = this.trace ?? '';
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     const generation = ++this.copyGeneration;
     this.cancelCopyTimer();

@@ -316,3 +316,25 @@ export const CancelableResize: Story = {
       </lr-app-rail>
     `),
 };
+
+export const StopResizingOnRequest: Story = {
+  name: 'Stop resizing from a request listener',
+  parameters: {
+    docs: {
+      description: {
+        story: 'The first resize request disables resizing and sets a final width of 300px. The pending proposal preserves that listener state and emits no committed resize event.',
+      },
+    },
+  },
+  render: () => page(html`
+    <lr-app-rail label="Primary" force-mode="full" resizable rail-width-px="240"
+      style="block-size: 100%;"
+      @lr-rail-resize-request=${(event: Event) => {
+        const rail = event.currentTarget as LyraAppRail;
+        rail.resizable = false;
+        rail.railWidthPx = 300;
+      }}>
+      ${navItems}
+    </lr-app-rail>
+  `),
+};

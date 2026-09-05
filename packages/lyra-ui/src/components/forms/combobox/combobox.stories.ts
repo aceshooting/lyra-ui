@@ -710,3 +710,33 @@ export const OptionAdornments: Story = {
     </lr-combobox>
   `,
 };
+
+export const MountedOptionSelection: Story = {
+  parameters: { docs: { description: { story: 'Mounted selected writes update the live value and submission immediately; reset restores Alpha. Switching to single selection exposes one selected row while keeping the multiple selection history. Composition keys remain with the filter. Source adornment edits and inert options update the popup presentation.' } } },
+  render: () => {
+    const control = (event: Event) => (event.currentTarget as HTMLElement).closest('form')!.querySelector('lr-combobox') as LyraCombobox;
+    return html`
+      <form>
+        <p id="mounted-combobox-guidance">Choose the available entries; Gamma is unavailable.</p>
+        <lr-combobox name="choice" label="Entries" hint="Type to filter" aria-describedby="mounted-combobox-guidance" multiple>
+          <lr-option value="a" selected>Alpha</lr-option>
+          <lr-option value="b"><span slot="start">B</span>Beta</lr-option>
+          <lr-option value="c" inert>Gamma</lr-option>
+        </lr-combobox>
+        <button type="button" @click=${(event: Event) => {
+          const option = control(event).querySelectorAll('lr-option')[1]!;
+          option.selected = !option.selected;
+        }}>Toggle Beta selection</button>
+        <button type="button" @click=${(event: Event) => {
+          const el = control(event);
+          el.multiple = !el.multiple;
+        }}>Toggle multiple</button>
+        <button type="button" @click=${(event: Event) => {
+          const badge = control(event).querySelector('[slot="start"]')!;
+          badge.textContent = badge.textContent === 'B' ? 'Updated B' : 'B';
+        }}>Update Beta adornment</button>
+        <button type="reset">Reset selection</button>
+      </form>
+    `;
+  },
+};

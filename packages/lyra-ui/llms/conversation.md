@@ -22,6 +22,10 @@ instance on a page shares one load. `heading`/`code`/`blockquote`/`table`/`link`
 rendered through a `marked` renderer override that injects `part="..."` attributes directly into the
 produced HTML in a single pass (no second DOM walk after insertion).
 
+Removing `content` clears the document and its empty-document tab stop, including while streaming.
+The property keeps Lit's `null` readback after removal; an explicitly empty attribute remains an
+empty string. Later source text renders normally.
+
 If an instance disconnects and reconnects before that shared promise settles, only the current
 connection applies the result and reparses; the stale connection callback is generation-guarded.
 
@@ -90,10 +94,10 @@ uses for its own `[part="body"]`.
   than overflowing past the HTML heading levels. `0` (the default) preserves the original
   `<h${token.depth}>` output
 - `streaming: boolean = false` (reflected) — marks the host `aria-busy="true"` while partial Markdown
-  is still arriving and lets consumers target `lr-markdown[streaming]`; content updates while it is
-  true are coalesced to at most one parse per animation frame, while the final `streaming=false`
-  update flushes the latest content immediately; busy state also remains true while parser
-  dependencies are loading
+  is still arriving and lets consumers target `lr-markdown[streaming]`. Both `lr-markdown` and
+  `lr-markdown-core` display accumulated plain text without parsing or highlighting while it is
+  true. Setting `streaming=false` parses and renders the latest complete content; busy state also
+  remains true while parser dependencies are loading
 - `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
   blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
   peer is available; set `false` to keep plain output even when `shiki` is installed. No effect
@@ -269,6 +273,10 @@ this component's own module never imports or calls that function at all; it only
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
+Removing `content` clears the document and its empty-document tab stop, including while streaming.
+The property keeps Lit's `null` readback after removal; an explicitly empty attribute remains an
+empty string. Later source text renders normally.
+
 A fenced code block whose language isn't a key in `languages` always renders the plain-text fallback
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
 rendering path as `<lr-code-block-core>`'s identical contract. A block that _is_ highlighted follows the
@@ -369,6 +377,10 @@ else). No built-in copy button is rendered — slot a copy control into `actions
 `lr-copy` (fulfilled-only frozen `detail: { ok: true, text }`) from it if you want one (matching
 `<lr-code-block>`'s copy-affordance contract for anything listening at the conversation-surface
 level).
+
+Compose `lr-copy-button` in `actions` with its `value` set to the intended message source. The shell
+does not infer that source or write the clipboard itself; the composed control emits success only
+after the write fulfills.
 
 **Properties:**
 
@@ -542,6 +554,9 @@ nothing else about the component differs: `dots` (default, three dots with a sta
 classic "typing…" affordance for a standalone status line), `pulse` (a single breathing dot, a
 quieter cue for a tight space, e.g. next to an avatar), `cursor` (a blinking vertical bar, meant to
 sit inline at the tail end of streamed text still being appended to).
+
+Removing `label` restores the localized thinking name while preserving an explicit host
+`aria-label`. Later label assignments remain reactive.
 
 **Properties:**
 
@@ -917,6 +932,9 @@ A selectable row representing one chat session in a history sidebar list. Usable
 `renderItem()` payload of `<lr-virtual-list>`; has no dependency on that (or any) other component.
 First-party invention (no Web Awesome equivalent).
 
+Inline rename keeps IME composition keys in the editor; ordinary Enter commits and Escape cancels
+after composition.
+
 **Properties:**
 
 - `conversationId: string = ''` (attribute `conversation-id`) — stable domain identity carried by
@@ -1081,6 +1099,14 @@ and the filter-as-you-type suggestion-popup technique `<lr-combobox>` uses, with
 element. First-party invention (no Web Awesome equivalent).
 Session-history/autofill restoration synchronously restores the model id and form entry without
 emitting `lr-change`.
+
+Removing `label`, `hint`, or `error-text` clears that optional copy in both catalog and free-text
+modes. Removed string properties retain `null` readback, and later assignments restore their
+content.
+
+Composing key events (`isComposing` or legacy `keyCode === 229`) remain with the catalog query or
+custom-value editor: they do not navigate options, commit a selection or custom value, or close the
+popup. Ordinary keyboard behavior resumes after composition.
 
 When `catalog`/`allowCustom` replaces a focused trigger with the free-text input or vice versa,
 focus follows the available replacement. If the new owner is disabled or inert, focus returns to
@@ -1421,6 +1447,11 @@ A compact, ticking status readout shown alongside an in-progress AI response: el
 count, and token-throughput, plus a built-in Stop button. First-party invention (no Web Awesome
 equivalent). Renders as e.g. `12.3s · 340 tokens · 27 tok/s [Stop]`.
 
+The host handles `lr-stop` by stopping its own producer and setting `status` to `complete`. A
+restart supplies a fresh `startedAt`, resets its token count, and retires the previous producer
+timer. The live example wires this lifecycle on mount, so its first Stop and every Restart take
+effect immediately.
+
 **9.0 identity migration:** `lr-generation-status` → `lr-generation-metrics`,
 `LyraGenerationStatus` → `LyraGenerationMetrics`, and `LyraGenerationStatusEventMap` →
 `LyraGenerationMetricsEventMap`. The old tag, class, event-map name, registration route, and
@@ -1533,6 +1564,13 @@ Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer
 `language` is unset/unrecognized. That
 fallback is the _default_ rendering path, not a degraded one: unhighlighted code is perfectly usable,
 and it's what every instance renders at zero extra bytes until shiki resolves.
+
+Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
+an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
+`null` property readback; an explicitly empty attribute stays an empty string, and a later value
+resumes normal rendering. Highlighted gutter labels and locale-formatted line numbers follow live
+`.strings` and inherited or explicit locale changes. Unrelated updates retain the existing
+highlighted markup.
 
 **Properties:**
 
@@ -1704,6 +1742,13 @@ plus an explicit oniguruma engine, seeded with _only_ the grammars in `languages
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
 
+Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
+an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
+`null` property readback; an explicitly empty attribute stays an empty string, and a later value
+resumes normal rendering. Highlighted gutter labels and locale-formatted line numbers follow live
+`.strings` and inherited or explicit locale changes. Unrelated updates retain the existing
+highlighted markup.
+
 A `language` value absent from `languages` always renders the plain `<pre><code>` fallback — there is
 no default/full-table highlighter here to fall back to, unlike `<lr-code-block>`'s dynamic-import
 path for an unmapped language. That fallback is the _default_ rendering path, not a degraded one,
@@ -1784,8 +1829,12 @@ fallback separately.
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`,
 `shiki/wasm`, and `shiki/themes/github-{light,dark}.mjs` subpaths — never `shiki`'s main entry point,
 which is what carries the ~200-language table this component exists to avoid). Building the
-fine-grained highlighter is cached per `languages` object identity (a `WeakMap`), so passing the same
-module-level `languages` constant on every render builds it only once.
+fine-grained highlighter is cached per `languages` object identity. A bounded weak cache also shares
+recently used equivalent, deeply frozen plain grammar maps, including the detached snapshots owned
+by separate component instances. Grammar contents and property/array order must agree completely;
+mutable or unusual inputs keep identity-only caching. Highlighters returned by the public loader
+can therefore be shared across equivalent frozen maps. Passing a stable module-level `languages`
+constant also avoids repeated component snapshots.
 
 ```ts
 import { html } from "lit";
@@ -1806,8 +1855,9 @@ const view = html`<lr-code-block-core
   added to `languages` will never highlight, no matter how common that language is elsewhere. Reach
   for `<lr-code-block>` instead if you need to support an open-ended set of languages without
   pre-declaring each one.
-- `languages` is keyed by object identity for caching purposes — pass a stable, module-level constant
-  (not a fresh object literal per render), or every render rebuilds its own fine-grained highlighter.
+- Pass a stable, module-level `languages` constant to avoid repeated snapshots on parent renders.
+  Equivalent frozen maps can share a recently used highlighter, but that bounded weak reuse is an
+  optimization: callers must not depend on distinct frozen map objects producing distinct cores.
 
 ---
 
@@ -1996,6 +2046,9 @@ becomes unavailable, focus moves to the nearest survivor or the stable toolbar, 
 newer external focus move. Keyboard movement starts from the action that actually received the event,
 even after a controlled state write changed the remembered stop.
 
+ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor remain native editing keys.
+Roving navigation still operates on the actual toolbar and thumb actions.
+
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins
 render, in that order. Duplicate names are omitted first-wins before rendering, roving focus, or
@@ -2046,6 +2099,10 @@ read-only display). Activating the pressed thumb while its detail panel is open 
 `null`. If an applicable panel was closed without changing the rating (for example with Escape),
 activating the still-pressed thumb reopens it with the surviving draft. A thumbs-only control always
 uses the ordinary re-activate-to-clear toggle.
+
+Asynchronous finalization or reversion preserves focus on an outside control. Settlement retains the
+existing thumb/submit fallback when focus remains within the feedback or was lost as its pending
+controls became disabled.
 
 **Properties:** `rating: MessageFeedbackValue = null` (`'up' | 'down' | null`, reflected),
 `detail?: MessageFeedbackDetailConfiguration` (attribute: false) — one configuration with optional
@@ -2119,6 +2176,9 @@ recording, optional chunked streaming, teardown. The one place in this library t
 microphone — no SDK, no LiveKit/ElevenLabs import, native browser APIs only. `mode="hold"` (the
 default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop with
 `aria-pressed`. Escape cancels the in-progress take in either mode.
+
+For example, `<lr-push-to-talk><span slot="microphone-icon">MIC</span></lr-push-to-talk>` replaces
+the idle microphone glyph. Use `recording-icon` separately for the recording state.
 
 While recording, the optional elapsed timer uses the effective locale's decimal digits, suppresses
 grouping, and pads its seconds field to two locale-aware digits.
@@ -2199,6 +2259,9 @@ Live captions for an in-progress voice session: speaker-grouped entries, interim
 with in-place upgrades keyed by `id`, and a stick-to-bottom auto-scroll with release, the same
 `follow`/`lr-follow-change` contract `<lr-terminal>` uses. Live captions only — recorded-media
 transcript sync is a separate concern.
+
+Activating the focused jump action resumes follow and transfers focus to the scroll base when the
+action disappears, unless a newer outside focus move takes precedence.
 
 **Properties:** `entries: LyraTranscriptEntry[] = []` (attribute: false) — `LyraTranscriptEntry { id:
 string; speaker?: string; text: string; interim?: boolean; timestamp?: LyraTimestamp }` (exported by
@@ -2421,6 +2484,9 @@ row actions in that mode. No thread CRUD or persistence — every mutation
 (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the _requested_ new
 state; the host mutates `threads`.
 
+A conversation row with `slot=""` belongs to the default slot exactly like a row with no slot
+attribute, including after reconnect. Named slots retain their distinct roles.
+
 ArrowUp/ArrowDown/Home/End navigation skips rows that are disabled, hidden, `aria-hidden`, or
 `inert` (including an inert ancestor introduced by `wrapRow`). Arrow navigation continues through
 the complete item model at a virtual-window edge and mounts the next available row before moving
@@ -2479,9 +2545,9 @@ property. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected)
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
 pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
 this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
-the real row keeps the `role="heading"`/`aria-level` semantics and the tab order (the copy's toggle
-is not a second tab stop), while the pinned copy stays clickable and requests the same
-`lr-group-toggle` collapse. Default `false` renders exactly as before; `grouping="none"` has no
+the real row keeps the `role="heading"`/`aria-level` semantics and its interactive toggle. The
+pinned copy is inert, pointer-transparent presentation content: its toggle and adornments do not
+receive interaction, and it adds no second tab stop. Default `false` renders exactly as before; `grouping="none"` has no
 headers to pin, so it is a no-op there. `label?: string` — accessible name for the list region.
 Omitting it uses the localized `threadListLabel`; an explicit empty string intentionally leaves the
 list unnamed. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
@@ -2683,6 +2749,10 @@ The tooltip reuses `lr-tool-call-chip`'s hover/focus/Escape/`aria-describedby` c
 Not `lr-context-meter` (occupancy of a fixed capacity); not `lr-generation-metrics` (live, with a
 Stop button) — this is static after the fact.
 
+Removing `cost-text` or `summary` safely omits that content; explicit empty values remain empty and
+later values restore it. An open tooltip participates in shared Escape ordering even while only
+hovered, and dismissal preserves focus elsewhere.
+
 **Properties:** `tokensIn?: number` (attribute `tokens-in`) — input tokens, normalized to a
 non-negative integer, locale-formatted; segment omitted while unset/non-finite. `tokensOut?: number`
 (attribute `tokens-out`) — same rules. `costText: string = ''` (attribute `cost-text`) —
@@ -2736,6 +2806,15 @@ implicit state mutation, no remote widget/schema fetching, and it never renders 
 navigates (no `href` props are allowlisted anywhere). Controlled state binding is deliberately
 narrow: a versioned document may bind an allowlisted primitive prop to a JSON Pointer, and the host
 must apply every requested change itself.
+
+Default authoring diagnostics are silent outside Lit's development mode. An explicit expert
+`ResolveContext.warn` callback remains active in every runtime; warning keys and the suppression cap
+remain scoped to the current context generation. Runtime `lr-render-error` reporting is independent
+of this development diagnostic policy.
+
+`createWidgetDocument` validates authored trees immediately. To handle a received, untrusted
+document, pass its envelope to the renderer's `document` boundary; malformed envelopes clear prior
+output and emit `lr-render-error`. The malformed-stream example exercises this boundary.
 
 **Exported types:**
 
@@ -2927,6 +3006,14 @@ active-option, and catalog changes likewise retire an internal preview before th
 control changes target; closing or filtering also retires a row-owned preview once no rendered
 control represents it. Does not synthesize speech, fetch catalogs, or persist selection; not a
 persona picker; `lr-model-select` stays for LLMs.
+
+Removing `label`, `hint`, or `error-text` clears that optional copy in both catalog and free-text
+modes. Removed string properties retain `null` readback, and later assignments restore their
+content.
+
+Composing key events (`isComposing` or legacy `keyCode === 229`) remain with the catalog query or
+custom-value editor: they do not navigate options, commit a selection or custom value, or close the
+popup. Ordinary keyboard behavior resumes after composition.
 
 **Exported types:** `LyraVoiceCatalogEntry extends LyraCatalogEntry { language?: string;
 description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
@@ -3207,8 +3294,9 @@ wins over the shadow stylesheet regardless of specificity.
 
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
-Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint, coalescing
-parse/highlight work; replacing that same-id part with `state: 'complete'` flushes the final content.
+Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint and displays
+accumulated plain text without parsing or highlighting. Replacing that same-id part with
+`state: 'complete'` parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
@@ -3559,270 +3647,320 @@ import "@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-s
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-conversation-chat-message-chat-message-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/chat-message/chat-message.class.js`.
   `ChatMessageToggleDetail {
-    collapsed: unknown;
+    collapsed: boolean;
   }`
 
 - **`components-conversation-chat-composer-chat-composer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.class.js`.
   `normalizeChatComposerStatus(value: unknown): ChatComposerStatus`
 
 - **`components-conversation-checkpoint-checkpoint-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/checkpoint/checkpoint.class.js`.
   `CheckpointRestoreDetail {
-    checkpointId: unknown;
-    label: unknown;
+    checkpointId: string;
+    label: string;
   }`
 
 - **`components-conversation-code-block-code-loader-contracts`** — Supporting data types and helpers for this component family.
-  `loadShikiHighlighter(): unknown`
-  `loadShikiLanguage(/* public names: hl, lang */): unknown`
-  `shikiHasLoadedLanguage(/* public names: hl, lang */): unknown`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
+  `loadShikiHighlighter(): Promise<ShikiHighlighter | null>`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
+  `loadShikiLanguage(hl: ShikiHighlighter, lang: string): Promise<boolean>`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
+  `shikiHasLoadedLanguage(hl: ShikiHighlighter, lang: string): boolean`
 
 - **`components-conversation-code-block-shiki-types-contracts`** — Supporting data types and helpers for this component family.
-  `loadShikiHighlighterCore(/* public names: languages */): unknown`
-  `normalizeShikiLanguage(/* public names: lang */): unknown`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
+  `loadShikiHighlighterCore(languages: Record<string, ShikiLanguageInput>): Promise<ShikiHighlighterCore | null>`
+  Results are cached by map identity, with bounded weak reuse across equivalent deeply frozen plain
+  grammar maps. Mutable maps and unusual grammar values retain identity-only caching.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
+  `normalizeShikiLanguage(lang: string): string`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
   `ShikiHighlighter {
-    codeToHtml: unknown;
-    code: unknown;
-    options: unknown;
-    getLoadedLanguages: unknown;
-    loadLanguage: unknown;
-    language: unknown;
+    codeToHtml(code: string, options: Record<string, unknown>): string;
+    getLoadedLanguages(): string[];
+    loadLanguage(language: string | ShikiLanguageInput): Promise<void>;
   }`
+  Import: `@aceshooting/lyra-ui`.
   `ShikiLanguageRegistration {
-    name: unknown;
-    scopeName: unknown;
-    displayName: unknown;
-    aliases: unknown;
-    patterns: unknown;
-    repository: unknown;
+    name: string;
+    scopeName: string;
+    displayName?: string;
+    aliases?: string[];
+    patterns?: unknown[];
+    repository?: Record<string, unknown>;
   }`
-  `ShikiLanguageInput {
-    name: unknown;
-    scopeName: unknown;
-    displayName: unknown;
-    aliases: unknown;
-    patterns: unknown;
-    repository: unknown;
-  }`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block.js`.
+  `ShikiLanguageInput = ShikiLanguageRegistration | readonly ShikiLanguageRegistration[]`
 
 - **`components-conversation-conversation-item-conversation-item-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js`.
   `ConversationItemRenameDetail {
-    conversationId: unknown;
-    label: unknown;
+    conversationId: string;
+    label: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js`.
   `ConversationItemSelectDetail {
-    conversationId: unknown;
+    conversationId: string;
   }`
 
 - **`components-conversation-markdown-katex-loader-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui`.
   `KatexApi {
-    renderToString(/* public names: tex, options */): unknown;
+    renderToString(tex: string, options?: Record<string, unknown>): string;
   }`
 
 - **`components-conversation-markdown-markdown-base-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui`.
   `MarkdownVariantContext {
-    tag: unknown;
-    connectedInstances: unknown;
-    sharedParser: unknown;
-    katexState: unknown;
+    readonly tag: 'lr-markdown' | 'lr-markdown-core';
+    readonly connectedInstances: Set<MarkdownRuntimeBase>;
+    readonly sharedParser: MarkdownParserController;
+    readonly katexState: MarkdownKatexState;
   }`
 
 - **`components-conversation-markdown-markdown-loader-contracts`** — Supporting data types and helpers for this component family.
-  `getMarkdownDepsIfLoaded(): unknown`
-  `loadMarkdownAndSanitizer(/* public names: importMarked, importDompurify */): unknown`
-  `loadMarkdownDeps(): unknown`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js`.
+  `getMarkdownDepsIfLoaded(): MarkdownDeps | undefined`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js`.
+  `loadMarkdownAndSanitizer(importMarked?: () => Promise<unknown>, importDompurify?: () => Promise<unknown>): Promise<MarkdownDeps>`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js`.
+  `loadMarkdownDeps(): Promise<MarkdownDeps>`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js`.
   `LyraMarkedParser {
-    defaults: unknown;
-    use: unknown;
-    extensions: unknown;
-    parse: unknown;
-    source: unknown;
-    options: unknown;
-    async: unknown;
+    readonly defaults: Record<string, unknown>;
+    use(...extensions: MarkedExtension[]): LyraMarkedParser;
+    parse(source: string, options: Record<string, unknown> & {
+      async: false;
+    }): string;
+    parse(source: string, options?: Record<string, unknown>): string | Promise<string>;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js`.
   `MarkdownDeps {
-    marked: unknown;
-    DOMPurify: unknown;
+    marked: MarkedModule | undefined;
+    DOMPurify: HtmlSanitizer | undefined;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js`.
   `MarkedExtension {
-    renderer: unknown;
-    extensions: unknown;
+    renderer?: Partial<MarkedRenderer>;
+    extensions?: unknown[];
+    [key: string]: unknown;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js`.
   `MarkedModule {
-    Marked: unknown;
+    Marked: new () => LyraMarkedParser;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js`.
   `MarkedParserContext {
-    parser: unknown;
-    parse: unknown;
-    tokens: unknown;
-    parseInline: unknown;
-    renderer: unknown;
-    textRenderer: unknown;
-    listitem: unknown;
-    token: unknown;
-    tablecell: unknown;
-    tablerow: unknown;
-    text: unknown;
+    parser: {
+      parse(tokens: unknown[]): string;
+      parseInline(tokens: unknown[], renderer?: unknown): string;
+      textRenderer: unknown;
+    };
+    listitem(token: unknown): string;
+    tablecell(token: unknown): string;
+    tablerow(token: {
+      text: string;
+    }): string;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js`.
   `MarkedRenderer {
-    heading: unknown;
-    this: unknown;
-    token: unknown;
-    depth: unknown;
-    paragraph: unknown;
-    list: unknown;
-    ordered: unknown;
-    start: unknown;
-    items: unknown;
-    code: unknown;
-    lang: unknown;
-    text: unknown;
-    escaped: unknown;
-    codespan: unknown;
-    blockquote: unknown;
-    table: unknown;
-    header: unknown;
-    align: unknown;
-    rows: unknown;
-    link: unknown;
-    href: unknown;
-    title: unknown;
-    image: unknown;
-    html: unknown;
+    heading(this: MarkedParserContext, token: MarkedTokenBase & {
+      depth: number;
+    }): string;
+    paragraph(this: MarkedParserContext, token: MarkedTokenBase): string;
+    list(this: MarkedParserContext, token: {
+      ordered: boolean;
+      start: number;
+      items: unknown[];
+    }): string;
+    code(this: MarkedParserContext, token: {
+      lang?: string;
+      text: string;
+      escaped: boolean;
+    }): string;
+    codespan(this: MarkedParserContext, token: {
+      text: string;
+    }): string;
+    blockquote(this: MarkedParserContext, token: MarkedTokenBase): string;
+    table(this: MarkedParserContext, token: {
+      header: Array<MarkedTokenBase & {
+        align?: string | null;
+      }>;
+      rows: Array<Array<MarkedTokenBase & {
+        align?: string | null;
+      }>>;
+    }): string;
+    link(this: MarkedParserContext, token: MarkedTokenBase & {
+      href: string;
+      title?: string | null;
+    }): string;
+    image(this: MarkedParserContext, token: MarkedTokenBase & {
+      href: string;
+      title?: string | null;
+    }): string;
+    html(this: MarkedParserContext, token: {
+      text: string;
+    }): string;
   }`
-  `preloadMarkdown(): unknown`
+  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown.js`.
+  `preloadMarkdown(): Promise<MarkdownDeps>`
 
 - **`components-conversation-markdown-markdown-shared-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui`.
   `MarkdownKatexState {
-    getIfLoaded: unknown;
-    isConfirmedMissing: unknown;
-    startLoad(/* public names: onResolved */): unknown;
+    getIfLoaded(): KatexApi | null;
+    isConfirmedMissing(): boolean;
+    startLoad(onResolved: () => void): void;
   }`
+  Import: `@aceshooting/lyra-ui`.
   `PendingHighlight {
-    key: unknown;
-    lang: unknown;
-    code: unknown;
+    key: string;
+    lang: string;
+    code: string;
   }`
 
 - **`components-conversation-message-actions-toolbar-actions-contracts`** — Supporting data types and helpers for this component family.
-  `isLyraToolbarActionProvider(/* public names: value */): unknown`
+  Import: `@aceshooting/lyra-ui/components/conversation/message-actions/toolbar-actions.js`.
+  `isLyraToolbarActionProvider(value: unknown): value is LyraToolbarActionProvider`
+  Import: `@aceshooting/lyra-ui/components/conversation/message-actions/toolbar-actions.js`.
   `LyraToolbarAction {
-    id: unknown;
-    disabled: unknown;
-    focus: unknown;
-    options: unknown;
-    setTabIndex: unknown;
-    tabIndex: unknown;
+    readonly id: string;
+    readonly disabled: boolean;
+    focus(options?: FocusOptions): void;
+    setTabIndex(tabIndex: 0 | -1): void;
     releaseTabIndex?(): void;
-    matchesEventPath: unknown;
-    path: unknown;
+    matchesEventPath(path: readonly EventTarget[]): boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/message-actions/toolbar-actions.js`.
   `LyraToolbarActionProvider {
-    getToolbarActions: unknown;
+    getToolbarActions(): readonly LyraToolbarAction[];
   }`
 
 - **`components-conversation-message-feedback-message-feedback-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/message-feedback/message-feedback.class.js`.
   `MessageFeedbackDetailConfiguration {
-    reasons: unknown;
-    commentable: unknown;
+    readonly reasons?: readonly MessageFeedbackReason[];
+    readonly commentable?: boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/message-feedback/message-feedback.class.js`.
   `MessageFeedbackReason {
-    id: unknown;
-    label: unknown;
+    readonly id: string;
+    readonly label: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/message-feedback/message-feedback.class.js`.
   `MessageFeedbackSubmitDetail {
-    rating: unknown;
-    reasonIds: unknown;
-    comment: unknown;
+    rating: MessageFeedbackValue;
+    reasonIds: string[];
+    comment: string;
     readonly submissionId: string;
   }`
 
 - **`components-conversation-model-select-model-select-contracts`** — Supporting data types and helpers for this component family.
-  `LyraModelCatalogEntry {
-    icon: unknown;
-    id: unknown;
-    label: unknown;
+  Import: `@aceshooting/lyra-ui/components/conversation/model-select/model-select.class.js`.
+  `LyraModelCatalogEntry extends LyraCatalogEntry {
+    icon?: string;
+    // Inherited from LyraCatalogEntry.
+    id: string;
+    label: string;
   }`
 
 - **`components-conversation-model-settings-panel-model-settings-panel-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/model-settings-panel/model-settings-panel.class.js`.
   `ModelSettingsChangeDetail {
-    model: unknown;
-    inCatalog: unknown;
-    temperature: unknown;
+    model: string;
+    inCatalog: boolean;
+    temperature: number;
   }`
 
 - **`components-conversation-prompt-input-prompt-input-contracts`** — Supporting data types and helpers for this component family.
-  `LyraPromptInputAttachment {
-    attachmentId: unknown;
-    file: unknown;
-    bytes: unknown;
-    status: unknown;
-    progress: unknown;
-    name: unknown;
-    mimeType: unknown;
-    uri: unknown;
-    version: unknown;
+  Import: `@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.class.js`.
+  `LyraPromptInputAttachment extends Omit<DocumentRef, 'id'> {
+    attachmentId: string;
+    file?: File;
+    bytes?: number;
+    status?: LyraAttachmentUploadStatus;
+    progress?: number;
+    // Inherited from Omit<DocumentRef, 'id'>.
+    name: string;
+    mimeType?: string;
+    uri?: string;
+    version?: string;
   }`
-  `LyraPromptSuggestion {
-    insertText: unknown;
-    suggestionId: unknown;
-    label: unknown;
-    description: unknown;
-    icon: unknown;
+  Import: `@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.class.js`.
+  `LyraPromptSuggestion extends LyraMentionItem {
+    insertText?: string;
+    // Inherited from LyraMentionItem.
+    readonly suggestionId: string;
+    readonly label: string;
+    readonly description?: string;
+    readonly icon?: string;
   }`
 
 - **`components-conversation-prompt-queue-prompt-queue-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.class.js`.
   `PromptQueueChangeDetail {
-    items: unknown;
-    reason: unknown;
-    itemId: unknown;
+    items: PromptQueueItem[];
+    reason: PromptQueueChangeReason;
+    itemId: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.class.js`.
   `PromptQueueItem {
-    id: unknown;
-    value: unknown;
-    attachments: unknown;
-    createdAt: unknown;
-    metadata: unknown;
+    id: string;
+    value: string;
+    attachments?: readonly DocumentRef[];
+    createdAt?: number;
+    metadata?: Record<string, unknown>;
   }`
 
 - **`components-conversation-selection-toolbar-selection-toolbar-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.class.js`.
   `SelectionActionDetail {
-    action: unknown;
-    text: unknown;
-    anchor: unknown;
+    readonly action: SelectionAction;
+    readonly text: string;
+    readonly anchor: DocumentLocator | null;
   }`
 
 - **`components-conversation-streaming-text-streaming-text-contracts`** — Supporting data types and helpers for this component family.
-  `looksLikeMarkdown(/* public names: text */): unknown`
+  Import: `@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.class.js`.
+  `looksLikeMarkdown(text: string): boolean`
 
 - **`components-conversation-suggestion-chips-suggestion-chips-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/suggestion-chips/suggestion-chips.class.js`.
   `LyraChatSuggestion {
-    suggestionId: unknown;
-    label: unknown;
-    icon: unknown;
-    detail: unknown;
+    suggestionId: string;
+    label: string;
+    icon?: string;
+    detail?: string;
   }`
 
 - **`components-conversation-transcript-feed-transcript-feed-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/transcript-feed/transcript-feed.class.js`.
   `LyraTranscriptEntry {
-    id: unknown;
-    speaker: unknown;
-    text: unknown;
-    interim: unknown;
-    timestamp: unknown;
+    id: string;
+    speaker?: string;
+    text: string;
+    interim?: boolean;
+    timestamp?: LyraTimestamp;
   }`
 
 - **`components-conversation-voice-picker-voice-picker-contracts`** — Supporting data types and helpers for this component family.
-  `LyraVoiceCatalogEntry {
-    language: unknown;
-    description: unknown;
-    previewUrl: unknown;
-    id: unknown;
-    label: unknown;
+  Import: `@aceshooting/lyra-ui/components/conversation/voice-picker/voice-picker.class.js`.
+  `LyraVoiceCatalogEntry extends LyraCatalogEntry {
+    language?: string;
+    description?: string;
+    previewUrl?: string;
+    // Inherited from LyraCatalogEntry.
+    id: string;
+    label: string;
   }`
 
 - **`internal-catalog-picker-contracts`** — Shared utility contracts.
+  Import: `@aceshooting/lyra-ui/components/conversation/model-select/model-select.class.js`.
   `LyraCatalogEntry {
-    id: unknown;
-    label: unknown;
+    id: string;
+    label: string;
   }`

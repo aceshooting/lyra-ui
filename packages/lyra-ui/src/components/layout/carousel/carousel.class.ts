@@ -119,7 +119,8 @@ export interface LyraCarouselEventMap {
  *   `current-slide` wins.
  * @csspart base - Compatibility name for the carousel landmark; use `carousel`.
  * @csspart carousel - The carousel landmark. It is the same node as `base`.
- * @csspart scroll-container - The keyboard-focusable scroll-snap viewport.
+ * @csspart scroll-container - The keyboard-focusable scroll-snap viewport. Arrow/Home/End
+ *   navigation leaves descendant editors and interactive controls in charge of their own keys.
  * @csspart track - Lyra extension wrapping the slotted slides and eligible inert loop snapshots.
  * @csspart controls - Lyra extension wrapping enabled navigation and pagination.
  * @csspart navigation - The previous/next navigation wrapper.
@@ -1198,7 +1199,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       !event.isPrimary ||
       event.button !== 0 ||
       this.dragPointerId !== undefined ||
-      this.pointerTargetsInteractiveContent(event)
+      this.targetsInteractiveContent(event)
     ) {
       return;
     }
@@ -1224,11 +1225,12 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.restartAutoplay();
   };
 
-  private pointerTargetsInteractiveContent(event: PointerEvent): boolean {
+  private targetsInteractiveContent(event: Event, includeSlideEditors = false): boolean {
     const slides = new Set(this.slideElements());
     for (const target of event.composedPath()) {
       if (!(target instanceof Element)) continue;
-      if (target === this || target === this.viewport || slides.has(target as HTMLElement)) continue;
+      const slideRoot = slides.has(target as HTMLElement);
+      if (target === this || target === this.viewport || (slideRoot && !includeSlideEditors)) continue;
       const name = target.localName;
       if (
         name === 'a' ||
@@ -1238,7 +1240,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         name === 'select' ||
         name === 'textarea' ||
         target.hasAttribute('contenteditable') ||
-        (name.includes('-') && target.getRootNode() !== this.shadowRoot)
+        (!slideRoot && name.includes('-') && target.getRootNode() !== this.shadowRoot)
       ) return true;
       const role = target.getAttribute('role')?.trim().toLowerCase();
       if (role && ['button', 'checkbox', 'combobox', 'link', 'radio', 'slider', 'spinbutton', 'switch', 'textbox'].includes(role)) {
@@ -1343,6 +1345,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
+    if (this.targetsInteractiveContent(event, true)) return;
     const vertical = this.effectiveOrientation() === 'vertical';
     const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = vertical ? 'ArrowDown' : rtl ? 'ArrowLeft' : 'ArrowRight';

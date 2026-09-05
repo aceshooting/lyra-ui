@@ -29,6 +29,7 @@ export class LyraFormatNumber extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   @property({ type: Number }) value = 0;
   @property() type: LyraFormatNumberType = 'decimal';
+  /** ISO currency code. Removed or blank attributes format with the existing USD fallback. */
   @property() currency = 'USD';
   @property({ attribute: 'currency-display' }) currencyDisplay: LyraFormatCurrencyDisplay = 'symbol';
   /** Web Awesome grouping alias. When both grouping aliases are false, `Intl` keeps the locale's

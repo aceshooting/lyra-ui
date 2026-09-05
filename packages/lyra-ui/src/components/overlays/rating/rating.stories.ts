@@ -9,7 +9,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A form-associated slider-style rating. The public `rating` getter returns the live presentational symbol row.',
+          'A form-associated slider-style rating. The public `rating` getter returns the live presentational symbol row. Readonly transitions synchronize validity and aria-invalid in the same completed update. Form reset restores the independent default-value rather than the live value attribute.',
       },
     },
   },
@@ -136,7 +136,7 @@ export const InAForm: StoryObj = {
     docs: {
       description: {
         story:
-          'Form-associated: the rating submits under its name, blocks submission while required and unrated, and form.reset() restores the value attribute.',
+          'Form-associated: the rating submits under its name, blocks submission while required and unrated, and form.reset() restores the independent default-value, set to 2 in this example.',
       },
     },
   },
@@ -149,7 +149,7 @@ export const InAForm: StoryObj = {
       }}
       style="display: flex; gap: 0.75rem; align-items: center;"
     >
-      <lr-rating name="score" value="2" required label="Satisfaction"></lr-rating>
+      <lr-rating name="score" value="2" default-value="2" required label="Satisfaction"></lr-rating>
       <button type="submit">Submit</button>
       <button type="reset">Reset</button>
       <output></output>

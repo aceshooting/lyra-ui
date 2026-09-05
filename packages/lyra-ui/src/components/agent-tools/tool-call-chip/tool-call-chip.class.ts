@@ -236,7 +236,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   /** The tool/function name, e.g. `web_search`. */
   @property() name = '';
 
-  /** Optional grouping label, e.g. `research`. */
+  /** Optional grouping label, e.g. `research`. Removing the attribute clears its displayed text. */
   @property() category = '';
 
   /**
@@ -246,7 +246,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   @property({ reflect: true, converter: statusConverter })
   status: ToolCallStatus = 'pending';
 
-  /** Short human-readable status text, e.g. `Searching web…`. */
+  /** Short human-readable status text, e.g. `Searching web…`. Removing the attribute clears its displayed text. */
   @property() summary = '';
 
   /** How long the call took, in milliseconds. Omitted from the chip entirely when unset. */
@@ -455,8 +455,8 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   }
 
   override render(): TemplateResult {
-    const hasCategory = this.category.length > 0;
-    const hasSummary = this.summary.length > 0;
+    const hasCategory = (this.category ?? '').length > 0;
+    const hasSummary = (this.summary ?? '').length > 0;
     const durationMs = this.safeDurationMs;
     const hasDuration = durationMs != null;
     const status = this.effectiveStatus;

@@ -21,8 +21,8 @@ export const styles = css`
   }
   [part="body"] {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: safe center;
+    justify-content: safe center;
     min-block-size: var(--lr-size-10rem);
     max-block-size: var(
       --lr-svg-viewer-max-height,

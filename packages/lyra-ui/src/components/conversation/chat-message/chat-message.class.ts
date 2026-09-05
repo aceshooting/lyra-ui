@@ -100,9 +100,10 @@ export interface LyraChatMessageEventMap {
  * an arbitrary slotted message even means (plain text? the rendered
  * markdown source? something else?) is exactly the kind of content
  * interpretation this shell deliberately stays out of — slot a copy control
- * into `actions` instead. Firing `lr-copy` (`detail: { text }`) from that
- * control keeps the event name consistent with `<lr-json-viewer>`'s own
- * copy affordance, for anything listening at the conversation-surface level.
+ * into `actions` instead. Compose `<lr-copy-button>` with the intended source
+ * text, or emit `lr-copy` from a custom control only after its clipboard write
+ * fulfills, with frozen `detail: { ok: true, text }`. This matches the success
+ * contract used by copy controls across the conversation surface.
  *
  * Accessibility of `status`: the current status is always available as
  * plain visible text (`[part="status-text"]`), never color alone. A

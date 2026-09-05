@@ -927,7 +927,7 @@ it('withholds fit-mode geometry until its first ResizeObserver measurement', asy
     expect(el.shadowRoot!.querySelectorAll('[part="axis-label"]').length).to.equal(0);
 
     callbacks[0]!(
-      [{ contentBoxSize: [{ inlineSize: 320, blockSize: 280 }] } as unknown as ResizeObserverEntry],
+      [{ target: el.shadowRoot!.querySelector('svg')!, contentBoxSize: [{ inlineSize: 320, blockSize: 280 }] } as unknown as ResizeObserverEntry],
       {} as ResizeObserver,
     );
     await el.updateComplete;
@@ -976,7 +976,7 @@ it('reproduces the SSR fallback before enabling fit measurement during hydration
     expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]')).to.have.length(0);
 
     callbacks[0]!(
-      [{ contentBoxSize: [{ inlineSize: 320, blockSize: 280 }] } as unknown as ResizeObserverEntry],
+      [{ target: el.shadowRoot!.querySelector('svg')!, contentBoxSize: [{ inlineSize: 320, blockSize: 280 }] } as unknown as ResizeObserverEntry],
       {} as ResizeObserver,
     );
     await el.updateComplete;
@@ -1039,7 +1039,7 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
     const viewBoxBefore = svgEl.getAttribute('viewBox');
     const latestCallback = callbacks[callbacks.length - 1];
     latestCallback!(
-      [{ contentBoxSize: [{ inlineSize: 321, blockSize: 123 }] } as unknown as ResizeObserverEntry],
+      [{ target: el.shadowRoot!.querySelector('svg')!, contentBoxSize: [{ inlineSize: 321, blockSize: 123 }] } as unknown as ResizeObserverEntry],
       new OriginalRO(() => {}),
     );
     await el.updateComplete;
@@ -1121,7 +1121,7 @@ it('constructs its resize observer in the adopted owner realm and ignores its st
     document.adoptNode(el);
     expect(disconnects, 'adoption disconnects the previous realm observer').to.equal(1);
     staleCallback(
-      [{ contentBoxSize: [{ inlineSize: 999, blockSize: 777 }] } as unknown as ResizeObserverEntry],
+      [{ target: el.shadowRoot!.querySelector('svg')!, contentBoxSize: [{ inlineSize: 999, blockSize: 777 }] } as unknown as ResizeObserverEntry],
       {} as ResizeObserver,
     );
     await el.updateComplete;
@@ -2660,7 +2660,7 @@ it('falls back to getBoundingClientRect() for plotWidth/plotHeight when a Resize
     const callback = callbacks[callbacks.length - 1];
     // No `contentBoxSize` on the entry at all -- forces the `box` lookup to be falsy so the
     // callback takes its getBoundingClientRect() fallback branch instead.
-    callback!([{} as unknown as ResizeObserverEntry], new OriginalRO(() => {}));
+    callback!([{ target: svgEl } as unknown as ResizeObserverEntry], new OriginalRO(() => {}));
     await el.updateComplete;
     expect((el as unknown as { plotWidth: number }).plotWidth).to.be.closeTo(rectBefore.width, 1);
     expect((el as unknown as { plotHeight: number }).plotHeight).to.be.closeTo(rectBefore.height, 1);
@@ -4033,3 +4033,30 @@ describe('data-table disclosure', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+for (const mode of ['bar', 'rounded', 'line'] as const) {
+  it(`preserves literal native SVG tooltip text and formatter updates for ${mode}`, async () => {
+    const text = 'Literal </title><script>throw 42</script> &amp; < > \r\n العربية 😀';
+    const el = (await mount(html`<lr-lite-chart
+      type=${mode === 'line' ? 'line' : 'bar'}
+      .roundedBars=${mode === 'rounded'}
+      .labels=${['A']}
+      .datasets=${[{ label: 'Values', data: [1] }]}
+      .pointText=${() => text}
+    ></lr-lite-chart>`)) as LyraLiteChart;
+
+    const assertTitle = (expected: string) => {
+      const title = el.shadowRoot!.querySelector('title')!;
+      expect(title.textContent).to.equal(expected);
+      expect(title.namespaceURI).to.equal('http://www.w3.org/2000/svg');
+      expect(title.childElementCount).to.equal(0);
+      expect(el.shadowRoot!.querySelectorAll('script').length).to.equal(0);
+    };
+    assertTitle(text);
+    expect(el.shadowRoot!.querySelector('[data-mark-index]')!.getAttribute('aria-label')).to.equal(text);
+    el.pointText = () => `Updated ${text}`;
+    await el.updateComplete;
+    assertTitle(`Updated ${text}`);
+    expect(el.shadowRoot!.querySelector('[data-mark-index]')!.getAttribute('aria-label')).to.equal(`Updated ${text}`);
+  });
+}

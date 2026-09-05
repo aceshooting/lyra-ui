@@ -14,7 +14,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A small bordered card + label/value row shell for per-tool renderer bodies. Meant to be used inside a custom renderer registered via `<lr-tool-result-view>`\'s `registerToolRenderer()`, so every custom tool result reads with the same dense, small-card visual language instead of each renderer hand-rolling its own bordered box.',
+          'Removing heading or a result field label hides that text while preserving the card actions and field value. A small bordered card + label/value row shell for per-tool renderer bodies. Meant to be used inside a custom renderer registered via `<lr-tool-result-view>`\'s `registerToolRenderer()`, so every custom tool result reads with the same dense, small-card visual language instead of each renderer hand-rolling its own bordered box.',
       },
     },
   },

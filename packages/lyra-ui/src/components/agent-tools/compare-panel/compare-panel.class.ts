@@ -32,7 +32,8 @@ export interface LyraComparePanelEventMap {
  * @event lr-vote - `detail: { choice, itemId }`. Cancelable; preventing it preserves the prior vote.
  * @csspart base - The outer wrapper.
  * @csspart prompt - The optional prompt header, hidden when the `prompt` slot is empty.
- * @csspart panes - The row (or, under 640px, column) wrapping both panes.
+ * @csspart panes - The row (or, under 640px, column) wrapping both panes. Stacked panes size to
+ *   their content up to the configured maximum height.
  * @csspart pane-a - The first pane's labeled scroll region.
  * @csspart pane-b - The second pane's labeled scroll region.
  * @csspart pane-header - A pane's visible heading.

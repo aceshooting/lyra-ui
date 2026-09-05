@@ -186,3 +186,10 @@ export const NarrowLegend: Story = {
 export const Empty: Story = {
   render: () => html`<lr-word-cloud style="height: 10rem"></lr-word-cloud>`,
 };
+
+/** A shared signed domain can span the finite number range without dropping eligible words. */
+export const ExtremeFiniteDomain: Story = {
+  render: () => html`<lr-word-cloud .domain=${[-1e308, 1e308]} .words=${[
+    { text: 'Midpoint', weight: 0 }, { text: 'Maximum', weight: 1e308 },
+  ]}></lr-word-cloud>`,
+};

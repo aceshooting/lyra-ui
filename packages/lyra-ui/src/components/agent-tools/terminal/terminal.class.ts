@@ -527,7 +527,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.cancelPendingAnnouncement();
     this.resetBuffer();
     this.appliedContent = this.content;
-    this.writeInternal(this.content, false);
+    this.writeInternal(this.content ?? '', false);
     this.emitSearchChangeIfChanged(previousSearch);
   }
 
@@ -624,7 +624,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   /** Resolves the retained match count. The emitted `lr-search-change.matchCountExact` is `false`
    *  when that return value is only a lower bound because the 10,000-match retention ceiling was
-   *  reached. */
+   *  reached. A query with no matches also clears the previous rendered search markers. */
   async search(query: string): Promise<number> {
     const previousSearch = this.searchState();
     this.searchQuery = query;
@@ -632,6 +632,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.searchActiveIndex = this.searchMatches.length > 0 ? 0 : -1;
     this.emitSearchChangeIfChanged(previousSearch);
     if (this.searchActiveIndex >= 0) this.jumpToActiveMatch();
+    this.requestUpdate();
     await this.updateComplete;
     return this.searchMatches.length;
   }

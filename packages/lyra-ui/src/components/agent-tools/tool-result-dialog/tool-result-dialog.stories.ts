@@ -22,7 +22,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape dismiss, opt-in `lightDismiss`, scroll lock, a maximize toggle) around it. Long localized header content wraps within narrow allocations so the header actions remain reachable.',
+          'Assigning accessibleLabel directly names the inner dialog when no host aria-label is present. A host aria-label retains its separate host ownership, and an empty direct value uses the tool title. A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape dismiss, opt-in `lightDismiss`, scroll lock, a maximize toggle) around it. Long localized header content wraps within narrow allocations so the header actions remain reachable.',
       },
     },
   },

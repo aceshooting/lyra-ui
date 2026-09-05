@@ -12,6 +12,7 @@ import {
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import {
   markOptionSelectedDirty,
+  notifyOptionSelectedWrite,
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
 } from '../../../internal/option-selection.js';
@@ -55,12 +56,16 @@ export interface LyraOptionEventMap {
  * otherwise `defaultLabel`, the normalized accessible text of the flattened default slot. Hidden
  * subtrees are excluded, visible nested `aria-label` values replace their descendants, and named
  * adornment slots never leak into either `defaultLabel` or Shoelace's `getTextLabel()` method.
+ * Named adornment text, attributes, insertion/removal, and slot reassignment refresh the owning
+ * combobox presentation, including decorative content that does not change the accessible label.
  *
  * Selection follows the native live/default split. The `selected` attribute initializes
  * `defaultSelected`, which parent controls use as their `form.reset()` baseline; property writes
  * to `defaultSelected` intentionally do not reflect. `selected` is independent property-only live
  * state, so a user pick never rewrites the declarative default. A later default change updates a
  * pristine live option, but never clobbers a live selection that has already become dirty.
+ * Assigning a mounted option's `selected` property immediately updates its owning picker and
+ * submitted value silently, including deselection and equal-value writes.
  * In a constrained option row the default label ellipsizes, while each `start`/`end` adornment is
  * capped at 40% of the row so unbroken consumer content cannot widen the owning listbox.
  *
@@ -130,6 +135,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   }
   set selected(next: boolean) {
     this.setLiveSelected(next, true);
+    notifyOptionSelectedWrite(this, () => this.emit('lr-option-change'));
   }
 
   /** Declarative/reset selection default supplied by the `selected` attribute. Property writes
@@ -164,6 +170,9 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   /** Lets an owning picker synchronize live selectedness without turning that synchronization
    * into a consumer `selected` IDL write. @internal */
   [SET_OPTION_SELECTED_FROM_OWNER](next: boolean): void {
+    // Once an owner has synchronized a pristine option, later consumer writes are mounted live
+    // edits rather than pre-initialization defaults used by the owner's reset fallback.
+    if (!this.selectedDirty) markOptionSelectedDirty(this, false);
     this.setLiveSelected(next, false);
   }
 
@@ -242,10 +251,10 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.syncOptionState();
   };
 
-  private readonly handleLabelMutation = (): void => {
+  private readonly handleLabelMutation = (presentationChanged = false): void => {
     const next = this.defaultLabel;
     this.requestUpdate();
-    if (next === this.observedDefaultLabel) return;
+    if (next === this.observedDefaultLabel && !presentationChanged) return;
     this.observedDefaultLabel = next;
     this.emit('lr-option-change');
   };
@@ -369,6 +378,12 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     if (!this.labelObserver) return;
     this.labelObserver.disconnect();
     this.observeLabelNode(this);
+    this.observeLabelAncestors(this);
+    for (const child of this.children) {
+      if (!this.isDefaultLabelNode(child)) {
+        this.labelObserver.observe(child, { attributes: true, childList: true, characterData: true, subtree: true });
+      }
+    }
     for (const slot of this.labelForwardingSlots()) {
       if (slot.assignedNodes().length === 0) continue;
       for (const assigned of slot.assignedNodes({ flatten: true })) {
@@ -437,9 +452,20 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     // observer to notify a parent combobox/select that its cached row data is stale.
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
+      ? new MutationObserverCtor((records) => {
           this.bindLabelObserverTargets();
-          this.handleLabelMutation();
+          const presentationChanged = records.some((record) => {
+            if (record.type === 'attributes' && record.attributeName === 'inert') return true;
+            // A removed slot name no longer identifies its former adornment. Notify directly
+            // for source assignment changes even when decorative text leaves the label unchanged.
+            if (record.type === 'attributes' && record.attributeName === 'slot' && this.contains(record.target)) return true;
+            let node: Node | null = record.target;
+            while (node && node !== this && node.parentNode !== this) node = node.parentNode;
+            if (node && node !== this && !this.isDefaultLabelNode(node)) return true;
+            return record.type === 'childList' && record.target === this &&
+              [...record.addedNodes, ...record.removedNodes].some((child) => !this.isDefaultLabelNode(child));
+          });
+          this.handleLabelMutation(presentationChanged);
         })
       : undefined;
     this.bindLabelObserverTargets();

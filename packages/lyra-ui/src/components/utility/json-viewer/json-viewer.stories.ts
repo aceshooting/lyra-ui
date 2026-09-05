@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './json-viewer.js';
+import type { LyraJsonViewer } from './json-viewer.js';
 import type { LyraClipboardWriteSuccess } from '../copy-button/copy-button.js';
 
 const sample = {
@@ -127,6 +128,18 @@ export const Narrow320: Story = {
       <lr-json-viewer
         .data=${{ aVeryLongUnbrokenPropertyNameWithNoSpacesToWrapOn: 'x' }}
       ></lr-json-viewer>
+    </div>
+  `,
+};
+
+
+export const BackwardSearch: Story = {
+  parameters: { docs: { description: { story: 'First Previous selects the last match. Subsequent navigation wraps and reveals only the selected result’s ancestors. Removing search clears matches.' } } },
+  render: () => html`
+    <div>
+      <lr-json-viewer .data=${{ first: 'needle first', middle: 'needle middle', last: 'needle last' }} search="needle"></lr-json-viewer>
+      <button @click=${(event: Event) => void (event.currentTarget as HTMLElement).parentElement!
+        .querySelector<LyraJsonViewer>('lr-json-viewer')!.searchPrevious()}>Previous match</button>
     </div>
   `,
 };

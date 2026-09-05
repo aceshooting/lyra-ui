@@ -1,4 +1,4 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyDeclaration, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -34,6 +34,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -132,7 +133,7 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * string round-trip explicitly. A bare slider starts at `0`, matching the mapped contract rather
  * than silently choosing the domain midpoint.
  *
- * Clicking anywhere on the track (not just the 16px thumb) jumps the thumb
+ * A primary-button press anywhere on the track (not just the thumb) jumps the thumb
  * to that point and continues the same gesture as a drag, matching native
  * `<input type=range>` click-to-seek. In `range` mode the click moves
  * whichever handle is nearer the clicked position.
@@ -145,6 +146,9 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * `label`/`hint`/`errorText` plus their slots render visible form context. `with-label`/`with-hint`
  * are SSR presence hints only: hydrated instances also detect populated content automatically.
  * Every handle references visible error content before hint content through `aria-describedby`.
+ * In single mode, host-root external descriptions precede that local guidance and follow live
+ * source replacement, removal and reconnection. Removing label, hint, help-text or error-text
+ * safely removes the corresponding copy while preserving native attribute-removal readback.
  * The `reference` slot supplies endpoint/unit context in the `references` part. All four text
  * regions wrap unbroken content within the slider's allocation in LTR and RTL instead of widening
  * it.
@@ -157,10 +161,11 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  *   native `<input type=range>`'s own `input` event.
  *   `detail: { value, minValue, maxValue, handle }`.
  * @event lr-change - Fired once an interaction commits: on pointerup for a
- *   drag, or on keyup for a keyboard step — so a single Arrow/Home/End/
+ *   drag, or on keyup or ordinary blur for a keyboard step — so a single Arrow/Home/End/
  *   PageUp/PageDown press fires both `lr-input` and `lr-change`,
  *   mirroring how native `<input type=range>` fires `change` on every
  *   committed step too. `detail: { value, minValue, maxValue, handle }`.
+ *   Disablement or readonly cancels an unfinished gesture without reverting its live value.
  * @event focus - Native focus relayed once from the focused thumb.
  * @event blur - Native blur relayed once from the thumb losing focus.
  * @event lr-invalid - The slider failed a validity check. Cancelable: calling `preventDefault()`
@@ -454,7 +459,10 @@ export class LyraSlider extends LyraSliderBase {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
-    if (this._disabled) this.pendingKeyHandle = null;
+    if (this._disabled) {
+      this.pendingKeyHandle = null;
+      this.abortActiveDrags();
+    }
     this.syncInteractionStates();
     // Disabling bars constraint validation, so the validity states are republished here rather than
     // left matching `:state(invalid)` on a control the browser will never enforce.
@@ -624,8 +632,19 @@ export class LyraSlider extends LyraSliderBase {
   @property({ reflect: true }) orientation: SliderOrientation = 'horizontal';
 
   /** Whether the value is displayed but not changeable. Unlike `disabled`, a read-only slider
-   *  stays focusable and fully legible, and still submits its value. */
+   *  stays focusable and fully legible, and still submits its value.
+   *  Becoming readonly cancels unfinished gestures, preserving their live value.
+   *  @default false */
   @property({ type: Boolean, reflect: true }) readonly = false;
+
+  override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: PropertyDeclaration): void {
+    // Lit calls this synchronously for a property write, before a later pointer/key completion.
+    if (name === 'readonly' && this.readonly) {
+      this.pendingKeyHandle = null;
+      this.abortActiveDrags();
+    }
+    super.requestUpdate(name, oldValue, options);
+  }
 
   /** Whether to draw a tick mark at every `step` position along the track. */
   @property({ type: Boolean, attribute: 'with-markers' }) withMarkers = false;
@@ -678,9 +697,26 @@ export class LyraSlider extends LyraSliderBase {
   private focusedHandle: SliderHandle | null = null;
   private rangeFocusTransfer?: { origin: Element; target: SliderHandle };
   private rangeFocusGeneration = 0;
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+
+  private syncExternalDescription(): void {
+    const target = this.isConnected && !this.range ? this.firstThumb() : null;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     // Attribute reactions are not ordered consistently across engines while
     // a custom element upgrades. In WebKit the reflected `value` default can
     // be applied before `step`, which would snap `value="0.2"` to the initial
@@ -735,6 +771,7 @@ export class LyraSlider extends LyraSliderBase {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     if (changed.has('readonly')) this.syncValidityStates();
     if (!changed.has('range')) return;
     const transfer = this.rangeFocusTransfer;
@@ -769,6 +806,7 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     super.disconnectedCallback();
     // Mirror lr-multi-split/lr-time-range's cleanup: if the element is removed
     // mid-drag (or a pointercancel/alt-tab means pointerup never reaches
@@ -787,6 +825,8 @@ export class LyraSlider extends LyraSliderBase {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
     // Adoption can happen while already disconnected, so do not rely on another disconnect to
     // retire work retained from the previous realm.
     this.rangeFocusGeneration++;
@@ -827,7 +867,10 @@ export class LyraSlider extends LyraSliderBase {
 
   formDisabledCallback(fieldsetDisabled: boolean): void {
     this._fieldsetDisabled = fieldsetDisabled;
-    if (fieldsetDisabled) this.pendingKeyHandle = null;
+    if (fieldsetDisabled) {
+      this.pendingKeyHandle = null;
+      this.abortActiveDrags();
+    }
     this.syncInteractionStates();
     // Cascaded disablement bars constraint validation exactly like the slider's own `disabled`.
     this.syncValidityStates();
@@ -1029,7 +1072,7 @@ export class LyraSlider extends LyraSliderBase {
   /** Whether a user gesture is allowed to change a value right now. `readonly`
    *  differs from `disabled` in that the control stays focusable and opaque. */
   private get interactive(): boolean {
-    return !this.effectiveDisabled && !this.readonly;
+    return !this.effectiveDisabled && !this.matches(':disabled') && !this.readonly;
   }
 
   /** Re-sanitize an already assigned value immediately after range settings change. */
@@ -1192,7 +1235,12 @@ export class LyraSlider extends LyraSliderBase {
     const bounds = this.reachableBounds(handle);
     const move = (next: number): void => {
       e.preventDefault();
-      if (this.setValueFor(handle, next, false)) this.pendingKeyHandle = handle;
+      if (this.assignValueFor(handle, next)) {
+        // Input listeners may synchronously disable or make the slider readonly. Record the
+        // gesture before notifying them so their cancellation cannot be overwritten afterward.
+        this.pendingKeyHandle = handle;
+        this.emitInput(handle);
+      }
     };
     if (e.key === forwardKey || e.key === 'ArrowUp') move(this.directionalStep(current, 1));
     else if (e.key === backwardKey || e.key === 'ArrowDown') move(this.directionalStep(current, -1));
@@ -1282,7 +1330,7 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   private onPointerDown = (handle: SliderHandle, e: PointerEvent): void => {
-    if (!this.interactive) return;
+    if (!this.interactive || e.button !== 0) return;
     this.beginDrag(e.pointerId, handle, e.target as HTMLElement, this.trackRect(), isRtl(this));
   };
 
@@ -1295,7 +1343,7 @@ export class LyraSlider extends LyraSliderBase {
    *  is resolved to whichever handle is nearer, since a two-handle track click
    *  is otherwise ambiguous. */
   private onBasePointerDown = (e: PointerEvent): void => {
-    if (!this.interactive) return;
+    if (!this.interactive || e.button !== 0) return;
     const thumbs = Array.from(this.renderRoot.querySelectorAll('[part~="thumb"]')) as HTMLElement[];
     if (thumbs.length === 0 || thumbs.includes(e.target as HTMLElement)) return;
     const rect = this.trackRect();
@@ -1334,7 +1382,7 @@ export class LyraSlider extends LyraSliderBase {
   };
 
   private onPointerUp = (e: PointerEvent): void => {
-    this.endDrag(e.pointerId, e.type === 'pointerup');
+    this.endDrag(e.pointerId, e.type === 'pointerup' && this.interactive);
   };
 
   /** Stop the drag owned by `pointerId`, optionally committing a final lr-change. */
@@ -1388,6 +1436,10 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   private onHandleBlur(handle: SliderHandle, event: FocusEvent): void {
+    if (this.pendingKeyHandle === handle) {
+      this.pendingKeyHandle = null;
+      if (this.interactive && this.isConnected) this.emitChange(handle);
+    }
     if (this.focusedHandle === handle) {
       this.focusedHandle = null;
       this.syncInteractionStates();
@@ -1530,9 +1582,9 @@ export class LyraSlider extends LyraSliderBase {
 
   override render(): TemplateResult {
     const vertical = this.orientation === 'vertical';
-    const hasHint = this.withHint || this.hasHintSlot || this.hint.length > 0 || this.helpText.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
-    const hasLabel = this.withLabel || this.hasLabelSlot || this.label.length > 0;
+    const hasHint = this.withHint || this.hasHintSlot || (this.hint ?? '').length > 0 || (this.helpText ?? '').length > 0;
+    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
+    const hasLabel = this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
     const hasReference = this.hasReferenceSlot;
     const describedBy = [hasError ? ERROR_ID : '', hasHint ? HINT_ID : ''].filter(Boolean).join(' ') || undefined;
     const labelledBy = hasLabel && !this.hasAttribute('aria-label') ? LABEL_ID : undefined;

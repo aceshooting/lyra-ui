@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Thumbs up/down for one assistant message, with an optional inline detail step (reason chips + comment) and one cancelable terminal persistence transaction. The detail record and reasons are a bounded clone-owned frozen snapshot; malformed, empty, blank, and later duplicate reason IDs are omitted first-wins. Create and reassign a new detail record after changes.',
+          'Thumbs up/down for one assistant message, with an optional inline detail step (reason chips + comment) and one cancelable terminal persistence transaction. The detail record and reasons are a bounded clone-owned frozen snapshot; malformed, empty, blank, and later duplicate reason IDs are omitted first-wins. Create and reassign a new detail record after changes. Asynchronous finalization or reversion preserves focus on an outside control. Settlement retains the existing thumb/submit fallback when focus remains within the feedback or was lost as its pending controls became disabled.',
       },
     },
   },

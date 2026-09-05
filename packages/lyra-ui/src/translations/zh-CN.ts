@@ -1154,6 +1154,7 @@ const strings: LyraLocaleStrings = {
   promptStudioVariables: '变量',
   promptStudioVersions: '版本',
   promptStudioPreview: '解析后的预览',
+  promptStudioPreviewLimit: '预览不可用：已超出文本展开上限。',
   promptStudioRun: '运行提示词',
   promptStudioSave: '保存版本',
   promptStudioAddMessage: '添加消息',

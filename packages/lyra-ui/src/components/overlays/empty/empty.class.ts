@@ -26,6 +26,8 @@ import { styles } from './empty.styles.js';
  * headings default to semantic level 3; set `heading-level` from `1`–`6` to fit the surrounding
  * outline, or `none` for visual-only heading text.
  *
+ * Removing heading or description safely omits that text; explicit empty values remain empty and later values restore the corresponding content.
+ *
  * @customElement lr-empty
  * @slot - Custom icon or illustration (defaults to none).
  * @slot heading - Rich heading content (overrides the `heading` attribute) inside the configured
@@ -256,8 +258,8 @@ export class LyraEmpty extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const hasHeading = this.slotPresence.has('heading') || this.heading.length > 0;
-    const hasDescription = this.slotPresence.has('description') || this.description.length > 0;
+    const hasHeading = this.slotPresence.has('heading') || (this.heading ?? '').length > 0;
+    const hasDescription = this.slotPresence.has('description') || (this.description ?? '').length > 0;
     const headingLevel = resolveHeadingLevel(this.headingLevel);
     return html`
       <div part="base">

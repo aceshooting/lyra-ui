@@ -1,5 +1,135 @@
 # Changelog
 
+## 14.1.0
+
+### Minor Changes
+
+- Add `promptStudioPreviewLimit` to the public localization keys, with an English fallback and translations in all ten shipped catalogs.
+
+### Patch Changes
+
+- Correct component behavior and keep the published reference aligned with the supported APIs.
+
+  - agent-tools/commit-card: Removing the message attribute clears the displayed subject and body; the property retains the normal null readback of a removed string attribute.
+  - agent-tools/compare-panel: Disabled vote buttons retain their resting colors during hover and press, including an existing selected vote. Stacked response panes keep short content readable at narrow widths while preserving the configured height limit for long responses.
+  - agent-tools/prompt-studio: Bound prompt preview expansion depth, substitution work, resolved output and memoized text. Show a localized preview fallback when a limit is exceeded while preserving raw messages, variables, editing and save/run payloads.
+  - agent-tools/result-card: Removing heading or a result field label hides that text while preserving the card actions and field value.
+  - agent-tools/stack-trace: Removing the trace attribute clears parsed content and copies empty text; the trace property retains null until assigned again.
+  - agent-tools/terminal: A search with no matches clears earlier rendered match markers. Removing the content attribute clears output and preserves the normal null property readback.
+  - agent-tools/tool-call-chip: Removing category or summary hides that optional text; assigning either attribute again restores its content.
+  - agent-tools/tool-param-form: Choosing Boolean Unset keeps an explicit undefined value when a schema default exists; deleting that key or replacing the value with an absent key restores default materialization. Without a schema default, Unset removes the key.
+  - agent-tools/tool-result-dialog: Assigning accessibleLabel directly names the inner dialog when no host aria-label is present. A host aria-label retains its separate host ownership, and an empty direct value uses the tool title.
+  - agent-tools/tool-select-dialog: Programmatic selectedToolIds and useDefaults replacements synchronize the live checkbox and switch state after user edits without emitting change events. Removing search-placeholder restores localized copy, while an explicitly empty placeholder stays empty.
+  - agent-tools/trace-tree: Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including surrounding whitespace. The first valid admitted duplicate continues to win.
+  - charts/chart: Correct horizontal tooltip values, preserve cyclic segment palettes when sampling, and defer chart canvas construction until the first visibility decision. Keep grouped SVG bars visible and map logarithmic stacks by their positive totals while preserving authored minimum-height floors. Fit long axis titles to their allocation while retaining full accessible names and refreshing after font changes. Use positive logarithmic grid ticks to prevent overlapping labels without changing data geometry. Preserve populated native SVG tooltips through server rendering and hydration.
+  - conversation/chat-message: Make the chat message Copy example copy its actual source through the shared copy control and describe fulfilled clipboard success accurately.
+  - conversation/code-block: Keep code and Markdown rendering safe after source attribute removal, refresh highlighted gutter labels and digits with localization changes, reuse highlighters for equivalent immutable grammar maps, and preserve the parser options contract in examples.
+  - conversation/conversation-item: Inline rename keeps IME composition keys in the editor; ordinary Enter commits and Escape cancels after composition.
+  - conversation/generation-metrics: Start the live metrics example on mount and make its first Stop and repeated Restarts retire their producer timers correctly.
+  - conversation/message-actions: ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor remain native editing keys. Roving navigation still operates on the actual toolbar and thumb actions.
+  - conversation/message-feedback: Asynchronous finalization or reversion preserves focus on an outside control. Settlement retains the existing thumb/submit fallback when focus remains within the feedback or was lost as its pending controls became disabled.
+  - conversation/message-parts: Clarify that streaming text and reasoning display accumulated plain text until Markdown parsing and highlighting resume on completion.
+  - conversation/model-select: Removing label, hint, or error-text clears that optional copy in both catalog and free-text modes. Removed string properties retain null readback, and later assignments restore their content.
+  - conversation/push-to-talk: Use the supported microphone icon slot in push-to-talk customization examples.
+  - conversation/thread-list: A conversation row with slot="" belongs to the default slot exactly like a row with no slot attribute, including after reconnect. Named slots retain their distinct roles.
+  - conversation/transcript-feed: Activating the focused jump action resumes follow and transfers focus to the scroll base when the action disappears, unless a newer outside focus move takes precedence.
+  - conversation/typing-indicator: Removing label restores the localized thinking name while preserving an explicit host aria-label. Later label assignments remain reactive.
+  - conversation/usage-badge: Removing cost-text or summary safely omits that content; explicit empty values remain empty and later values restore it. An open tooltip participates in shared Escape ordering even while only hovered, and dismissal preserves focus elsewhere. Closed badges retain their first hydration update timing.
+  - conversation/voice-picker: Removing label, hint, or error-text clears that optional copy in both catalog and free-text modes. Removed string properties retain null readback, and later assignments restore their content.
+  - conversation/widget-renderer: Exercise malformed streamed documents at the renderer boundary and keep default authoring diagnostics silent outside development.
+  - data/condition-builder: Contain field/operator select value and listbox lifecycle aliases so one selection emits one complete condition model.
+  - data/context-meter: Preserve populated ring segment tooltips through server rendering and hydration.
+  - data/data-grid: Keep repeated data-grid rows canonical in processed output, reserve fixed-column widths during size-to-fit, and preserve click ownership for controls inside open shadow roots.
+  - data/document-library: Retain documents with undefined optional tags and safely clear search filtering when the search-term attribute is removed.
+  - data/file-tree: Keep valid files when an earlier same-path record has unreadable optional metadata, preserving first-valid path ownership and neighboring files.
+  - data/flow-canvas: Keep flow cards readable in horizontal RTL layouts, preserve valid handles after rejected duplicate records, and omit unreadable run decorations without rejecting valid neighboring status records.
+  - data/funnel: Fill main and comparison tracks when a positive ratio between finite stage values overflows the numeric range.
+  - data/gauge: Safely remove gauge labels in every shape while preserving localized and authored accessible names. Preserve long native SVG tooltip text through server rendering and hydration.
+  - data/graph-query-builder: Emit one complete graph query per hop selection without leaking child select aliases. Keep chip removal and saved-query updates working when focus observation is unavailable.
+  - data/heatmap: Preserve heatmap no-data values when domain settings change and neighboring cell pixels during keyboard focus repaint. Limit invalid authored color diagnostics to development without changing color fallbacks.
+  - data/sparkline: Use fallback values safely after the sparkline data attribute is removed.
+  - data/stat: Safely remove stat caption and sub-line attributes, and preserve modified-link activation from passive slotted content while keeping nested controls independent.
+  - data/table: Keep table activation, focus, and editing aligned with locale-sorted pages, safely handle removed filter text, and hide priority footer cells with their columns.
+  - data/timeline: Allocate horizontal time timeline height from actual item content and stack lanes, updating it when content grows or shrinks. Defer browser measurements during server rendering.
+  - data/tree: Bound object-tree normalization to 10,000 lazily inspected array positions while preserving valid depth-first order. Give otherwise unnamed data rows a stable ID-based accessible name without changing their visible content or authored names.
+  - data/word-cloud: Keep word-cloud geometry finite and retain eligible words across extreme signed finite domains.
+  - forms/button: Keep button and icon-button external descriptions current through source replacement, removal, reconnection, document adoption, and native button/link changes.
+  - forms/code-editor: Make code editor soft/hard wrapping respect its allocation, keep the line-number gutter aligned with wrapped source, and share explicit tab width with text measurement so the editor frame owns scrolling. External descriptions now reach the native textarea, form reset restores pristine interaction feedback, and removing label, hint, or error text renders safely.
+  - forms/color-picker: Discard disabled color-picker drafts without committing, block disabled palette and format actions immediately, and keep external trigger descriptions synchronized with their source elements. Render enabled and disabled inline controls safely on the server.
+  - forms/combobox: Synchronize mounted option selection with select and combobox values and form submission while preserving reset defaults. Keep single combobox selection semantics consistent, ignore composition keys, honor inert options, refresh changed adornments, and forward external descriptions. Safely render removed form guidance attributes and clarify silent filter range edits.
+  - forms/date-picker: Fix calendar range admission, preset identity, bounded navigation and focus recovery. Preserve explicit action labels and external date-input guidance, support early calendar years and all-day ICS dates, and keep selection and agenda actions readable with long preset labels fitting narrow layouts.
+  - forms/emoji-picker: Keep emoji picker descriptions on the value listbox, preserve localized built-in headings through filtering and live string changes, refresh reused item content on groups reassignment, and restore pristine interaction feedback on form reset. Composing search keys no longer pick or navigate emoji, and removing label, hint, or error text renders safely.
+  - forms/input: Use current pending native step constraints in input, number input, and native time input. Safely render removed form guidance attributes in those fields and the segmented time input.
+  - forms/locale-picker: Resolve external descriptions onto the locale picker trigger and safely render removed label, hint, and error text attributes.
+  - forms/otp-input: Resolve external descriptions onto the native OTP input while retaining local guidance and tracking referenced elements across replacement and document changes.
+  - forms/phone-input: Honor explicit country and validation copy over locale strings, preserve phone copy defaults on attribute removal, safely remove default-country, and resolve external descriptions onto the telephone input.
+  - forms/radio: Preserve explicit radio checked writes, resolve external radio and switch descriptions on their semantic controls, and safely remove checkbox and switch guidance attributes.
+  - forms/rubric-form: Synchronize rubric category checkboxes after controlled value replacements, safely remove aggregate label and hint attributes, and keep external descriptions on the aggregate group current.
+  - forms/slider: Keep slider descriptions and removable form copy synchronized, ignore secondary mouse buttons, cancel disabled or readonly gestures, and commit an enabled keyboard edit once when focus leaves its handle.
+  - forms/swatch-picker: Honor disabled changes immediately when activating or focusing a swatch picker.
+  - forms/textarea: Safely remove textarea label, hint, help-text, and error-text attributes while preserving their absence readback.
+  - forms/time-range: Ignore right and middle mouse presses when seeking or dragging a time range while preserving primary mouse, touch, and pen interaction.
+  - forms/token-input: Preserve IME editing in token inputs, synchronize external descriptions and removable form copy, vertically center editable token labels, and correct the story to use native focus and blur events.
+  - layout/app-rail: Preserve listener state when an app rail resize request disables resizing, changes mode, or disconnects the rail, without publishing an accepted resize.
+  - layout/carousel: Keep Arrow, Home, and End keys with focused editors and controls inside carousel slides while retaining viewport keyboard navigation.
+  - layout/command-palette: Keep valid commands available when optional keywords are malformed, ignoring invalid keyword entries without reading accessors.
+  - layout/dashboard-grid: Snap dashboard pointer move and resize proposals to painted tracks and gutters, including public CSS geometry overrides in LTR and RTL.
+  - layout/details: Clarify that Details toggle events report accepted changes and that accordion grouping applies to direct accordion-item children.
+  - layout/filter-bar: Ignore malformed filter options and custom definitions without a callable renderer while retaining valid sibling controls.
+  - layout/menu: Keep focus on outside, header, and footer controls when menu items change, and clarify direct item enrollment.
+  - layout/multi-split: Keep feasible panel pixel minimums intact after divider gutters, including live font-relative gutters, without changing percentage state or overflowing a smaller allocation.
+  - layout/reorder-list: Refresh reorder movement controls when item identities change and safely render removed standalone values.
+  - layout/split-panel: Report proposed split-panel percentages from the selected primary edge, matching pixel details and accepted values.
+  - layout/tab-group: Restore focus when a manually focused unselected tab is removed while retaining the selected panel.
+  - layout/widget: Safely omit widget title and secondary copy when their attributes are removed.
+  - media/animation: An initial playing mount emits one start lifecycle; target changes, timing changes, reconnect and replay retain their own starts.
+  - media/attachment-chip: An error already present on reconnect renders silently as history; a new connected upload failure still announces once.
+  - media/av-player: Removing mime-type restores automatic video fallback. Open-ended transcript cues use the next strictly chronological start with linear reconciliation per seek, and unavailable timeline controls retain resting paint under hover and press.
+  - media/avatar: Removing label safely restores the unnamed fallback while preserving host accessible naming and later label updates.
+  - media/file-input: Removing label or hint safely removes its text chrome and association. Disabled file removal controls retain resting paint under hover and press, including fieldset disablement.
+  - media/image-viewer: Keep image highlight activation separate from annotation commands, show annotation focus, and retain disabled toolbar paint. Honor direct pan/zoom and iframe labels and distinguish iframe focus from zoom-control focus.
+  - media/map: Align map markers and popups to geographic coordinates in RTL and refresh choropleth stop and step-base colors when ancestor themes change.
+  - media/media-card: Removing mime-type restores the generic file fallback. A property-only accessibleLabel reactively names the action while host labels retain separate ownership.
+  - media/sequence-playback: The play button retains its disabled resting paint when too few items are available; enabled pointer feedback remains visible.
+  - media/video: An unavailable progress control and its visible timeline track retain resting paint on hover and press; enabled controls retain feedback.
+  - overlays/chip: Collapsed groups reapply max-visible when assigned children are replaced or reordered at the same count, preserving authored hidden/inert state and releasing departed visibility leases.
+  - overlays/dialog: Removing label safely omits its fallback title. Open dialog and drawer names follow supported name and exclusion attribute changes on direct unslotted headings, while host naming retains precedence; nested and slot-empty headings remain outside automatic discovery.
+  - overlays/empty: Removing heading or description safely omits that text; explicit empty values remain empty and later values restore the corresponding content.
+  - overlays/kbd: Removing keys safely clears the shortcut. Unknown tokens, including constructor and __proto__, render and name themselves verbatim; recognized modifiers keep their localized labels.
+  - overlays/overlay: Open popovers, dropdowns and tooltips reposition when their effective host or inherited text direction changes, preserving open state and lifecycle events. Removing content safely omits tooltip fallback text; preserve null readback and later recovery.
+  - overlays/rating: Readonly transitions synchronize validity and aria-invalid in the same completed update. Form reset restores the independent default-value rather than the live value attribute.
+  - retrieval/embedding-explorer: Preserve populated point tooltips through server rendering and hydration.
+  - retrieval/entity-card: Update entity-card heading levels immediately when the existing aria-level override changes or is removed.
+  - retrieval/entity-chip: Keep entity-chip accessible names renderable when text or type attributes are removed.
+  - retrieval/graph: Fix graph keyboard focus across hidden links, live canvas zoom bounds, and canvas node/link hover events. Zero-width canvas links now omit both strokes and arrowheads while retaining graph topology.
+  - retrieval/grounding-summary: Correct grounding-summary documentation to describe citation activation containment and the richer selection event.
+  - retrieval/ingestion-queue: Render and announce malformed ingestion failure details with the localized failure label instead of rejecting updates.
+  - retrieval/knowledge-graph-explorer: Route path-node activation into explorer selection and details, tolerate removed search queries, and correct the preset-search example.
+  - retrieval/node-palette: Make the node-palette canvas example commit placements to the public canvas model so new nodes render.
+  - retrieval/provenance-panel: Ignore malformed provenance type rows so valid entities and later matching type labels still render.
+  - retrieval/source-picker: Restore a visible source tree entry when re-enabling search with a retained filter.
+  - utility/copy-button: Keep the CopyFailure example effective after held pointer presses and restore the original inherited or own clipboard after each action.
+  - utility/format: Keep currency formatting usable after removing the currency attribute, using the existing USD fallback.
+  - utility/json-viewer: Clear removed JSON search safely and begin backward navigation at the last match while preserving manual branch collapse.
+  - utility/known-date: Restore localized known-date labels after attribute removal, resolve external guidance on the date group, and preserve disabled field paint.
+  - utility/live-region: Make both Basic live-region example actions announce reliably on first and repeated clicks.
+  - utility/mention-popover: Preserve input-method composition when forwarding mention keys and safely clear a removed query attribute.
+  - utility/poll-status: Wrap long localized polling labels within narrow layouts while preserving the pause and resume target size.
+  - viewers/dataset-viewer: Keep populated dataset headers sticky to the page in page mode while preserving horizontal page overflow and default contained scrolling.
+  - viewers/document-preview: Handle removed MIME attributes safely, recognize parameterized JSON previews, and keep capped image content reachable from its scroll origin.
+  - viewers/ebook-viewer: Restore text-selection events for genuine native selections inside EPUB chapter iframes while retaining bounded text/rectangles, CFI anchors, stale-rendition guards, and containment of arbitrary peer getters.
+  - viewers/email-viewer: Reveal matching folded plain-text and HTML email quotes for padded, Unicode-normalized, and whitespace-normalized search queries while retaining shared search limits.
+  - viewers/include: Apply passive markup restrictions to nested template contents before remote include caching and fragment extraction.
+  - viewers/notebook-viewer: Fix notebook anchors to scroll identified virtual cells into the visible viewport, retain active-cell paint, and support repeated jumps to the same cell.
+  - viewers/svg-viewer: Keep oversized SVG content inside the reachable scroll range of capped viewers while retaining centered fitting content.
+  - viewers/xml-viewer: Reopen the selected XML search match and its ancestors before scrolling, including manually collapsed branches, while preserving later manual collapse.
+
+  Shared behavior fixes preserve fieldset disablement, composing keyboard input, passive embedded markup, XML renderer dispatch and development-only diagnostics. Correct migration guidance and complete public type descriptions.
+
+  Restore factory-created document renderer registries and retain the supported cue IDs in the audio/video payload example.
+
+  Preserve trusted document and audio/video renderer adapters through registry snapshots while retaining callback validation and collection limits.
+
 ## 14.0.0
 
 ### Major Changes
@@ -11,9 +141,9 @@
   preserved, just relocated), and dozens of components gain new events, CSS custom properties,
   exported types, and hardening around malformed input, prototype getters, and browser-capability
   failures. No default values changed and no public part, slot, or event name was removed.
-  
+
   ### Breaking changes
-  
+
   **1. Feedback settlement now requires a `submissionId` for anything beyond the first transaction.**
   `lr-feedback-submit`'s frozen detail gained `submissionId: string`. `lr-message-feedback`'s
   `finalizePendingSubmit()`/`revertPendingSubmit()` changed from `(): void` to
@@ -22,24 +152,24 @@
   superseded (by an external `rating`/`detail`/`detailFor` change, disconnect, adoption, or
   ownership change); after a second submission starts or any pending one is invalidated, the
   no-argument form fails closed and returns `false` forever after.
-  
+
   Migration: read `event.detail.submissionId` in your `lr-feedback-submit` listener, pass it to the
   settle call explicitly, and check the boolean result instead of assuming success:
   `panel.finalizePendingSubmit(event.detail.submissionId)`. `lr-message-actions` (which embeds a
   thumbs-only `lr-message-feedback`) also gained its own id-scoped, read-only `feedbackPending`
   getter plus `finalizePendingSubmit(submissionId: string): boolean` /
   `revertPendingSubmit(submissionId: string): boolean` for the request it currently owns.
-  
+
   **2. `lr-details`'s internal structure changed — `base`/`details`/`header`/`content` moved to
   different elements.** No part or slot was removed; only their owning node changed:
-  
+
   | Part | Before | After |
   | --- | --- | --- |
   | `base`, `details` | both on the native `<details>` | both on a new outer wrapper; native `<details>` is now private (no exposed part) |
   | `header` | the flex wrapper *inside* `<summary>` | the complete summary + actions row |
   | `header-actions` | rendered inside the `<summary>`/`<details>` content box | a following sibling of the now-private native `<details>`; stays enabled and non-toggling even while `disabled` |
   | `content` | inside the native `<details>` | outside it, behind a private `hidden="until-found"` gate (adds in-page-find support) |
-  
+
   This was necessary because interactive `header-actions` content (e.g. a trailing "add" button)
   cannot legally nest inside a native `<summary>`. Plain color/spacing/border rules against
   `::part(base|details|header|summary|header-actions|icon|content)` keep working unchanged. Update a
@@ -48,9 +178,9 @@
   target the host's `[open]`/`aria-expanded` instead; anything assuming `::part(header-actions)` is
   a descendant of `::part(details)` should treat it as a sibling within `part="header"` instead;
   never set `hidden` on `::part(content)` yourself — the component now manages it.
-  
+
   ### Changes
-  
+
   #### Agent tools
   - `lr-approval-close.detail.reason` can now be `'request-invalidated'` when a selected pending
     request disappears or resolves elsewhere.
@@ -64,7 +194,7 @@
   - `lr-tool-select-dialog` and `lr-json-schema-viewer` now cap traversal at 10,000 supplied
     positions and safely skip malformed/accessor-backed rows. `lr-tool-param-form` now recurses only
     into safe own-data fields, omitting unsafe branches while valid siblings still render/submit.
-  
+
   #### Charts
   - `formatter`'s context object documents its full `statistic` vocabulary: `x`, `y`, `r`, `min`,
     `q1`, `median`, `q3`, `max`, `total`.
@@ -79,7 +209,7 @@
     next update.
   - `lr-lite-chart`'s `selectedIndices` is now documented and enforced as **source category
     indices**, not positions in the (possibly sampled) rendered output.
-  
+
   #### Conversation
   - `lr-markdown`: GFM task-list checkboxes get an accessible name from their primary inline text;
     `lr-highlight-activate` now fires before `lr-link-click` when an intercepted link overlaps a
@@ -109,20 +239,20 @@
     `lr-document-preview.highlights`, `lr-map`'s `markers`/`dataLayers`/`choropleth`) now
     consistently document that data is snapshotted on assignment — mutating an already-assigned
     array/object in place is not observed; assign a new value to update the view.
-  
+
   #### Data
   - `lr-data-grid` gained six custom properties for independent hover/pressed theming of
     controls, the page-size selector, rows, and sortable headers.
   - `lr-calendar`'s `events[].date` now accepts an ISO string, finite epoch milliseconds, or a
     `Date`; invalid rows are omitted while `lr-event-select`'s detail keeps the original object.
   - `lr-calendar` gained six custom properties for nav/day/agenda-event hover/pressed states.
-  
+
   #### Forms
   - `lr-date-picker` gained `--lr-date-picker-preset-selected-border` and
     `--lr-date-picker-preset-selected-color`.
   - `lr-input`, `lr-time-input`, and `lr-checkbox-group` now project a host `aria-describedby` onto
     the native control ahead of built-in hint/error/required-description ids.
-  
+
   #### Layout
   - `lr-multi-split` gained a new cancelable `lr-toggle` event
     (`detail: LyraMultiSplitToggleDetail = { open: boolean }`) firing before Escape/backdrop closes
@@ -130,19 +260,19 @@
     A forced close from a responsive collapse transition fires it noncancelably afterward. Direct
     `open` writes and no-op dismissals stay silent.
   - `lr-details`'s structure changed — see Breaking changes above.
-  
+
   #### Media
   - `lr-map`: a malformed earlier `markers`/`dataLayers` row no longer reserves its `id`, so a later
     valid row with the same id is now admitted.
   - `lr-qr-code` now defers painting until it has a valid intersecting `IntersectionObserver` entry
     where available, pausing off-screen and resuming on re-entry; unresolvable paint colors now fall
     back to documented safe values.
-  
+
   #### Overlays
   - `lr-rating`: for its managed slider name only, an empty/whitespace `label` now counts as absent
     and falls through to the localized default; the raw `label` property still reads back exactly as
     assigned, and an authored `aria-label` still wins.
-  
+
   #### Retrieval
   - `lr-knowledge-graph-explorer` gained a new cancelable `lr-before-visibility-change` event
     (`detail: { hiddenTypes }`) firing before a node-type visibility toggle changes state or
@@ -154,7 +284,7 @@
   - Palette-style catalog inputs cap traversal at 10,000 positions and skip accessor-backed rows; an
     omitted/empty/whitespace `label` now falls back to the localized default without changing the
     raw property readback.
-  
+
   #### Utility
   - Toolbar/menu actions (including `lr-copy-button`'s `getToolbarActions()`) gained an optional
     `releaseTabIndex()` method mirroring the conversation-family addition above.
@@ -170,7 +300,7 @@
   - `lr-export-button`'s multi-format menu now reads descriptor fields from direct data only and
     behaves as a proper nonmodal overlay (only the topmost open menu handles
     Escape/outside-pointer/Tab; rebinds correctly after document adoption).
-  
+
   #### Viewers
   - `lr-document-preview` and `lr-document-viewer` gained download-link hover/active background
     custom properties (`--lr-document-preview-download-link-hover-bg`/`-active-bg` and the
@@ -185,7 +315,7 @@
     assignment; a non-string runtime `language` value is now treated as `''`.
   - `lr-docx-viewer` (Mammoth-based) now validates the conversion result shape before using it and
     caps diagnostic messages at the first 100.
-  
+
   #### Shared
   - New registration-free helper modules, usable without registering their owning component: stack
     trace parsing, span projection, agent-status presentation, approval-state helpers, and the

@@ -123,13 +123,14 @@ export function snapshotFlowHandles(
     try {
       const id = handle?.id;
       if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
-      seen.add(id);
+      const label = handle?.label;
       result.push(
         Object.freeze({
           id,
-          ...(typeof handle?.label === 'string' ? { label: handle.label } : {}),
+          ...(typeof label === 'string' ? { label } : {}),
         })
       );
+      seen.add(id);
     } catch {
       // A malformed handle cannot reserve its id or suppress a later valid occurrence.
     }
@@ -214,20 +215,25 @@ export function snapshotFlowDecorations(value: unknown): FlowRunDecorations {
     }
     if (!descriptor || !('value' in descriptor)) continue;
     const candidate: unknown = descriptor.value;
-    if (!isRecord(candidate)) continue;
-    const status = normalizeFlowStatus(candidate['status']);
-    if (!status) continue;
-    entries.push([
-      id,
-      Object.freeze({
-        status,
-        ...(typeof candidate['progress'] === 'number' ? { progress: candidate['progress'] } : {}),
-        ...(typeof candidate['durationMs'] === 'number'
-          ? { durationMs: candidate['durationMs'] }
-          : {}),
-        ...(typeof candidate['detail'] === 'string' ? { detail: candidate['detail'] } : {}),
-      }),
-    ]);
+    try {
+      if (!isRecord(candidate)) continue;
+      const status = normalizeFlowStatus(candidate['status']);
+      if (!status) continue;
+      const progress = candidate['progress'];
+      const durationMs = candidate['durationMs'];
+      const detail = candidate['detail'];
+      entries.push([
+        id,
+        Object.freeze({
+          status,
+          ...(typeof progress === 'number' ? { progress } : {}),
+          ...(typeof durationMs === 'number' ? { durationMs } : {}),
+          ...(typeof detail === 'string' ? { detail } : {}),
+        }),
+      ]);
+    } catch {
+      // One unreadable decoration must not reject the collection or erase valid neighbors.
+    }
   }
   return Object.freeze(Object.fromEntries(entries));
 }

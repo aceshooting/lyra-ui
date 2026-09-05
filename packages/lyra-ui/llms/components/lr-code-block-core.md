@@ -26,6 +26,13 @@ plus an explicit oniguruma engine, seeded with _only_ the grammars in `languages
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
 
+Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
+an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
+`null` property readback; an explicitly empty attribute stays an empty string, and a later value
+resumes normal rendering. Highlighted gutter labels and locale-formatted line numbers follow live
+`.strings` and inherited or explicit locale changes. Unrelated updates retain the existing
+highlighted markup.
+
 A `language` value absent from `languages` always renders the plain `<pre><code>` fallback — there is
 no default/full-table highlighter here to fall back to, unlike `<lr-code-block>`'s dynamic-import
 path for an unmapped language. That fallback is the _default_ rendering path, not a degraded one,
@@ -106,8 +113,12 @@ fallback separately.
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`,
 `shiki/wasm`, and `shiki/themes/github-{light,dark}.mjs` subpaths — never `shiki`'s main entry point,
 which is what carries the ~200-language table this component exists to avoid). Building the
-fine-grained highlighter is cached per `languages` object identity (a `WeakMap`), so passing the same
-module-level `languages` constant on every render builds it only once.
+fine-grained highlighter is cached per `languages` object identity. A bounded weak cache also shares
+recently used equivalent, deeply frozen plain grammar maps, including the detached snapshots owned
+by separate component instances. Grammar contents and property/array order must agree completely;
+mutable or unusual inputs keep identity-only caching. Highlighters returned by the public loader
+can therefore be shared across equivalent frozen maps. Passing a stable module-level `languages`
+constant also avoids repeated component snapshots.
 
 ```ts
 import { html } from "lit";
@@ -128,7 +139,8 @@ const view = html`<lr-code-block-core
   added to `languages` will never highlight, no matter how common that language is elsewhere. Reach
   for `<lr-code-block>` instead if you need to support an open-ended set of languages without
   pre-declaring each one.
-- `languages` is keyed by object identity for caching purposes — pass a stable, module-level constant
-  (not a fresh object literal per render), or every render rebuilds its own fine-grained highlighter.
+- Pass a stable, module-level `languages` constant to avoid repeated snapshots on parent renders.
+  Equivalent frozen maps can share a recently used highlighter, but that bounded weak reuse is an
+  optimization: callers must not depend on distinct frozen map objects producing distinct cores.
 
 ---

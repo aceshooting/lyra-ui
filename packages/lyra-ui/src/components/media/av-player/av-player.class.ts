@@ -355,7 +355,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
    *  Unrecognized runtime or attribute values continue MIME auto-detection. */
   @property() kind?: LyraAvKind;
   /** Drives auto-detection: an `audio/*` mime type renders `<audio>`; anything else renders
-   *  `<video>`. Ignored once `kind` is set explicitly. */
+   *  `<video>`. Ignored once `kind` is set explicitly. Attribute removal is consumed as an absent hint. */
   @property({ attribute: 'mime-type' }) mimeType = '';
   /** Poster image for `<video>`; validated with `safeMediaSrc` and omitted when unsafe. Ignored for
    *  `<audio>`. */
@@ -397,13 +397,22 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.requestUpdate('rates', previous);
   }
   private _cues: readonly LyraAvCue[] = EMPTY_CUES;
+  private nextCueStarts = new Map<number, number>();
   /** Transcript entries, rendered as a virtualized, `currentTime`-synced list. Valid nonempty
-   * `cueId` values are unique; the first occurrence wins. Inputs are bounded, cloned, and frozen. */
+   * `cueId` values are unique; the first occurrence wins. Inputs are bounded, cloned, and frozen.
+   * Omitted ends use indexed next chronological starts; seeks reconcile in linear work. */
   @property({ attribute: false })
   get cues(): readonly LyraAvCue[] { return this._cues; }
   set cues(value: readonly LyraAvCue[]) {
     const previous = this._cues;
     this._cues = snapshotLyraAvCues(value);
+    if (this._cues !== previous) {
+      const starts = [...new Set(this._cues.map((cue) => cue.start))].sort((a, b) => a - b);
+      this.nextCueStarts = new Map();
+      for (let index = 0; index < starts.length; index += 1) {
+        this.nextCueStarts.set(starts[index]!, starts[index + 1] ?? Infinity);
+      }
+    }
     this.requestUpdate('cues', previous);
   }
   private _peaks: readonly number[] = EMPTY_PEAKS;
@@ -524,7 +533,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   private detectedKind(): LyraAvKind {
     if (this.kind === 'audio' || this.kind === 'video') return this.kind;
-    return this.mimeType.startsWith('audio/') ? 'audio' : 'video';
+    return (this.mimeType ?? '').startsWith('audio/') ? 'audio' : 'video';
   }
 
   private get effectivePreload(): LyraAvPreload {
@@ -941,7 +950,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     let activeIndex = -1;
     this.cues.forEach((cue, index) => {
       const start = this.safeCueStart(cue);
-      const end = this.safeCueEnd(cue, start, index);
+      const end = this.safeCueEnd(cue, start);
       if (time >= start && time < end) {
         if (!active || start >= this.safeCueStart(active)) {
           active = cue;
@@ -1258,17 +1267,14 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     return finiteRange(cue.start, 0, 0, max);
   }
 
-  private safeCueEnd(cue: LyraAvCue, start: number, cueIndex: number): number {
-    if (cue.end == null) {
-      let nextStart = Infinity;
-      this.cues.forEach((candidate, index) => {
-        if (index === cueIndex) return;
-        const candidateStart = this.safeCueStart(candidate);
-        if (candidateStart > start && candidateStart < nextStart) nextStart = candidateStart;
-      });
-      return nextStart;
-    }
+  private safeCueEnd(cue: LyraAvCue, start: number): number {
     const max = this.duration > 0 ? this.duration : Infinity;
+    if (cue.end == null) {
+      const nextStart = this.nextCueStarts.get(cue.start) ?? Infinity;
+      // A duration cap can collapse several distinct source starts onto one effective start.
+      // Equal starts never end one another, and the final chronological cue remains open-ended.
+      return start >= max || nextStart === Infinity ? Infinity : Math.min(nextStart, max);
+    }
     return finiteRange(cue.end, start, start, max);
   }
 

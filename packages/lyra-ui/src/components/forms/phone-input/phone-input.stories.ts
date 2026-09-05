@@ -257,3 +257,28 @@ export const AncestorTheme: Story = {
     </div>
   `,
 };
+
+export const ExternalDescription: StoryObj = {
+  parameters: { docs: { description: { story: 'External guidance is resolved onto the value control before its local hint; changing the referenced content keeps the relationship current.' } } },
+  render: () => html`
+    <div>
+      <p id="lr-phone-input-external-guidance">Use the details associated with your account.</p>
+      <lr-phone-input label="Phone number" hint="Include the local area code" aria-describedby="lr-phone-input-external-guidance"></lr-phone-input>
+    </div>
+  `,
+};
+
+export const AuthoredCopy: StoryObj = {
+  parameters: { docs: { description: { story: 'Explicit copy wins over locale strings, including the English default and an empty country label. Removing copy attributes restores default property readback and localized copy. An empty validation override still uses a localized native error reason.' } } },
+  render: () => html`
+    <lr-phone-input
+      label="Phone number"
+      default-country="LU"
+      country-label="Select"
+      incomplete-text="Enter the complete contact number."
+      invalid-text="Check the contact number."
+      .adapter=${demoAdapter}
+      .strings=${{ select: 'Choisir', phoneInputIncomplete: 'Numéro incomplet.', valueInvalid: 'Numéro invalide.' }}
+    ></lr-phone-input>
+  `,
+};

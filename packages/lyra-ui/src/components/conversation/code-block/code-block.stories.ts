@@ -322,3 +322,19 @@ export const ActiveLineOutlineColor: Story = {
     ></lr-code-block>
   `,
 };
+
+/** Locale and strings remain live after the grammar has finished highlighting. */
+export const LiveGutterLocalization: Story = {
+  render: () => html`
+    <div lang="en">
+      <button type="button" @click=${(event: Event) => {
+        const wrapper = (event.currentTarget as HTMLElement).parentElement!;
+        wrapper.lang = wrapper.lang === 'en' ? 'ar-EG' : 'en';
+      }}>Change gutter number locale</button>
+      <lr-code-block language="typescript" line-numbers activatable-lines
+        .code=${'const answer = 42;\nconsole.log(answer);'}
+        .strings=${{ codeBlockLineLabel: 'Source line {line}' }}
+      ></lr-code-block>
+    </div>
+  `,
+};

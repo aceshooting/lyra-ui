@@ -25,6 +25,9 @@ consumer-supplied `lr-menu` in the default slot becomes that contained engine in
 wrapped in another menu. This supports both Web Awesome's direct-item shape and Shoelace's
 consumer-menu shape.
 
+An open lr-dropdown repositions when its effective host or inherited text direction changes,
+preserving open state without emitting lifecycle events.
+
 **Direct mapped items.** `<lr-dropdown-item>` is the Web Awesome-compatible name for the same row
 implementation as `<lr-menu-item>`. Direct mapped items receive this dropdown's `size` and use its
 contained roving-focus, type-ahead, disabled-skipping, selection, and submenu controller; a

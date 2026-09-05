@@ -20,6 +20,9 @@ A boolean form control. `role="checkbox"` with an `aria-checked` that can also b
 visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associated via
 `ElementInternals`, click and Space toggle) but with checkbox semantics.
 
+Removing `error-text` safely omits the message while preserving native `null` property readback.
+Explicit empty text stays empty; later supplied text renders normally.
+
 **Properties:**
 
 - `checked: boolean = false` — the live, non-reflecting state

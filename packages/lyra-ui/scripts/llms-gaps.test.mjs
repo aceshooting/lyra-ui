@@ -1648,6 +1648,28 @@ test('semantic document locator identity ignores object key order and dot-path s
   );
 });
 
+test('exact interface locators retain nested generic defaults and constraints', () => {
+  const signatures = [
+    'Grid<Row = Record<string, unknown>> { readonly row: Row; }',
+    'Grid<Row extends { readonly id: string }> { readonly row: Row; }',
+    'Grid<Node, Link extends LinkDatum<Node>> { node: Node; link: Link; }',
+  ];
+  for (const signature of signatures) {
+    const text = '\x60' + signature + '\x60';
+    assert.equal(contractDeclarationBlock(text, 'Grid', 'interface'), text);
+  }
+  assert.equal(contractDeclarationBlock('\x60Grid<Row = Record<string, unknown>>(row)\x60', 'Grid', 'interface'), '');
+  assert.equal(contractDeclarationBlock('\x60Grid<Row = Record<string, unknown>>.value\x60', 'Grid', 'interface'), '');
+});
+
+test('exact helper locators retain nested generic defaults and indented overloads', () => {
+  const signature = '\x60create<T = Record<string, unknown>>(value: T): T\x60';
+  const overloads = '\x60load(value: string): string;\n  load(value: number): number;\x60';
+  assert.equal(contractDeclarationBlock(signature, 'create', 'function'), signature);
+  assert.equal(contractDeclarationBlock(overloads, 'load', 'function'), overloads);
+  assert.equal(contractDeclarationBlock('\x60create<Record<string, unknown>>(value)\x60', 'create', 'function'), '');
+});
+
 if (failures > 0) {
   console.error(`${failures} llms-gaps test(s) failed.`);
   process.exitCode = 1;

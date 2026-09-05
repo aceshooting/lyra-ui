@@ -18,6 +18,11 @@
 
 Responsive month calendar with event markers and an agenda view.
 
+Early ISO dates such as `0001`, `0099`, and `0100` retain their authored local year in the month
+grid and month navigation. Valid colored agenda actions preserve their foreground/background pairing
+through hover and press, with the existing state tokens remaining overridable. Arbitrary caller
+colors still require the caller to choose an accessible contrast pair.
+
 **Properties:**
 
 - `events: CalendarEvent[] = []` (attribute: false) — `{ readonly id?, readonly date, readonly

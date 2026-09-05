@@ -21,6 +21,19 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const BackgroundItemChange: Story = {
+  parameters: { docs: { description: { story: 'Focus the middle item, then use the outside button to disable it. The roving stop repairs while focus remains on the button. Header/footer controls also keep their focus during item updates. Menu labels are sibling visual captions; selectable items stay directly enrolled.' } } },
+  render: () => html`<section>
+    <button @click=${(event: Event) => {
+      const item = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-menu-item[value="middle"]')!;
+      item.toggleAttribute('disabled');
+    }}>Toggle middle availability</button>
+    <lr-menu><button slot="header">Header action</button><lr-menu-label>Actions</lr-menu-label>
+      <lr-menu-item>First</lr-menu-item><lr-menu-item value="middle">Middle</lr-menu-item><lr-menu-item>Last</lr-menu-item>
+      <button slot="footer">Footer action</button></lr-menu>
+  </section>`,
+};
+
 /** The exact Shoelace authoring shape after a mechanical `sl-` → `lr-` rename. */
 export const StandaloneMappedMenu: Story = {
   render: () => html`

@@ -19,6 +19,9 @@
 A compact commit summary (subject, author/time, diffstat, per-file changes) that links file rows out
 to a diff view.
 
+Removing the `message` attribute clears the displayed subject and body; the property retains the
+normal `null` readback of a removed string attribute.
+
 **Properties:** `hash: string = ''`, `message: string = ''`, `author: string = ''`, `timestamp?:
 number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []` (attribute: false) —
 `CommitFileChange { path: string; additions: number; deletions: number; status?: GitStatus }`

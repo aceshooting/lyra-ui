@@ -1,3 +1,4 @@
+import { takeOverlayOrder, type OverlayOrderReservation } from './overlay-order.js';
 import { deepActiveElementIn } from './active-element.js';
 import {
   collectComposedAutofocusElements,
@@ -46,6 +47,7 @@ export interface OverlayStackActivationOptions {
   restoreFocusTo?: OverlayStackRestoreFocusTarget;
   onTab?: () => void;
   initiallySuspended?: boolean;
+  orderReservation?: OverlayOrderReservation;
   modal: boolean;
   trapFocus: boolean;
   onRegistered?: (document: Document) => void;
@@ -89,7 +91,6 @@ interface OverlayDocumentState {
   stack: OverlayEntry[];
   routingSuspensions: Set<symbol>;
   observers: Set<OverlayStackObserver>;
-  nextStackOrder: number;
   started: boolean;
   onKeyDown: (event: KeyboardEvent) => void;
 }
@@ -257,10 +258,9 @@ function createState(doc: Document): OverlayDocumentState {
   state.stack = [];
   state.routingSuspensions = new Set();
   state.observers = new Set();
-  state.nextStackOrder = 0;
   state.started = false;
   state.onKeyDown = (event: KeyboardEvent) => {
-    if (event.defaultPrevented || event.isComposing || state.routingSuspensions.size > 0) return;
+    if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || state.routingSuspensions.size > 0) return;
     const entry = state.stack[state.stack.length - 1];
     if (!entry) return;
     if (event.key === 'Escape') {
@@ -320,7 +320,7 @@ function updateStackStyles(state: OverlayDocumentState): void {
 function registerEntry(entry: OverlayEntry, state: OverlayDocumentState, preserveStackOrder = false): void {
   if (entry.registered) return;
   startState(state);
-  if (!preserveStackOrder || entry.state !== state) entry.stackOrder = state.nextStackOrder++;
+  if (!preserveStackOrder || entry.state !== state) entry.stackOrder = takeOverlayOrder(state.document);
   entry.state = state;
   entry.registered = true;
   entry.options.onRegistered?.(state.document);
@@ -452,7 +452,7 @@ export function activateOverlayStack(options: OverlayStackActivationOptions): Ov
   // Reserve order at logical activation time, even when the panel begins unrendered and therefore
   // cannot join the live stack yet. Otherwise multiple lifecycle-controlled entries all carry the
   // same sentinel order and a restored lower entry can incorrectly jump above a newer overlay.
-  entry.stackOrder = entry.state.nextStackOrder++;
+  entry.stackOrder = takeOverlayOrder(doc, options.orderReservation);
   entry.handle = {
     focusInitial: () => {
       if (

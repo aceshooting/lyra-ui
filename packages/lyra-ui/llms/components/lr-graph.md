@@ -18,6 +18,12 @@
 
 A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
+A zero-width canvas link paints neither a stroke nor an arrowhead; its relationship remains in the
+nonvisual topology summary.
+
+In both renderers, roving navigation transfers real focus through nodes, operable links, then
+community hulls; zero-width, fully transparent, and dangling links remain outside that focus order.
+
 **Properties:**
 
 - `nodes: LyraGraphNode[] = []` (attribute: false) — readonly `LyraGraphNode { id: string; label?: string;
@@ -111,7 +117,7 @@ camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local draw
 **Events:** `lr-node-click` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
 local drawing coordinates), `lr-link-click` (`detail: { sourceNodeId, targetNodeId,
 linkId? }`; the optional `linkId` is the stable `LyraGraphLink.id` supplied by the caller), `lr-node-enter`/
-`lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning),
+`lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning; canvas emits once per hit-identity transition or exit),
 `lr-link-enter`/`lr-link-leave` (`detail: { sourceNodeId, targetNodeId, linkId? }`, same hover contract),
 `lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-click`
@@ -222,7 +228,7 @@ localized `part="error"` alert. Install with
   force on the new midpoint and nudges the simulation via `alpha(0.1).restart()`, in addition to
   resizing the rendered `viewBox` — both branches apply independently, so setting `width` and
   `chargeStrength` in the same synchronous batch retunes both, not just one.
-- zoom is bounded via `minZoom`/`maxZoom` (`d3-zoom`'s `.scaleExtent(...)`, live-reactive); pan/
+- zoom is bounded via `minZoom`/`maxZoom` (`d3-zoom`'s `.scaleExtent(...)`, live-reactive in both SVG and canvas); pan/
   zoom/drag are still pointer-only with no keyboard equivalent. Links (`<line part="link">`) are now
   keyboard-operable too (`tabindex="0"`, `role="button"`, `aria-label`, Enter/Space), matching nodes.
 - while the `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers are resolving, the host shows an

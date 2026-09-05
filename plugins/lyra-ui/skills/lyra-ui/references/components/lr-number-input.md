@@ -20,6 +20,16 @@ A numeric field with the complete `lr-input` form, validation and native-editing
 own increment/decrement stepper pair. Its constructor and `connectedCallback()` both force
 `type = 'number'`; all inherited `lr-input` form and editing APIs remain available.
 
+`stepUp()` and `stepDown()` use the current `value`, `step`, `min`, and `max` properties in the same
+synchronous call, including changes made immediately beforehand. They preserve native step alignment
+and bounds, update form submission silently, and remain no-ops before the native input has rendered
+or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
+
 **Inherits:** all public surface from `lr-input`.
 
 The inherited `--lr-input-*` theme inputs keep `lr-input`'s ancestor-theme precedence; the number
@@ -30,7 +40,8 @@ action-height ladder as `lr-input` instead of remaining at the default tier for 
 **Properties:** `size` (`2xs`…`xl`), `appearance`, `pill`, `autofocus`, `placeholder`, `readonly`,
 `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
-`autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), `enterKeyHint` (`enterkeyhint`), and
+`autocorrect` (boolean readback; accepts `boolean | 'off' | 'on'` writes), `inputMode`
+(`inputmode`), `enterKeyHint` (`enterkeyhint`), and
 `min`/`max`/`step` (the native numeric constraint validation), all inherited from `lr-input` with
 identical meaning. This component changes the mapped defaults to `appearance='outlined'`,
 `inputMode='numeric'`, and `step=1`. `clearable` (and its `with-clear` spelling),

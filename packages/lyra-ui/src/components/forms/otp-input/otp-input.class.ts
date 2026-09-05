@@ -1,3 +1,4 @@
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -94,6 +95,10 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
  * ancestor theme wrapper override appearance fallbacks. A value set directly on the OTP input
  * still wins through normal custom-property inheritance.
+ *
+ * Host aria-describedby targets supplement local error/hint guidance on the native control
+ * input. Relationships track missing IDs, target replacement, removal/reinsertion, reconnect,
+ * and document adoption.
  *
  * @customElement lr-otp-input
  * @slot label - Rich label content used while the `label` attribute is empty.
@@ -607,6 +612,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     super.disconnectedCallback();
     this.autosubmitToken += 1;
   }
@@ -622,6 +628,37 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     // native focus event and changes `focused`, which Lit correctly diagnoses as an update that
     // was scheduled from inside the update it just completed.
     if (this.autofocus) this.scheduleAfterUpdate(() => this.focus(), 'otp-autofocus');
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.hasUpdated) this.syncExternalDescription();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.syncExternalDescription();
+  }
+
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const target = this.control ?? null;
+    if (!target) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
   }
 
   override willUpdate(changed: PropertyValues<this>): void {

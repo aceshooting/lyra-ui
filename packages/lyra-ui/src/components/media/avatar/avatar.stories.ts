@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A small, fixed-size identity marker: an image, an `icon`-slotted fallback glyph, or initials, in that priority order. Purely presentational — wrap it in a button or menu trigger when interaction is required.',
+          'Removing label safely restores the unnamed fallback while preserving host accessible naming and later label updates. A small, fixed-size identity marker: an image, an `icon`-slotted fallback glyph, or initials, in that priority order. Purely presentational — wrap it in a button or menu trigger when interaction is required.',
       },
     },
   },

@@ -10,6 +10,15 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const OptionalHeaderCopy: Story = {
+  parameters: { docs: { description: { story: 'Remove title and secondary copy, then restore them. Removed attributes render as absent and subsequent values recover normally.' } } },
+  render: () => html`<section><button @click=${(event: Event) => {
+    const widget = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-widget')!;
+    if (widget.hasAttribute('label')) { widget.removeAttribute('label'); widget.removeAttribute('sublabel'); }
+    else { widget.setAttribute('label', 'Usage'); widget.setAttribute('sublabel', 'Last week'); }
+  }}>Toggle header copy</button><lr-widget label="Usage" sublabel="Last week">Content remains available.</lr-widget></section>`,
+};
+
 function preventWidgetCollapse(event: Event): void {
   const request = event as CustomEvent<{ collapsed: boolean }>;
   if (request.detail.collapsed) request.preventDefault();

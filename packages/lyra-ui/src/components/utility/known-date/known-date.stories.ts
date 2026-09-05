@@ -145,3 +145,18 @@ export const PinnedFieldHeight: Story = {
     <lr-known-date label="Birth date" value="2007-03-27" style="--lr-known-date-field-height: 44px;"></lr-known-date>
   `,
 };
+
+
+export const ExternalGuidance: Story = {
+  parameters: { docs: { description: { story: 'External guidance describes the date group. The hint remains attached to each field. Removing an optional day/month/year label restores its localized default; an explicitly empty label stays empty.' } } },
+  render: () => html`
+    <div>
+      <p id="known-date-passport-guide">Use the date printed on your passport.</p>
+      <lr-known-date label="Passport date" aria-describedby="known-date-passport-guide"
+        hint="Enter the complete day, month and year." day-label="Custom day"></lr-known-date>
+      <button @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!
+        .querySelector('lr-known-date')!.removeAttribute('day-label')}>Restore localized day label</button>
+      <lr-known-date label="Disabled date" value="2007-03-27" disabled></lr-known-date>
+    </div>
+  `,
+};

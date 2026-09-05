@@ -1,3 +1,4 @@
+import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -357,7 +358,7 @@ export class LyraContextMeter extends LyraElement {
           stroke-dasharray=${`${segLen} ${CIRCUMFERENCE - segLen}`}
           stroke-dashoffset=${dashoffset}
           transform="rotate(-90 ${CENTER} ${CENTER})"
-        ><title>${this.segmentTitle(segment, value)}</title></circle>
+        >${nativeSvgTitle(this.segmentTitle(segment, value))}</circle>
       `;
     });
     return html`

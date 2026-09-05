@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A controlled ingestion list that omits malformed, blank-id, and later duplicate rows first-wins before counts, virtualization, failure announcements, rendering, and retry/cancel actions. Every documented row part, including stage and detailed count/status fields, remains forwarded in virtualized mode.',
+          'A controlled ingestion list that omits malformed, blank-id, and later duplicate rows first-wins before counts, virtualization, failure announcements, rendering, and retry/cancel actions. Nonstring failure details use the localized failed-stage label; historical failures remain silent on mount. Every documented row part, including stage and detailed count/status fields, remains forwarded in virtualized mode.',
       },
     },
   },

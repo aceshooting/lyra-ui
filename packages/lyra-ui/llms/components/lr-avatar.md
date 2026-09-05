@@ -22,6 +22,10 @@ named `icon` slot, label and image-load error event) and adds this library's sha
 `variant` vocabulary. Purely presentational, with no built-in interactivity; wrap it in a
 `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
+Removing the attribute consumes the label as absent while preserving its `null` property readback.
+Explicit empty labels remain empty, host `aria-label` precedence remains intact, and later label
+values restore the image or fallback name.
+
 **Properties:**
 
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no glyph and no

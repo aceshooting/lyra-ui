@@ -87,7 +87,8 @@ export class LyraSparkline extends LyraElement {
   /** Interpolation used to connect adjacent samples. */
   @property({ reflect: true }) curve: LyraSparklineCurve = 'linear';
 
-  /** Space-separated finite numeric samples. At least two are required. */
+  /** Space-separated finite numeric samples. At least two are required. An empty or removed
+   * data attribute uses values instead; removal retains null property readback. */
   @property() data = '';
 
   /** Accessible label applied verbatim to the SVG. */
@@ -128,7 +129,7 @@ export class LyraSparkline extends LyraElement {
   private readonly gradientId = nextId('sparkline-gradient');
 
   private plotValues(): number[] {
-    if (this.data.trim()) {
+    if ((this.data ?? '').trim()) {
       const parsed = finiteData(this.data);
       return parsed.length >= 2 ? parsed : [];
     }

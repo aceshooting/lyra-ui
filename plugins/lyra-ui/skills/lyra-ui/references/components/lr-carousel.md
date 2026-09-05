@@ -27,6 +27,11 @@ native or authored semantics, and an explicit `role`, `aria-roledescription`, or
 temporarily makes off-page slides inert and aria-hidden, then restores their retained author state
 when they become visible, are removed, or the carousel disconnects.
 
+**Keyboard:** focus the `scroll-container` viewport to navigate with Arrow keys (horizontal LTR/RTL
+or vertical), Home, and End. Keys originating in a native input, textarea, contenteditable surface,
+or supported custom control remain owned by that editor, including when the editor is the assigned
+slide itself; they do not change the active slide or move focus away from it.
+
 **Properties:**
 
 - `currentSlide: number = 0` (attribute `current-slide`, reflected) — zero-based index of the first

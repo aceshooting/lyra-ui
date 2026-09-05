@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
 import "./chat-message.js";
+import '../../utility/copy-button/copy-button.js';
 
 const meta: Meta = {
   title: "ChatMessage",
@@ -129,6 +130,9 @@ export const CustomFailureSlot: Story = {
   `,
 };
 
+const copyableMessage =
+  'Migrating the table component to the new pagination API touches four files; want me to open a PR?';
+
 export const WithAvatarBadgesAndActions: Story = {
   render: () => html`
     <lr-chat-message
@@ -151,28 +155,16 @@ export const WithAvatarBadgesAndActions: Story = {
         style="font-size:0.6875rem;padding:0.0625rem 0.375rem;border-radius:999px;background:var(--lr-color-surface);color:var(--lr-color-text-quiet);"
         >812 tokens · 1.4s</span
       >
-      Migrating the table component to the new pagination API touches four
-      files; want me to open a PR?
+      ${copyableMessage}
       <span slot="attachments">
         <span
           style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid var(--lr-color-border);border-radius:0.375rem;"
           >📎 table.diff</span
         >
       </span>
-      <button
-        slot="actions"
-        style="font:inherit;font-size:0.75rem;background:none;border:none;color:inherit;cursor:pointer;padding:0;"
-        @click=${(e: Event) =>
-          e.currentTarget!.dispatchEvent(
-            new CustomEvent("lr-copy", {
-              bubbles: true,
-              composed: true,
-              detail: { text: "copied!" },
-            })
-          )}
-      >
-        Copy
-      </button>
+      <lr-copy-button slot="actions" .value=${copyableMessage} copy-label="Copy">
+        <span slot="copy-icon">Copy</span>
+      </lr-copy-button>
     </lr-chat-message>
   `,
 };

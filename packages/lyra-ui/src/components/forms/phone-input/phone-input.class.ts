@@ -1,3 +1,5 @@
+import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -353,6 +355,13 @@ function normalizeCountryCatalog(source: unknown): readonly LyraPhoneCountry[] {
  * `readonly` locks both telephone and country mutation while retaining focus, selection, copying,
  * form value, and submission. `autofocus` targets the real native telephone input.
  *
+ * Host aria-describedby targets supplement local hint/error guidance on the telephone input,
+ * including live target changes, reconnect, and adoption. Removing default-country safely uses
+ * the existing country fallback while retaining null property readback. Explicit countryLabel,
+ * incompleteText, and invalidText values win over locale strings; removing those copy attributes
+ * restores their English property defaults and localized presentation. Empty validation copy
+ * retains a nonempty localized native error reason.
+ *
  * @customElement lr-phone-input
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
@@ -485,14 +494,26 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property({ type: Boolean, reflect: true }) pill = false;
   /** Accessible name for the telephone input. Takes precedence over `phoneLabel`, label, and placeholder. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
-  /** Accessible name for the country selector. */
-  @property({ attribute: 'country-label', useDefault: true }) countryLabel = 'Select';
+  /** Accessible name for the country selector. Explicit copy wins over locale strings; omission localizes.
+   * @default 'Select'
+   */
+  @property({ attribute: 'country-label', useDefault: true })
+  countryLabel = 'Select';
+  private countryLabelAuthored = false;
   /** Accessible-name override for the telephone input. */
   @property({ attribute: 'phone-label' }) phoneLabel = '';
-  /** Validation message for a number that may still become valid with more digits. */
-  @property({ attribute: 'incomplete-text', useDefault: true }) incompleteText = 'This phone number is incomplete.';
-  /** Validation message for a completed but invalid number. */
-  @property({ attribute: 'invalid-text', useDefault: true }) invalidText = 'The value is invalid.';
+  /** Validation message for a number that may still become valid with more digits. Explicit copy wins over locale strings; omission localizes.
+   * @default 'This phone number is incomplete.'
+   */
+  @property({ attribute: 'incomplete-text', useDefault: true })
+  incompleteText = 'This phone number is incomplete.';
+  private incompleteTextAuthored = false;
+  /** Validation message for a completed but invalid number. Explicit copy wins over locale strings; omission localizes.
+   * @default 'The value is invalid.'
+   */
+  @property({ attribute: 'invalid-text', useDefault: true })
+  invalidText = 'The value is invalid.';
+  private invalidTextAuthored = false;
   @property({ useDefault: true }) autocomplete = 'tel';
   @property({ useDefault: true }) inputmode: 'tel' | 'numeric' | 'text' = 'tel';
   @property() enterkeyhint = '';
@@ -603,7 +624,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   private resolveCountry(rows: readonly LyraPhoneCountry[]): string {
     const codes = rows.map((row) => row.code);
     const explicit = normalizeCountry(this.explicitCountry);
-    const preferred = normalizeCountry(this.defaultCountry);
+    const preferred = normalizeCountry(this.defaultCountry ?? '');
     if (codes.includes(explicit)) return explicit;
     if (codes.includes(preferred)) return preferred;
     return codes[0] ?? '';
@@ -657,8 +678,52 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     };
   }
 
+  static override get observedAttributes(): string[] {
+    const attributes = super.observedAttributes;
+    observeReactivePropertyWrites(this.prototype, ['countryLabel', 'incompleteText', 'invalidText'], (instance: LyraPhoneInput, name, value) => {
+      const authored = value != null;
+      let ownershipChanged = false;
+      switch (name) {
+        case 'countryLabel':
+          // The field initializer precedes its ownership flag; later equal writes are authored.
+          if (instance.countryLabelAuthored === undefined) return;
+          ownershipChanged = authored !== instance.countryLabelAuthored;
+          instance.countryLabelAuthored = authored;
+          break;
+        case 'incompleteText':
+          // The field initializer precedes its ownership flag; later equal writes are authored.
+          if (instance.incompleteTextAuthored === undefined) return;
+          ownershipChanged = authored !== instance.incompleteTextAuthored;
+          instance.incompleteTextAuthored = authored;
+          break;
+        case 'invalidText':
+          // The field initializer precedes its ownership flag; later equal writes are authored.
+          if (instance.invalidTextAuthored === undefined) return;
+          ownershipChanged = authored !== instance.invalidTextAuthored;
+          instance.invalidTextAuthored = authored;
+          break;
+      }
+      if (ownershipChanged) instance.requestUpdate();
+      if (name !== 'countryLabel' && instance.hasUpdated) instance.updateValidity();
+    });
+    return attributes;
+  }
+
+  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    super.attributeChangedCallback(name, oldValue, newValue);
+    if (newValue !== null) return;
+    // useDefault restores the English IDL defaults; removal also relinquishes authored copy so
+    // the presentation and native validation reason resume localization.
+    if (name === 'country-label') this.countryLabelAuthored = false;
+    else if (name === 'incomplete-text') this.incompleteTextAuthored = false;
+    else if (name === 'invalid-text') this.invalidTextAuthored = false;
+    else return;
+    this.requestUpdate();
+    if (this.hasUpdated) this.updateValidity();
+  }
+
   private get effectiveCountryLabel(): string {
-    return this.localize('select', this.countryLabel === 'Select' ? undefined : this.countryLabel);
+    return this.countryLabelAuthored ? this.countryLabel : this.localize('select');
   }
 
   /** The telephone input's accessible name. Every consumer-supplied source wins, in the precedence
@@ -679,17 +744,13 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   private get incompleteMessage(): string {
-    return this.localize(
-      'phoneInputIncomplete',
-      this.incompleteText === 'This phone number is incomplete.' ? undefined : this.incompleteText,
-    );
+    return (this.incompleteTextAuthored ? this.incompleteText : '') ||
+      this.localize('phoneInputIncomplete');
   }
 
   private get invalidMessage(): string {
-    return this.localize(
-      'valueInvalid',
-      this.invalidText === 'The value is invalid.' ? undefined : this.invalidText,
-    );
+    return (this.invalidTextAuthored ? this.invalidText : '') ||
+      this.localize('valueInvalid');
   }
 
   private countryName(row: LyraPhoneCountry): string {
@@ -734,6 +795,37 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.hasUpdated) this.syncExternalDescription();
+  }
+
+  override disconnectedCallback(): void {
+    this.releaseExternalDescription();
+    super.disconnectedCallback();
+  }
+
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const target = this.inputElement ?? null;
+    if (!target) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (this.flags && !LyraPhoneInput.flagRegistration) {
@@ -773,6 +865,8 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
+    if (changed.has('strings')) this.updateValidity();
     if (
       changed.has('touched') ||
       changed.has('required') ||

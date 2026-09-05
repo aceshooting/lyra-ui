@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './source-picker.js';
-import type { LyraSourceEntry } from './source-picker.class.js';
+import type { LyraSourceEntry, LyraSourcePicker } from './source-picker.class.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
@@ -29,6 +29,18 @@ export const Default: Story = {
 
 export const WithSelection: Story = {
   render: () => html`<lr-source-picker .sources=${sources} .selectedSourceIds=${['doc1']}></lr-source-picker>`,
+};
+
+export const ToggleSearch: Story = {
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => {
+        const picker = (event.currentTarget as HTMLElement).nextElementSibling as LyraSourcePicker;
+        picker.searchable = !picker.searchable;
+      }}>Toggle search, retaining query and selection</button>
+      <lr-source-picker .sources=${sources}></lr-source-picker>
+    </div>
+  `,
 };
 
 export const NoSelectAllNoSearch: Story = {

@@ -212,3 +212,24 @@ export const ActualRunGeometry: StoryObj = {
     </div>
   `,
 };
+
+export const ExternalDescription: StoryObj = {
+  render: () => html`
+    <p id="radio-button-guidance">Choose this option when it matches your preference.</p>
+    <lr-radio-button aria-describedby="radio-button-guidance">Preferred option</lr-radio-button>
+  `,
+};
+
+export const LiveCheckedDefault: StoryObj = {
+  render: () => html`
+    <form>
+      <lr-radio-button name="choice" value="a">Alpha</lr-radio-button>
+      <button type="button" @click=${(event: Event) => {
+        const radio = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-radio-button')!;
+        radio.checked = false;
+        radio.defaultChecked = true;
+      }}>Keep unchecked until reset</button>
+      <button type="reset">Restore default</button>
+    </form>
+  `,
+};

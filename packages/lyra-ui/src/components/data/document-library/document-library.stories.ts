@@ -161,3 +161,16 @@ export const NarrowAllocation: Story = {
     </div>
   `,
 };
+
+/** Undefined optional tags are omitted; removing the query shows the complete inventory. */
+export const OptionalTagsAndSearchRemoval: Story = {
+  render: () => html`
+    <div>
+      <button type="button" @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-document-library')!.removeAttribute('search-term')}>Clear search attribute</button>
+      <lr-document-library search-term="Alpha" .documents=${[
+        { id: 'alpha', name: 'Alpha', tags: undefined },
+        { id: 'beta', name: 'Beta' },
+      ]}></lr-document-library>
+    </div>
+  `,
+};

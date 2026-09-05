@@ -9,7 +9,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Internal match patterns are a bounded clone-owned frozen snapshot; create and reassign a new array after changing the matcher sequence.',
+          'Removing the trace attribute clears parsed content and copies empty text; the trace property retains null until assigned again. Internal match patterns are a bounded clone-owned frozen snapshot; create and reassign a new array after changing the matcher sequence.',
       },
     },
   },

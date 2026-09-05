@@ -24,6 +24,10 @@ so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lr-tab-g
 child scan expects real projected content, while its modal behavior participates in the shared
 overlay stack.
 
+Assigning `accessibleLabel` directly names the inner dialog when no host `aria-label` is present. A
+host `aria-label` retains its separate host ownership, and an empty direct value uses the tool
+title.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — whether the dialog is open; set it directly or use the

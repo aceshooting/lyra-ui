@@ -228,12 +228,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.renderRoot.querySelector('[part="view-toggles"]')
   );
 
+  /** Header title. Removing the attribute omits the copy without changing null readback. */
   @property() label = '';
   /** Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a
    *  slotted `label`. An explicitly empty value remains an explicit name; fallbacks apply only when
    *  the value is absent. Fed only by a host `aria-label`, matching `lr-scroller`'s/`lr-carousel`'s
    *  own host-override pattern. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  /** Secondary header copy. Removed or empty attributes render no fallback text. */
   @property() sublabel = '';
   @property({ type: Boolean, reflect: true }) collapsible = false;
   @property({ type: Boolean, reflect: true }) collapsed = false;
@@ -642,8 +644,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   };
 
   override render(): TemplateResult {
-    const hasLabel = this.label.length > 0;
-    const hasSublabel = this.sublabel.length > 0;
+    const hasLabel = (this.label ?? '').length > 0;
+    const hasSublabel = (this.sublabel ?? '').length > 0;
     const views = this.views;
     const fullscreenInset = sanitizeCssInset(this.fullscreenInset);
     const backdropInset = sanitizeCssInset(this.backdropInset);

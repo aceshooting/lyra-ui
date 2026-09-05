@@ -14,8 +14,8 @@ export interface EmojiPickerItem {
 export interface EmojiPickerGroup {
   readonly key: string;
   /** The heading text. Consumer-supplied content is rendered verbatim. Groups produced by the
-   *  built-in data adapter are recognized privately by their canonical numeric key so their
-   *  library-owned headings can be localized without exposing localization metadata here. */
+   *  built-in data adapter retain private provenance through filtering so their library-owned
+   *  headings follow live localization. A caller group with the same key keeps its literal label. */
   readonly label: string;
   readonly emojis: readonly EmojiPickerItem[];
 }

@@ -651,7 +651,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
 
   /** Host-declared filter definitions, rendered in array order. The first 10,000 definitions and
    * nested collection entries are deeply snapshotted and frozen; reassign after changing them.
-   * `null`/`undefined` is treated as an empty array rather than throwing. */
+   * `null`/`undefined` is treated as an empty array rather than throwing. Choice options require
+   * string value/label data fields; malformed entries are omitted independently. Custom definitions
+   * require a callable renderer and adapter. Exceptions thrown by admitted renderers propagate. */
   get filters(): readonly LyraFilterBarFilterDefinition[] {
     return this._filters;
   }
@@ -677,12 +679,22 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         if ((definition.type === 'select' || definition.type === 'combobox') && !Array.isArray(definition.options)) {
           return false;
         }
-        if (definition.type === 'custom' && !definition.custom?.adapter) return false;
+        if (definition.type === 'custom' && (!definition.custom?.adapter || typeof definition.custom.render !== 'function')) return false;
         seen.add(definition.filterId);
         return true;
       } catch {
         return false;
       }
+    }).map((definition) => {
+      if (definition.type !== 'select' && definition.type !== 'combobox') return definition;
+      const options = definition.options.filter((option) => {
+        try {
+          return option !== null && typeof option === 'object'
+            && typeof Object.getOwnPropertyDescriptor(option, 'value')?.value === 'string'
+            && typeof Object.getOwnPropertyDescriptor(option, 'label')?.value === 'string';
+        } catch { return false; }
+      });
+      return Object.freeze({ ...definition, options: Object.freeze(options) });
     }));
     const ids = new Set(this._filters.map((definition) => definition.filterId));
     this.touchedFilters = new Set(

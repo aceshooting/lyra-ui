@@ -52,6 +52,7 @@ const spans: LyraSpan[] = [
 const meta: Meta = {
   title: 'Observability/Agent Trace',
   component: 'lr-agent-trace',
+  parameters: { docs: { description: { component: 'Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including surrounding whitespace. The first valid admitted duplicate continues to win.' } } },
   tags: ['autodocs'],
 };
 export default meta;

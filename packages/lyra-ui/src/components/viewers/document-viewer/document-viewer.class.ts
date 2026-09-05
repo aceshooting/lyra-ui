@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraElement, snapshotPublicCollection } from '../../../internal/lyra-element.js';
+import { documentRendererRegistrySource } from './registry-ownership.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import type { DialogCloseReason } from '../../overlays/dialog/dialog.class.js';
@@ -131,13 +132,35 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     this.requestUpdate('payload', old);
   }
 
+  private registrySource?: DocumentRendererRegistry;
+  private _registry?: DocumentRendererRegistry;
+
   /** Optional per-instance immutable/read-only registry override. Native maps and definition
    * records are synchronously cloned and frozen while callback identities are retained; later
-   * source-map mutation is not observed. When unset, this instance owns a snapshot of the built-ins
+   * source-map mutation is not observed. Factory-created immutable registries use the same bounded
+   * snapshot boundary. When unset, this instance owns a snapshot of the built-ins
    * that existed when it was constructed; later registrations cannot mutate it. A consumer matcher
    * or renderer that throws is contained as the localized error state, and a pending anchor
    * completes once with `{ found: false }`. */
-  @property({ attribute: false }) registry?: DocumentRendererRegistry;
+  @property({ attribute: false, noAccessor: true }) registry?: DocumentRendererRegistry;
+
+  static {
+    Object.defineProperty(this.prototype, 'registry', {
+      configurable: true,
+      enumerable: true,
+      get(this: LyraDocumentViewer): DocumentRendererRegistry | undefined { return this._registry; },
+      set(this: LyraDocumentViewer, value: DocumentRendererRegistry | undefined) {
+        if (value === this.registrySource || value === this._registry) return;
+        const old = this._registry;
+        this._registry = snapshotPublicCollection(
+          documentRendererRegistrySource(value),
+          this.ownerDocument?.defaultView,
+        ) as DocumentRendererRegistry | undefined;
+        this.registrySource = value;
+        this.requestUpdate('registry', old);
+      },
+    });
+  }
 
   /** Declarative scroll-to-anchor target, forwarded to the resolved renderer. A string is a
    *  highlight id in `highlights`. `hasChanged: () => true` so re-assigning the same value (e.g.

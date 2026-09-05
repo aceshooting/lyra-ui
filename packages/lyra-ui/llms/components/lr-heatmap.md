@@ -33,6 +33,19 @@ Full canvas redraws pause while the host is outside the viewport. Data, locale, 
 DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
 environments without `IntersectionObserver` retain eager drawing.
 
+Focus-only updates repaint a bounded neighborhood around the old and new cells, restoring all
+intersected neighboring fills and overlays while preserving the focus-ring geometry. Calendar axis
+pixels intersected by the repaint are restored too.
+
+Changing `domain` or `midpoint` without replacing matrix data preserves absent and nullish cells as
+no data in paint, accessible text, callbacks, and cell events. Missing values still use `-1` in
+default unsigned mode and `NaN` in signed mode; supplied negative signed values remain data.
+
+Invalid authored ramp colors retain the default endpoint fallback. The public `resolveRgb()` helper
+likewise preserves its supplied fallback bytes. These authoring diagnostics are once-per-color
+development warnings and remain silent in production; the separate missing-canvas runtime warning is
+unchanged.
+
 Set `accessibleCells: true` (`accessible-cells`) to opt into a semantic grid backed by a bounded
 window of native buttons. It retains the complete `aria-rowcount`/`aria-colcount` and arrow-key
 navigation model without mounting one node per cell. Buttons use localized `aria-label`s, explicit

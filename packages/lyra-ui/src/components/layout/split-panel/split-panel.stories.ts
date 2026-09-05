@@ -19,6 +19,15 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const EndEdgeRequest: Story = {
+  parameters: { docs: { description: { story: 'Resize from primary=end. The request percentage and pixel position both measure the end pane and agree with the accepted property values.' } } },
+  render: () => html`<section><lr-split-panel primary="end" position="30" style="block-size:12rem"
+    @lr-reposition-request=${(event: CustomEvent<{ position: number; positionInPixels: number }>) => {
+      const output = (event.currentTarget as HTMLElement).parentElement!.querySelector('output')!;
+      output.textContent = `${event.detail.position.toFixed(1)}% / ${event.detail.positionInPixels.toFixed(1)}px from end`;
+    }}><div slot="start">Start</div><div slot="end">End</div></lr-split-panel><output></output></section>`,
+};
+
 const paneStyle = 'padding: var(--lr-space-l); block-size: 100%; box-sizing: border-box;';
 
 function capReposition(event: Event): void {

@@ -18,6 +18,10 @@
 
 `Intl.NumberFormat` output.
 
+Removing `currency` preserves the removal readback while formatting with the declared USD fallback.
+An explicitly blank currency also keeps its existing USD formatting fallback, and a later valid
+currency takes effect normally.
+
 Shared by all four formatters (`lr-format-number`, `lr-format-date`, `lr-format-bytes`,
 `lr-relative-time`): each is text-only — a `display: inline` host with **no CSS parts, no events, and
 no themeable custom properties of its own** — rendering one formatted string into its shadow root.

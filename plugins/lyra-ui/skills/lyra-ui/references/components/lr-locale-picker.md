@@ -23,6 +23,12 @@ plus `en` — kept live via `subscribeLyraLocaleRegistry()`. Built directly on `
 trigger-button/`aria-activedescendant` listbox technique, not composed from it — a plain closed
 list, no filter/free-text mode.
 
+Host `aria-describedby` references resolve onto the role=combobox trigger before its local error and
+hint guidance. The relationship tracks missing IDs, target replacement, removal/reinsertion,
+reconnect, and document adoption. Removing `label`, `hint`, or `error-text` safely omits that
+content while leaving native `null` property readback unchanged; explicit empty strings remain empty
+and later supplied text renders normally.
+
 Public `--lr-locale-picker-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override size-tier fallbacks; a value set directly on the element still wins.
 

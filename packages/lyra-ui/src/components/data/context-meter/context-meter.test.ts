@@ -523,3 +523,22 @@ describe('showLegend', () => {
     expect(legend(el) === null).to.equal(true);
   });
 });
+
+it('preserves literal native ring tooltip text and segment updates', async () => {
+  const text = 'Literal </title><script>throw 42</script> &amp; < > \r\n العربية 😀';
+  const el = (await fixture(html`<lr-context-meter shape="ring" total="100"
+    .segments=${[{ label: text, value: 25 }]}
+  ></lr-context-meter>`)) as LyraContextMeter;
+
+  const assertTitle = (expected: string) => {
+    const title = el.shadowRoot!.querySelector('title')!;
+    expect(title.textContent).to.equal(expected);
+    expect(title.namespaceURI).to.equal('http://www.w3.org/2000/svg');
+    expect(title.childElementCount).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('script').length).to.equal(0);
+  };
+  assertTitle(`${text}: 25`);
+  el.segments = [{ label: `Updated ${text}`, value: 50 }];
+  await el.updateComplete;
+  assertTitle(`Updated ${text}: 50`);
+});

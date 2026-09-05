@@ -102,12 +102,12 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
     cursor: pointer;
   }
-  [part='timeline']:hover {
+  [part='timeline']:hover:where(:not([aria-disabled='true'])) {
     border-color: var(--lr-color-brand);
   }
   /* The timeline is itself the seek target -- a pointer press scrubs -- so it earns a pressed state
      beyond the hover border: the surface shifts while the border keeps the hover accent. */
-  [part='timeline']:active {
+  [part='timeline']:active:where(:not([aria-disabled='true'])) {
     border-color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }

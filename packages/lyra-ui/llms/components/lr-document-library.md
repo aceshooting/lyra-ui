@@ -20,6 +20,10 @@ Controlled searchable and filterable document inventory with versions, tags, own
 sorting, and bulk selection. It composes the table's bounded 100-row default, so a large document
 collection stays reachable through pagination without mounting an unbounded grid.
 
+Own `tags: undefined` is treated like omitted tags; malformed tag arrays and entries remain invalid.
+Removing `search-term` clears search filtering without rewriting its `null` property readback; an
+explicitly empty query also clears filtering and a later query applies normally.
+
 **9.0 migration:** `lr-filter-change.detail.text` is now `searchTerm`, backed by the public
 `searchTerm`/`search-term` axis. Replace `sortDirection: 'ascending'|'descending'` with
 `sortDir: 'asc'|'desc'`; document sorting now uses the same cancelable `lr-sort-request` followed

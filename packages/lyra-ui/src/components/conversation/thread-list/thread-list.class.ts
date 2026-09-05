@@ -622,7 +622,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private defaultSlottedElements(): Element[] {
-    return Array.from(this.children).filter((el) => !el.hasAttribute('slot'));
+    return Array.from(this.children).filter((el) => !el.getAttribute('slot'));
   }
 
   // Slotted mode's `[part="list"]` carries `role="list"`, which ARIA requires to directly own only

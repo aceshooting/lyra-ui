@@ -21,6 +21,10 @@ available in a conversation. It keeps its own panel template rather than nesting
 it has no dependency on the general-purpose dialog, while its modal behavior participates in the
 shared overlay stack. First-party invention (no Web Awesome equivalent).
 
+Programmatic `selectedToolIds` and `useDefaults` replacements synchronize the live checkbox and
+switch state after user edits without emitting change events. Removing `search-placeholder` restores
+localized copy, while an explicitly empty placeholder stays empty.
+
 **Exported types:**
 
 - `ToolSelectDialogTool { id: string; name: string; description?: string; category?: string; icon?:

@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The per-message action toolbar for lr-chat-message\'s actions slot: opt-in built-ins (copy / regenerate / edit / feedback) plus a slot for custom controls. Duplicate built-in names normalize first-wins; provider actions require nonblank IDs and omit later duplicates. Departing managed controls restore untouched authored tab stops through their optional toolbar release hook.',
+          'The per-message action toolbar for lr-chat-message\'s actions slot: opt-in built-ins (copy / regenerate / edit / feedback) plus a slot for custom controls. Duplicate built-in names normalize first-wins; provider actions require nonblank IDs and omit later duplicates. Departing managed controls restore untouched authored tab stops through their optional toolbar release hook. ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor remain native editing keys. Roving navigation still operates on the actual toolbar and thumb actions.',
       },
     },
   },

@@ -287,7 +287,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     this._rotation = normalizeImageRotation(value);
     this.requestUpdate('rotation', old);
   }
-  /** Enables region drawing via pointer or keyboard. */
+  /** Enables region drawing via pointer or keyboard. The focused image wrapper owns drawing
+   * commands and shows the shared focus ring inside its clipped viewport; descendant highlights retain activation. */
   @property({ type: Boolean, reflect: true }) annotatable = false;
 
   /** From `DocumentAnchorTarget` — only `region` anchors resolve here. */
@@ -516,6 +517,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
 
   private onWrapperKeyDown = (event: KeyboardEvent): void => {
+    if (event.target !== event.currentTarget) return;
     if (!this.annotatable || !this.hasOperableContent) return;
     if (!this.draft) {
       if (event.key === 'Enter') {

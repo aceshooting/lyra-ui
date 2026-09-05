@@ -475,7 +475,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Shows copy-to-clipboard affordances: one for the whole value, plus one per node. */
   @property({ type: Boolean, reflect: true }) copyable = false;
-  /** Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property. */
+  /** Removing the attribute clears search without changing its null readback. Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property. */
   @property() search = '';
 
   /**
@@ -638,7 +638,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    */
   private computeSearch(): SearchState {
     const locale = this.effectiveLocale;
-    const query = this.search.trim().toLocaleLowerCase(locale);
+    const query = (this.search ?? '').trim().toLocaleLowerCase(locale);
     const keyMatches = new Set<string>();
     const valueMatches = new Set<string>();
     const forceExpand = new Set<string>();
@@ -1011,12 +1011,13 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     return true;
   }
 
-  /** Moves the cursor to the previous match (wrapping), revealing collapsed ancestors and
+  /** Moves the cursor to the previous match (wrapping), starting at the last result when unset,
+   *  revealing collapsed ancestors and
    *  scrolling the selected match into view. Resolves `false` with no match to move to. */
   async searchPrevious(): Promise<boolean> {
     const total = this.searchState.orderedMatches.length;
     if (total === 0) return false;
-    this.activeSearchIndex = (this.activeSearchIndex - 1 + total) % total;
+    this.activeSearchIndex = this.activeSearchIndex < 0 ? total - 1 : (this.activeSearchIndex - 1 + total) % total;
     this.revealActiveMatch();
     this.emitSearchChange();
     await this.scrollActiveMatchIntoView();

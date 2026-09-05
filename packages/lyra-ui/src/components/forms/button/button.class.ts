@@ -9,8 +9,8 @@ import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import {
   syncAriaControlsElements,
-  syncAriaDescribedByElements,
 } from '../../../internal/aria-reflection.js';
+import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { variants } from '../../../internal/variants.styles.js';
 import type {
@@ -106,6 +106,8 @@ export interface LyraButtonEventMap {
  * as a literal string (for an icon-only button with no visible label). Host `aria-describedby`
  * IDREFs are resolved through `ariaDescribedByElements`; external `aria-labelledby` is not copied
  * across the shadow boundary.
+ * Description targets follow same-ID replacement, removal, reinsertion, reconnection and document
+ * adoption, including transitions between the native button and anchor.
  * Host `aria-haspopup` and `aria-expanded` values are likewise forwarded to the internal semantic
  * control. When host `aria-controls` names elements in the host's own root, the controls
  * relationship is resolved onto the internal control through the reflected element-reference API
@@ -291,7 +293,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   private _value = '';
   private _required = false;
   private _variant: LyraVariant = 'neutral';
-  private hasSyncedDescribedByElements = false;
+  private readonly localDescriptionIds = '';
+  private externalDescriptionLease?: NativeControlDescriptionLease;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
   /** Consumer validity retained while a non-action mode is barred from validation. */
@@ -759,8 +762,20 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncDescribedByElements();
     this.updateValidity();
     this.syncButtonStates();
+  }
+
+  override disconnectedCallback(): void {
+    this.releaseExternalDescription();
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.isConnected && this.hasUpdated) this.syncDescribedByElements();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -874,12 +889,18 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
 
   private syncDescribedByElements(): void {
-    if (!this.triggerDescribedBy && !this.hasSyncedDescribedByElements) return;
-    this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
-      this,
-      this.baseEl,
-      this.triggerDescribedBy
-    );
+    const target = this.isConnected ? this.baseEl : undefined;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireNativeControlDescription(this, target, () => this.localDescriptionIds);
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
   }
 
   override render(): TemplateResult {

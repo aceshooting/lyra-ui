@@ -1219,6 +1219,8 @@ const strings: LyraLocaleStrings = {
   promptStudioVariables: 'Переменные',
   promptStudioVersions: 'Версии',
   promptStudioPreview: 'Итоговый просмотр',
+  promptStudioPreviewLimit:
+    'Предварительный просмотр недоступен: превышен лимит разворачивания текста.',
   promptStudioRun: 'Выполнить запрос',
   promptStudioSave: 'Сохранить версию',
   promptStudioAddMessage: 'Добавить сообщение',

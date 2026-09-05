@@ -25,6 +25,9 @@ classic "typing…" affordance for a standalone status line), `pulse` (a single 
 quieter cue for a tight space, e.g. next to an avatar), `cursor` (a blinking vertical bar, meant to
 sit inline at the tail end of streamed text still being appended to).
 
+Removing `label` restores the localized thinking name while preserving an explicit host
+`aria-label`. Later label assignments remain reactive.
+
 **Properties:**
 
 - `shape: TypingIndicatorShape = 'dots'` (`'dots' | 'pulse' | 'cursor'`, reflected)

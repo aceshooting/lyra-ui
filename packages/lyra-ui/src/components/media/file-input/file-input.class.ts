@@ -366,8 +366,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** Enables files pasted from the clipboard into the dropzone. `true`-defaulting, so a plain
    *  `paste="false"` attribute (not just a `.paste=${false}` property binding) actually disables it. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) paste = true;
-  /** Form-control label. Empty leaves the localized dropzone instruction as the visible fallback. */
+  /** Form-control label. Empty or removed leaves the localized dropzone instruction as the visible fallback. */
   @property() label = '';
+  /** Optional hint copy. Removing the attribute removes its text and description association. */
   @property() hint = '';
   /** Plain-text validation error. A custom-validity message is shown when this is empty. */
   @property({ attribute: 'error-text' }) errorText = '';
@@ -1417,7 +1418,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   override render(): TemplateResult {
     const label = this.effectiveLabel;
-    const hasLabel = this.withLabel || this.slotPresence.has('label') || this.label.length > 0;
+    const hasLabel = this.withLabel || this.slotPresence.has('label') || (this.label ?? '').length > 0;
     const explicitHostLabel = hostAriaLabel(this);
     const explicitAccessibleLabel = this.hasAttribute('accessible-label') || this.accessibleLabel
       ? this.accessibleLabel
@@ -1425,7 +1426,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     const accessibleLabel = explicitHostLabel ?? explicitAccessibleLabel;
     const labelledBy = accessibleLabel == null && hasLabel ? 'file-input-label' : undefined;
     const fallbackAriaLabel = accessibleLabel ?? (hasLabel ? undefined : label);
-    const hasHint = this.withHint || this.slotPresence.has('hint') || this.hint.length > 0;
+    const hasHint = this.withHint || this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
     const renderedError = this.errorText || this.customError || (this.touched ? this.validationMessage : '');
     const hasError = this.withError || this.slotPresence.has('error') || renderedError.length > 0;
     const describedBy = [hasError ? 'file-input-error' : '', hasHint ? 'file-input-hint' : '']

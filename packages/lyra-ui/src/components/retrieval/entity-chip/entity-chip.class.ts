@@ -58,9 +58,11 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
 
   /** Echoed verbatim in both events. Blank identities disable activation. */
   @property({ attribute: 'entity-id' }) entityId = '';
-  /** The visible chip text (unlike citation-badge, the chip renders its own text, not `[n]`). */
+  /** The visible chip text (unlike citation-badge, the chip renders its own text, not `[n]`).
+   *  Removing the attribute leaves null readback and uses the localized untitled accessible name. */
   @property() text = '';
-  /** The entity's `lr-graph` `nodeTypes` id; reflected so hosts theme per type from CSS. */
+  /** The entity's `lr-graph` `nodeTypes` id; reflected so hosts theme per type from CSS.
+   *  A removed attribute is treated as an absent type without rewriting null readback. */
   @property({ reflect: true }) type = '';
   /** Resolved display label for `type`; when set, the accessible name speaks it instead of the raw
    *  type id. */
@@ -126,10 +128,10 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
 
   private get accessibleLabel(): string {
     const label =
-      this.text.trim() === ''
+      (this.text ?? '').trim() === ''
         ? this.localize('untitledEntity')
         : this.text;
-    const typeText = this.typeLabel?.trim() || this.type.trim();
+    const typeText = this.typeLabel?.trim() || (this.type ?? '').trim();
     if (!typeText) return label;
     return this.localize('entityChipWithType', undefined, {
       label,

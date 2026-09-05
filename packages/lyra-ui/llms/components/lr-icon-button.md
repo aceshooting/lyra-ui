@@ -22,6 +22,13 @@ slot when a form action is required. Because it is not form-associated, an ances
 `<fieldset disabled>` does not disable it and it is absent from `form.elements`; set `disabled`
 directly on each icon button.
 
+External descriptions follow the current source element identity when an element with the same ID
+replaces it, when a source is removed or reinserted, and when the control reconnects or moves to
+another document. Host-root lookup and ordering follow the current `aria-describedby` list,
+including unresolved IDs and duplicates. Switching between native button and anchor modes keeps the
+relationship on the current action. Existing accessible names and `aria-controls` relationships
+retain their separate contracts.
+
 Its public `--lr-icon-button-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override the built-in fallbacks; a value set directly on the element still wins.
 

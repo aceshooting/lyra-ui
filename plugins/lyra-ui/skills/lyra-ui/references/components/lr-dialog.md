@@ -18,6 +18,10 @@
 
 General-purpose modal/overlay plus a promise-based confirmation helper built on top of it.
 
+Removing `label` safely omits its fallback title. Open dialog and drawer names follow supported name
+and exclusion attribute changes on direct unslotted headings, while host naming retains precedence;
+nested and `slot=""` headings remain outside automatic discovery.
+
 ### `lr-dialog`
 
 A modal/overlay: `role="dialog"`, focus-trapped while open, dismissible via Escape or (opt-in) a

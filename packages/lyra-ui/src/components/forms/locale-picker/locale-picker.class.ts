@@ -1,3 +1,4 @@
+import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -168,6 +169,10 @@ export interface LyraLocalePickerEventMap {
  * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
  * ancestor theme wrapper override the active size tier. A value set directly on the locale picker
  * still wins through normal custom-property inheritance.
+ *
+ * Host aria-describedby targets supplement local error/hint guidance on the trigger. The
+ * relationships track target replacement, missing IDs, removal/reinsertion, reconnect, and adoption.
+ * Removed label/hint/error-text content is safely omitted without changing null property readback.
  *
  * @customElement lr-locale-picker
  * @event lr-change - The selection changed. `detail: { value, previousValue, direction }`, where
@@ -406,8 +411,25 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this.renderRoot?.querySelector('[part="trigger"]') ?? null;
   }
 
+  private localDescriptionIds = '';
+  private externalDescriptionLease?: NativeControlDescriptionLease;
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const target = this.triggerElement ?? null;
+    if (!target) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireNativeControlDescription(this, target, () => this.localDescriptionIds);
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.syncLocaleAttributeForLocalization();
     this.updateValidity();
     this.stopRegistrySubscription = subscribeLyraLocaleRegistry(() => {
@@ -417,6 +439,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -435,6 +458,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.cleanup?.();
     this.cleanup = undefined;
     this.unbindDocumentPointer();
@@ -799,6 +824,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     const reposition =
       changed.has('open') ||
       (this.open && (changed.has('locales') || changed.has('registryTick') || changed.has('locale')));
@@ -1042,10 +1068,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const previewTag = this.previewTag;
     const previewEntry = this.entryFor(previewTag);
-    const hasLabel = this.hasLabelSlot || this.label.length > 0;
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
-    const describedBy = [hasError ? 'locale-picker-error' : '', hasHint ? 'locale-picker-hint' : '']
+    const hasLabel = this.hasLabelSlot || (this.label ?? '').length > 0;
+    const hasHint = this.hasHintSlot || (this.hint ?? '').length > 0;
+    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
+    const describedBy = this.localDescriptionIds = [hasError ? 'locale-picker-error' : '', hasHint ? 'locale-picker-hint' : '']
       .filter(Boolean)
       .join(' ');
     return html`

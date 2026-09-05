@@ -73,6 +73,32 @@ assertIsolatedNodeImport(
   `
 );
 
+// Disabled writes also run under the document-less HTMLElement shim during SSR property binding.
+assertIsolatedNodeImport(
+  'form controls document-less disabled writes',
+  `
+    import assert from 'node:assert/strict';
+    ${noBrowserGlobals}
+    for (const [path, name] of [
+      ['input/input', 'LyraInput'],
+      ['input/number-input', 'LyraNumberInput'],
+      ['input/native-time-input', 'LyraNativeTimeInput'],
+      ['textarea/textarea', 'LyraTextarea'],
+      ['otp-input/otp-input', 'LyraOtpInput'],
+    ]) {
+      const module = await import('./dist/components/forms/' + path + '.js');
+      const control = new module[name]();
+      control.disabled = true;
+      assert.equal(control.disabled, true, name);
+      assert.equal(control.effectiveDisabled, true, name);
+      control.disabled = false;
+      assert.equal(control.disabled, false, name);
+      assert.equal(control.effectiveDisabled, false, name);
+    }
+    ${noBrowserGlobals}
+  `
+);
+
 // Animated Image's reduced-motion branch used to assume a browser-owned document during render.
 // Keep a named, document-less server-render regression ahead of the aggregate traversal so a
 // recurrence points to the exact component instead of aborting anonymously partway through it.
@@ -86,6 +112,21 @@ assert.match(
   /part="base"/,
   'lr-animated-image must render without an owner document on the server'
 );
+
+// Color-picker's pre-render disabled check must also work without Element.matches on the server.
+for (const disabled of [false, true]) {
+  const colorPickerHtml = await collectResult(render(html`<lr-color-picker
+    .disabled=${disabled} value="#123456" inline opacity
+    label="Server color" hint="Server guidance" swatches="#abcdef"
+  ></lr-color-picker>`, { elementRenderers: animatedImageContext.elementRenderers }));
+  assert.match(colorPickerHtml, /<template shadowroot="open" shadowrootmode="open">/);
+  assert.match(colorPickerHtml, /Server guidance/);
+  assert.match(colorPickerHtml, /#123456/);
+  const colorInput = colorPickerHtml.match(/<input\b[^>]*part="input"[^>]*>/)?.[0];
+  assert.ok(colorInput, 'lr-color-picker SSR must expose its native color field');
+  assert.equal(/\sdisabled(?:[\s=>]|$)/.test(colorInput), disabled);
+  assert.match(colorPickerHtml, new RegExp(`aria-disabled="${disabled}"`));
+}
 
 // Checkbox seeds browser slot-presence state on its first connection. Keep that optimization from
 // making server rendering depend on a browser-owned render root or light-DOM child collections.
@@ -733,6 +774,53 @@ assert.match(
   /<div(?=[^>]*\bpart="base rating")(?=[^>]*\baria-hidden="true")[^>]*>/,
   'lr-rating SSR shadow symbols must remain presentational chrome'
 );
+
+// Populated native SVG tooltips must remain renderable as fragments without browser globals.
+const nativeTitleText = 'Tooltip & <tag> &amp; </title><script>throw 42</script>\r\nالعربية';
+const escapedNativeTitleText = 'Tooltip &amp; &lt;tag&gt; &amp;amp; &lt;/title&gt;&lt;script&gt;throw 42&lt;/script&gt;&#13;\nالعربية';
+const nativeTitleCases = [
+  ...['bar', 'rounded', 'line'].map((mode) => ({
+    name: `lr-lite-chart ${mode}`,
+    expected: escapedNativeTitleText,
+    template: html`<lr-lite-chart
+      type=${mode === 'line' ? 'line' : 'bar'}
+      .roundedBars=${mode === 'rounded'}
+      .labels=${['A']}
+      .datasets=${[{ label: 'Values', data: [1] }]}
+      .pointText=${() => nativeTitleText}
+    ></lr-lite-chart>`,
+  })),
+  ...['radial', 'linear', 'ring'].map((shape) => ({
+    name: `lr-gauge ${shape}`,
+    expected: `${escapedNativeTitleText}: Value`,
+    template: html`<lr-gauge .shape=${shape} .label=${nativeTitleText} value-text="Value"></lr-gauge>`,
+  })),
+  {
+    name: 'lr-context-meter ring',
+    expected: `${escapedNativeTitleText}: 25`,
+    template: html`<lr-context-meter shape="ring" total="100"
+      .segments=${[{ label: nativeTitleText, value: 25 }]}
+    ></lr-context-meter>`,
+  },
+  {
+    name: 'lr-embedding-explorer point',
+    expected: `${escapedNativeTitleText}, embedding point 1`,
+    template: html`<lr-embedding-explorer
+      .points=${[{ id: 'p', x: 1, y: 2, label: nativeTitleText }]}
+    ></lr-embedding-explorer>`,
+  },
+];
+for (const { name, expected, template } of nativeTitleCases) {
+  const markup = await collectResult(render(template, {
+    elementRenderers: animatedImageContext.elementRenderers,
+  }));
+  assert.match(markup, /<template[^>]*shadowrootmode="open"/, `${name} must retain declarative shadow DOM`);
+  assert.equal((markup.match(/<title>/g) ?? []).length, 1, `${name} must render one native tooltip`);
+  assert.ok(markup.includes(`<title>${expected}</title>`), `${name} must preserve escaped native tooltip text`);
+  assert.doesNotMatch(markup, /<script>throw 42<\/script>/, `${name} must treat caller text as text`);
+}
+assert.equal(globalThis.window, undefined, 'populated SVG tooltip rendering must not create a window shim');
+assert.equal(globalThis.document, undefined, 'populated SVG tooltip rendering must not create a document shim');
 
 const { entries, inventory, loader } = await renderSsrMatrix();
 const inventoryTags = inventory.components.map(({ tag }) => tag).sort();

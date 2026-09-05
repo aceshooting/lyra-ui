@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Catalog ids must be unique and nonempty; malformed rows and later duplicates are omitted first-wins. The catalog is a bounded clone-owned frozen snapshot; create and reassign a new array after changes.',
+          'Removing label, hint, or error-text clears that optional copy in both catalog and free-text modes. Removed string properties retain null readback, and later assignments restore their content. Catalog ids must be unique and nonempty; malformed rows and later duplicates are omitted first-wins. The catalog is a bounded clone-owned frozen snapshot; create and reassign a new array after changes.',
       },
     },
   },

@@ -7,6 +7,7 @@ import type { LyraTerminal } from './terminal.class.js';
 const meta: Meta = {
   title: 'Terminal',
   component: 'lr-terminal',
+  parameters: { docs: { description: { component: 'A search with no matches clears earlier rendered match markers. Removing the content attribute clears output and preserves the normal null property readback.' } } },
 };
 export default meta;
 type Story = StoryObj;

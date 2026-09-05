@@ -21,6 +21,10 @@ Chart.js wrapper used directly and by the eight typed Chart.js tags plus `lr-his
 series surface and a raw Chart.js `config` passthrough (mirrors Web Awesome's `wa-chart` `config`
 property).
 
+For horizontal scalar bars, tooltip values come from parsed x rather than the category y, including
+an effective raw `config.options.indexAxis` override. Both formatter APIs follow this rule;
+structured points retain their y-value formatting.
+
 **Properties:**
 - `type: LyraChartType = 'bar'` — `LyraChartType = 'line' | 'bar' | 'scatter' | 'pie' | 'doughnut' |
   'radar' | 'polarArea' | 'bubble'` — every named default used by a typed `lr-*-chart` is
@@ -86,7 +90,9 @@ property).
     splitting the series in two.
   - `segmentColors` colors each *segment* (the line drawn between two consecutive points) by the
     segment's **starting** point index, so `['red', 'green']` over 3 points paints the first
-    segment red and the second green; a shorter array cycles. Wired to Chart.js's
+    segment red and the second green; a shorter array cycles. When rows are sampled, each
+    represented segment retains the original source starting-point index modulo the palette length.
+    Wired to Chart.js's
     `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
     Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
     empty array) emits no `segment` key at all, leaving line rendering exactly as before.
@@ -427,9 +433,12 @@ announced. In particular, unavailable data labels do not remove generated table 
   The raw `config` passthrough is deep-merged with `__proto__`/`constructor`/`prototype` keys skipped
   unconditionally, so a JSON-sourced `config` (e.g. parsed from an API response) can't reach up and
   pollute `Object.prototype` through the merge.
-- lazy-redraw + change gating: an `IntersectionObserver` gates `draw()` — while the host is scrolled
-  off-screen, property changes that would otherwise trigger a Chart.js redraw are skipped (and a
-  single redraw fires once it re-enters the viewport). Independently, `updated()` only reaches
+- lazy-redraw + change gating: with `IntersectionObserver` available, canvas construction waits
+  for its first delivered visibility decision. Off-screen charts remain unconstructed until
+  visible, and later off-screen property changes skip redraws until visibility returns. Without
+  the observer, drawing starts when the peer and canvas are ready. An empty delivered callback
+  retains the visible fallback. Peer loading and accessible DOM may settle while visibility is
+  pending. Independently, `updated()` only reaches
   Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `indexAxis`,
   `label`, `hiddenDatasets`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
   position, `valueFormatter`, `formatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,

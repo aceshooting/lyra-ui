@@ -218,7 +218,8 @@ export const styles = css`
   :host([orientation='horizontal']:dir(rtl)) [part='viewport'] {
     transform: scaleX(-1);
   }
-  :host([orientation='horizontal']:dir(rtl)) [part='node'] ::slotted(*) {
+  :host([orientation='horizontal']:dir(rtl)) [part='node'] ::slotted(*),
+  :host([orientation='horizontal']:dir(rtl)) [part='node'] [data-flow-canvas-default-card] {
     transform: scaleX(-1);
   }
   /* MUST stay before the :hover/:active rules below: all three are (0,2,0), so whichever is

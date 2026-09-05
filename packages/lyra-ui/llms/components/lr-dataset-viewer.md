@@ -34,8 +34,9 @@ rather than a phantom success, and a header-row target scrolls with the same
 `max-height`), and `scrollMode: DatasetViewerScrollMode = 'self'` (attribute `scroll-mode`,
 reflected). Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 `scrollMode='self'` preserves contained horizontal scrolling and applies `maxHeight`.
-`scrollMode='page'` drops both the overflow container and height cap so an uncapped sticky header
-uses the page scrollport; the explicit tradeoff is that a wide dataset can overflow its host.
+`scrollMode='page'` removes intervening scroll containers and the height cap, so a populated table's
+sticky header follows the page scrollport while rows continue below it. The border and rounded
+header corners remain; a wide dataset can overflow its host in page mode.
 Unsupported attribute and untyped property values normalize to `'self'`.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;
 `name` and the localized row-count caption are fallbacks. The same computed name (host `aria-label`,

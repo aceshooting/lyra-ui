@@ -2,7 +2,6 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
@@ -167,7 +166,8 @@ export interface LyraZoomableFrameEventMap {
  * `inert`, leaves sequential focus, refuses pointer and programmatic activation, and carries no
  * unsupported `aria-disabled` claim. Focus entry through Tab, pointer, or `focus()` is tracked on
  * the host as `data-frame-focused` so the shared focus ring remains visible across the browsing-
- * context boundary.
+ * context boundary. Zoom-control focus does not enter that browsing context; transitions between
+ * a zoom control and the iframe retain one balanced native focus/blur relay pair.
  *
  * @customElement lr-zoomable-frame
  * @slot zoom-in-icon - Override for the decorative zoom-in glyph. Its flattened subtree is inert
@@ -255,7 +255,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     if (!wasFocused && this.frameOwnsFocus(frame)) this.emitHostFocus(undefined, previous);
   }
 
-  /** Blur the internal iframe. */
+  /** Blur the internal iframe. Does not blur a focused zoom control. */
   override blur(): void {
     const frame = this.iframe;
     if (!frame || !this.frameOwnsFocus(frame)) return;
@@ -283,7 +283,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   private frameIsActive(frame: HTMLIFrameElement | undefined = this.iframe): boolean {
     return Boolean(
       frame && this.isConnected &&
-      (this.shadowRoot?.activeElement === frame || this.ownerDocument.activeElement === this),
+      this.shadowRoot?.activeElement === frame,
     );
   }
 
@@ -302,8 +302,13 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   ): void {
     const view = this.ownerDocument.defaultView;
     if (!view) return;
+    const related = source?.relatedTarget ?? relatedTarget;
+    const relatedNode = related as Node | null;
+    // An internal zoom control retargets to this host. Using it as the host event's
+    // relatedTarget suppresses the entire relay, although the iframe boundary changed.
+    const internalRelated = related === this || (relatedNode?.nodeType !== undefined && this.shadowRoot?.contains(relatedNode));
     const nativeSource = new view.FocusEvent(type, {
-      relatedTarget: source?.relatedTarget ?? relatedTarget,
+      relatedTarget: internalRelated ? null : related,
       view,
       detail: source?.detail ?? 0,
     });
@@ -766,7 +771,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     const inline = this.hasInlineDocument;
     const src = inline ? null : safeZoomableFrameSrc(this.src);
     const referrerPolicy = safeReferrerPolicy(this.referrerpolicy);
-    const explicitHostLabel = hostAriaLabel(this);
+    const explicitHostLabel = this.getAttribute('aria-label');
     const label = explicitHostLabel === ''
       ? ''
       : explicitHostLabel !== null

@@ -31,6 +31,19 @@ export const Default: Story = {
   ></lr-prompt-studio>`,
 };
 
+export const PreviewLimit: Story = {
+  render: () => html`
+    <p>Preview expansion stops at its resource limits. Messages and variables remain editable and save/run keep the original values.</p>
+    <lr-prompt-studio
+      .messages=${[{ id: 'limited', role: 'user' as const, content: '{{v0}}' }]}
+      .variables=${Array.from({ length: 65 }, (_, index) => ({
+        name: `v${index}`,
+        value: index < 64 ? `{{v${index + 1}}}` : 'Resolved text',
+      }))}
+    ></lr-prompt-studio>
+  `,
+};
+
 export const Narrow320: Story = {
   name: 'Narrow (320px, long content and selected version)',
   render: () => html`

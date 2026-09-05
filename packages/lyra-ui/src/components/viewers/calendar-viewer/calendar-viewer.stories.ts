@@ -20,3 +20,16 @@ export const MaxHeight: Story = { render: () => html`<lr-calendar-viewer style="
 export const Narrow320: Story = {
   render: () => html`<div style="max-width:320px"><lr-calendar-viewer src=${source} name="Long quarterly planning calendar.ics"></lr-calendar-viewer></div>`,
 };
+
+
+/** All-day early dates retain UTC calendar semantics and an exclusive DTEND. */
+export const EarlyAllDayDates: Story = {
+  render: () => {
+    const calendar = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', 'UID:early-all-day',
+      'DTSTART;VALUE=DATE:00990714', 'DTEND;VALUE=DATE:00990717',
+      'SUMMARY:Historical gathering', 'END:VEVENT', 'END:VCALENDAR', '',
+    ].join('\r\n');
+    return html`<lr-calendar-viewer name="Historical calendar" src=${`data:text/calendar;charset=utf-8,${encodeURIComponent(calendar)}`}></lr-calendar-viewer>`;
+  },
+};

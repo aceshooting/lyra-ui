@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraStat } from './stat.class.js';
 import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
 
 const meta: Meta = {
@@ -107,9 +108,7 @@ export const BreakdownRows: Story = {
     </div>
   `,
   play: async ({ canvasElement }) => {
-    const el = canvasElement.querySelector('lr-stat') as HTMLElement & {
-      rows: { label: string; value: string }[];
-    };
+    const el = canvasElement.querySelector('lr-stat') as LyraStat;
     el.rows = [
       { label: 'Direct', value: '64%' },
       { label: 'Referral', value: '21%' },
@@ -125,9 +124,7 @@ export const BreakdownRowsWithExactValue: Story = {
     </div>
   `,
   play: async ({ canvasElement }) => {
-    const el = canvasElement.querySelector('lr-stat') as HTMLElement & {
-      rows: { label: string; value: string; exactValue?: string }[];
-    };
+    const el = canvasElement.querySelector('lr-stat') as LyraStat;
     el.rows = [
       { label: 'Sonnet tokens', value: '8.4K', exactValue: '8,412 tokens' },
       { label: 'Haiku tokens', value: '3.1K', exactValue: '3,068 tokens' },
@@ -316,4 +313,19 @@ export const NarrowLongContent: Story = {
         ></lr-stat>
       `;
     }),
+};
+
+/** Passive slotted copy keeps modified-link behavior while the nested button owns its action. */
+export const ModifiedLinkAndOptionalCopy: Story = {
+  render: () => html`<div>
+    <button type="button" @click=${(event: Event) => {
+      const stat = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-stat')!;
+      stat.removeAttribute('caption');
+      stat.removeAttribute('sub');
+    }}>Remove optional copy</button>
+    <lr-stat label="Documents" value="42" href="https://example.com/documents" caption="Inventory" sub="Recently updated">
+      <span slot="caption">Open document details</span>
+      <button type="button" slot="sub">Independent action</button>
+    </lr-stat>
+  </div>`,
 };

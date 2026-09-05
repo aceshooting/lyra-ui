@@ -98,7 +98,8 @@ export class LyraTypingIndicator extends LyraElement {
 
   /** Accessible name, exposed via `role="status"`. Not re-announced on every
    *  animation frame — only mount (and any later change to this property)
-   *  produces a new announcement. An empty or whitespace-only value falls
+   *  produces a new announcement. Removing the attribute restores the localized fallback; an
+   *  explicit host aria-label keeps precedence. An empty or whitespace-only value falls
    *  back to the localized "Thinking…" copy (see
    *  `accessibleLabel`) so the component never loses its accessible name. */
   @property() label = '';
@@ -124,7 +125,7 @@ export class LyraTypingIndicator extends LyraElement {
    *  translation concern), same convention as `<lr-date-picker>`'s `previousLabel`. */
   private get accessibleLabel(): string {
     if (this.explicitAriaLabel !== null) return this.explicitAriaLabel;
-    const trimmed = this.label.trim();
+    const trimmed = (this.label ?? '').trim();
     return trimmed === '' ? this.localize('thinking') : trimmed;
   }
 

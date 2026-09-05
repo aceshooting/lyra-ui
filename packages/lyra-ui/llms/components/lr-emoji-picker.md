@@ -24,6 +24,17 @@ supplied (an explicit empty array still counts as supplied and skips the auto-lo
 When the filtered set reaches 200 items, the grid automatically windows its visible rows while
 preserving the full option count through `aria-setsize`/`aria-posinset`.
 
+Removing `label`, `hint`, or `error-text` treats the removed value as absent for rendering while
+preserving native attribute-removal property readback. Host `aria-describedby` references resolve in
+the host root onto the value-owning listbox before its local error/hint guidance. Target
+replacement, removal, reinsertion, reconnect, and adoption keep that relationship current. The
+search input keeps its separate description ownership.
+
+`form.reset()` restores the default value and pristine interaction feedback. Required constraints
+and persistent custom validity remain in force; a required-empty value remains invalid. Composing
+key events (`isComposing` or legacy key code 229) remain with text editing and do not navigate or
+pick an emoji.
+
 Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-select`/
 `lr-color-picker` (props + matching named slots + `form-control`/`form-control-label`/`hint`/
 `error` CSS parts) — left unset, none of that chrome renders.
@@ -35,11 +46,14 @@ can override size-tier fallbacks; a value set directly on the element still wins
 (`custom-error`), `disabled`, and `required`, plus
 `groups: readonly EmojiPickerGroup[] = []` (attribute: false) — readonly `EmojiPickerGroup { key,
 label, emojis: readonly EmojiPickerItem[] }`, readonly `EmojiPickerItem { emoji, name,
-shortcodes? }`; assignment captures a bounded frozen owned snapshot. The search field matches
+shortcodes? }`; assignment captures a bounded frozen owned snapshot, including the current contents
+of reused source item objects. Earlier snapshots remain frozen and unchanged; in-place source edits
+become visible only after an explicit `groups` assignment. The search field matches
 `name` and every `shortcodes` entry, case-insensitively. Consumer group labels render verbatim.
 Groups returned by the built-in loader carry private provenance, letting their fixed emojibase
-headings follow `registerLyraLocale()`/`.strings` without exposing localization keys as consumer
-data. Empty (the default, before the auto-loader
+headings follow `registerLyraLocale()`/`.strings` through filtering and windowed rendering, including
+same-locale `.strings` changes, without exposing localization keys as consumer data. Caller-authored
+headings remain literal even when their keys match built-in groups. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
 forwards a host-supplied accessible name to the internal `role="listbox"` grid. Only omission falls
 back to the visible label or localized default; an explicit `aria-label=""` remains empty.

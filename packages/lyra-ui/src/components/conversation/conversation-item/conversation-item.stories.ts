@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A selectable row representing one chat session in a history sidebar list — the intended `renderItem()` payload for a sibling virtualized-list component, but fully usable standalone. Its selectable region uses `role="button"` and does not require a listbox owner; label/excerpt/timestamp are individual props, not a bound `.session` object, for consistency with `<lr-chat-message>`.',
+          'Inline rename keeps IME composition keys in the editor; ordinary Enter commits and Escape cancels after composition. A selectable row representing one chat session in a history sidebar list — the intended `renderItem()` payload for a sibling virtualized-list component, but fully usable standalone. Its selectable region uses `role="button"` and does not require a listbox owner; label/excerpt/timestamp are individual props, not a bound `.session` object, for consistency with `<lr-chat-message>`.',
       },
     },
   },

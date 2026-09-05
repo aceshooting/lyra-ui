@@ -482,7 +482,10 @@ export interface LyraTableEventMap<T = unknown> {
  * `activateRow()`). When controlled rows or columns replace the focused
  * member, focus follows the same stable key when it survives and otherwise
  * clamps to the nearest surviving index; an update never reclaims focus once
- * the user has moved it outside the table.
+ * the user has moved it outside the table. Effective locale changes use the same current
+ * page identity for activation, editing, and direct row-focus restoration.
+ * Priority-hidden columns hide their header, body, and footer cells together; revealing
+ * priority columns restores all three bands.
  * Blank and later-duplicate column keys are omitted first-wins at assignment. Rows retain their
  * caller-owned records, then one canonical `rowKey` projection omits blank and later-duplicate
  * identities before filtering, counts, pagination, focus, actions, and events.
@@ -1103,6 +1106,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private resizeEventWindow?: Window;
 
   private rowsByKey = new Map<string, TableRowEntry<T>>();
+  private rowsLocale?: string;
   private columnsByKey = new Map<string, TableColumn<T>>();
 
   /** Watches `[part='base']`'s own inline-size — the `@container` query
@@ -1634,7 +1638,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     locale: string;
   } | null = null;
   private matchingEntries(): TableRowEntry<T>[] {
-    const text = this.filterText.trim();
+    const text = (this.filterText ?? '').trim();
     // The locale only affects case-folding, which only happens when there is
     // filter text — skipping the read here keeps a locale change from
     // invalidating an unfiltered cache.
@@ -1925,7 +1929,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       changed.has('sortKey') ||
       changed.has('sortDir') ||
       changed.has('sortMode') ||
-      changed.has('groupBy')
+      changed.has('groupBy') ||
+      this.rowsLocale !== this.effectiveLocale
     );
   }
 
@@ -2014,28 +2019,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (changed.has('columns')) {
       this.columnsByKey = new Map(this.columns.map((c) => [c.key, c]));
     }
-    if (
-      changed.has('rows') ||
-      changed.has('rowKey') ||
-      changed.has('filterText') ||
-      changed.has('filter') ||
-      changed.has('page') ||
-      changed.has('pageSize') ||
-      changed.has('paginationMode') ||
-      changed.has('totalItems') ||
-      // Sorting reorders the entries and, under pagination, changes which of them the current
-      // page even contains -- so the key->entry map has to be rebuilt alongside it.
-      changed.has('columns') ||
-      changed.has('sortKey') ||
-      changed.has('sortDir') ||
-      changed.has('sortMode') ||
-      // A client sort is applied within each group, so swapping `groupBy` re-orders the entries
-      // (and, under pagination, changes which of them the current page holds) too.
-      changed.has('groupBy')
-    ) {
+    // Effective locale can change through an ancestor without a named property update. Reuse
+    // the same invalidation for the visible identity map and its pre-render focus snapshot.
+    if (this.rowsAffectingRovingFocusChanged(changed)) {
       this.rowsByKey = new Map(
         this.renderedEntries().map((entry) => [encodeKey(entry.key), entry])
       );
+      this.rowsLocale = this.effectiveLocale;
     }
     this.resolveRovingFocusTarget();
     if (this.editingCell !== null) {
@@ -2909,7 +2899,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                   <tr part="footer-row">
                     ${hasExpand ? html`<td part="footer-cell" aria-hidden="true"></td>` : nothing}
                     ${this.columns.map(
-                      (col) => html`<td part="footer-cell" data-col-key=${col.key} data-align=${col.align ?? 'start'}>
+                      (col) => html`<td part="footer-cell" data-col-key=${col.key} data-priority=${col.priority ?? nothing} data-align=${col.align ?? 'start'}>
                         ${col.footer?.(matchingEntries.map((entry) => entry.row)) ?? ''}
                       </td>`
                     )}

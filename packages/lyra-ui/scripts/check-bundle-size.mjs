@@ -112,9 +112,7 @@ if (
   );
 }
 for (const [entry, budget] of Object.entries(initialMarginalBudgets)) {
-  if (!Number.isSafeInteger(budget) || budget <= 0) {
-    throw new TypeError(`${entry}: initial marginal budget must be a positive integer KiB ceiling`);
-  }
+  budgetKilobytesToBytes(budget, `${entry}: initial marginal budget`);
 }
 const exclusionClaims = JSON.parse(readFileSync(exclusionClaimsPath, "utf8"));
 const entries = Object.keys(budgets)

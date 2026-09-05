@@ -34,6 +34,10 @@ and repeated edge movements append repeated announcements even when their text i
 no live-region role of its own. Pointer input resolves the nearest word from the adequately-sized
 SVG surface; the potentially tiny text glyphs are not independent hit targets.
 
+Pinned opposite-sign finite endpoints such as `[-1e308, 1e308]` produce bounded finite scale
+fractions and SVG geometry, including with reversed endpoints or square-root scaling. Word weights
+remain nonnegative; placement budgets, font-size limits, and the omitted-word policy are unchanged.
+
 **Properties:**
 
 - `words: readonly WordCloudWord[] = []` (attribute: false) — readonly `{ text: string, weight:

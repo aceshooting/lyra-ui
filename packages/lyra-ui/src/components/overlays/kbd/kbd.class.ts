@@ -110,7 +110,7 @@ export function shortcutTokenLabel(rawToken: string, isMac: boolean, localize?: 
   }
   if (lower === 'shift') return { visual: '⇧', word: resolve('kbdShiftWord', 'Shift') };
 
-  const named = NAMED_KEY_LABELS[lower];
+  const named = Object.hasOwn(NAMED_KEY_LABELS, lower) ? NAMED_KEY_LABELS[lower] : undefined;
   if (named) {
     return { visual: resolve(named.visualKey, named.visual), word: resolve(named.wordKey, named.word) };
   }
@@ -178,6 +178,8 @@ function isEffectivePlatform(value: string | null): value is EffectiveKbdPlatfor
  * glyph) that, when non-empty, replaces the `keys`-driven rendering.
  * A host `aria-label` names that custom shortcut as one `role="img"` unit;
  * without one, the slotted content continues to own its own semantics.
+ *
+ * Removing keys safely clears the shortcut. Unknown tokens, including constructor and __proto__, render and name themselves verbatim; recognized modifiers keep their localized labels.
  *
  * @customElement lr-kbd
  * @slot - Optional override for fully custom key-cap content, replacing the
@@ -279,7 +281,7 @@ export class LyraKbd extends LyraElement {
     // is intentional (KbdLocalize callers may ignore trailing params).
     const tokens = this.hasCustomContent
       ? []
-      : parseShortcut(this.keys, this.effectivePlatform === 'mac', (key) => this.localize(key));
+      : parseShortcut(this.keys ?? '', this.effectivePlatform === 'mac', (key) => this.localize(key));
     // role="img" treats the chip as one opaque unit (matching
     // lr-context-meter's/lr-chart's canvas usage of the same pattern):
     // the individual glyphs and "+" separators aren't real words, so

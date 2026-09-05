@@ -34,6 +34,9 @@ A format-dispatching viewer for one document/attachment, plus the visual state m
 server-side conversion a host app runs in front of it. First-party invention (no Web Awesome
 equivalent).
 
+Fitting images remain centered; overflowing nonzoomable images begin inside the reachable body
+scroll range, so their top and bottom are available.
+
 Format dispatch is intentionally minimal: only `text/*`/`application/json` (a plain, scrollable
 `<pre>` — no syntax highlighting; compose `<lr-code-block>` yourself via the `unsupported` slot for
 that) and `image/*` (a contained `<img>`) render inline. Everything else — PDF, office documents,
@@ -69,7 +72,10 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   still in progress. Validated per-sink before use — see the URL-safety note above; an unsafe/
   malformed value is treated as if `src` were unusable for that sink, never passed to `fetch()`/
   `<img>`/the anchor.
-- `mimeType: string = ''` (attribute `mime-type`) — drives format dispatch (see above).
+- `mimeType: string = ''` (attribute `mime-type`) — drives format dispatch using the case-insensitive
+  MIME essence before parameters. For example, `application/json; charset=utf-8` renders as text.
+  Attribute removal retains `null` readback and is interpreted as an absent format by the renderer;
+  an explicitly empty attribute remains empty, and later valid values restore dispatch.
 - `filename: string = ''` — shown in the header and used as the download link's suggested filename.
 - `alt?: string` — image description. When omitted, the filename/localized image-preview fallback
   is used; an explicit empty string keeps a decorative preview's `alt=""` intact.
@@ -247,6 +253,11 @@ A dialog-hosted, format-dispatching full viewer for one document or attachment. 
 renderer registry and falls back to `<lr-document-preview>` when no renderer matches the file's MIME
 type. First-party invention.
 
+MIME matching uses the case-insensitive essence before parameters and ignores outer whitespace. An
+extensionless `application/*+xml` file selects the XML renderer when it is registered, including a
+value such as ` APPLICATION/ATOM+XML ; charset=utf-8 `. Exact registry keys retain precedence,
+filename extensions remain a fallback, and the renderer receives the original MIME value.
+
 A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty
 value, without suppressing the visible `name` heading.
 
@@ -262,9 +273,10 @@ value, without suppressing the visible `name` heading.
   anchors/highlights, and download; the scalar `name`, `mimeType`, `src`, `anchor`, `highlights`,
   and `alt` properties resume their legacy behavior when `payload` is reset to `undefined`.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry
-  override. A native map assignment is copied behind a frozen readonly facade; definition records
-  are cloned and frozen while callback identities are retained. Later source-map or definition
-  mutation is not observed. When unset, the
+  override. Assign either a native map or the result of `createDocumentRendererRegistry()`; both
+  use the same bounded snapshot behind a frozen readonly facade. Definition records are cloned and
+  frozen while callback identities are retained. Later source-map or definition mutation is not
+  observed. Reassigning the same source or retained snapshot leaves the snapshot unchanged. When unset, the
   instance owns an immutable snapshot of the built-ins registered when it was constructed. A later
   module import/registration cannot mutate an existing viewer. A throwing consumer matcher or
   renderer is contained as the localized error state rather than escaping the update.
@@ -524,6 +536,11 @@ An attachment with no filename uses the localized `emailViewerUnnamedAttachment`
 `lr-attachment-open` detail. The fallback resolves while rendering, so changing the locale or
 per-instance `strings` after the message loads updates it without reparsing the message.
 
+When `foldQuotes` is enabled, `search(query)` reveals matching supported plain-text and HTML quoted
+replies before navigating. Reveal uses the shared text index's Unicode normalization, whitespace
+collapse, soft-hyphen removal, locale matching, and query/work bounds, so padded or normalized
+queries reveal the same quote as ordinary matching text. Folding remains opt-in.
+
 Parser output is admitted through a bounded direct-data projection: malformed optional fields,
 recipients, and attachment entries are omitted without discarding later valid siblings. Accepted
 string, `Uint8Array`, and `ArrayBuffer` attachment bytes are copied before use, and every
@@ -599,6 +616,10 @@ Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders
 plain text, including its title, start/end time, location, and description. RFC 5545 `DATE` values
 remain all-day dates rather than fabricated midnight times, and an all-day `DTEND` is displayed as
 the exclusive boundary it represents (14–17 renders as 14–16). No HTML is injected.
+
+Valid early all-day dates, including years `0001`, `0099`, and `0100`, retain their UTC calendar
+year when parsed through `ical.js`; the exclusive `DTEND` display rule remains unchanged. The peer
+may normalize malformed raw date fields before Lyra receives them.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
@@ -729,6 +750,10 @@ epub.js renders the reading area into its stable `mount` element, using an inter
 chapter content. A usable book exposes `ready`, `renderTo()`, and `destroy()`, and its rendition
 exposes `display()`, `prev()`, `next()`, `on()`, and `annotations.highlight()`/`remove()`; an absent
 required capability is terminal. Navigation and spine data are optional.
+
+Genuine native `Selection`/`Range` objects from the current chapter iframe are accepted through
+platform accessors, including across document realms. Arbitrary peer-owned accessors remain
+uninvoked, and callbacks from replaced or disconnected books cannot emit stale selections.
 
 **Properties:** `src: string = ''` and `name: string = ''`. A plain `aria-label` attribute on the
 host overrides the reading region's accessible name — by attribute presence, so an explicitly empty
@@ -918,6 +943,9 @@ resource or paint-server references before insertion, preventing fetched SVG con
 the viewer's paint box or starting secondary requests. Local `url(#id)` paint servers and embedded
 raster data remain available.
 
+Fitting SVG content stays centered. In a capped nonzoomable viewer, overflowing content begins
+inside the body's reachable scroll range, keeping both its top and bottom available.
+
 Adopts `DocumentAnchorTarget` (the same shared mixin `lr-pdf-viewer`/`lr-csv-viewer` use): a `region`
 anchor addresses one `highlights` entry, matched by reference or by structural equality of its `rect`
 (and optional `page`). Assigning `anchor` or calling `scrollToAnchor()` scrolls the matching
@@ -1066,8 +1094,9 @@ rather than a phantom success, and a header-row target scrolls with the same
 `max-height`), and `scrollMode: DatasetViewerScrollMode = 'self'` (attribute `scroll-mode`,
 reflected). Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 `scrollMode='self'` preserves contained horizontal scrolling and applies `maxHeight`.
-`scrollMode='page'` drops both the overflow container and height cap so an uncapped sticky header
-uses the page scrollport; the explicit tradeoff is that a wide dataset can overflow its host.
+`scrollMode='page'` removes intervening scroll containers and the height cap, so a populated table's
+sticky header follows the page scrollport while rows continue below it. The border and rounded
+header corners remain; a wide dataset can overflow its host in page mode.
 Unsupported attribute and untyped property values normalize to `'self'`.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;
 `name` and the localized row-count caption are fallbacks. The same computed name (host `aria-label`,
@@ -1511,6 +1540,11 @@ include instance. Other navigation and resource attributes such as `href`, `src`
 cannot remain interactive; their wrappers are unwrapped when their ordinary children are safe,
 while elements such as inputs that have no passive content are removed.
 
+The same passive restrictions apply through nested template contents before a remote document is
+retained in the cache or a selected fragment becomes live. Template text and fragment selection
+remain supported at nested depths, including ordinary elements inside templates; permitted local
+anchors still resolve against per-instance rebased IDs.
+
 A bare primitive: no label/hint/error chrome, no implicit role, no computed accessible name, and no
 `aria-live` wrapper (the fragment can carry its own landmarks; wrapping the host would re-announce
 all of it on every load). The host always carries explicit `aria-busy="true"|"false"`: true while
@@ -1726,7 +1760,10 @@ are removed, and only inline base64 raster image sources render. Sanitized `imag
 is likewise network-silent and non-interactive: animation is removed and only same-document
 fragment references or inline base64 raster image references survive.
 Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `path[0]` as a cell
-index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, no editing, no
+index; `fragment` anchors resolve a cell's own `id`. For cells with IDs, successful public anchor
+navigation scrolls the matching virtual row into the notebook allocation and applies active-cell
+paint using that same ID. Repeating a target scrolls back to it after manual scrolling.
+`maxHeight` also bounds the child virtual viewport. No execution, no kernels, no editing, no
 ipywidgets.
 
 **Properties:** `src: string = ''` — URL to fetch and parse as a notebook; ignored while `notebook`
@@ -1847,6 +1884,10 @@ matching. Every document type declaration is rejected before `DOMParser`, preven
 entity access and browser-specific internal-entity expansion. Not `lr-json-viewer` (JS values); not `lr-html-viewer`
 (sanitized _rendered_ HTML). No XPath/XSLT evaluation, no editing, no schema validation.
 
+The registration entry also matches extensionless `application/*+xml` MIME essences, ignoring
+parameters, case and outer whitespace. Exact registered MIME keys retain precedence over this
+fallback matcher.
+
 **Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
 string` (property only) — raw XML text to parse and render; wins over `src`, and setting it parses
 synchronously. Assigning `undefined` relinquishes inline authority and immediately resumes an
@@ -1865,8 +1906,11 @@ attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are 
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
 `clearSearch()`), accepting at most 4,096 query code units and scanning at most 4,000,000 code
 units while retaining 10,000 matches; `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
-`clearSearch()` clears the query and matches. All three resolve only after the newly active match's
-row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
+`clearSearch()` clears the query and matches. Imperative `search()`, `searchNext()` and
+`searchPrevious()` reopen the selected match and its ancestors, including manually collapsed
+nodes, before scrolling. Other explicit collapse choices remain in effect, and later manual
+collapse still takes precedence over default expansion. All three resolve only after the newly
+active match's row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
 `prefers-reduced-motion`) — before 9.0.0 they moved `data-active-match` without ever scrolling, so
 on a document taller than the viewport the reader never saw the match they had stepped to. Replacing
 the XML source clears document-relative matches and emits the canonical empty `lr-search-change`;
@@ -2101,464 +2145,539 @@ its module-worker URL configured for the bundler before this viewer constructs t
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-viewers-archive-viewer-archive-viewer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer.class.js`.
   `ArchiveEntry {
-  name: unknown;
-  dir: unknown;
-  size: unknown;
-}`
+    name: string;
+    dir: boolean;
+    size: number;
+  }`
 
 - **`components-viewers-calendar-viewer-calendar-loader-contracts`** — Supporting data types and helpers for this component family.
-  `clearIcalCache(): unknown`
+  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  `clearIcalCache(): void`
+  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
   `IcalApi {
-  parse: unknown;
-  source: unknown;
-  Component: unknown;
-  Event: unknown;
-}`
+    parse(source: string): unknown;
+    Component: new (data: unknown) => IcalComponentApi;
+    Event: new (component: unknown) => IcalEventApi;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
   `IcalComponentApi {
-  getAllSubcomponents: unknown;
-  name: unknown;
-}`
+    getAllSubcomponents(name: string): unknown[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
   `IcalEventApi {
-  uid: unknown;
-  summary: unknown;
-  startDate: unknown;
-  endDate: unknown;
-  location: unknown;
-  description: unknown;
-}`
+    uid?: string;
+    summary?: string;
+    startDate?: IcalTimeApi;
+    endDate?: IcalTimeApi;
+    location?: string;
+    description?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
   `IcalTimeApi {
-  toJSDate: unknown;
-  isDate: unknown;
-  year: unknown;
-  month: unknown;
-  day: unknown;
-}`
-  `loadIcalDeps(/* public names: importIcal */): unknown`
-  `loadIcal(): unknown`
+    toJSDate(): Date;
+    isDate?: boolean;
+    year?: number;
+    month?: number;
+    day?: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  `loadIcalDeps(importIcal?: () => Promise<unknown>): Promise<IcalApi | null>`
+  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  `loadIcal(): Promise<IcalApi | null>`
 
 - **`components-viewers-calendar-viewer-calendar-viewer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.class.js`.
   `ParsedCalendarEvent {
-  uid: unknown;
-  summary: unknown;
-  start: unknown;
-  end: unknown;
-  startKind: unknown;
-  endKind: unknown;
-  location: unknown;
-  description: unknown;
-}`
+    uid: string;
+    summary: string;
+    start: Date | null;
+    end: Date | null;
+    startKind: ParsedCalendarTimeKind | null;
+    endKind: ParsedCalendarTimeKind | null;
+    location: string;
+    description: string;
+  }`
 
 - **`components-viewers-contact-viewer-vcard-contracts`** — Supporting data types and helpers for this component family.
-  `parseVCards(/* public names: text, options */): unknown`
+  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
+  `parseVCards(text: string, options?: number | ParseVCardsOptions): VCardContact[]`
+  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
   `ParseVCardsOptions {
-  maxContacts: unknown;
-}`
+    maxContacts?: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
   `VCardAddress {
-  poBox: unknown;
-  extendedAddress: unknown;
-  streetAddress: unknown;
-  locality: unknown;
-  region: unknown;
-  postalCode: unknown;
-  country: unknown;
-  types: unknown;
-}`
+    poBox: string;
+    extendedAddress: string;
+    streetAddress: string;
+    locality: string;
+    region: string;
+    postalCode: string;
+    country: string;
+    types: string[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
   `VCardContact {
-  fn: unknown;
-  n: unknown;
-  org: unknown;
-  tel: unknown;
-  email: unknown;
-  adr: unknown;
-}`
+    fn: string;
+    n?: VCardName;
+    org: string[];
+    tel: VCardTypedValue[];
+    email: VCardTypedValue[];
+    adr: VCardAddress[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
   `VCardName {
-  familyNames: unknown;
-  givenNames: unknown;
-  additionalNames: unknown;
-  honorificPrefixes: unknown;
-  honorificSuffixes: unknown;
-}`
+    familyNames: string;
+    givenNames: string;
+    additionalNames: string;
+    honorificPrefixes: string;
+    honorificSuffixes: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
   `VCardTypedValue {
-  value: unknown;
-  types: unknown;
-}`
+    value: string;
+    types: string[];
+  }`
 
 - **`components-viewers-dataset-viewer-dataset-viewer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/dataset-viewer/dataset-viewer.class.js`.
   `DatasetTable {
-  fields: unknown;
-  rows: unknown;
-}`
+    fields: string[];
+    rows: Record<string, string>[];
+  }`
 
 - **`components-viewers-document-compare-document-compare-contracts`** — Supporting data types and helpers for this component family.
-  `DocumentCompareVersion {
-  text: unknown;
-  highlights: unknown;
-  id: unknown;
-  name: unknown;
-  mimeType: unknown;
-  uri: unknown;
-  version: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-compare/document-compare.class.js`.
+  `DocumentCompareVersion extends DocumentRef {
+    readonly text?: string;
+    readonly highlights?: readonly LyraHighlight[];
+    // Inherited from DocumentRef.
+    id: string;
+    name: string;
+    mimeType?: string;
+    uri?: string;
+    version?: string;
+  }`
 
 - **`components-viewers-document-viewer-anchors-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
   `AnchorResultDetail {
-  found: unknown;
-}`
+    found: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
   `AnchorTargetCapabilities {
-  anchors: unknown;
-  search: unknown;
-  textSelect: unknown;
-}`
+    anchors?: LyraAnchorKind[];
+    search?: boolean;
+    textSelect?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
   `HighlightActivateDetail {
-  highlightId: unknown;
-}`
+    highlightId: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
   `LyraHighlight {
-  id: unknown;
-  anchor: unknown;
-  label: unknown;
-  note: unknown;
-  tone: unknown;
-}`
+    readonly id: string;
+    readonly anchor: LyraAnchor;
+    readonly label?: string;
+    readonly note?: string;
+    readonly tone?: LyraHighlightTone;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
   `TextSelectDetail {
-  text: unknown;
-  anchor: unknown;
-  rects: unknown;
-}`
+    readonly text: string;
+    readonly anchor: LyraAnchor | null;
+    readonly rects: readonly TextSelectRect[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
   `TextSelectRect {
-  x: unknown;
-  y: unknown;
-  width: unknown;
-  height: unknown;
-  top: unknown;
-  right: unknown;
-  bottom: unknown;
-  left: unknown;
-}`
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly left: number;
+  }`
 
 - **`components-viewers-document-viewer-registry-contracts`** — Supporting data types and helpers for this component family.
-  `adaptDocumentRenderer(/* public names: candidate, file, supplied */): unknown`
-  `clearDocumentRenderers(): unknown`
-  `createDocumentRendererAdapter(/* public names: definition */): unknown`
-  `createDocumentRendererRegistry(/* public names: overrides */): unknown`
-  `DirectDocumentRendererDefinition {
-  render: unknown;
-  file: unknown;
-  capabilities: unknown;
-  adapter: unknown;
-  load: unknown;
-  matches: unknown;
-}`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `adaptDocumentRenderer(candidate: LyraResolvedDocumentRendererDefinition, file: DocumentFile, supplied?: LyraDocumentRendererPayload): LyraAdaptedDocumentRenderer`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `clearDocumentRenderers(): void`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `createDocumentRendererAdapter<K extends LyraDocumentRendererPayloadKind>(definition: LyraDocumentRendererAdapterDefinition<K>): LyraDocumentRendererAdapter`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `createDocumentRendererRegistry(overrides?: Iterable<readonly [string, DocumentRendererDefinition]>): DocumentRendererRegistry`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `DirectDocumentRendererDefinition extends DocumentRendererDefinitionBase {
+    readonly render: (file: DocumentFile) => unknown;
+    readonly capabilities?: AnchorTargetCapabilities;
+    readonly adapter?: never;
+    readonly load?: never;
+    // Inherited from DocumentRendererDefinitionBase.
+    readonly matches?: (file: DocumentFile) => boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `DocumentFile {
-  name: unknown;
-  mimeType: unknown;
-  src: unknown;
-  anchor: unknown;
-  highlights: unknown;
-  alt: unknown;
-}`
-  `findDocumentRenderer(/* public names: file, registry */): unknown`
-  `getDefaultDocumentRendererRegistry(): unknown`
-  `LazyDocumentRendererDefinition {
-  render: unknown;
-  adapter: unknown;
-  capabilities: unknown;
-  load: unknown;
-  default: unknown;
-  matches: unknown;
-  file: unknown;
-}`
-  `loadDocumentRenderer(/* public names: candidate */): unknown`
-  `LyraAdaptedDocumentRendererDefinition {
-  adapter: unknown;
-  render: unknown;
-  capabilities: unknown;
-  load: unknown;
-  matches: unknown;
-  file: unknown;
-}`
+    readonly name: string;
+    readonly mimeType: string;
+    readonly src: string;
+    readonly anchor?: LyraAnchor | string;
+    readonly highlights?: readonly LyraHighlight[];
+    readonly alt?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `findDocumentRenderer(file: DocumentFile, registry?: DocumentRendererRegistry): DocumentRendererDefinition | undefined`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `getDefaultDocumentRendererRegistry(): DocumentRendererRegistry`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `LazyDocumentRendererDefinition extends DocumentRendererDefinitionBase {
+    readonly render?: never;
+    readonly adapter?: never;
+    readonly capabilities?: AnchorTargetCapabilities;
+    readonly load: () => Promise<DirectDocumentRendererDefinition | {
+      default: DirectDocumentRendererDefinition;
+    }>;
+    // Inherited from DocumentRendererDefinitionBase.
+    readonly matches?: (file: DocumentFile) => boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `loadDocumentRenderer(candidate: DirectDocumentRendererDefinition | LazyDocumentRendererDefinition): Promise<DirectDocumentRendererDefinition>;
+  loadDocumentRenderer(candidate: LyraAdaptedDocumentRendererDefinition): Promise<LyraAdaptedDocumentRendererDefinition>;
+  loadDocumentRenderer(candidate: DocumentRendererDefinition): Promise<LyraResolvedDocumentRendererDefinition>;`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `LyraAdaptedDocumentRendererDefinition extends DocumentRendererDefinitionBase {
+    readonly adapter: LyraDocumentRendererAdapter;
+    readonly render?: never;
+    readonly capabilities?: never;
+    readonly load?: never;
+    // Inherited from DocumentRendererDefinitionBase.
+    readonly matches?: (file: DocumentFile) => boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LyraAdaptedDocumentRenderer {
-  payload: unknown;
-  capabilities: unknown;
-  render: unknown;
-}`
+    readonly payload: LyraDocumentRendererPayload;
+    readonly capabilities?: AnchorTargetCapabilities;
+    readonly render: () => unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LyraAvDocumentRendererPayload {
-  kind: unknown;
-  file: unknown;
-  cues: unknown;
-  tracks: unknown;
-}`
+    readonly kind: 'av';
+    readonly file: LyraDocumentFile;
+    readonly cues: readonly LyraAvCue[];
+    readonly tracks: readonly LyraAvTrack[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LyraDocumentFile {
-  name: unknown;
-  mimeType: unknown;
-  src: unknown;
-  anchor: unknown;
-  highlights: unknown;
-  alt: unknown;
-}`
-  `LyraDocumentRendererAdapterDefinition {
-  kind: unknown;
-  adapt: unknown;
-  file: unknown;
-  supplied: unknown;
-  capabilities: unknown;
-  payload: unknown;
-  render: unknown;
-}`
+    readonly name: string;
+    readonly mimeType: string;
+    readonly src: string;
+    readonly anchor?: LyraAnchor | string;
+    readonly highlights?: readonly LyraHighlight[];
+    readonly alt?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `LyraDocumentRendererAdapterDefinition<K extends LyraDocumentRendererPayloadKind> {
+    readonly kind: K;
+    readonly adapt: (file: DocumentFile, supplied?: LyraDocumentRendererPayload) => LyraDocumentRendererPayloadFor<K>;
+    readonly capabilities: (payload: LyraDocumentRendererPayloadFor<K>) => AnchorTargetCapabilities | undefined;
+    readonly render: (payload: LyraDocumentRendererPayloadFor<K>) => unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LyraDocumentRendererAdapter {
-  kind: unknown;
-  adapt: unknown;
-  file: unknown;
-  supplied: unknown;
-  capabilities: unknown;
-  payload: unknown;
-  render: unknown;
-}`
+    readonly kind: LyraDocumentRendererPayloadKind;
+    readonly [DOCUMENT_RENDERER_ADAPTER]: true;
+    adapt(file: DocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload;
+    capabilities(payload: LyraDocumentRendererPayload): AnchorTargetCapabilities | undefined;
+    render(payload: LyraDocumentRendererPayload): unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LyraGenericDocumentRendererPayload {
-  kind: unknown;
-  file: unknown;
-}`
-  `registerDocumentRenderer(/* public names: key, definition */): unknown`
-  `snapshotLyraDocumentRendererPayload(/* public names: value */): unknown`
+    readonly kind: 'document';
+    readonly file: LyraDocumentFile;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `registerDocumentRenderer(key: string, definition: DocumentRendererDefinition): void`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `snapshotLyraDocumentRendererPayload(value: LyraDocumentRendererPayload): LyraDocumentRendererPayload`
 
 - **`components-viewers-docx-viewer-docx-loader-contracts`** — Supporting data types and helpers for this component family.
-  `clearDocxDepsCache(): unknown`
+  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  `clearDocxDepsCache(): void`
+  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
   `DocxDeps {
-  mammoth: unknown;
-  DOMPurify: unknown;
-}`
-  `getDocxDepsIfLoaded(): unknown`
-  `loadDocxDeps(): unknown`
-  `loadMammothAndSanitizer(/* public names: importMammoth, importDompurify */): unknown`
+    mammoth: MammothApi | undefined;
+    DOMPurify: HtmlSanitizer | undefined;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  `getDocxDepsIfLoaded(): DocxDeps | undefined`
+  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  `loadDocxDeps(): Promise<DocxDeps>`
+  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  `loadMammothAndSanitizer(importMammoth?: () => Promise<unknown>, importDompurify?: () => Promise<unknown>): Promise<DocxDeps>`
+  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
   `MammothApi {
-  convertToHtml: unknown;
-  input: unknown;
-  arrayBuffer: unknown;
-  value: unknown;
-  messages: unknown;
-}`
+    convertToHtml(input: {
+      arrayBuffer: ArrayBuffer;
+    }): Promise<{
+      value: string;
+      messages: unknown[];
+    }>;
+  }`
 
 - **`components-viewers-docx-viewer-docx-viewer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.class.js`.
   `DocxHeadingItem {
-  id: unknown;
-  label: unknown;
-  level: unknown;
-}`
+    id: string;
+    label: string;
+    level: number;
+  }`
 
 - **`components-viewers-ebook-viewer-ebook-viewer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer.class.js`.
   `EbookTocItem {
-  id: unknown;
-  label: unknown;
-  href: unknown;
-  level: unknown;
-}`
+    id: string;
+    label: string;
+    href: string;
+    level: number;
+  }`
 
 - **`components-viewers-email-viewer-email-loader-contracts`** — Supporting data types and helpers for this component family.
-  `clearEmailDepsCache(): unknown`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  `clearEmailDepsCache(): void`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
   `EmailDeps {
-  PostalMime: unknown;
-  DOMPurify: unknown;
-}`
-  `getEmailDepsIfLoaded(): unknown`
-  `loadEmailAndSanitizer(/* public names: importPostalMime, importDompurify */): unknown`
-  `loadEmailDeps(): unknown`
+    PostalMime: PostalMimeApi | undefined;
+    DOMPurify: HtmlSanitizer | undefined;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  `getEmailDepsIfLoaded(): EmailDeps | undefined`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  `loadEmailAndSanitizer(importPostalMime?: () => Promise<unknown>, importDompurify?: () => Promise<unknown>): Promise<EmailDeps>`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  `loadEmailDeps(): Promise<EmailDeps>`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
   `PostalAddressApi {
-  name: unknown;
-  address: unknown;
-  group: unknown;
-}`
+    name?: string;
+    address?: string;
+    group?: PostalAddressApi[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
   `PostalAttachmentApi {
-  filename: unknown;
-  mimeType: unknown;
-  content: unknown;
-}`
+    filename?: string | null;
+    mimeType?: string;
+    content: ArrayBuffer | Uint8Array | string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
   `PostalMessageApi {
-  html: unknown;
-  text: unknown;
-  from: unknown;
-  to: unknown;
-  subject: unknown;
-  date: unknown;
-  attachments: unknown;
-}`
+    html?: string;
+    text?: string;
+    from?: PostalAddressApi;
+    to?: PostalAddressApi[];
+    subject?: string;
+    date?: string;
+    attachments?: PostalAttachmentApi[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
   `PostalMimeApi {
-  parse: unknown;
-  input: unknown;
-}`
+    parse(input: ArrayBuffer): Promise<PostalMessageApi>;
+  }`
 
 - **`components-viewers-email-viewer-email-viewer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.class.js`.
   `LyraEmailAttachmentOpenDetail {
-  attachment: unknown;
-  filename: unknown;
-  mimeType: unknown;
-  content: unknown;
-}`
+    readonly attachment: Readonly<{
+      filename: string;
+      mimeType: string;
+      content?: Blob;
+    }>;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.class.js`.
   `ParsedEmailAttachment {
-  filename: unknown;
-  mimeType: unknown;
-  size: unknown;
-  content: unknown;
-}`
+    filename: string;
+    mimeType: string;
+    size: number;
+    content?: Uint8Array;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.class.js`.
   `ParsedEmail {
-  from: unknown;
-  to: unknown;
-  subject: unknown;
-  date: unknown;
-  bodyHtml: unknown;
-  bodyText: unknown;
-  attachments: unknown;
-}`
+    from: string;
+    to: string;
+    subject: string;
+    date: string;
+    bodyHtml: string | null;
+    bodyText: string | null;
+    attachments: ParsedEmailAttachment[];
+  }`
 
 - **`components-viewers-highlight-layer-highlight-layer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/highlight-layer/highlight-layer.class.js`.
   `HighlightLayerItem {
-  id: unknown;
-  rects: unknown;
-  x: unknown;
-  y: unknown;
-  width: unknown;
-  height: unknown;
-  label: unknown;
-  tone: unknown;
-}`
+    readonly id: string;
+    readonly rects: readonly Readonly<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }>[];
+    readonly label?: string;
+    readonly tone?: LyraHighlightTone;
+  }`
 
 - **`components-viewers-include-include-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/include/include.class.js`.
   `LyraIncludeErrorDetail {
-  status: unknown;
-  reason: unknown;
-  error: unknown;
-}`
+    status: number;
+    reason: LyraIncludeErrorReason;
+    error?: unknown;
+  }`
 
 - **`components-viewers-page-rail-page-rail-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.class.js`.
   `LyraPageViewerSnapshot {
-  identity: unknown;
-  status: unknown;
-  page: unknown;
-  pageCount: unknown;
-}`
+    readonly identity: number;
+    readonly status: LyraPageViewerStatus;
+    readonly page: number;
+    readonly pageCount: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.class.js`.
   `LyraPageViewerStateChangeDetail {
-  snapshot: unknown;
-}`
+    readonly snapshot: LyraPageViewerSnapshot;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.class.js`.
   `PageThumbnailRenderHandle {
-  dispose: unknown;
-}`
-  `PageThumbnailSource {
-  page: unknown;
-  pageViewerSnapshot: unknown;
-  renderPageThumbnail: unknown;
-  canvas: unknown;
-  options: unknown;
-  width: unknown;
-  renderPageThumbnailToContainer: unknown;
-  container: unknown;
-}`
+    dispose(): void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.class.js`.
+  `PageThumbnailSource extends EventTarget {
+    page: number;
+    readonly pageViewerSnapshot?: LyraPageViewerSnapshot;
+    renderPageThumbnail?(page: number, canvas: HTMLCanvasElement, options?: {
+      width?: number;
+    }): Promise<boolean>;
+    renderPageThumbnailToContainer?(page: number, container: HTMLElement, options?: {
+      width?: number;
+    }): Promise<PageThumbnailRenderHandle | false>;
+  }`
 
 - **`components-viewers-pdf-viewer-pdf-viewer-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.class.js`.
   `PdfOutlineItem {
-  title: unknown;
-  page: unknown;
-  children: unknown;
-}`
+    title: string;
+    page?: number;
+    children?: PdfOutlineItem[];
+  }`
 
 - **`components-viewers-pptx-viewer-pptx-loader-contracts`** — Supporting data types and helpers for this component family.
-  `adaptPptxViewer(/* public names: value */): unknown`
-  `getPptxRenderer(): unknown`
-  `loadPptxRenderer(/* public names: importer */): unknown`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
+  `adaptPptxViewer(value: unknown): PptxViewerAdapter | null`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
+  `getPptxRenderer(): Promise<PptxRendererModule | null>`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
+  `loadPptxRenderer(importer?: () => Promise<unknown>): Promise<PptxRendererModule | null>`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
   `PptxRendererModule {
-  PptxViewer: unknown;
-  open: unknown;
-  input: unknown;
-  container: unknown;
-  options: unknown;
-  RECOMMENDED_ZIP_LIMITS: unknown;
-}`
+    PptxViewer: {
+      open(input: ArrayBuffer, container: HTMLElement, options?: Record<string, unknown>): Promise<PptxViewerApi>;
+    };
+    RECOMMENDED_ZIP_LIMITS: Readonly<PptxZipLimits>;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
   `PptxSearchHighlightHandle {
-  dispose: unknown;
-}`
+    dispose(): void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
   `PptxTextSearchResult {
-  slideIndex: unknown;
-  nodeId: unknown;
-  matchStart: unknown;
-  matchEnd: unknown;
-  text: unknown;
-}`
+    readonly slideIndex: number;
+    readonly nodeId: string;
+    readonly matchStart: number;
+    readonly matchEnd: number;
+    readonly text: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
   `PptxThumbnailHandle {
-  ready: unknown;
-  dispose: unknown;
-}`
+    readonly ready: Promise<void>;
+    dispose(): void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
   `PptxViewerAdapter {
-  slideCount: unknown;
-  currentSlideIndex: unknown;
-  goToSlide: unknown;
-  index: unknown;
-  searchText: unknown;
-  query: unknown;
-  options: unknown;
-  matchCase: unknown;
-  highlightSearchResult: unknown;
-  result: unknown;
-  scrollIntoView: unknown;
-  renderThumbnailToContainer: unknown;
-  container: unknown;
-  width: unknown;
-  clearSearchHighlights: unknown;
-  subscribe: unknown;
-  listener: unknown;
-  event: unknown;
-  destroy: unknown;
-}`
-  `PptxViewerApi {
-  slideCount: unknown;
-  currentSlideIndex: unknown;
-  goToSlide: unknown;
-  index: unknown;
-  searchText: unknown;
-  query: unknown;
-  options: unknown;
-  matchCase: unknown;
-  highlightSearchResult: unknown;
-  result: unknown;
-  scrollIntoView: unknown;
-  renderThumbnailToContainer: unknown;
-  container: unknown;
-  width: unknown;
-  clearSearchHighlights: unknown;
-  destroy: unknown;
-}`
+    readonly slideCount: number;
+    readonly currentSlideIndex: number;
+    goToSlide(index: number): Promise<void>;
+    searchText(query: string, options?: {
+      matchCase?: boolean;
+    }): PptxTextSearchResult[];
+    highlightSearchResult(result: PptxTextSearchResult, options?: {
+      scrollIntoView?: boolean | ScrollIntoViewOptions;
+    }): Promise<PptxSearchHighlightHandle | null>;
+    renderThumbnailToContainer(index: number, container: HTMLElement, options?: {
+      width?: number;
+    }): PptxThumbnailHandle | null;
+    clearSearchHighlights(): void;
+    subscribe(listener: (event: PptxViewerAdapterEvent) => void): () => void;
+    destroy(): void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
+  `PptxViewerApi extends EventTarget {
+    slideCount: number;
+    currentSlideIndex: number;
+    goToSlide(index: number): Promise<void> | void;
+    searchText(query: string, options?: {
+      matchCase?: boolean;
+    }): PptxTextSearchResult[];
+    highlightSearchResult(result: PptxTextSearchResult, options?: {
+      scrollIntoView?: boolean | ScrollIntoViewOptions;
+    }): Promise<PptxSearchHighlightHandle | null>;
+    renderThumbnailToContainer(index: number, container: HTMLElement, options?: {
+      width?: number;
+    }): PptxThumbnailHandle | null;
+    clearSearchHighlights(): void;
+    destroy(): void;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-loader.js`.
   `PptxZipLimits {
-  maxEntries: unknown;
-  maxEntryUncompressedBytes: unknown;
-  maxTotalUncompressedBytes: unknown;
-  maxMediaBytes: unknown;
-  maxConcurrency: unknown;
-}`
+    maxEntries: number;
+    maxEntryUncompressedBytes: number;
+    maxTotalUncompressedBytes: number;
+    maxMediaBytes: number;
+    maxConcurrency: number;
+  }`
 
 - **`components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts`** — Supporting data types and helpers for this component family.
-  `clearSheetJsCache(): unknown`
-  `loadSheetJsCached(): unknown`
-  `loadSheetJs(/* public names: importXlsx */): unknown`
+  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
+  `clearSheetJsCache(): void`
+  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
+  `loadSheetJsCached(): Promise<SheetJsApi | null>`
+  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
+  `loadSheetJs(importXlsx?: () => Promise<unknown>): Promise<SheetJsApi | null>`
+  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
   `SheetJsApi {
-  read: unknown;
-  input: unknown;
-  options: unknown;
-  utils: unknown;
-  sheet_to_json: unknown;
-  sheet: unknown;
-}`
+    read(input: ArrayBuffer, options?: Record<string, unknown>): SheetJsWorkbook;
+    utils: {
+      sheet_to_json(sheet: unknown, options?: Record<string, unknown>): unknown;
+    };
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
   `SheetJsWorkbook {
-  SheetNames: unknown;
-  Sheets: unknown;
-}`
+    SheetNames: string[];
+    Sheets: Record<string, unknown>;
+  }`
 
 - **`components-viewers-viewer-diagnostics-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.class.js`.
   `LyraViewerDiagnosticEventDetail {
-  diagnostic: unknown;
-}`
+    readonly diagnostic: LyraViewerDiagnostic;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.class.js`.
   `LyraViewerDiagnostic {
-  code: unknown;
-  severity: unknown;
-  fatal: unknown;
-  source: unknown;
-  cause: unknown;
-  page: unknown;
-  nodeId: unknown;
-}`
+    readonly code: LyraViewerDiagnosticCode;
+    readonly severity: LyraViewerDiagnosticSeverity;
+    readonly fatal: boolean;
+    readonly source: 'mammoth' | 'pptx-renderer';
+    readonly cause: unknown;
+    readonly page?: number;
+    readonly nodeId?: string;
+  }`

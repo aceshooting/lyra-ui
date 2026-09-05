@@ -196,3 +196,16 @@ export const NarrowRightToLeft: Story = {
     </div>
   `,
 };
+
+export const RemovableGuidance: Story = {
+  render: () => html`
+    <div>
+      <lr-time-input aria-label="Start time" label="Start time" hint="Choose an available time" value="09:30"></lr-time-input>
+      <button type="button" @click=${(event: Event) => {
+        const input = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-time-input')!;
+        input.removeAttribute('label');
+        input.removeAttribute('hint');
+      }}>Remove optional guidance</button>
+    </div>
+  `,
+};

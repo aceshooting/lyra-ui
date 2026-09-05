@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   bundleBudgetSlackFinding,
+  budgetKilobytesToBytes,
   createBundleBudgetReview,
   maximumReviewedBudgetBytes,
   validateBundleBudgetPolicy,
@@ -42,6 +43,22 @@ const policyFixture = {
   $componentMaxGzipKb: maximumReviewedBudgetBytes(2_000) / 1024,
   'dist/example.js': maximumReviewedBudgetBytes(3_000) / 1024,
 };
+
+// Initial-route ceilings use whole bytes expressed in KiB, so a small component can retain a
+// tight measured limit without requiring the next complete KiB of headroom.
+assert.equal(budgetKilobytesToBytes(3328 / 1024, 'initial route fixture'), 3328);
+for (const invalidCeiling of [NaN, Infinity, -Infinity, 0, -1, 0.5 / 1024, 2 ** 53 / 1024]) {
+  assert.throws(
+    () => budgetKilobytesToBytes(invalidCeiling, 'initial route fixture'),
+    TypeError,
+    'initial-route ceilings must reject non-finite, non-positive, fractional-byte, and unsafe-byte values',
+  );
+}
+assert.match(
+  checker,
+  /for \(const \[entry, budget\] of Object\.entries\(initialMarginalBudgets\)\) \{\s*budgetKilobytesToBytes\(budget, `\$\{entry\}: initial marginal budget`\);\s*\}/u,
+  'every live initial-route ceiling must use the same whole-byte validator as total budgets',
+);
 
 assert.doesNotThrow(() => validateBundleBudgetPolicy(policyFixture));
 assert.deepEqual(createBundleBudgetReview({ 'dist/example.js': 3_000 }), {
@@ -129,7 +146,7 @@ const deferredPositionerConsumers = {
   'dist/components/agent-tools/tool-call-chip/tool-call-chip.js':
     'src/components/agent-tools/tool-call-chip/tool-call-chip.class.ts',
   'dist/components/conversation/usage-badge/usage-badge.js':
-    'src/components/conversation/usage-badge/usage-badge.class.ts',
+    'src/components/conversation/usage-badge/usage-badge-overlay-runtime.ts',
   'dist/components/forms/color-picker/color-picker.js':
     'src/components/forms/color-picker/color-picker.class.ts',
   'dist/components/forms/date-picker/date-input.js':
@@ -187,10 +204,9 @@ assert.deepEqual(
   'every anchored component route needs a splitting-aware initial budget',
 );
 for (const [entry, sourcePath] of Object.entries(deferredPositionerConsumers)) {
-  assert.ok(
-    Number.isSafeInteger(initialBudgets.$marginalGzipKb[entry]) &&
-      initialBudgets.$marginalGzipKb[entry] > 0,
-    `${entry} needs a positive reviewed initial-route ceiling`,
+  assert.doesNotThrow(
+    () => budgetKilobytesToBytes(initialBudgets.$marginalGzipKb[entry], entry),
+    `${entry} needs a positive reviewed whole-byte initial-route ceiling`,
   );
   const source = readFileSync(path.join(scriptsDir, '..', sourcePath), 'utf8');
   assert.match(
@@ -205,10 +221,9 @@ for (const [entry, sourcePath] of Object.entries(deferredPositionerConsumers)) {
   );
 }
 for (const [entry, sourcePath] of Object.entries(deferredCatalogPickerConsumers)) {
-  assert.ok(
-    Number.isSafeInteger(initialBudgets.$marginalGzipKb[entry]) &&
-      initialBudgets.$marginalGzipKb[entry] > 0,
-    `${entry} needs a positive reviewed initial-route ceiling`,
+  assert.doesNotThrow(
+    () => budgetKilobytesToBytes(initialBudgets.$marginalGzipKb[entry], entry),
+    `${entry} needs a positive reviewed whole-byte initial-route ceiling`,
   );
   const source = readFileSync(path.join(scriptsDir, '..', sourcePath), 'utf8');
   assert.match(

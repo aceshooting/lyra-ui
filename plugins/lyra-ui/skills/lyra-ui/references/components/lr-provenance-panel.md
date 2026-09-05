@@ -20,6 +20,9 @@ The grounding breakdown for one answer: a sectioned disclosure panel (Entities /
 Communities / Text chunks) composing this family's own pieces. The chat ↔ graph ↔ document glue
 component. Pure projection + event conduit: no fetching, no graph/viewer imports, no persistence.
 
+Malformed type rows are ignored during lookup, preserving valid later matching records and the
+existing immutable collection ownership.
+
 **Properties:**
 
 - `provenance: LyraProvenance | null = null` (attribute: false) — `LyraProvenance { entities?:

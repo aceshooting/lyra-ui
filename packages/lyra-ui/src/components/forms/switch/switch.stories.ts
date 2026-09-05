@@ -158,3 +158,22 @@ export const Sizes: StoryObj = {
     </div>
   `,
 };
+
+export const ExternalDescription: StoryObj = {
+  render: () => html`
+    <p id="switch-guidance">Notifications arrive only while this switch is on.</p>
+    <lr-switch hint="You can change this later." aria-describedby="switch-guidance">Notifications</lr-switch>
+  `,
+};
+
+export const RemovableGuidance: StoryObj = {
+  render: () => html`
+    <div>
+      <lr-switch hint="Optional guidance" help-text="Compatibility guidance" error-text="Review this choice">Notifications</lr-switch>
+      <button @click=${(event: Event) => {
+        const control = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-switch')!;
+        for (const attribute of ['hint', 'help-text', 'error-text']) control.removeAttribute(attribute);
+      }}>Remove guidance</button>
+    </div>
+  `,
+};

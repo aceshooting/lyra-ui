@@ -251,6 +251,8 @@ function editIcon(): SVGTemplateResult {
  * events, so each built-in can occur at most once. Provider action ids must be nonblank and unique
  * within that provider; invalid actions and later duplicates are omitted.
  *
+ * ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor remain native editing keys. Roving navigation still operates on the actual toolbar and thumb actions.
+ *
  * @customElement lr-message-actions
  * @slot - Additional controls (e.g. `lr-copy-button`, `lr-icon-button`, `lr-branch-picker`)
  *   appended after the built-ins; they participate in the toolbar's arrow-key navigation.
@@ -856,6 +858,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     const originIndex = stops.findIndex(({ action }) =>
       action.matchesEventPath(path)
     );
+    if (originIndex < 0 && path[0] !== e.currentTarget) return;
     const currentIndex = originIndex >= 0 ? originIndex : this.activeStopIndex;
     const forwardKey =
       this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';

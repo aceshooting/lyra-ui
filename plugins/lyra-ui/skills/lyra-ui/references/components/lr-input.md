@@ -21,6 +21,20 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 `label`/`hint`/`errorText` form-control chrome as `lr-textarea`/`lr-select`, and the same
 `size` scale as `lr-select`/`lr-combobox`.
 
+`stepUp()` and `stepDown()` use the current `value`, `step`, `min`, and `max` properties in the same
+synchronous call, including changes made immediately beforehand. They preserve native step alignment
+and bounds, update form submission silently, and remain no-ops before the native input has rendered
+or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
+
+Removing `label`, `hint`, `help-text`, or `error-text` safely omits that content while retaining
+native `null` property readback. Explicit empty strings remain empty and later supplied text renders
+normally. The same inherited behavior applies to `lr-number-input` and `lr-native-time-input`.
+
+Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
+the native editing control effectively disabled. The enabled first-legend exception and explicit
+own-disabled state retain their native meaning; validity and form submission follow the effective
+disabled state.
+
 Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs;
 see "Enter-to-submit" below for the exact rules and for which controls deliberately opt out.
 
@@ -61,9 +75,9 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus
 - `withClear: boolean = false` (attribute `with-clear`) — Web Awesome's spelling of `clearable`;
-  either one shows the same action. Inherited by `lr-number-input`, where it is inert because that
-  type renders no clear action, and by `lr-time-input`, where it enables the segmented field's
-  localized clear action
+  either one shows the same action. Inherited by `lr-number-input` and `lr-native-time-input`,
+  where it is inert because their native types render no clear action. The separate segmented
+  `lr-time-input` implements its own `with-clear` action
 - `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `label: string = ''`
 - `hint: string = ''`
@@ -95,7 +109,7 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   `type="time"`. On `lr-input` itself the `min`/`max` _attributes_ are number-converted, so a
   non-numeric bound only survives a direct property assignment; the declared type also admits a
   string so a subclass can narrow the attribute parsing to its own native type's literal form —
-  `lr-time-input` does exactly that. Inert for the other types
+  `lr-native-time-input` does exactly that. Inert for the other types
 - `minlength?: number` / `maxlength?: number` (attributes `minlength`/`maxlength`) — text-length
   bounds forwarded to the native input and reported as `validity.tooShort`/`validity.tooLong`.
   Apply to the text-bearing types (`text`, `search`, `email`, `password`); the platform ignores
@@ -203,8 +217,8 @@ than the icon-beside-label gap the ladder is tuned for. `--lr-input-radius` (def
 `--lr-form-control-radius`, its corner radius) is retunable the same way but _does_ follow the tier:
 the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a
 lozenge. `pill` changes its private default to `--lr-radius-pill`; an inherited or direct public
-value still wins. `lr-number-input`/`lr-time-input` inherit both
-unchanged.
+value still wins. `lr-number-input`/`lr-native-time-input` inherit both
+unchanged. The separate segmented `lr-time-input` also consumes the documented input theme tokens.
 
 `--lr-input-fill` (default `transparent`) is the control row's background and
 `--lr-input-border-color` (default `var(--lr-color-border)`) its border color. `appearance` changes
@@ -298,8 +312,8 @@ submission must never shadow it: `lr-textarea` and `lr-code-editor` insert a new
 whole point of a multi-line surface; `lr-select`'s `role="combobox"` trigger opens the listbox (and
 then commits the active option), per the ARIA pattern; and `lr-date-picker` selects the focused day
 in the calendar grid. The controls that _do_ wire it are `lr-input` (and its `lr-number-input`/
-`lr-time-input` subclasses), `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input` and
-`lr-otp-input`.
+`lr-native-time-input` subclasses), the separate segmented `lr-time-input`, `lr-combobox`,
+`lr-date-input`, `lr-phone-input`, `lr-token-input` and `lr-otp-input`.
 
 ### Exact-height hatches — the one rule that applies to all of them
 

@@ -16,6 +16,10 @@ import {
   isAccessibilityVisibilityHidden,
   nextId,
 } from '../../../internal/a11y.js';
+import {
+  acquireResolvedAriaRelationship,
+  type ResolvedAriaRelationshipLease,
+} from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { styles } from './known-date.styles.js';
@@ -193,6 +197,10 @@ function addCompatibilityDetail<T extends Event>(
  * announcement text, and no error is announced while the control or a composed ancestor is
  * hidden. Initial and reconnected validation state remains silent.
  *
+ * Host `aria-describedby` resolves external guidance onto the aggregate date fieldset;
+ * each native field retains its local hint/error guidance. Removed label/hint attributes
+ * render as absent. Disabled native fields retain their resting border on hover or press.
+ *
  * @customElement lr-known-date
  * @event {InputEvent & { readonly detail: LyraKnownDateEventDetail }} input - A bubbling, composed
  *   native input event fired on every keystroke in
@@ -344,11 +352,11 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   /** Overrides the fieldset's computed accessible name (normally the `<legend>`'s content). Applied
    *  as `aria-label` on the `part="fieldset"` element, which owns the role -- not just the host. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
-  /** Visible + accessible day label. `undefined` localizes the default; supplied text is literal. */
+  /** Visible + accessible day label. Omission or attribute removal localizes the default; supplied empty text stays empty. */
   @property({ attribute: 'day-label' }) dayLabel?: string;
-  /** Visible + accessible month label. `undefined` localizes the default; supplied text is literal. */
+  /** Visible + accessible month label. Omission or attribute removal localizes the default; supplied empty text stays empty. */
   @property({ attribute: 'month-label' }) monthLabel?: string;
-  /** Visible + accessible year label. `undefined` localizes the default; supplied text is literal. */
+  /** Visible + accessible year label. Omission or attribute removal localizes the default; supplied empty text stays empty. */
   @property({ attribute: 'year-label' }) yearLabel?: string;
 
   private _parts: LyraKnownDateParts = { ...EMPTY_PARTS };
@@ -370,6 +378,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   private lastEditedField: LyraKnownDateField = 'day';
   private errorAnnouncementSink?: AnnouncementSink;
   private errorObserver?: MutationObserver;
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private errorAnnouncementsArmed = false;
   private lastVisibleError = '';
   private connectionGeneration = 0;
@@ -402,6 +411,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
@@ -487,6 +497,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   }
 
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     this.connectionGeneration += 1;
     this.errorAnnouncementsArmed = false;
     this.lastVisibleError = '';
@@ -496,6 +507,25 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
+  }
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const owner = this.renderRoot.querySelector<HTMLElement>('[part="fieldset"]');
+    if (!owner) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(owner);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, owner, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
   }
 
   get min(): string {
@@ -619,21 +649,15 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   }
 
   private get effectiveDayLabel(): string {
-    return this.dayLabel === undefined
-      ? this.localize('knownDateDay')
-      : this.dayLabel;
+    return this.dayLabel ?? this.localize('knownDateDay');
   }
 
   private get effectiveMonthLabel(): string {
-    return this.monthLabel === undefined
-      ? this.localize('knownDateMonth')
-      : this.monthLabel;
+    return this.monthLabel ?? this.localize('knownDateMonth');
   }
 
   private get effectiveYearLabel(): string {
-    return this.yearLabel === undefined
-      ? this.localize('knownDateYear')
-      : this.yearLabel;
+    return this.yearLabel ?? this.localize('knownDateYear');
   }
 
   private labelFor(field: LyraKnownDateField): string {
@@ -786,6 +810,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     // Unconditional (not gated on `changed.has('value')`) -- `value` uses
     // `noAccessor` and its base setter is never invoked for a freshly
     // constructed, attribute-less instance (the constructor seeds the form
@@ -1120,10 +1145,10 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
   override render(): TemplateResult {
     const hasLabel =
-      this.withLabel || this.hasLabelSlot || this.label.length > 0;
+      this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
     const validationError = this.touched ? this.validationMessage : '';
     const renderedError = this.errorText || validationError;
-    const hasHint = this.withHint || this.hasHintSlot || this.hint.length > 0;
+    const hasHint = this.withHint || this.hasHintSlot || (this.hint ?? '').length > 0;
     const hasError = this.hasErrorSlot || renderedError.length > 0;
     const invalid = this.touched && !this.internals.validity.valid;
     const describedBy = [

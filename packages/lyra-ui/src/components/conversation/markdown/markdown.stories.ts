@@ -85,7 +85,7 @@ export const InstanceParserRefresh: Story = {
           const markdown = (event.currentTarget as HTMLElement).nextElementSibling as LyraMarkdown;
           const parser = markdown.marked;
           if (!parser) return;
-          const originalDefaults = parser.defaults;
+          const originalDefaults = { ...parser.defaults };
           try {
             parser.use({
               hooks: {
@@ -94,7 +94,8 @@ export const InstanceParserRefresh: Story = {
             });
             markdown.renderMarkdown();
           } finally {
-            parser.defaults = originalDefaults;
+            for (const key of Object.keys(parser.defaults)) delete parser.defaults[key];
+            Object.assign(parser.defaults, originalDefaults);
           }
         }}
       >
@@ -174,5 +175,19 @@ export const TrustedHtml: Story = {
       html-mode="trusted"
       .content=${'Raw HTML passthrough when explicitly opted out of sanitization: <mark>highlighted</mark> text.'}
     ></lr-markdown>
+  `,
+};
+
+/** Content removal clears the document without changing the native attribute readback. */
+export const ClearContent: Story = {
+  render: () => html`
+    <div>
+      <button type="button" @click=${(event: Event) => {
+        const markdown = (event.currentTarget as HTMLElement).nextElementSibling!;
+        if (markdown.hasAttribute('content')) markdown.removeAttribute('content');
+        else markdown.setAttribute('content', '**Restored document**');
+      }}>Clear or restore content</button>
+      <lr-markdown content="**Visible document**"></lr-markdown>
+    </div>
   `,
 };

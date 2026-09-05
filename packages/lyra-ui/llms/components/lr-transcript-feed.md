@@ -21,6 +21,9 @@ with in-place upgrades keyed by `id`, and a stick-to-bottom auto-scroll with rel
 `follow`/`lr-follow-change` contract `<lr-terminal>` uses. Live captions only — recorded-media
 transcript sync is a separate concern.
 
+Activating the focused jump action resumes follow and transfers focus to the scroll base when the
+action disappears, unless a newer outside focus move takes precedence.
+
 **Properties:** `entries: LyraTranscriptEntry[] = []` (attribute: false) — `LyraTranscriptEntry { id:
 string; speaker?: string; text: string; interim?: boolean; timestamp?: LyraTimestamp }` (exported by
 this module; `LyraTimestamp = Date | string | number`, normalized through Date/TimeClip). Reconciled

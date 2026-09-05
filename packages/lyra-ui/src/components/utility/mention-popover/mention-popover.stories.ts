@@ -69,6 +69,7 @@ export const CommandsWithoutIcons: Story = {
 };
 
 export const FilteredByQuery: Story = {
+  parameters: { docs: { description: { story: 'Removing the query attribute restores the unfiltered list; an explicitly empty query also leaves every item available.' } } },
   render: () => staticDemo('mention-demo-filtered', PEOPLE, { query: 'ba' }),
 };
 
@@ -100,6 +101,7 @@ export const NarrowLongContent: Story = {
  * mention is spliced into the text in place of the trigger + query.
  */
 export const LiveComposerIntegration: Story = {
+  parameters: { docs: { description: { story: 'The native textarea forwards keydown to handleKeyDown(). Composing events, including the legacy keyCode 229 signal, remain available to the input method without moving, choosing, or closing a suggestion.' } } },
   render: () => {
     const containerId = 'mention-demo';
     setTimeout(() => wireDemo(containerId), 0);
@@ -143,10 +145,11 @@ function wireDemo(containerId: string): void {
       closeMention();
       return;
     }
-    triggerIndex = caret - match[1].length - 1;
+    const query = match[1] ?? '';
+    triggerIndex = caret - query.length - 1;
     suggestionGeneration += 1;
     popover.anchor = textarea;
-    popover.query = match[1];
+    popover.query = query;
     popover.open = true;
   });
 

@@ -507,3 +507,22 @@ for (const shape of ['radial', 'ring', 'linear'] as const) {
     }
   });
 }
+
+for (const shape of ['radial', 'linear', 'ring'] as const) {
+  it(`preserves literal native SVG tooltip text and updates for ${shape}`, async () => {
+    const text = 'Literal </title><script>throw 42</script> &amp; < > \r\n العربية 😀';
+    const el = (await fixture(html`<lr-gauge .shape=${shape} .label=${text} value-text="Value"></lr-gauge>`)) as LyraGauge;
+
+    const assertTitle = (expected: string) => {
+      const title = el.shadowRoot!.querySelector('title')!;
+      expect(title.textContent).to.equal(expected);
+      expect(title.namespaceURI).to.equal('http://www.w3.org/2000/svg');
+      expect(title.childElementCount).to.equal(0);
+      expect(el.shadowRoot!.querySelectorAll('script').length).to.equal(0);
+    };
+    assertTitle(`${text}: Value`);
+    el.label = `Updated ${text}`;
+    await el.updateComplete;
+    assertTitle(`Updated ${text}: Value`);
+  });
+}

@@ -1,7 +1,8 @@
 import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 
-/** A named input/output connection point on a flow node. */
+/** A named input/output connection point on a flow node. Collections retain the first valid
+ * occurrence of each id; an unreadable optional label does not reserve that id. */
 export interface FlowHandle {
   readonly id: string;
   readonly label?: string;

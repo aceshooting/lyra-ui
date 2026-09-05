@@ -19,6 +19,17 @@ const meta: Meta = {
 };
 export default meta;
 
+export const CorrectedIdentity: StoryObj = {
+  parameters: { docs: { description: { story: 'The middle row begins with a duplicate value. Correcting its value enables its movement buttons; making it duplicate again disables them without reordering any row.' } } },
+  render: () => html`<section>
+    <button @click=${(event: Event) => {
+      const item = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-reorder-item[data-middle]')!;
+      item.setAttribute('value', item.getAttribute('value') === 'b' ? 'a' : 'b');
+    }}>Toggle duplicate identity</button>
+    <lr-reorder-list><lr-reorder-item value="a">A</lr-reorder-item><lr-reorder-item data-middle value="a">B</lr-reorder-item><lr-reorder-item value="c">C</lr-reorder-item></lr-reorder-list>
+  </section>`,
+};
+
 export const Default: StoryObj = {
   render: () => html`
     <lr-reorder-list

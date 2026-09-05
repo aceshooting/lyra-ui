@@ -145,3 +145,13 @@ it('falls back safely for invalid runtime Intl inputs', () => {
   expect(monthTitle(2026, 6, 'not_a_locale')).to.be.a('string').and.not.equal('');
   expect(resolveFirstDayOfWeek(7 as never, 'en-US')).to.equal(0);
 });
+
+
+it('does not serialize unsupported years as non-round-trippable ISO dates', () => {
+  for (const year of [-1, 10000]) {
+    const date = new Date(0);
+    date.setFullYear(year, 0, 1);
+    expect(formatISO(date)).to.equal('');
+  }
+  expect(formatISO(new Date(Number.NaN))).to.equal('');
+});

@@ -24,6 +24,13 @@ light-DOM form's submission on its own. They remain default actions of the compo
 runs, while `stopPropagation()` alone does not. Canceling the form's later `submit` or `reset`
 event remains an independent veto point.
 
+External descriptions follow the current source element identity when an element with the same ID
+replaces it, when a source is removed or reinserted, and when the control reconnects or moves to
+another document. Host-root lookup and ordering follow the current `aria-describedby` list,
+including unresolved IDs and duplicates. Switching between native button and anchor modes keeps the
+relationship on the current action. Existing accessible names and `aria-controls` relationships
+retain their separate contracts.
+
 Set `href` to a safe link URL and the root renders as a real `<a part="base" href=…>` instead — a
 link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
 handling and `type` have no effect in that mode. A disabled link button (its own `disabled` or an
@@ -340,9 +347,10 @@ box no matter what tier or override is in play.
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
 - **`SubmitEvent.submitter` is not this element** whenever `name`/`value` or any `form*` override is
-  set: it is the transient native `<button>` described above, which has already been removed from
-  the DOM by the time a `submit` listener runs. Read the submitted entry from the `FormData`, or
-  the override off your own component, rather than identity-checking the submitter.
+  set: it is the transient native `<button>` described above. That native submitter remains
+  connected throughout synchronous `requestSubmit()` handling, so a `submit` listener can read
+  its `name`, `value` and `form*` fields and construct `FormData` with it. It is removed after
+  submission handling returns; its identity is distinct from the `lr-button` host.
 - The `form*` overrides and `type` are all inert while `href` renders the anchor — native navigation
   is the activation there, and an anchor has no submit/reset concept.
 

@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Audio/video player built on a native media element with bounded readonly cue/track collections whose retained records are cloned and frozen. Cue collections require a trimmed nonempty `cueId` and retain the first occurrence, while the transcript stays synced to playback. Cue changes carry a frozen readonly `{ cueId, index }`; time-range marker activations carry `{ highlightId }`. Marker buttons are siblings of the slider rather than nested controls. Self-registers into the document-viewer registry for common audio/video MIME types.',
+          'Removing mime-type restores automatic video fallback. Open-ended transcript cues use the next strictly chronological start with linear reconciliation per seek, and unavailable timeline controls retain resting paint under hover and press. Audio/video player built on a native media element with bounded readonly cue/track collections whose retained records are cloned and frozen. Cue collections require a trimmed nonempty `cueId` and retain the first occurrence, while the transcript stays synced to playback. Cue changes carry a frozen readonly `{ cueId, index }`; time-range marker activations carry `{ highlightId }`. Marker buttons are siblings of the slider rather than nested controls. Self-registers into the document-viewer registry for common audio/video MIME types.',
       },
     },
   },

@@ -18,6 +18,22 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const PixelMinimumWithGutter: Story = {
+  parameters: { docs: { description: { story: 'A 600px allocation with a 40px divider leaves 560px for panels. The first panel keeps its feasible 300px minimum and the second receives 260px; percentage sizes remain unchanged.' } } },
+  render: () => html`<lr-multi-split style="inline-size:600px;block-size:12rem;--lr-multi-split-divider-target-size:40px"
+    .sizes=${[50, 50]} .panelConstraints=${[{ minPx: 300 }, { minPx: 260 }]}>
+    <div>Minimum 300px</div><div>Minimum 260px</div>
+  </lr-multi-split>`,
+};
+
+export const FontRelativeGutter: Story = {
+  parameters: { docs: { description: { story: 'The 2em divider resolves to 32px in its own 16px font. A larger panel font leaves the divider budget and feasible 300px/268px panel floors unchanged.' } } },
+  render: () => html`<lr-multi-split style="inline-size:600px;block-size:12rem;font-size:16px;--lr-multi-split-divider-target-size:2em"
+    .sizes=${[50, 50]} .panelConstraints=${[{ minPx: 300 }, { minPx: 268 }]}>
+    <div style="font-size:32px">Minimum 300px</div><div>Minimum 268px</div>
+  </lr-multi-split>`,
+};
+
 function capMultiSplitResize(event: Event): void {
   const request = event as CustomEvent<{ sizes: number[] }>;
   if (request.detail.sizes[0]! > 65) request.preventDefault();

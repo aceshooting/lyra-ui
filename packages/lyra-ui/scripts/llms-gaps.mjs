@@ -123,7 +123,7 @@ function contractDeclarationBlocks(text, name, kind) {
   );
   for (const match of text.matchAll(pattern)) {
     const content = `${name}${match[1]}`;
-    const declarationLike = kind === 'interface'
+    const legacyDeclarationLike = kind === 'interface'
       ? new RegExp(
           `^${escapePattern(name)}(?:<[^>]+>)?(?:\\s+extends\\s+[^{}]+)?\\s*\\{`,
         ).test(content)
@@ -132,6 +132,28 @@ function contractDeclarationBlocks(text, name, kind) {
         : new RegExp(
             `^${escapePattern(name)}(?:(?:<[^>]+>)?\\s*\\{|(?:<[^>]+>)?\\([\\s\\S]*\\)\\s*:)`,
           ).test(content);
+    const declarationKinds = kind === 'interface' || kind === 'function'
+      ? [kind]
+      : ['interface', 'function'];
+    const declarationLike = legacyDeclarationLike || declarationKinds.some((declarationKind) => {
+      // Retain existing shorthand signatures while recognizing nested generic defaults and
+      // constraints through TypeScript syntax rather than a single-level angle-bracket pattern.
+      const source = declarationKind === 'interface'
+        ? `interface ${content}`
+        : content.replace(
+            new RegExp(`^([ \t]*)${escapePattern(name)}(?=[<(])`, 'gm'),
+            `$1declare function ${name}`,
+          );
+      const parsed = parseSync('llms-contract.ts', source, { lang: 'ts', sourceType: 'module' });
+      const expectedKind = declarationKind === 'interface'
+        ? 'TSInterfaceDeclaration'
+        : 'TSDeclareFunction';
+      return parsed.errors.length === 0 && parsed.program.body.length > 0 &&
+        parsed.program.body.every((declaration) =>
+          declaration.type === expectedKind && declaration.id?.name === name &&
+          (declarationKind === 'interface' || declaration.returnType != null),
+        );
+    });
     if (declarationLike) matches.push(match[0]);
   }
   return matches;

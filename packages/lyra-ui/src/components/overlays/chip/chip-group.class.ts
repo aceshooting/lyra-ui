@@ -55,6 +55,8 @@ interface TrackedChipFocus {
  * state is restored when a child leaves or the group disconnects, and reconnecting reapplies the
  * current collapsed state.
  *
+ * Collapsed groups reapply max-visible when assigned children are replaced or reordered at the same count, preserving authored hidden/inert state and releasing departed visibility leases.
+ *
  * @customElement lr-chip-group
  * @slot - `<lr-chip>` elements (or any content, though the chip pairing is
  * the intended usage).
@@ -430,6 +432,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     this.updateBrowserDerivedState(() => {
       if (!this.isConnected) return;
       this.childCount = slot.assignedElements({ flatten: true }).length;
+      this.requestUpdate();
     });
   };
 

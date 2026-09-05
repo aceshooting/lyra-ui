@@ -106,10 +106,11 @@ interface CanonicalCommand {
 }
 
 const EMPTY_CANONICAL_COMMANDS: readonly CanonicalCommand[] = Object.freeze([]);
+const EMPTY_COMMAND_KEYWORDS: readonly string[] = Object.freeze([]);
 
-function projectCommandKeywords(value: unknown): readonly string[] | undefined {
+function projectCommandKeywords(value: unknown): readonly string[] {
   try {
-    if (!Array.isArray(value)) return undefined;
+    if (!Array.isArray(value)) return EMPTY_COMMAND_KEYWORDS;
     const length = getOwnDataDescriptor(value, 'length');
     if (
       length === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -118,7 +119,7 @@ function projectCommandKeywords(value: unknown): readonly string[] | undefined {
       !Number.isSafeInteger(length.value) ||
       length.value < 0
     )
-      return undefined;
+      return EMPTY_COMMAND_KEYWORDS;
     const keywords: string[] = [];
     for (let index = 0; index < Math.min(length.value, MAX_COMMAND_PALETTE_KEYWORDS); index += 1) {
       const entry = getOwnDataDescriptor(value, String(index));
@@ -127,12 +128,12 @@ function projectCommandKeywords(value: unknown): readonly string[] | undefined {
         entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
         typeof entry.value !== 'string'
       )
-        return undefined;
+        continue;
       keywords.push(entry.value);
     }
     return Object.freeze(keywords);
   } catch {
-    return undefined;
+    return EMPTY_COMMAND_KEYWORDS;
   }
 }
 
@@ -181,8 +182,7 @@ function projectCommand(candidate: unknown): CanonicalCommand | undefined {
       (onSelectValue !== undefined && typeof onSelectValue !== 'function')
     )
       return undefined;
-    const keywordValues = keywordsValue === undefined ? Object.freeze([]) : projectCommandKeywords(keywordsValue);
-    if (!keywordValues) return undefined;
+    const keywordValues = projectCommandKeywords(keywordsValue);
     return Object.freeze({
       source: candidate as LyraCommand,
       commandId: commandId.value,

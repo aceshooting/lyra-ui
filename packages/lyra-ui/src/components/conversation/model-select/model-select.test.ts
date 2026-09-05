@@ -1,5 +1,5 @@
 import { fixture, expect, oneEvent, html, waitUntil } from "@open-wc/testing";
-import { resetMouse, sendMouse } from "@web/test-runner-commands";
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import "./model-select.js";
 import type { LyraModelSelect } from "./model-select.js";
 

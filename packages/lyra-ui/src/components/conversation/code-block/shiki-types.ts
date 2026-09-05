@@ -97,6 +97,58 @@ const highlighterCores = new WeakMap<
   Promise<ShikiHighlighterCore | null>
 >();
 
+// Owned component assignments detach equal grammar maps. Keep a small, weak recent index so
+// those snapshots can reuse a core without retaining application grammars or changing the public
+// identity cache. Eviction only loses reuse; it never disposes a highlighter a caller still owns.
+const recentHighlighterCores: {
+  languages: WeakRef<Record<string, ShikiLanguageInput>>;
+  promise: WeakRef<Promise<ShikiHighlighterCore | null>>;
+}[] = [];
+
+/** Exact, bounded comparison of immutable grammar data; unusual inputs keep identity-only reuse. */
+function equalFrozenGrammars(left: unknown, right: unknown): boolean {
+  let remaining = 20_000;
+  const leftSeen = new WeakSet<object>();
+  const rightSeen = new WeakSet<object>();
+  const equal = (a: unknown, b: unknown, depth: number): boolean => {
+    if (--remaining < 0 || depth > 32 || typeof a !== typeof b) return false;
+    if (typeof a === 'function' || typeof a === 'symbol') return false;
+    if (typeof a === 'number' && (!Number.isFinite(a) || !Number.isFinite(b))) return false;
+    if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object')
+      return Object.is(a, b);
+    if (!Object.isFrozen(a) || !Object.isFrozen(b) || leftSeen.has(a) || rightSeen.has(b))
+      return false;
+    const prototype = Object.getPrototypeOf(a) as object | null;
+    if (
+      prototype !== Object.getPrototypeOf(b) ||
+      (prototype !== Object.prototype && prototype !== Array.prototype && prototype !== null) ||
+      Array.isArray(a) !== Array.isArray(b)
+    ) return false;
+    leftSeen.add(a);
+    rightSeen.add(b);
+    const leftKeys = Reflect.ownKeys(a);
+    const rightKeys = Reflect.ownKeys(b);
+    if (leftKeys.length !== rightKeys.length || leftKeys.length > remaining) return false;
+    for (let i = 0; i < leftKeys.length; i += 1) {
+      const key = leftKeys[i]!;
+      if (typeof key !== 'string' || key !== rightKeys[i]) return false;
+      const first = Object.getOwnPropertyDescriptor(a, key)!;
+      const second = Object.getOwnPropertyDescriptor(b, key)!;
+      if (
+        !('value' in first) || !('value' in second) ||
+        first.enumerable !== second.enumerable ||
+        !equal(first.value, second.value, depth + 1)
+      ) return false;
+    }
+    return true;
+  };
+  try {
+    return equal(left, right, 0);
+  } catch {
+    return false;
+  }
+}
+
 type ShikiHighlighterCoreLoader = (
   languages: Record<string, ShikiLanguageInput>
 ) => Promise<ShikiHighlighterCore | null>;
@@ -115,6 +167,8 @@ export function __setShikiHighlighterCoreLoaderForTesting(
 
 /**
  * Builds and caches a fine-grained `HighlighterCore` seeded with only the supplied grammars.
+ * The identity cache also shares recently used equivalent, deeply frozen plain grammar maps.
+ * This bounded weak reuse never changes mutable or unusual inputs' identity-only caching.
  * Only Shiki subpaths are imported here; the package's main entry and full grammar table remain
  * unreachable from lean component graphs.
  */
@@ -124,6 +178,29 @@ export function loadShikiHighlighterCore(
   if (highlighterCoreLoaderForTesting)
     return highlighterCoreLoaderForTesting(languages);
   let cached = highlighterCores.get(languages);
+  let frozen = false;
+  if (!cached) {
+    try {
+      frozen = Object.isFrozen(languages);
+    } catch {
+      // Reflection failures retain the existing asynchronous plain-text fallback.
+    }
+  }
+  if (frozen) {
+    for (let i = recentHighlighterCores.length - 1; i >= 0; i -= 1) {
+      const entry = recentHighlighterCores[i]!;
+      const previous = entry.languages.deref();
+      const promise = entry.promise.deref();
+      if (!previous || !promise) recentHighlighterCores.splice(i, 1);
+      else if (equalFrozenGrammars(languages, previous)) {
+        cached = promise;
+        recentHighlighterCores.splice(i, 1);
+        recentHighlighterCores.push({ languages: new WeakRef(languages), promise: entry.promise });
+        highlighterCores.set(languages, cached);
+        break;
+      }
+    }
+  }
   if (!cached) {
     cached = Promise.all([
       import('shiki/core'),
@@ -151,6 +228,17 @@ export function loadShikiHighlighterCore(
         return null;
       });
     highlighterCores.set(languages, cached);
+    if (frozen) {
+      recentHighlighterCores.push({ languages: new WeakRef(languages), promise: new WeakRef(cached) });
+      if (recentHighlighterCores.length > 8) recentHighlighterCores.shift();
+      const pending = cached;
+      void pending.then(core => {
+        if (core) return;
+        for (let i = recentHighlighterCores.length - 1; i >= 0; i -= 1)
+          if (recentHighlighterCores[i]!.promise.deref() === pending)
+            recentHighlighterCores.splice(i, 1);
+      });
+    }
   }
   return cached;
 }

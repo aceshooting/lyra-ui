@@ -44,6 +44,7 @@ export type LibraryDocumentFreshness = 'fresh' | 'aging' | 'stale';
  * consistency across this component family.
  */
 export interface LibraryDocument extends DocumentRef {
+  /** Optional tags. An own undefined value is treated like omission. */
   tags?: readonly string[];
   owner?: string;
   /** Last-updated timestamp. `Date | string` (ISO-8601), matching `ChatMessage.timestamp`. */
@@ -200,8 +201,9 @@ function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined
     )
       return undefined;
 
-    const tagValues = tags === MISSING_OWN_DATA_DESCRIPTOR ? undefined : projectLibraryStringArray(tags.value);
-    if (tags !== MISSING_OWN_DATA_DESCRIPTOR && !tagValues) return undefined;
+    const tagsValue = tags === MISSING_OWN_DATA_DESCRIPTOR ? undefined : tags.value;
+    const tagValues = tagsValue === undefined ? undefined : projectLibraryStringArray(tagsValue);
+    if (tagsValue !== undefined && !tagValues) return undefined;
     const updatedAtValue = updatedAt === MISSING_OWN_DATA_DESCRIPTOR || updatedAt.value === undefined
       ? undefined
       : projectLibraryDate(updatedAt.value);
@@ -382,7 +384,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   /** Controlled canonical sort direction shared with `<lr-table>`. */
   @property({ attribute: 'sort-dir' }) sortDir: TableSortDirection = 'asc';
 
-  /** Controlled search query applied to document names, owners, and tags. */
+  /** Controlled search query applied to document names, owners, and tags. Removing the
+   * attribute clears filtering while retaining the native null property readback. */
   @property({ attribute: 'search-term' }) searchTerm = '';
 
   @property({ type: Boolean, reflect: true }) loading = false;
@@ -580,7 +583,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   /** The current search+tag-facet-filtered, sorted view of `documents`. */
   private get visibleDocuments(): LibraryDocument[] {
-    const query = this.searchTerm
+    const query = (this.searchTerm ?? '')
       .trim()
       .toLocaleLowerCase(this.effectiveLocale);
     const matchFn = this.filter ?? this.defaultFilter;

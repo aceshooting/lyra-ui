@@ -200,7 +200,8 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
 
   /**
    * Which element scrolls when the table overflows. `'self'` preserves contained horizontal
-   * scrolling and applies `maxHeight`. `'page'` makes the page the sticky header's scrollport; a
+   * scrolling and applies `maxHeight`. `'page'` removes intervening scroll containers while
+   * retaining rounded header corners, making the page the sticky header's scrollport; a
    * wide dataset can consequently overflow its host.
    */
   @property({ reflect: true, attribute: 'scroll-mode', converter: DATASET_VIEWER_SCROLL_MODE })

@@ -27,6 +27,10 @@ shortcut list alongside a grid, a hue ramp and a text field that can still expre
 Arrow/Home/End navigation starts from the swatch that actually received the keyboard event, even
 when a controlled `value` write changed the selected or remembered roving item first.
 
+Own `disabled` changes take effect immediately for host `click()` and `focus()`, including calls in
+the same task as the property assignment. Blocked activation leaves value and `lr-change` untouched;
+blocked focus preserves outside focus and emits no native focus inside the picker.
+
 **Properties:**
 
 - `items: readonly SwatchPickerItem[] = []` (attribute: false) — `SwatchPickerItem { readonly value:

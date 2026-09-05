@@ -4,6 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   formatISO,
+  localDate,
   monthMatrix,
   parseISO,
   resolveFirstDayOfWeek,
@@ -33,7 +34,7 @@ export interface CalendarEvent {
   readonly data?: unknown;
 }
 export interface LyraCalendarEventMap { 'lr-date-select': CustomEvent<{ date: string }>; 'lr-event-select': CustomEvent<{ event: CalendarEvent }>; 'lr-view-change': CustomEvent<{ viewDate: string }>; }
-const monthStart = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1);
+const monthStart = (date: Date): Date => localDate(date.getFullYear(), date.getMonth(), 1);
 
 interface CanonicalCalendarEvent {
   readonly color?: string;
@@ -133,7 +134,10 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  *
  * Month-view event markers are real buttons inside each focusable gridcell, so
  * keyboard users can activate individual events without switching views.
- * Agenda view renders the same events as full-width buttons.
+ * Agenda view renders the same events as full-width buttons. Early ISO dates retain their
+ * authored local year in month rendering and navigation. Colored agenda actions keep their
+ * foreground/background pairing during hover and press; callers remain responsible for choosing
+ * accessible custom event colors.
  *
  * Public collection properties take bounded, detached readonly sequences. Calendar-only fields
  * are projected from own data descriptors once per assignment; `lr-event-select` retains the
@@ -169,8 +173,8 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * @cssprop [--lr-calendar-nav-active-bg=color-mix(in oklab, var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Month-navigation pressed background.
  * @cssprop [--lr-calendar-day-hover-bg=var(--lr-color-brand-quiet)] - Day hover background.
  * @cssprop [--lr-calendar-day-active-bg=color-mix(in oklab, var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Day pressed background.
- * @cssprop [--lr-calendar-agenda-event-hover-bg=var(--lr-color-brand-quiet)] - Agenda-event hover background.
- * @cssprop [--lr-calendar-agenda-event-active-bg=color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Agenda-event pressed background.
+ * @cssprop [--lr-calendar-agenda-event-hover-bg=var(--lr-color-brand-quiet)] - Agenda-event hover background override; without one, colored events retain their event fill.
+ * @cssprop [--lr-calendar-agenda-event-active-bg=color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Agenda-event pressed background override; without one, colored events retain their event fill.
  * @cssprop [--lr-calendar-day-min-block-size=var(--lr-size-6rem)] - Minimum block size of a day cell.
  * @cssprop [--lr-calendar-day-min-block-size-narrow=var(--lr-size-4rem)] - Minimum block size of a day cell once the host is narrower than 28rem.
  * @cssprop [--lr-calendar-day-selected-bg=var(--lr-color-brand-quiet)] - Background of a selected day cell, decoupled from the shared token also driving the nav-button/agenda-event hover background.
@@ -228,7 +232,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   private get normalizedFirstDayOfWeek(): number {
     return resolveFirstDayOfWeek(this.firstDayOfWeek, this.effectiveLocale);
   }
-  private changeMonth(delta: number): void { const next = new Date(this.viewStart.getFullYear(), this.viewStart.getMonth() + delta, 1); this.viewDate = formatISO(next); this.emit('lr-view-change', { viewDate: this.viewDate }); }
+  private changeMonth(delta: number): void { const next = localDate(this.viewStart.getFullYear(), this.viewStart.getMonth() + delta, 1); this.viewDate = formatISO(next); this.emit('lr-view-change', { viewDate: this.viewDate }); }
   private selectDate(date: string): void { this.value = date; this.focusedDate = date; this.emit('lr-date-select', { date }); }
   /** Invalid rows are omitted; all later rendering uses the descriptor-safe projection. */
   private get effectiveEvents(): readonly CanonicalCalendarEvent[] {

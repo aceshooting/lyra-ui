@@ -25,6 +25,11 @@ The `base` part is an accessible `role="group"`: a non-empty host `aria-label` n
 aggregate. A native external `<label for>` remains available through `labels`, but it does not cross
 into the shadow-root group. `startLabel` and `endLabel` continue to name the individual sliders.
 
+Only the primary mouse button starts seeking or dragging. Right and middle presses leave the range
+and input/change events untouched. Touch and pen gestures keep their existing behavior, including
+concurrent pointer support; pointer cancellation and capture cleanup retain their existing
+semantics.
+
 **Properties:**
 
 - `min: number = 0`

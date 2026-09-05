@@ -18,6 +18,24 @@ const meta: Meta = { title: 'Form/Color picker', component: 'lr-color-picker', t
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-color-picker label="Accent color"></lr-color-picker>` };
 
+export const DisabledDraft: StoryObj = {
+  parameters: {
+    docs: { description: { story: 'Disabling an unfinished text draft discards it without committing a color. Palette and format actions also stop immediately. Move focus away while enabled to commit a valid draft.' } },
+  },
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-m); max-inline-size:var(--lr-size-28rem);">
+      <lr-color-picker inline label="Draft color" value=${ACCENT} swatches=${[ACCENT, SUCCESS].join(';')}></lr-color-picker>
+      <button type="button" @pointerdown=${(event: PointerEvent) => event.preventDefault()} @click=${(event: Event) => {
+        const picker = (event.currentTarget as HTMLElement).previousElementSibling;
+        if (picker?.localName === 'lr-color-picker') {
+          const control = picker as HTMLElement & { disabled: boolean };
+          control.disabled = !control.disabled;
+        }
+      }}>Toggle disabled</button>
+    </div>
+  `,
+};
+
 /** The panel carries the saturation/brightness grid, the hue slider, the value field, the format
  *  toggle, and — where the browser exposes the EyeDropper API — a screen picker. */
 export const Open: StoryObj = {

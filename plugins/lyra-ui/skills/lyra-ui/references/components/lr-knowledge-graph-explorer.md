@@ -21,6 +21,13 @@ neighborhood expansion, pinned nodes, path finding between pins, node selection,
 overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-list`,
 `lr-path-strip`, and `lr-popover.showAt()`.
 
+Removing `search-query` retains `null` property readback while clearing the search input, results
+and search dimming; an explicitly empty value remains empty and later queries work normally.
+Path-node `lr-entity-activate` is consumed by the explorer and enters the same selection, graph
+focus and details flow as other entity activations, emitting one `lr-selection-change`.
+`lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
+`query`, `matchCount`, and `matchCountExact`.
+
 **Properties:** (host-supplied data, identity-normalized before rendering)
 
 - `nodes: LyraGraphNode[] = []`, `links: LyraGraphLink[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,

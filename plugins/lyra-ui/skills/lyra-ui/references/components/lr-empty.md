@@ -18,6 +18,9 @@
 
 First-party "no data" state (no Web Awesome equivalent).
 
+Removing `heading` or `description` safely omits that text; explicit empty values remain empty and
+later values restore the corresponding content.
+
 **Properties:**
 
 - `heading: string = ''`

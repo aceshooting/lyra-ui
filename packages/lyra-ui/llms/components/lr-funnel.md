@@ -21,6 +21,10 @@ bar whose length is that stage's share of the **first** stage, read top-to-botto
 drop-off. It sits beside `lr-gauge` and `lr-heatmap` as an analytics primitive rather than a general
 chart type.
 
+When a positive finite stage value divided by a positive finite baseline overflows to `Infinity`,
+the main or comparison data fill clamps to 100%. Nonfinite input normalization, nonpositive-baseline
+behavior, percentage and drop-off text, and overflow border styling keep their existing rules.
+
 It is deliberately not a sorted bar chart: it normalizes to the first stage rather than to the data
 maximum, draws no value axis, and reads as stage-to-stage retention rather than category comparison.
 Reach for `lr-bar-chart`/`lr-lite-chart` when you actually want a value axis and category comparison.

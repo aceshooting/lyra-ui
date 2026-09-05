@@ -227,6 +227,7 @@ export const styles = css`
   /* Only rendered while [editable] is set, so a non-editable token row keeps its plain,
      non-focusable text span and its current metrics. */
   [part="token-label"] {
+    align-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border-radius: var(--lr-token-input-radius, var(--_lr-token-input-radius));

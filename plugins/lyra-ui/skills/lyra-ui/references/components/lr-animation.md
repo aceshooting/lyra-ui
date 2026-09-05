@@ -18,6 +18,10 @@
 
 Declaratively animates one slotted element through the native Web Animations API.
 
+An initial playing mount creates one native animation and emits one `lr-start`. A real target or
+timing change still rebuilds the animation, while replay and reconnect retain their normal
+start/finish lifecycle, including reduced motion.
+
 **Properties:**
 
 - `name: string = 'none'` — accepts any animation registry name. The built-in names are `'none' |

@@ -24,7 +24,6 @@ import {
   codeBlockLineHasFocus,
   codeBlockLineCount,
   codeBlockLineHighlightSet,
-  codeBlockNeedsHighlightResync,
   codeBlockPreSuppliedGrammar,
   codeBlockShowsSkeleton,
   renderCodeBlockPlainCode,
@@ -173,7 +172,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The raw source text. */
+  /** The raw source text. Removing the attribute renders an empty code block. */
   @property() code = '';
 
   /** A shiki-recognized language id or alias (e.g. `"javascript"`,
@@ -209,12 +208,13 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
    *  past this height instead of growing the page. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
-  /** Whether to display one-based line numbers beside the code. */
+  /** Whether to display one-based line numbers beside the code. Highlighted gutters
+   *  follow live locale and line-label string changes. */
   @property({ type: Boolean, attribute: 'line-numbers', reflect: true })
   lineNumbers = false;
 
   /** Comma-separated 1-based inclusive line ranges (e.g. `"3-5,7"`) to visually emphasize.
-   *  Declarative sugar over `highlights` — merges with, and renders identically to, any
+   *  Removing the attribute clears these ranges. Declarative sugar over `highlights` — merges with, and renders identically to, any
    *  `line-range` entries in `highlights`. */
   @property({ attribute: 'highlight-lines' }) highlightLines = '';
 
@@ -372,12 +372,12 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   // `willUpdate()`/`updated()`/`render()`/`syncHighlight()` so they all agree
   // on whether this language is highlightable at all.
   private preSuppliedGrammar(): ShikiLanguageInput | undefined {
-    return codeBlockPreSuppliedGrammar(this.languages, this.language);
+    return codeBlockPreSuppliedGrammar(this.languages, this.language ?? '');
   }
 
   private lineHighlightSet(): Set<number> {
     return codeBlockLineHighlightSet(
-      this.highlightLines,
+      this.highlightLines ?? '',
       this.highlights,
       this.lineCount()
     );
@@ -392,7 +392,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   }
 
   private lineCount(): number {
-    return codeBlockLineCount(this.code);
+    return codeBlockLineCount(this.code ?? '');
   }
 
   /** Resolves a `line-range` anchor (or a `highlights` id string resolving to one) by scrolling
@@ -424,7 +424,11 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
       );
     }
     if (changed.has('languages')) this.activateLanguages(this.languages);
-    if (!codeBlockNeedsHighlightResync(changed)) return;
+    if (!this.interactions.needsHighlightResync(
+      changed,
+      this.effectiveLocale,
+      this.localize('codeBlockLineLabel'),
+    )) return;
     if (this.shikiReady || this.preSuppliedGrammar()) {
       this.syncHighlight();
     } else {
@@ -476,7 +480,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     const languages = this.languages;
     const generation = this.activateLanguages(languages);
     const token = ++this.highlightToken;
-    const lang = normalizeShikiLanguage(this.language);
+    const lang = normalizeShikiLanguage(this.language ?? '');
     if (!lang) {
       this.highlightedHtml = null;
       return;
@@ -523,7 +527,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   private tokenize(hl: ShikiHighlighterCore, lang: string): string | null {
     return tokenizeCodeBlock(hl, {
-      code: this.code,
+      code: this.code ?? '',
       lang,
       lineNumbers: this.lineNumbers,
       activatableLines: this.activatableLines,
@@ -545,7 +549,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   // own doc for the rendering behavior.
   private renderPlainCode(): TemplateResult {
     return renderCodeBlockPlainCode({
-      code: this.code,
+      code: this.code ?? '',
       lineNumbers: this.lineNumbers,
       activatableLines: this.activatableLines,
       focusedLine: this.focusedLine,

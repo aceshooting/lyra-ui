@@ -18,6 +18,16 @@
 
 KPI/stat card — value + unit + label + optional icon/trend/caption.
 
+Passive slotted content preserves normal pointer activation and Control/Meta/Shift intent. The
+platform primary modifier and Shift activate a new browsing context through the real anchor;
+listeners may cancel that activation. Nested interactive controls retain their own actions.
+Temporary target and relation values are restored after activation unless the listener changed those
+attributes itself.
+
+Removing `caption` or `sub` omits the attribute fallback without hiding assigned slot content.
+Removal retains `null` property readback; explicit empty strings remain empty and later supplied
+values render normally.
+
 **Renamed in 8.0.0 — breaking:** `appearance` is now `frame`. Library-wide, `appearance` means only
 "how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
 this property was always the second. There is no alias — `appearance` on `<lr-stat>` is an unknown

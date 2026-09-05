@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { live } from 'lit/directives/live.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
@@ -19,6 +20,7 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -192,6 +194,10 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * Pointer drags are reversible previews: a release commits the latest colour, while cancellation,
  * lost capture, disablement, disconnection, or document adoption silently restores the colour and
  * submitted form value that existed before the gesture.
+ * Own or fieldset disablement discards an unfinished text draft without committing it and blocks
+ * palette/format actions immediately. An enabled text-field blur still commits a valid draft;
+ * changing format remains silent. Host-root external descriptions precede local trigger guidance
+ * and follow source replacement, removal, reinsertion, reconnection and document adoption.
  * The popup participates in the shared nonmodal overlay stack, so Escape and an outside pointer
  * dismiss it only while it is topmost; closing a newer overlay hands focus back through the
  * manager instead of collapsing every open popup under the same event.
@@ -427,7 +433,28 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
    *  deferred so a declarative `value` attribute is interpreted with the `format`/`opacity`/
    *  `uppercase` attributes that arrive alongside it, whatever order they land in. */
   private valueNeedsParse = false;
-  private pendingInput = '';
+  private pendingInput: string | undefined;
+  private localDescriptionIds = '';
+  private externalDescriptionLease?: NativeControlDescriptionLease;
+
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || (typeof this.matches === 'function' && this.matches(':disabled'));
+  }
+
+  private syncExternalDescription(): void {
+    const target = this.isConnected ? this.triggerEl() : null;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireNativeControlDescription(this, target, () => this.localDescriptionIds);
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
 
   private hintId = nextId('color-picker-hint');
   private errorId = nextId('color-picker-error');
@@ -464,6 +491,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     // Seed from the light-DOM children directly, before the first render -- the slots'
     // @slotchange handler (onSlotChange below) only fires once the shadow DOM has committed its
     // first <slot> elements, so relying on it alone rendered label/hint/error chrome `hidden` on
@@ -484,6 +512,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     // A disconnect/reconnect cycle (drag-and-drop reparenting, a virtualized list reordering)
     // otherwise leaves the panel rendered open at a stale, frozen position. Assigned through the
     // setter so the reflected `open` attribute is cleared too, then torn down immediately rather
@@ -500,6 +529,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
     // Adoption can occur while already disconnected, in which case no new disconnected callback
     // runs. Defensively retire resources retained from the previous realm either way.
     this.cancelDrag();
@@ -525,8 +556,9 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     if (formatChanged) this.cancelDrag();
     // `disabled` can flip (directly, or through an ancestor fieldset) while the panel is already
     // showing; the open-guard in the setter only covers the opening direction.
-    if (this.effectiveDisabled) {
+    if (this.liveDisabled) {
       if (this.open) this.applyOpenState(false);
+      this.pendingInput = undefined;
       this.keyboardChanged = false;
       this.cancelDrag();
     }
@@ -548,6 +580,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     if (changed.has('open')) {
       const suppressClose = !this.open && this.suppressDisconnectedClose;
       this.suppressDisconnectedClose = false;
@@ -560,7 +593,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
         this.pendingPlacementEffects = 0;
         this.teardownOverlay(this.restoreFocusOnClose);
         // An abandoned half-typed entry must not reappear the next time the panel opens.
-        this.pendingInput = '';
+        this.pendingInput = undefined;
       }
       // A declaratively-open picker must not announce a transition it never made, and a close
       // driven by disconnection has nowhere to dispatch to.
@@ -1006,31 +1039,44 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // color-picker's serialized public value changed; commitColor() emits the one public input
     // after parsing succeeds.
     event.stopPropagation();
+    if (this.liveDisabled) {
+      this.pendingInput = undefined;
+      this.requestUpdate();
+      return;
+    }
     this.pendingInput = (event.target as HTMLInputElement).value;
   };
 
   private onFieldChange = (event: Event): void => {
     event.stopPropagation();
     const field = event.target as HTMLInputElement;
+    if (this.liveDisabled) {
+      this.pendingInput = undefined;
+      this.requestUpdate();
+      return;
+    }
     const parsed = parseColor(field.value);
     if (parsed) this.commitColor(parsed);
-    this.pendingInput = '';
+    this.pendingInput = undefined;
     this.requestUpdate();
   };
 
   private onFieldKeyDown = (event: KeyboardEvent): void => {
+    if (this.liveDisabled) return;
     if (event.key !== 'Enter') return;
     event.preventDefault();
     this.onFieldChange(event);
   };
 
   private onSwatchClick(swatch: LyraColorPickerSwatch): void {
+    if (this.liveDisabled) return;
     const parsed = parseColor(swatch.color);
     if (!parsed) return;
     this.commitColor(this.opacity ? parsed : hsva(parsed.h, parsed.s, parsed.v, 1));
   }
 
   private onFormatClick = (): void => {
+    if (this.liveDisabled) return;
     const index = FORMAT_CYCLE.indexOf(this.format);
     this.format = FORMAT_CYCLE[(index + 1) % FORMAT_CYCLE.length]!;
   };
@@ -1241,7 +1287,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     invalid: boolean,
   ): TemplateResult {
     const entries = this.normalizedSwatches();
-    const fieldValue = this.pendingInput || this.getFormattedValue(this.activeFormat());
+    const fieldValue = this.pendingInput ?? this.getFormattedValue(this.activeFormat());
     return html`<div
       id=${this.panelId}
       part="panel"
@@ -1267,7 +1313,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           spellcheck="false"
           autocapitalize="off"
           autocomplete="off"
-          .value=${fieldValue}
+          .value=${live(fieldValue)}
           aria-label=${this.localize('colorPickerValueField')}
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${invalid ? 'true' : 'false'}
@@ -1320,7 +1366,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const labelledBy = !this.accessibleLabel && hasLabel ? this.labelId : '';
     const userInvalid = this.internals.states.has('user-invalid');
     const invalid = hasError || userInvalid;
-    const describedBy = [
+    const describedBy = this.localDescriptionIds = [
       hasError ? this.errorId : '',
       hasHint ? this.hintId : '',
       this.valueTextId,

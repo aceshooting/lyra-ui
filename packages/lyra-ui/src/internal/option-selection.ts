@@ -23,3 +23,22 @@ export function isOptionSelectedDirty(option: object): boolean {
 export function wasOptionInitiallySelected(option: object): boolean {
   return initialDirtySelection.get(option) === true;
 }
+
+const selectedWriters = new WeakMap<EventTarget, number>();
+
+/** @internal Emits an owner's existing child notification with live-write provenance. */
+export function notifyOptionSelectedWrite(option: EventTarget, notify: () => void): void {
+  const depth = selectedWriters.get(option) ?? 0;
+  selectedWriters.set(option, depth + 1);
+  try {
+    notify();
+  } finally {
+    if (depth) selectedWriters.set(option, depth);
+    else selectedWriters.delete(option);
+  }
+}
+
+/** @internal Identifies an existing option-change notification from a consumer live write. */
+export function isOptionSelectedWrite(event: Event): boolean {
+  return event.composedPath().some((target) => (selectedWriters.get(target) ?? 0) > 0);
+}

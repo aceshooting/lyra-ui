@@ -55,18 +55,18 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
-  [part="fit-control"]:hover,
-  [part="rotate-button"]:hover,
-  [part="annotate-toggle"]:hover {
+  [part="fit-control"]:where(:not(:disabled)):hover,
+  [part="rotate-button"]:where(:not(:disabled)):hover,
+  [part="annotate-toggle"]:where(:not(:disabled)):hover {
     background: var(--lr-color-brand-quiet);
   }
   /* Declared before the [aria-pressed='true'] rule below so the toggle's own 'on' fill wins the
      source-order tie, as it already does against :hover. Covers UNPRESSED toggles only -- an 'on'
      annotate-toggle takes the dedicated (0,3,0) press rule beside that pressed rule, since losing
      hover on an already-on toggle is deliberate but losing the press is not. */
-  [part="fit-control"]:active,
-  [part="rotate-button"]:active,
-  [part="annotate-toggle"]:active {
+  [part="fit-control"]:where(:not(:disabled)):active,
+  [part="rotate-button"]:where(:not(:disabled)):active,
+  [part="annotate-toggle"]:where(:not(:disabled)):active {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
@@ -106,7 +106,7 @@ export const styles = css`
      filter chips of lr-test-results, lr-agent-eval-dashboard, lr-env-list and lr-trace-tree, which
      keep hover on the selected member. Mixing from --lr-image-viewer-annotate-active-bg keeps a
      retinted fill's press a deeper tier of itself. */
-  [part="annotate-toggle"][aria-pressed="true"]:active {
+  [part="annotate-toggle"][aria-pressed="true"]:where(:not(:disabled)):active {
     background: color-mix(
       in oklab,
       var(--lr-image-viewer-annotate-active-bg, var(--lr-color-brand-quiet)),
@@ -133,6 +133,11 @@ export const styles = css`
     max-inline-size: 100%;
     transition: transform var(--lr-transition-base);
     outline: none;
+  }
+  [part="image-wrapper"]:focus-visible {
+    outline: var(--lr-focus-ring);
+    /* Keep the ring inside an image that fills the clipping pan/zoom viewport. */
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), var(--lr-focus-ring-width) + var(--lr-focus-ring-offset)));
   }
   /* 'actual' keeps the image at its natural pixel dimensions -- undo the 100% cap above and the
      'width'/'contain' image constraints below for that mode. */

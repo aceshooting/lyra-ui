@@ -26,6 +26,9 @@ The clear/expand actions sit directly in the shared outer height ladder: compact
 enough for their hit targets, while `l` and `xl` retain the shared 48px and 56px heights rather
 than adding outer padding around the buttons.
 
+Removing `label` or `hint` safely omits that content while retaining native `null` property
+readback. Explicit empty strings remain empty; later supplied text renders normally.
+
 **Properties:**
 
 - `value: string` (also accepts a `Date` or `null` when assigned) — strict `HH:mm`, optional

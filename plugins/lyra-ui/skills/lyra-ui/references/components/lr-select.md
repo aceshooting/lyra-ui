@@ -27,6 +27,15 @@ Session-history/autofill restoration assigns the stored string through the same 
 value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
 `lr-change`.
 
+Mounted `option.selected` assignments update the picker value and form submission immediately,
+including deselection and equal-value writes. Duplicate-valued options retain their individual
+occurrence identities. These programmatic writes emit no user input/change event.
+
+Host `aria-describedby` resolves external guidance onto the trigger before internal value, error,
+and hint guidance. References track missing targets, replacement, removal/reinsertion, reconnect,
+and adoption. Removing `label`, `hint`, `help-text`, or `error-text` safely omits the content
+without changing native `null` property readback; explicit empty strings remain empty.
+
 There is no typing-to-filter and no `filter`/`source`/`empty-text`/`max-render` surface — reach for
 `<lr-combobox>` instead whenever any of those apply. Everything else a closed list needs is here:
 `multiple`, `max-options-visible`, `with-clear`, `getTag`, `placement`, `appearance`, and `pill`.

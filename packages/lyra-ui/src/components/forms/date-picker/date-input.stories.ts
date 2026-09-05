@@ -329,3 +329,21 @@ export const RangePresets: Story = {
     `;
   },
 };
+
+/** Host-root guidance describes the text field; explicit action copy remains literal. */
+export const ExternalGuidanceAndCallerCopy: Story = {
+  render: () => html`
+    <p id="date-input-booking-guidance">Choose an arrival date within the booking window.</p>
+    <lr-date-input
+      label="Arrival"
+      aria-describedby="date-input-booking-guidance"
+      hint="Dates use your current locale."
+      value="2026-07-15"
+      with-clear
+      clear-label="Clear arrival"
+      open-label="Open arrival calendar"
+      dialog-label="Arrival calendar"
+      .strings=${{ clear: 'Effacer', openCalendar: 'Ouvrir le calendrier', chooseDate: 'Choisir une date' }}
+    ></lr-date-input>
+  `,
+};

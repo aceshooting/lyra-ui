@@ -26,6 +26,9 @@ row actions in that mode. No thread CRUD or persistence — every mutation
 (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the _requested_ new
 state; the host mutates `threads`.
 
+A conversation row with `slot=""` belongs to the default slot exactly like a row with no slot
+attribute, including after reconnect. Named slots retain their distinct roles.
+
 ArrowUp/ArrowDown/Home/End navigation skips rows that are disabled, hidden, `aria-hidden`, or
 `inert` (including an inert ancestor introduced by `wrapRow`). Arrow navigation continues through
 the complete item model at a virtual-window edge and mounts the next available row before moving
@@ -84,9 +87,9 @@ property. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected)
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
 pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
 this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
-the real row keeps the `role="heading"`/`aria-level` semantics and the tab order (the copy's toggle
-is not a second tab stop), while the pinned copy stays clickable and requests the same
-`lr-group-toggle` collapse. Default `false` renders exactly as before; `grouping="none"` has no
+the real row keeps the `role="heading"`/`aria-level` semantics and its interactive toggle. The
+pinned copy is inert, pointer-transparent presentation content: its toggle and adornments do not
+receive interaction, and it adds no second tab stop. Default `false` renders exactly as before; `grouping="none"` has no
 headers to pin, so it is a no-op there. `label?: string` — accessible name for the list region.
 Omitting it uses the localized `threadListLabel`; an explicit empty string intentionally leaves the
 list unnamed. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>

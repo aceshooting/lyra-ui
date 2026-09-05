@@ -21,6 +21,15 @@ landing surface for `region`-anchored citations. Distinct from `<lr-svg-viewer>`
 documents) and `<lr-image-comparer>` (before/after slotted surfaces). Adopts `DocumentAnchorTarget`
 with `anchorKinds: ['region']` only — no text selection is bound.
 
+Disabled fit, rotate and annotate controls retain their resting paint on hover and press. Enabled
+controls keep their token-driven feedback.
+
+The annotation wrapper displays the shared token-driven focus ring in keyboard modality. The ring
+sits inside the wrapper so an image filling the scroll viewport cannot clip it. Annotation commands
+apply when that wrapper itself owns keyboard input. Enter on a highlight button activates that
+highlight without starting or committing an annotation, whether or not a draft exists; wrapper arrow
+commands retain physical image-coordinate semantics in both directions.
+
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
 `contain`), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute

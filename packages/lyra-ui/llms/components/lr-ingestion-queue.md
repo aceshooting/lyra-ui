@@ -19,6 +19,10 @@
 Controlled list of documents moving through an ingestion pipeline: stage badge, progress, chunk/
 embedding counts, retry attempts, errors, and retry/cancel requests. Never ingests anything itself.
 
+Nonstring failure details use the localized failed-stage label for row text and fresh failure
+announcements. Omitted details stay omitted. Formatting uses the effective locale, and historical
+failures remain silent on mount.
+
 **Properties:**
 
 - `items: IngestionQueueItem[] = []` (attribute: false) — `IngestionQueueItem { id: string;

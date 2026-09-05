@@ -29,6 +29,11 @@ include instance. Other navigation and resource attributes such as `href`, `src`
 cannot remain interactive; their wrappers are unwrapped when their ordinary children are safe,
 while elements such as inputs that have no passive content are removed.
 
+The same passive restrictions apply through nested template contents before a remote document is
+retained in the cache or a selected fragment becomes live. Template text and fragment selection
+remain supported at nested depths, including ordinary elements inside templates; permitted local
+anchors still resolve against per-instance rebased IDs.
+
 A bare primitive: no label/hint/error chrome, no implicit role, no computed accessible name, and no
 `aria-live` wrapper (the fragment can carry its own landmarks; wrapping the host would re-announce
 all of it on every load). The host always carries explicit `aria-busy="true"|"false"`: true while

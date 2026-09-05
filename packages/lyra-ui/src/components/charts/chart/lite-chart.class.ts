@@ -1,3 +1,4 @@
+import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import {
   html,
   svg,
@@ -183,9 +184,8 @@ const MAX_SCROLL_CONTENT_WIDTH = 1_000_000;
  * Picks a "nice" (1/2/5 × 10^n) step size for an axis spanning `span` over
  * roughly `count` ticks — the standard Heckbert nice-numbers approach, so
  * axis labels read as 0/25/50/75/100 rather than 0/23.4/46.8/70.2/93.6.
- * `span` is always positive here: niceDomain() (the only caller) guarantees
- * `lo < hi` before calling this, either from its own lo===hi widening or
- * from its own caller's Math.min/max-accumulated data domain.
+ * Callers supply a positive span from validated bounds, widening equal linear-domain bounds
+ * before selecting their step.
  */
 function niceStep(span: number, count: number): number {
   const rough = span / Math.max(1, count);
@@ -239,6 +239,33 @@ function safeDomainTicks(lo: number, hi: number, count: number): number[] {
     const ratio = index / count;
     return lo * (1 - ratio) + hi * ratio;
   }).filter(Number.isFinite);
+}
+
+/** Readable positive ticks inside the unchanged logarithmic domain, including both bounds. */
+function logarithmicTicks(lo: number, hi: number, count: number): number[] | undefined {
+  if (!(lo > 0 && hi > lo) || !Number.isFinite(lo) || !Number.isFinite(hi)) return undefined;
+  const start = Math.log10(lo);
+  const end = Math.log10(hi);
+  const span = end - start;
+  if (!(span > 0)) return undefined;
+  const decades = span >= 1;
+  const step = decades ? Math.ceil(span / count) : niceStep(hi - lo, count);
+  if (!Number.isFinite(step) || step <= 0) return [...new Set(safeDomainTicks(lo, hi, count))];
+  const ticks = [lo];
+  // Keep the first and last interior tick clear of the exact bounds as well as one another.
+  const minimumGap = decades ? step / 2 : span / (count * 2);
+  const first = Math.ceil((decades ? start : lo) / step);
+  for (let index = 0; index <= count + 1; index++) {
+    const value = decades ? 10 ** ((first + index) * step) : (first + index) * step;
+    if (!Number.isFinite(value) || value >= hi) break;
+    if (value <= ticks.at(-1)!) continue;
+    const logarithm = Math.log10(value);
+    if (logarithm - Math.log10(ticks.at(-1)!) >= minimumGap && end - logarithm >= minimumGap) {
+      ticks.push(value);
+    }
+  }
+  ticks.push(hi);
+  return ticks;
 }
 
 /** Nice-rounded [lo, hi, ticks[]] for an axis covering `dataLo..dataHi`. */
@@ -478,7 +505,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** A CSS `height`; invalid values leave the default height token in control. The public
    * `--lr-chart-height` token always takes precedence over this private fallback. */
   @property() height = '280px';
+  /** Horizontal axis title. Long titles ellipsize to fit while retaining their full accessible name. */
   @property({ attribute: 'x-label' }) xLabel = '';
+  /** Vertical axis title. Long titles ellipsize to fit while retaining their full accessible name. */
   @property({ attribute: 'y-label' }) yLabel = '';
   @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter }) beginAtZero = true;
   /** Stacks each category's bars into one segmented bar. Ignored for `type="line"`. */
@@ -596,14 +625,16 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property({ converter: autoNumberConverter, attribute: 'value-axis-gutter' })
   valueAxisGutter?: number | 'auto';
   /** Overrides the internal `BAR_GROUP_GAP` (0.2) fraction of a category slot left as a gap between
-   *  categories. Unset (the default) keeps today's fixed 0.2. */
+   *  categories. Grouped bars share the remaining width with bounded internal gaps; ratios below
+   *  1 retain positive bar widths. Unset (the default) keeps the 0.2 category gap. */
   @property({ type: Number, attribute: 'bar-gap-ratio' }) barGapRatio?: number;
-  /** `type="bar"` only (no effect on `type="line"`): `'linear'` (default) maps a bar's value to
-   *  height via the standard `niceDomain`-based fraction, unchanged from before this property
-   *  existed. `'sqrt'` instead maps via `Math.sqrt(value / domainMax)` (mirroring `lr-heatmap`'s
-   *  matrix-mode `sqrt` scale), boosting smaller values relative to one dominant value so a skewed
-   *  dataset's smaller bars don't get washed out. Gridlines/tick labels stay on the linear domain
-   *  either way — only the bar marks' own height mapping changes. */
+  /** `'linear'` (default) maps values through the standard domain fraction. `'sqrt'` compresses
+   *  bar magnitudes while keeping line points and gridlines linear; stacked bars compress each
+   *  signed total once and split it proportionally. `'logarithmic'` maps bars, line points and
+   *  gridlines onto the same log axis with positive, bounded logarithmic ticks. Logarithmic stacks
+   *  map the finite positive total once and
+   *  split its extent by raw positive shares; nonpositive segments have zero natural log height.
+   *  With minBarHeight unset, the natural logarithmic stack remains within the plot. */
   @property() scale: LyraLiteChartScale = 'linear';
   /** Suppresses `renderGrid()` entirely — no gridlines, no y-axis tick labels. x-axis category
    *  labels (rendered separately) are unaffected. Default `false` preserves today's behavior. */
@@ -614,7 +645,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  heterogeneous-magnitude stacked data. `type="bar"` only; a value of exactly `0` is unaffected
    *  (that's `skipZero`'s job, not this one's). Finite values are capped at 1,000,000px to keep
    *  derived SVG geometry practical. Unset (the default) reproduces today's `Math.max(0, y2 - y1)`
-   *  exactly, with no floor. */
+   *  exactly, with no floor. Authored floors can exceed the available plot height. Linear and
+   *  logarithmic stacks push subsequent segments along their signed pixel cursor. */
   @property({ type: Number, attribute: 'min-bar-height' }) minBarHeight?: number;
   /** Category indexes to mark `data-selected` and `aria-pressed="true"` on every bar/point at
    *  that index, across every
@@ -657,6 +689,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private resizeObserverDocument?: Document;
   private resizeObserverTarget?: SVGSVGElement;
   private resizeObserverGeneration = 0;
+  private axisTitleTargets = new Set<SVGTextElement>();
+  private axisTitleFrame?: number;
+  private axisTitleFits = new WeakMap<SVGTextElement, {
+    source: string; extent: number; display: string; width: number;
+  }>();
   private forcedColorsQuery?: MediaQueryList;
   private forcedColorsWindow?: Window;
   private refocusMarkAfterUpdate = false;
@@ -727,6 +764,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return [header, ...rows].join('\r\n');
   }
 
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (oldValue !== value && (name === 'style' || name === 'class')) this.fitAxisTitles();
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncAnnouncementSink();
@@ -759,16 +801,21 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       ) {
         return;
       }
-      const box = entries[0]?.contentBoxSize?.[0];
-      if (box) {
-        this.plotWidth = box.inlineSize;
-        this.plotHeight = box.blockSize;
-      } else {
-        const rect = this.svgEl?.getBoundingClientRect();
-        if (rect) {
+      const svgEntry = entries.find((entry) => entry.target === target);
+      if (svgEntry) {
+        const box = svgEntry.contentBoxSize?.[0];
+        if (box) {
+          this.plotWidth = box.inlineSize;
+          this.plotHeight = box.blockSize;
+        } else {
+          const rect = target.getBoundingClientRect();
           this.plotWidth = rect.width;
           this.plotHeight = rect.height;
         }
+        this.fitAxisTitles();
+      }
+      if (entries.some((entry) => this.axisTitleTargets.has(entry.target as SVGTextElement))) {
+        this.queueAxisTitleFit();
       }
     });
     this.resizeObserver = observer;
@@ -779,6 +826,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // shadow root) — re-observe it here (firstUpdated() only ever runs once,
     // on the very first render, so it can't be relied on for a reconnect).
     if (target) observer.observe(target);
+    this.syncAxisTitleTargets();
   }
 
   override disconnectedCallback(): void {
@@ -836,6 +884,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private resetResizeObserver(): void {
+    if (this.axisTitleFrame !== undefined) {
+      this.resizeObserverDocument?.defaultView?.cancelAnimationFrame(this.axisTitleFrame);
+      this.axisTitleFrame = undefined;
+    }
+    this.axisTitleTargets.clear();
     this.resizeObserverGeneration += 1;
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
@@ -921,6 +974,77 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       this.refocusChartAfterUpdate = false;
       this.svgEl?.focus();
     }
+    this.fitAxisTitles();
+    this.syncAxisTitleTargets();
+  }
+
+  /** Fit using the rendered font after hydration, preserving Lit's text part anchors. */
+  private fitAxisTitles(): void {
+    if (!this.ownerDocument?.defaultView || !this.isConnected || !this.svgEl?.getClientRects().length) return;
+    for (const title of this.svgEl.querySelectorAll<SVGTextElement>('[part="axis-title"]')) {
+      const text = Array.from(title.childNodes).find((node) => node.nodeType === 3) as Text | undefined;
+      if (!text) continue;
+      const source = title.getAttribute('aria-label') ?? '';
+      const extent = finiteRange(Number(title.getAttribute('data-title-extent')), 0, 0, MAX_SCROLL_CONTENT_WIDTH);
+      const previous = this.axisTitleFits.get(title);
+      if (
+        previous?.source === source && previous.extent === extent &&
+        previous.display === text.data && previous.width === title.getComputedTextLength()
+      ) continue;
+      title.style.removeProperty('opacity');
+      text.data = source;
+      if (title.getComputedTextLength() > extent) {
+        text.data = '…';
+        // Keep measurable geometry when no glyph fits so inherited font changes can restore it.
+        if (title.getComputedTextLength() > extent) title.style.opacity = '0';
+        else {
+          // Binary search bounds layout reads logarithmically even for a very long caller title.
+          let lower = 0;
+          let upper = source.length;
+          while (lower < upper) {
+            const middle = Math.ceil((lower + upper) / 2);
+            text.data = `${source.slice(0, middle)}…`;
+            if (title.getComputedTextLength() <= extent) lower = middle;
+            else upper = middle - 1;
+          }
+          // Do not leave the first half of a surrogate pair immediately before the ellipsis.
+          const last = source.charCodeAt(lower - 1);
+          if (last >= 0xd800 && last <= 0xdbff) lower -= 1;
+          text.data = `${source.slice(0, lower)}…`;
+        }
+      }
+      this.axisTitleFits.set(title, { source, extent, display: text.data, width: title.getComputedTextLength() });
+    }
+  }
+
+  private syncAxisTitleTargets(): void {
+    if (!this.resizeObserver || !this.svgEl) return;
+    const current = new Set(this.svgEl.querySelectorAll<SVGTextElement>('[part="axis-title"]'));
+    for (const title of this.axisTitleTargets) {
+      if (!current.has(title)) this.resizeObserver.unobserve(title);
+    }
+    for (const title of current) {
+      if (!this.axisTitleTargets.has(title)) this.resizeObserver.observe(title);
+    }
+    this.axisTitleTargets = current;
+  }
+
+  private queueAxisTitleFit(): void {
+    const document = this.resizeObserverDocument;
+    const window = document?.defaultView;
+    if (!window || this.axisTitleFrame !== undefined) return;
+    const generation = this.resizeObserverGeneration;
+    // Font changes can alter text geometry without resizing the SVG. Fit on the next frame so
+    // shortening an observed title cannot feed back into the current ResizeObserver delivery.
+    const frame = window.requestAnimationFrame(() => {
+      if (
+        this.axisTitleFrame !== frame || this.resizeObserverGeneration !== generation ||
+        !this.isConnected || this.ownerDocument !== document
+      ) return;
+      this.axisTitleFrame = undefined;
+      this.fitAxisTitles();
+    });
+    this.axisTitleFrame = frame;
   }
 
   private colorFor(index: number, series: LyraLiteChartSeries): string {
@@ -1330,7 +1454,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       lo = 0;
       hi = 1;
     }
-    return niceDomain(lo, hi, this.beginAtZero, TICK_COUNT);
+    const domain = niceDomain(lo, hi, this.beginAtZero, TICK_COUNT);
+    if (this.scale === 'logarithmic') {
+      const ticks = logarithmicTicks(this.logDomainFloor(domain.lo, domain.hi), domain.hi, TICK_COUNT);
+      if (ticks) return { ...domain, ticks };
+    }
+    return domain;
   }
 
   private emitPoint(datasetIndex: number, index: number): void {
@@ -1472,7 +1601,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // gap logic at all (<0), either of which would corrupt every bar's x-position/width below.
     const groupGap = finiteRange(this.barGapRatio ?? BAR_GROUP_GAP, BAR_GROUP_GAP, 0, 1);
     const groupW = slot * (1 - groupGap);
-    const barW = (groupW - BAR_GAP * slot * (groupCount - 1)) / groupCount;
+    // Keep ordinary gaps while reserving at least half of a crowded group's allocation for bars.
+    const barGap = groupCount > 1 ? Math.min(BAR_GAP * slot, groupW / (2 * (groupCount - 1))) : 0;
+    const barW = (groupW - barGap * (groupCount - 1)) / groupCount;
     const markIndexes = this.markIndexMap();
     const activeMarkIndex = this.normalizedMarkIndex();
     // Hoisted out of the per-bar loop: the whole SVG re-renders on every reactive change
@@ -1482,19 +1613,17 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // minBarHeight is a non-negative pixel floor, or undefined when unset -- resolved once per
     // render pass (not per bar/segment) since every usage below needs the same normalized value.
     const minBarHeight = this.effectiveMinBarHeight();
-    // Only meaningful for stacked + scale="sqrt": each category's *positive*
-    // and *negative* stack totals, sqrt-compressed once per category (not
-    // per segment) -- see barValueToY()'s doc for why this has to be a
-    // per-category pre-pass rather than a per-segment computation.
+    // Nonlinear stacks transform each category's total once before sharing the resulting height
+    // among its segments. The square-root branch retains independent positive/negative totals.
     const stackedSqrt = this.stacked && this.scale === 'sqrt';
+    const stackedLog = this.stacked && this.scale === 'logarithmic';
     const domainMax = hi > 0 ? hi : 1;
     // Mirrors domainMax's fallback, but for the negative side: the magnitude of the domain's own
     // negative floor, or 1 when there's no negative extent at all (unused in that case).
     const negDomainMax = lo < 0 ? -lo : 1;
-    // The zero line's pixel position on the LINEAR domain, independent of `this.scale` -- unlike
-    // `barValueToY(0, ...)`, so all scale modes and both stacked branches share one exact baseline,
-    // matching renderGrid()'s own zero gridline position.
-    const zeroY = plotY + plotH - domainFraction(0, lo, hi) * plotH;
+    // Square-root and linear bars share the linear zero baseline. A logarithmic stack starts at
+    // the plot bottom, where its nonpositive values and logarithmic floor are pinned.
+    const zeroY = plotY + plotH - (stackedLog ? 0 : domainFraction(0, lo, hi)) * plotH;
     const clampSvgCoordinate = (value: number, fallback = zeroY) =>
       finiteRange(value, fallback, -MAX_SCROLL_CONTENT_WIDTH, MAX_SCROLL_CONTENT_WIDTH);
     const clampSvgLength = (value: number) =>
@@ -1506,7 +1635,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const negAvailH = plotY + plotH - zeroY;
     const posTotals = new Map<number, number>();
     const negTotals = new Map<number, number>();
-    if (stackedSqrt) {
+    if (stackedSqrt || stackedLog) {
       for (const i of recordSample.rowIndexes) {
         let pos = 0;
         let neg = 0;
@@ -1548,6 +1677,19 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       const negCompressedH = stackedSqrt
         ? Math.sqrt(Math.min(negDomainMax, -(negTotals.get(i) ?? 0)) / negDomainMax) * negAvailH
         : 0;
+      const logTotal = posTotals.get(i) ?? 0;
+      const logStackH = stackedLog ? this.valueFraction(logTotal, lo, hi) * plotH : 0;
+      // Normalize by the finite total before summing shares: the raw positive sum may saturate at
+      // Number.MAX_VALUE, but its displayed extent must still be partitioned exactly once.
+      let logShareTotal = 0;
+      if (stackedLog && logTotal > 0) {
+        for (const datasetIndex of recordSample.seriesIndexes) {
+          const value = this.datasets[datasetIndex]?.data[i];
+          if (value != null && Number.isFinite(value) && value > 0) {
+            logShareTotal += value / logTotal;
+          }
+        }
+      }
       recordSample.seriesIndexes.forEach((di, sampledDatasetIndex) => {
         const s = this.datasets[di];
         if (!s) return;
@@ -1586,6 +1728,23 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             y2 = zeroY + shareHi * negCompressedH;
             stackNeg = nextStackNeg;
           }
+        } else if (stackedLog) {
+          rectX = slotStart;
+          // Map the positive total once, then partition that extent by raw positive shares.
+          // The pixel cursor preserves the opt-in floor's push/overflow behavior.
+          const naturalH = v > 0 && logShareTotal > 0 ? (v / logTotal / logShareTotal) * logStackH : 0;
+          const segH = clampSvgLength(
+            minBarHeight != null && v !== 0 && naturalH < minBarHeight ? minBarHeight : naturalH,
+          );
+          if (v >= 0) {
+            y2 = posPixelTop;
+            y1 = clampSvgCoordinate(finiteAdd(posPixelTop, -segH), posPixelTop);
+            posPixelTop = y1;
+          } else {
+            y1 = negPixelBottom;
+            y2 = clampSvgCoordinate(finiteAdd(negPixelBottom, segH), negPixelBottom);
+            negPixelBottom = y2;
+          }
         } else if (this.stacked) {
           rectX = slotStart;
           if (v >= 0) {
@@ -1613,7 +1772,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             negPixelBottom = y2;
           }
         } else {
-          rectX = slotStart + sampledDatasetIndex * (barW + BAR_GAP * slot);
+          rectX = slotStart + sampledDatasetIndex * (barW + barGap);
           const zeroClamped = Math.min(hi, Math.max(lo, 0));
           const barValLo = Math.min(zeroClamped, v);
           const barValHi = Math.max(zeroClamped, v);
@@ -1651,7 +1810,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         }
         const markIndex = markIndexes.get(`${di}:${i}`)!;
         const selected = selectedIndices.has(i);
-        const intraGroupSpacing = barW + BAR_GAP * slot;
+        const intraGroupSpacing = barW + barGap;
         const crossCategorySpacing =
           slot - Math.max(0, groupCount - 1) * intraGroupSpacing;
         const horizontalSpacing = Math.max(
@@ -1700,7 +1859,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               @click=${() => this.emitPoint(di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-            ><title>${titleText}</title></path>
+            >${nativeSvgTitle(titleText)}</path>
           </g>
         `
             : svg`
@@ -1725,7 +1884,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               @click=${() => this.emitPoint(di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-            ><title>${titleText}</title></rect>
+            >${nativeSvgTitle(titleText)}</rect>
           </g>
         `,
         );
@@ -1844,7 +2003,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               @click=${(event: MouseEvent) => this.emitNearestLinePoint(event, hitPoints, di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-            ><title>${titleText}</title></circle>
+            >${nativeSvgTitle(titleText)}</circle>
           </g>
         `;
       });
@@ -2127,6 +2286,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           ${!awaitingFitMeasurement && this.yLabel
             ? svg`<text
                 part="axis-title"
+                aria-label=${this.yLabel}
+                data-title-extent=${plotH}
                 x=${rtl ? w - 12 : 12}
                 y=${plotY + plotH / 2}
                 text-anchor="middle"
@@ -2134,7 +2295,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               >${this.yLabel}</text>`
             : nothing}
           ${!awaitingFitMeasurement && this.xLabel
-            ? svg`<text part="axis-title" x=${plotX + plotW / 2} y=${plotY + plotH + padBottom - 2} text-anchor="middle">${this.xLabel}</text>`
+            ? svg`<text part="axis-title" aria-label=${this.xLabel} data-title-extent=${plotW} x=${plotX + plotW / 2} y=${plotY + plotH + padBottom - 2} text-anchor="middle">${this.xLabel}</text>`
             : nothing}
         </svg>
         <lr-live-region part="live-region"></lr-live-region>

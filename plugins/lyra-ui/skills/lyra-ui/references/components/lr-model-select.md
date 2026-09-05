@@ -26,6 +26,14 @@ element. First-party invention (no Web Awesome equivalent).
 Session-history/autofill restoration synchronously restores the model id and form entry without
 emitting `lr-change`.
 
+Removing `label`, `hint`, or `error-text` clears that optional copy in both catalog and free-text
+modes. Removed string properties retain `null` readback, and later assignments restore their
+content.
+
+Composing key events (`isComposing` or legacy `keyCode === 229`) remain with the catalog query or
+custom-value editor: they do not navigate options, commit a selection or custom value, or close the
+popup. Ordinary keyboard behavior resumes after composition.
+
 When `catalog`/`allowCustom` replaces a focused trigger with the free-text input or vice versa,
 focus follows the available replacement. If the new owner is disabled or inert, focus returns to
 the available element that led into the picker, or to the stable `form-control` owner when no

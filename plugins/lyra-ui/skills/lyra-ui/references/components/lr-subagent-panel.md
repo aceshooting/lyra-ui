@@ -25,8 +25,9 @@ parents remain renderable instead of recursing forever.
 accessible-name override for the `role="tree"` element, where omission reads back `undefined` and
 localizes the default while any supplied string, including `''`, renders verbatim.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
-string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
-Record<string, unknown> }`.
+string; model?: string; readonly progressRatio?: number; startedAt?: number; endedAt?: number;
+metadata?: Record<string, unknown> }`. `progressRatio` represents completion from `0` to `1`,
+inclusive.
 Empty/blank run ids are omitted and later duplicate ids are ignored before hierarchy, focus,
 counts, selection, and events.
 

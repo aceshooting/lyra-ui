@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Transcript entries require unique nonempty, nonblank IDs; invalid and later duplicate rows are omitted first-wins within each session, and an invalid-only collection renders the empty state.',
+          'Transcript entries require unique nonempty, nonblank IDs; invalid and later duplicate rows are omitted first-wins within each session, and an invalid-only collection renders the empty state. Activating the focused jump action resumes follow and transfers focus to the scroll base when the action disappears, unless a newer outside focus move takes precedence.',
       },
     },
   },

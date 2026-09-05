@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Form-associated file selection with writable `files` and readonly derived `fileCount`/`dragging` state. Directory mode is intrinsically multi-file.',
+          'Removing label or hint safely removes its text chrome and association. Disabled file removal controls retain resting paint under hover and press, including fieldset disablement. Form-associated file selection with writable `files` and readonly derived `fileCount`/`dragging` state. Directory mode is intrinsically multi-file.',
       },
     },
   },

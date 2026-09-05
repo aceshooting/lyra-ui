@@ -21,6 +21,9 @@ cursor-addressed full-screen apps. An ANSI sequence split across chunks retains 
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
 clean parser boundary.
 
+A search with no matches clears earlier rendered match markers. Removing the `content` attribute
+clears output and preserves the normal `null` property readback.
+
 **Properties:** `content: string = ''` — initial/replaceable buffer content, parsed for ANSI/SGR
 codes. `replace(content: string): void` synchronously replaces the parsed buffer and reactive
 `content` source, preserving commit order with same-turn `write()`/`clear()` calls.

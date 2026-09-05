@@ -1,6 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './xml-viewer.js';
+import type { LyraXmlViewer } from './xml-viewer.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'DocumentViewer/XmlViewer', component: 'lr-xml-viewer', tags: ['autodocs'] };
@@ -102,4 +103,21 @@ export const AttributeAnchor: Story = {
       .anchor=${{ kind: 'node-path', path: [0, 1, 1, '@href'] }}
     ></lr-xml-viewer>
   `,
+};
+
+
+export const SearchCollapsedBranches: Story = {
+  parameters: { docs: { description: { story: 'Collapse a branch or the root, then use search, next, or previous. Imperative navigation reopens the selected match and its ancestors; subsequent manual collapse still works.' } } },
+  render: () => html`<section style="max-inline-size: 32rem">
+    ${(['search', 'searchNext', 'searchPrevious'] as const).map((method) => html`
+      <button @click=${(event: Event) => {
+        const viewer = (event.currentTarget as HTMLElement).parentElement!.querySelector<LyraXmlViewer>('lr-xml-viewer')!;
+        if (method === 'search') void viewer.search('needle');
+        else void viewer[method]();
+      }}>${method}</button>
+    `)}
+    <lr-xml-viewer max-height="12rem" collapsed-depth="1"
+      .xml=${'<root><first><entry>needle one</entry></first><second><entry>needle two</entry></second></root>'}
+    ></lr-xml-viewer>
+  </section>`,
 };

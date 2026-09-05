@@ -21,6 +21,13 @@ collected as three plain day/month/year number fields in the locale's natural or
 calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is always canonical ISO
 8601 (`YYYY-MM-DD`), or `''` while any field is blank or the combination isn't a real calendar date.
 
+Host `aria-describedby` resolves external guidance onto the aggregate date fieldset and follows live
+target replacement/removal/reinsertion and document adoption. Each native field retains the
+component’s local hint and error guidance. Removed `label` and `hint` render as absent. Removing
+`day-label`, `month-label`, or `year-label` restores that field’s localized omitted default; an
+explicitly empty label remains empty. Own or fieldset disablement preserves each field’s resting
+paint on hover and press.
+
 **Properties:**
 
 - `value: string` — canonical `YYYY-MM-DD` or `''`. Assignment goes through a strict-ISO gate:

@@ -513,3 +513,22 @@ export const NarrowRtl: Story = {
     </div>
   `,
 };
+
+export const FixedAndFlexibleWidths: Story = {
+  parameters: { docs: { description: { story: 'Fit columns reserves the fixed Name column before dividing the remaining space. The repeated first record appears once in rows, pagination, facets, and CSV.' } } },
+  render: () => html`
+    <div style="inline-size: min(100%, 40rem)">
+      <lr-button @click=${(event: Event) => {
+        (event.currentTarget as HTMLElement).parentElement?.querySelector<LyraDataGrid<DemoRow>>('lr-data-grid')?.sizeColumnsToFit();
+      }}>Fit columns</lr-button>
+      <lr-data-grid label="Fixed and flexible roster" row-key="id" paginate page-size="2"
+        .columns=${[
+          { field: 'name', label: 'Name', width: 180, flex: 0 },
+          { field: 'team', label: 'Team', flex: 1 },
+          { field: 'score', label: 'Score', flex: 1 },
+        ]}
+        .data=${[rows[0]!, rows[0]!, ...rows.slice(1)]}
+      ></lr-data-grid>
+    </div>
+  `,
+};

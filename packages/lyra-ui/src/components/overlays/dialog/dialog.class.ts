@@ -128,6 +128,8 @@ export interface LyraDialogEventMap {
  * Escape and the Tab focus trap only ever act on the topmost open dialog, so
  * dialogs beneath it stay open and untouched until the one on top closes.
  *
+ * Removing label safely omits its fallback title. Open dialog and drawer names follow supported name and exclusion attribute changes on direct unslotted headings, while host naming retains precedence; nested and slot-empty headings remain outside automatic discovery.
+ *
  * @customElement lr-dialog
  * @slot - The dialog body.
  * @slot label - Rich header content, rendered in the header row and used as the panel's
@@ -497,7 +499,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     });
     this.headingObserver = observer;
     this.headingObserverDocument = ownerDocument;
-    observer.observe(this, { childList: true, characterData: true, subtree: true });
+    observer.observe(this, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-label', 'aria-labelledby', 'aria-hidden', 'hidden', 'inert', 'class', 'style', 'slot'],
+    });
   }
 
   private resetHeadingObserver(): void {
@@ -854,7 +862,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     // heading, then the shadow-owned visible title. Only the final case uses aria-labelledby.
     const suppressHeader = this.withoutHeader || this.noHeader;
     const renderHeading =
-      !suppressHeader && !this.headingText && (this.hasLabelSlot || this.label.length > 0 || !!this.heading);
+      !suppressHeader && !this.headingText && (this.hasLabelSlot || (this.label ?? '').length > 0 || !!this.heading);
     const hasHostName = this.hostAriaLabel !== null;
     const explicitName = hasHostName ? this.hostAriaLabel : this.accessibleLabel || this.headingText;
     const hasExplicitName = hasHostName || Boolean(explicitName);

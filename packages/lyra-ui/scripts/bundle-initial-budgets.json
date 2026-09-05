@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard marginal gzip budgets in KiB for splitting-aware production ESM. Each route adds one anchored component to the representative application shell in $baseline; only the entry and its transitively static chunks count as initial, while dynamic first-open chunks remain part of the separate total-cost budgets.",
+  "$comment": "Hard marginal gzip budgets in KiB for splitting-aware production ESM. Each route adds one anchored component to the representative application shell in $baseline; only the entry and its transitively static chunks count as initial, while dynamic first-open chunks remain part of the separate total-cost budgets. Ceilings may use fractional KiB when they resolve to positive whole safe integer bytes. The final live-description routes measure color-picker 21,817 bytes, combobox 25,776 bytes, date-input 30,736 bytes, and select 22,338 bytes; their reviewed ceilings are 22, 26, 31, and 22 KiB respectively. Usage-badge measures 3,216 initial bytes after its nonmodal overlay runtime is deferred while eager cancellation and activation ordering remain available; its 3,264-byte ceiling retains 48 bytes of headroom. Each changed initial ceiling stays below 4% headroom.",
   "$baseline": [
     "dist/components/data/stat/stat.js",
     "dist/components/overlays/callout/callout.js",
@@ -10,14 +10,14 @@
   "$marginalGzipKb": {
     "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 4,
     "dist/components/conversation/model-select/model-select.js": 15,
-    "dist/components/conversation/usage-badge/usage-badge.js": 3,
+    "dist/components/conversation/usage-badge/usage-badge.js": 3.1875,
     "dist/components/conversation/voice-picker/voice-picker.js": 17,
-    "dist/components/forms/color-picker/color-picker.js": 21,
-    "dist/components/forms/combobox/combobox.js": 24,
-    "dist/components/forms/date-picker/date-input.js": 29,
+    "dist/components/forms/color-picker/color-picker.js": 22.0,
+    "dist/components/forms/combobox/combobox.js": 26.0,
+    "dist/components/forms/date-picker/date-input.js": 31.0,
     "dist/components/forms/input/time-input.js": 24,
     "dist/components/forms/locale-picker/locale-picker.js": 19,
-    "dist/components/forms/select/select.js": 21,
+    "dist/components/forms/select/select.js": 22.0,
     "dist/components/layout/app-rail/app-rail-item.js": 3,
     "dist/components/layout/menu/menu.js": 9,
     "dist/components/overlays/overlay/popover.js": 13,

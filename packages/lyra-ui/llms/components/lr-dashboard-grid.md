@@ -19,6 +19,11 @@
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
 move, resize, collision, and layout-change requests; the host owns persistence and applies updates.
 
+Pointer move and resize gestures measure the rendered column/row pitch, including the gutter, so
+movement by four painted tracks proposes four logical columns in either LTR or RTL. Row-height and
+gap overrides also govern vertical pointer snapping. The component continues to emit controlled
+layout proposals; the caller accepts them by assigning `layout`.
+
 **Properties:** `layout: readonly LyraDashboardCell[] = []` (attribute: false, never mutated by the component),
 `columns: number = 12`, `rowHeight: number = 80` (px, also the row snap pitch), `gap: number = 8`
 (px, both axes), `collision: 'reject' | 'push' | 'overlap' = 'reject'`, `cellsDraggable: boolean = false`

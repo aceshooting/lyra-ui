@@ -57,8 +57,8 @@ export const styles = css`
   [part="body"] {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: safe center;
+    justify-content: safe center;
     min-block-size: var(--lr-size-10rem);
     max-block-size: var(
       --lr-document-preview-max-height,

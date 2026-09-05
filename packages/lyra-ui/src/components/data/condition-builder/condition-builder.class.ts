@@ -337,6 +337,8 @@ function normalizeConditionBuilderValue(value: unknown): ConditionBuilderValue {
  * `<lr-combobox>` (`enum`, `in`/`notIn`). Date fields forward bounded `min`/`max` strings to
  * `<lr-date-input>`; number fields forward finite `min`/`max` and positive finite `step` values to
  * `<lr-input>`. A unary operator (`isEmpty`/`isNotEmpty`) renders no value control.
+ * Field/operator selections emit one complete-model `lr-input`; their native value events,
+ * prefixed value aliases and listbox lifecycle events stay within the picker.
  * `<lr-icon-button icon="trash">` removes a row; `<lr-button>` appends one.
  *
  * This is a composite query-definition control, not a single submittable form field — it
@@ -660,6 +662,10 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     action();
   }
 
+  private containSelectEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.pendingFocusAdd) {
@@ -833,6 +839,13 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           placeholder=${this.localize('queryBuilderFieldPlaceholder')}
           .value=${condition.field}
           ?disabled=${this.disabled}
+          @input=${this.containSelectEvent}
+          @lr-input=${this.containSelectEvent}
+          @lr-change=${this.containSelectEvent}
+          @lr-show=${this.containSelectEvent}
+          @lr-after-show=${this.containSelectEvent}
+          @lr-hide=${this.containSelectEvent}
+          @lr-after-hide=${this.containSelectEvent}
           @change=${(event: Event) =>
             this.consumeChildEvent(event, () =>
               this.setConditionField(condition.id, selectValue(event.target as LyraSelect)),
@@ -848,6 +861,13 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           placeholder=${this.localize('queryBuilderOperatorPlaceholder')}
           .value=${condition.operator}
           ?disabled=${this.disabled || !field}
+          @input=${this.containSelectEvent}
+          @lr-input=${this.containSelectEvent}
+          @lr-change=${this.containSelectEvent}
+          @lr-show=${this.containSelectEvent}
+          @lr-after-show=${this.containSelectEvent}
+          @lr-hide=${this.containSelectEvent}
+          @lr-after-hide=${this.containSelectEvent}
           @change=${(event: Event) =>
             this.consumeChildEvent(event, () =>
               this.setConditionOperator(condition.id, (event.target as LyraSelect).value as ConditionBuilderOperator),

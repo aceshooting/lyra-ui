@@ -735,12 +735,13 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     });
   }
 
-  private expandAncestors(path: readonly PathSegment[]): void {
+  private expandAncestors(path: readonly PathSegment[], includeSelf = false): void {
     const next = new Map(this.expandedOverrides);
     for (let i = 0; i < path.length; i++) {
       if (typeof path[i] !== 'number') continue;
       next.set(JSON.stringify(path.slice(0, i)), true);
     }
+    if (includeSelf) next.set(JSON.stringify(path), true);
     this.expandedOverrides = next;
   }
 
@@ -749,7 +750,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
    *  units, scans at most 4,000,000 code units, resolves at most 10,000 retained matches, and fires
    *  `lr-search-change`; `detail.matchCountExact=false` identifies a ceiling-truncated lower
    *  bound. Replacing the source invalidates document-relative matches and emits the canonical
-   *  empty `lr-search-change` reset. */
+   *  empty `lr-search-change` reset. Imperative navigation reopens the active match and its
+   *  ancestors, including manually collapsed nodes; later manual collapse still takes precedence. */
   async search(query: string): Promise<number> {
     this.searchQuery = query;
     this.searchState = this.xmlState.kind === 'loaded' ? this.computeSearch(this.xmlState.doc) : EMPTY_SEARCH;
@@ -797,6 +799,10 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
    *  sees, which is what every other search-capable viewer here avoids. Reduced motion drops the
    *  smooth behavior, matching the sibling viewers. */
   private async scrollActiveMatchIntoView(): Promise<void> {
+    const pathKey = this.searchState.ordered[this.activeSearchIndex];
+    if (pathKey === undefined) return;
+    // Search keys are bounded numeric paths created from the parsed document.
+    this.expandAncestors(JSON.parse(pathKey) as PathSegment[], true);
     await this.updateComplete;
     const active = this.renderRoot.querySelector('[data-active-match]') as HTMLElement | null;
     active?.scrollIntoView({

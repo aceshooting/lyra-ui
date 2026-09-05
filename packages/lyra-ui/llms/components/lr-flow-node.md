@@ -39,7 +39,8 @@ owns none of that.
   previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
-  `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins;
+  `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
+  (a record rejected for an unreadable optional label does not reserve its ID);
   reassign a collection after changes
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`

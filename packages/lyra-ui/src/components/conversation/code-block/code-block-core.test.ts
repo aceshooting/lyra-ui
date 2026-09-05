@@ -530,18 +530,23 @@ describe("lr-code-block-core", () => {
     const hl = await loadShikiHighlighterCore(
       el.languages as Record<string, ShikiLanguageInput>
     );
-    hl!.codeToHtml = () => {
-      throw new Error("malformed grammar");
-    };
-    el.code = '{"a":2}';
-    await el2Ready(el);
-    type Internals = { highlightedHtml: string | null };
-    const internals = el as unknown as Internals;
-    expect(internals.highlightedHtml).to.equal(null);
-    expect(el.shadowRoot!.querySelector(".shiki") == null).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(
-      '{"a":2}'
-    );
+    const originalCodeToHtml = hl!.codeToHtml;
+    try {
+      hl!.codeToHtml = () => {
+        throw new Error("malformed grammar");
+      };
+      el.code = '{"a":2}';
+      await el2Ready(el);
+      type Internals = { highlightedHtml: string | null };
+      const internals = el as unknown as Internals;
+      expect(internals.highlightedHtml).to.equal(null);
+      expect(el.shadowRoot!.querySelector(".shiki") == null).to.be.true;
+      expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(
+        '{"a":2}'
+      );
+    } finally {
+      hl!.codeToHtml = originalCodeToHtml;
+    }
   });
 });
 
@@ -682,20 +687,25 @@ describe("anchor-target (line-range)", () => {
   });
 
   it("resolves false when called before the highlighter has finished loading (skeleton still showing, no line elements yet)", async () => {
+    let finishLoading!: (value: null) => void;
+    const pending = new Promise<null>(resolve => { finishLoading = resolve; });
     const el = document.createElement(
       "lr-code-block-core"
     ) as LyraCodeBlockCore;
     el.language = "json";
     el.languages = { json: jsonGrammar };
     el.code = "a\nb\nc";
-    document.body.appendChild(el);
+    __setShikiHighlighterCoreLoaderForTesting(() => pending);
     try {
+      document.body.appendChild(el);
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector("lr-skeleton")).to.exist;
+      expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(1);
       expect(await el.scrollToAnchor({ kind: "line-range", start: 1 })).to.be
         .false;
     } finally {
       el.remove();
+      __setShikiHighlighterCoreLoaderForTesting(undefined);
+      finishLoading(null);
     }
   });
 
@@ -1652,5 +1662,172 @@ describe("lean/full parity with <lr-code-block>", () => {
       if (hadUpdated) proto["updated"] = originalUpdated;
       else delete proto["updated"];
     }
+  });
+});
+
+import { expect as cacheExpect, fixture as cacheFixture, html as cacheHtml, waitUntil as cacheWaitUntil } from '@open-wc/testing';
+import './code-block-core.js';
+import type { LyraCodeBlockCore as CacheCodeBlock } from './code-block-core.js';
+import { loadShikiHighlighterCore as cacheLoad, type ShikiLanguageInput as CacheLanguage, type ShikiHighlighterCore as CacheCore } from './shiki-types.js';
+
+let cacheGrammarSequence = 0;
+function cacheGrammar() {
+  const name = `lyra-cache-${++cacheGrammarSequence}`;
+  return { name, scopeName: `source.${name}`, patterns: [{ match: 'alpha', name: 'keyword.control' }] };
+}
+function cacheOwn(grammar: CacheLanguage): Record<string, CacheLanguage> {
+  const element = document.createElement('lr-code-block-core') as CacheCodeBlock;
+  element.languages = { example: grammar };
+  return element.languages;
+}
+function cacheFreeze<T>(value: T): T {
+  if (value && typeof value === 'object') {
+    for (const descriptor of Object.values(Object.getOwnPropertyDescriptors(value)))
+      if ('value' in descriptor) cacheFreeze(descriptor.value);
+    Object.freeze(value);
+  }
+  return value;
+}
+function cacheRender(core: CacheCore, language: string): string {
+  return core.codeToHtml('alpha', { lang: language, theme: 'github-light' });
+}
+
+// These tests use the real optional peer. Dispose only their unique, locally owned grammar cores.
+describe('fine-grained Shiki immutable snapshot reuse', () => {
+  const cores = new Set<CacheCore>();
+  const load = async (map: Record<string, CacheLanguage>) => {
+    const core = await cacheLoad(map);
+    cacheExpect(core !== null).to.equal(true);
+    cores.add(core!);
+    return core!;
+  };
+  afterEach(() => {
+    for (const core of cores) {
+      const disposable = core as CacheCore & { dispose?: () => void };
+      disposable.dispose?.();
+    }
+    cores.clear();
+  });
+
+  it('shares the actual core across twelve equal detached component grammar snapshots', async () => {
+    const grammar = cacheGrammar();
+    const maps = Array.from({ length: 12 }, () => cacheOwn(grammar));
+    cacheExpect(new Set(maps).size).to.equal(12);
+    cacheExpect(maps.every(map => Object.isFrozen(map) && Object.isFrozen(map['example']))).to.equal(true);
+    const promises = maps.map(map => cacheLoad(map));
+    for (const core of await Promise.all(promises)) if (core) cores.add(core);
+    cacheExpect(new Set(promises).size).to.equal(1);
+    const core = await load(maps[0]!);
+    cacheExpect(cacheRender(core, grammar.name)).to.contain('alpha');
+    cacheExpect(await load(maps[11]!) === core).to.equal(true);
+  });
+
+  it('preserves caller isolation, same-source no-op, and replacement grammar contents', async () => {
+    const grammar = cacheGrammar();
+    const source = { example: grammar };
+    const element = document.createElement('lr-code-block-core') as CacheCodeBlock;
+    element.languages = source;
+    const retained = element.languages;
+    const first = await load(retained);
+    const firstHtml = cacheRender(first, grammar.name);
+    grammar.patterns[0]!.name = 'string.quoted';
+    element.languages = source;
+    cacheExpect(element.languages === retained).to.equal(true);
+    cacheExpect(cacheRender(first, grammar.name)).to.equal(firstHtml);
+    element.languages = { ...source };
+    const second = await load(element.languages);
+    cacheExpect(second === first).to.equal(false);
+    cacheExpect(cacheRender(second, grammar.name) === firstHtml).to.equal(false);
+    cacheExpect(await load(cacheOwn(grammar)) === second).to.equal(true);
+  });
+
+  it('preserves map and grammar-array order when duplicate grammar names have different rules', async () => {
+    const grammar = cacheGrammar();
+    const other = { ...grammar, patterns: [{ match: 'alpha', name: 'string.quoted' }] };
+    const ordered = await load(cacheFreeze({ first: grammar, second: other }));
+    const reversed = await load(cacheFreeze({ second: other, first: grammar }));
+    cacheExpect(ordered === reversed).to.equal(false);
+    cacheExpect(cacheRender(ordered, grammar.name) === cacheRender(reversed, grammar.name)).to.equal(false);
+    const array = await load(cacheOwn([grammar, other]));
+    const reverseArray = await load(cacheOwn([other, grammar]));
+    cacheExpect(array === reverseArray).to.equal(false);
+    cacheExpect(cacheRender(array, grammar.name) === cacheRender(reverseArray, grammar.name)).to.equal(false);
+  });
+
+  it('keeps mutable input maps on their existing identity cache', async () => {
+    const grammar = cacheGrammar();
+    const map = { example: grammar };
+    const first = await load(map);
+    cacheExpect(await load(map) === first).to.equal(true);
+    cacheExpect(await load({ example: grammar }) === first).to.equal(false);
+  });
+
+  for (const [label, decorate] of [
+    ['callbacks', (grammar: ReturnType<typeof cacheGrammar>) => ({ ...grammar, marker: () => 1 })],
+    ['symbol properties', (grammar: ReturnType<typeof cacheGrammar>) => ({ ...grammar, [Symbol.for('lyra-cache-marker')]: true })],
+    ['custom prototypes', (grammar: ReturnType<typeof cacheGrammar>) => Object.assign(Object.create({ marker: true }), grammar)],
+    ['accessors', (grammar: ReturnType<typeof cacheGrammar>) => Object.defineProperty({ ...grammar }, 'marker', { get() { throw new Error('cache must not read grammar getters'); } })],
+  ] as const) {
+    it(`uses identity-only fallback for grammar ${label}`, async () => {
+      const grammar = cacheGrammar();
+      const firstMap = cacheFreeze({ example: decorate(grammar) });
+      const secondMap = cacheFreeze({ example: decorate(grammar) });
+      const first = await load(firstMap);
+      cacheExpect(await load(firstMap) === first).to.equal(true);
+      cacheExpect(await load(secondMap) === first).to.equal(false);
+      cacheExpect(cacheRender(first, grammar.name)).to.contain('alpha');
+    });
+  }
+
+  it('uses identity-only fallback for cyclic grammar metadata without recursing forever', async () => {
+    const grammar = cacheGrammar();
+    const makeMap = () => {
+      const value: ReturnType<typeof cacheGrammar> & { marker?: unknown } = { ...grammar };
+      Object.defineProperty(value, 'marker', { value });
+      Object.freeze(value.patterns[0]); Object.freeze(value.patterns); Object.freeze(value);
+      return Object.freeze({ example: value });
+    };
+    const map = makeMap();
+    const first = await load(map);
+    cacheExpect(await load(map) === first).to.equal(true);
+    const second = await load(makeMap());
+    cacheExpect(second === first).to.equal(false);
+    cacheExpect(cacheRender(first, grammar.name)).to.contain('alpha');
+    cacheExpect(cacheRender(second, grammar.name)).to.equal(cacheRender(first, grammar.name));
+  });
+
+  it('never disposes live callers when the eight-entry recent index evicts their map', async () => {
+    const originalGrammar = cacheGrammar();
+    const originalMap = cacheOwn(originalGrammar);
+    const original = await load(originalMap);
+    for (let index = 0; index < 9; index += 1) {
+      const core = await load(cacheOwn(cacheGrammar()));
+      (core as CacheCore & { dispose(): void }).dispose();
+      cores.delete(core);
+    }
+    cacheExpect(await load(originalMap) === original).to.equal(true);
+    cacheExpect(cacheRender(original, originalGrammar.name)).to.contain('alpha');
+    const replacement = await load(cacheOwn(originalGrammar));
+    cacheExpect(replacement === original).to.equal(false);
+    cacheExpect(cacheRender(original, originalGrammar.name)).to.contain('alpha');
+  });
+
+  it('keeps connected owners usable after an equivalent component disconnects and reconnects', async () => {
+    const grammar = cacheGrammar();
+    const container = await cacheFixture<HTMLDivElement>(cacheHtml`<div>
+      <lr-code-block-core language=${grammar.name} .languages=${{ [grammar.name]: grammar }} .code=${'alpha'}></lr-code-block-core>
+      <lr-code-block-core language=${grammar.name} .languages=${{ [grammar.name]: grammar }} .code=${'alpha'}></lr-code-block-core>
+    </div>`);
+    const [first, second] = Array.from(container.children) as CacheCodeBlock[];
+    await cacheWaitUntil(() => !!first?.shadowRoot?.querySelector('pre.shiki') && !!second?.shadowRoot?.querySelector('pre.shiki'));
+    const shared = await load(first!.languages);
+    cacheExpect(await load(second!.languages) === shared).to.equal(true);
+    first!.remove();
+    second!.code = 'alpha alpha';
+    await second!.updateComplete;
+    await cacheWaitUntil(() => second!.shadowRoot?.querySelector('pre.shiki')?.textContent?.includes('alpha alpha') === true);
+    container.append(first!);
+    await cacheWaitUntil(() => !!first!.shadowRoot?.querySelector('pre.shiki'));
+    cacheExpect(await load(first!.languages) === shared).to.equal(true);
   });
 });

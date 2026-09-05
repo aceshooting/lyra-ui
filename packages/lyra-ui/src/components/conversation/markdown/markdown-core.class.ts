@@ -224,7 +224,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
       instance.renderMarkdown();
   }
 
-  /** The Markdown source to render. */
+  /** The Markdown source to render. Removing the attribute clears the document and its tab stop. */
   @property() override content = '';
 
   /** Tab-stop width used to expand tabs in leading indentation before parsing. Finite values are

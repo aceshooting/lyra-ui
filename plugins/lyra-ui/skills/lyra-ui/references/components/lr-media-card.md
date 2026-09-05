@@ -22,6 +22,10 @@ server-side-conversion state machine) and `lr-attachment-chip` (a pre-send queue
 upload progress). This component has neither concern; it only ever shows a `src` that's already
 final.
 
+Removing `mime-type` consumes the hint as absent and restores generic file detection unless `kind`
+explicitly selects a format. Property readback stays `null`; an explicit empty hint remains empty
+and later MIME values restore detection.
+
 **Properties:**
 
 - `src: string = ''` — the media URL. Always re-validated against a safe-scheme allowlist before
@@ -38,8 +42,7 @@ final.
   carve-out: an empty `alt` there still falls through to `filename`/the generic description, because
   an empty accessible name would leave an interactive player unnamed rather than mark it decorative.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — a declarative attribute names
-  the host as a whole while its nested button/link keeps a purpose-specific localized action name. A
-  property-only assignment can override the nested action when no host label is present. An explicit
+  the host as a whole while its nested button/link keeps a purpose-specific localized action name. A property-only assignment names the nested action and updates reactively when no host label is present, without creating a host attribute. An explicit
   empty string behaves like the unset `null` default — both fall through to the generated
   purpose-specific name. Image alt text and the native video's own purpose label remain independent;
   an explicitly empty host still leaves every interactive descendant named.

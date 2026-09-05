@@ -40,7 +40,24 @@ const groups: EmojiPickerGroup[] = [
 ];
 
 export const WithSuppliedGroups: Story = {
+  parameters: {
+    docs: { description: { story: 'Caller group headings remain literal. Reassign groups to capture edits to reused item objects; existing snapshots remain frozen.' } },
+  },
   render: () => html`<lr-emoji-picker .groups=${groups}></lr-emoji-picker>`,
+};
+
+export const DescribedRequiredPicker: Story = {
+  parameters: {
+    docs: { description: { story: 'External guidance describes the emoji listbox alongside the local hint. Blur the search, then reset: required validity remains, while interaction feedback becomes pristine. Composing search keys do not pick or navigate emoji.' } },
+  },
+  render: () => html`
+    <form>
+      <p id="emoji-story-guidance">Choose a reaction for this message.</p>
+      <lr-emoji-picker label="Reaction" required hint="Search by name or shortcode."
+        aria-describedby="emoji-story-guidance" .groups=${groups}></lr-emoji-picker>
+      <button type="reset">Reset</button>
+    </form>
+  `,
 };
 
 /** Focus an emoji option, then use the pointer to replace the controlled collection. Preventing
@@ -102,8 +119,8 @@ export const WindowedWithRemGeometry: Story = {
 };
 
 // Leaves `groups` unset, exercising the optional emoji-picker-element-data auto-loader from
-// emoji-data-loader.ts -- renders empty (just the search input) if that peer isn't installed in
-// whatever environment is running Storybook, which is the fully-supported default, not an error.
+// emoji-data-loader.ts. A missing peer shows the distinct localized load-error state; explicitly
+// supplying groups = [] opts out of loading and shows the ordinary empty state.
 export const WithAutoLoadedData: Story = {
   render: () => html`<lr-emoji-picker></lr-emoji-picker>`,
 };

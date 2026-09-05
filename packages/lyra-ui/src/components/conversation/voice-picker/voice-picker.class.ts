@@ -1056,7 +1056,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
 
   private get hasVisibleLabel(): boolean {
-    return this.label.length > 0 || this.slotPresence.has('label');
+    return (this.label ?? '').length > 0 || this.slotPresence.has('label');
   }
 
   private renderLabel(): TemplateResult {
@@ -1101,8 +1101,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this.value.length > 0;
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.slotPresence.has('hint') || this.hint.length > 0;
-    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
+    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
+    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const describedBy = [hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
       .filter(Boolean)
       .join(' ');
@@ -1146,8 +1146,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.slotPresence.has('hint') || this.hint.length > 0;
-    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
+    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
+    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const describedBy = [hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
       .filter(Boolean)
       .join(' ');

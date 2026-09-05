@@ -20,6 +20,9 @@ A format-dispatching viewer for one document/attachment, plus the visual state m
 server-side conversion a host app runs in front of it. First-party invention (no Web Awesome
 equivalent).
 
+Fitting images remain centered; overflowing nonzoomable images begin inside the reachable body
+scroll range, so their top and bottom are available.
+
 Format dispatch is intentionally minimal: only `text/*`/`application/json` (a plain, scrollable
 `<pre>` — no syntax highlighting; compose `<lr-code-block>` yourself via the `unsupported` slot for
 that) and `image/*` (a contained `<img>`) render inline. Everything else — PDF, office documents,
@@ -55,7 +58,10 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   still in progress. Validated per-sink before use — see the URL-safety note above; an unsafe/
   malformed value is treated as if `src` were unusable for that sink, never passed to `fetch()`/
   `<img>`/the anchor.
-- `mimeType: string = ''` (attribute `mime-type`) — drives format dispatch (see above).
+- `mimeType: string = ''` (attribute `mime-type`) — drives format dispatch using the case-insensitive
+  MIME essence before parameters. For example, `application/json; charset=utf-8` renders as text.
+  Attribute removal retains `null` readback and is interpreted as an absent format by the renderer;
+  an explicitly empty attribute remains empty, and later valid values restore dispatch.
 - `filename: string = ''` — shown in the header and used as the download link's suggested filename.
 - `alt?: string` — image description. When omitted, the filename/localized image-preview fallback
   is used; an explicit empty string keeps a decorative preview's `alt=""` intact.
