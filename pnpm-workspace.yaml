@@ -74,7 +74,7 @@ minimumReleaseAgeExclude:
   - axe-core@4.13.0
   - vue@3.5.41
   - postal-mime@2.7.6 || 3.0.0
-  - katex@0.18.3 || 0.18.5
+  - katex@0.18.3 || 0.18.5 || 0.18.6
   - mammoth@1.12.1
   - '@changesets/apply-release-plan@8.0.0'
   - '@changesets/assemble-release-plan@7.0.0'

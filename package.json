@@ -45,7 +45,7 @@
     "@aceshooting/lyra-flags": "workspace:*",
     "@aceshooting/lyra-ui": "workspace:*",
     "@arethetypeswrong/cli": "^0.18.5",
-    "@changesets/cli": "^3.0.1",
+    "@changesets/cli": "^3.0.2",
     "@codecov/vite-plugin": "^2.0.1",
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.5",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
@@ -65,7 +65,7 @@
     "lit": "^3.3.3",
     "maplibre-gl": "^6.7.0",
     "pdfjs-dist": "^6.3.289",
-    "playwright": "^1.62.1",
+    "playwright": "^1.63.0",
     "publint": "^0.3.24",
     "react": "^19.2.8",
     "secretlint": "^13.0.5",
@@ -73,6 +73,6 @@
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.2"
   },
-  "packageManager": "pnpm@11.25.0",
+  "packageManager": "pnpm@12.3.4",
   "customElements": "packages/lyra-ui/custom-elements.json"
 }

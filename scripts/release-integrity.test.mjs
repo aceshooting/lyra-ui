@@ -2490,7 +2490,7 @@ test('upgrade protects managed peer floors before synchronizing package-manager 
   const syncDocsIndex = upgradeScript.indexOf(
     'node scripts/sync-package-manager-docs.mjs --write',
   );
-  const installIndex = upgradeScript.indexOf('pnpm install --prod=false --no-frozen-lockfile');
+  const installIndex = upgradeScript.indexOf('pnpm install --no-prod --no-frozen-lockfile');
 
   assert.ok(exactNodeIndex >= 0, 'upgrade must fail closed on the exact Node authority');
   assert.ok(secondNcuIndex > firstNcuIndex, 'upgrade must retain separate non-peer and peer NCU passes');

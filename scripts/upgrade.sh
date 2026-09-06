@@ -133,7 +133,8 @@ echo
 echo "==> Installing workspace dependencies and refreshing pnpm-lock.yaml"
 # npm-check-updates has just changed the workspace manifests, so override pnpm's CI default of a
 # frozen lockfile and persist the upgraded dependency graph before building generated artifacts.
-pnpm install --prod=false --no-frozen-lockfile
+# Use the negated flag to include development dependencies; pnpm 12 rejects --prod=false.
+pnpm install --no-prod --no-frozen-lockfile
 
 echo
 echo "==> Synchronizing peer-compatibility current versions"

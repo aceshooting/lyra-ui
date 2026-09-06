@@ -35,7 +35,7 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
 
 ## Monorepo layout
 
-pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@11.25.0`.
+pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@12.3.4`.
 The published package supports Node ≥ 20; contributor generation, measured-quality, release, and
 primary CI work use the exact Node `22.23.2` recorded in [`.nvmrc`](.nvmrc). Run `nvm use` before
 those commands rather than relying on an arbitrary Node 22 patch.

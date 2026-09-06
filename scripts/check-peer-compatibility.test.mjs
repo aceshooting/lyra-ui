@@ -41,7 +41,7 @@ const CURRENT_VERSIONS = Object.freeze({
   'chartjs-plugin-datalabels': '2.2.0',
   'chartjs-plugin-zoom': '2.2.0',
   dompurify: '3.4.14',
-  katex: '0.18.5',
+  katex: '0.18.6',
   mammoth: '1.12.2',
   marked: '18.0.11',
   'pdfjs-dist': '6.3.289',
@@ -91,13 +91,13 @@ function authorityFixture() {
     managedPeerRanges: { ...MANAGED_PEER_RANGES },
     currentVersions: { ...CURRENT_VERSIONS },
     toolchain: {
-      playwright: '1.62.1',
+      playwright: '1.63.0',
       typescript: '7.0.2',
       vite: '8.2.2',
     },
     packageManagers: {
       npm: '10.9.8',
-      pnpm: '11.25.0',
+      pnpm: '12.3.4',
     },
     profiles: Object.entries(PROFILE_FLOOR_PEERS).map(([id, floorPeers]) => ({
       id,
@@ -183,6 +183,32 @@ function lockfileFixture(currentVersions = CURRENT_VERSIONS, specifiers = {}) {
     ...snapshotRows,
     '',
   ].join('\n');
+}
+
+function environmentLockfileFixture() {
+  return [
+    "lockfileVersion: '9.0'",
+    '',
+    'importers:',
+    '  .:',
+    '    configDependencies: {}',
+    '    packageManagerDependencies:',
+    '      pnpm:',
+    '        specifier: 12.3.4',
+    '        version: 12.3.4',
+    '',
+    'packages:',
+    '  pnpm@12.3.4:',
+    `    resolution: {integrity: ${peerIntegrity('pnpm', '12.3.4')}}`,
+    '',
+    'snapshots:',
+    '  pnpm@12.3.4: {}',
+    '',
+  ].join('\n');
+}
+
+function splitLockfileFixture(workspaceLock, environmentLock = environmentLockfileFixture()) {
+  return `---\n${environmentLock}\n---\n${workspaceLock}`;
 }
 
 function writeTarString(header, offset, length, value) {
@@ -418,6 +444,96 @@ test('synchronizes reviewed current pins from dev bases and lock without moving 
   assert.equal(profiles[0].versions['chart.js'], '4.0.1');
   assert.equal(profiles[1].versions['chart.js'], '4.6.0');
   assert.equal(profiles[3].versions['chart.js'], '4.6.0');
+});
+
+test('reads workspace peer versions from single-document and split pnpm lockfiles', async () => {
+  const { synchronizeAuthorityCurrentVersions, validatePeerCompatibilityDocuments } = await loadChecker();
+  const updatedVersions = { ...CURRENT_VERSIONS, 'chart.js': '4.6.0' };
+  const workspaceLock = lockfileFixture(updatedVersions);
+  const forms = [
+    workspaceLock,
+    `---\n${workspaceLock}`,
+    splitLockfileFixture(workspaceLock),
+    `${environmentLockfileFixture()}---\n${workspaceLock}`,
+  ];
+  for (const form of forms) {
+    for (const newline of ['\n', '\r\n']) {
+      const lockfileText = `# pnpm lockfile\n\n${form}`.replaceAll('\n', newline);
+      const packageManifest = packageManifestFixture(updatedVersions);
+      const authority = synchronizeAuthorityCurrentVersions({
+        authority: authorityFixture(),
+        packageManifest,
+        lockfileText,
+      });
+      assert.deepEqual(authority.currentVersions, updatedVersions);
+      assert.doesNotThrow(() =>
+        validatePeerCompatibilityDocuments({ authority, packageManifest, lockfileText }),
+      );
+    }
+  }
+});
+
+test('rejects ambiguous documents and duplicate sections in split pnpm lockfiles', async () => {
+  const { validatePeerCompatibilityDocuments } = await loadChecker();
+  const fixture = validationFixture();
+  const workspaceLock = fixture.lockfileText;
+  const environmentLock = environmentLockfileFixture();
+  const hostileLocks = [
+    ['two workspace documents', splitLockfileFixture(workspaceLock, workspaceLock)],
+    ['reversed documents', splitLockfileFixture(environmentLock, workspaceLock)],
+    ['third document', `${splitLockfileFixture(workspaceLock)}---\n${workspaceLock}`],
+    ['empty first document', `---\n# empty\n---\n${workspaceLock}`],
+    ['empty final document', `${splitLockfileFixture(workspaceLock)}---\n`],
+    ['indented marker', `  ---\n${workspaceLock}`],
+    ['document end marker', `${splitLockfileFixture(workspaceLock)}...\n`],
+    ['duplicate workspace section', splitLockfileFixture(`${workspaceLock}\nimporters:\n`)],
+    ['duplicate environment section', splitLockfileFixture(workspaceLock, `${environmentLock}\nimporters:\n`)],
+    ['workspace dependencies in environment', splitLockfileFixture(
+      workspaceLock,
+      environmentLock.replace('packageManagerDependencies:', 'devDependencies:'),
+    )],
+    ['extra environment importer', splitLockfileFixture(
+      workspaceLock,
+      environmentLock.replace('packages:\n', '  packages/other: {}\n\npackages:\n'),
+    )],
+    ['unsupported environment version', splitLockfileFixture(
+      workspaceLock,
+      environmentLock.replace("lockfileVersion: '9.0'", "lockfileVersion: '10.0'"),
+    )],
+  ];
+  for (const [label, lockfileText] of hostileLocks) {
+    assert.throws(
+      () => validatePeerCompatibilityDocuments({ ...fixture, lockfileText }),
+      /pnpm lockfile/iu,
+      label,
+    );
+  }
+});
+
+test('never borrows workspace package or snapshot records from the pnpm environment document', async () => {
+  const { validatePeerCompatibilityDocuments } = await loadChecker();
+  const fixture = validationFixture();
+  const workspaceLock = fixture.lockfileText;
+  const chartPackage = `  chart.js@4.5.1:\n    resolution: {integrity: sha512-${createHash('sha512').update('chart.js@4.5.1').digest('base64')}}\n`;
+  const chartSnapshot = '  chart.js@4.5.1: {}\n';
+  const environmentLock = environmentLockfileFixture()
+    .replace('packages:\n', `packages:\n${chartPackage}`)
+    .replace('snapshots:\n', `snapshots:\n${chartSnapshot}`);
+  assert.doesNotThrow(() => validatePeerCompatibilityDocuments({
+    ...fixture,
+    lockfileText: splitLockfileFixture(workspaceLock, environmentLock),
+  }));
+  for (const record of [chartPackage, chartSnapshot]) {
+    const incomplete = workspaceLock.replace(record, '');
+    assert.notEqual(incomplete, workspaceLock);
+    assert.throws(
+      () => validatePeerCompatibilityDocuments({
+        ...fixture,
+        lockfileText: splitLockfileFixture(incomplete, environmentLock),
+      }),
+      /package|snapshot/iu,
+    );
+  }
 });
 
 test('rejects authority current-version downgrades even when the managed floor still permits them', async () => {
@@ -982,6 +1098,17 @@ test('binds npm and pnpm consumer locks to the exact loopback URL and SHA-512 ta
     '',
   ].join('\n');
   assert.doesNotThrow(() => verifyPnpmConsumerTarballLock(pnpmLock, tarballUrl, staged));
+  for (const lockfileText of [`---\n${pnpmLock}`, splitLockfileFixture(pnpmLock)]) {
+    assert.doesNotThrow(() => verifyPnpmConsumerTarballLock(lockfileText, tarballUrl, staged));
+    assert.throws(
+      () => verifyPnpmConsumerTarballLock(
+        lockfileText.replace(staged.integrity, peerIntegrity('wrong', '1.0.0')),
+        tarballUrl,
+        staged,
+      ),
+      /integrity/iu,
+    );
+  }
   const profileVersions = { ...CURRENT_VERSIONS };
   const peerResolution = `${tarballUrl}${Object.entries(profileVersions)
     .map(([name, version]) => `(${name}@${peerLockResolution(name, version, profileVersions)})`)
@@ -2151,29 +2278,29 @@ test('exports isolated strict npm/pnpm command plans and validates both exact au
 
   const versionByCommand = new Map([
     ['npm', '10.9.8'],
-    ['pnpm', '11.25.0'],
+    ['pnpm', '12.3.4'],
   ]);
   await assertExecutionToolchain({
     actualNodeVersion: '22.23.2',
     authority,
     captureVersion: async (command) => versionByCommand.get(command),
     nvmrcText: '22.23.2\n',
-    rootManifest: { packageManager: 'pnpm@11.25.0' },
+    rootManifest: { packageManager: 'pnpm@12.3.4' },
   });
   await assertExecutionToolchain({
     actualNodeVersion: '22.23.2',
     authority,
     captureVersion: async (command) => versionByCommand.get(command),
     nvmrcText: '22.23.2\r\n',
-    rootManifest: { packageManager: 'pnpm@11.25.0' },
+    rootManifest: { packageManager: 'pnpm@12.3.4' },
   });
   await assert.rejects(
     assertExecutionToolchain({
       actualNodeVersion: '22.23.2',
       authority,
-      captureVersion: async (command) => command === 'npm' ? '10.9.7' : '11.25.0',
+      captureVersion: async (command) => command === 'npm' ? '10.9.7' : '12.3.4',
       nvmrcText: '22.23.2\n',
-      rootManifest: { packageManager: 'pnpm@11.25.0' },
+      rootManifest: { packageManager: 'pnpm@12.3.4' },
     }),
     /requires npm 10\.9\.8.*10\.9\.7/iu,
   );
@@ -2185,7 +2312,7 @@ test('exports isolated strict npm/pnpm command plans and validates both exact au
       nvmrcText: '22.23.2\n',
       rootManifest: { packageManager: 'pnpm@11.24.0' },
     }),
-    /root packageManager.*pnpm@11\.25\.0/iu,
+    /root packageManager.*pnpm@12\.3\.4/iu,
   );
 });
 

@@ -22,7 +22,7 @@ jobs:
     # symptom; removing apt from the job removes the failure mode.
     # The tag MUST match the `playwright` devDependency -- release-integrity asserts it.
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
       # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
       # there, and this repo has already been bitten once by exhausting it (see the
       # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with

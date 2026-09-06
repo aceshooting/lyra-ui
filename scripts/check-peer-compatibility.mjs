@@ -398,12 +398,42 @@ function lockfileLines(lockfileText) {
   }
   const lines = lockfileText.replaceAll('\r\n', '\n').split('\n');
   if (lines.length > 2_000_000) throw new Error('pnpm lockfile exceeds the parser line limit.');
+  let documentStart = 0;
+  let documentHasContent = false;
+  let sawDocumentMarker = false;
+  let environmentEnd;
   for (let index = 0; index < lines.length; index += 1) {
+    if (lines[index] === '---') {
+      if (documentHasContent) {
+        if (environmentEnd !== undefined) {
+          throw new Error('pnpm lockfile must contain at most two YAML documents.');
+        }
+        environmentEnd = index;
+      } else if (sawDocumentMarker) {
+        throw new Error('pnpm lockfile must not contain an empty YAML document.');
+      }
+      sawDocumentMarker = true;
+      documentHasContent = false;
+      documentStart = index + 1;
+      lines[index] = '';
+      continue;
+    }
     const trimmed = lines[index].trim();
-    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('- ')) continue;
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    documentHasContent = true;
+    if (trimmed.startsWith('- ')) continue;
     if (!yamlEntry(lines[index], index + 1)) {
       throw new Error(`pnpm lockfile line ${index + 1} is outside the admitted mapping grammar.`);
     }
+  }
+  if (sawDocumentMarker && !documentHasContent) {
+    throw new Error('pnpm lockfile must not contain an empty YAML document.');
+  }
+  if (environmentEnd !== undefined) {
+    // pnpm stores its environment graph before the workspace graph. Validate that boundary,
+    // then retain only workspace records without changing their original diagnostic line numbers.
+    assertEnvironmentLockDocument(lines.slice(0, environmentEnd));
+    lines.fill('', 0, documentStart);
   }
   return lines;
 }
@@ -417,6 +447,57 @@ function topLevelLockEntries(lines) {
     entries.set(entry.key, { ...entry, index });
   }
   return entries;
+}
+
+function assertEnvironmentLockDocument(lines) {
+  const label = 'pnpm lockfile environment document';
+  const topLevel = topLevelLockEntries(lines);
+  const version = topLevel.get('lockfileVersion');
+  if (version?.rawValue !== "'9.0'") {
+    throw new Error(`${label} must use canonical lockfileVersion 9.0.`);
+  }
+  for (const [name, entry] of topLevel) {
+    if (!['lockfileVersion', 'importers', 'packages', 'snapshots'].includes(name)) {
+      throw new Error(`${label} has unexpected section ${name}.`);
+    }
+    assertCanonicalStructuralKey(entry, name, label);
+    const end = sectionEnd(lines, entry.index);
+    if (name === 'lockfileVersion' || entry.value === '{}') {
+      assertScalarLeaf(lines, entry, end, `${label} ${name}`);
+    } else if (entry.value !== undefined) {
+      throw new Error(`${label} ${name} must be a block map or an empty inline map.`);
+    } else {
+      directSectionEntries(lines, entry.index, end, 2, `${label} ${name} entry`);
+    }
+  }
+  const importers = topLevel.get('importers');
+  if (!importers || importers.value !== undefined) {
+    throw new Error(`${label} must contain a block importers map.`);
+  }
+  const importersEnd = sectionEnd(lines, importers.index);
+  const entries = directSectionEntries(lines, importers.index, importersEnd, 2, `${label} importer`);
+  const importer = entries.get('.');
+  if (entries.size !== 1 || !importer || importer.value !== undefined) {
+    throw new Error(`${label} must contain only the root environment importer.`);
+  }
+  assertCanonicalPnpmDataKey(importer, '.', label);
+  assertNoSequenceNodes(lines, importers.index, importersEnd, label);
+  const fields = directSectionEntries(lines, importer.index, importersEnd, 4, `${label} importer field`);
+  if (fields.size === 0) throw new Error(`${label} has no environment dependencies.`);
+  for (const [name, field] of fields) {
+    if (!['configDependencies', 'packageManagerDependencies'].includes(name)) {
+      throw new Error(`${label} has unexpected importer field ${name}.`);
+    }
+    assertCanonicalStructuralKey(field, name, label);
+    const end = entryEnd(lines, field.index, importersEnd, field.indent);
+    if (field.value === '{}') {
+      assertScalarLeaf(lines, field, end, `${label} ${name}`);
+    } else if (field.value !== undefined) {
+      throw new Error(`${label} ${name} must be a block map or an empty inline map.`);
+    } else {
+      directSectionEntries(lines, field.index, end, 6, `${label} ${name} dependency`);
+    }
+  }
 }
 
 function sectionEnd(lines, start) {
