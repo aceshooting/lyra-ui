@@ -1,5 +1,11 @@
 # Changelog
 
+## 14.1.1
+
+### Patch Changes
+
+- 9cb130c: Update development dependencies and restore dependency-upgrade compatibility with pnpm 12, including its separate environment and workspace lockfile documents.
+
 ## 14.1.0
 
 ### Minor Changes
