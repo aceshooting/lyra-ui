@@ -104,8 +104,10 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   side resolves to the stricter one (larger for min, smaller for max) via a native CSS `max()`/`min()`
   in the rendered `clamp()` flex-basis. `sizes`, the `lr-resize` payload, and localStorage persistence
   stay percent-based regardless — only the effective drag/keyboard clamp bounds (and the rendered
-  `flex-basis`, via a native CSS `clamp()` so a constrained panel stays pinned between its bounds
-  across container resizes with no extra `ResizeObserver`) change for a constrained panel.
+  `flex-basis`, via a native CSS `clamp()` across container resizes) change for a constrained panel.
+  Pixel minimums also account for live divider dimensions. Bounds on neighboring panels remain
+  active during collapse transitions, including when constraints are updated from an
+  `lr-multi-split-collapse-change` handler.
 - `collapse: 'start'|'end'|'none' = 'none'` (reflected) — opt-in responsive collapse for one panel:
   `'start'`/`'end'` is a _logical_ position (RTL-aware, matching CSS logical properties — the panel at
   the document's visual leading/trailing edge, not a raw array index). `lr-multi-split` only owns the

@@ -197,7 +197,11 @@ it('keeps logical gutter lines aligned after preceding source wraps and allocati
     range.setEnd(text, text.textContent!.indexOf('second line') + 1);
     return range.getBoundingClientRect().top;
   };
-  const aligned = () => Math.abs(line().getBoundingClientRect().top - secondTop()) <= 2;
+  const aligned = (): boolean => {
+    const range = document.createRange();
+    range.selectNodeContents(line());
+    return Math.abs(range.getBoundingClientRect().top - secondTop()) <= 2;
+  };
   await waitUntil(aligned, 'the second gutter line did not follow wrapped source');
   el.style.inlineSize = '320px';
   await waitUntil(aligned, 'the gutter did not follow a new wrapping allocation');
@@ -209,7 +213,9 @@ it('keeps logical gutter lines aligned after preceding source wraps and allocati
 it('keeps the final logical gutter line visible when scrolling a large wrapped source', async () => {
   const el = await fixture<LyraCodeEditor>(html`<lr-code-editor wrap="soft" resize="none"
     style="inline-size: 250px; block-size: 160px"
-    .value=${Array.from({ length: 260 }, (_, index) => `line ${index + 1} ${'word '.repeat(12)}`).join('\n')}></lr-code-editor>`);
+    .value=${Array.from({ length: 260 }, (_, index) => index === 259
+      ? 'line 260'
+      : `line ${index + 1} ${'word '.repeat(12)}`).join('\n')}></lr-code-editor>`);
   const frame = el.shadowRoot!.querySelector<HTMLElement>('[part="editor"]')!;
   el.scrollPosition({ top: frame.scrollHeight });
   await waitUntil(() => [...el.shadowRoot!.querySelectorAll('.gutter-line')].some((line) => line.textContent?.trim() === '260'));
@@ -257,5 +263,140 @@ it('extends the wrapped gutter background and border through the final logical l
   expect(gutter.getBoundingClientRect().bottom).to.be.at.least(lastLine.getBoundingClientRect().bottom);
   el.wrap = 'off';
   await el.updateComplete;
-  expect(gutter.style.blockSize).to.equal('');
+  expect(gutter.getBoundingClientRect().height).to.be.at.least(
+    el.shadowRoot!.querySelector<HTMLElement>('.editor-measure')!.getBoundingClientRect().height,
+  );
 });
+
+
+it('keeps native text, measurement and gutter on the live monospace family token', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="--lr-theme-font-family-mono: monospace; font-weight: 700; font-style: italic">
+    <lr-code-editor wrap="soft" resize="none" style="inline-size: 250px; block-size: 160px"
+      .value=${'wrapped source '.repeat(20) + '\nsecond line'}></lr-code-editor>
+  </div>`);
+  const el = wrapper.querySelector<LyraCodeEditor>('lr-code-editor')!;
+  await el.updateComplete;
+  const measure = el.shadowRoot!.querySelector<HTMLElement>('.editor-measure')!;
+  const gutter = el.shadowRoot!.querySelector<HTMLElement>('[part="gutter"]')!;
+  const owners = [el.input!, measure, gutter];
+  const expectFamily = (family: string): void => {
+    for (const owner of owners) {
+      const computed = getComputedStyle(owner);
+      expect(computed.fontFamily).to.equal(family);
+      expect(computed.fontWeight).to.equal('700');
+      expect(computed.fontStyle).to.equal('italic');
+    }
+    expect(getComputedStyle(measure).fontSize).to.equal(getComputedStyle(el.input!).fontSize);
+    expect(getComputedStyle(gutter).lineHeight).to.equal(getComputedStyle(el.input!).lineHeight);
+  };
+  expectFamily('monospace');
+  const computedGutter = getComputedStyle(gutter);
+  const digitWidth = el.shadowRoot!.querySelector<HTMLElement>('.gutter-measure')!.getBoundingClientRect().width;
+  const gutterChrome = [computedGutter.paddingInlineStart, computedGutter.paddingInlineEnd,
+    computedGutter.borderInlineStartWidth, computedGutter.borderInlineEndWidth]
+    .reduce((width, value) => width + Number.parseFloat(value), 0);
+  expect(gutter.getBoundingClientRect().width).to.be.closeTo(digitWidth + gutterChrome, 1);
+  wrapper.style.setProperty('--lr-theme-font-family-mono', 'serif');
+  expectFamily('serif');
+  el.style.setProperty('--lr-font-mono', 'monospace');
+  expectFamily('monospace');
+  el.style.removeProperty('--lr-font-mono');
+  expectFamily('serif');
+  wrapper.style.removeProperty('--lr-theme-font-family-mono');
+  for (const owner of owners) expect(getComputedStyle(owner).fontFamily).to.include('monospace');
+  expect(el.input!.scrollHeight - el.input!.clientHeight).to.be.at.most(1);
+  expect(el.input!.scrollWidth - el.input!.clientWidth).to.be.at.most(1);
+});
+
+
+for (const [wrap, resize] of [
+  ['off', 'none'], ['off', 'vertical'], ['off', 'horizontal'], ['off', 'both'],
+  ['soft', 'none'], ['hard', 'none'],
+] as const) {
+  it(`keeps ${wrap}/${resize} gutter chrome as tall as the text and viewport through live geometry changes`, async () => {
+    const el = await fixture<LyraCodeEditor>(html`<lr-code-editor .wrap=${wrap} .resize=${resize}
+      style="inline-size: 250px; block-size: 160px"
+      .value=${Array.from({ length: 40 }, () => 'long source '.repeat(6)).join('\n')}></lr-code-editor>`);
+    const frame = el.shadowRoot!.querySelector<HTMLElement>('[part="editor"]')!;
+    const measure = el.shadowRoot!.querySelector<HTMLElement>('.editor-measure')!;
+    const aligned = (): boolean => {
+      const gutter = el.shadowRoot!.querySelector<HTMLElement>('[part="gutter"]')!;
+      return Math.abs(gutter.getBoundingClientRect().height - Math.max(measure.getBoundingClientRect().height, frame.clientHeight)) <= 1;
+    };
+    await waitUntil(aligned, 'the gutter must cover the long rendered source');
+    expect(frame.scrollHeight - frame.clientHeight).to.be.greaterThan(0);
+    expect(el.input!.scrollHeight - el.input!.clientHeight).to.be.at.most(1);
+    expect(el.input!.scrollWidth - el.input!.clientWidth).to.be.at.most(1);
+    el.style.setProperty('--lr-code-editor-font-size', '20px');
+    el.style.setProperty('--lr-code-editor-line-height', '2');
+    await waitUntil(aligned, 'the gutter must follow live font and line-height tokens');
+    expect(el.input!.scrollHeight - el.input!.clientHeight).to.be.at.most(1);
+    expect(el.input!.scrollWidth - el.input!.clientWidth).to.be.at.most(1);
+    el.value = 'short';
+    await el.updateComplete;
+    await waitUntil(aligned, 'short content must retain a gutter through the viewport');
+    el.lineNumbers = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="gutter"]').length).to.equal(0);
+    el.lineNumbers = true;
+    await el.updateComplete;
+    await waitUntil(aligned, 're-enabled line numbers must use current text geometry');
+    expect(el.input!.scrollHeight - el.input!.clientHeight).to.be.at.most(1);
+    expect(el.input!.scrollWidth - el.input!.clientWidth).to.be.at.most(1);
+  });
+}
+
+
+for (const [wrap, direction] of [['off', 'ltr'], ['off', 'rtl'], ['soft', 'ltr'], ['soft', 'rtl']] as const) {
+  it(`keeps ${wrap}/${direction} end and start carets outside native scrollbars and the pinned gutter`, async () => {
+    const value = Array.from({ length: 40 }, (_, index) => index === 39 ? 'last line' : 'long source '.repeat(12)).join('\n');
+    const el = await fixture<LyraCodeEditor>(html`<lr-code-editor .wrap=${wrap} dir=${direction} resize="none"
+      style="inline-size: 250px; block-size: 160px" .value=${value}></lr-code-editor>`);
+    const frame = el.shadowRoot!.querySelector<HTMLElement>('[part="editor"]')!;
+    const marker = el.shadowRoot!.querySelector<HTMLElement>('.editor-caret-measure')!;
+    const visible = (): boolean => {
+      const outer = frame.getBoundingClientRect();
+      const range = document.createRange();
+      let remaining = el.selectionStart ?? 0;
+      const text = [...marker.parentElement!.childNodes].find((node) => {
+        if (node.nodeType !== Node.TEXT_NODE) return false;
+        const length = node.textContent?.length ?? 0;
+        if (remaining < length) return true;
+        remaining -= length;
+        return false;
+      })!;
+      range.setStart(text, remaining);
+      if (text.textContent?.[remaining] === '\n') range.setEnd(text, remaining + 1);
+      else range.collapse(true);
+      const caret = range.getBoundingClientRect();
+      const gutter = el.shadowRoot!.querySelector<HTMLElement>('[part="gutter"]')?.getBoundingClientRect();
+      const left = outer.left + frame.clientLeft;
+      const top = outer.top + frame.clientTop;
+      const textLeft = direction === 'ltr' && gutter ? gutter.right : left;
+      const textRight = direction === 'rtl' && gutter ? gutter.left : left + frame.clientWidth;
+      return caret.height > 0 && caret.left >= textLeft - 1 && caret.right <= textRight + 1
+        && caret.top >= top - 1 && caret.bottom <= top + frame.clientHeight + 1;
+    };
+    for (const lineNumbers of [true, false]) {
+      el.lineNumbers = lineNumbers;
+      await el.updateComplete;
+      for (const offset of [value.length, value.indexOf('\n'), 0]) {
+        el.setSelectionRange(offset, offset);
+        if (lineNumbers) el.focus();
+        else el.input!.focus();
+        await el.updateComplete;
+        await waitUntil(visible, 'the caret must be inside the visible text viewport');
+        expect(el.input!.scrollTop).to.equal(0);
+        expect(el.input!.scrollLeft).to.equal(0);
+      }
+    }
+    el.lineNumbers = true;
+    el.value = '';
+    await el.updateComplete;
+    el.setSelectionRange(0, 0);
+    el.focus();
+    await el.updateComplete;
+    await waitUntil(visible, 'the empty editor caret must use its visible text sentinel');
+    expect(el.selectionStart).to.equal(0);
+  });
+}

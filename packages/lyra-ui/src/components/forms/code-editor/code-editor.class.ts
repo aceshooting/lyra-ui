@@ -289,20 +289,20 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @state() private gutterWindowStart = 0;
   @state() private caretOffset = 0;
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
-  private wrappedGeometryObserver?: ResizeObserver;
+  private textGeometryObserver?: ResizeObserver;
   private wrappedLineStarts?: { value: string; offsets: number[] };
 
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) {
       this.syncExternalDescription();
-      this.observeWrappedGeometry();
+      this.observeTextGeometry();
     }
   }
 
   override disconnectedCallback(): void {
-    this.wrappedGeometryObserver?.disconnect();
-    this.wrappedGeometryObserver = undefined;
+    this.textGeometryObserver?.disconnect();
+    this.textGeometryObserver = undefined;
     this.releaseExternalDescription();
     super.disconnectedCallback();
   }
@@ -310,11 +310,11 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.releaseExternalDescription();
-    this.wrappedGeometryObserver?.disconnect();
-    this.wrappedGeometryObserver = undefined;
+    this.textGeometryObserver?.disconnect();
+    this.textGeometryObserver = undefined;
     if (this.isConnected && this.hasUpdated) {
       this.syncExternalDescription();
-      this.observeWrappedGeometry();
+      this.observeTextGeometry();
     }
   }
 
@@ -501,7 +501,12 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       event.stopPropagation();
       return;
     }
-    this.syncCaretOffset();
+    const textarea = event.target;
+    // Native focus dispatch may restore the selection only after its listeners return.
+    queueMicrotask(() => {
+      if (this.isConnected && this.textarea === textarea && this.shadowRoot?.activeElement === textarea)
+        this.syncCaretOffset();
+    });
     relayNativeEvent(this, event);
   };
   // Disabling a focused native control forces the browser to blur it --
@@ -564,18 +569,36 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const marker = this.caretMeasure;
     if (!editor || !marker) return;
     const frame = editor.getBoundingClientRect();
-    const caret = marker.getBoundingClientRect();
+    let caret = marker.getBoundingClientRect();
+    let text = marker.nextSibling;
+    while (text && (text.nodeType !== 3 || !text.textContent)) text = text.nextSibling;
+    if (text) {
+      // Text ranges follow bidi caret placement and font metrics, unlike a neutral inline anchor.
+      const range = this.ownerDocument.createRange();
+      range.setStart(text, 0);
+      // A selected line break has caret geometry even where its collapsed range has no box.
+      if (text.textContent?.startsWith('\n')) range.setEnd(text, 1);
+      else range.collapse(true);
+      const measured = range.getBoundingClientRect();
+      if (measured.height > 0) caret = measured;
+    }
+    const gutterWidth = this.gutter?.getBoundingClientRect().width ?? 0;
+    const viewportLeft = frame.left + editor.clientLeft;
+    const viewportTop = frame.top + editor.clientTop;
+    const textLeft = viewportLeft + (this.effectiveDirection === 'rtl' ? 0 : gutterWidth);
+    const textRight = viewportLeft + editor.clientWidth - (this.effectiveDirection === 'rtl' ? gutterWidth : 0);
+    const viewportBottom = viewportTop + editor.clientHeight;
     const left =
-      caret.left < frame.left
-        ? caret.left - frame.left
-        : caret.right > frame.right
-        ? caret.right - frame.right
+      caret.left < textLeft
+        ? caret.left - textLeft
+        : caret.right > textRight
+        ? caret.right - textRight
         : 0;
     const top =
-      caret.top < frame.top
-        ? caret.top - frame.top
-        : caret.bottom > frame.bottom
-        ? caret.bottom - frame.bottom
+      caret.top < viewportTop
+        ? caret.top - viewportTop
+        : caret.bottom > viewportBottom
+        ? caret.bottom - viewportBottom
         : 0;
     if (left === 0 && top === 0) return;
     editor.scrollBy({
@@ -642,8 +665,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       this.fitToContent();
     }
     this.syncGutterInlinePosition();
-    this.observeWrappedGeometry();
-    this.syncWrappedGutter();
+    this.observeTextGeometry();
+    this.syncGutterGeometry();
     if (changed.has('caretOffset') || changed.has('value'))
       this.scrollCaretIntoView();
   }
@@ -726,44 +749,41 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     return 0;
   }
 
-  private syncWrappedGutter(): void {
+  private syncGutterGeometry(): void {
     if (!this.lineNumbers) return;
     const lines = this.renderRoot.querySelectorAll<HTMLElement>('.gutter-line');
     const start = Math.min(this.gutterWindowStart, Math.max(0, this.countLines() - 1));
-    if (!this.wrapsText) {
-      this.gutter?.style.removeProperty('block-size');
-      lines.forEach((line, index) => {
-        line.style.insetBlockStart = `calc(var(--lr-code-editor-line-height, var(--_lr-code-editor-line-height)) * ${start + index}em)`;
-      });
-      return;
-    }
-    const offsets = this.lineStarts();
+    const offsets = this.wrapsText ? this.lineStarts() : undefined;
     // Finish geometry reads before writing any row styles, keeping layout work in one phase.
-    const positions = Array.from(lines, (_line, index) => this.wrappedLineOffset(offsets[start + index] ?? 0));
+    const positions = offsets
+      ? Array.from(lines, (_line, index) => this.wrappedLineOffset(offsets[start + index] ?? 0))
+      : undefined;
     const height = this.renderRoot.querySelector<HTMLElement>('.editor-measure')?.getBoundingClientRect().height;
     if (height !== undefined) this.gutter?.style.setProperty('block-size', `${height}px`);
     lines.forEach((line, index) => {
-      line.style.insetBlockStart = `${positions[index]}px`;
+      line.style.insetBlockStart = positions
+        ? `${positions[index]}px`
+        : `calc(var(--lr-code-editor-line-height, var(--_lr-code-editor-line-height)) * ${start + index}em)`;
     });
   }
 
-  private observeWrappedGeometry(): void {
-    if (!this.wrapsText || !this.lineNumbers || !this.isConnected) {
-      this.wrappedGeometryObserver?.disconnect();
-      this.wrappedGeometryObserver = undefined;
+  private observeTextGeometry(): void {
+    if (!this.lineNumbers || !this.isConnected) {
+      this.textGeometryObserver?.disconnect();
+      this.textGeometryObserver = undefined;
       return;
     }
-    if (this.wrappedGeometryObserver) return;
+    if (this.textGeometryObserver) return;
     const measure = this.renderRoot.querySelector<HTMLElement>('.editor-measure');
     const ownerDocument = this.ownerDocument;
     const Observer = ownerDocument.defaultView?.ResizeObserver;
     if (!measure || !Observer) return;
     const observer = new Observer(() => {
-      if (!this.isConnected || this.ownerDocument !== ownerDocument || this.wrappedGeometryObserver !== observer) return;
+      if (!this.isConnected || this.ownerDocument !== ownerDocument || this.textGeometryObserver !== observer) return;
       this.onEditorScroll();
-      this.syncWrappedGutter();
+      this.syncGutterGeometry();
     });
-    this.wrappedGeometryObserver = observer;
+    this.textGeometryObserver = observer;
     observer.observe(measure);
   }
 
@@ -880,9 +900,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
         @scroll=${this.onEditorScroll}
       >
         ${this.lineNumbers
-          ? html`<div part="gutter" aria-hidden="true">
-              ${this.gutterRows(lineCount)}
-            </div>`
+          ? html`<div part="gutter" aria-hidden="true">${this.gutterRows(lineCount)}</div>`
           : nothing}
         <div class="editor-content" data-wrap=${this.wrap} style=${styleMap(contentStyle)}>
           <span class="editor-measure" data-wrap=${this.wrap} aria-hidden="true"

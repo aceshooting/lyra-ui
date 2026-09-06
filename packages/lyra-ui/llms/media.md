@@ -2614,8 +2614,10 @@ kept for mechanical Web Awesome migration. Lyra also supplies
 Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
 chevrons; their option foreground and background inherit `--controls-color` and
 `--controls-background`. Controls, elapsed/title text, caption text, and selectors consistently use
-the semantic strong-overlay foreground. The fallback remains legible in light and dark themes;
-an explicit `--controls-color` still has final precedence, and forced-colors mode remains UA-owned.
+the semantic strong-overlay foreground. The fallback remains legible in light and dark themes.
+The poster play button and its glyph instead default to `--lr-color-text` against their
+`--lr-color-surface-overlay` surface. An explicit `--controls-color` retains final precedence on
+both poster and overlay controls, and forced-colors mode remains UA-owned.
 
 **RTL behavior:** surrounding controls follow the inherited direction, while the elapsed-media axis
 stays physical left-to-right. Native ArrowRight advances and ArrowLeft rewinds the timeline in both

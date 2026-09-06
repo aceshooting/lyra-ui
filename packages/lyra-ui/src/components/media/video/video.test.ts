@@ -1,6 +1,7 @@
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './video.js';
+import '../video-playlist/video-playlist.js';
 import type { LyraVideo } from './video.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -576,6 +577,78 @@ describe('lr-video public contract', () => {
       );
     }
   });
+
+  for (const composition of ['standalone', 'playlist'] as const) {
+    for (const themeClass of ['lr-light', 'lr-dark']) {
+      it(`pairs the ${composition} poster surface with visible glyph ink in ${themeClass}`, async () => {
+        const video = html`<lr-video controls="full" preload="none"
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"></lr-video>`;
+        const wrapper = await fixture<HTMLElement>(html`<div class=${themeClass}>
+          ${composition === 'playlist' ? html`<lr-video-playlist>${video}</lr-video-playlist>` : video}
+        </div>`);
+        const el = wrapper.querySelector<LyraVideo>('lr-video')!;
+        await el.updateComplete;
+        const poster = el.shadowRoot!.querySelector<HTMLElement>('[part="poster-play-button"]')!;
+        const icon = poster.parentElement!.querySelector<HTMLElementTagNameMap['lr-icon']>('lr-icon')!;
+        await icon.updateComplete;
+        const svg = icon.shadowRoot!.querySelector('svg')!;
+        const controls = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"]')!;
+        const controlIcon = controls.querySelector<HTMLElement>('.icon-button-stack:not([hidden]) lr-icon')!;
+        const background = getComputedStyle(poster).backgroundColor;
+        const foreground = getComputedStyle(icon).color;
+        expect(svg.getBoundingClientRect().width).to.be.greaterThan(0);
+        expect(getComputedStyle(svg).color).to.equal(foreground);
+        expect(getComputedStyle(poster).color).to.equal(foreground);
+        expect(contrastRatio(foreground, background), 'the visible poster glyph must contrast with its own surface').to.be.at.least(3);
+        expect(getComputedStyle(controlIcon).color).to.equal(getComputedStyle(controls).color);
+        expect(contrastRatio(getComputedStyle(controls).color,
+          getComputedStyle(el.shadowRoot!.querySelector('[part~="video-wrapper"]')!).backgroundColor)).to.be.at.least(4.5);
+        if (CSS.supports('forced-color-adjust', 'auto')) {
+          expect(getComputedStyle(icon).forcedColorAdjust).to.equal('auto');
+          expect(getComputedStyle(poster).forcedColorAdjust).to.equal('auto');
+        }
+      });
+    }
+
+    it(`preserves live ${composition} poster color overrides on the button and slotted glyph`, async () => {
+      const video = html`<lr-video controls="full" preload="none"
+        poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
+        <svg slot="poster-icon" viewBox="0 0 24 24" style="inline-size: 24px; block-size: 24px; fill: currentColor">
+          <path d="M8 5v14l11-7Z"></path>
+        </svg>
+      </lr-video>`;
+      const wrapper = await fixture<HTMLElement>(html`<div class="lr-light"
+        style="--controls-color: rgb(10, 20, 30); --poster-play-button-background: rgb(240, 241, 242)">
+        ${composition === 'playlist' ? html`<lr-video-playlist>${video}</lr-video-playlist>` : video}
+      </div>`);
+      const el = wrapper.querySelector<LyraVideo>('lr-video')!;
+      await el.updateComplete;
+      const poster = el.shadowRoot!.querySelector<HTMLElement>('[part="poster-play-button"]')!;
+      const glyph = el.querySelector('svg')!;
+      const controls = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"]')!;
+      const expectInk = (color: string): void => {
+        expect(getComputedStyle(poster).color).to.equal(color);
+        expect(getComputedStyle(glyph).fill).to.equal(color);
+        expect(getComputedStyle(controls).color).to.equal(color);
+      };
+      expectInk('rgb(10, 20, 30)');
+      expect(getComputedStyle(poster).backgroundColor).to.equal('rgb(240, 241, 242)');
+      el.style.setProperty('--controls-color', 'rgb(40, 50, 60)');
+      expectInk('rgb(40, 50, 60)');
+      wrapper.style.setProperty('--controls-color', 'rgb(70, 80, 90)');
+      expectInk('rgb(40, 50, 60)');
+      el.style.removeProperty('--controls-color');
+      expectInk('rgb(70, 80, 90)');
+      wrapper.style.removeProperty('--controls-color');
+      wrapper.style.removeProperty('--poster-play-button-background');
+      for (const themeClass of ['lr-light', 'lr-dark']) {
+        wrapper.className = themeClass;
+        const foreground = getComputedStyle(glyph).fill;
+        expect(getComputedStyle(poster).color).to.equal(foreground);
+        expect(contrastRatio(foreground, getComputedStyle(poster).backgroundColor)).to.be.at.least(3);
+      }
+    });
+  }
 
   it('uses default and ancestor-themed poster hover hooks for rendered button ink', async () => {
     const defaults = await fixture<LyraVideo>(html`

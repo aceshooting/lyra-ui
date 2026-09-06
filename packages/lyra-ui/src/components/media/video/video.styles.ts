@@ -83,6 +83,11 @@ export const styles = css`
     pointer-events: none;
   }
 
+  [part='poster-overlay'] .icon-button-stack,
+  [part='poster-play-button'] {
+    color: var(--controls-color, var(--lr-color-text));
+  }
+
   [part='poster-play-button'] {
     position: relative;
     min-inline-size: var(--lr-icon-button-size);
@@ -92,7 +97,6 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
     background: var(--poster-play-button-background, var(--lr-color-surface-overlay));
-    color: var(--controls-color, var(--lr-color-on-strong-overlay));
     box-shadow: var(--lr-shadow-m);
     cursor: pointer;
     pointer-events: auto;

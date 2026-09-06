@@ -128,6 +128,7 @@ it('releases gutter observation and ignores stale callbacks while detached or un
     await split.updateComplete;
     const divider = split.shadowRoot!.querySelector<HTMLElement>('[part="divider"]')!;
     const base = split.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    await waitUntil(() => records.some(record => record.targets.includes(divider)));
     const first = records.find(record => record.targets.includes(divider));
     expect(first !== undefined).to.equal(true);
     split.remove();
@@ -138,6 +139,7 @@ it('releases gutter observation and ignores stale callbacks while detached or un
     expect(base.style.getPropertyValue('--_lr-multi-split-gutters')).to.equal('');
     wrapper.append(split);
     await split.updateComplete;
+    await waitUntil(() => records.some(record => !record.disconnected && record.targets.includes(divider)));
     const active = records.find(record => !record.disconnected && record.targets.includes(divider));
     expect(active !== undefined && active !== first).to.equal(true);
     split.panelConstraints = [];
@@ -147,5 +149,81 @@ it('releases gutter observation and ignores stale callbacks while detached or un
     expect(base.style.getPropertyValue('--_lr-multi-split-gutters')).to.equal('');
   } finally {
     window.ResizeObserver = OriginalObserver;
+  }
+});
+
+const completeResizeDelivery = (): Promise<void> => new Promise((resolve) => {
+  requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+});
+
+for (const collapse of ['start', 'end'] as const) {
+  for (const orientation of ['horizontal', 'vertical'] as const) {
+    it(`preserves native pixel bounds across responsive ${collapse}/${orientation} transitions`, async () => {
+      const constraints = collapse === 'start'
+        ? [null, { minPx: 40, maxPx: 120 }]
+        : [{ minPx: 40, maxPx: 120 }, null];
+      const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+        collapse=${collapse} orientation=${orientation} dir=${collapse === 'end' ? 'rtl' : 'ltr'}
+        style="inline-size:500px;block-size:300px" .panelConstraints=${constraints}>
+        <div>A</div><div>B</div>
+      </lr-multi-split>`);
+      const panel = split.children[collapse === 'start' ? 1 : 0] as HTMLElement;
+      for (const width of [500, 700, 300, 700, 500]) {
+        split.style.inlineSize = `${width}px`;
+        await waitUntil(() => split.collapseState === (width < 400 ? 'floating' : width < 640 ? 'rail' : 'wide'));
+        await completeResizeDelivery();
+        const rect = panel.getBoundingClientRect();
+        const extent = orientation === 'horizontal' ? rect.width : rect.height;
+        expect(extent).to.be.at.least(40);
+        expect(extent).to.be.at.most(120);
+        expect(split.shadowRoot!.querySelector('[part="base"]')!.getBoundingClientRect().width).to.equal(width);
+      }
+    });
+  }
+
+  it(`accepts pixel constraints assigned by a native ${collapse} collapse-change listener`, async () => {
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse=${collapse} style="inline-size:500px;block-size:120px">
+      <div>A</div><div>B</div>
+    </lr-multi-split>`);
+    await waitUntil(() => split.collapseState === 'rail');
+    await completeResizeDelivery();
+    split.addEventListener('lr-multi-split-collapse-change', () => {
+      if (split.collapseState === 'wide') {
+        split.panelConstraints = collapse === 'start'
+          ? [null, { minPx: 40, maxPx: 120 }]
+          : [{ minPx: 40, maxPx: 120 }, null];
+      }
+    });
+    split.style.inlineSize = '700px';
+    await waitUntil(() => split.collapseState === 'wide');
+    await completeResizeDelivery();
+    const panel = split.children[collapse === 'start' ? 1 : 0] as HTMLElement;
+    expect(panel.getBoundingClientRect().width).to.be.at.least(40);
+    expect(panel.getBoundingClientRect().width).to.be.at.most(120);
+  });
+}
+
+it('cancels pending native gutter observation before disconnect and restores live gutters on reconnect', async () => {
+  const split = document.createElement('lr-multi-split') as LyraMultiSplit;
+  split.style.cssText = 'inline-size:600px;block-size:120px;--lr-multi-split-divider-target-size:40px';
+  split.panelConstraints = [{ minPx: 300 }, { minPx: 260 }];
+  split.append(document.createElement('div'), document.createElement('div'));
+  document.body.append(split);
+  try {
+    await split.updateComplete;
+    const base = split.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(base.style.getPropertyValue('--_lr-multi-split-gutters')).to.equal('40px');
+    split.remove();
+    await completeResizeDelivery();
+    expect(base.style.getPropertyValue('--_lr-multi-split-gutters')).to.equal('');
+    document.body.append(split);
+    await waitUntil(() => base.style.getPropertyValue('--_lr-multi-split-gutters') === '40px');
+    split.style.setProperty('--lr-multi-split-divider-target-size', '32px');
+    await waitUntil(() => base.style.getPropertyValue('--_lr-multi-split-gutters') === '32px');
+    expect((split.children[0] as HTMLElement).getBoundingClientRect().width).to.be.at.least(300);
+    expect((split.children[1] as HTMLElement).getBoundingClientRect().width).to.be.at.least(260);
+  } finally {
+    split.remove();
   }
 });

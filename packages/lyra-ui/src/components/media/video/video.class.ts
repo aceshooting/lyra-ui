@@ -232,6 +232,7 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * @cssprop [--controls-background=var(--lr-color-overlay-strong)] - Controls, captions, and title
  *   overlay background.
  * @cssprop [--controls-color=var(--lr-color-on-strong-overlay)] - Custom-control foreground color.
+ *   The poster play action defaults to `var(--lr-color-text)` against its surface background.
  * @cssprop [--poster-play-button-background=var(--lr-color-surface-overlay)] - Poster play-button
  *   background.
  * @cssprop [--lr-video-poster-play-button-hover-background=color-mix(...)] - Poster play-button

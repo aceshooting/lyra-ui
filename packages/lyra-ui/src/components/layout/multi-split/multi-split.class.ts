@@ -498,6 +498,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private collapseObserverOwnerDocument?: Document;
   private collapseObserverGeneration = 0;
   private gutterResizeObserver?: ResizeObserver;
+  private gutterObserverFrame?: number;
   private gutterObserverDocument?: Document;
   private gutterObservedDividers: HTMLElement[] = [];
   private gutterObservedContainerSize = 0;
@@ -1400,6 +1401,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private resetGutterObserver(): void {
+    if (this.gutterObserverFrame !== undefined) {
+      this.gutterObserverDocument?.defaultView?.cancelAnimationFrame(this.gutterObserverFrame);
+      this.gutterObserverFrame = undefined;
+    }
     this.gutterResizeObserver?.disconnect();
     this.gutterResizeObserver = undefined;
     this.gutterObserverDocument = undefined;
@@ -1451,8 +1456,9 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.gutterObserverDocument = ownerDocument;
     this.gutterObservedContainerSize = this.getContainerSize();
     this.updateGutterBudget();
-    const ResizeObserverConstructor = ownerDocument.defaultView?.ResizeObserver;
-    if (!ResizeObserverConstructor) return;
+    const ownerWindow = ownerDocument.defaultView;
+    const ResizeObserverConstructor = ownerWindow?.ResizeObserver;
+    if (!ownerWindow || !ResizeObserverConstructor) return;
     const observer = new ResizeObserverConstructor(() => {
       if (this.gutterResizeObserver !== observer || !this.isConnected || this.ownerDocument !== ownerDocument) return;
       this.updateGutterBudget();
@@ -1463,8 +1469,21 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       }
     });
     this.gutterResizeObserver = observer;
-    observer.observe(base, { box: 'border-box' });
-    for (const divider of dividers) observer.observe(divider, { box: 'border-box' });
+    // A responsive transition may create this observer during another observer's delivery.
+    // Start its subscriptions on the next frame so the shared base can receive its first entry.
+    const frame = ownerWindow.requestAnimationFrame(() => {
+      if (
+        this.gutterObserverFrame !== frame ||
+        this.gutterResizeObserver !== observer ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument ||
+        this.baseEl !== base
+      ) return;
+      this.gutterObserverFrame = undefined;
+      observer.observe(base, { box: 'border-box' });
+      for (const divider of dividers) observer.observe(divider, { box: 'border-box' });
+    });
+    this.gutterObserverFrame = frame;
   }
 
   /** The physical panel index `collapse: 'start' | 'end'` resolves to, or

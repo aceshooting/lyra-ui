@@ -31,11 +31,9 @@ function pointerMove(pointerId: number, x: number) {
   );
 }
 
-/** Spies on the real `ResizeObserver` constructor so a test can manually
- *  drive a component's collapse-state callback with a synthetic width,
- *  instead of depending on real (viewport/layout-dependent, flaky) browser
- *  resize timing -- same technique lite-chart.test.ts's reconnect test uses
- *  for its own ResizeObserver-driven assertions. Restore in a `finally`. */
+/** Spies on native observation for fixtures whose synthetic width matches their actual allocation.
+ *  This preserves real delivery and reconnect behavior. Use installStubResizeObserver() when a
+ *  test deliberately supplies a width or geometry that differs from the rendered fixture. */
 function installResizeObserverSpy(): {
   callbacks: ResizeObserverCallback[];
   restore: () => void;
@@ -61,13 +59,10 @@ function installResizeObserverSpy(): {
   };
 }
 
-/** Like `installResizeObserverSpy()`, but the observer is a stub that never observes anything, so
- *  the only measurements a component sees are the synthetic ones the test fires. The
- *  orientation-breakpoint tests need that isolation: they assert narrow states on a fixture the
- *  browser really lays out wide (and one of them changes the root font size mid-test), so every
- *  real delivery would contradict the synthetic one — making the assertions racy and flipping the
- *  layout axis back and forth often enough to trip Chromium's "ResizeObserver loop completed with
- *  undelivered notifications" error. Restore in a `finally`. */
+/** Supplies only the explicit measurements a test fires. A real observer would contradict a
+ *  synthetic width or mocked geometry, racing state assertions and responsive layout changes.
+ *  Native allocation and observer lifecycle contracts have separate rendered tests. Restore in
+ *  a finally block so later native-observer fixtures retain the browser constructor. */
 function installStubResizeObserver(): {
   callbacks: ResizeObserverCallback[];
   restore: () => void;
@@ -1234,7 +1229,7 @@ it("falls back to an equal split when the persisted localStorage value is malfor
 });
 
 it("switches the resize axis from its own inline-size breakpoint and reports the effective orientation", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split
@@ -1274,7 +1269,7 @@ it("switches the resize axis from its own inline-size breakpoint and reports the
 });
 
 it("falls back to observed base geometry when a ResizeObserver entry omits contentBoxSize", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split
@@ -3092,7 +3087,7 @@ it("does not schedule a Lit update from the initial collapse observer setup", as
 });
 
 it('clamps the collapse="start" panel (index 0) to rail-width and marks it via dataset + host attribute once the container narrows into the rail range', async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -3179,7 +3174,7 @@ it("replaces the responsive observer with the destination owner constructor afte
 });
 
 it("honors a sibling panel's own panelConstraints while its neighbor is rail-collapsed instead of growing it unclamped", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -3209,7 +3204,7 @@ it("honors a sibling panel's own panelConstraints while its neighbor is rail-col
 });
 
 it('resolves collapse="end" to the LAST panel, including for 3+ panels', async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="end"
@@ -3233,7 +3228,7 @@ it('resolves collapse="end" to the LAST panel, including for 3+ panels', async (
 });
 
 it('resolves collapse="start"/"end" to the same physical panel indices (0 / last) under a simulated RTL host, since panel 0 already renders at the logical inline-start edge regardless of direction (same as the existing pointer-drag RTL behavior above)', async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split dir="rtl" collapse="start"
@@ -3252,7 +3247,7 @@ it('resolves collapse="start"/"end" to the same physical panel indices (0 / last
     spy.restore();
   }
 
-  const spyEnd = installResizeObserverSpy();
+  const spyEnd = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split dir="rtl" collapse="end"
@@ -3273,7 +3268,7 @@ it('resolves collapse="start"/"end" to the same physical panel indices (0 / last
 });
 
 it("transitions collapseState across both breakpoints (wide -> rail -> floating) as the container width crosses them", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     // Fixed size: opening the floating drawer below must not perturb the
     // host's own measured box, which would otherwise let a REAL (unmocked)
@@ -3334,7 +3329,7 @@ it("transitions collapseState across both breakpoints (wide -> rail -> floating)
 });
 
 it('orders a forced responsive drawer exit after collapse-change and ignores a toggle veto', async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(html`
       <lr-multi-split
@@ -3394,7 +3389,7 @@ it('orders a forced responsive drawer exit after collapse-change and ignores a t
 });
 
 it('still emits one forced close when a collapse-change listener has already closed the drawer', async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(html`
       <lr-multi-split
@@ -3441,7 +3436,7 @@ it('still emits one forced close when a collapse-change listener has already clo
 });
 
 it('keeps the drawer open when a collapse-change listener restores floating', async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(html`
       <lr-multi-split
@@ -3484,7 +3479,7 @@ it('keeps the drawer open when a collapse-change listener restores floating', as
 });
 
 it("fires lr-multi-split-collapse-change only on an actual collapseState transition, not on every resize callback", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -3520,7 +3515,7 @@ it("fires lr-multi-split-collapse-change only on an actual collapseState transit
 });
 
 it("disables dragging (pointer and keyboard) on the divider adjacent to the collapsed pane", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -3564,7 +3559,7 @@ it("disables dragging (pointer and keyboard) on the divider adjacent to the coll
 });
 
 it("leaves a non-adjacent divider fully draggable while a different pane is collapsed (3-panel case)", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -3597,7 +3592,7 @@ it("leaves a non-adjacent divider fully draggable while a different pane is coll
 });
 
 it('reverts to plain wide/percent styling and clears data-collapse-state when collapse is switched back to "none" at runtime', async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -3629,7 +3624,7 @@ it('reverts to plain wide/percent styling and clears data-collapse-state when co
 });
 
 it('resets collapseState to "wide" from willUpdate(), not updated(), so switching collapse back to "none" does not schedule a redundant extra render', async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -3770,7 +3765,7 @@ it('lets a consumer override the floating drawer\'s position/inset geometry with
 });
 
 it("honors a custom rail-width for the rail state", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start" rail-width="4rem"
@@ -3789,7 +3784,7 @@ it("honors a custom rail-width for the rail state", async () => {
 });
 
 it("honors custom rail-breakpoint/float-breakpoint attributes", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split
@@ -3878,7 +3873,7 @@ it('moves a divider directly to both achievable extremes with Home and End', asy
 });
 
 it("honors custom rail-breakpoint/float-breakpoint attributes with an invalid/inverted pair sanitized", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split
@@ -3905,7 +3900,7 @@ it("honors custom rail-breakpoint/float-breakpoint attributes with an invalid/in
 });
 
 it("never gets permanently stuck in floating for an inverted rail/float pair -- reaches wide at a large width", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split
@@ -3934,7 +3929,7 @@ it("never gets permanently stuck in floating for an inverted rail/float pair -- 
 // -- collapseState: forceable accessor (mirrors lr-app-rail's `mode`) ----
 
 it("pins a forced collapseState across a subsequent resize, ignoring measurement until released", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -3960,7 +3955,7 @@ it("pins a forced collapseState across a subsequent resize, ignoring measurement
 });
 
 it('releases a forced collapseState back to measurement-derived state via the "auto" sentinel', async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -3992,7 +3987,7 @@ it('releases a forced collapseState back to measurement-derived state via the "a
 });
 
 it("fires lr-multi-split-collapse-change on a forced assignment and on release-to-auto, only when the effective state actually changes", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -4028,7 +4023,7 @@ it("fires lr-multi-split-collapse-change on a forced assignment and on release-t
 });
 
 it("reflects collapseState to a collapse-state attribute", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"
@@ -4052,7 +4047,7 @@ it("reflects collapseState to a collapse-state attribute", async () => {
 // -- 'floating' hidden-by-default drawer (open) ----------------------------
 
 it("defaults open to false: the floating pane renders nothing (hidden, out of the accessibility tree) until opened", async () => {
-  const spy = installResizeObserverSpy();
+  const spy = installStubResizeObserver();
   try {
     const el = (await fixture(
       html`<lr-multi-split collapse="start"

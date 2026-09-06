@@ -87,6 +87,7 @@ export const styles = css`
   [part='gutter'] {
     box-sizing: border-box;
     grid-area: 1 / 1;
+    min-block-size: 100%;
     align-self: start;
     position: relative;
     transform: translateX(
@@ -102,6 +103,7 @@ export const styles = css`
     white-space: pre;
     user-select: none;
     font: inherit;
+    font-family: var(--lr-font-mono);
     font-size: var(
       --lr-code-editor-font-size,
       var(--_lr-code-editor-font-size)
@@ -121,6 +123,10 @@ export const styles = css`
     block-size: 100%;
     min-block-size: 0;
   }
+  :host(:not([resize='auto'])) .editor-content {
+    block-size: max-content;
+    min-block-size: 100%;
+  }
   .editor-measure {
     display: block;
     box-sizing: border-box;
@@ -129,7 +135,8 @@ export const styles = css`
     min-inline-size: 100%;
     padding: var(--lr-code-editor-padding, var(--_lr-code-editor-padding));
     color: transparent;
-    font: var(--lr-font-mono);
+    font: inherit;
+    font-family: var(--lr-font-mono);
     font-size: var(
       --lr-code-editor-font-size,
       var(--_lr-code-editor-font-size)
@@ -195,7 +202,8 @@ export const styles = css`
     outline: 0;
     background: transparent;
     color: var(--lr-color-text);
-    font: var(--lr-font-mono);
+    font: inherit;
+    font-family: var(--lr-font-mono);
     font-size: var(
       --lr-code-editor-font-size,
       var(--_lr-code-editor-font-size)

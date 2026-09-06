@@ -16,7 +16,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An unavailable progress control and its visible timeline track retain resting paint on hover and press; enabled controls retain feedback. Experimental inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and owner-realm capability-gated picture in picture. `getState()` returns the mirrored canonical `VideoState` snapshot. Poster and control-bar play actions are mutually exclusive, and all strong-overlay text defaults to the semantic `--lr-color-on-strong-overlay` foreground. Play-control focus transitions relay exactly one native `FocusEvent`.',
+          'An unavailable progress control and its visible timeline track retain resting paint on hover and press; enabled controls retain feedback. Experimental inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and owner-realm capability-gated picture in picture. `getState()` returns the mirrored canonical `VideoState` snapshot. Poster and control-bar play actions are mutually exclusive, and all strong-overlay text defaults to the semantic `--lr-color-on-strong-overlay` foreground. The poster play glyph pairs surface text with its surface background unless `--controls-color` is set. Play-control focus transitions relay exactly one native `FocusEvent`.',
       },
     },
   },
@@ -122,7 +122,7 @@ export const CustomControlTheme: Story = {
     docs: {
       description: {
         story:
-          '`--controls-color` retains final mirrored override precedence. Without it, controls, title, captions, and selectors use the theme-wide semantic on-strong-overlay foreground in both light and dark themes.',
+          '`--controls-color` retains final mirrored override precedence. Without it, overlay controls, title, captions, and selectors use the theme-wide semantic on-strong-overlay foreground, while the poster button and glyph use surface text in both light and dark themes.',
       },
     },
   },
