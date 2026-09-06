@@ -360,7 +360,7 @@ _run_with_toolchain_worker() {
       ': "${CI_SH_SELECTED_TOOLCHAIN_DIR:?selected toolchain directory is required}"' \
       'PATH="$CI_SH_SELECTED_TOOLCHAIN_DIR:$PATH"' \
       'export PATH' \
-      'exec env npm_config_manage_package_manager_versions=false npm_config_scripts_prepend_node_path=false npm_config_script_shell="$CI_SH_SELECTED_TOOLCHAIN_DIR/script-shell" "$CI_SH_SELECTED_PNPM_BIN" --config.script-shell="$CI_SH_SELECTED_TOOLCHAIN_DIR/script-shell" "$@"' \
+      'exec env npm_config_manage_package_manager_versions=false npm_config_scripts_prepend_node_path=false npm_config_script_shell="$CI_SH_SELECTED_TOOLCHAIN_DIR/script-shell" PNPM_CONFIG_SCRIPT_SHELL="$CI_SH_SELECTED_TOOLCHAIN_DIR/script-shell" "$CI_SH_SELECTED_PNPM_BIN" --config.script-shell="$CI_SH_SELECTED_TOOLCHAIN_DIR/script-shell" "$@"' \
       > "$selected_node_proxy_dir/pnpm"; then
     echo "could not create the nested pnpm proxy" >&2
     return 1
@@ -387,6 +387,7 @@ _run_with_toolchain_worker() {
   # temporary directory again after `--dir` changes its cwd, so a relative
   # TMPDIR that was valid here dangles there; hand it the resolved absolute
   # parent that already hosts the proxy directory.
+  # pnpm 12 reads PNPM_CONFIG_SCRIPT_SHELL; retain npm_config_script_shell for pnpm 10/11.
   set -m
   PATH="$selected_node_proxy_dir:$PATH" \
     TMPDIR="$selected_node_proxy_parent" \
@@ -395,6 +396,7 @@ _run_with_toolchain_worker() {
     CI_SH_SELECTED_TOOLCHAIN_DIR="$selected_node_proxy_dir" \
     CI=true npm_config_manage_package_manager_versions=false \
     npm_config_script_shell="$selected_node_proxy_dir/script-shell" \
+    PNPM_CONFIG_SCRIPT_SHELL="$selected_node_proxy_dir/script-shell" \
     npm_config_scripts_prepend_node_path=false \
     "$selected_node_proxy_dir/pnpm" "$@" &
   selected_command_pid="$!"

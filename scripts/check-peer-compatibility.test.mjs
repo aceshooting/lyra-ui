@@ -873,6 +873,32 @@ test('validates tar structure and exact package identity before staging immutabl
   }
 });
 
+test('accepts omitted portable tar ownership while rejecting malformed ownership numbers', async () => {
+  const { inspectPeerTarballArchive } = await loadChecker();
+  const expectedPackage = { name: '@aceshooting/lyra-ui', version: '14.0.0' };
+  const tarball = lyraTarball();
+  const expectedContent = inspectPeerTarballArchive(tarball, { expectedPackage }).contentSha256;
+  for (const blank of [0, 0x20]) {
+    const portable = mutateTarball(tarball, (archive) => {
+      archive.fill(blank, 108, 124);
+      refreshTarChecksum(archive.subarray(0, 512));
+    });
+    assert.equal(inspectPeerTarballArchive(portable, { expectedPackage }).contentSha256, expectedContent);
+  }
+  for (const offset of [108, 116]) {
+    for (const invalid of [Buffer.from('0000008\0'), Buffer.from([0x80, 0, 0, 0, 0, 0, 0, 1]), Buffer.from('0\0hidden')]) {
+      const malformed = mutateTarball(tarball, (archive) => {
+        invalid.copy(archive, offset);
+        refreshTarChecksum(archive.subarray(0, 512));
+      });
+      assert.throws(
+        () => inspectPeerTarballArchive(malformed, { expectedPackage }),
+        /(?:uid|gid).*tar octal/iu,
+      );
+    }
+  }
+});
+
 test('rejects portable tar ambiguities, collisions, malformed boundaries, and header tricks', async () => {
   const { inspectPeerTarballArchive } = await loadChecker();
   const expectedPackage = { name: '@aceshooting/lyra-ui', version: '14.0.0' };

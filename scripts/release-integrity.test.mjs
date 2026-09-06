@@ -477,12 +477,13 @@ function exerciseRealPnpmLifecycle(selectedNode) {
     assert.equal(pnpmResolution.status, 0, pnpmResolution.stderr);
     const selectedPnpm = pnpmResolution.stdout.trim();
     assert.ok(path.isAbsolute(selectedPnpm), 'real pnpm fixture requires one absolute executable');
+    const packageManager = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8')).packageManager;
 
     writeFileSync(
       path.join(packageRoot, 'package.json'),
       `${JSON.stringify({
         name: 'real-pnpm-lifecycle-fixture',
-        packageManager: 'pnpm@11.25.0',
+        packageManager,
         private: true,
         scripts: { probe: 'node probe.cjs && pnpm --version' },
       }, null, 2)}\n`,
@@ -538,7 +539,7 @@ function exerciseRealPnpmLifecycle(selectedNode) {
       execPath: selectedRuntime,
       selectedPathFirst: true,
     });
-    assert.match(result.stdout, /11\.25\.0/u);
+    assert.ok(result.stdout.split('\n').includes(packageManager.replace(/^pnpm@/u, '')));
     assert.deepEqual(
       readdirSync(transactionTemp).filter((entry) => entry.startsWith('lyra-ci-selected-node.')),
       [],

@@ -3055,8 +3055,9 @@ export function inspectPeerTarballArchive(compressed, { expectedPackage, limits:
     if (tarField(header, 263, 265, `${entryPath} version`) !== '00') {
       throw new Error(`${entryPath}: tar header must use canonical ustar version 00.`);
     }
-    tarOctal(header.subarray(108, 116), `${entryPath} uid`);
-    tarOctal(header.subarray(116, 124), `${entryPath} gid`);
+    // Portable package archives omit host ownership; validate numeric fields when present.
+    tarOptionalOctal(header.subarray(108, 116), `${entryPath} uid`);
+    tarOptionalOctal(header.subarray(116, 124), `${entryPath} gid`);
     tarOctal(header.subarray(136, 148), `${entryPath} mtime`);
     tarField(header, 265, 297, `${entryPath} owner name`);
     tarField(header, 297, 329, `${entryPath} group name`);
