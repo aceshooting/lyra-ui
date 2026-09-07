@@ -4148,6 +4148,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -4368,6 +4369,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -5297,6 +5299,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -5335,6 +5338,13 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/forms/button/button-remediation.test.ts",
+              "line": 81,
+              "test": "exposes accessible toggle buttons and current links including disabled navigation",
+              "target": "wrapper",
+              "state": "populated"
+            },
             {
               "file": "src/components/forms/button/button.test.ts",
               "line": 384,
@@ -5413,7 +5423,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/button/button.test.ts",
+              "file": "src/components/forms/button/button-remediation.test.ts",
               "line": 6,
               "kind": "component keyboard assertion signal"
             }
@@ -6794,6 +6804,20 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/charts/chart/chart-datum-legend.test.ts",
+              "line": 24,
+              "test": "${type} exposes one named, color-matched category toggle per slice",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart/chart-datum-legend.test.ts",
+              "line": 246,
+              "test": "wraps long RTL categories and refreshes per-slice theme swatches",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/charts/chart/chart.test.ts",
               "line": 80,
               "test": "drops malformed simplified dataset entries while retaining valid rendered series",
@@ -6809,21 +6833,21 @@
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6090,
+              "line": 6095,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6090,
+              "line": 6095,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6574,
+              "line": 6576,
               "test": "fills a compact plot while retaining accessible data, keyboard actions and explicit config overrides",
               "target": "el",
               "state": "populated"
@@ -6994,6 +7018,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -13215,21 +13240,28 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 66,
+              "line": 117,
               "test": "renders a disclosure panel and reports its state",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 1541,
+              "line": 1592,
               "test": "is accessible with custom icons, a sibling header action, grouping, and a populated open panel",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 1321,
+              "line": 34,
+              "test": "keeps rich independent header actions readable with the public-parts recipe at ${width}px ${direction}",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/details/details.test.ts",
+              "line": 1372,
               "test": "stays accessible and keyboard-operable at the smallest tier",
               "target": "el",
               "state": "populated"
@@ -15152,6 +15184,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -22530,6 +22563,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -25598,6 +25632,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -25813,6 +25848,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -26192,28 +26228,28 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1457,
+              "line": 1497,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2340,
+              "line": 2380,
               "test": "adds a maplibregl.Marker per entry in markers",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5374,
+              "line": 5414,
               "test": "styles and localizes peer-added controls inside the shadow root",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5465,
+              "line": 5505,
               "test": "clusters mixed categories, restores their rendered icons after a style reload and exports them",
               "target": "el",
               "state": "populated"
@@ -26238,7 +26274,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3164,
+              "line": 3204,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -32275,6 +32311,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -32474,6 +32511,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -34876,6 +34914,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -38525,6 +38564,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
@@ -43942,42 +43982,49 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 3611,
+              "line": 2079,
+              "test": "optionally keeps inactive sortable headers discoverable without changing sort semantics or geometry",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table.test.ts",
+              "line": 3662,
               "test": "is accessible with expandedContent and an open row",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4596,
+              "line": 4647,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5044,
+              "line": 5095,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5545,
+              "line": 5596,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5976,
+              "line": 6027,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6089,
+              "line": 6140,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"
@@ -44019,7 +44066,7 @@
           "evidence": [
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 7242,
+              "line": 7293,
               "kind": "320px allocation test signal"
             }
           ]

@@ -1085,9 +1085,12 @@ export type LyraBarChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -1109,8 +1112,10 @@ export type LyraBarChartReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -1155,6 +1160,8 @@ export type LyraBarChartReactProps = LyraReactElementProps<
     'data-labels'?: LyraBarChart['dataLabels'];
     'data-table-toggle'?: LyraBarChart['dataTableToggle'];
     'index-axis'?: LyraBarChart['indexAxis'];
+    'legend-display'?: LyraBarChart['legendDisplay'];
+    'legend-mode'?: LyraBarChart['legendMode'];
     'legend-position'?: LyraBarChart['legendPosition'];
     'scale-type'?: LyraBarChart['scaleType'];
     'show-data-table'?: LyraBarChart['showDataTable'];
@@ -1306,9 +1313,12 @@ export type LyraBubbleChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -1330,8 +1340,10 @@ export type LyraBubbleChartReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -1376,6 +1388,8 @@ export type LyraBubbleChartReactProps = LyraReactElementProps<
     'data-labels'?: LyraBubbleChart['dataLabels'];
     'data-table-toggle'?: LyraBubbleChart['dataTableToggle'];
     'index-axis'?: LyraBubbleChart['indexAxis'];
+    'legend-display'?: LyraBubbleChart['legendDisplay'];
+    'legend-mode'?: LyraBubbleChart['legendMode'];
     'legend-position'?: LyraBubbleChart['legendPosition'];
     'scale-type'?: LyraBubbleChart['scaleType'];
     'show-data-table'?: LyraBubbleChart['showDataTable'];
@@ -1461,10 +1475,12 @@ export type LyraButtonReactProps = LyraReactElementProps<
   | '--lr-button-width',
   {
     'aria-controls'?: LyraAttributeValue<string | null>;
+    'aria-current'?: LyraAttributeValue<string | null>;
     'aria-describedby'?: LyraAttributeValue<string | null>;
     'aria-expanded'?: LyraAttributeValue<string | null>;
     'aria-haspopup'?: LyraAttributeValue<string | null>;
     'aria-label'?: LyraButton['accessibleLabel'];
+    'aria-pressed'?: LyraAttributeValue<string | null>;
     'custom-error'?: LyraButton['customError'];
     'formaction'?: LyraButton['formAction'];
     'formenctype'?: LyraButton['formEnctype'];
@@ -1687,9 +1703,12 @@ export type LyraChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -1711,8 +1730,10 @@ export type LyraChartReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -1757,6 +1778,8 @@ export type LyraChartReactProps = LyraReactElementProps<
     'data-labels'?: LyraChart['dataLabels'];
     'data-table-toggle'?: LyraChart['dataTableToggle'];
     'index-axis'?: LyraChart['indexAxis'];
+    'legend-display'?: LyraChart['legendDisplay'];
+    'legend-mode'?: LyraChart['legendMode'];
     'legend-position'?: LyraChart['legendPosition'];
     'scale-type'?: LyraChart['scaleType'];
     'show-data-table'?: LyraChart['showDataTable'];
@@ -3512,9 +3535,12 @@ export type LyraDoughnutChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -3536,8 +3562,10 @@ export type LyraDoughnutChartReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -3582,6 +3610,8 @@ export type LyraDoughnutChartReactProps = LyraReactElementProps<
     'data-labels'?: LyraDoughnutChart['dataLabels'];
     'data-table-toggle'?: LyraDoughnutChart['dataTableToggle'];
     'index-axis'?: LyraDoughnutChart['indexAxis'];
+    'legend-display'?: LyraDoughnutChart['legendDisplay'];
+    'legend-mode'?: LyraDoughnutChart['legendMode'];
     'legend-position'?: LyraDoughnutChart['legendPosition'];
     'scale-type'?: LyraDoughnutChart['scaleType'];
     'show-data-table'?: LyraDoughnutChart['showDataTable'];
@@ -4901,9 +4931,12 @@ export type LyraHistogramReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -4927,8 +4960,10 @@ export type LyraHistogramReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -4973,6 +5008,8 @@ export type LyraHistogramReactProps = LyraReactElementProps<
     'data-labels'?: LyraHistogram['dataLabels'];
     'data-table-toggle'?: LyraHistogram['dataTableToggle'];
     'index-axis'?: LyraHistogram['indexAxis'];
+    'legend-display'?: LyraHistogram['legendDisplay'];
+    'legend-mode'?: LyraHistogram['legendMode'];
     'legend-position'?: LyraHistogram['legendPosition'];
     'scale-type'?: LyraHistogram['scaleType'];
     'series-label'?: LyraHistogram['seriesLabel'];
@@ -5650,9 +5687,12 @@ export type LyraLineChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -5674,8 +5714,10 @@ export type LyraLineChartReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -5720,6 +5762,8 @@ export type LyraLineChartReactProps = LyraReactElementProps<
     'data-labels'?: LyraLineChart['dataLabels'];
     'data-table-toggle'?: LyraLineChart['dataTableToggle'];
     'index-axis'?: LyraLineChart['indexAxis'];
+    'legend-display'?: LyraLineChart['legendDisplay'];
+    'legend-mode'?: LyraLineChart['legendMode'];
     'legend-position'?: LyraLineChart['legendPosition'];
     'scale-type'?: LyraLineChart['scaleType'];
     'show-data-table'?: LyraLineChart['showDataTable'];
@@ -7130,9 +7174,12 @@ export type LyraPieChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -7154,8 +7201,10 @@ export type LyraPieChartReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -7200,6 +7249,8 @@ export type LyraPieChartReactProps = LyraReactElementProps<
     'data-labels'?: LyraPieChart['dataLabels'];
     'data-table-toggle'?: LyraPieChart['dataTableToggle'];
     'index-axis'?: LyraPieChart['indexAxis'];
+    'legend-display'?: LyraPieChart['legendDisplay'];
+    'legend-mode'?: LyraPieChart['legendMode'];
     'legend-position'?: LyraPieChart['legendPosition'];
     'scale-type'?: LyraPieChart['scaleType'];
     'show-data-table'?: LyraPieChart['showDataTable'];
@@ -7230,9 +7281,12 @@ export type LyraPolarAreaChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -7254,8 +7308,10 @@ export type LyraPolarAreaChartReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -7300,6 +7356,8 @@ export type LyraPolarAreaChartReactProps = LyraReactElementProps<
     'data-labels'?: LyraPolarAreaChart['dataLabels'];
     'data-table-toggle'?: LyraPolarAreaChart['dataTableToggle'];
     'index-axis'?: LyraPolarAreaChart['indexAxis'];
+    'legend-display'?: LyraPolarAreaChart['legendDisplay'];
+    'legend-mode'?: LyraPolarAreaChart['legendMode'];
     'legend-position'?: LyraPolarAreaChart['legendPosition'];
     'scale-type'?: LyraPolarAreaChart['scaleType'];
     'show-data-table'?: LyraPolarAreaChart['showDataTable'];
@@ -7760,9 +7818,12 @@ export type LyraRadarChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -7784,8 +7845,10 @@ export type LyraRadarChartReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -7830,6 +7893,8 @@ export type LyraRadarChartReactProps = LyraReactElementProps<
     'data-labels'?: LyraRadarChart['dataLabels'];
     'data-table-toggle'?: LyraRadarChart['dataTableToggle'];
     'index-axis'?: LyraRadarChart['indexAxis'];
+    'legend-display'?: LyraRadarChart['legendDisplay'];
+    'legend-mode'?: LyraRadarChart['legendMode'];
     'legend-position'?: LyraRadarChart['legendPosition'];
     'scale-type'?: LyraRadarChart['scaleType'];
     'show-data-table'?: LyraRadarChart['showDataTable'];
@@ -8431,9 +8496,12 @@ export type LyraScatterChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -8455,8 +8523,10 @@ export type LyraScatterChartReactProps = LyraReactElementProps<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -8501,6 +8571,8 @@ export type LyraScatterChartReactProps = LyraReactElementProps<
     'data-labels'?: LyraScatterChart['dataLabels'];
     'data-table-toggle'?: LyraScatterChart['dataTableToggle'];
     'index-axis'?: LyraScatterChart['indexAxis'];
+    'legend-display'?: LyraScatterChart['legendDisplay'];
+    'legend-mode'?: LyraScatterChart['legendMode'];
     'legend-position'?: LyraScatterChart['legendPosition'];
     'scale-type'?: LyraScatterChart['scaleType'];
     'show-data-table'?: LyraScatterChart['showDataTable'];
@@ -9452,6 +9524,7 @@ export type LyraTableReactProps = LyraReactElementProps<
   | 'selectionMode'
   | 'skeletonRows'
   | 'sortDir'
+  | 'sortIndicators'
   | 'sortKey'
   | 'sortMode'
   | 'spellcheck'
@@ -9517,6 +9590,7 @@ export type LyraTableReactProps = LyraReactElementProps<
     'selection-mode'?: LyraTable['selectionMode'];
     'skeleton-rows'?: LyraTable['skeletonRows'];
     'sort-dir'?: LyraTable['sortDir'];
+    'sort-indicators'?: LyraTable['sortIndicators'];
     'sort-key'?: LyraTable['sortKey'];
     'sort-mode'?: LyraTable['sortMode'];
     'storage-key'?: LyraTable['storageKey'];

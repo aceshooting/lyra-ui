@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets against the fixed pre-8.0.0 baseline. Machine-consumed editor and design-token JSON, emitted JavaScript, CSS, declarations, and public CLI whitespace are compacted while retaining public paths, type text, declaration JSDoc, and readable runtime names. Both byte ceilings use the existing measured required-public-artifact exception; neither claims the mathematical 25% target was met. The favorable incomplete-package probe retained required docs/editor/CEM assets plus fully identifier-minified runtime JavaScript but omitted declarations, CSS, and other required runtime artifacts; it still packed to 6,088,928 bytes, above the 5,872,345-byte packed target. The complete 14.1.0 package measured with Node 22.23.2/npm 10.9.8 contains 7,114,110 packed bytes and 29,347,941 unpacked bytes, reductions of 9.1% and 23.8% from the fixed baseline. Against the same-tool repack of published 14.0.0, required docs/editor/CEM/CHANGELOG and other text grow by 299,844 unpacked bytes and runtime/declarations by 99,302 bytes, with every prior public path retained. The 12 added files are JavaScript/declaration pairs for native descriptions, registry ownership, reactive property writes, overlay ordering, the deferred usage overlay runtime, and native SVG titles. Byte ceilings retain the existing 34,000 packed / 140,000 unpacked headroom bytes, each below 0.5%, and equal the exact reviewed measurement plus that allowance. The file ceiling is 2,500 base artifacts + 285 stable aliases times 2 files + 94 measured non-alias remainder + 7 next-component files = 3,171. The positive scaffold reserve remains available. Fixed targets/baselines, the measured exception reason, exact ceiling equality, the 0.5% headroom bound, and source/map/test/fixture/story rejection remain independently enforced.",
+  "$comment": "Hard npm-tarball budgets against the fixed pre-8.0.0 baseline. Required public docs, editor/CEM data, declarations and runtime remain shipped; both byte ceilings retain the measured required-public-artifact exception and do not claim the mathematical 25% targets were met. The favorable incomplete-package probe still packed to 6,088,928 bytes, above its 5,872,345-byte target even before restoring declarations, CSS and other runtime artifacts. The integrated category-legend, native-button-state, table-sort and attribution changes measure 7,161,539 packed bytes and 29,561,077 unpacked bytes under Node 22.23.2/npm 10.9.8. Against the same-tool repack of published 14.2.0, required docs/editor/CEM/package metadata add 65,639 unpacked bytes, declarations add 12,441, and runtime/CSS add 10,382. All 3,164 public paths are retained. Byte ceilings equal those exact reviewed measurements plus the existing 34,000 packed and 140,000 unpacked headroom bytes, each below 0.5%. The file ceiling remains 2,500 base artifacts + 285 stable aliases times 2 + 94 measured non-alias remainder + 7 next-component files = 3,171. Fixed targets/baselines, exception reason, exact ceiling equality, the 0.5% headroom bound, and source/map/test/fixture/story rejection remain independently enforced.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,7 +10,7 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 7114110,
+    "reviewedMeasurementBytes": 7161539,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928
@@ -18,7 +18,7 @@
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 29347941,
+    "reviewedMeasurementBytes": 29561077,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563
   },
@@ -31,8 +31,8 @@
     "entrypointHeadroom": 101
   },
   "maximum": {
-    "packedBytes": 7148110,
-    "unpackedBytes": 29487941,
+    "packedBytes": 7195539,
+    "unpackedBytes": 29701077,
     "fileCount": 3171
   }
 }

@@ -5537,14 +5537,19 @@ describe('coverage: legend/tooltip/table label fallbacks and misc guards', () =>
     expect((el as any).tableStackTotalLabel('y2', 2)).to.equal('Secondary axis total');
   });
 
-  it('legendTextFor() falls back to the plain label when the dataset has no finite values or the formatted value is unchanged', () => {
-    const el = document.createElement('lr-chart') as LyraChart;
+  it('legend labels stay plain when the dataset has no finite values or the formatted value is unchanged', async () => {
+    const el = await fixture<LyraChart>(html`<lr-chart
+      .labels=${['A']}
+      .datasets=${[{ label: 'Empty', data: [] }, { label: 'Same', data: [10] }]}
+    ></lr-chart>`);
     const runtimeFormatter = el as unknown as {
       valueFormatter: (value: number) => number | string;
     };
     runtimeFormatter.valueFormatter = (value) => value;
-    expect((el as any).legendTextFor({ label: 'Empty', data: [] }, 0)).to.equal('Empty');
-    expect((el as any).legendTextFor({ label: 'Same', data: [10] }, 0)).to.equal('Same');
+    await waitUntil(() => !!el.chart);
+    await el.updateComplete;
+    expect([...el.shadowRoot!.querySelectorAll('[part~="legend-item"]')].map((item) => item.textContent?.trim()))
+      .to.deep.equal(['Empty', 'Same']);
   });
 
   it('legendColor() falls back to transparent when the palette lookup produces no entry', () => {
@@ -6505,10 +6510,7 @@ describe('bounded chart fallback paths', () => {
     el.valueFormatter = (value, context) => `${context}:${value}`;
     expect((el as any).tooltipLabel({ parsed: { x: 8 }, dataset: {} })).to.equal('tooltip:8');
     expect((el as any).formatExportValue(3)).to.equal('table:3');
-    expect((el as any).legendTextFor(
-      { label: 'point', data: [{ x: 1, y: 4 }] },
-      0,
-    )).to.equal('point: legend:4');
+    expect((el as any).legendTextFor('point', 4, 1)).to.equal('point: legend:4');
 
     el.legendPosition = 'bottom';
     expect((el as any).legendPositionForLayout()).to.equal('bottom');

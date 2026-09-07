@@ -546,16 +546,16 @@ to 6,088,928 bytes, already 216,583 bytes above its mathematical target before r
 declarations, CSS, and other required runtime artifacts. Deleting those public artifacts or
 weakening their content is not an acceptable package-size fix.
 
-The complete 14.1.0 package, measured with exact Node 22.23.2/npm 10.9.8, contains
-7,114,110 packed bytes and 29,347,941 unpacked bytes (9.1% and 23.8% below the fixed
-baselines). Compared with a same-tool repack of published 14.0.0, required documentation,
-editor/CEM data, CHANGELOG, and other text add 299,844 unpacked bytes; runtime and declarations
-add 99,302 bytes. Every prior public path remains. The existing compaction pipeline already
-preserves declaration JSDoc and readable runtime names while removing redundant runtime syntax,
-comments, and whitespace. Required public documentation and declarations remain part of the package.
+The complete package with category legends, native-button states, persistent table sort indicators
+and attribution styling, measured with exact Node 22.23.2/npm 10.9.8, contains 7,161,539 packed bytes
+and 29,561,077 unpacked bytes. Against a same-tool repack of published 14.2.0, required
+docs/editor/CEM/package metadata add 65,639 unpacked bytes, declarations add 12,441, and runtime/CSS
+add 10,382. All 3,164 public paths remain. The existing compaction pipeline preserves declaration
+JSDoc and readable runtime names while removing redundant syntax, comments and whitespace;
+removing required references or declarations is not a package-size fix.
 
-The byte ceilings remain exact reviewed measurements plus the existing 34,000 packed and
-140,000 unpacked headroom bytes: 7,148,110 and 29,487,941 bytes respectively.
+The byte ceilings are the exact reviewed measurements plus the existing 34,000 packed and
+140,000 unpacked headroom bytes: 7,195,539 and 29,701,077 bytes respectively.
 `validatePackageBudgets()` rejects a missing or renamed exception, an unpacked reviewed measurement
 that no longer exceeds its mathematical target, a packed measurement at or below the favorable
 probe, headroom above 0.5%, a ceiling that differs from measurement plus headroom, and a ceiling at or

@@ -109,7 +109,11 @@ export interface LyraButtonEventMap {
  * Description targets follow same-ID replacement, removal, reinsertion, reconnection and document
  * adoption, including transitions between the native button and anchor.
  * Host `aria-haspopup` and `aria-expanded` values are likewise forwarded to the internal semantic
- * control. When host `aria-controls` names elements in the host's own root, the controls
+ * control. `aria-pressed` (`true`, `false`, `mixed`) supports button toggles; `aria-current`
+ * (`page`, `step`, `location`, `date`, `time`, `true`, `false`) supports current navigation.
+ * These states follow attribute changes, removal and button/link replacement without changing
+ * the native role. Empty or unsupported state tokens are omitted from the internal control.
+ * When host `aria-controls` names elements in the host's own root, the controls
  * relationship is resolved onto the internal control through the reflected element-reference API
  * so it remains valid across this component's shadow boundary. Assigning that relationship
  * intentionally clears the serialized `aria-controls` value; read `ariaControlsElements` in a
@@ -132,6 +136,8 @@ export interface LyraButtonEventMap {
  * @slot end - Trailing icon/content, rendered after the label.
  * @slot suffix - Shoelace alias for `end`, rendered through the same wrapper.
  * @attr form - ID of an external form owner. The `form` property still reads as the resolved form.
+ * @attr aria-pressed - Toggle state forwarded reactively to the internal control: true, false or mixed.
+ * @attr aria-current - Current-item state forwarded reactively to the internal control: page, step, location, date, time, true or false.
  * @attr rel - Independently settable author relationship tokens (no default). `opener` is always
  *   stripped, and any `target` force-adds the non-removable `noopener noreferrer` guard.
  * @csspart base - Compatibility name for the internal control; use `button`.
@@ -389,6 +395,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   @property({ attribute: 'aria-expanded' }) private triggerExpanded:
     | string
     | null = null;
+  @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
+  @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
   @property({ attribute: 'aria-controls' }) private triggerControls:
     | string
     | null = null;
@@ -904,6 +912,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
 
   override render(): TemplateResult {
+    const pressed = ['true', 'false', 'mixed'].includes(this.triggerPressed ?? '')
+      ? this.triggerPressed : nothing;
+    const current = ['page', 'step', 'location', 'date', 'time', 'true', 'false'].includes(this.triggerCurrent ?? '')
+      ? this.triggerCurrent : nothing;
     // Shared inner content, rendered identically in both roots so the extracted variable produces
     // byte-identical DOM to the previous inline template in `<button>` mode.
     const content = html`
@@ -953,6 +965,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         aria-label=${this.accessibleLabel ?? nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-pressed=${pressed}
+        aria-current=${current}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
         aria-disabled=${disabled ? 'true' : 'false'}
@@ -972,6 +986,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         aria-label=${this.accessibleLabel ?? nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-pressed=${pressed}
+        aria-current=${current}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
         aria-busy=${this.loading ? 'true' : 'false'}

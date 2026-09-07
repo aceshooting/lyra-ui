@@ -215,25 +215,33 @@ export const styles = css`
   [part='header-cell'][data-align='end'] {
     text-align: end;
   }
-  [part='sort-icon'] {
+  [part~='sort-icon'] {
     display: inline-block;
     margin-inline-start: var(--lr-space-xs);
     vertical-align: middle;
     transition: transform var(--lr-transition-fast);
   }
-  [part='sort-icon'] svg {
+  [part~='sort-icon-inactive'] {
+    color: var(--lr-color-text-quiet);
+  }
+  @media (forced-colors: active) {
+    [part~='sort-icon-inactive'] {
+      color: CanvasText !important;
+    }
+  }
+  [part~='sort-icon'] svg {
     display: block;
   }
   /* Rotate the wrapping part element, not the svg -- internal/icons.ts's documented contract. This
      previously rotated the inner <svg> directly. */
-  [part='sort-icon'][data-dir='asc'] {
+  [part~='sort-icon'][data-dir='asc'] {
     transform: rotate(-90deg);
   }
-  [part='sort-icon'][data-dir='desc'] {
+  [part~='sort-icon'][data-dir='desc'] {
     transform: rotate(90deg);
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='sort-icon'] {
+    [part~='sort-icon'] {
       transition: none !important;
     }
   }

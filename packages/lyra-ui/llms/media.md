@@ -732,6 +732,16 @@ when `legend` and `legendGradient` are both empty.
 `legend-hi`, `legend-limit`, `marker`, `popup`,
 `popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `navigation`,
 `zoom-in`, `zoom-out`, `compass`, `scale`, `error`.
+The compact attribution summary has a decorative, current-color information glyph and retains
+MapLibre's accessible name, keyboard/touch disclosure behavior and attribution links. To make
+only this control compact, scope the shared target-size token to its public wrapper:
+
+```css
+lr-map::part(attribution) { --lr-icon-button-size: var(--lr-size-24px); }
+```
+
+Keep that target at least 24px in both axes. This leaves navigation controls at their existing size.
+
 `legend` is a localized `role="group"` containing a real list associated to the map canvas with
 `aria-describedby`; each entry is a `listitem`, decorative swatches are inert/accessibility-hidden,
 and the overlay is bounded to the map allocation with scrolling and long-label wrapping.

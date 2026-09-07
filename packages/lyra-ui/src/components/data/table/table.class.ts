@@ -11,7 +11,7 @@ import { resolveCssLength } from '../../../internal/css-length.js';
 import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './table.styles.js';
-import { chevronIcon } from '../../../internal/icons.js';
+import { chevronIcon, sortIcon } from '../../../internal/icons.js';
 import { minMax } from '../heatmap/heatmap-scale.js';
 import '../../overlays/empty/empty.class.js';
 import {
@@ -180,6 +180,9 @@ export type TableSelectionMode = 'none' | 'single' | 'multiple';
  *  `sortKey`/`sortDir`, `'server'` renders `rows` in the order given. Mirrors the
  *  `paginationMode` split of the same two names. */
 export type TableSortMode = 'client' | 'server';
+
+/** Whether only the active header or every sortable header displays an indicator. */
+export type TableSortIndicators = 'active' | 'all';
 
 /** `<lr-table>`'s `scrollMode`: which element scrolls when the table overflows.
  *
@@ -645,7 +648,9 @@ export interface LyraTableEventMap<T = unknown> {
  *   `editTrigger: 'always'`
  *   column.
  * @csspart more-button - The "load more" control, shown when `hasMore` is true.
- * @csspart sort-icon - The chevron shown in the active sortable column's header cell.
+ * @csspart sort-icon - The direction indicator in a sortable header cell.
+ * @csspart sort-icon-active - The active direction chevron; also carries sort-icon.
+ * @csspart sort-icon-inactive - The muted bidirectional indicator when sortIndicators is all; also carries sort-icon.
  * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
  * @csspart expand-toggle-cell - Each row's (and the header's) leading
  *   chevron-toggle cell, rendered only when `expandedContent` is set.
@@ -851,6 +856,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
   @property({ attribute: 'sort-key' }) sortKey = '';
   @property({ attribute: 'sort-dir' }) sortDir: TableSortDirection = 'asc';
+  /** `'active'` preserves the active-column chevron alone. `'all'` also reserves the same icon
+   *  space with a muted bidirectional indicator in inactive sortable headers, including on touch
+   *  screens. This presentation choice does not change sorting, focus or aria-sort semantics. */
+  @property({ attribute: 'sort-indicators', converter: literalSetConverter<TableSortIndicators>(['active', 'all'], 'active') })
+  sortIndicators: TableSortIndicators = 'active';
   /** `'client'` (the default) orders `rows` itself, in the browser, from `sortKey`/`sortDir` and
    *  the active column's `sortValue`. `'server'` renders `rows` in exactly the order given,
    *  assuming the caller has already sorted them — mirroring `paginationMode`'s identical
@@ -2788,8 +2798,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                     tabindex=${col.key === focusedCol ? '0' : '-1'}
                   >
                     ${typeof col.headerCell === 'function' ? col.headerCell(col) : col.label} ${this.renderResizeHandle(col)}
-                    ${active
-                      ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true">${chevronIcon()}</span>`
+                    ${active || (col.sortable && this.sortIndicators === 'all')
+                      ? html`<span part=${active ? 'sort-icon sort-icon-active' : 'sort-icon sort-icon-inactive'}
+                          data-dir=${active ? this.sortDir : nothing} aria-hidden="true">${active ? chevronIcon() : sortIcon()}</span>`
                       : nothing}
                   </th>`;
                 })}

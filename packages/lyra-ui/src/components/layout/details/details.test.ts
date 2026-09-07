@@ -9,6 +9,9 @@ import type { LyraAccordionItem } from "./accordion-item.js";
 import { styles as accordionStyles } from "./accordion.styles.js";
 import { resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";
+import '../../forms/checkbox/checkbox.js';
+import '../../overlays/badge/badge.js';
+import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
 
 function nativeDetailsOf(el: LyraDetails): HTMLDetailsElement {
   return el.shadowRoot!.querySelector<HTMLDetailsElement>('details:not([part])')!;
@@ -24,6 +27,54 @@ function contentGateOf(el: LyraDetails): HTMLElement {
 
 function afterMicrotask(): Promise<void> {
   return new Promise((resolve) => queueMicrotask(resolve));
+}
+
+for (const width of [320, 390]) {
+  for (const direction of ['ltr', 'rtl']) {
+    it(`keeps rich independent header actions readable with the public-parts recipe at ${width}px ${direction}`, async () => {
+      const wrapper = await fixture<HTMLElement>(html`<div style=${`inline-size:${width}px`} dir=${direction}>
+        <style>
+          lr-details.responsive-actions::part(header-actions) {
+            flex: 1 1 12rem;
+            min-inline-size: min(100%, 12rem);
+            padding: var(--lr-space-xs);
+            box-sizing: border-box;
+          }
+          .details-action-group { display:flex; flex-wrap:wrap; align-items:center; gap:var(--lr-space-s); min-inline-size:0; }
+          .details-action-group lr-checkbox { flex:1 1 auto; min-inline-size:0; }
+        </style>
+        <lr-details class="responsive-actions" summary="Settings and preferences" disabled>
+          <span slot="header-actions" class="details-action-group">
+            <lr-checkbox size="s">Afficher les détails de distribution</lr-checkbox>
+            <lr-badge>Live</lr-badge>
+          </span>
+          Distribution settings.
+        </lr-details>
+      </div>`);
+      const el = wrapper.querySelector<LyraDetails>('lr-details')!;
+      const checkbox = el.querySelector<LyraCheckbox>('lr-checkbox')!;
+      await el.updateComplete;
+      await checkbox.updateComplete;
+      const actions = el.shadowRoot!.querySelector<HTMLElement>('[part="header-actions"]')!;
+      const label = checkbox.shadowRoot!.querySelector<HTMLElement>('[part~="label"]')!;
+      expect(actions.getBoundingClientRect().width).to.be.at.least(192);
+      expect(label.getBoundingClientRect().width).to.be.greaterThan(160);
+      expect(wrapper.scrollWidth).to.be.at.most(width + 1);
+      expect(summaryOf(el).getAttribute('tabindex')).to.equal('-1');
+      checkbox.focus();
+      await sendKeys({ press: 'Space' });
+      await checkbox.updateComplete;
+      expect(checkbox.checked).to.equal(true);
+      expect(el.open).to.equal(false);
+      el.disabled = false;
+      await el.updateComplete;
+      summaryOf(el).focus();
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => el.open, 'summary opens independently');
+      expect(checkbox.checked).to.equal(true);
+      await expect(el).to.be.accessible();
+    });
+  }
 }
 
 it('moves public wrapper parts to the outer disclosure container while keeping native details private', async () => {

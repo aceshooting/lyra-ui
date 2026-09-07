@@ -2164,7 +2164,7 @@ export interface LyraMapEventMap {
  * @csspart popup-content - The content container inside a MapLibre-generated marker popup.
  * @csspart popup-close-button - The MapLibre-generated button that closes an open marker popup.
  * @csspart attribution - MapLibre-generated map attribution.
- * @csspart attribution-toggle - MapLibre's compact-attribution disclosure control.
+ * @csspart attribution-toggle - MapLibre's compact-attribution disclosure control with a decorative information glyph.
  * @csspart navigation - Standard peer NavigationControl group, when added through the map getter.
  * @csspart zoom-in - Peer zoom-in button with a localized accessible name and tokenized target.
  * @csspart zoom-out - Peer zoom-out button.

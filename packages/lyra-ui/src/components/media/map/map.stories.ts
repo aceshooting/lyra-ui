@@ -52,6 +52,16 @@ const OFFLINE_RASTER_STYLE = {
 };
 
 const longLtrLegend = 'LongestUnbrokenLegendLabelForNarrowMapLayouts'.repeat(10);
+
+export const CompactAttribution: StoryObj = {
+  render: () => html`
+    <style>
+      lr-map.compact-attribution::part(attribution) { --lr-icon-button-size: var(--lr-size-24px); }
+    </style>
+    <lr-map class="compact-attribution" label="Map attribution" .mapStyle=${OFFLINE_RASTER_STYLE}
+      style="inline-size: min(100%, 24rem); block-size: 18rem"></lr-map>
+  `,
+};
 const longRtlLegend = 'أطولتسميةوسيلةإيضاحمتصلةلخريطةضيقة'.repeat(10);
 const longLtrPopup = 'LongMarkerPopupContentWithoutSpaces'.repeat(10);
 const longRtlPopup = 'محتوىنافذةعلامةطويلمتصل'.repeat(12);

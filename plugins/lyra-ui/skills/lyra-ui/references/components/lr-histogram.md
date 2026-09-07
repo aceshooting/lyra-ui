@@ -34,7 +34,8 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
   specialist owns its controller because a non-bar type would contradict the derived distribution.
 - All other `LyraChart` properties are inherited and usable: `description`, `grid`, `axes`, `compact`, `indexAxis`
-  (`index-axis`), `hiddenDatasets`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
+  (`index-axis`), `hiddenDatasets`, `hiddenDatums`, `legendPosition` (`legend-position`),
+  `legendMode` (`legend-mode`), `legendDisplay` (`legend-display`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `formatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
@@ -46,9 +47,12 @@ maxSamples?)` appends finite raw samples and optionally retains only the newest 
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
 
-**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-legend-visibility-change` (cancelable), and
+**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-datum-visibility-change`
+(cancelable), `lr-datum-visibility-change`, `lr-before-legend-visibility-change` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
+The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
+bar controller and dataset legend even with `legend-mode="datum"`.
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 

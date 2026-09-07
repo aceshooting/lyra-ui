@@ -353,6 +353,7 @@ export type {
   TableSortDetail,
   TableSortDirection,
   TableSortMode,
+  TableSortIndicators,
   TableSortRequestDetail,
 } from './components/data/table/table.class.js';
 export { LyraDataGrid } from './components/data/data-grid/data-grid.class.js';
@@ -564,6 +565,8 @@ export type {
   LyraChartAnnotation,
   LyraChartLayoutPosition,
   LyraChartLegendPosition,
+  LyraChartLegendMode,
+  LyraChartLegendDisplay,
   LyraChartExportFormat,
   LyraChartPlugin,
   LyraChartFormatSurface,
@@ -579,7 +582,7 @@ export type {
   LyraChartPreloadOptions,
   LyraChartPreloadResult,
 } from './components/charts/chart/chart-preload.js';
-export type { LyraChartLegendVisibilityChangeDetail } from './components/charts/chart/chart-legend-visibility.js';
+export type { LyraChartLegendVisibilityChangeDetail, LyraChartDatumVisibilityChangeDetail } from './components/charts/chart/chart-legend-visibility.js';
 export type { LyraChartChromeLegendPosition } from './components/charts/chart/chart-chrome.js';
 export { LyraBoxPlot } from './components/charts/chart/box-plot.class.js';
 export type {

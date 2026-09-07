@@ -26,7 +26,8 @@ and behavior there. **See `llms/components/lr-chart.md` for the details, code ex
 of every entry in these lists.**
 
 **Properties:** `description`, `grid`, `axes`, `compact`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
-(`legend-position`), `max`, `min`, `plugins`, `scaleType` (`scale-type`), `annotations`,
+(`legend-position`), `hiddenDatums`, `legendMode` (`legend-mode`), `legendDisplay` (`legend-display`),
+`max`, `min`, `plugins`, `scaleType` (`scale-type`), `annotations`,
 `stacked`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`, `area`, `zoom`,
@@ -42,6 +43,8 @@ of every entry in these lists.**
 index, label, value }`), `lr-before-legend-visibility-change` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
 complete `hiddenDatasets` snapshot).
+Radial category legends additionally emit `lr-before-datum-visibility-change` (cancelable) and
+`lr-datum-visibility-change`, carrying `index`, `visible` and the frozen `hiddenDatums` snapshot.
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 

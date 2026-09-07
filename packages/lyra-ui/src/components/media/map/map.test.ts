@@ -1335,6 +1335,46 @@ it('projects parts onto peer chrome added after map construction', async () => {
   );
 });
 
+it('paints a theme-aware compact attribution glyph while preserving native disclosure and compact hit targets', async function () {
+  if (!hasWebGL2) this.skip();
+  let loaded = false;
+  const el = await fixture<LyraMap>(html`<lr-map .mapStyle=${LOCAL_STYLE} label="Attribution example"
+    style="inline-size:320px;block-size:240px" @lr-map-load=${() => { loaded = true; }}></lr-map>`);
+  await waitUntil(() => loaded, 'map loaded', { timeout: 5000 });
+  const { AttributionControl } = await import('maplibre-gl');
+  (el.map as unknown as import('maplibre-gl').Map).addControl(new AttributionControl({
+    compact: true, customAttribution: '<a href="https://example.com">Example map data</a>',
+  }));
+  await waitUntil(() => [...el.shadowRoot!.querySelectorAll('[part~="attribution"]')]
+    .some((node) => node.textContent?.includes('Example map data')), 'attribution parts ready');
+  const attribution = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="attribution"]')]
+    .find((node) => node.textContent?.includes('Example map data'))!;
+  const summary = attribution.querySelector<HTMLElement>('[part~="attribution-toggle"]')!;
+  const glyph = getComputedStyle(summary, '::before');
+  expect(glyph.maskImage).to.not.equal('none');
+  expect(parseFloat(glyph.width)).to.be.greaterThan(0);
+  expect(glyph.backgroundColor).to.equal(getComputedStyle(summary).color);
+  expect(summary.getAttribute('aria-label')).to.be.a('string').and.not.equal('');
+  const details = summary.parentElement as HTMLDetailsElement;
+  const opened = details.open;
+  summary.focus();
+  await sendKeys({ press: 'Enter' });
+  await waitUntil(() => details.open !== opened, 'native keyboard toggle');
+  expect(attribution.querySelector('a')?.getAttribute('href')).to.equal('https://example.com');
+  attribution.style.setProperty('--lr-icon-button-size', '24px');
+  expect(summary.getBoundingClientRect().width).to.be.at.least(24);
+  expect(summary.getBoundingClientRect().height).to.be.at.least(24);
+  el.style.setProperty('--lr-color-text', 'rgb(221, 238, 255)');
+  el.style.setProperty('--lr-color-surface', 'rgb(17, 34, 51)');
+  expect(getComputedStyle(summary, '::before').backgroundColor).to.equal('rgb(221, 238, 255)');
+  await setForcedColors('active');
+  try {
+    if (matchMedia('(forced-colors: active)').matches) {
+      expect(getComputedStyle(summary, '::before').backgroundColor).to.equal(getComputedStyle(summary).color);
+    }
+  } finally { await setForcedColors('none'); }
+});
+
 it('does not let a LyraMapLegendEntry.color value inject extra CSS declarations via the swatch style attribute', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   el.legend = [{ color: 'red; position: fixed; top: 0px', label: 'Bad', pattern: 'solid' }];

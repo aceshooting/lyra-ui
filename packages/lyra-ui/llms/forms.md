@@ -1961,6 +1961,11 @@ box no matter what tier or override is in play.
   are resolved onto the focused internal control through `ariaDescribedByElements`; external
   `aria-labelledby` is not copied across the shadow boundary.
 - Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
+  For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button.
+  Navigation can use `aria-current="page|step|location|date|time|true|false"`. Both states update
+  reactively, including native `ariaPressed`/`ariaCurrent` property assignments, attribute removal
+  and `href` changes. Empty or unsupported tokens are omitted. The native button/link role remains
+  unchanged: use pressed state for button toggles and current state for navigation links.
   For host `aria-controls`, targets in the host's own root are resolved through the reflected
   element-reference API so a popup relationship survives the component's shadow boundary; browsers
   with that API expose the relationship through `ariaControlsElements` and intentionally serialize

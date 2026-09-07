@@ -33,6 +33,11 @@ const meta: Meta = {
     },
   },
 };
+
+export const PersistentSortIndicators: StoryObj = {
+  render: () => html`<lr-table accessible-label="Sortable results" sort-indicators="all"
+    .columns=${columns} .rows=${rows}></lr-table>`,
+};
 export default meta;
 type Story = StoryObj;
 

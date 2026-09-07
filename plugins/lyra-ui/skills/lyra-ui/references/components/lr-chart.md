@@ -127,6 +127,28 @@ structured points retain their y-value formatting.
   would clip. Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is
   defined, otherwise the effective dataset's declarative `hidden` value before Chart.js is ready
   and across chart type/plugin rebuilds.
+- `legendMode: LyraChartLegendMode = 'dataset'` (attribute `legend-mode`) — `dataset` preserves
+  dataset toggles. `datum` shows one category toggle per slice in pie, doughnut and polar-area
+  charts; other types retain dataset legends. Category names use source labels with localized
+  numbered fallbacks. Colors and values come from the first dataset. With multiple datasets/rings,
+  a category toggle hides that source index in every ring, matching Chart.js category visibility.
+- `hiddenDatums: readonly number[] = []` (attribute: false) — clone-owned hidden source category
+  indexes for radial charts. `[]` restores all categories. Invalid, duplicate and out-of-range
+  indexes are ignored when applied or emitted. Programmatic changes are silent; accepted datum
+  legend toggles write the complete next snapshot. Data and type replacements, reconnection and
+  sampling retain source-index meaning. This state is independent of `hiddenDatasets`; hiding a
+  whole dataset continues to hide its ring. Accessible data and CSV export retain hidden values.
+- `legendDisplay: LyraChartLegendDisplay = 'auto'` (attribute `legend-display`) — `auto` preserves
+  the existing label with optional legend formatting. `label` always shows labels alone, even when
+  `formatter`/`valueFormatter` supplies values for tooltips or axes. `value` appends the formatted
+  numeric value. `percentage` appends a locale-formatted share independently of these callbacks:
+  the denominator is the sum of absolute represented legend values, including hidden entries.
+  Dataset entries use sampled sums; category entries use the first dataset's represented values.
+  Zero totals give 0%. These options affect the DOM legend; tooltip/axis/table formatting is unchanged.
+  Simplified pie/doughnut datasets with magnitudes above `Number.MAX_SAFE_INTEGER` are uniformly
+  rescaled for finite canvas geometry. Lyra tooltips, data labels, legends, events and CSV retain
+  original values; direct Chart.js callbacks see the rescaled peer data. Explicit `config.data`
+  remains the unmodified full-fidelity escape hatch.
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — accepts the
   Chart.js `left|top|right|bottom|center|chartArea|{ [scaleId]: number }` positions plus logical
   `start`/`end`; the additive `auto` chooses right above 480px and bottom below that allocation
@@ -310,6 +332,22 @@ family-wide handling; `lr-point-click` remains as a compatibility event. Also
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
 complete, sorted, valid next snapshot. Call `preventDefault()` on the proposal to veto the toggle;
 then no property change or commit event occurs.
+Category toggles use a separate pair, `lr-before-datum-visibility-change` (cancelable proposal) and
+`lr-datum-visibility-change` (accepted commit), carrying
+`{ index: number, visible: boolean, hiddenDatums: readonly number[] }`. Both details and their
+complete, sorted index snapshots are frozen. `index` is the source category index, including when
+the displayed data is sampled; it applies across all rings. Programmatic assignments emit neither
+pair. `preventDefault()` leaves both controlled state and the chart unchanged.
+
+```html
+<lr-doughnut-chart
+  legend-mode="datum"
+  legend-display="label"
+  .labels=${['A', 'B', 'C']}
+  .datasets=${[{ label: 'Distribution', data: [5, 3, 2] }]}
+  .hiddenDatums=${[]}
+></lr-doughnut-chart>
+```
 
 **Slots:** default — one optional `<script type="application/json">` Chart.js configuration;
 `data-table` — an optional consumer-provided complete, paginated, or virtualized accessible table
@@ -327,8 +365,8 @@ another application-owned presentation. Explicit `config.data` is the deliberate
 Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
-wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-item-hidden` (added to
-that button while its dataset is hidden), `legend-swatch`,
+wrapping DOM legend), `legend-item` (a dataset/category visibility button), `legend-item-hidden`
+(added while the dataset/category is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
 bounded-alternative truncation notices), `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `data-truncation` (the bounded-alternative
 notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the

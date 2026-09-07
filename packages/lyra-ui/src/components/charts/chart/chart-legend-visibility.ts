@@ -8,6 +8,16 @@ export interface LyraChartLegendVisibilityChangeDetail {
   readonly hiddenDatasets: readonly number[];
 }
 
+/** Complete category visibility proposal or committed snapshot for radial charts. */
+export interface LyraChartDatumVisibilityChangeDetail {
+  /** Zero-based source category index, shared by every dataset/ring. */
+  readonly index: number;
+  /** Proposed or committed visibility of this category. */
+  readonly visible: boolean;
+  /** Complete canonical list of hidden source category indexes. */
+  readonly hiddenDatums: readonly number[];
+}
+
 /**
  * Returns a stable, bounded visibility snapshot. A defined empty array deliberately means every
  * dataset is visible; `undefined` is left distinct so component configuration can supply its

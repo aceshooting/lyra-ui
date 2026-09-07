@@ -2068,12 +2068,63 @@ it('renders a visual sort-direction chevron only in the active sort column, mark
   const [nameHeader, scoreHeader] = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]'),
   ] as [HTMLElement, HTMLElement];
-  expect((nameHeader.querySelector('[part="sort-icon"]')) == null).to.be.true;
-  const icon = scoreHeader.querySelector('[part="sort-icon"]');
+  expect((nameHeader.querySelector('[part~="sort-icon"]')) == null).to.be.true;
+  const icon = scoreHeader.querySelector('[part~="sort-icon"]');
   expect(icon != null).to.equal(true);
   expect(icon!.getAttribute('aria-hidden')).to.equal('true');
   expect(icon!.getAttribute('data-dir')).to.equal('desc');
   expect(icon!.querySelector('svg') != null).to.equal(true);
+});
+
+it('optionally keeps inactive sortable headers discoverable without changing sort semantics or geometry', async () => {
+  const el = await fixture<LyraTable<Row>>(html`<lr-table sort-indicators="all" accessible-label="Results"
+    .columns=${columns.map((column) => ({ ...column, sortable: true }))} .rows=${rows}></lr-table>`);
+  const headers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]')];
+  const before = headers.map((header) => header.getBoundingClientRect().width);
+  const icons = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="sort-icon-inactive"]')];
+  expect(icons.length).to.equal(2);
+  expect(headers.map((header) => header.getAttribute('aria-sort'))).to.deep.equal(['none', 'none']);
+  expect(icons.every((icon) => icon.getAttribute('aria-hidden') === 'true' && icon.querySelector('svg'))).to.equal(true);
+  expect(icons.every((icon) => icon.getBoundingClientRect().width > 0)).to.equal(true);
+  headers[1]!.focus();
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(el.sortKey).to.equal('score');
+  expect(headers[1]!.getAttribute('aria-sort')).to.equal('ascending');
+  expect(el.shadowRoot!.querySelectorAll('[part~="sort-icon-active"]').length).to.equal(1);
+  expect(headers.map((header) => header.getBoundingClientRect().width)).to.deep.equal(before);
+  el.removeAttribute('sort-indicators');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part~="sort-icon-inactive"]').length).to.equal(0);
+  await expect(el).to.be.accessible();
+});
+
+it('retains server sort proposals, RTL placement and public inactive-icon styling', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <style>lr-table.sort-affordance::part(sort-icon-inactive) { color: rgb(17, 85, 153); }</style>
+    <lr-table class="sort-affordance" dir="rtl" sort-mode="server" sort-indicators="all"
+      accessible-label="Results" .columns=${columns.map((column) => ({ ...column, sortable: true }))}
+      .rows=${rows}></lr-table>
+  </div>`);
+  const el = wrapper.querySelector<LyraTable<Row>>('lr-table')!;
+  await el.updateComplete;
+  const icon = el.shadowRoot!.querySelector<HTMLElement>('[part~="sort-icon-inactive"]')!;
+  expect(icon !== null).to.equal(true);
+  expect(getComputedStyle(icon).color).to.equal('rgb(17, 85, 153)');
+  expect(parseFloat(getComputedStyle(icon).marginRight)).to.be.greaterThan(0);
+  const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header-cell"]')!;
+  const proposal = oneEvent(el, 'lr-sort-request');
+  header.click();
+  const event = await proposal;
+  expect(event.detail.sortKey).to.equal('name');
+  expect(el.sortKey).to.equal('');
+  expect(header.getAttribute('aria-sort')).to.equal('none');
+  await setForcedColors('active');
+  try {
+    if (matchMedia('(forced-colors: active)').matches) {
+      expect(getComputedStyle(icon).color).to.equal(getComputedStyle(header).color);
+    }
+  } finally { await setForcedColors('none'); }
 });
 
 it('flips the sort-icon rotation data-dir when sortDir changes from desc to asc', async () => {
@@ -2084,11 +2135,11 @@ it('flips the sort-icon rotation data-dir when sortDir changes from desc to asc'
   el.sortDir = 'asc';
   await el.updateComplete;
   const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1]!;
-  const icon = scoreHeader.querySelector('[part="sort-icon"]');
+  const icon = scoreHeader.querySelector('[part~="sort-icon"]');
   expect(icon!.getAttribute('data-dir')).to.equal('asc');
 });
 
-it('rotates the wrapping [part="sort-icon"] element, not the inner svg, per the icons.ts rotation contract', async () => {
+it('rotates the wrapping [part~="sort-icon"] element, not the inner svg, per the icons.ts rotation contract', async () => {
   // internal/icons.ts documents: "callers needing 'up'/'left'/'open' etc.
   // rotate the wrapping part element via CSS transform: rotate(...), not the svg."
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
@@ -2098,7 +2149,7 @@ it('rotates the wrapping [part="sort-icon"] element, not the inner svg, per the 
   el.sortDir = 'desc';
   await el.updateComplete;
   const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1]!;
-  const icon = scoreHeader.querySelector('[part="sort-icon"]') as HTMLElement;
+  const icon = scoreHeader.querySelector('[part~="sort-icon"]') as HTMLElement;
   const svgEl = icon.querySelector('svg') as unknown as HTMLElement;
   expect(getComputedStyle(icon).transform).to.not.equal('none');
   expect(getComputedStyle(svgEl).transform).to.equal('none');

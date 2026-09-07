@@ -22,6 +22,21 @@ export const Default: Story = {
   render: () => html`<lr-button>Save</lr-button>`,
 };
 
+export const ToggleAndCurrent: Story = {
+  parameters: {
+    docs: { description: { story: 'A toggle exposes its pressed state on the focused native button. Navigation exposes the current page on the native link. State follows attribute changes and native keyboard activation.' } },
+  },
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-m);flex-wrap:wrap">
+      <lr-button aria-pressed="false" @click=${(event: Event) => {
+        const button = event.currentTarget as HTMLElement;
+        button.ariaPressed = button.ariaPressed === 'true' ? 'false' : 'true';
+      }}>Monthly</lr-button>
+      <lr-button href="#overview" aria-current="page">Overview</lr-button>
+    </div>
+  `,
+};
+
 export const LiveDescription: Story = {
   parameters: {
     docs: { description: { story: 'External descriptions remain attached to the native action when their source element is replaced, removed or reinserted.' } },

@@ -1080,9 +1080,12 @@ export type LyraBarChartVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -1104,8 +1107,10 @@ export type LyraBarChartVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -1150,6 +1155,8 @@ export type LyraBarChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraBarChart['dataLabels'];
     'data-table-toggle'?: LyraBarChart['dataTableToggle'];
     'index-axis'?: LyraBarChart['indexAxis'];
+    'legend-display'?: LyraBarChart['legendDisplay'];
+    'legend-mode'?: LyraBarChart['legendMode'];
     'legend-position'?: LyraBarChart['legendPosition'];
     'scale-type'?: LyraBarChart['scaleType'];
     'show-data-table'?: LyraBarChart['showDataTable'];
@@ -1301,9 +1308,12 @@ export type LyraBubbleChartVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -1325,8 +1335,10 @@ export type LyraBubbleChartVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -1371,6 +1383,8 @@ export type LyraBubbleChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraBubbleChart['dataLabels'];
     'data-table-toggle'?: LyraBubbleChart['dataTableToggle'];
     'index-axis'?: LyraBubbleChart['indexAxis'];
+    'legend-display'?: LyraBubbleChart['legendDisplay'];
+    'legend-mode'?: LyraBubbleChart['legendMode'];
     'legend-position'?: LyraBubbleChart['legendPosition'];
     'scale-type'?: LyraBubbleChart['scaleType'];
     'show-data-table'?: LyraBubbleChart['showDataTable'];
@@ -1456,10 +1470,12 @@ export type LyraButtonVueProps = LyraVueCustomElement<
   | '--lr-button-width',
   {
     'aria-controls'?: LyraAttributeValue<string | null>;
+    'aria-current'?: LyraAttributeValue<string | null>;
     'aria-describedby'?: LyraAttributeValue<string | null>;
     'aria-expanded'?: LyraAttributeValue<string | null>;
     'aria-haspopup'?: LyraAttributeValue<string | null>;
     'aria-label'?: LyraButton['accessibleLabel'];
+    'aria-pressed'?: LyraAttributeValue<string | null>;
     'custom-error'?: LyraButton['customError'];
     'formaction'?: LyraButton['formAction'];
     'formenctype'?: LyraButton['formEnctype'];
@@ -1682,9 +1698,12 @@ export type LyraChartVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -1706,8 +1725,10 @@ export type LyraChartVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -1752,6 +1773,8 @@ export type LyraChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraChart['dataLabels'];
     'data-table-toggle'?: LyraChart['dataTableToggle'];
     'index-axis'?: LyraChart['indexAxis'];
+    'legend-display'?: LyraChart['legendDisplay'];
+    'legend-mode'?: LyraChart['legendMode'];
     'legend-position'?: LyraChart['legendPosition'];
     'scale-type'?: LyraChart['scaleType'];
     'show-data-table'?: LyraChart['showDataTable'];
@@ -3507,9 +3530,12 @@ export type LyraDoughnutChartVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -3531,8 +3557,10 @@ export type LyraDoughnutChartVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -3577,6 +3605,8 @@ export type LyraDoughnutChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraDoughnutChart['dataLabels'];
     'data-table-toggle'?: LyraDoughnutChart['dataTableToggle'];
     'index-axis'?: LyraDoughnutChart['indexAxis'];
+    'legend-display'?: LyraDoughnutChart['legendDisplay'];
+    'legend-mode'?: LyraDoughnutChart['legendMode'];
     'legend-position'?: LyraDoughnutChart['legendPosition'];
     'scale-type'?: LyraDoughnutChart['scaleType'];
     'show-data-table'?: LyraDoughnutChart['showDataTable'];
@@ -4896,9 +4926,12 @@ export type LyraHistogramVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -4922,8 +4955,10 @@ export type LyraHistogramVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -4968,6 +5003,8 @@ export type LyraHistogramVueProps = LyraVueCustomElement<
     'data-labels'?: LyraHistogram['dataLabels'];
     'data-table-toggle'?: LyraHistogram['dataTableToggle'];
     'index-axis'?: LyraHistogram['indexAxis'];
+    'legend-display'?: LyraHistogram['legendDisplay'];
+    'legend-mode'?: LyraHistogram['legendMode'];
     'legend-position'?: LyraHistogram['legendPosition'];
     'scale-type'?: LyraHistogram['scaleType'];
     'series-label'?: LyraHistogram['seriesLabel'];
@@ -5645,9 +5682,12 @@ export type LyraLineChartVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -5669,8 +5709,10 @@ export type LyraLineChartVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -5715,6 +5757,8 @@ export type LyraLineChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraLineChart['dataLabels'];
     'data-table-toggle'?: LyraLineChart['dataTableToggle'];
     'index-axis'?: LyraLineChart['indexAxis'];
+    'legend-display'?: LyraLineChart['legendDisplay'];
+    'legend-mode'?: LyraLineChart['legendMode'];
     'legend-position'?: LyraLineChart['legendPosition'];
     'scale-type'?: LyraLineChart['scaleType'];
     'show-data-table'?: LyraLineChart['showDataTable'];
@@ -7125,9 +7169,12 @@ export type LyraPieChartVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -7149,8 +7196,10 @@ export type LyraPieChartVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -7195,6 +7244,8 @@ export type LyraPieChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraPieChart['dataLabels'];
     'data-table-toggle'?: LyraPieChart['dataTableToggle'];
     'index-axis'?: LyraPieChart['indexAxis'];
+    'legend-display'?: LyraPieChart['legendDisplay'];
+    'legend-mode'?: LyraPieChart['legendMode'];
     'legend-position'?: LyraPieChart['legendPosition'];
     'scale-type'?: LyraPieChart['scaleType'];
     'show-data-table'?: LyraPieChart['showDataTable'];
@@ -7225,9 +7276,12 @@ export type LyraPolarAreaChartVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -7249,8 +7303,10 @@ export type LyraPolarAreaChartVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -7295,6 +7351,8 @@ export type LyraPolarAreaChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraPolarAreaChart['dataLabels'];
     'data-table-toggle'?: LyraPolarAreaChart['dataTableToggle'];
     'index-axis'?: LyraPolarAreaChart['indexAxis'];
+    'legend-display'?: LyraPolarAreaChart['legendDisplay'];
+    'legend-mode'?: LyraPolarAreaChart['legendMode'];
     'legend-position'?: LyraPolarAreaChart['legendPosition'];
     'scale-type'?: LyraPolarAreaChart['scaleType'];
     'show-data-table'?: LyraPolarAreaChart['showDataTable'];
@@ -7755,9 +7813,12 @@ export type LyraRadarChartVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -7779,8 +7840,10 @@ export type LyraRadarChartVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -7825,6 +7888,8 @@ export type LyraRadarChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraRadarChart['dataLabels'];
     'data-table-toggle'?: LyraRadarChart['dataTableToggle'];
     'index-axis'?: LyraRadarChart['indexAxis'];
+    'legend-display'?: LyraRadarChart['legendDisplay'];
+    'legend-mode'?: LyraRadarChart['legendMode'];
     'legend-position'?: LyraRadarChart['legendPosition'];
     'scale-type'?: LyraRadarChart['scaleType'];
     'show-data-table'?: LyraRadarChart['showDataTable'];
@@ -8426,9 +8491,12 @@ export type LyraScatterChartVueProps = LyraVueCustomElement<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
+  | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
   | 'labels'
+  | 'legendDisplay'
+  | 'legendMode'
   | 'legendPosition'
   | 'locale'
   | 'max'
@@ -8450,8 +8518,10 @@ export type LyraScatterChartVueProps = LyraVueCustomElement<
   | 'zoom',
   {},
   LyraChartEventMap,
+  | 'lr-before-datum-visibility-change'
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
+  | 'lr-datum-visibility-change'
   | 'lr-legend-visibility-change'
   | 'lr-point-click'
   | 'lr-zoom',
@@ -8496,6 +8566,8 @@ export type LyraScatterChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraScatterChart['dataLabels'];
     'data-table-toggle'?: LyraScatterChart['dataTableToggle'];
     'index-axis'?: LyraScatterChart['indexAxis'];
+    'legend-display'?: LyraScatterChart['legendDisplay'];
+    'legend-mode'?: LyraScatterChart['legendMode'];
     'legend-position'?: LyraScatterChart['legendPosition'];
     'scale-type'?: LyraScatterChart['scaleType'];
     'show-data-table'?: LyraScatterChart['showDataTable'];
@@ -9447,6 +9519,7 @@ export type LyraTableVueProps = LyraVueCustomElement<
   | 'selectionMode'
   | 'skeletonRows'
   | 'sortDir'
+  | 'sortIndicators'
   | 'sortKey'
   | 'sortMode'
   | 'spellcheck'
@@ -9512,6 +9585,7 @@ export type LyraTableVueProps = LyraVueCustomElement<
     'selection-mode'?: LyraTable['selectionMode'];
     'skeleton-rows'?: LyraTable['skeletonRows'];
     'sort-dir'?: LyraTable['sortDir'];
+    'sort-indicators'?: LyraTable['sortIndicators'];
     'sort-key'?: LyraTable['sortKey'];
     'sort-mode'?: LyraTable['sortMode'];
     'storage-key'?: LyraTable['storageKey'];

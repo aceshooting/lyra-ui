@@ -456,6 +456,15 @@ export type LyraAutoloadPreloadEvent = AutoloaderEventMap['lr-autoload-preload']
 export type LyraAutoloadTraversalErrorEvent = AutoloaderEventMap['lr-autoload-traversal-error'];
 
 /**
+ * `lr-before-datum-visibility-change` — dispatched by 10 components: `<lr-bar-chart>`,
+ * `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`,
+ * `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`.
+ *
+ * Detail type: `LyraChartEventMap['lr-before-datum-visibility-change']`.
+ */
+export type LyraBeforeDatumVisibilityChangeEvent = LyraChartEventMap['lr-before-datum-visibility-change'];
+
+/**
  * `lr-before-legend-visibility-change` — dispatched by 11 components: `<lr-bar-chart>`,
  * `<lr-box-plot>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`,
  * `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`,
@@ -957,6 +966,15 @@ export type LyraDatumActivateEvent =
   | LyraBoxPlotEventMap['lr-datum-activate']
   | LyraChartEventMap['lr-datum-activate']
   | LyraLiteChartEventMap['lr-datum-activate'];
+
+/**
+ * `lr-datum-visibility-change` — dispatched by 10 components: `<lr-bar-chart>`,
+ * `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`,
+ * `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`.
+ *
+ * Detail type: `LyraChartEventMap['lr-datum-visibility-change']`.
+ */
+export type LyraDatumVisibilityChangeEvent = LyraChartEventMap['lr-datum-visibility-change'];
 
 /**
  * `lr-deny` — dispatched by 2 components: `<lr-confirm-bar>`, `<lr-tool-approval-dialog>`.
@@ -3513,6 +3531,7 @@ export interface LyraGlobalEventMap {
   'lr-autoload-loaded': LyraAutoloadLoadedEvent;
   'lr-autoload-preload': LyraAutoloadPreloadEvent;
   'lr-autoload-traversal-error': LyraAutoloadTraversalErrorEvent;
+  'lr-before-datum-visibility-change': LyraBeforeDatumVisibilityChangeEvent;
   'lr-before-legend-visibility-change': LyraBeforeLegendVisibilityChangeEvent;
   'lr-before-media-download': LyraBeforeMediaDownloadEvent;
   'lr-before-page-change': LyraBeforePageChangeEvent;
@@ -3560,6 +3579,7 @@ export interface LyraGlobalEventMap {
   'lr-data-error': LyraDataErrorEvent;
   'lr-date-select': LyraDateSelectEvent;
   'lr-datum-activate': LyraDatumActivateEvent;
+  'lr-datum-visibility-change': LyraDatumVisibilityChangeEvent;
   'lr-deny': LyraDenyEvent;
   'lr-disconnect': LyraDisconnectEvent;
   'lr-dismiss': LyraDismissEvent;

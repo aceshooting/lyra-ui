@@ -3164,6 +3164,29 @@
     },
     {
       "module": "src/components/charts/chart/chart-legend-visibility.ts",
+      "exportName": "LyraChartDatumVisibilityChangeDetail",
+      "kind": "interface",
+      "fingerprint": "7c2679cb9455719c5934",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-chart-legend-visibility-contracts",
+        "declaration": "LyraChartDatumVisibilityChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/chart-legend-visibility.ts",
       "exportName": "LyraChartLegendVisibilityChangeDetail",
       "kind": "interface",
       "fingerprint": "dfe7a881bb8ae69ef47d",
@@ -3410,7 +3433,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartInstance",
       "kind": "interface",
-      "fingerprint": "7705fca32e8afe24fdd1",
+      "fingerprint": "f589fe66466b7b3a1d8e",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -13784,7 +13807,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "aa6b9eac72df7dcea940",
+      "fingerprint": "aee1e5764f5df5840507",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15385,7 +15408,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "8bee3d345ce507e0e450",
+      "fingerprint": "e4e5db596f6242fc0100",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15820,7 +15843,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "c40c1be16a28398ca803",
+      "fingerprint": "4970c7eea8e6b85deb9a",
       "routes": [
         "src/vue.ts"
       ],

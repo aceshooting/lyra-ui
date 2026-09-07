@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './details.js';
+import '../../forms/checkbox/checkbox.js';
+import '../../overlays/badge/badge.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'Disclosure/Details', component: 'lr-details', tags: ['autodocs'] };
@@ -42,6 +44,36 @@ export const HeaderActions: StoryObj = {
       <button slot="header-actions" type="button">Add member</button>
       Invite collaborators and choose their project roles.
     </lr-details>
+  `,
+};
+
+export const ResponsiveHeaderActions: StoryObj = {
+  render: () => html`
+    <style>
+      lr-details.responsive-actions::part(header-actions) {
+        flex: 1 1 12rem;
+        min-inline-size: min(100%, 12rem);
+        padding: var(--lr-space-xs);
+        box-sizing: border-box;
+      }
+      .details-action-group {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--lr-space-s);
+        min-inline-size: 0;
+      }
+      .details-action-group lr-checkbox { flex: 1 1 auto; min-inline-size: 0; }
+    </style>
+    <div style="inline-size: min(100%, 24rem)">
+      <lr-details class="responsive-actions" summary="Settings">
+        <span slot="header-actions" class="details-action-group">
+          <lr-checkbox size="s">Show distribution details</lr-checkbox>
+          <lr-badge>Live</lr-badge>
+        </span>
+        Choose which distribution details to display.
+      </lr-details>
+    </div>
   `,
 };
 

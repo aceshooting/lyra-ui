@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 36 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -146,6 +146,10 @@ cell: (row) => unknown }` —
   the two consequences of the fixed algorithm worth knowing before opting in
 - `sortKey: string = ''` (attribute `sort-key`)
 - `sortDir: 'asc'|'desc' = 'asc'` (attribute `sort-dir`)
+- `sortIndicators: TableSortIndicators = 'active'` (attribute `sort-indicators`) — `'all'` adds a
+  muted bidirectional indicator to each inactive sortable header, reserving the same space as the
+  active chevron. The default retains only the active column's indicator. This presentation does
+  not change keyboard interaction, client/server sorting, or `aria-sort="none"` on inactive columns.
 - `sortMode: 'client'|'server' = 'client'` (attribute `sort-mode`, reflected) — mirrors
   `paginationMode`'s identical split. `'client'` (the default) orders `rows` in the browser from
   `sortKey`/`sortDir` and the active column's `sortValue`; `'server'` renders `rows` exactly as
@@ -316,8 +320,9 @@ slot-replaceable: it reports a configuration problem (`noColumnsHeading`), not "
 nothing", and one slot covering all three would collapse that distinction. Everything else comes
 from `columns`/`rows`.
 
-**CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon` (a
-chevron indicator shown on the active sortable header, rotated per `sortDir`), `reveal-columns-button`
+**CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon`
+(each sort indicator), `sort-icon-active` (the active chevron, rotated per `sortDir`),
+`sort-icon-inactive` (the muted bidirectional indicator under `sort-indicators="all"`), `reveal-columns-button`
 (shown when priority columns are hidden or when a narrow allocation is currently force-visible),
 `foot` (the `<tfoot>`, only rendered when at least one
 column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each body row's trailing
@@ -387,7 +392,8 @@ or structural-pseudo-class selector and does not affect group, expanded, hover, 
 showing through the sticky header while it scrolls.
 Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,
 because `::part(header-cell)[aria-sort]` is invalid CSS. The `sort-icon` part styles only the
-chevron; these tokens style the header cell itself.
+indicator; these tokens style the header cell itself. Use `::part(sort-icon-inactive)` and
+`::part(sort-icon-active)` to style the two indicator states without private selectors.
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).

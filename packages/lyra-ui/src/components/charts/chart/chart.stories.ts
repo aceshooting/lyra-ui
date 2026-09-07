@@ -10,6 +10,23 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const CategoryLegends: Story = {
+  parameters: {
+    docs: { description: { story: 'Radial category legends show one toggle per slice label. This example keeps labels compact while tooltips retain currency formatting. Each category toggle affects the matching slice in both rings; hiddenDatums can be persisted by the application.' } },
+  },
+  render: () => html`
+    <lr-chart type="doughnut" legend-mode="datum" legend-display="label" legend-position="bottom"
+      height="18rem" style="inline-size:24rem;max-inline-size:100%"
+      .labels=${['Subscriptions', 'Services', 'Other revenue']}
+      .datasets=${[
+        { label: 'Current', data: [50, 30, 20] },
+        { label: 'Previous', data: [40, 35, 25] },
+      ]}
+      .valueFormatter=${(value: number) => `$${value}`}
+    ></lr-chart>
+  `,
+};
+
 /** Click a legend item to hide its dataset; hidden items retain a line-through state and part hook. */
 export const Default: Story = {
   render: () => {

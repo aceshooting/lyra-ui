@@ -40,6 +40,11 @@ export function chevronIcon(): SVGTemplateResult {
   return icon(svg`<polyline points="9 6 15 12 9 18"></polyline>`);
 }
 
+/** Paired vertical chevrons indicate a sortable column with no active direction. */
+export function sortIcon(): SVGTemplateResult {
+  return icon(svg`<polyline points="8 8 12 4 16 8"></polyline><polyline points="8 16 12 20 16 16"></polyline>`);
+}
+
 /** An "x" close/clear glyph. */
 export function closeIcon(): SVGTemplateResult {
   return icon(svg`

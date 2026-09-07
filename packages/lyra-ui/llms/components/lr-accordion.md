@@ -159,6 +159,42 @@ findable `hidden="until-found"` closed-state gate.
 The Details icon wrapper also carries Shoelace's `summary-icon` alias, so either part name styles
 the same node. `header-actions` is the wrapper around the `header-actions` slot.
 
+For rich independent actions, reserve a useful basis on `header-actions` so the complete action
+group wraps onto another row before its checkbox label becomes too narrow. The header already
+wraps; its summary belongs to a private native-details flex item, so setting `flex` on
+`::part(summary)` does not control that item's allocation. This recipe uses public parts and
+ordinary light-DOM layout:
+
+```html
+<style>
+  lr-details.responsive-actions::part(header-actions) {
+    flex: 1 1 12rem;
+    min-inline-size: min(100%, 12rem);
+    padding: var(--lr-space-xs);
+    box-sizing: border-box;
+  }
+  .details-action-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-s);
+    min-inline-size: 0;
+  }
+  .details-action-group lr-checkbox { flex: 1 1 auto; min-inline-size: 0; }
+</style>
+<lr-details class="responsive-actions" summary="Settings">
+  <span slot="header-actions" class="details-action-group">
+    <lr-checkbox size="s">Show distribution details</lr-checkbox>
+    <lr-badge>Live</lr-badge>
+  </span>
+  Distribution settings.
+</lr-details>
+```
+
+Import the granular details, checkbox and badge registration entries. Adjust the `12rem` basis
+for the actual labels. Logical sizing supports RTL and narrower allocations; the checkbox remains
+independently focusable and operable when the summary is disabled.
+
 **Themeable custom properties:** accordion item exposes `--lr-accordion-item-spacing` (default
 `var(--lr-form-control-padding-inline)`), `--lr-accordion-item-show-duration` and
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and

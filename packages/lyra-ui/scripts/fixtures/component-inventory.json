@@ -10152,6 +10152,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -10472,6 +10492,26 @@
             "default": "[]"
           },
           {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legendPosition",
             "attribute": "legend-position",
             "type": "LyraChartLegendPosition",
@@ -10658,6 +10698,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -10666,6 +10712,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -12571,6 +12623,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -12891,6 +12963,26 @@
             "default": "[]"
           },
           {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legendPosition",
             "attribute": "legend-position",
             "type": "LyraChartLegendPosition",
@@ -13077,6 +13169,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -13085,6 +13183,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -13483,6 +13587,16 @@
             "default": null
           },
           {
+            "name": "aria-current",
+            "property": "triggerCurrent",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "aria-describedby",
             "property": "triggerDescribedBy",
             "type": "| string | null",
@@ -13515,6 +13629,16 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "aria-pressed",
+            "property": "triggerPressed",
             "type": "string | null",
             "reflects": false,
             "inferred": false,
@@ -17089,6 +17213,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -17415,6 +17559,16 @@
             "hasDefault": false
           },
           {
+            "name": "hiddenDatums",
+            "attribute": null,
+            "type": "readonly number[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
             "name": "indexAxis",
             "attribute": "index-axis",
             "type": "LyraChartIndexAxis",
@@ -17443,6 +17597,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
           },
           {
             "name": "legendPosition",
@@ -17640,6 +17814,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -17648,6 +17828,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -40763,6 +40949,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -41083,6 +41289,26 @@
             "default": "[]"
           },
           {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legendPosition",
             "attribute": "legend-position",
             "type": "LyraChartLegendPosition",
@@ -41269,6 +41495,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -41277,6 +41509,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -57446,6 +57684,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -57786,6 +58044,26 @@
             "default": "[]"
           },
           {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legendPosition",
             "attribute": "legend-position",
             "type": "LyraChartLegendPosition",
@@ -57992,6 +58270,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -58000,6 +58284,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -66527,6 +66817,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -66847,6 +67157,26 @@
             "default": "[]"
           },
           {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legendPosition",
             "attribute": "legend-position",
             "type": "LyraChartLegendPosition",
@@ -67033,6 +67363,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -67041,6 +67377,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -85766,6 +86108,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -86086,6 +86448,26 @@
             "default": "[]"
           },
           {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legendPosition",
             "attribute": "legend-position",
             "type": "LyraChartLegendPosition",
@@ -86272,6 +86654,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -86280,6 +86668,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -86780,6 +87174,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -87100,6 +87514,26 @@
             "default": "[]"
           },
           {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legendPosition",
             "attribute": "legend-position",
             "type": "LyraChartLegendPosition",
@@ -87286,6 +87720,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -87294,6 +87734,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -93144,6 +93590,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -93464,6 +93930,26 @@
             "default": "[]"
           },
           {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legendPosition",
             "attribute": "legend-position",
             "type": "LyraChartLegendPosition",
@@ -93650,6 +94136,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -93658,6 +94150,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -101973,6 +102471,26 @@
             "default": null
           },
           {
+            "name": "legend-display",
+            "property": "legendDisplay",
+            "type": "LyraChartLegendDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legend-mode",
+            "property": "legendMode",
+            "type": "LyraChartLegendMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legend-position",
             "property": "legendPosition",
             "type": "LyraChartLegendPosition",
@@ -102293,6 +102811,26 @@
             "default": "[]"
           },
           {
+            "name": "legendDisplay",
+            "attribute": "legend-display",
+            "type": "LyraChartLegendDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "legendMode",
+            "attribute": "legend-mode",
+            "type": "LyraChartLegendMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dataset"
+          },
+          {
             "name": "legendPosition",
             "attribute": "legend-position",
             "type": "LyraChartLegendPosition",
@@ -102479,6 +103017,12 @@
         ],
         "events": [
           {
+            "name": "lr-before-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
@@ -102487,6 +103031,12 @@
           {
             "name": "lr-datum-activate",
             "type": "CustomEvent< LyraChartDatumActivateDetail<LyraCoreChartDatumKind> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-datum-visibility-change",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -114044,6 +114594,16 @@
             "default": "asc"
           },
           {
+            "name": "sort-indicators",
+            "property": "sortIndicators",
+            "type": "TableSortIndicators",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "active"
+          },
+          {
             "name": "sort-key",
             "property": "sortKey",
             "type": "string",
@@ -114521,6 +115081,16 @@
             "default": "asc"
           },
           {
+            "name": "sortIndicators",
+            "attribute": "sort-indicators",
+            "type": "TableSortIndicators",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "active"
+          },
+          {
             "name": "sortKey",
             "attribute": "sort-key",
             "type": "string",
@@ -114789,6 +115359,14 @@
           },
           {
             "name": "sort-icon",
+            "deprecated": null
+          },
+          {
+            "name": "sort-icon-active",
+            "deprecated": null
+          },
+          {
+            "name": "sort-icon-inactive",
             "deprecated": null
           },
           {

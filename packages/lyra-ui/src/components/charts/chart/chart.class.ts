@@ -52,8 +52,9 @@ import {
   legendVisibilityDetail,
   normalizeHiddenDatasets,
   type LyraChartLegendVisibilityChangeDetail,
+  type LyraChartDatumVisibilityChangeDetail,
 } from './chart-legend-visibility.js';
-export type { LyraChartLegendVisibilityChangeDetail } from './chart-legend-visibility.js';
+export type { LyraChartLegendVisibilityChangeDetail, LyraChartDatumVisibilityChangeDetail } from './chart-legend-visibility.js';
 import { sampleChartTableIndexes } from './chart-table-sampling.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -145,6 +146,10 @@ export type LyraChartLayoutPosition =
   | 'chartArea'
   | { [scaleId: string]: number };
 export type LyraChartLegendPosition = LyraChartLayoutPosition | 'start' | 'end' | 'auto';
+/** Dataset toggles, or shared category toggles for pie/doughnut/polar-area charts. */
+export type LyraChartLegendMode = 'dataset' | 'datum';
+/** Text shown in the DOM legend, independently of tooltip and axis formatting. */
+export type LyraChartLegendDisplay = 'auto' | 'label' | 'value' | 'percentage';
 export type LyraChartValueFormatterContext = 'tick' | 'tooltip' | 'legend' | 'table';
 export type LyraChartValueFormatter = (
   value: number,
@@ -287,6 +292,8 @@ interface RuntimeChart {
   getDatasetMeta?(index: number): { hidden: boolean | null };
   isDatasetVisible(index: number): boolean;
   setDatasetVisibility(index: number, visible: boolean): void;
+  getDataVisibility?(index: number): boolean;
+  toggleDataVisibility?(index: number): void;
 }
 
 /** Public structural view of the current Chart.js instance, without imposing `chart.js` as a
@@ -1370,6 +1377,8 @@ export interface LyraChartEventMap {
   'lr-zoom': CustomEvent<{ zoomed: boolean }>;
   'lr-before-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
   'lr-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
+  'lr-before-datum-visibility-change': CustomEvent<LyraChartDatumVisibilityChangeDetail>;
+  'lr-datum-visibility-change': CustomEvent<LyraChartDatumVisibilityChangeDetail>;
   'lr-datum-activate': CustomEvent<
     LyraChartDatumActivateDetail<LyraCoreChartDatumKind>
   >;
@@ -1559,6 +1568,9 @@ function chartDatasetAxis(dataset: unknown): 'y' | 'y2' {
  * are further optional peers loaded only on demand.
  * With IntersectionObserver available, canvas construction waits for the first delivered
  * visibility decision; without it, drawing starts as soon as the peer and canvas are ready.
+ * Simplified pie/doughnut datasets with magnitudes above Number.MAX_SAFE_INTEGER are uniformly
+ * scaled for finite peer arc geometry. Legends, tooltips, data labels and semantic exports retain
+ * original values; direct peer callbacks see scaled values. Explicit config.data is passed through.
  *
  * **API mirror note:** the real `wa-chart` docs page
  * (https://webawesome.com/docs/components/chart/) documents a `config:
@@ -1589,13 +1601,18 @@ function chartDatasetAxis(dataset: unknown): 'y' | 'y2' {
  *   value, and the complete canonical proposed `hiddenDatasets` snapshot.
  * @event lr-legend-visibility-change - Emitted after an accepted DOM legend toggle commits the
  *   same detail. Programmatic `hiddenDatasets` changes reconcile without either event.
+ * @event lr-before-datum-visibility-change - Cancelable category visibility proposal in datum
+ *   legend mode. `detail: { index: number, visible: boolean, hiddenDatums: readonly number[] }`.
+ *   Source category indexes apply to every dataset/ring. The complete detail is frozen.
+ * @event lr-datum-visibility-change - Emitted after an accepted category toggle commits the same
+ *   frozen detail. Programmatic `hiddenDatums` assignments are silent.
  * @csspart base - The chart wrapper.
  * @csspart plot - The fixed-height canvas/overlay region.
  * @csspart canvas - The Chart.js canvas.
  * @csspart legend - The wrapping DOM legend, rendered unless `withoutLegend` is set.
- * @csspart legend-item - A keyboard-operable series visibility toggle.
- * @csspart legend-item-hidden - Added to a `legend-item` while its dataset is hidden.
- * @csspart legend-swatch - The resolved series-color swatch in a legend item.
+ * @csspart legend-item - A keyboard-operable dataset or category visibility toggle.
+ * @csspart legend-item-hidden - Added while the legend item's dataset or category is hidden.
+ * @csspart legend-swatch - The resolved dataset/category color swatch in a legend item.
  * @csspart reset-zoom-button - The reset-zoom control when zoom is active.
  * @csspart description - The accessible chart summary.
  * @csspart data-table - The optional generated or slotted data table.
@@ -1736,6 +1753,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-before-legend-visibility-change',
     'lr-legend-visibility-change',
+    'lr-before-datum-visibility-change',
+    'lr-datum-visibility-change',
   ]);
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
@@ -1812,6 +1831,37 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * indexes are ignored when state is applied or emitted.
    */
   @property({ attribute: false }) hiddenDatasets?: readonly number[];
+  private _hiddenDatums: readonly number[] = Object.freeze([]);
+  /**
+   * Controlled hidden source category indexes for pie/doughnut/polar-area charts, shared by all
+   * datasets/rings. Clone-owned; invalid, duplicate and out-of-range indexes are ignored when
+   * applied or emitted. Empty restores all categories. Does not alter dataset visibility or exports.
+   * @default []
+   */
+  @property({ attribute: false })
+  get hiddenDatums(): readonly number[] { return this._hiddenDatums; }
+  set hiddenDatums(value: readonly number[]) {
+    const previous = this._hiddenDatums;
+    this._hiddenDatums = projectHiddenDatasetIndexes(value) ?? Object.freeze([]);
+    this.requestUpdate('hiddenDatums', previous);
+  }
+  /**
+   * `datum` renders category toggles for pie/doughnut/polar-area charts. Categories use the first
+   * dataset's colors and values; a toggle affects that category in every ring. Other chart types
+   * retain dataset legends. Both modes use the generated accessible-data sampling budget.
+   */
+  @property({ attribute: 'legend-mode', converter: {
+    fromAttribute: (value) => value === 'datum' ? 'datum' : 'dataset',
+  } }) legendMode: LyraChartLegendMode = 'dataset';
+  /**
+   * `auto` retains optional legend formatting; `label` omits values even with a formatter; `value`
+   * appends a formatted value. `percentage` uses locale percentages of the absolute represented
+   * legend values, including hidden items (zero totals yield 0%). Dataset values are sampled sums;
+   * category values come from the first dataset. Tooltip and axis formatting are unchanged.
+   */
+  @property({ attribute: 'legend-display', converter: {
+    fromAttribute: (value) => ['label', 'value', 'percentage'].includes(value ?? '') ? value : 'auto',
+  } }) legendDisplay: LyraChartLegendDisplay = 'auto';
   /**
    * Accessible chart description, which REPLACES the generated summary rather than adding to it.
    *
@@ -2154,6 +2204,31 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return datasetCount > 0;
   }
 
+  private isSliceChart(): boolean {
+    return ['pie', 'doughnut', 'polarArea'].includes(this.effectiveType());
+  }
+
+  /** Reconcile through Chart.js's public category visibility API after data/index remapping. */
+  private applyDatumVisibility(): boolean {
+    if (!this.chart || !this.isSliceChart()) return false;
+    const sample = this.dataTableSample();
+    const rows = this.visualRowSourceIndexes;
+    const hidden = new Set(normalizeHiddenDatasets(this.hiddenDatums, sample.rowCount));
+    let changed = false;
+    for (let index = 0; index < (rows?.length ?? sample.rowCount); index++) {
+      const visible = !hidden.has(rows?.[index] ?? index);
+      try {
+        if (this.chart.getDataVisibility?.(index) === !visible) {
+          this.chart.toggleDataVisibility?.(index);
+          changed = true;
+        }
+      } catch {
+        // An external peer/plugin capability must not interrupt reconciliation of other entries.
+      }
+    }
+    return changed;
+  }
+
   private hasExplicitConfigData(): boolean {
     const config = this.effectiveConfig();
     if (!isSafeChartConfigurationRecord(config)) return false;
@@ -2421,6 +2496,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   /** The current Chart.js instance. Read it only while the element is connected and loaded. */
   chart?: LyraChartInstance;
+  private scaledSliceDatasets = new Set<number>();
   private chartJsModule?: ChartJsModule;
   private resizeObserver?: ResizeObserver;
   private resizeDrawFrame?: number;
@@ -2940,7 +3016,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       (this.lastDrawnLocale !== undefined && this.lastDrawnLocale !== effectiveLocale);
     this.lastDrawnDirection = effectiveDirection;
     this.lastDrawnLocale = effectiveLocale;
-    if (!contentChanged && !contextChanged) return;
+    if (!contentChanged && !contextChanged) {
+      // Legend presentation does not replace canvas data. Reconcile a controlled category change
+      // once; an accepted native legend click has already applied the same visibility snapshot.
+      if (changed.has('hiddenDatums') && this.visible && this.applyDatumVisibility()) this.chart?.update('none');
+      return;
+    }
     this.drawIfVisible();
   }
 
@@ -3418,7 +3499,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           const total = totalsByAxis?.[axis][sourceRowIndex(index)];
           if (total != null) return this.formatDataLabel(total);
         }
-        const numeric = chartDatumNumericValue(value);
+        const numeric = chartDatumNumericValue(this.scaledSliceDatasets.has(datasetIndex)
+          ? this.datasetValues(dataset!)[sourceRowIndex(index)] : value);
         if (numeric === undefined) return '';
         return this.formatDataLabel(numeric);
       },
@@ -3945,10 +4027,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const parsedPoint = normalizedChartPoint(parsed);
     // Scalar cartesian data uses the effective value axis. Structured points keep their y-value
     // contract, and partial/radial parsed shapes retain the existing numeric fallback.
-    const rawValue = (horizontal && !normalizedChartPoint(raw) ? parsedPoint?.x : parsedPoint?.y) ??
+    let rawValue = (horizontal && !normalizedChartPoint(raw) ? parsedPoint?.x : parsedPoint?.y) ??
       parsed ?? raw;
-    const formatted = this.formatValue(rawValue, 'tooltip');
-    if (formatted === rawValue || formatted === undefined) return undefined;
+    const indexes = this.scaledSliceDatasets.size ? this.callbackIndexes(context) : undefined;
+    const scaled = indexes !== undefined && this.scaledSliceDatasets.has(indexes.datasetIndex);
+    if (scaled) {
+      const dataset = this.effectiveData().datasets[this.visualDatasetSourceIndexes?.[indexes.datasetIndex] ?? indexes.datasetIndex];
+      rawValue = this.datasetValues(dataset!)[this.visualRowSourceIndexes?.[indexes.index] ?? indexes.index];
+    }
+    let formatted = this.formatValue(rawValue, 'tooltip');
+    if ((!scaled && formatted === rawValue) || formatted === undefined) return undefined;
+    if (scaled && typeof formatted === 'number') formatted = this.formatSummaryValue(formatted);
     const label = chartDatasetLabel(chartDatasetValue(context, 'dataset'));
     return label
       ? this.localize('chartValueLabel', undefined, {
@@ -4159,7 +4248,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             backgroundColor: theme.tooltipBg,
             titleColor: theme.tooltipText,
             bodyColor: theme.tooltipText,
-            ...(this.formatter || this.valueFormatter
+            ...(this.formatter || this.valueFormatter ||
+              ((effectiveType === 'pie' || effectiveType === 'doughnut') && !this.hasExplicitConfigData())
               ? {
                   callbacks: {
                     label: (context: ChartTooltipContext) =>
@@ -4245,9 +4335,31 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return merged;
   }
 
+  /** Keep proportional slice geometry finite while every Lyra readout retains source values. */
+  private scaleExtremeSlices(config: RuntimeChartConfiguration): void {
+    this.scaledSliceDatasets.clear();
+    if ((config.type !== 'pie' && config.type !== 'doughnut') || this.hasExplicitConfigData()) return;
+    for (const [index, dataset] of config.data.datasets.entries()) {
+      const source = this.datasetValues(dataset);
+      const maximum = source.reduce<number>((largest, value) => {
+        const number = chartDatumNumericValue(value);
+        return number === undefined ? largest : Math.max(largest, Math.abs(number));
+      }, 0);
+      // Chart.js multiplies a slice value by the sweep before dividing by its total. Uniform
+      // scaling avoids intermediate overflow and unbounded native arc loops at extreme magnitudes.
+      if (maximum <= Number.MAX_SAFE_INTEGER) continue;
+      dataset.data = source.map((value) => {
+        const number = chartDatumNumericValue(value);
+        return number === undefined ? value : number / maximum;
+      });
+      this.scaledSliceDatasets.add(index);
+    }
+  }
+
   private draw(): void {
     if (!this.chartJsModule || !this.canvasEl) return;
     const config = this.buildConfig();
+    this.scaleExtremeSlices(config);
     const effectiveType = config.type;
     const nextPlugins = projectChartPlugins(config.plugins);
     const samePlugins =
@@ -4262,6 +4374,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // configured `hidden` default.
       this.applyDatasetVisibility();
       this.chart.update('none');
+      if (this.applyDatumVisibility()) this.chart.update('none');
       this.updateChartArea(this.chart);
       return;
     }
@@ -4275,8 +4388,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // A new Chart already reads configured `dataset.hidden` values. Apply and redraw only when a
     // public controlled snapshot is present; this also avoids a redundant first update for the
     // ordinary uncontrolled construction path.
-    if (this.canonicalHiddenDatasets() !== undefined) {
-      this.applyDatasetVisibility();
+    const datasetsControlled = this.canonicalHiddenDatasets() !== undefined;
+    if (datasetsControlled) this.applyDatasetVisibility();
+    if (this.applyDatumVisibility() || datasetsControlled) {
       this.chart.update('none');
     }
     this.updateChartArea(this.chart);
@@ -4644,43 +4758,37 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private legendTextFor(
-    dataset: LyraChartDatasetConfiguration,
-    datasetIndex: number,
-    rowIndexes?: readonly number[]
+    label: string,
+    value: number | undefined,
+    percentage: number,
   ): string {
-    const label = this.datasetLabel(dataset, datasetIndex);
-    if (!this.formatter && !this.valueFormatter) return label;
-    const source = this.datasetValues(dataset);
-    const selected = rowIndexes ?? source.map((_, index) => index);
-    const values: number[] = [];
-    for (const index of selected) {
-      const datum = source[index];
-      const value = chartDatumNumericValue(datum);
-      if (value !== undefined) values.push(value);
-    }
-    if (!values.length) return label;
-    const value = values.reduce((sum, item) => finiteAdd(sum, item), 0);
-    const formatted = this.formatValue(value, 'legend');
-    return formatted === value || formatted === undefined
+    if (this.legendDisplay === 'label' || value === undefined) return label;
+    const explicit = this.legendDisplay === 'value' || this.legendDisplay === 'percentage';
+    const formatted = this.legendDisplay === 'percentage'
+      ? getNumberFormat(this.effectiveLocale, { style: 'percent', maximumFractionDigits: 1 }).format(percentage)
+      : this.formatValue(value, 'legend');
+    return (!explicit && formatted === value) || formatted === undefined
       ? label
       : this.localize('chartValueLabel', undefined, {
           label,
-          value: String(formatted),
+          value: typeof formatted === 'number' ? this.formatSummaryValue(formatted) : String(formatted),
         });
   }
 
   private legendColor(
     dataset: LyraChartDatasetConfiguration,
     datasetIndex: number,
-    palette: string[] = this.seriesPalette()
+    palette: string[] = this.seriesPalette(),
+    datumIndex?: number,
   ): string {
-    const fallback = palette[datasetIndex % palette.length] ?? 'transparent';
+    const fallback = palette[(datumIndex ?? datasetIndex) % palette.length] ?? 'transparent';
     const rawCandidate =
       chartDatasetValue(dataset, 'backgroundColor') ??
       chartDatasetValue(dataset, 'borderColor') ??
       chartDatasetValue(dataset, 'color');
     const array = admitChartArray(rawCandidate);
-    const first = array ? chartRecordValue(array.source, '0') : undefined;
+    const first = array?.length
+      ? chartRecordValue(array.source, String((datumIndex ?? 0) % array.length)) : undefined;
     const candidate =
       first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR
         ? undefined
@@ -4719,12 +4827,62 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     );
   }
 
+  private toggleDatum(index: number): void {
+    if (!this.chart || !this.isSliceChart()) return;
+    const count = this.dataTableSample().rowCount;
+    if (index < 0 || index >= count) return;
+    const hidden = normalizeHiddenDatasets(this.hiddenDatums, count) ?? [];
+    const visible = hidden.includes(index);
+    const next = visible ? hidden.filter((item) => item !== index) : [...hidden, index].sort((a, b) => a - b);
+    const detail: LyraChartDatumVisibilityChangeDetail = { index, visible, hiddenDatums: next };
+    if (this.emit('lr-before-datum-visibility-change', detail, { cancelable: true }).defaultPrevented) return;
+    this.hiddenDatums = next;
+    this.applyDatumVisibility();
+    this.chart.update('none');
+    this.emit('lr-datum-visibility-change', detail);
+  }
+
   private renderLegend(): TemplateResult | typeof nothing {
     if (!this.showsLegend) return nothing;
     const effective = this.effectiveData();
     if (!effective.datasets.length) return nothing;
     const sample = this.dataTableSample(effective);
-    const palette = this.seriesPalette();
+    let palette = this.seriesPalette();
+    const datumMode = this.legendMode === 'datum' && this.isSliceChart();
+    if (datumMode) palette = palette.map((fallback, index) =>
+      index < 6 ? this.styleColor(`--fill-color-${index + 1}`, fallback) : fallback,
+    );
+    const forcedColors = forcedColorsActive(this.ownerWindow);
+    const hiddenDatums = new Set(normalizeHiddenDatasets(this.hiddenDatums, sample.rowCount));
+    const needValues = this.legendDisplay !== 'label' &&
+      (this.legendDisplay === 'value' || this.legendDisplay === 'percentage' || this.formatter || this.valueFormatter);
+    const entries = (datumMode ? sample.rowIndexes : sample.seriesIndexes).map((index) => {
+      const datasetIndex = datumMode ? 0 : index;
+      const dataset = effective.datasets[datasetIndex]!;
+      const source = this.datasetValues(dataset);
+      let value: number | undefined;
+      let valueScale = 0;
+      let scaledValue = 0;
+      if (needValues) {
+        for (const row of datumMode ? [index] : sample.rowIndexes) {
+          const number = chartDatumNumericValue(source[row]);
+          if (number !== undefined) {
+            value = finiteAdd(value ?? 0, number);
+            const nextScale = Math.max(valueScale, Math.abs(number));
+            if (nextScale) scaledValue = scaledValue * (valueScale / nextScale) + number / nextScale;
+            valueScale = nextScale;
+          }
+        }
+      }
+      const label = datumMode
+        ? labelText(effective.labels[index]) || this.localize('chartPointLabel', undefined, { n: this.formatSummaryValue(index + 1) })
+        : this.datasetLabel(dataset, datasetIndex);
+      return { index, datasetIndex, dataset, label, value, valueScale, scaledValue };
+    });
+    // Preserve each sum's scale before computing shares: saturating finite totals would make
+    // differently sized datasets above Number.MAX_VALUE appear equal.
+    const maximum = entries.reduce((largest, entry) => Math.max(largest, entry.valueScale), 0);
+    const total = maximum ? entries.reduce((sum, entry) => sum + Math.abs(entry.scaledValue) * (entry.valueScale / maximum), 0) : 0;
     const controlledHidden = normalizeHiddenDatasets(
       this.canonicalHiddenDatasets(),
       effective.datasets.length
@@ -4739,17 +4897,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         data-position=${this.legendPositionForLayout()}
         aria-label=${this.accessibleName(this.localize('chart'))}
       >
-        ${sample.seriesIndexes.map((index) => {
-          const dataset = effective.datasets[index]!;
+        ${entries.map(({ index, datasetIndex, dataset, label, value, valueScale, scaledValue }) => {
           // In uncontrolled mode the effective data configuration is the visibility source. DOM
           // legend interaction writes `hiddenDatasets`, so Chart.js metadata never becomes a
           // separate, unobservable state source.
           const visible =
-            controlledHiddenSet === undefined
+            datumMode ? !hiddenDatums.has(index) : controlledHiddenSet === undefined
               ? chartDatasetBoolean(dataset, 'hidden') !== true
               : !controlledHiddenSet.has(index);
           const encoding: ForcedColorEncodingName | undefined =
-            forcedColorsActive(this.ownerWindow)
+            forcedColors
               ? forcedColorEncoding(index).name
               : undefined;
           return html`
@@ -4757,7 +4914,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               part=${visible ? 'legend-item' : 'legend-item legend-item-hidden'}
               type="button"
               aria-pressed=${visible ? 'true' : 'false'}
-              @click=${() => this.toggleDataset(index)}
+              @click=${() => datumMode ? this.toggleDatum(index) : this.toggleDataset(index)}
             >
               <span
                 part="legend-swatch"
@@ -4765,11 +4922,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 data-encoding=${encoding ?? nothing}
                 style="background-color:${this.legendColor(
                   dataset,
-                  index,
-                  palette
+                  datasetIndex,
+                  palette,
+                  datumMode ? index : undefined,
                 )}"
               ></span>
-              <span>${this.legendTextFor(dataset, index, sample.rowIndexes)}</span>
+              <span>${this.legendTextFor(label, value, total ? Math.abs(scaledValue) * (valueScale / maximum) / total : 0)}</span>
             </button>
           `;
         })}

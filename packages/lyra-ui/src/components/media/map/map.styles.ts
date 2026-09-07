@@ -444,6 +444,15 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text);
     cursor: pointer;
+    place-items: center;
+  }
+  .maplibregl-ctrl-attrib-button::before {
+    content: '';
+    display: block;
+    inline-size: var(--lr-size-1rem);
+    block-size: var(--lr-size-1rem);
+    background: currentColor;
+    mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Ccircle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/%3E%3Cpath d="M12 10v7m0-10v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/%3E%3C/svg%3E') center / contain no-repeat;
   }
   .maplibregl-ctrl-attrib.maplibregl-compact {
     position: relative;
@@ -453,12 +462,15 @@ export const styles = css`
   .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
     display: none;
   }
-  .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button,
+  .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+    display: grid;
+  }
   .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
     display: block;
   }
   .maplibregl-ctrl-attrib-button:hover,
-  .maplibregl-ctrl-attrib-button:active {
+  .maplibregl-ctrl-attrib-button:active,
+  .maplibregl-ctrl-attrib:where([open]) .maplibregl-ctrl-attrib-button {
     background: var(--lr-color-brand-quiet);
   }
   .maplibregl-ctrl-attrib-button:focus-visible {
@@ -479,6 +491,12 @@ export const styles = css`
   }
 
   @media (forced-colors: active) {
+    .maplibregl-ctrl-attrib-button {
+      color: ButtonText;
+    }
+    .maplibregl-ctrl-attrib-button::before {
+      forced-color-adjust: none;
+    }
     [part='legend-swatch'] {
       background: Canvas !important;
       border-color: CanvasText;
