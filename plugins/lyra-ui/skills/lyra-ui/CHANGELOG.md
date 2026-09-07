@@ -1,5 +1,29 @@
 # Changelog
 
+## 14.3.0
+
+### Minor Changes
+
+- 3d58e7a: Add numeric feature-field radius scales to declarative map points, with threshold or linear interpolation, bounded stops and explicit fallbacks. Categories remain on one clustered source while cluster-count sizes stay independent.
+  
+  Add fill, stroke and combined modes to safe path-only map icons, including viewBox-scaled stroke widths and cap/join options. Preserve filled-path defaults, local bounded rasterization, theme updates, resource cleanup, clicks and canvas export.
+  
+  Keep expanded attribution clear of opposite map controls on narrow layouts, align navigation to its logical edge, and reserve legend space even when attribution is the only control. Preserve the gradient's visible width in shrink-to-fit legends and keep scale labels inside their background without changing the peer's distance-bar width.
+- d7aa2c0: Add opt-in category legends and controlled slice visibility to pie, doughnut and polar-area charts. Legend text can show labels, values or percentages independently of tooltip and axis formatting. Category toggles preserve source indexes across sampling and multiple rings, with immutable, cancelable visibility events.
+  
+  Keep extreme finite pie and doughnut values from overflowing native arc geometry while retaining original values in Lyra readouts and exports.
+  
+  Forward button pressed and current-item ARIA states reactively to the internal native control, including state removal, href changes and disabled controls.
+  
+  Add opt-in persistent table sort indicators, restore the compact map attribution information glyph,
+  and document a responsive details-header recipe for independent controls.
+
+### Patch Changes
+
+- 249d8a1: Keep sampled chart category legends and accessible tables responsive by sharing dataset projections and color probes within each render. Data and theme updates still receive fresh values, including percentage labels and repeated token-based category colors.
+  
+  Let map scale labels fit different fonts and text sizes while drawing the ruler at the native geographic width, including after zoom changes.
+
 ## 14.2.0
 
 ### Minor Changes
