@@ -11,3 +11,7 @@ Preserve fractional slider values across value-first Lit bindings and prevent co
 Add typed category point colors, radius/stroke and safe SVG path icons to map data layers. Categories retain one shared clustered source; theme changes, style reloads, feature clicks and canvas exports preserve their appearance.
 
 Respect configured bar border defaults when generating datasets, preserving visible dense histograms and explicit per-series widths.
+
+Add a compact flag-only locale-picker trigger with an accessible current-language description, a public trigger-label part, and independent label/flag-label modes.
+
+Add configurable heatmap matrix gaps and rounded corners, with sparse visual column labels that preserve full tooltip and keyboard semantics.

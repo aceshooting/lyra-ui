@@ -21939,6 +21939,13 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/data/heatmap/heatmap-matrix-presentation.test.ts",
+              "line": 75,
+              "test": "uses custom painted bounds for semantic cells and keeps complete labels with sparse visual columns",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/heatmap/heatmap-selection.test.ts",
               "line": 56,
               "test": "emits an immutable proposal and applies only the controlled assignment",
@@ -22126,7 +22133,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2214,
+              "line": 2242,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -22163,6 +22170,7 @@
         "tests": [
           "src/components/data/heatmap/calendar-grid.test.ts",
           "src/components/data/heatmap/heatmap-i18n.test.ts",
+          "src/components/data/heatmap/heatmap-matrix-presentation.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas.test.ts",
           "src/components/data/heatmap/heatmap-remediation.test.ts",
           "src/components/data/heatmap/heatmap-rtl.test.ts",
@@ -25999,14 +26007,28 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 720,
+              "line": 61,
+              "test": "renders a 36px flag-only trigger with an accessible current language in ${direction}",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/forms/locale-picker/locale-picker.test.ts",
+              "line": 61,
+              "test": "renders a 36px flag-only trigger with an accessible current language in ${direction}",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/forms/locale-picker/locale-picker.test.ts",
+              "line": 810,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 713,
+              "line": 803,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -26031,7 +26053,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 737,
+              "line": 60,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26106,7 +26128,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 961,
+              "line": 974,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

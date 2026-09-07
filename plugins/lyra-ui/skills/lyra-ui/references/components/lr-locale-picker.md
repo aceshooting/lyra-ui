@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -49,6 +49,14 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
 - `showFlags: boolean = true` — each row's leading `<lr-flag language={tag} variant="compact">`
   (or `<lr-flag country={country} variant="compact">` when the entry sets `country`); `false`
   omits the flag element entirely (not just visually).
+- `triggerDisplay: LyraLocaleTriggerDisplay = 'flag-label'` (attribute `trigger-display`) —
+  `'flag' | 'label' | 'flag-label'`. The default keeps the flag, label and chevron. `label`
+  omits only the trigger flag; the menu keeps its flags and endonyms. `flag` centers the flag in
+  a square and hides the visible label and chevron. The `trigger-label` remains available to
+  assistive technology and describes the trigger's current language; its accessible name still
+  follows `label`/the host `aria-label`. The square uses the shared/scoped trigger height with a
+  24px floor. `showFlags=false` retains visible text in every mode. Selection, keyboard navigation,
+  form values and the uncommitted effective-locale preview keep their usual behavior.
 - `value: string = ''` — the **committed** selection (form value, drives `lr-change`). While `''`
   and untouched, the trigger _displays_ `effectiveLocale` as a preview label, but
   `checkValidity()`/`required` are governed by the real `value`, which stays `''` until a real
@@ -112,7 +120,8 @@ priority until cleared.
 
 **CSS parts:** `form-control`, `form-control-label`, `trigger`,
 `trigger-flag` (the trigger's leading `<lr-flag>` for the current value, present only while
-`showFlags` is on), `listbox`, `option`, `option-flag` (present only while `showFlags` is on),
+`showFlags` is on and `triggerDisplay` is not `label`), `trigger-label` (the current language,
+visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present only while `showFlags` is on),
 `option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag), `expand-icon`,
 `hint`, `error`.
 
@@ -136,6 +145,11 @@ quiet-brand, and semibold semantic tokens.
 **Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
 peer warning duplication; `lr-flag` itself already logs one) when the optional
 `@aceshooting/lyra-flags` package isn't installed and `showFlags` is left on.
+
+A compact header can set `trigger-display="flag"` and
+`--lr-locale-picker-trigger-height: 2.25rem` for a 36px square at the usual 16px root size.
+Import `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` to register the optional flag
+resolver. Menu labels stay visible; a per-entry `country` override also reaches the compact trigger.
 
 ```html
 <lr-locale-picker label="Language"></lr-locale-picker>

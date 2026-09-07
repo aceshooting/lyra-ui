@@ -27,6 +27,18 @@ export const Default: Story = {
   render: () => html`<lr-locale-picker label="Language"></lr-locale-picker>`,
 };
 
+export const CompactHeader: Story = {
+  parameters: { docs: { description: { story: 'A square flag trigger retains the accessible current language and the full option labels. The shared small control height sets both dimensions; a country override reaches the trigger and its menu row.' } } },
+  render: () => html`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--lr-space-m);max-inline-size:var(--lr-size-20rem);--lr-theme-form-control-height-s:2.25rem">
+      <span>Workspace</span>
+      <lr-locale-picker size="s" value="en" trigger-display="flag" aria-label="Language"
+        .locales=${[{ tag: 'en', country: 'gb' }, { tag: 'fr' }, { tag: 'he' }]}
+        @lr-change=${(event: Event) => event.preventDefault()}></lr-locale-picker>
+    </div>
+  `,
+};
+
 export const CustomCatalog: Story = {
   name: 'Custom catalog with labels',
   render: () => html`

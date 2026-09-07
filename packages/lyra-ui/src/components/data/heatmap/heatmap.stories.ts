@@ -575,3 +575,19 @@ export const WeeklyAvailability: Story = {
     </section>
   `,
 };
+
+
+export const MatrixPresentation: Story = {
+  parameters: { docs: { description: { story: 'A fluid 7×24 activity matrix with 1px column gaps, 2px row gaps, 2px rounded corners, and every third hour painted on the axis. Hover or use arrow keys: every hour retains its full label.' } } },
+  render: () => html`
+    <lr-heatmap fit-to-width cell-gap-x="1" cell-gap-y="2" cell-radius="2" col-label-interval="3"
+      aria-label="Hourly activity" value-label="events"
+      style="inline-size:var(--lr-size-38rem);max-inline-size:100%"
+      .data=${{
+        kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        colLabels: Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, '0')}:00`),
+        values: Array.from({ length: 7 }, (_, day) => Array.from({ length: 24 }, (_, hour) => (day * 7 + hour * 3) % 16)),
+      }}
+    ></lr-heatmap>
+  `,
+};

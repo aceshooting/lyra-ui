@@ -56272,6 +56272,36 @@
             "hasDefault": false
           },
           {
+            "name": "cell-gap-x",
+            "property": "cellGapX",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
+          },
+          {
+            "name": "cell-gap-y",
+            "property": "cellGapY",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
+          },
+          {
+            "name": "cell-radius",
+            "property": "cellRadius",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
             "name": "cell-size",
             "property": "cellSize",
             "type": "number",
@@ -56288,6 +56318,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "col-label-interval",
+            "property": "colLabelInterval",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           },
           {
             "name": "col-label-rotation",
@@ -56433,6 +56473,26 @@
             "hasDefault": false
           },
           {
+            "name": "cellGapX",
+            "attribute": "cell-gap-x",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
+          },
+          {
+            "name": "cellGapY",
+            "attribute": "cell-gap-y",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
+          },
+          {
             "name": "cellInteractive",
             "attribute": null,
             "type": "( pos: MatrixCellPos | CalendarCellPos, value: number ) => boolean | undefined",
@@ -56440,6 +56500,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "cellRadius",
+            "attribute": "cell-radius",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "cellSize",
@@ -56467,6 +56537,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "colLabelInterval",
+            "attribute": "col-label-interval",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           },
           {
             "name": "colLabelRotation",
@@ -68464,6 +68544,16 @@
             "default": "m"
           },
           {
+            "name": "trigger-display",
+            "property": "triggerDisplay",
+            "type": "LyraLocaleTriggerDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "flag-label"
+          },
+          {
             "name": "value",
             "property": "defaultValue",
             "type": "string",
@@ -68626,6 +68716,16 @@
             "default": "m"
           },
           {
+            "name": "triggerDisplay",
+            "attribute": "trigger-display",
+            "type": "LyraLocaleTriggerDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "flag-label"
+          },
+          {
             "name": "validationMessage",
             "attribute": null,
             "type": "string",
@@ -68749,6 +68849,10 @@
           },
           {
             "name": "trigger-flag",
+            "deprecated": null
+          },
+          {
+            "name": "trigger-label",
             "deprecated": null
           }
         ],

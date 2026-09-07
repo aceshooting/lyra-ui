@@ -1688,6 +1688,20 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
 - `cellSize: number = 22` (attribute `cell-size` — default `22` in matrix mode, `11` in calendar
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)
+- `cellGapX: number = 1` / `cellGapY: number = 1` (attributes `cell-gap-x` / `cell-gap-y`) —
+  matrix-only trailing horizontal/vertical gaps in CSS pixels, subtracted from the square
+  `cellSize` pitch. Negative values clamp to zero, non-finite values use `1`, and oversized gaps
+  leave at least one painted pixel. Custom geometry with `accessibleCells` grows the minimum pitch
+  and caps gaps to preserve the `--lr-icon-button-size` target floor. Calendar spacing is unchanged.
+- `cellRadius: number = 0` (attribute `cell-radius`) — matrix-only painted corner radius in CSS
+  pixels, clamped from zero to half the smaller painted side; non-finite values use zero. Custom
+  cell fills, focus/selection/annotation rings, semantic overlays, and PNG canvas output share the
+  same bounds. Custom gaps are excluded from canvas pointer hits; rounded cells retain rectangular
+  interaction bounds. The default one-pixel separator retains its existing hit area.
+- `colLabelInterval: number = 1` (attribute `col-label-interval`) — paint every Nth matrix column
+  label starting at column zero, including frozen labels and rotated label measurement. Truncated
+  to an integer of at least one; non-finite values use `1`. Every original `data.colLabels` value
+  remains available to tooltips, keyboard announcements, semantic cells, and `cellText`.
 - `fitToWidth: boolean = false` (attribute `fit-to-width` — derives `cellSize` from the host's
   measured `clientWidth` on every draw/resize instead of the fixed `cell-size`, so the grid actually
   fills the available width; now applies to calendar mode as well as matrix mode — see gotchas for
@@ -1931,14 +1945,21 @@ color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key r
 
 **Getters/methods:** `refreshTheme()` — redraws canvas content after an upstream design-token or
 color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
-force a redraw manually. `matrixGeometry: Readonly<{ padLeft: number; padTop: number; cellSize:
-number }> | undefined` — the gutter/cell geometry the last matrix-mode draw actually painted with,
+force a redraw manually. `matrixGeometry: Readonly<LyraHeatmapMatrixGeometryChangeDetail> | undefined` — the gutter/cell geometry the last matrix-mode draw actually painted with,
 in CSS pixels; `undefined` in calendar mode. Lets a light-DOM consumer line up with the canvas
 without hardcoding the same numbers `row-label-width`/`col-label-height`'s `"auto"` resolution would
 otherwise keep private. For the case that motivated it — a frozen header or gutter on a tall or wide
 matrix — prefer `stickyLabels`, which freezes the band inside the component and needs no mirror at
 all; the getter remains the way to align a *separate* element (a sibling chart, a custom overlay)
-with the grid.
+with the grid. `LyraHeatmapMatrixGeometryChangeDetail` contains `padLeft`, `padTop`, and `cellSize`
+(the square pitch), plus optional `cellWidth`, `cellHeight`, and `cellRadius` for custom matrix
+presentation. When those optional fields are absent, painted width/height are `cellSize - 1` and
+radius is zero. The getter and geometry-change event always share one frozen snapshot, including
+changes to the resolved gaps/radius.
+
+For a fluid day/hour matrix, keep all 24 hour strings in `data.colLabels` and use
+`fit-to-width cell-gap-x="1" cell-gap-y="2" cell-radius="2" col-label-interval="3"`.
+For a single fluid square cell, use `fit-to-width` with equal horizontal and vertical gaps.
 
 **Events:** `lr-selection-change` (not cancelable; frozen readonly `HeatmapSelectionChangeDetail { selectedCells, source }` proposal in multiple mode, with `source: 'pointer' | 'keyboard' | 'row' | 'column'`; accept it by assigning `selectedCells`). `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
 `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),

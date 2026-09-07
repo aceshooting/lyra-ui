@@ -163,6 +163,7 @@ export { LyraLocalePicker } from './components/forms/locale-picker/locale-picker
 export type {
   LyraLocaleEntry,
   LyraLocaleCatalog,
+  LyraLocaleTriggerDisplay,
   LyraLocaleChangeDetail,
   LyraLocalePickerEventMap,
 } from './components/forms/locale-picker/locale-picker.class.js';

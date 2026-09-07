@@ -78,6 +78,15 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='trigger']:where(.flag-only) {
+    --_lr-locale-picker-compact-size: max(var(--lr-size-24px), var(--lr-locale-picker-trigger-height, var(--lr-locale-picker-trigger-min-height, var(--_lr-locale-picker-trigger-min-height-default))));
+    inline-size: var(--_lr-locale-picker-compact-size);
+    block-size: var(--_lr-locale-picker-compact-size);
+    min-inline-size: min(var(--lr-icon-button-size), var(--_lr-locale-picker-compact-size));
+    min-block-size: min(var(--lr-icon-button-size), var(--_lr-locale-picker-compact-size));
+    justify-content: center;
+    padding: var(--lr-locale-picker-trigger-padding, 0);
+  }
   /* :where() keeps this at (0,1,0), the same weight as the pressed rule below, which therefore
      wins on source order while the trigger is held. Matches lr-select and lr-model-select. */
   :where([part='trigger']):hover:where(:not(:disabled)) {

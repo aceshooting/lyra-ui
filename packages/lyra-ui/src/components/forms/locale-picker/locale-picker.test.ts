@@ -33,6 +33,96 @@ function requiredItem<T>(items: ArrayLike<T>, index: number, description: string
   return item;
 }
 
+it('keeps the default flag-label trigger and exposes independent trigger label styling', async () => {
+  const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`);
+  expect(el.triggerDisplay).to.equal('flag-label');
+  const label = () => el.shadowRoot!.querySelector<HTMLElement>('[part="trigger-label"]')!;
+  expect(label()?.textContent).to.equal(localeNativeName('fr'));
+  expect(el.shadowRoot!.querySelectorAll('[part="trigger-flag"]').length).to.equal(1);
+  const style = document.createElement('style');
+  style.textContent = 'lr-locale-picker::part(trigger-label) { font-weight: 800; }';
+  document.head.append(style);
+  try { expect(getComputedStyle(label()).fontWeight).to.equal('800'); } finally { style.remove(); }
+  el.triggerDisplay = 'label';
+  el.open = true;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="trigger-flag"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="option-flag"]').length).to.equal(2);
+  expect(getComputedStyle(label()).position).to.not.equal('absolute');
+  el.setAttribute('trigger-display', 'flag');
+  await el.updateComplete;
+  el.removeAttribute('trigger-display');
+  await el.updateComplete;
+  expect(el.triggerDisplay).to.equal('flag-label');
+  expect(el.shadowRoot!.querySelectorAll('[part="trigger-flag"]').length).to.equal(1);
+});
+
+for (const direction of ['ltr', 'rtl'] as const) {
+  it(`renders a 36px flag-only trigger with an accessible current language in ${direction}`, async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker dir=${direction} value="fr"
+      trigger-display="flag" aria-label="Interface language" hint="Choose your language"
+      size="s" style="inline-size:36px;--lr-theme-form-control-height-s:36px"
+      .locales=${['en', 'fr', 'he']}></lr-locale-picker>`);
+    const button = trigger(el);
+    const rect = button.getBoundingClientRect();
+    expect(rect.width).to.equal(36);
+    expect(rect.height).to.equal(36);
+    const label = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger-label"]')!;
+    expect(label?.textContent).to.equal(localeNativeName('fr'));
+    expect(label.getBoundingClientRect().width).to.be.at.most(1);
+    expect(button.getAttribute('aria-label')).to.equal('Interface language');
+    expect(button.getAttribute('aria-describedby')?.split(' ')).to.include(label.id);
+    expect(button.getAttribute('aria-describedby')?.split(' ')).to.include('locale-picker-hint');
+    expect(el.shadowRoot!.querySelectorAll('[part="expand-icon"]').length).to.equal(0);
+    const flag = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger-flag"]')!;
+    const flagRect = flag.getBoundingClientRect();
+    expect(Math.abs(flagRect.left + flagRect.width / 2 - rect.left - rect.width / 2)).to.be.at.most(1);
+    await expect(el).to.be.accessible();
+    el.open = true;
+    await el.updateComplete;
+    expect(rows(el).length).to.equal(3);
+    const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][aria-selected="true"]')!;
+    expect(selected.textContent).to.include(localeNativeName('fr'));
+    expect(selected.querySelector<HTMLElement>('[part="option-label"]')!.getBoundingClientRect().width).to.be.greaterThan(1);
+    await expect(el).to.be.accessible();
+    el.style.setProperty('--lr-locale-picker-trigger-height', '48px');
+    expect(button.getBoundingClientRect().width).to.equal(48);
+    expect(button.getBoundingClientRect().height).to.equal(48);
+  });
+}
+
+it('keeps compact keyboard commits, form values, locale preview and flag opt-out coherent', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form><lr-locale-picker trigger-display="flag" name="language"
+    value="en" .locales=${['en', 'fr']} @lr-change=${(event: Event) => event.preventDefault()}></lr-locale-picker></form>`);
+  const el = form.querySelector('lr-locale-picker')!;
+  el.focus();
+  await sendKeys({ press: 'ArrowDown' });
+  await waitUntil(() => el.open);
+  await sendKeys({ press: 'End' });
+  const changed = oneEvent(el, 'lr-change');
+  await sendKeys({ press: 'Enter' });
+  expect((await changed).detail.value).to.equal('fr');
+  await el.updateComplete;
+  expect(new FormData(form).get('language')).to.equal('fr');
+  const label = () => el.shadowRoot!.querySelector<HTMLElement>('[part="trigger-label"]')!;
+  expect(label().textContent).to.equal(localeNativeName('fr'));
+  expect(el.open).to.equal(false);
+  el.showFlags = false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('lr-flag').length).to.equal(0);
+  expect(getComputedStyle(label()).position).to.not.equal('absolute');
+  expect(el.shadowRoot!.querySelectorAll('[part="expand-icon"]').length).to.equal(1);
+  el.value = '';
+  el.locale = 'he';
+  el.required = true;
+  el.showFlags = true;
+  await el.updateComplete;
+  expect(label().textContent).to.equal(localeNativeName('he'));
+  expect(el.value).to.equal('');
+  expect(el.validity.valueMissing).to.equal(true);
+  expect(trigger(el).getAttribute('aria-describedby')?.split(' ')).to.include(label().id);
+});
+
 it('rejects direct open writes while disabled or synchronously fieldset-disabled', async () => {
   const fieldset = await fixture<HTMLFieldSetElement>(html`
     <fieldset><lr-locale-picker .locales=${['en', 'fr']}></lr-locale-picker></fieldset>

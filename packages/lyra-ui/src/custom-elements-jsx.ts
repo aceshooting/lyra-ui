@@ -4795,10 +4795,14 @@ export type LyraHeatmapReactProps = LyraReactElementProps<
   | 'annotations'
   | 'bucketCount'
   | 'cellColor'
+  | 'cellGapX'
+  | 'cellGapY'
   | 'cellInteractive'
+  | 'cellRadius'
   | 'cellSize'
   | 'cellText'
   | 'colLabelHeight'
+  | 'colLabelInterval'
   | 'colLabelRotation'
   | 'colorSteps'
   | 'data'
@@ -4837,8 +4841,12 @@ export type LyraHeatmapReactProps = LyraReactElementProps<
   {
     'accessible-cells'?: LyraHeatmap['accessibleCells'];
     'bucket-count'?: LyraHeatmap['bucketCount'];
+    'cell-gap-x'?: LyraHeatmap['cellGapX'];
+    'cell-gap-y'?: LyraHeatmap['cellGapY'];
+    'cell-radius'?: LyraHeatmap['cellRadius'];
     'cell-size'?: LyraHeatmap['cellSize'];
     'col-label-height'?: LyraHeatmap['colLabelHeight'];
+    'col-label-interval'?: LyraHeatmap['colLabelInterval'];
     'col-label-rotation'?: LyraHeatmap['colLabelRotation'];
     'fit-to-width'?: LyraHeatmap['fitToWidth'];
     'max-cell-size'?: LyraHeatmap['maxCellSize'];
@@ -5836,6 +5844,7 @@ export type LyraLocalePickerReactProps = LyraReactElementProps<
   | 'showFlags'
   | 'size'
   | 'strings'
+  | 'triggerDisplay'
   | 'value',
   {
     form: HTMLFormElement | string | null;
@@ -5865,6 +5874,7 @@ export type LyraLocalePickerReactProps = LyraReactElementProps<
     'custom-error'?: LyraLocalePicker['customError'];
     'error-text'?: LyraLocalePicker['errorText'];
     'show-flags'?: LyraLocalePicker['showFlags'];
+    'trigger-display'?: LyraLocalePicker['triggerDisplay'];
     'value'?: LyraLocalePicker['defaultValue'];
   }
 >;
