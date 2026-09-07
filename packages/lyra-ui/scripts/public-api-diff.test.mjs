@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -16,6 +16,7 @@ import {
   parseNpmPackOutput,
   parseChangesetText,
   readPackageApi,
+  runCli,
   validateTarEntries,
   validateTarEntryTypes,
   versionBump,
@@ -29,6 +30,36 @@ const readFixture = (name) =>
 const baseline = readFixture('baseline');
 const additive = readFixture('additive');
 const breaking = readFixture('breaking');
+
+test('scopes default reviewed exceptions to the package being checked and honors an explicit path', (context) => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-api-exception-scope-'));
+  context.mock.method(console, 'log', () => {});
+  try {
+    writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+      name: '@example/companion', version: '1.0.0', types: './index.d.ts',
+      exports: { '.': { types: './index.d.ts', default: './index.js' } },
+    }));
+    writeFileSync(path.join(root, 'index.js'), 'export const value = 1;\n');
+    writeFileSync(path.join(root, 'index.d.ts'), 'export declare const value: number;\n');
+    const args = ['--baseline', root, '--current', root, '--changesets', root];
+    assert.equal(runCli(args), 0, 'a companion package must not inherit this script package\'s exceptions');
+    mkdirSync(path.join(root, 'scripts'));
+    writeFileSync(path.join(root, 'scripts/public-api-semver-exceptions.json'), JSON.stringify({
+      exceptions: [{
+        changeId: 'companion-review', requiredBump: 'major', allowedBump: 'patch',
+        before: 'before', after: 'after', reason: 'Reviewed companion API change',
+        reviewer: 'Test reviewer', reviewedOn: '2026-09-07',
+      }],
+    }));
+    assert.throws(() => runCli(args), /Reviewed API exception companion-review does not match/);
+    const explicitPath = path.join(root, 'explicit-exceptions.json');
+    writeFileSync(explicitPath, JSON.stringify({ exceptions: [] }));
+    assert.equal(runCli(['--exceptions', explicitPath, ...args]), 0);
+    assert.equal(runCli([...args, '--exceptions', explicitPath]), 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('reads a typed non-component package from its root declaration entries', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'lyra-public-api-flags-'));

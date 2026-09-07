@@ -3193,7 +3193,7 @@ function parseArgs(argv) {
   const options = {
     current: packageDir,
     changesets: path.join(repoRoot, '.changeset'),
-    exceptions: path.join(scriptsDir, 'public-api-semver-exceptions.json'),
+    exceptions: undefined,
     json: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -3210,6 +3210,7 @@ function parseArgs(argv) {
     options[argument.slice(2)] = path.resolve(value);
     index += 1;
   }
+  options.exceptions ??= path.join(options.current, 'scripts', 'public-api-semver-exceptions.json');
   return options;
 }
 
