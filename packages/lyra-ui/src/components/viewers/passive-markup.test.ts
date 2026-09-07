@@ -9,6 +9,7 @@ import './svg-viewer/svg-viewer.js';
 import './include/include.js';
 import type { LyraHtmlViewer } from './html-viewer/html-viewer.js';
 import type { LyraEmailViewer } from './email-viewer/email-viewer.js';
+import { loadEmailDeps } from './email-viewer/email-loader.js';
 import type { LyraNotebookViewer } from './notebook-viewer/notebook-viewer.js';
 import type { LyraDocxViewer } from './docx-viewer/docx-viewer.js';
 import type { LyraSvgViewer } from './svg-viewer/svg-viewer.js';
@@ -210,6 +211,10 @@ describe('passive markup through real viewer routes', () => {
   });
 
   it('sanitizes nested template contents through the real email parser and viewer', async () => {
+    // Load the real parser before the render assertion's polling budget begins. A cold dynamic
+    // import can outlast that budget while the complete suite serves other browser pages.
+    const deps = await loadEmailDeps();
+    expect(typeof deps.PostalMime?.parse).to.equal('function');
     const email = ['From: Reader <reader@example.test>', 'Subject: Passive document', 'Content-Type: text/html; charset=utf-8', '', passiveTemplates(8), ''].join('\r\n');
     window.fetch = (async () => new Response(email)) as typeof fetch;
     const viewer = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="/passive-document.eml"></lr-email-viewer>`);
