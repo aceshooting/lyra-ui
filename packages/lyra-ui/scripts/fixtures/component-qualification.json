@@ -26213,7 +26213,7 @@
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5461,
+              "line": 5465,
               "test": "clusters mixed categories, restores their rendered icons after a style reload and exports them",
               "target": "el",
               "state": "populated"

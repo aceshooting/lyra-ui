@@ -5412,10 +5412,14 @@ describe('standard peer navigation and scale controls', () => {
 
 it('renders declarative route metrics, restores them after style changes, and exports painted pixels', async function () {
   if (!hasWebGL2) this.skip();
+  let loaded = false;
   const el = await fixture<LyraMap>(html`<lr-map .mapStyle=${LOCAL_STYLE} zoom="14"
+    @lr-map-load=${() => { loaded = true; }}
     .legendGradient=${[[0, 'blue'], [100, 'red']]}
     legend-gradient-lo-label="0 km/h" legend-gradient-hi-label="100 km/h"></lr-map>`);
-  await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
+  // MapLibre can report its style ready before the component's load handler installs data layers.
+  // Wait for the public readiness event before capturing the generated resource identifiers.
+  await waitUntil(() => loaded, 'component map loaded', { timeout: 5000 });
   const map = el.map as unknown as import('maplibre-gl').Map;
   expect(map.getCanvas().getAttribute('aria-describedby')).to.equal('map-legend');
   const errors: string[] = [];
@@ -5460,8 +5464,10 @@ it('renders declarative route metrics, restores them after style changes, and ex
 
 it('clusters mixed categories, restores their rendered icons after a style reload and exports them', async function () {
   if (!hasWebGL2) this.skip();
-  const el = await fixture<LyraMap>(html`<lr-map label="Classified locations" .mapStyle=${LOCAL_STYLE} zoom="8"></lr-map>`);
-  await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
+  let loaded = false;
+  const el = await fixture<LyraMap>(html`<lr-map label="Classified locations" .mapStyle=${LOCAL_STYLE} zoom="8"
+    @lr-map-load=${() => { loaded = true; }}></lr-map>`);
+  await waitUntil(() => loaded, 'component map loaded', { timeout: 5000 });
   const map = el.map as unknown as import('maplibre-gl').Map;
   const errors: string[] = [];
   map.on('error', event => errors.push(String(event.error)));
