@@ -543,3 +543,35 @@ export const LiveSignedDomain: Story = {
     </div>
   `,
 };
+
+export const WeeklyAvailability: Story = {
+  parameters: {
+    docs: { description: { story: 'Controlled day/hour selection. Click or drag to paint/erase; Shift+arrows selects a rectangle, Shift+Space toggles the focused row, and Ctrl/Meta+Space toggles its column. Row and column methods also support application-owned toolbar controls. The grid scrolls inside a narrow allocation while labels stay visible.' } },
+  },
+  render: () => html`
+    <section style="max-inline-size: 100%; inline-size: var(--lr-size-38rem)">
+      <p>Choose available hours. Drag to select or clear a run of cells.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-xs); margin-block-end: var(--lr-space-s)">
+        <lr-button size="s" @click=${(event: Event) => {
+          (event.currentTarget as HTMLElement).closest('section')!.querySelector('lr-heatmap')!.toggleRowSelection(0);
+        }}>Toggle Monday</lr-button>
+        <lr-button size="s" @click=${(event: Event) => {
+          (event.currentTarget as HTMLElement).closest('section')!.querySelector('lr-heatmap')!.toggleColumnSelection(9);
+        }}>Toggle 09:00</lr-button>
+      </div>
+      <lr-heatmap multiple accessible-cells sticky-labels="both" cell-size="40"
+        style="--lr-heatmap-grid-max-block-size: var(--lr-size-20rem)"
+        aria-label="Weekly availability" value-label="availability"
+        .data=${{
+          kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          colLabels: Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0')),
+          values: Array.from({ length: 7 }, () => Array(24).fill(1)),
+        }}
+        .selectedCells=${[{ row: 0, col: 9 }, { row: 0, col: 10 }]}
+        @lr-selection-change=${(event: CustomEvent<import('./heatmap.js').HeatmapSelectionChangeDetail>) => {
+          (event.currentTarget as LyraHeatmap).selectedCells = event.detail.selectedCells;
+        }}
+      ></lr-heatmap>
+    </section>
+  `,
+};

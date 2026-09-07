@@ -79,6 +79,11 @@ export type SliderTooltipPlacement = 'top' | 'right' | 'bottom' | 'left';
  *  one of the two handles of a `range` slider. */
 export type SliderHandle = 'value' | 'min' | 'max';
 
+/** Text used by the optional visible readout. */
+export type SliderValueDisplay = 'numeric' | 'formatted';
+/** Places the optional readout beside the track or opposite the visible label. */
+export type SliderValuePlacement = 'inline' | 'label';
+
 /** Formats a finite, clamped slider value for `aria-valuetext` (and for the
  *  `with-tooltip` bubble); return a nullish value to omit `aria-valuetext`
  *  for that handle. The second argument identifies which handle is being
@@ -202,7 +207,8 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @csspart tooltip__content - Tooltip text wrapper.
  * @csspart tooltip__arrow - Decorative tooltip arrow.
  * @csspart tooltip-visible - Added to `tooltip` while that handle is focused or being dragged.
- * @csspart value - The visible numeric readout, rendered when `show-value` is true.
+ * @csspart value - The visible readout, rendered when `show-value` is true.
+ * @csspart label-row - Label and readout row, rendered with showValue and valuePlacement="label".
  * @csspart error - The error region, hidden while neither `errorText` nor the `error` slot has content.
  * @csspart hint - The hint region, hidden while neither `hint` nor the `hint` slot has content.
  * @method focus - Focuses the first thumb, or the lower thumb in range mode.
@@ -349,6 +355,21 @@ export class LyraSlider extends LyraSliderBase {
   private applyingRangeValueAttribute = false;
   private _defaultMinValue = 0;
   private _defaultMaxValue = 50;
+  private pendingValueBatch?: {
+    value: number;
+    min: number;
+    max: number;
+    lastRange?: 'min' | 'max';
+  };
+
+  /** Preserve pre-normalization inputs until the entire reactive batch has supplied its domain. */
+  private captureValueBatch(): NonNullable<LyraSlider['pendingValueBatch']> {
+    if (!this.pendingValueBatch) {
+      this.pendingValueBatch = { value: this._value, min: this._minValue, max: this._maxValue };
+      this.requestUpdate();
+    }
+    return this.pendingValueBatch;
+  }
 
   constructor() {
     super();
@@ -370,6 +391,8 @@ export class LyraSlider extends LyraSliderBase {
 
   /** Live numeric value. String writes remain accepted as a source-compatible input path, but
    * reads are always finite numbers; use `valueAsString` when a string round-trip is desired.
+   * Assignments in one reactive batch settle against its final min/max/step at updateComplete,
+   * so value-first Lit bindings retain fractions. Immediate reads use the current domain.
    * @default 0 */
   get value(): number {
     return this._value;
@@ -377,7 +400,9 @@ export class LyraSlider extends LyraSliderBase {
   set value(next: number | string) {
     const old = this._value;
     if (!this.settingDefaultValue) this._valueDirty = true;
-    this._value = this.clampValue(finiteNumber(Number(next), this.defaultNumericValue()));
+    const raw = finiteNumber(Number(next), this.defaultNumericValue());
+    this.captureValueBatch().value = raw;
+    this._value = this.clampValue(raw);
     this.syncFormValue();
     this.requestUpdate('value', old);
   }
@@ -502,6 +527,7 @@ export class LyraSlider extends LyraSliderBase {
     return this._min;
   }
   set min(next: number) {
+    this.captureValueBatch();
     const old = this._min;
     this._min = finiteNumber(next, 0);
     this.requestUpdate('min', old);
@@ -514,6 +540,7 @@ export class LyraSlider extends LyraSliderBase {
     return this._max;
   }
   set max(next: number) {
+    this.captureValueBatch();
     const old = this._max;
     this._max = finiteNumber(next, 100);
     this.requestUpdate('max', old);
@@ -526,6 +553,7 @@ export class LyraSlider extends LyraSliderBase {
     return this._step;
   }
   set step(next: number) {
+    this.captureValueBatch();
     const old = this._step;
     // A zero/negative step is retained as an explicit "unstepped" mode;
     // invalid/non-finite input follows the same safe path without poisoning
@@ -562,6 +590,9 @@ export class LyraSlider extends LyraSliderBase {
     return this._minValue;
   }
   set minValue(next: number) {
+    const batch = this.captureValueBatch();
+    batch.min = finiteNumber(next, 0);
+    batch.lastRange = 'min';
     const old = this._minValue;
     if (!this.applyingRangeValueAttribute) this._minValueDirty = true;
     this._minValue = this.clampValue(finiteNumber(next, 0));
@@ -581,6 +612,9 @@ export class LyraSlider extends LyraSliderBase {
     return this._maxValue;
   }
   set maxValue(next: number) {
+    const batch = this.captureValueBatch();
+    batch.max = finiteNumber(next, 50);
+    batch.lastRange = 'max';
     const old = this._maxValue;
     if (!this.applyingRangeValueAttribute) this._maxValueDirty = true;
     this._maxValue = this.clampValue(finiteNumber(next, 50));
@@ -677,6 +711,15 @@ export class LyraSlider extends LyraSliderBase {
 
   @property({ type: Boolean, attribute: 'show-value', converter: falseDefaultBooleanConverter }) showValue = false;
 
+  /** Visible readout text. `formatted` reuses valueFormatter (then tooltipFormatter when absent)
+   * for each handle, with localized numeric fallback for nullish results. The numeric default
+   * preserves the existing showValue contract. Does not change ARIA, tooltip or event behavior. */
+  @property({ attribute: 'value-display' }) valueDisplay: SliderValueDisplay = 'numeric';
+
+  /** Position of the showValue readout. `label` places it at the inline end of a separate label
+   * row without including its text in the control's accessible name. */
+  @property({ attribute: 'value-placement' }) valuePlacement: SliderValuePlacement = 'inline';
+
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
@@ -751,6 +794,10 @@ export class LyraSlider extends LyraSliderBase {
    */
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.pendingValueBatch) {
+      this.sanitizeCurrentValue();
+      this.pendingValueBatch = undefined;
+    }
     if (!changed.has('range') || !this.hasUpdated) return;
     const active = activeElementIn(this.shadowRoot);
     if (active?.matches('[part~="thumb"]')) {
@@ -903,6 +950,9 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   formResetCallback(): void {
+    this.pendingValueBatch = {
+      value: this._defaultValue, min: this._defaultMinValue, max: this._defaultMaxValue,
+    };
     this.restoreLiveValueFromDefault();
     this._minValue = this._defaultMinValue;
     this._maxValue = this._defaultMaxValue;
@@ -1079,16 +1129,19 @@ export class LyraSlider extends LyraSliderBase {
   private sanitizeCurrentValue(): void {
     this.sanitizeHandles();
     const old = this._value;
-    this._value = this.clampValue(this._value);
+    this._value = this.clampValue(this.pendingValueBatch?.value ?? this._value);
     if (this._value !== old) this.requestUpdate('value', old);
     this.syncFormValue();
   }
 
   /** Re-clamp both range handles into the current domain and step grid. */
   private sanitizeHandles(): void {
-    this._minValue = this.clampValue(this._minValue);
-    this._maxValue = this.clampValue(this._maxValue);
-    if (this._minValue > this._maxValue) this._maxValue = this._minValue;
+    this._minValue = this.clampValue(this.pendingValueBatch?.min ?? this._minValue);
+    this._maxValue = this.clampValue(this.pendingValueBatch?.max ?? this._maxValue);
+    if (this._minValue > this._maxValue) {
+      if (this.pendingValueBatch?.lastRange === 'max') this._minValue = this._maxValue;
+      else this._maxValue = this._minValue;
+    }
   }
 
   /** Publish a scalar string, or two same-name entries for a range. */
@@ -1471,11 +1524,18 @@ export class LyraSlider extends LyraSliderBase {
     return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 }).format(value);
   }
 
-  /** The visible readout: one number, or both handle values joined by an en
-   *  dash. Both sides are `Intl`-formatted data, never translated copy. */
+  /** One value, or both handles joined by an en dash. Caller formatting is opt-in;
+   * localized numeric data remains the default and nullish-result fallback. */
   private readoutText(): string {
-    if (!this.range) return this.formatValue(this.valueAsNumber);
-    return `${this.formatValue(this.minValue)}–${this.formatValue(this.maxValue)}`;
+    const format = (value: number, handle: SliderHandle): string => {
+      if (this.valueDisplay === 'formatted') {
+        const text = this.valueFormatter ? this.valueFormatter(value, handle) : this.tooltipFormatter?.(value);
+        if (text != null) return text;
+      }
+      return this.formatValue(value);
+    };
+    if (!this.range) return format(this.valueAsNumber, 'value');
+    return `${format(this.minValue, 'min')}–${format(this.maxValue, 'max')}`;
   }
 
   /** The accessible name of the control as a whole — the single thumb's own
@@ -1605,10 +1665,16 @@ export class LyraSlider extends LyraSliderBase {
       ? `inset-block-end:${startPercent}%;block-size:${span}%`
       : `inset-inline-start:${startPercent}%;inline-size:${span}%`;
     const markers = this.markerPercents();
-    return html`
+    const label = html`
       <div id=${LABEL_ID} part="label form-control-label" ?hidden=${!hasLabel}>
         ${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>
-      </div>
+      </div>`;
+    const value = this.showValue
+      ? html`<span part="value" aria-hidden="true">${this.readoutText()}</span>`
+      : nothing;
+    const labelValue = this.showValue && this.valuePlacement === 'label';
+    return html`
+      ${labelValue ? html`<div part="label-row">${label}${value}</div>` : label}
       <div part="references" ?hidden=${!hasReference}>
         <slot name="reference" @slotchange=${this.onSlotChange}></slot>
       </div>
@@ -1636,9 +1702,7 @@ export class LyraSlider extends LyraSliderBase {
             )}`
           : this.renderHandle('value', describedBy, labelledBy)}
       </div>
-      ${this.showValue
-        ? html`<span part="value" aria-hidden="true">${this.readoutText()}</span>`
-        : nothing}
+      ${labelValue ? nothing : value}
       <div id=${ERROR_ID} part="error" ?hidden=${!hasError}>
         ${this.hasErrorSlot ? nothing : this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot>
       </div>

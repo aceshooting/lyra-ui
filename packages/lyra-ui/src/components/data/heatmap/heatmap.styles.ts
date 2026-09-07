@@ -63,6 +63,11 @@ export const styles = css`
       var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
+  :host([multiple]) [part='canvas'],
+  :host([multiple]) [part='cell'] {
+    touch-action: none;
+    user-select: none;
+  }
   /* Neither the canvas nor a cell has a background to tint -- the fill under the pointer is
      painted into the bitmap from consumer data -- so the outline carries the feedback, and the
      pressed step is the ring thickening from a hairline to the full focus-ring width. */

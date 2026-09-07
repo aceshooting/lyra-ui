@@ -1067,8 +1067,10 @@ export type LyraBarChartVueProps = LyraVueCustomElement<
   LyraBarChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -1286,8 +1288,10 @@ export type LyraBubbleChartVueProps = LyraVueCustomElement<
   LyraBubbleChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -1665,8 +1669,10 @@ export type LyraChartVueProps = LyraVueCustomElement<
   LyraChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -3488,8 +3494,10 @@ export type LyraDoughnutChartVueProps = LyraVueCustomElement<
   LyraDoughnutChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -4796,16 +4804,19 @@ export type LyraHeatmapVueProps = LyraVueCustomElement<
   | 'maxCellSize'
   | 'midpoint'
   | 'minCellSize'
+  | 'multiple'
   | 'rowLabelWidth'
   | 'scale'
   | 'selectedCell'
+  | 'selectedCells'
   | 'stickyLabels'
   | 'strings'
   | 'valueLabel',
   {},
   LyraHeatmapEventMap,
   | 'lr-cell-click'
-  | 'lr-matrix-geometry-change',
+  | 'lr-matrix-geometry-change'
+  | 'lr-selection-change',
   | '--lr-heatmap-annotation-color'
   | '--lr-heatmap-color-steps-gradient'
   | '--lr-heatmap-focus-ring-color'
@@ -4863,9 +4874,11 @@ export type LyraHistogramVueProps = LyraVueCustomElement<
   LyraHistogram,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'bins'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -5611,8 +5624,10 @@ export type LyraLineChartVueProps = LyraVueCustomElement<
   LyraLineChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -7087,8 +7102,10 @@ export type LyraPieChartVueProps = LyraVueCustomElement<
   LyraPieChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -7185,8 +7202,10 @@ export type LyraPolarAreaChartVueProps = LyraVueCustomElement<
   LyraPolarAreaChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -7713,8 +7732,10 @@ export type LyraRadarChartVueProps = LyraVueCustomElement<
   LyraRadarChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -8382,8 +8403,10 @@ export type LyraScatterChartVueProps = LyraVueCustomElement<
   LyraScatterChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -8751,7 +8774,9 @@ export type LyraSliderVueProps = LyraVueCustomElement<
   | 'value'
   | 'valueAsNumber'
   | 'valueAsString'
+  | 'valueDisplay'
   | 'valueFormatter'
+  | 'valuePlacement'
   | 'withHint'
   | 'withLabel'
   | 'withMarkers'
@@ -8802,6 +8827,8 @@ export type LyraSliderVueProps = LyraVueCustomElement<
     'tooltip-distance'?: LyraSlider['tooltipDistance'];
     'tooltip-placement'?: LyraSlider['tooltipPlacement'];
     'value'?: LyraSlider['defaultValue'];
+    'value-display'?: LyraSlider['valueDisplay'];
+    'value-placement'?: LyraSlider['valuePlacement'];
     'with-hint'?: LyraSlider['withHint'];
     'with-label'?: LyraSlider['withLabel'];
     'with-markers'?: LyraSlider['withMarkers'];

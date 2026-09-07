@@ -127,7 +127,9 @@ compacts this control with it. Set it to pin the box independently of the tier.
 the label text: the box plus the gap beside it. It defaults to
 `calc(var(--lr-checkbox-box-size) + var(--lr-space-s))`, and the rendered gap is
 _derived_ from it, so the advertised value and the real label offset cannot drift. Setting it on
-the element (or on `lr-checkbox` in your own stylesheet) moves the label.
+the element (or on `lr-checkbox` in your own stylesheet) moves the label. The visible box
+aligns with the inline start of its transparent hit target, so a compact box plus gap remains
+clear of the label in both directions even when the hit target is wider than the box.
 
 It is published so you can align your own per-option hint text under the label without re-deriving
 that formula by reading the shadow styles. **But custom properties inherit down, not sideways**, so

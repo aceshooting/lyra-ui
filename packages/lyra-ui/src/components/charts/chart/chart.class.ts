@@ -114,6 +114,8 @@ export type LyraChartType =
   | 'bubble';
 
 export type LyraChartGrid = 'x' | 'y' | 'both' | 'none';
+/** Complete cartesian axes, including their ticks, labels, borders and grid lines. */
+export type LyraChartAxes = LyraChartGrid;
 export type LyraChartIndexAxis = 'x' | 'y';
 /** Scale type for a chart's value axis. The categorical axis is never affected. */
 export type LyraChartScaleType = 'linear' | 'logarithmic';
@@ -1827,6 +1829,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /** Controls which cartesian grid axes are drawn. */
   @property({ converter: { fromAttribute: (value) => normalizeChartGrid(value) } })
   grid: LyraChartGrid = 'both';
+  /** Complete cartesian axis visibility, independent of grid. `y` also controls the y2 axis.
+   * Radial charts ignore this setting. Explicit config scale options retain precedence. */
+  @property({ converter: { fromAttribute: (value) => normalizeChartGrid(value) } })
+  axes: LyraChartAxes = 'both';
+  /** Compact cartesian plot: hide axes and remove automatic layout padding. Set height and
+   * withoutLegend for a small histogram/sparkline. Preserves data tables, tooltips and keyboard
+   * actions; radial charts ignore this setting. Explicit config options retain precedence. */
+  @property({ type: Boolean }) compact = false;
   /** Chart.js index axis. `'y'` is Chart.js's own mechanism for horizontal bars (it also flips
    *  line/area types onto a horizontal category axis). */
   @property({ attribute: 'index-axis' }) indexAxis: LyraChartIndexAxis = 'x';
@@ -1977,7 +1987,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * config in `buildConfig()` (any key at any nesting depth — e.g.
    * `config.options.scales.y.min` — wins over the generated equivalent
    * without discarding sibling keys the generated config set), for consumers
-   * who need full Chart.js control beyond the simplified `LyraChartSeries` shape.
+   * who need full Chart.js control beyond the simplified `LyraChartSeries` shape. Generated bar
+   * borderWidth/borderRadius defer to authored bar option scopes; explicit series.width still wins.
    *
    * Caveat: the merge only recurses into plain objects — an *array* value
    * (e.g. `config.plugins` as an inline-plugin array, or `config.data.datasets`)
@@ -2946,6 +2957,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'hiddenDatasets',
       'description',
       'grid',
+      'axes',
+      'compact',
       'indexAxis',
       'label',
       'legendPosition',
@@ -3100,11 +3113,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // through.
       type: series.type,
       fill,
-      borderRadius: chartStyle.borderRadius,
-      borderWidth: nonNegativeFinite(
-        series.width,
-        datasetType === 'line' ? chartStyle.lineBorderWidth : chartStyle.borderWidth
-      ),
+      ...(datasetType === 'bar' && this.hasConfiguredBarOption('borderRadius')
+        ? {} : { borderRadius: chartStyle.borderRadius }),
+      ...(datasetType === 'bar' && !Number.isFinite(series.width) && this.hasConfiguredBarOption('borderWidth')
+        ? {} : { borderWidth: nonNegativeFinite(
+          series.width,
+          datasetType === 'line' ? chartStyle.lineBorderWidth : chartStyle.borderWidth
+        ) }),
       borderDash: series.dash ? [4, 4] : chartStyle.forcedColors ? [...encoding.dash] : undefined,
       pointStyle: chartStyle.forcedColors ? encoding.pointStyle : undefined,
       backgroundColor: encodedBackgroundColor,
@@ -3136,6 +3151,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         : {}),
       yAxisID: series.axis === 'y2' ? 'y2' : 'y',
     };
+  }
+
+  /** Let Chart.js resolve authored bar defaults, including scriptable/indexable values, at their
+   * native scope. A generated per-dataset fallback would shadow every chart-level scope. */
+  private hasConfiguredBarOption(option: 'borderWidth' | 'borderRadius'): boolean {
+    const read = (value: unknown, key: string): unknown => {
+      if (!isChartRecord(value)) return undefined;
+      const descriptor = chartRecordValue(value, key);
+      return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
+        ? undefined : descriptor.value;
+    };
+    const options = this.effectiveConfig()?.options;
+    const dataset = read(read(options, 'datasets'), 'bar');
+    const scopes = [dataset, read(read(dataset, 'elements'), 'bar'), read(read(options, 'elements'), 'bar'), options];
+    const prefixed = `bar${option[0]!.toUpperCase()}${option.slice(1)}`;
+    return scopes.some(scope => read(scope, prefixed) !== undefined || read(scope, option) !== undefined);
   }
 
   /**
@@ -3496,6 +3527,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return grid === 'both' || grid === axis;
   }
 
+  private axisVisible(axis: LyraChartIndexAxis): boolean {
+    const axes = normalizeChartGrid(this.axes);
+    return !this.compact && (axes === 'both' || axes === axis);
+  }
+
   /**
    * Builds `options.scales` for the effective chart type: no scale at all for
    * pie/doughnut (a proportional-area chart has no axis), the single radial
@@ -3561,6 +3597,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const bounds = this.scaleBounds();
     return {
       x: {
+        display: this.axisVisible('x'),
         type: xKind === 'value' ? this.valueScaleType() : 'category',
         beginAtZero: xKind === 'value' ? this.valueBeginAtZero() : undefined,
         ...(valueAxis === 'x' ? bounds : {}),
@@ -3575,6 +3612,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         stacked,
       },
       y: {
+        display: this.axisVisible('y'),
         type: yKind === 'value' ? this.valueScaleType() : 'category',
         position: rtl ? 'right' : 'left',
         beginAtZero: yKind === 'value' ? this.valueBeginAtZero() : undefined,
@@ -3592,6 +3630,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       ...(hasY2
         ? {
             y2: {
+              display: this.axisVisible('y'),
               type: this.valueScaleType(),
               position: rtl ? 'left' : 'right',
               ...(valueAxis === 'y' ? bounds : {}),
@@ -4082,6 +4121,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         locale: this.effectiveLocale,
         responsive: true,
         maintainAspectRatio: false,
+        ...(this.compact && !['pie', 'doughnut', 'radar', 'polarArea'].includes(effectiveType)
+          ? { layout: { padding: 0, autoPadding: false } } : {}),
         // Chart.js's own mechanism for horizontal bars (also flips line/area
         // types onto a horizontal category axis).
         indexAxis: this.effectiveIndexAxis(),

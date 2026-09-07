@@ -4167,3 +4167,99 @@ it("saturates when a finite step overflows only after it is added to the current
   el.stepDown();
   expect(el.valueAsNumber).to.equal(-Number.MAX_VALUE);
 });
+
+it('keeps numeric inline readouts by default and opts into formatted label-row values', async () => {
+  const el = await fixture<LyraSlider>(html`<lr-slider label="Speed" value="30" show-value
+    .valueFormatter=${(value: number) => `${value}%`}></lr-slider>`);
+  const readout = () => el.shadowRoot!.querySelector<HTMLElement>('[part="value"]')!;
+  expect(readout().textContent).to.equal('30');
+  expect(el.shadowRoot!.querySelector('[part="label-row"]') === null).to.equal(true);
+  el.valueDisplay = 'formatted';
+  el.valuePlacement = 'label';
+  await el.updateComplete;
+  expect(readout().textContent).to.equal('30%');
+  expect(readout().parentElement!.getAttribute('part')).to.equal('label-row');
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!;
+  expect(label.textContent!.trim()).to.equal('Speed');
+  expect(readout().getBoundingClientRect().top).to.be.lessThan(el.shadowRoot!.querySelector('[part="track"]')!.getBoundingClientRect().top);
+  expect(readout().getBoundingClientRect().left).to.be.greaterThan(label.getBoundingClientRect().left);
+  el.dir = 'rtl';
+  await el.updateComplete;
+  expect(readout().getBoundingClientRect().left).to.be.lessThan(label.getBoundingClientRect().left);
+  await expect(el).to.be.accessible();
+});
+
+it('formats both live range values while committing only on key release', async () => {
+  const el = await fixture<LyraSlider>(html`<lr-slider range label="Hours" min-value="2" max-value="8"
+    show-value value-display="formatted" value-placement="label"
+    .valueFormatter=${(value: number, handle: string) => `${handle}:${value} h`}></lr-slider>`);
+  const events: string[] = [];
+  el.addEventListener('lr-input', () => events.push('input'));
+  el.addEventListener('lr-change', () => events.push('change'));
+  const thumb = el.shadowRoot!.querySelector<HTMLElement>('[part~="thumb-min"]')!;
+  thumb.focus();
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(events).to.deep.equal(['input']);
+  expect(el.shadowRoot!.querySelector('[part="value"]')!.textContent).to.equal('min:3 h–max:8 h');
+  expect(thumb.getAttribute('aria-valuetext')).to.equal('min:3 h');
+  thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+  expect(events).to.deep.equal(['input', 'change']);
+  el.valueDisplay = 'numeric';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="value"]')!.textContent).to.equal('3–8');
+});
+
+it('uses localized numeric fallback for nullish formatted values and bounds long label rows', async () => {
+  const el = await fixture<LyraSlider>(html`<lr-slider lang="ar" dir="rtl" value="30" show-value
+    value-display="formatted" value-placement="label" style="inline-size:320px"
+    .valueFormatter=${() => null}><span slot="label">${'Long label '.repeat(20)}</span></lr-slider>`);
+  const value = el.shadowRoot!.querySelector<HTMLElement>('[part="value"]')!;
+  expect(value.textContent).to.equal(new Intl.NumberFormat('ar').format(30));
+  el.valueFormatter = () => '0.3 hours '.repeat(40);
+  await el.updateComplete;
+  expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
+  el.showValue = false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="label-row"]') === null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="value"]') === null).to.equal(true);
+});
+
+it('preserves an authored fraction when value is bound before its domain and step', async () => {
+  const el = await fixture<LyraSlider>(html`<lr-slider .value=${0.55} .min=${0} .max=${1} .step=${0.05}
+    show-value value-display="formatted" .valueFormatter=${(value: number) => `${Math.round(value * 100)}%`}></lr-slider>`);
+  expect(el.value).to.equal(0.55);
+  expect(el.shadowRoot!.querySelector('[part~="thumb"]')!.getAttribute('aria-valuenow')).to.equal('0.55');
+  expect(el.shadowRoot!.querySelector('[part="value"]')!.textContent).to.equal('55%');
+  el.value = 0.5;
+  el.min = 0.1;
+  el.max = 3;
+  el.step = 0.1;
+  await el.updateComplete;
+  expect(el.value).to.equal(0.5);
+});
+
+it('preserves a domain batch snapshot and controlled range endpoints without emitting changes', async () => {
+  const el = await fixture<LyraSlider>(html`<lr-slider range .minValue=${0.25} .maxValue=${0.75}
+    .min=${0} .max=${1} .step=${0.05}></lr-slider>`);
+  expect(el.minValue).to.equal(0.25);
+  expect(el.maxValue).to.equal(0.75);
+  let changes = 0;
+  el.addEventListener('lr-change', () => changes++);
+  el.minValue = 12.5;
+  el.maxValue = 17.5;
+  el.min = 10;
+  el.max = 20;
+  el.step = 0.5;
+  await el.updateComplete;
+  expect(el.minValue).to.equal(12.5);
+  expect(el.maxValue).to.equal(17.5);
+  el.value = 18;
+  await el.updateComplete;
+  el.max = 5;
+  el.min = 0;
+  el.max = 20;
+  await el.updateComplete;
+  expect(el.value).to.equal(18);
+  expect(changes).to.equal(0);
+});

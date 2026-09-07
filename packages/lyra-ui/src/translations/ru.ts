@@ -473,6 +473,7 @@ const strings: LyraLocaleStrings = {
   heatmapDefaultRowLabel: 'строка {n}',
   heatmapDefaultColLabel: 'столбец {n}',
   heatmapSelectedCellLabel: 'Выбрано: {cell}.',
+  heatmapSelectedCount: 'Выбранные ячейки: {count}.',
   heatmapProjectionLimit:
     'Показаны только первые {count} ячеек тепловой карты.',
   heatmapDecorationLimit:
@@ -516,6 +517,7 @@ const strings: LyraLocaleStrings = {
   mentionResultPosition: 'Подсказка {current} из {total}',
   suggestionsLabel: 'Предлагаемые запросы',
   map: 'Карта',
+  mapResetNorth: 'Ориентировать карту на север',
   model: 'Модель',
   selectModel: 'Выберите модель…',
   modelSelectNoModels: 'Нет моделей',

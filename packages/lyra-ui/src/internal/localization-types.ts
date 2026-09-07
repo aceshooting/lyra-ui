@@ -455,6 +455,8 @@ export type LyraMessageKey =
   | 'heatmapDefaultRowLabel'
   | 'heatmapDefaultColLabel'
   | 'heatmapSelectedCellLabel'
+  | 'heatmapSelectedCount'
+  | 'mapResetNorth'
   | 'heatmapProjectionLimit'
   | 'heatmapDecorationLimit'
   | 'inputLabel'

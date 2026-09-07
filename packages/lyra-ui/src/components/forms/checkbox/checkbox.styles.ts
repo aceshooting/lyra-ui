@@ -33,7 +33,9 @@ export const styles = css`
   .checkbox-owner {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    /* The visible box starts at the same inline origin as label-indent. The larger transparent
+       target can extend beneath the label without shifting the box into its text. */
+    justify-content: flex-start;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }

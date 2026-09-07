@@ -1287,43 +1287,29 @@ use the same normalization path as direct property writes.
 `--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
 With no label text the part is hidden and no glyph is painted.
 
-**Themeable custom properties:** `--lr-date-input-padding-block` (default `--lr-space-xs`) and
-`--lr-date-input-padding-inline` (default `--lr-space-s`) — the `input-wrapper`'s padding;
-`--lr-date-input-font-size` (default `inherit`) — the `input` part's font size;
-`--lr-date-input-control-min-height` (default `--lr-form-control-height`, i.e. `2.5rem` at the
-default `m` tier) — the `input-wrapper`'s block-size
-floor. Their private defaults follow `size` (`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the base defaults),
-using the same per-`size` values `lr-input` uses. Inherited or direct public values win in every
-tier. `pill` changes the private `--lr-date-input-radius` default to `--lr-radius-pill`; a public
-radius still wins. Plus shared
-tokens. The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's
-enter and exit transitions; both default to `var(--lr-transition-fast)`.
-The clear and calendar actions expose point-of-use state hooks:
-`--lr-date-input-action-hover-color`, `--lr-date-input-action-hover-bg`, and
+**Themeable custom properties:** `--lr-date-input-padding-block` (default
+`--lr-form-control-padding-block`) pads the native text input; `--lr-date-input-padding-inline`
+(default `--lr-form-control-padding-inline`) pads the row. `--lr-date-input-font-size` defaults to
+`--lr-form-control-font-size`. The row floor `--lr-date-input-control-min-height` defaults to
+`--lr-form-control-height`. All four defaults follow the shared size ladder, including
+`small`/`medium`/`large` aliases and inherited `--lr-theme-form-control-height-*` overrides.
+Inherited or direct public values win. `pill` changes the private radius default to
+`--lr-radius-pill`; a public `--lr-date-input-radius` still wins.
+
+Calendar and clear actions fit inside the selected row height while retaining at least 24×24
+CSS-pixel targets. At the default root size, rows measure 30/40/48/56px for s/m/l/xl; 2xs and xs
+grow to 26px to accommodate the 24px action plus the row borders. Custom content or font metrics
+can grow an unconstrained row. A theme setting the small tier to 36px produces a 36px date row.
+`--lr-date-input-control-height` remains undeclared by default and pins an exact row height when
+set. If it forces a row below its target size, the action overflows instead of shrinking.
+
+The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's enter
+and exit transitions; both default to `var(--lr-transition-fast)`. Clear and calendar action
+state hooks are `--lr-date-input-action-hover-color`, `--lr-date-input-action-hover-bg`, and
 `--lr-date-input-action-hover-radius` (defaults: text, transparent, and the input radius), plus
 `--lr-date-input-action-active-color`, `--lr-date-input-action-active-bg`, and
 `--lr-date-input-action-active-radius` for the pressed state. They inherit from theme ancestors;
 direct values on `lr-date-input` win without retuning library-wide tokens.
-
-`--lr-date-input-control-height` pins an **exact** `input-wrapper` height (both floors and caps it).
-It is **undeclared by default**, so the row grows to fit its content — see "exact-height hatches"
-under `lr-input`. Pinning it _below_ the calendar toggle's 24×24 target is safe: the toggle keeps
-its own `--lr-icon-button-size` floor and simply overflows a short row rather than shrinking, so
-WCAG 2.2 SC 2.5.8 is preserved either way.
-
-**Height parity with `lr-input` is density parity, not pixel parity.** The per-`size` padding and
-font-size scale is shared with `lr-input`, so the two look equally dense at a given `size` — but a
-same-`size` pair does **not** end up the same height, and code that assumes it will be
-disappointed at the small tiers. `[part='input-wrapper']` carries no intrinsic `min-block-size` of
-its own, while `[part='expand-button']` pins `min-block-size: var(--lr-icon-button-size)` that is
-deliberately **not** gated by `size` — the calendar toggle must keep a 24×24 touch target at every
-tier, and `lr-input`'s own password-toggle floors identically. So the row height is pinned
-transitively by that button: at `size="s"` an `lr-input` floors at `1.875rem`/30px, while an
-`lr-date-input` cannot go below roughly 40px plus its padding. Every default value of
-`--lr-date-input-control-min-height` sits below that transitive height, which means the floor is
-inert until you raise it past the button — a lower value changes nothing. To line the two controls
-up exactly, either raise `lr-input`'s floor to meet the date input, or lower
-`--lr-theme-icon-button-size` on a common ancestor (never below 24px).
 
 **Optional peer deps:** none.
 
@@ -3596,7 +3582,9 @@ compacts this control with it. Set it to pin the box independently of the tier.
 the label text: the box plus the gap beside it. It defaults to
 `calc(var(--lr-checkbox-box-size) + var(--lr-space-s))`, and the rendered gap is
 _derived_ from it, so the advertised value and the real label offset cannot drift. Setting it on
-the element (or on `lr-checkbox` in your own stylesheet) moves the label.
+the element (or on `lr-checkbox` in your own stylesheet) moves the label. The visible box
+aligns with the inline start of its transparent hit target, so a compact box plus gap remains
+clear of the label in both directions even when the hit target is wider than the box.
 
 It is published so you can align your own per-option hint text under the label without re-deriving
 that formula by reading the shadow styles. **But custom properties inherit down, not sideways**, so
@@ -3895,6 +3883,15 @@ single numeric string entry.
 - `showValue: boolean = false` (attribute `show-value`) — opt-in numeric readout next to the track;
   a range readout joins both values with an en dash. The explicit HTML spelling
   `show-value="false"` stays false.
+- `valueDisplay: SliderValueDisplay = 'numeric'` (attribute `value-display`) — `'numeric' |
+  'formatted'`. Opt into `formatted` to reuse `valueFormatter` (or `tooltipFormatter` when no
+  value formatter is supplied) for the visible readout too. Each range handle is formatted
+  separately; nullish results fall back to localized numbers. Existing ARIA and tooltip behavior
+  is unchanged. The callback owns its unit labels and locale formatting.
+- `valuePlacement: SliderValuePlacement = 'inline'` (attribute `value-placement`) — `'inline' |
+  'label'`. With `showValue`, `label` places the readout opposite the label in a wrapping row that
+  follows RTL. The readout stays outside the accessible label. These presentation options update
+  on live `lr-input` changes without changing the commit-only `lr-change` contract.
 - `value: number = 0`, `defaultValue: number = 0` (attribute `value`), `valueAsNumber: number`, and
   `valueAsString: string` are synchronized and finite. Values normalize the low/high domain, snap
   to the grid anchored at the low endpoint, then clamp so a non-grid endpoint remains reachable;
@@ -3947,7 +3944,8 @@ live value bubble per handle, present only with `with-tooltip`), `tooltip-visibl
 `tooltip` element's part list_ while that handle is focused or dragged — visibility is encoded in
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
 `::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
-`tooltip__arrow`. `value` is the opt-in numeric readout.
+`tooltip__arrow`. `value` is the opt-in readout; `label-row` contains the separate label and value
+nodes when `showValue` and `valuePlacement="label"` are enabled.
 
 **CSS custom states:** `disabled`, `dragging`, `focused`, `required`, `optional`, `valid`,
 `invalid`, `user-valid`, and `user-invalid`. A slider always has a finite numeric value, so
@@ -4052,8 +4050,14 @@ is present for upstream form-surface parity but adds no missing-value constraint
   value); ArrowUp/ArrowDown are never swapped, since direction only affects the horizontal inline axis.
 - Changing `min`/`max`/`step` after mount automatically re-clamps/re-snaps the current `value` in the
   next update — narrowing the domain can silently move the slider's value.
-- `valueFormatter` is presentation-only: `aria-valuenow`, the visible numeric readout, geometry,
-  form value, and emitted values stay numeric. With no formatter, `aria-valuetext` remains the
+- `valueFormatter` is presentation-only: `aria-valuenow`, geometry, form value, and emitted values
+  stay numeric. The visible readout stays numeric unless `valueDisplay="formatted"` is set.
+- Numeric value/domain assignments in the same Lit update batch are normalized against the final
+  `min`, `max`, and `step`, regardless of binding order. Await `updateComplete` to read the settled
+  scalar or range endpoints. Immediate imperative readback remains clamped to the current domain;
+  separate update batches intentionally normalize independently. Programmatic normalization emits
+  no user input/change event.
+  With no formatter, `aria-valuetext` remains the
   numeric string rendered by earlier versions; a nullish formatter result omits it.
 - A pointer drag fires `lr-input` continuously and a single `lr-change` on release; a keyboard step
   fires exactly one of each per press, but OS key-repeat while a key is held re-fires `lr-input` on

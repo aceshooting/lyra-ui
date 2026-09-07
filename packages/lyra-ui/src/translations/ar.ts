@@ -479,6 +479,7 @@ const strings: LyraLocaleStrings = {
   heatmapDefaultRowLabel: 'الصف {n}',
   heatmapDefaultColLabel: 'العمود {n}',
   heatmapSelectedCellLabel: 'المحدَّد: {cell}.',
+  heatmapSelectedCount: 'الخلايا المحددة: {count}.',
   heatmapProjectionLimit: 'لا تظهر سوى أول {count} خلية في الخريطة الحرارية.',
   heatmapDecorationLimit:
     'لا تظهر سوى أول {count} لونًا للخريطة الحرارية وتوقفًا في وسيلة الإيضاح وتعليقًا توضيحيًا.',
@@ -523,6 +524,7 @@ const strings: LyraLocaleStrings = {
   mentionResultPosition: 'الاقتراح {current} من {total}',
   suggestionsLabel: 'مُوجّهات مقترحة',
   map: 'خريطة',
+  mapResetNorth: 'إعادة توجيه الخريطة نحو الشمال',
   model: 'النموذج',
   selectModel: 'اختر نموذجًا…',
   modelSelectNoModels: 'لا توجد نماذج',

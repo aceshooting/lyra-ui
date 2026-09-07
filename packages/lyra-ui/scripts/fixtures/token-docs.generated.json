@@ -2449,7 +2449,6 @@
       },
       "evidence": [
         "src/components/conversation/code-block/code-block.styles.ts",
-        "src/components/forms/date-picker/date-input.styles.ts",
         "src/components/forms/locale-picker/locale-picker.styles.ts",
         "src/components/forms/token-input/token-input.styles.ts",
         "src/components/overlays/chip/chip.styles.ts",
@@ -2503,7 +2502,6 @@
         "src/components/conversation/streaming-text/streaming-text.styles.ts",
         "src/components/conversation/typing-indicator/typing-indicator.styles.ts",
         "src/components/data/stat/stat.styles.ts",
-        "src/components/forms/date-picker/date-input.styles.ts",
         "src/components/forms/locale-picker/locale-picker.styles.ts",
         "src/components/forms/token-input/token-input.styles.ts",
         "src/components/layout/segmented/segmented.class.ts",

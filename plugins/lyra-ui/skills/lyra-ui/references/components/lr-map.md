@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 15 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -127,7 +127,8 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
 - `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
   `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
 GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
-'danger' | 'neutral'; color?: string; strokeColor?: string; kind?: LyraMapDataLayerKind;
+'danger' | 'neutral'; color?: string; strokeColor?: string; line?: LyraMapLineOptions;
+point?: LyraMapPointOptions; kind?: LyraMapDataLayerKind;
 heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` is trimmed and must be nonempty; the first layer for a
   `sourceId` that is successfully admitted wins; blank, malformed, and later duplicate records are
   ignored without reserving an identity for a valid later sibling. Each retained entry adds one
@@ -212,6 +213,81 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   peer's default untouched on construction, and dropping a previously-authored value restores 1.
   `cluster` is ignored on a heatmap entry: a heatmap already aggregates density, and clustering its
   input would feed it one point per cluster instead of the real distribution.
+  `line?: LyraMapLineOptions { field?: string; stops?: readonly (readonly [number, string])[];
+  width?: number; opacity?: number }` configures line/outline paint for an ordinary `dataLayers`
+  entry. `field` names a numeric feature property; two usable `[value, color]` stops produce a
+  continuous linear ramp. Missing, null, and non-numeric feature values use `strokeColor`, then
+  `color`, then `tone`. Stops inspect the first 64 entries, discard non-finite values and invalid
+  CSS colors, sort ascending, and retain the first duplicate threshold. Fewer than two stops or
+  an absent field preserves flat color. Values beyond the endpoints clamp to their endpoint color.
+  CSS variables resolve on the host during reconciliation and retheming. `width` defaults to 2 CSS
+  pixels and clamps to `[0, 200]`; `opacity` defaults to 1 and clamps to `[0, 1]`. Non-finite values
+  restore those defaults, as does dropping a previously-authored option. Point colors and polygon
+  fills are unaffected; cluster and heatmap entries ignore `line`.
+
+  `point?: LyraMapPointOptions` styles individual points on ordinary and clustered auto entries.
+  It is ignored for heatmaps. `field` names a **string** feature property; `colors` maps exact
+  `[category, CSS color]` pairs. Missing, unknown and non-string categories use the existing
+  `strokeColor`/`color`/`tone` fallback. The first 32 pairs are inspected and valid duplicates are
+  first-wins. CSS variables resolve on the host and follow ancestor theme changes. `radius`
+  defaults to 5 CSS pixels and `strokeWidth` to 0; both clamp to `[0, 200]`. `strokeColor` overrides
+  the outline only, with the layer's flat color as fallback. Dropping options restores defaults.
+
+  `point.icons` maps exact category values to `LyraMapPointIcon { value: string; path: string;
+  viewBox?: readonly [number, number, number, number] }`. `iconField` defaults to `field`.
+  Each icon is a **filled SVG path string**, not SVG markup or a URL. Copy an icon's path data,
+  combine filled subpaths in that string, and supply its `[minX, minY, width, height]` viewBox
+  (default `[0, 0, 24, 24]`). Stroke-only drawings must first be converted to filled outlines.
+  The first 32 entries are inspected, valid duplicates are first-wins, path data is capped at
+  8192 characters, and viewBox coordinates must be finite within ±10000 with dimensions at least
+  0.001. Invalid paths are ignored; markup, external references and event handlers cannot execute.
+  Rasterization is synchronous and local, with no fetch or HTML/SVG document insertion.
+  `iconColor` accepts CSS variables and defaults to the tone's contrasting foreground; `iconSize`
+  is the displayed bounding square in CSS pixels (default 16, clamped to `[1, 200]`). The fixed
+  64px raster preserves the viewBox aspect ratio. Unknown categories, invalid icons and partial
+  peers lacking image-atlas methods retain their colored circles. No sprite or glyph URL is needed.
+
+  All categories use the **same GeoJSON source** and cluster across categories. Cluster circles
+  keep the existing count-based styling; only unclustered points get category colors/icons.
+  An optional symbol layer and at most 32 images are allocated per configured source, with no
+  per-feature DOM markers. Data changes reuse the source, retheming updates paint/icon pixels,
+  and style reloads restore the owned resources. Removing the entry or icons releases its images.
+  `lr-map-click` on either a point's circle or icon returns `origin: 'data-layer'`, the public
+  `sourceId`, and the rendered feature. For clustered GeoJSON, use numeric feature IDs and keep
+  string business IDs in feature properties, as MapLibre's cluster tiling uses numeric IDs. Canvas export includes both; supply an accessible textual
+  legend/list for category interpretation and individual keyboard actions.
+
+  ```js
+  import '@aceshooting/lyra-ui/components/lr-map.js';
+  map.dataLayers = [{
+    sourceId: 'places', geojson: locations, cluster: {},
+    point: {
+      field: 'category', radius: 12, strokeWidth: 1,
+      colors: [['home', 'var(--lr-color-brand)'], ['work', 'var(--lr-color-success)']],
+      icons: [
+        { value: 'home', path: 'M2 12L12 2L22 12V22H2Z' },
+        { value: 'work', path: 'M8 2H16V6H22V22H2V6H8Z' },
+      ],
+      iconSize: 14,
+    },
+  }];
+  ```
+
+  Share the same stops with `legendGradient` and set its endpoint labels for units. A gradient
+  matching a line ramp remains linear even alongside a logarithmic choropleth. Changing metric,
+  filtered GeoJSON, width or opacity reconciles existing resources; style reloads restore the layer.
+  Lines remain in MapLibre's canvas and can be captured with the map's normal render-event PNG
+  export flow.
+
+  ```js
+  mapElement.dataLayers = [{
+    sourceId: 'routes', geojson: routes,
+    line: { field: 'kmh', stops: speedStops, width: 4, opacity: 0.9 }
+  }];
+  mapElement.legendGradient = speedStops;
+  mapElement.legendGradientLoLabel = '0 km/h';
+  mapElement.legendGradientHiLabel = '100 km/h';
+  ```
 - `maxBounds: LyraMapBounds | null = null` (attribute: false) — box the map may not pan outside,
   `[[west, south], [east, north]]`. Prefer it over calling `map.setMaxBounds()` through the `.map`
   escape hatch: constraining the camera can wedge maplibre-gl at a sub-1 fractional zoom in a wide
@@ -254,7 +330,7 @@ payload beside the map.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
 `LyraMapGeoJsonDataLayer`, `LyraMapDataLayerKind`, `LyraMapClusterOptions`, `LyraMapHeatmapOptions`,
-`LyraMapHeatmapZoomValue`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
+`LyraMapHeatmapZoomValue`, `LyraMapLineOptions`, `LyraMapPointOptions`, `LyraMapPointIcon`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
 `LyraMapMarkerActivationSource`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
 The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
 in v9 rather than retained as aliases.
@@ -297,7 +373,8 @@ when `legend` and `legendGradient` are both empty.
 
 **CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-gradient`, `legend-lo`,
 `legend-hi`, `legend-limit`, `marker`, `popup`,
-`popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `error`.
+`popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `navigation`,
+`zoom-in`, `zoom-out`, `compass`, `scale`, `error`.
 `legend` is a localized `role="group"` containing a real list associated to the map canvas with
 `aria-describedby`; each entry is a `listitem`, decorative swatches are inert/accessibility-hidden,
 and the overlay is bounded to the map allocation with scrolling and long-label wrapping.
@@ -309,6 +386,18 @@ text rendered in place of `container` for four distinct states: explicit style r
 peer unavailable, owner-realm WebGL2 unavailable, or initialization failed. A post-mount failure is
 appended to the document's pre-mounted `[data-lr-live-region="assertive"]` sink rather than making
 shadow chrome live; raw caught errors are never exposed.
+
+**Standard peer controls:** after `lr-map-load`, narrow `.map` to the installed MapLibre peer
+and use `addControl(new NavigationControl(), 'bottom-right')` and
+`addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')`. No document-level peer CSS or
+shadow-root modification is needed: navigation buttons, compass glyph, scale bar and control
+corners are styled with Lyra tokens. The corners follow inline start/end under RTL. The legend
+reserves vertical room for these controls and attribution, including after resize or removal.
+Navigation exposes `navigation`, `zoom-in`, `zoom-out`, and `compass` parts; the scale exposes `scale`.
+Button names update through `zoomIn`, `zoomOut`, and `mapResetNorth` locale strings. MapLibre retains
+keyboard activation, compass rotation, zoom limits, scale units and viewport updates. No controls
+are created until the application explicitly adds them. This is a supported imperative peer-control
+integration; there is no declarative controls property.
 
 **Themeable custom properties:**
 

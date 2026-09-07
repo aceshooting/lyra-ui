@@ -373,6 +373,25 @@ export const styles = css`
     min-inline-size: var(--lr-size-2-5ch);
     text-align: end;
   }
+  [part='label-row'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--lr-slider-gap, var(--lr-space-s));
+    flex: 1 0 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='label-row'] [part~='label'] {
+    flex: 1 1 0;
+  }
+  [part='label-row'] [part='value'] {
+    flex: 0 1 auto;
+    margin-inline-start: auto;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
   [part="error"],
   [part~="hint"] {
     /* Full basis so supporting text gets its own wrapped line under the track row, however wide

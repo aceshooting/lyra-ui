@@ -1802,6 +1802,44 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
   `<lr-lite-chart>`'s `selectedIndices`, this component never mutates it itself. Unset (the default,
   `null`) reproduces today's exact output.
+- `multiple: boolean = false` — opts into controlled multi-cell selection through `selectedCells`.
+  The existing `selectedCell` is ignored while enabled and resumes when disabled. Single-cell
+  behavior is unchanged when omitted.
+- `selectedCells: readonly HeatmapSelectedCell[] = []` (attribute: false) — clone-owned selection
+  input, inspected up to `MAX_HEATMAP_CELLS` (10,000) entries. Duplicates, non-integer/out-of-grid
+  coordinates and non-interactive cells are ignored. Matrix records use `{ row, col }`; calendar
+  records use `{ date }`, including interactive calendar gaps. The component never assigns this
+  property in response to user input. It draws selected rings and, with `accessibleCells`, exposes
+  per-cell `aria-selected` plus grid `aria-multiselectable="true"`. The localized accessible summary
+  reports the selected count through `heatmapSelectedCount`.
+
+  `lr-selection-change` is a non-cancelable proposal: frozen `HeatmapSelectionChangeDetail {
+  selectedCells: readonly Readonly<HeatmapSelectedCell>[]; source: HeatmapSelectionSource }`, with
+  source `'pointer' | 'keyboard' | 'row' | 'column'`. Assign the event's array back to `selectedCells`
+  to accept it; property assignments are silent. Output is deduplicated in row/column order. Click
+  or Enter/Space toggles one cell and retains `lr-cell-click`. Pointer dragging paints or erases
+  according to the starting cell, previews transient selection, and proposes once on release;
+  pointer cancellation, Escape, disconnect, data/mode changes discard the gesture. A drag does
+  not emit a cell click. Shift+arrows extends/contracts a rectangle from the anchor while retaining
+  unrelated pre-range selection. Directions remain physical under RTL, matching the canvas.
+
+  `toggleRowSelection(row: number): void` and `toggleColumnSelection(col: number): void` propose
+  whole-axis toggles for application-owned controls: remove an entirely selected axis, otherwise
+  add its interactive cells. Shift+Space and Ctrl/Meta+Space invoke those actions for the focused
+  row/column. Calendar rows are weekday rows 0–6 and columns are zero-based weeks. Invalid indices
+  and calls outside `multiple` mode are no-ops. For a narrow day/hour matrix, use `accessibleCells`
+  and `stickyLabels="both"` to retain usable targets within the component's own scrollport.
+
+  ```js
+  import '@aceshooting/lyra-ui/components/lr-heatmap.js';
+  const heatmap = document.querySelector('lr-heatmap');
+  heatmap.multiple = true;
+  heatmap.accessibleCells = true;
+  heatmap.addEventListener('lr-selection-change', event => {
+    heatmap.selectedCells = event.detail.selectedCells;
+    // Derive filter state from the accepted row/column coordinates.
+  });
+  ```
 - `accessibleCells: boolean = false` (attribute `accessible-cells`) — renders `[part="cells"]` with
   at most 400 `[part="cell"]` native buttons around the active cell. The semantic grid exposes the
   full row/column counts, buttons expose localized `aria-label`s and explicit `aria-selected`, and
@@ -1902,7 +1940,7 @@ matrix — prefer `stickyLabels`, which freezes the band inside the component an
 all; the getter remains the way to align a *separate* element (a sibling chart, a custom overlay)
 with the grid.
 
-**Events:** `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
+**Events:** `lr-selection-change` (not cancelable; frozen readonly `HeatmapSelectionChangeDetail { selectedCells, source }` proposal in multiple mode, with `source: 'pointer' | 'keyboard' | 'row' | 'column'`; accept it by assigning `selectedCells`). `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
 `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
 `lr-matrix-geometry-change` (fired after a matrix-mode draw whose resolved `matrixGeometry` differs
 from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height="auto"` resolves
@@ -4142,6 +4180,11 @@ These named interfaces and helper signatures are available to typed integrations
     row?: number;
     col?: number;
     date?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
+  `HeatmapSelectionChangeDetail {
+    readonly selectedCells: readonly Readonly<HeatmapSelectedCell>[];
+    readonly source: HeatmapSelectionSource;
   }`
   Import: `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`.
   `hexToRgb(hex: string): [number, number, number, number] | null`

@@ -465,6 +465,7 @@ const strings: LyraLocaleStrings = {
   heatmapDefaultRowLabel: '{n} 行目',
   heatmapDefaultColLabel: '{n} 列目',
   heatmapSelectedCellLabel: '選択中：{cell}。',
+  heatmapSelectedCount: '選択したセル数：{count}。',
   heatmapProjectionLimit:
     'ヒートマップの先頭 {count} セルのみを表示しています。',
   heatmapDecorationLimit:
@@ -505,6 +506,7 @@ const strings: LyraLocaleStrings = {
   mentionResultPosition: '{total} 件中 {current} 件目の候補',
   suggestionsLabel: 'おすすめのプロンプト',
   map: '地図',
+  mapResetNorth: '地図の向きを北に戻す',
   model: 'モデル',
   selectModel: 'モデルを選択…',
   modelSelectNoModels: 'モデルがありません',

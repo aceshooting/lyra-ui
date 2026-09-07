@@ -25,7 +25,7 @@ Everything else is inherited verbatim from `lr-chart`; each name below has the s
 and behavior there. **See `llms/components/lr-chart.md` for the details, code example, and gotchas
 of every entry in these lists.**
 
-**Properties:** `description`, `grid`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
+**Properties:** `description`, `grid`, `axes`, `compact`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
 (`legend-position`), `max`, `min`, `plugins`, `scaleType` (`scale-type`), `annotations`,
 `stacked`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),

@@ -310,43 +310,29 @@ use the same normalization path as direct property writes.
 `--lr-form-control-required-offset` retune or suppress it here exactly as they do on `lr-input`.
 With no label text the part is hidden and no glyph is painted.
 
-**Themeable custom properties:** `--lr-date-input-padding-block` (default `--lr-space-xs`) and
-`--lr-date-input-padding-inline` (default `--lr-space-s`) — the `input-wrapper`'s padding;
-`--lr-date-input-font-size` (default `inherit`) — the `input` part's font size;
-`--lr-date-input-control-min-height` (default `--lr-form-control-height`, i.e. `2.5rem` at the
-default `m` tier) — the `input-wrapper`'s block-size
-floor. Their private defaults follow `size` (`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the base defaults),
-using the same per-`size` values `lr-input` uses. Inherited or direct public values win in every
-tier. `pill` changes the private `--lr-date-input-radius` default to `--lr-radius-pill`; a public
-radius still wins. Plus shared
-tokens. The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's
-enter and exit transitions; both default to `var(--lr-transition-fast)`.
-The clear and calendar actions expose point-of-use state hooks:
-`--lr-date-input-action-hover-color`, `--lr-date-input-action-hover-bg`, and
+**Themeable custom properties:** `--lr-date-input-padding-block` (default
+`--lr-form-control-padding-block`) pads the native text input; `--lr-date-input-padding-inline`
+(default `--lr-form-control-padding-inline`) pads the row. `--lr-date-input-font-size` defaults to
+`--lr-form-control-font-size`. The row floor `--lr-date-input-control-min-height` defaults to
+`--lr-form-control-height`. All four defaults follow the shared size ladder, including
+`small`/`medium`/`large` aliases and inherited `--lr-theme-form-control-height-*` overrides.
+Inherited or direct public values win. `pill` changes the private radius default to
+`--lr-radius-pill`; a public `--lr-date-input-radius` still wins.
+
+Calendar and clear actions fit inside the selected row height while retaining at least 24×24
+CSS-pixel targets. At the default root size, rows measure 30/40/48/56px for s/m/l/xl; 2xs and xs
+grow to 26px to accommodate the 24px action plus the row borders. Custom content or font metrics
+can grow an unconstrained row. A theme setting the small tier to 36px produces a 36px date row.
+`--lr-date-input-control-height` remains undeclared by default and pins an exact row height when
+set. If it forces a row below its target size, the action overflows instead of shrinking.
+
+The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's enter
+and exit transitions; both default to `var(--lr-transition-fast)`. Clear and calendar action
+state hooks are `--lr-date-input-action-hover-color`, `--lr-date-input-action-hover-bg`, and
 `--lr-date-input-action-hover-radius` (defaults: text, transparent, and the input radius), plus
 `--lr-date-input-action-active-color`, `--lr-date-input-action-active-bg`, and
 `--lr-date-input-action-active-radius` for the pressed state. They inherit from theme ancestors;
 direct values on `lr-date-input` win without retuning library-wide tokens.
-
-`--lr-date-input-control-height` pins an **exact** `input-wrapper` height (both floors and caps it).
-It is **undeclared by default**, so the row grows to fit its content — see "exact-height hatches"
-under `lr-input`. Pinning it _below_ the calendar toggle's 24×24 target is safe: the toggle keeps
-its own `--lr-icon-button-size` floor and simply overflows a short row rather than shrinking, so
-WCAG 2.2 SC 2.5.8 is preserved either way.
-
-**Height parity with `lr-input` is density parity, not pixel parity.** The per-`size` padding and
-font-size scale is shared with `lr-input`, so the two look equally dense at a given `size` — but a
-same-`size` pair does **not** end up the same height, and code that assumes it will be
-disappointed at the small tiers. `[part='input-wrapper']` carries no intrinsic `min-block-size` of
-its own, while `[part='expand-button']` pins `min-block-size: var(--lr-icon-button-size)` that is
-deliberately **not** gated by `size` — the calendar toggle must keep a 24×24 touch target at every
-tier, and `lr-input`'s own password-toggle floors identically. So the row height is pinned
-transitively by that button: at `size="s"` an `lr-input` floors at `1.875rem`/30px, while an
-`lr-date-input` cannot go below roughly 40px plus its padding. Every default value of
-`--lr-date-input-control-min-height` sits below that transitive height, which means the floor is
-inert until you raise it past the button — a lower value changes nothing. To line the two controls
-up exactly, either raise `lr-input`'s floor to meet the date input, or lower
-`--lr-theme-icon-button-size` on a common ancestor (never below 24px).
 
 **Optional peer deps:** none.
 

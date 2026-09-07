@@ -4,9 +4,9 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 export const styles = css`
   :host {
     display: block;
-    --_lr-date-input-padding-block: var(--lr-space-xs);
-    --_lr-date-input-padding-inline: var(--lr-space-s);
-    --_lr-date-input-font-size: inherit;
+    --_lr-date-input-padding-block: var(--lr-form-control-padding-block);
+    --_lr-date-input-padding-inline: var(--lr-form-control-padding-inline);
+    --_lr-date-input-font-size: var(--lr-form-control-font-size);
     --_lr-date-input-gap: var(--lr-space-xs);
     --_lr-date-input-radius: var(--lr-form-control-radius);
     /* Fill/border pair swapped per appearance, as in lr-input/lr-textarea/lr-otp-input/
@@ -16,13 +16,6 @@ export const styles = css`
        has no outline, [part='input'] sets outline: none). No [part] rule out-ranks another. */
     --_lr-date-input-fill: var(--lr-color-surface);
     --_lr-date-input-border-color: var(--lr-color-border);
-    /* Per-tier row floor from lr-input's min-height scale -- not height parity:
-       [part='input-wrapper'] has no min-block-size, and [part='expand-button'] pins
-       min-block-size: var(--lr-icon-button-size) un-gated by size, so the calendar toggle pins row
-       height transitively (size="s": lr-input 1.875rem/30px, here ~40px plus padding). Gating that
-       floor by size would break 24x24 at 2xs/xs, and lr-input's password-toggle is un-gated too.
-       Every default sits below that height, so the floor is dead until a consumer raises it.
-       Matches lr-input/lr-select/lr-combobox. */
     /* Six values from the one shared form-control ladder (internal/sizes.styles.ts), so
        --lr-theme-form-control-height-* retunes this control and every sibling field together. The
        ladder matches both spellings of every tier, so size="small" resolves with no per-component
@@ -32,7 +25,7 @@ export const styles = css`
        deadens the var() fallback arms on [part='input-wrapper'] below and makes
        --lr-date-input-control-min-height dead code -- the lr-select trap. Undeclared, the per-tier
        floor falls out of the fallback and setting this consumer-facing hatch pins an exact height,
-       safely even below 24x24: the toggle keeps its --lr-icon-button-size floor and overflows a
+       safely even below 24x24: the toggle keeps its minimum target and overflows a
        short row (WCAG 2.2 SC 2.5.8). */
   }
   :host([pill]) {
@@ -50,39 +43,6 @@ export const styles = css`
   }
   :host([appearance="filled-outlined"]) {
     --_lr-date-input-fill: var(--lr-color-surface-raised);
-  }
-  /* Each tier reuses lr-input's own 2xs-xl padding/font-size scale (input.styles.ts) -- density
-     parity, not height parity (see the min-height comment above). Not the shared form-control
-     padding ladder: lr-input's scale is a tier denser at every step, and switching would change
-     this row's height at l and xl. 'm' is the default and stays on the :host block, leaving the
-     unset-size render untouched. Both spellings match, as in sizes.styles.ts -- the height ladder
-     accepts size="small", so density must too. */
-  :host([size="2xs"]) {
-    --_lr-date-input-padding-block: var(--lr-size-0-0625rem);
-    --_lr-date-input-padding-inline: var(--lr-space-2xs);
-    --_lr-date-input-font-size: var(--lr-font-size-2xs);
-  }
-  :host([size="xs"]) {
-    --_lr-date-input-padding-block: var(--lr-size-0-125rem);
-    --_lr-date-input-padding-inline: var(--lr-space-xs);
-    --_lr-date-input-font-size: var(--lr-font-size-xs);
-  }
-  :host([size="s"]),
-  :host([size="small"]) {
-    --_lr-date-input-padding-block: var(--lr-space-xs);
-    --_lr-date-input-padding-inline: var(--lr-space-xs);
-    --_lr-date-input-font-size: var(--lr-font-size-sm);
-  }
-  :host([size="l"]),
-  :host([size="large"]) {
-    --_lr-date-input-padding-block: var(--lr-space-m);
-    --_lr-date-input-padding-inline: var(--lr-space-m);
-    --_lr-date-input-font-size: var(--lr-font-size-lg);
-  }
-  :host([size="xl"]) {
-    --_lr-date-input-padding-block: var(--lr-space-l);
-    --_lr-date-input-padding-inline: var(--lr-space-l);
-    --_lr-date-input-font-size: var(--lr-font-size-xl);
   }
   [part="form-control-label"] {
     display: block;
@@ -116,11 +76,7 @@ export const styles = css`
     /* Pinned only when --lr-date-input-control-height is set; otherwise 'auto', so the row grows
        to fit its content and the calendar toggle's full touch target. */
     block-size: var(--lr-date-input-control-height, auto);
-    padding: var(
-        --lr-date-input-padding-block,
-        var(--_lr-date-input-padding-block)
-      )
-      var(--lr-date-input-padding-inline, var(--_lr-date-input-padding-inline));
+    padding-inline: var(--lr-date-input-padding-inline, var(--_lr-date-input-padding-inline));
     border: var(--lr-border-width-thin) solid
       var(--_lr-date-input-border-color);
     border-radius: var(--lr-date-input-radius, var(--_lr-date-input-radius));
@@ -139,6 +95,7 @@ export const styles = css`
   [part="input"] {
     flex: 1 1 auto;
     min-inline-size: 0;
+    padding-block: var(--lr-date-input-padding-block, var(--_lr-date-input-padding-block));
     border: none;
     outline: none;
     background: transparent;
@@ -180,14 +137,17 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text-quiet);
     padding: var(--lr-space-xs);
-    /* Touch target in both dimensions -- WCAG 2.2 SC 2.5.8 needs 24x24 CSS px, and min-block-size
-       alone left these 24px tall but narrower. The row has no min-block-size of its own (unlike
-       combobox's [part=combobox]), so it grows to fit. Un-gated by size, like lr-input's
-       password-toggle, so the hit area never drops below the minimum at '2xs'/'xs'. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    /* Inline actions fit inside the selected control's border box. Keep a physical 24px floor
+       even when the smallest tier, or an exact-height override, is shorter than that target. */
+    min-inline-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) - 2 * var(--lr-border-width-thin))));
+    min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) - 2 * var(--lr-border-width-thin))));
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-font-size-m);
+  }
+  [part='expand-icon'],
+  [part='clear-button'] > span {
+    display: inline-flex;
+    align-items: center;
   }
   [part="clear-button"]:hover:not(:disabled),
   [part="expand-button"]:hover:not(:disabled) {

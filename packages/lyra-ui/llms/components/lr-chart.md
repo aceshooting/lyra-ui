@@ -26,6 +26,24 @@ an effective raw `config.options.indexAxis` override. Both formatter APIs follow
 structured points retain their y-value formatting.
 
 **Properties:**
+- `axes: LyraChartAxes = 'both'` — `'x' | 'y' | 'both' | 'none'`, controlling complete cartesian
+  axes: labels, ticks, borders and grid lines. The `y` setting includes `y2`; invalid values use
+  `both`. Radial charts ignore this setting. Use `grid` when only grid lines should disappear.
+- `compact: boolean = false` — hides cartesian axes and removes automatic plot padding. Combine
+  with `withoutLegend` and a short `height` (for example `64px`) for an inline histogram or
+  sparkline. Tooltips, accessible data, formatting and keyboard activation remain available.
+  `config` still wins over generated options, so explicit scale visibility or layout padding
+  can override the preset. Leaving compact mode restores `axes`. Radial charts are unaffected.
+
+  For a monthly histogram above `lr-slider`, give both controls the same inline allocation and
+  use `lr-bar-chart compact without-legend height="64px"`. Map range values to bin edges: with
+  twelve months, set the slider's `min=0`, `max=12`, `step=1` and treat its values as the half-open
+  interval `[minValue, maxValue)`. Equal edges select no months. Use `show-value`,
+  `value-display="formatted"` and `value-placement="label"` to display application-formatted month
+  names without a separate readout listener. Commit filtering on `lr-change`; `lr-input` remains
+  available for live previews. Chart categories retain their authored physical order: for an RTL
+  slider that starts at the right edge, reverse both histogram labels and counts. The Monthly
+  Range bar-chart story demonstrates both directions without scale configuration.
 - `type: LyraChartType = 'bar'` — `LyraChartType = 'line' | 'bar' | 'scatter' | 'pie' | 'doughnut' |
   'radar' | 'polarArea' | 'bubble'` — every named default used by a typed `lr-*-chart` is
   already a first-class member, so `<lr-chart type="pie">` needs no subclass or cast to work;
@@ -170,6 +188,14 @@ structured points retain their y-value formatting.
   explicit array replaces that generated member rather than concatenating with it. This effective
   model drives canvas rendering, `appendData()`, export, the accessible name/summary, keyboard
   navigation and activation events, the DOM legend, and the generated fallback table.
+  For generated **bar** series, an explicit series `width` wins. Otherwise authored bar
+  `borderWidth`/`borderRadius` defaults in `options.datasets.bar`, its nested `elements.bar`,
+  `options.elements.bar`, or root `options` are left for Chart.js to resolve, including scriptable,
+  indexable and `barBorderWidth`/`barBorderRadius` forms. Unset values retain Lyra's `--border-width`
+  and `--border-radius` defaults; removing config restores those defaults. Raw `config.data.datasets`
+  remain authoritative. Dense charts with transparent borders should set
+  `config.options.datasets.bar.borderWidth = 0` (or the public `--border-width: 0` CSS hook):
+  a one-pixel transparent stroke can consume the fill of a bar narrower than two pixels.
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
@@ -439,7 +465,7 @@ announced. In particular, unavailable data labels do not remove generated table 
   the observer, drawing starts when the peer and canvas are ready. An empty delivered callback
   retains the visible fallback. Peer loading and accessible DOM may settle while visibility is
   pending. Independently, `updated()` only reaches
-  Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `indexAxis`,
+  Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `axes`, `compact`, `indexAxis`,
   `label`, `hiddenDatasets`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
   position, `valueFormatter`, `formatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
   `stacked`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed

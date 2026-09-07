@@ -6548,3 +6548,118 @@ describe('bounded chart fallback paths', () => {
     expect(() => (el as any).toggleDataset(1)).to.not.throw();
   });
 });
+
+it('controls complete cartesian axis visibility independently from grid lines', async () => {
+  const el = await fixture<LyraChart>(html`<lr-chart type="bar" without-animation grid="none"
+    .labels=${['January', 'February']} .datasets=${[
+      { label: 'Trips', data: [4, 8] }, { label: 'Hours', data: [2, 5], axis: 'y2' },
+    ]}></lr-chart>`);
+  const runtime = () => (el as unknown as { chart?: import('chart.js').Chart }).chart;
+  await waitUntil(() => !!runtime());
+  expect(runtime()!.scales['y']!.width).to.be.greaterThan(0);
+  el.axes = 'x';
+  await el.updateComplete;
+  await waitUntil(() => runtime()!.scales['y']!.width === 0, 'value axes hidden');
+  expect(runtime()!.scales['y2']!.width).to.equal(0);
+  expect(runtime()!.scales['x']!.height).to.be.greaterThan(0);
+  el.axes = 'y';
+  await el.updateComplete;
+  await waitUntil(() => runtime()!.scales['x']!.height === 0, 'category axis hidden');
+  expect(runtime()!.scales['y']!.width).to.be.greaterThan(0);
+  Reflect.set(el, 'axes', 'invalid');
+  await el.updateComplete;
+  await waitUntil(() => runtime()!.scales['x']!.height > 0, 'invalid axes restores the default');
+});
+
+it('fills a compact plot while retaining accessible data, keyboard actions and explicit config overrides', async () => {
+  const el = await fixture<LyraChart>(html`<lr-chart type="bar" compact without-legend without-animation
+    height="64px" style="inline-size:320px" label="Monthly trips" lang="ar" dir="rtl"
+    .labels=${['January', 'February']} .datasets=${[{ label: 'Trips', data: [4, 8] }]}
+    .valueFormatter=${(value: number) => `Trips: ${value}`}></lr-chart>`);
+  const runtime = () => (el as unknown as { chart?: import('chart.js').Chart }).chart;
+  await waitUntil(() => !!runtime());
+  await waitUntil(() => runtime()!.chartArea.left === 0, 'compact plot has no axis gutter');
+  expect(runtime()!.chartArea.right).to.equal(runtime()!.width);
+  expect(runtime()!.chartArea.top).to.equal(0);
+  expect(runtime()!.chartArea.bottom).to.equal(runtime()!.height);
+  expect(el.shadowRoot!.querySelector('[part="data-table"]')!.textContent).to.contain('Trips: 8');
+  const activated: number[] = [];
+  el.addEventListener('lr-datum-activate', event => activated.push(event.detail.index));
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  canvas.focus();
+  await sendKeys({ press: 'ArrowLeft' });
+  await sendKeys({ press: 'Enter' });
+  expect(activated).to.deep.equal([1]);
+  el.style.setProperty('--lr-chart-tick-color', 'rgb(1, 2, 3)');
+  el.config = { options: { scales: { x: { display: true } }, layout: { padding: 2 } } };
+  await el.updateComplete;
+  await waitUntil(() => runtime()!.scales['x']!.height > 0, 'explicit axis display wins over compact');
+  expect(runtime()!.chartArea.left).to.equal(2);
+  el.config = undefined;
+  el.compact = false;
+  await el.updateComplete;
+  await waitUntil(() => runtime()!.scales['y']!.width > 0, 'leaving compact restores ordinary axes');
+  await expect(el).to.be.accessible();
+});
+
+it('keeps radial scale presentation unchanged when compact cartesian options are supplied', async () => {
+  const el = await fixture<LyraChart>(html`<lr-chart type="radar" compact axes="none" without-animation
+    .labels=${['A', 'B', 'C']} .datasets=${[{ label: 'Score', data: [2, 4, 3] }]}></lr-chart>`);
+  const runtime = () => (el as unknown as { chart?: import('chart.js').Chart }).chart;
+  await waitUntil(() => !!runtime());
+  expect(runtime()!.scales['r']!.options.display).to.equal(true);
+  expect(runtime()!.options.layout!.autoPadding).to.equal(true);
+});
+
+it('renders dense positive bars with configured controller borders and restores generated defaults', async () => {
+  const el = await fixture<LyraChart>(html`<lr-chart type="bar" compact without-legend without-animation height="48px"
+    style="inline-size:340px;--border-color-1:transparent;--fill-color-1:rgb(30, 90, 160)"
+    .labels=${Array.from({ length: 240 }, (_, index) => String(index))}
+    .datasets=${[{ label: 'Monthly count', data: Array.from({ length: 240 }, (_, index) => index % 8 + 1) }]}
+    .config=${{ options: { datasets: { bar: { borderWidth: 0, borderRadius: 0 } } } }}></lr-chart>`);
+  const runtime = () => (el as unknown as { chart?: import('chart.js').Chart }).chart;
+  await waitUntil(() => !!runtime());
+  const firstBar = () => runtime()!.getDatasetMeta(0).data[0] as import('chart.js').BarElement;
+  expect(firstBar().options.borderWidth).to.equal(0);
+  expect(firstBar().options.borderRadius).to.equal(0);
+  const canvas = runtime()!.canvas;
+  const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
+  expect(pixels.some((value, index) => index % 4 === 3 && value > 0), 'dense bars paint visible pixels').to.equal(true);
+  el.config = { options: { datasets: { bar: { borderWidth: 2, borderRadius: 3 } } } };
+  el.datasets = [{ label: 'Monthly count', data: [1, 2], width: 0 }];
+  await el.updateComplete;
+  await waitUntil(() => runtime()!.data.datasets[0]!.data.length === 2);
+  expect(firstBar().options.borderWidth, 'explicit series width wins').to.equal(0);
+  expect(firstBar().options.borderRadius).to.equal(3);
+  el.datasets = [{ label: 'Monthly count', data: [1, 2] }];
+  el.config = { options: { elements: { bar: { borderWidth: 0, borderRadius: 2 } } } };
+  await el.updateComplete;
+  await waitUntil(() => firstBar().options.borderRadius === 2);
+  expect(firstBar().options.borderWidth).to.equal(0);
+  el.config = undefined;
+  await el.updateComplete;
+  await waitUntil(() => firstBar().options.borderWidth === 1, 'unsetting config restores theme defaults');
+  el.style.setProperty('--border-width', '0');
+  el.refreshTheme();
+  await waitUntil(() => firstBar().options.borderWidth === 0, 'CSS-only border control remains supported');
+});
+
+it('retains scriptable bar borders and mixed-series widths through native option resolution', async () => {
+  const el = await fixture<LyraChart>(html`<lr-chart type="bar" without-animation .labels=${['A', 'B']}
+    .datasets=${[{ label: 'Bars', data: [1, 2] }, { label: 'Line', type: 'line', width: 3, data: [2, 1] }]}
+    .config=${{ options: { datasets: { bar: {
+      borderWidth: (context: { dataIndex: number }) => context.dataIndex === 0 ? 0 : 2,
+      elements: { bar: { borderRadius: 3 } },
+    } } } }}></lr-chart>`);
+  const runtime = () => (el as unknown as { chart?: import('chart.js').Chart }).chart;
+  await waitUntil(() => !!runtime());
+  const bars = () => runtime()!.getDatasetMeta(0).data as import('chart.js').BarElement[];
+  expect(bars()[0]!.options.borderWidth).to.equal(0);
+  expect(bars()[1]!.options.borderWidth).to.equal(2);
+  expect(bars()[0]!.options.borderRadius).to.equal(3);
+  expect((runtime()!.getDatasetMeta(1).dataset as import('chart.js').LineElement).options.borderWidth).to.equal(3);
+  el.config = { options: { barBorderWidth: 0, barBorderRadius: 2 } };
+  await el.updateComplete;
+  await waitUntil(() => bars()[0]!.options.borderRadius === 2);
+  expect(bars()[1]!.options.borderWidth).to.equal(0);
+});

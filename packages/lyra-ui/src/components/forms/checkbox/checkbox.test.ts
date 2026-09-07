@@ -2059,3 +2059,22 @@ it('lets ::part(row) stretch the checkbox across its container', async () => {
   const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="row"]')!;
   expect(row.getBoundingClientRect().width, 'the row fills the 300px container').to.be.closeTo(300, 1);
 });
+
+it('keeps compact custom-box labels clear of the centered visual box in every size and direction', async () => {
+  for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl']) {
+    for (const direction of ['ltr', 'rtl']) {
+      const el = await fixture<LyraCheckbox>(html`<lr-checkbox size=${size} dir=${direction}
+        hint="Hint" error-text="Error" style="inline-size:320px;--lr-checkbox-box-size:1rem;--lr-checkbox-label-indent:1.5rem"
+      >${'A long checkbox label '.repeat(10)}</lr-checkbox>`);
+      const box = el.shadowRoot!.querySelector<HTMLElement>('[part~="box"]')!;
+      const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+      const owner = el.shadowRoot!.querySelector<HTMLElement>('[role="checkbox"]')!;
+      const visual = box.getBoundingClientRect();
+      const text = label.getBoundingClientRect();
+      expect(direction === 'ltr' ? text.left - visual.right : visual.left - text.right, `${size} ${direction}`).to.be.at.least(7);
+      expect(owner.getBoundingClientRect().width).to.be.at.least(24);
+      expect(owner.getBoundingClientRect().height).to.be.at.least(24);
+      expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
+    }
+  }
+});

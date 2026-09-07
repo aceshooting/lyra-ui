@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import './date-input.js';
+import '../input/input.js';
 import type { LyraDateInputValidator } from './date-input.class.js';
 
 const meta: Meta = {
@@ -345,5 +347,15 @@ export const ExternalGuidanceAndCallerCopy: Story = {
       dialog-label="Arrival calendar"
       .strings=${{ clear: 'Effacer', openCalendar: 'Ouvrir le calendrier', chooseDate: 'Choisir une date' }}
     ></lr-date-input>
+  `,
+};
+
+export const ThemedFilterRow: Story = {
+  render: () => html`
+    <div style="--lr-theme-form-control-height-s:2.25rem;display:flex;flex-wrap:wrap;gap:var(--lr-space-s);align-items:end">
+      <lr-date-input size="s" label="From" value="2026-01-01" with-clear style="flex:1;min-inline-size:var(--lr-size-12rem)"></lr-date-input>
+      <lr-date-input size="s" label="To" value="2026-12-31" with-clear style="flex:1;min-inline-size:var(--lr-size-12rem)"></lr-date-input>
+      <lr-input size="s" label="Filter" placeholder="Search trips" style="flex:1;min-inline-size:var(--lr-size-12rem)"></lr-input>
+    </div>
   `,
 };

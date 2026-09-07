@@ -33,7 +33,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the
   normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
   specialist owns its controller because a non-bar type would contradict the derived distribution.
-- All other `LyraChart` properties are inherited and usable: `description`, `grid`, `indexAxis`
+- All other `LyraChart` properties are inherited and usable: `description`, `grid`, `axes`, `compact`, `indexAxis`
   (`index-axis`), `hiddenDatasets`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `formatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),

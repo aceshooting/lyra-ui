@@ -466,6 +466,7 @@ const strings: LyraLocaleStrings = {
   heatmapDefaultRowLabel: 'ردیف {n}',
   heatmapDefaultColLabel: 'ستون {n}',
   heatmapSelectedCellLabel: 'انتخاب شده: {cell}.',
+  heatmapSelectedCount: 'سلول‌های انتخاب‌شده: {count}.',
   heatmapProjectionLimit:
     'فقط {count} سلول نخست نقشهٔ حرارتی نمایش داده می‌شود.',
   heatmapDecorationLimit:
@@ -507,6 +508,7 @@ const strings: LyraLocaleStrings = {
   mentionResultPosition: 'پیشنهاد {current} از {total}',
   suggestionsLabel: 'درخواست‌های پیشنهادی',
   map: 'نقشه',
+  mapResetNorth: 'جهت نقشه را به شمال بازگردانید',
   model: 'مدل',
   selectModel: 'انتخاب مدل…',
   modelSelectNoModels: 'مدلی وجود ندارد',

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import '../../forms/slider/slider.js';
 import type { LyraChartSeries } from './chart.js';
 import { narrowChartStory } from '../../../../../../.storybook/narrow-chart-story.js';
 
@@ -42,4 +43,36 @@ export const NarrowLongContent: Story = {
       ></lr-bar-chart>
     `);
   },
+};
+
+/** Slider values denote bin edges: [0, 12] contains all twelve monthly bars. */
+export const MonthlyRange: Story = {
+  args: { direction: 'ltr' },
+  argTypes: { direction: { control: 'radio', options: ['ltr', 'rtl'] } },
+  render: (args) => {
+    const rtl = args['direction'] === 'rtl';
+    const months = Array.from({ length: 12 }, (_, month) =>
+      new Intl.DateTimeFormat('en', { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, month))));
+    const counts = [4, 8, 5, 9, 14, 20, 18, 15, 12, 8, 6, 4];
+    return html`
+      <div dir=${rtl ? 'rtl' : 'ltr'} style="inline-size:100%;max-inline-size:var(--lr-size-28rem);display:grid;gap:var(--lr-space-xs)">
+        <lr-bar-chart label="Monthly trips" compact without-legend without-animation height="64px"
+          .labels=${rtl ? [...months].reverse() : months}
+          .datasets=${[{ label: 'Trips', data: rtl ? [...counts].reverse() : counts }]}></lr-bar-chart>
+        <lr-slider label="Included months" range min="0" max="12" step="1" min-value="0" max-value="12"
+          show-value value-display="formatted" value-placement="label"
+          .valueFormatter=${(value: number, handle: string) => months[Math.max(0, Math.min(11, handle === 'max' ? value - 1 : value))]}></lr-slider>
+      </div>
+    `;
+  },
+};
+
+export const DenseHistory: Story = {
+  render: () => html`
+    <lr-bar-chart label="Twenty years of monthly counts" compact without-legend without-animation height="48px"
+      style="inline-size:100%;max-inline-size:340px;--border-color-1:transparent"
+      .labels=${Array.from({ length: 240 }, (_, index) => `Month ${index + 1}`)}
+      .datasets=${[{ label: 'Count', data: Array.from({ length: 240 }, (_, index) => index % 8 + 1) }]}
+      .config=${{ options: { datasets: { bar: { borderWidth: 0, borderRadius: 0 } } } }}></lr-bar-chart>
+  `,
 };

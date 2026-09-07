@@ -474,6 +474,7 @@ const strings: LyraLocaleStrings = {
   heatmapDefaultRowLabel: 'Zeile {n}',
   heatmapDefaultColLabel: 'Spalte {n}',
   heatmapSelectedCellLabel: 'Ausgewählt: {cell}.',
+  heatmapSelectedCount: 'Ausgewählte Zellen: {count}.',
   heatmapProjectionLimit:
     'Nur die ersten {count} Heatmap-Zellen werden angezeigt.',
   heatmapDecorationLimit:
@@ -515,6 +516,7 @@ const strings: LyraLocaleStrings = {
   mentionResultPosition: 'Vorschlag {current} von {total}',
   suggestionsLabel: 'Vorgeschlagene Prompts',
   map: 'Karte',
+  mapResetNorth: 'Karte nach Norden ausrichten',
   model: 'Modell',
   selectModel: 'Modell auswählen…',
   modelSelectNoModels: 'Keine Modelle',

@@ -29,7 +29,7 @@ import { styles } from './map.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapWebglUnavailable, LYRA_DEFAULT_paginationSummary } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapWebglUnavailable, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -525,6 +525,52 @@ export interface LyraMapHeatmapOptions {
   readonly opacity?: number;
 }
 
+/** Continuous feature-driven color and constant width for an auto data layer's lines/outlines. */
+export interface LyraMapLineOptions {
+  /** Numeric feature property to color by. Missing/non-numeric values use strokeColor/color/tone. */
+  readonly field?: string;
+  /** Linear [value, color] stops. First 64 entries are inspected, sorted and deduplicated
+   * first-wins. Two usable stops are required; otherwise the flat stroke color remains.
+   * CSS variables resolve on the host. Share these stops with legendGradient for a matching key. */
+  readonly stops?: readonly (readonly [number, string])[];
+  /** Stroke width in CSS pixels, clamped to [0, 200]. Unset/non-finite restores 2. */
+  readonly width?: number;
+  /** Whole-line opacity, clamped to [0, 1]. Unset/non-finite restores 1. */
+  readonly opacity?: number;
+}
+
+/** A category's filled SVG path, rasterized locally without parsing markup or fetching resources. */
+export interface LyraMapPointIcon {
+  /** Exact string category matched against point.iconField, or point.field when omitted. */
+  readonly value: string;
+  /** SVG path data only, at most 8192 characters. Markup, URLs and non-path commands are rejected. */
+  readonly path: string;
+  /** SVG [minX, minY, width, height]. Defaults to [0, 0, 24, 24]; dimensions must be positive. */
+  readonly viewBox?: readonly [number, number, number, number];
+}
+
+/** Category colors and optional symbols for points, including unclustered points in a cluster source. */
+export interface LyraMapPointOptions {
+  /** String feature property to match. Unknown, missing and non-string values use the flat layer color. */
+  readonly field?: string;
+  /** [category, CSS color] pairs; first 32 inspected, duplicate categories first-wins. */
+  readonly colors?: readonly (readonly [string, string])[];
+  /** Point radius in CSS pixels, clamped to [0, 200]. Defaults to 5. */
+  readonly radius?: number;
+  /** Point outline width in CSS pixels, clamped to [0, 200]. Defaults to 0. */
+  readonly strokeWidth?: number;
+  /** Outline color; defaults to the layer's strokeColor/color/tone. CSS variables resolve on the host. */
+  readonly strokeColor?: string;
+  /** String feature property used for icon matching; defaults to field. */
+  readonly iconField?: string;
+  /** First 32 icons inspected, duplicate values first-wins. Unknown categories keep their circle. */
+  readonly icons?: readonly LyraMapPointIcon[];
+  /** Filled icon color; defaults to the layer tone's contrasting foreground. CSS variables supported. */
+  readonly iconColor?: string;
+  /** Icon bounding square in CSS pixels, clamped to [1, 200]. Defaults to 16. */
+  readonly iconSize?: number;
+}
+
 /** One GeoJSON source rendered as three layers (`${sourceId}-fill` for polygons, `${sourceId}-line`
  *  for lines/outlines, `${sourceId}-circle` for points), or — under `cluster`/`kind` — as the
  *  cluster or heatmap layers those describe. Colors resolve from `--lr-*` tokens at apply time,
@@ -555,6 +601,14 @@ export interface LyraMapGeoJsonDataLayer {
    * to `color`, then to `tone`. See `color` for why these are separable.
    */
   readonly strokeColor?: string;
+
+  /** Line/outline paint in the default geometry split. Ignored by cluster and heatmap entries.
+   * Does not change point colors or polygon fills. Updates repaint existing layers in place. */
+  readonly line?: LyraMapLineOptions;
+
+  /** Category point paint and safe path icons. Works with auto and clustered entries; ignored by heatmaps.
+   * Categories share this source and therefore cluster together. No DOM marker is allocated per point. */
+  readonly point?: LyraMapPointOptions;
 
   /** What this entry renders. Defaults to `'auto'` — today's geometry split, unchanged. */
   readonly kind?: LyraMapDataLayerKind;
@@ -646,6 +700,8 @@ interface CanonicalMapDataLayer {
   readonly tone: LyraMapGeoJsonDataLayer['tone'];
   readonly color: string | undefined;
   readonly strokeColor: string | undefined;
+  readonly line: CanonicalLineOptions | undefined;
+  readonly point: CanonicalPointOptions | undefined;
   readonly kind: LyraMapDataLayerKind;
   readonly heatmap: CanonicalHeatmapOptions | undefined;
   readonly cluster: NormalizedClusterOptions | undefined;
@@ -674,6 +730,7 @@ function projectMapDataLayer(value: unknown): CanonicalMapDataLayer | undefined 
     const toneDescriptor = ownDataValue(value, 'tone');
     const colorDescriptor = ownDataValue(value, 'color');
     const strokeColorDescriptor = ownDataValue(value, 'strokeColor');
+    const lineDescriptor = ownDataValue(value, 'line');
     const kindDescriptor = ownDataValue(value, 'kind');
     const heatmapDescriptor = ownDataValue(value, 'heatmap');
     const clusterDescriptor = ownDataValue(value, 'cluster');
@@ -716,6 +773,8 @@ function projectMapDataLayer(value: unknown): CanonicalMapDataLayer | undefined 
       tone,
       color: typeof colorValue === 'string' ? colorValue : undefined,
       strokeColor: typeof strokeColorValue === 'string' ? strokeColorValue : undefined,
+      line: kind === 'auto' ? projectLineOptions(optionalValue(lineDescriptor)) : undefined,
+      point: kind === 'auto' ? projectPointOptions(optionalDescriptorValue(ownDataValue(value, 'point'))) : undefined,
       kind,
       heatmap: kind === 'heatmap' ? projectHeatmapOptions(heatmapValue) : undefined,
       cluster: kind === 'auto' ? normalizedClusterOptions(clusterValue) : undefined,
@@ -758,6 +817,7 @@ const DATA_LAYER_SUFFIXES = [
   '-fill',
   '-line',
   '-circle',
+  '-point-icon',
   '-cluster',
   '-cluster-count',
   '-heatmap',
@@ -772,7 +832,7 @@ const DATA_LAYER_SUFFIXES = [
  * top of the `-cluster` circle already queried and carries the same properties, so including it
  * would just make the label, rather than the cluster, the topmost hit.
  */
-const QUERYABLE_DATA_LAYER_SUFFIXES = ['-fill', '-line', '-circle', '-cluster'] as const;
+const QUERYABLE_DATA_LAYER_SUFFIXES = ['-fill', '-line', '-circle', '-cluster', '-point-icon'] as const;
 
 /** Bound on cluster/heatmap step stops, matching `MAX_MAP_LEGEND_GRADIENT_STOPS`'s rationale. */
 const MAX_MAP_STEP_STOPS = 32;
@@ -951,6 +1011,126 @@ function normalizedClusterFonts(value: unknown): readonly string[] {
     return Object.freeze(fonts);
   } catch {
     return Object.freeze([]);
+  }
+}
+
+interface CanonicalLineOptions {
+  readonly field: string | undefined;
+  readonly stops: readonly (readonly [number, string])[];
+  readonly width: number;
+  readonly opacity: number;
+}
+
+interface CanonicalPointOptions {
+  readonly field: string | undefined;
+  readonly colors: readonly (readonly [string, string])[];
+  readonly radius: number;
+  readonly strokeWidth: number;
+  readonly strokeColor: string | undefined;
+  readonly iconField: string | undefined;
+  readonly icons: readonly CanonicalPointIcon[];
+  readonly iconColor: string | undefined;
+  readonly iconSize: number;
+}
+
+interface CanonicalPointIcon {
+  readonly value: string;
+  readonly path: string;
+  readonly viewBox: readonly [number, number, number, number];
+}
+
+function projectPointOptions(value: unknown): CanonicalPointOptions | undefined {
+  if (!isRuntimeRecord(value)) return undefined;
+  const read = (key: string): unknown => optionalDescriptorValue(ownDataValue(value, key));
+  const string = (key: string): string | undefined => {
+    const candidate = read(key);
+    return typeof candidate === 'string' && candidate.trim() ? candidate : undefined;
+  };
+  const number = (key: string, fallback: number, min: number, max: number): number => {
+    const candidate = read(key);
+    return finiteRange(typeof candidate === 'number' ? candidate : NaN, fallback, min, max);
+  };
+  const colors: (readonly [string, string])[] = [];
+  const icons: CanonicalPointIcon[] = [];
+  const project = (input: unknown, accept: (row: object) => void): void => {
+    const length = boundedOwnArrayLength(input, MAX_MAP_STEP_STOPS) ?? 0;
+    for (let index = 0; index < length; index++) {
+      const row = optionalDescriptorValue(ownDataValue(input as object, String(index)));
+      if (row !== null && typeof row === 'object') accept(row);
+    }
+  };
+  project(read('colors'), (row) => {
+    const key = optionalDescriptorValue(ownDataValue(row, '0'));
+    const color = optionalDescriptorValue(ownDataValue(row, '1'));
+    if (typeof key !== 'string' || typeof color !== 'string' || !sanitizeCssColor(color) ||
+      colors.some(([existing]) => existing === key)) return;
+    colors.push(Object.freeze([key, color]));
+  });
+  project(read('icons'), (row) => {
+    const key = optionalDescriptorValue(ownDataValue(row, 'value'));
+    const path = optionalDescriptorValue(ownDataValue(row, 'path'));
+    if (typeof key !== 'string' || typeof path !== 'string' || path.length === 0 || path.length > 8192 ||
+      !/^[MmLlHhVvCcSsQqTtAaZz\d.eE+,\s-]+$/u.test(path) || icons.some((icon) => icon.value === key)) return;
+    const rawBox = optionalDescriptorValue(ownDataValue(row, 'viewBox'));
+    const box: number[] = [];
+    if (rawBox === undefined) box.push(0, 0, 24, 24);
+    else {
+      if (boundedOwnArrayLength(rawBox, 4) !== 4) return;
+      for (let index = 0; index < 4; index++) {
+        const coordinate = optionalDescriptorValue(ownDataValue(rawBox as object, String(index)));
+        if (typeof coordinate !== 'number' || !Number.isFinite(coordinate) || Math.abs(coordinate) > 10_000) return;
+        box.push(coordinate);
+      }
+      if (box[2]! < 0.001 || box[3]! < 0.001) return;
+    }
+    icons.push(Object.freeze({ value: key, path, viewBox: Object.freeze(box) as unknown as CanonicalPointIcon['viewBox'] }));
+  });
+  return Object.freeze({ field: string('field'), colors: Object.freeze(colors), radius: number('radius', 5, 0, 200),
+    strokeWidth: number('strokeWidth', 0, 0, 200), strokeColor: string('strokeColor'),
+    iconField: string('iconField') ?? string('field'), icons: Object.freeze(icons),
+    iconColor: string('iconColor'), iconSize: number('iconSize', 16, 1, 200) });
+}
+
+/** Fixed 2x atlas raster size; display size is controlled by point.iconSize, not device allocation. */
+const POINT_ICON_RASTER_SIZE = 64;
+
+function rasterPointIcon(host: Element, icon: CanonicalPointIcon, color: string): ImageData | undefined {
+  try {
+    const canvas = host.ownerDocument.createElement('canvas');
+    canvas.width = canvas.height = POINT_ICON_RASTER_SIZE;
+    const context = canvas.getContext('2d');
+    const Path = host.ownerDocument.defaultView?.Path2D;
+    if (!context || !Path) return undefined;
+    const [x, y, width, height] = icon.viewBox;
+    const scale = POINT_ICON_RASTER_SIZE / Math.max(width, height);
+    context.translate((POINT_ICON_RASTER_SIZE - width * scale) / 2, (POINT_ICON_RASTER_SIZE - height * scale) / 2);
+    context.scale(scale, scale);
+    context.translate(-x, -y);
+    context.fillStyle = color;
+    context.fill(new Path(icon.path));
+    return context.getImageData(0, 0, POINT_ICON_RASTER_SIZE, POINT_ICON_RASTER_SIZE);
+  } catch {
+    return undefined;
+  }
+}
+
+function projectLineOptions(value: unknown): CanonicalLineOptions | undefined {
+  try {
+    if (!isRuntimeRecord(value)) return undefined;
+    const field = optionalDescriptorValue(ownDataValue(value, 'field'));
+    const width = optionalDescriptorValue(ownDataValue(value, 'width'));
+    const opacity = optionalDescriptorValue(ownDataValue(value, 'opacity'));
+    return Object.freeze({
+      field: typeof field === 'string' && field.trim() ? field.trim() : undefined,
+      stops: Object.freeze(normalizeMapLegendGradient(
+        optionalDescriptorValue(ownDataValue(value, 'stops')),
+      ).filter((stop, index, stops) => index === 0 || stop[0] > stops[index - 1]![0])
+        .map((stop) => Object.freeze(stop))),
+      width: typeof width === 'number' ? finiteRange(width, 2, 0, 200) : 2,
+      opacity: typeof opacity === 'number' ? finiteRange(opacity, 1, 0, 1) : 1,
+    });
+  } catch {
+    return undefined;
   }
 }
 
@@ -1985,6 +2165,11 @@ export interface LyraMapEventMap {
  * @csspart popup-close-button - The MapLibre-generated button that closes an open marker popup.
  * @csspart attribution - MapLibre-generated map attribution.
  * @csspart attribution-toggle - MapLibre's compact-attribution disclosure control.
+ * @csspart navigation - Standard peer NavigationControl group, when added through the map getter.
+ * @csspart zoom-in - Peer zoom-in button with a localized accessible name and tokenized target.
+ * @csspart zoom-out - Peer zoom-out button.
+ * @csspart compass - Peer compass/reset-north button; its glyph retains the peer's bearing rotation.
+ * @csspart scale - Standard peer ScaleControl bar. Units and updates remain owned by MapLibre.
  * @csspart error - Visible localized message shown instead of `container` when `mapStyle` is
  *   missing, the optional peer is unavailable, WebGL2 cannot be created, or map initialization
  *   fails; the transition is announced through the shared light-DOM assertive region.
@@ -2018,9 +2203,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     mapInitializationFailed: LYRA_DEFAULT_mapInitializationFailed,
     mapLegend: LYRA_DEFAULT_mapLegend,
     mapMissingLibrary: LYRA_DEFAULT_mapMissingLibrary,
+    mapResetNorth: LYRA_DEFAULT_mapResetNorth,
     mapStyleRequired: LYRA_DEFAULT_mapStyleRequired,
     mapWebglUnavailable: LYRA_DEFAULT_mapWebglUnavailable,
     paginationSummary: LYRA_DEFAULT_paginationSummary,
+    zoomIn: LYRA_DEFAULT_zoomIn,
+    zoomOut: LYRA_DEFAULT_zoomOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -2150,6 +2338,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Dev-mode-only: catches a gradient key whose value/color stops disagree with the layer it
    * claims to describe. Warning preserves explicit override behavior while making drift visible. */
   private warnOnLegendChoroplethMismatch(): void {
+    if (this.legendDescribesLine()) return;
     const layer = this.canonicalChoropleth;
     const legend = this.legendGradient;
     if (!layer || legend.length === 0 || layer.stops.length === 0) {
@@ -2174,6 +2363,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         'may misdescribe the map. Assign the same stops array to both, or derive both from one ' +
         'source.',
     );
+  }
+
+  private legendDescribesLine(): boolean {
+    const stops = this.legendGradient;
+    if (stops.length < 2) return false;
+    return this.canonicalDataLayers.some((layer) => layer.kind === 'auto' && !layer.cluster && layer.line?.field &&
+      layer.line.stops.length === stops.length && layer.line.stops.every(([value, color], index) =>
+        value === stops[index]![0] && resolvedLayerColor(this, color, layer.tone) ===
+        resolvedLayerColor(this, stops[index]![1], layer.tone)));
   }
   /** Overrides the low endpoint's caption; defaults to the lowest stop value, locale-formatted. */
   @property({ attribute: 'legend-gradient-lo-label' }) legendGradientLoLabel: string | null = null;
@@ -2200,7 +2398,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * source into a natively clustered one (aggregate circle, count label, unclustered points), which
    * is what thousands of points need and what `markers` -- one real DOM element per entry -- cannot
    * be; `kind: 'heatmap'` replaces the geometry split with MapLibre's own `heatmap` layer. Neither
-   * changes an entry that sets neither.
+   * changes an entry that sets neither. `point` adds categorical circle paint and bounded SVG path
+   * icons to ordinary or clustered points on the same source; `line` adds numeric route paint.
    */
   @property({ attribute: false }) dataLayers: readonly LyraMapGeoJsonDataLayer[] = [];
 
@@ -2299,6 +2498,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    *  than replacing the whole source. Holds a reference, not a copy -- it is only ever compared. */
   private _appliedGeoJson = new Map<string, CanonicalGeoJsonProjection>();
   private _nextDataLayerId = 0;
+  private nextPointIconId = 0;
+  private appliedPointPaint = new Set<string>();
+  private appliedPointIcons = new Map<string, {
+    signature: string;
+    color: string;
+    icons: readonly { id: string; icon: CanonicalPointIcon }[];
+  }>();
   // Cached once connectedCallback's loadMaplibre().then() resolves, and always
   // set before `_map` itself is (see that closure) -- so any code path gated
   // on `this._map` being truthy can rely on this being set too, without
@@ -2584,6 +2790,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._appliedFillLayerId = undefined;
     this._appliedDataLayerIds.clear();
     this._appliedDataLayerShapes.clear();
+    this.appliedPointIcons.clear();
+    this.appliedPointPaint.clear();
     this._appliedGeoJson.clear();
   }
 
@@ -2655,6 +2863,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           'Map.Title': this.effectiveMapLabel,
           'Marker.Title': this.localize('map'),
           'Popup.Close': this.localize('close'),
+          'NavigationControl.ZoomIn': this.localize('zoomIn'),
+          'NavigationControl.ZoomOut': this.localize('zoomOut'),
+          'NavigationControl.ResetBearing': this.localize('mapResetNorth'),
         },
       });
       // Install every component-owned handler before publishing the instance. A constructor or
@@ -2777,12 +2988,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // leave the choropleth (and `_styleLoaded`) never re-applied.
       const map = this._map;
       try {
+        for (const sourceId of this.appliedPointIcons.keys()) this.removePointIcons(sourceId);
         map.once('style.load', () => {
           if (this._map !== map) return;
           try {
             this._styleLoaded = true;
             this._appliedDataLayerIds.clear(); // a style change wipes every layer/source maplibre-gl knows about
             this._appliedDataLayerShapes.clear();
+            this.appliedPointPaint.clear();
             this._appliedGeoJson.clear();
             this.applyChoropleth();
             this.applyDataLayers();
@@ -3046,9 +3259,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const cluster = layer.cluster;
     if (cluster) {
       this.applyClusterLayers(sourceId, layer, cluster);
-      return;
+    } else {
+      this.applyGeometryLayers(sourceId, layer);
     }
-    this.applyGeometryLayers(sourceId, layer);
+    this.applyPointIcons(sourceId, layer);
   }
 
   /**
@@ -3065,9 +3279,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const cluster = layer.cluster;
     if (cluster) {
       this.paintClusterLayers(sourceId, layer, cluster);
-      return;
+    } else {
+      this.paintGeometryLayers(sourceId, layer);
     }
-    this.paintGeometryLayers(sourceId, layer);
+    this.paintPointIcons(sourceId, layer);
   }
 
   /** The pre-existing geometry split: polygons filled, lines/outlines stroked, points circled. */
@@ -3094,7 +3309,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         type: 'line',
         source: sourceId,
         filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
-        paint: { 'line-color': stroke, 'line-width': 2 },
+        paint: {
+          'line-color': this.lineColor(layer), 'line-width': layer.line?.width ?? 2,
+          ...(layer.line ? { 'line-opacity': layer.line.opacity } : {}),
+        },
       });
     }
     if (!this._map.getLayer(circleId)) {
@@ -3106,6 +3324,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         paint: { 'circle-color': stroke, 'circle-radius': 5 },
       });
     }
+    this._map.setPaintProperty(lineId, 'line-width', layer.line?.width ?? 2);
+    this._map.setPaintProperty(lineId, 'line-opacity', layer.line?.opacity ?? 1);
     this.paintGeometryLayers(sourceId, layer);
   }
 
@@ -3114,11 +3334,106 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!this._map) return;
     const tone = layer.tone;
     const color = resolvedLayerColor(this, layer.color, tone);
-    const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
     this._map.setPaintProperty(`${sourceId}-fill`, 'fill-color', color);
     this._map.setPaintProperty(`${sourceId}-fill`, 'fill-opacity', choroplethFillOpacity(this));
-    this._map.setPaintProperty(`${sourceId}-line`, 'line-color', stroke);
-    this._map.setPaintProperty(`${sourceId}-circle`, 'circle-color', stroke);
+    this._map.setPaintProperty(`${sourceId}-line`, 'line-color', this.lineColor(layer));
+    this.paintPoints(sourceId, layer);
+  }
+
+  private lineColor(layer: CanonicalMapDataLayer): string | unknown[] {
+    const fallback = resolvedLayerColor(this, layer.strokeColor ?? layer.color, layer.tone);
+    const line = layer.line;
+    if (!line?.field || line.stops.length < 2) return fallback;
+    // A guarded numeric assertion keeps absent/null/string properties on the authored fallback
+    // instead of coercing them into a meaningful domain value or producing peer evaluation errors.
+    return [
+      'case', ['==', ['typeof', ['get', line.field]], 'number'],
+      ['interpolate', ['linear'], ['number', ['get', line.field]],
+        ...line.stops.flatMap(([value, color]) => [value, resolvedLayerColor(this, color, layer.tone)])],
+      fallback,
+    ];
+  }
+
+  private paintPoints(sourceId: string, layer: CanonicalMapDataLayer): void {
+    if (!this._map) return;
+    const point = layer.point;
+    const fallback = resolvedLayerColor(this, layer.strokeColor ?? layer.color, layer.tone);
+    const color = point?.field && point.colors.length
+      ? ['match', ['get', point.field], ...point.colors.flatMap(([value, paint]) =>
+        [value, resolvedLayerColor(this, paint, layer.tone)]), fallback] : fallback;
+    const id = `${sourceId}-circle`;
+    this._map.setPaintProperty(id, 'circle-color', color);
+    if (!point && !this.appliedPointPaint.has(sourceId)) return;
+    this._map.setPaintProperty(id, 'circle-radius', point?.radius ?? 5);
+    this._map.setPaintProperty(id, 'circle-stroke-width', point?.strokeWidth ?? 0);
+    this._map.setPaintProperty(id, 'circle-stroke-color', point?.strokeColor
+      ? resolvedLayerColor(this, point.strokeColor, layer.tone) : fallback);
+    if (point) this.appliedPointPaint.add(sourceId);
+    else this.appliedPointPaint.delete(sourceId);
+  }
+
+  private pointIconColor(layer: CanonicalMapDataLayer): string {
+    return resolvedLayerColor(this, layer.point?.iconColor ?? `var(${ON_TONE_TOKEN[layer.tone ?? 'accent']})`, layer.tone);
+  }
+
+  private removePointIcons(sourceId: string): void {
+    const applied = this.appliedPointIcons.get(sourceId);
+    if (!applied || !this._map) return;
+    const id = `${sourceId}-point-icon`;
+    if (this._map.getLayer(id)) this._map.removeLayer(id);
+    for (const { id: imageId } of applied.icons) {
+      if (this._map.hasImage?.(imageId)) this._map.removeImage?.(imageId);
+    }
+    this.appliedPointIcons.delete(sourceId);
+  }
+
+  private applyPointIcons(sourceId: string, layer: CanonicalMapDataLayer): void {
+    const map = this._map;
+    const point = layer.point;
+    const signature = JSON.stringify([point?.iconField, point?.iconSize, point?.icons]);
+    if (this.appliedPointIcons.get(sourceId)?.signature === signature) {
+      this.paintPointIcons(sourceId, layer);
+      return;
+    }
+    this.removePointIcons(sourceId);
+    if (!point?.iconField || !point.icons.length || !map ||
+      typeof map.addImage !== 'function' || typeof map.hasImage !== 'function' ||
+      typeof map.updateImage !== 'function' || typeof map.removeImage !== 'function') return;
+    const color = this.pointIconColor(layer);
+    const icons: { id: string; icon: CanonicalPointIcon }[] = [];
+    // Track ownership before allocating so teardown can also clean up a partially failed peer call.
+    this.appliedPointIcons.set(sourceId, { signature, color, icons });
+    for (const icon of point.icons) {
+      const raster = rasterPointIcon(this, icon, color);
+      if (!raster) continue;
+      let id: string;
+      do { id = `lr-point-icon-${this.nextPointIconId++}`; } while (map.hasImage(id));
+      icons.push({ id, icon });
+      map.addImage(id, raster, { pixelRatio: 2 });
+    }
+    if (!icons.length) return;
+    map.addLayer({ id: `${sourceId}-point-icon`, type: 'symbol', source: sourceId,
+      filter: layer.cluster
+        ? ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]]
+        : ['==', ['geometry-type'], 'Point'],
+      layout: {
+        'icon-image': ['match', ['get', point.iconField], ...icons.flatMap(({ id, icon }) => [icon.value, id]), ''],
+        'icon-size': point.iconSize / (POINT_ICON_RASTER_SIZE / 2),
+        'icon-allow-overlap': true, 'icon-ignore-placement': true,
+      },
+    });
+  }
+
+  private paintPointIcons(sourceId: string, layer: CanonicalMapDataLayer): void {
+    const applied = this.appliedPointIcons.get(sourceId);
+    if (!applied) return;
+    const color = this.pointIconColor(layer);
+    if (color === applied.color) return;
+    for (const { id, icon } of applied.icons) {
+      const raster = rasterPointIcon(this, icon, color);
+      if (raster) this._map?.updateImage?.(id, raster);
+    }
+    applied.color = color;
   }
 
   /**
@@ -3237,7 +3552,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         resolvedLayerColor(this, `var(${ON_TONE_TOKEN[tone ?? 'accent']})`, tone),
       );
     }
-    this._map.setPaintProperty(`${sourceId}-circle`, 'circle-color', stroke);
+    this.paintPoints(sourceId, layer);
   }
 
   /** The single `heatmap` layer `kind: 'heatmap'` renders, in place of the geometry split. */
@@ -3365,6 +3680,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!this._map) return;
     const sourceId = this._appliedDataLayerIds.get(publicSourceId);
     if (!sourceId) return;
+    this.removePointIcons(sourceId);
+    this.appliedPointPaint.delete(sourceId);
     for (const suffix of DATA_LAYER_SUFFIXES) {
       const layerId = `${sourceId}${suffix}`;
       if (this._map.getLayer(layerId)) this._map.removeLayer(layerId);
@@ -3607,9 +3924,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private stopObservingPeerChrome(): void {
+    this.peerControlsResizeObserver?.disconnect();
+    this.peerControlsResizeObserver = undefined;
     this.peerChromeObserver?.disconnect();
     this.peerChromeObserver = undefined;
     this.observedPeerContainer = undefined;
+  }
+
+  private peerControlsResizeObserver?: ResizeObserver;
+
+  private measurePeerControlInsets(container: HTMLElement): void {
+    if (!this.isConnected || this.containerEl !== container) return;
+    const hasControls = container.querySelector('.maplibregl-ctrl-group, .maplibregl-ctrl-scale') !== null;
+    for (const edge of ['top', 'bottom']) {
+      const height = !hasControls ? 0 : Math.max(0, ...[...container.querySelectorAll<HTMLElement>(
+        `.maplibregl-ctrl-${edge}-left, .maplibregl-ctrl-${edge}-right`,
+      )].map((corner) => corner.getBoundingClientRect().height));
+      container.parentElement?.style.setProperty(`--_lr-map-controls-${edge}`, `${height}px`);
+    }
   }
 
   /** Projects stable Lyra parts onto peer-owned nodes without erasing existing part tokens. */
@@ -3621,11 +3953,26 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       ['.maplibregl-popup-close-button', 'popup-close-button'],
       ['.maplibregl-ctrl-attrib', 'attribution'],
       ['.maplibregl-ctrl-attrib-button', 'attribution-toggle'],
+      ['.maplibregl-ctrl-group:has(.maplibregl-ctrl-zoom-in, .maplibregl-ctrl-compass)', 'navigation'],
+      ['.maplibregl-ctrl-zoom-in', 'zoom-in'],
+      ['.maplibregl-ctrl-zoom-out', 'zoom-out'],
+      ['.maplibregl-ctrl-compass', 'compass'],
+      ['.maplibregl-ctrl-scale', 'scale'],
     ];
     for (const [selector, part] of selectors) {
       const candidate = root as ParentNode & { matches?: (value: string) => boolean };
-      if (candidate.matches?.(selector)) addPartToken(candidate as unknown as Element, part);
-      for (const element of root.querySelectorAll(selector)) addPartToken(element, part);
+      const elements = [...root.querySelectorAll(selector)];
+      if (candidate.matches?.(selector)) elements.push(candidate as unknown as Element);
+      for (const element of elements) {
+        addPartToken(element, part);
+        const label = part === 'zoom-in' ? this.localize('zoomIn')
+          : part === 'zoom-out' ? this.localize('zoomOut')
+          : part === 'compass' ? this.localize('mapResetNorth') : undefined;
+        if (label !== undefined) {
+          element.setAttribute('aria-label', label);
+          element.setAttribute('title', label);
+        }
+      }
     }
   }
 
@@ -3638,6 +3985,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const MutationObserverCtor = container.ownerDocument.defaultView?.MutationObserver;
     if (!MutationObserverCtor) return;
     this.observedPeerContainer = container;
+    const ResizeObserverCtor = container.ownerDocument.defaultView?.ResizeObserver;
+    if (ResizeObserverCtor) {
+      this.peerControlsResizeObserver = new ResizeObserverCtor(() => this.measurePeerControlInsets(container));
+      for (const corner of container.querySelectorAll<HTMLElement>(
+        '.maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right, .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right',
+      )) this.peerControlsResizeObserver.observe(corner);
+    }
+    this.measurePeerControlInsets(container);
     this.peerChromeObserver = new MutationObserverCtor((records) => {
       if (!this.isConnected || this.containerEl !== container) return;
       for (const record of records) {
@@ -3645,6 +4000,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           if (node.nodeType === Node.ELEMENT_NODE) this.syncPeerChromeParts(node as Element);
         }
       }
+      this.measurePeerControlInsets(container);
     });
     this.peerChromeObserver.observe(container, { childList: true, subtree: true });
   }
@@ -3683,7 +4039,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (canvas) {
       canvas.setAttribute('aria-label', this.effectiveMapLabel);
       canvas.setAttribute('lang', this.effectiveLocale);
-      if (this.legend.length || this.legendProjection.truncated) {
+      if (this.legend.length || this.legendGradient.length >= 2 || this.hasLegendSlot || this.legendProjection.truncated) {
         canvas.setAttribute('aria-describedby', 'map-legend');
       }
       else canvas.removeAttribute('aria-describedby');
@@ -3742,7 +4098,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (stops.length < 2) return nothing;
     const lo = stops[0]!;
     const hi = stops[stops.length - 1]!;
-    const image = choroplethLegendGradientImage(stops, this.canonicalChoropleth?.interpolation);
+    const image = choroplethLegendGradientImage(stops,
+      this.legendDescribesLine() ? 'linear' : this.canonicalChoropleth?.interpolation);
     return html`<div class="legend-gradient">
       <span part="legend-lo">${this.legendGradientLoLabel ?? this.formatCount(lo[0])}</span>
       <span

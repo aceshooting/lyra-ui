@@ -467,6 +467,8 @@ export type {
   HeatmapAnnotation,
   HeatmapLegendStop,
   HeatmapSelectedCell,
+  HeatmapSelectionChangeDetail,
+  HeatmapSelectionSource,
   LyraHeatmapCellClickDetail,
   LyraHeatmapMatrixGeometryChangeDetail,
 } from './components/data/heatmap/heatmap.class.js';
@@ -555,6 +557,7 @@ export type {
   LyraChartDatasetConfiguration,
   LyraChartType,
   LyraChartGrid,
+  LyraChartAxes,
   LyraChartIndexAxis,
   LyraChartScaleType,
   LyraChartAnnotation,
@@ -611,6 +614,9 @@ export type {
   LyraMapClusterOptions,
   LyraMapHeatmapOptions,
   LyraMapHeatmapZoomValue,
+  LyraMapLineOptions,
+  LyraMapPointOptions,
+  LyraMapPointIcon,
   LyraMapMarkerActivationDetail,
   LyraMapMarkerActivationSource,
   LyraMapStyleSpecification,
@@ -1568,6 +1574,8 @@ export type {
   SliderOrientation,
   SliderTooltipPlacement,
   SliderValueFormatter,
+  SliderValueDisplay,
+  SliderValuePlacement,
 } from './components/forms/slider/slider.class.js';
 export type { LyraSourceCardEventMap } from './components/retrieval/source-card/source-card.class.js';
 export type { LyraSourceListEventMap } from './components/retrieval/source-list/source-list.class.js';

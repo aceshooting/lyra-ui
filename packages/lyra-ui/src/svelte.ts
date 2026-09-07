@@ -1074,8 +1074,10 @@ export type LyraBarChartSvelteProps = LyraSvelteElementProps<
   LyraBarChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -1293,8 +1295,10 @@ export type LyraBubbleChartSvelteProps = LyraSvelteElementProps<
   LyraBubbleChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -1672,8 +1676,10 @@ export type LyraChartSvelteProps = LyraSvelteElementProps<
   LyraChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -3495,8 +3501,10 @@ export type LyraDoughnutChartSvelteProps = LyraSvelteElementProps<
   LyraDoughnutChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -4803,16 +4811,19 @@ export type LyraHeatmapSvelteProps = LyraSvelteElementProps<
   | 'maxCellSize'
   | 'midpoint'
   | 'minCellSize'
+  | 'multiple'
   | 'rowLabelWidth'
   | 'scale'
   | 'selectedCell'
+  | 'selectedCells'
   | 'stickyLabels'
   | 'strings'
   | 'valueLabel',
   {},
   LyraHeatmapEventMap,
   | 'lr-cell-click'
-  | 'lr-matrix-geometry-change',
+  | 'lr-matrix-geometry-change'
+  | 'lr-selection-change',
   | '--lr-heatmap-annotation-color'
   | '--lr-heatmap-color-steps-gradient'
   | '--lr-heatmap-focus-ring-color'
@@ -4870,9 +4881,11 @@ export type LyraHistogramSvelteProps = LyraSvelteElementProps<
   LyraHistogram,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'bins'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -5618,8 +5631,10 @@ export type LyraLineChartSvelteProps = LyraSvelteElementProps<
   LyraLineChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -7094,8 +7109,10 @@ export type LyraPieChartSvelteProps = LyraSvelteElementProps<
   LyraPieChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -7192,8 +7209,10 @@ export type LyraPolarAreaChartSvelteProps = LyraSvelteElementProps<
   LyraPolarAreaChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -7720,8 +7739,10 @@ export type LyraRadarChartSvelteProps = LyraSvelteElementProps<
   LyraRadarChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -8389,8 +8410,10 @@ export type LyraScatterChartSvelteProps = LyraSvelteElementProps<
   LyraScatterChart,
   | 'annotations'
   | 'area'
+  | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'compact'
   | 'config'
   | 'dataLabels'
   | 'datasets'
@@ -8758,7 +8781,9 @@ export type LyraSliderSvelteProps = LyraSvelteElementProps<
   | 'value'
   | 'valueAsNumber'
   | 'valueAsString'
+  | 'valueDisplay'
   | 'valueFormatter'
+  | 'valuePlacement'
   | 'withHint'
   | 'withLabel'
   | 'withMarkers'
@@ -8809,6 +8834,8 @@ export type LyraSliderSvelteProps = LyraSvelteElementProps<
     'tooltip-distance'?: LyraSlider['tooltipDistance'];
     'tooltip-placement'?: LyraSlider['tooltipPlacement'];
     'value'?: LyraSlider['defaultValue'];
+    'value-display'?: LyraSlider['valueDisplay'];
+    'value-placement'?: LyraSlider['valuePlacement'];
     'with-hint'?: LyraSlider['withHint'];
     'with-label'?: LyraSlider['withLabel'];
     'with-markers'?: LyraSlider['withMarkers'];

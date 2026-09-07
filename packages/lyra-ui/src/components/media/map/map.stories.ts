@@ -486,3 +486,65 @@ export const Narrow320LtrRtl: Story = {
     </div>
   `,
 };
+
+export const RouteSpeed: Story = {
+  parameters: { docs: { description: { story: 'Numeric route colors, width and opacity are managed by dataLayers. The same stops feed the gradient legend; reassign dataLayers when a filter or speed metric changes. Style reloads and ancestor theme changes preserve the declarative layer.' } } },
+  render: () => {
+    const stops: [number, string][] = [[0, storyColor('brand')], [50, storyColor('warning')], [100, storyColor('danger')]];
+    const layer: LyraMapGeoJsonDataLayer = {
+      sourceId: 'routes',
+      geojson: { type: 'FeatureCollection', features: [20, 50, 85].map((speed, index) => ({
+        type: 'Feature', id: `route-${index}`, properties: { speed },
+        geometry: { type: 'LineString', coordinates: [[-0.025, (index - 1) * 0.01], [0.025, (index - 1) * 0.01]] },
+      })) },
+      line: { field: 'speed', stops, width: 5, opacity: 0.9 },
+    };
+    return html`<lr-map label="Route speeds" .mapStyle=${OFFLINE_RASTER_STYLE} zoom="12"
+      .dataLayers=${[layer]} .legendGradient=${stops}
+      legend-gradient-lo-label="0 km/h" legend-gradient-hi-label="100 km/h"></lr-map>`;
+  },
+};
+
+export const NavigationAndScale: Story = {
+  parameters: { docs: { description: { story: 'Standard MapLibre NavigationControl and ScaleControl added through the public map getter receive shadow-root styles, localized button names and public CSS parts. Positions follow text direction. The legend reserves room for controls and attribution; ScaleControl owns unit formatting and viewport updates.' } } },
+  render: () => html`<lr-map label="Map with navigation controls" .mapStyle=${OFFLINE_RASTER_STYLE}
+    .legendGradient=${[[0, storyColor('brand')], [100, storyColor('danger')]]}
+    @lr-map-load=${async (event: Event) => {
+      const el = event.currentTarget as import('./map.js').LyraMap;
+      const { NavigationControl, ScaleControl } = await import('maplibre-gl');
+      const map = el.map as import('maplibre-gl').Map | undefined;
+      if (!el.isConnected || !map) return;
+      map.addControl(new NavigationControl(), 'bottom-right');
+      map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
+    }}></lr-map>`,
+};
+
+export const ClassifiedPoints: Story = {
+  args: { zoom: 13 },
+  argTypes: { zoom: { control: { type: 'range', min: 10, max: 18, step: 1 } } },
+  parameters: { docs: { description: { story: 'One clustered source retains cross-category aggregation. Increase zoom past 14 to see category colors and locally rasterized SVG path icons. The same feature is returned by lr-map-click on its circle or icon; CSS token colors follow the active theme.' } } },
+  render: ({ zoom }) => {
+    const categories = ['home', 'work', 'shop'];
+    const layer: LyraMapGeoJsonDataLayer = {
+      sourceId: 'places', cluster: {},
+      geojson: { type: 'FeatureCollection', features: Array.from({ length: 1200 }, (_, index) => ({
+        type: 'Feature', id: index, properties: { category: categories[index % 3] },
+        geometry: { type: 'Point', coordinates: [((index % 40) - 20) * 0.001, (Math.floor(index / 40) - 15) * 0.001] },
+      })) },
+      point: { field: 'category', colors: [['home', storyColor('brand')], ['work', storyColor('success')], ['shop', storyColor('warning')]],
+        radius: 12, strokeWidth: 1, iconSize: 14,
+        icons: [
+          { value: 'home', path: 'M2 12L12 2L22 12V22H2Z' },
+          { value: 'work', path: 'M8 2H16V6H22V22H2V6H8Z' },
+          { value: 'shop', path: 'M4 2H20L23 9H21V22H3V9H1ZM6 12V20H10V12Z' },
+        ],
+      },
+    };
+    return html`<lr-map label="Classified locations" .mapStyle=${OFFLINE_RASTER_STYLE} .zoom=${zoom}
+      .dataLayers=${[layer]} .legend=${[
+        { label: 'Home', color: storyColor('brand'), pattern: 'solid' },
+        { label: 'Work', color: storyColor('success'), pattern: 'diagonal' },
+        { label: 'Shop', color: storyColor('warning'), pattern: 'dots' },
+      ]}></lr-map>`;
+  },
+};

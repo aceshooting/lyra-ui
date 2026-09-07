@@ -280,8 +280,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * pointer/keyboard toggle rather than carrying the only popup relationship.
  *
  * `size` uses the same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`,
- * default `m`. The calendar-toggle and clear buttons keep a constant touch-target size at every
- * tier (mirroring `lr-input`'s own password-toggle button), so only the field's density scales.
+ * default `m`. The calendar-toggle and clear buttons fit within the selected control height
+ * while retaining a 24px target. The smallest tiers can grow to accommodate that minimum.
  * In a constrained row the editable input shrinks first, while each public `start`/`end`
  * adornment is capped at 40% so unbroken consumer content cannot widen the field.
  *
@@ -326,9 +326,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart preset-button - One quick-range button, forwarded from `<lr-date-picker>`.
  * @csspart hint - The hint message.
  * @csspart error - The validation message.
- * @cssprop [--lr-date-input-padding-block=var(--lr-space-xs)] - Block padding of the input row, scaled by `size`.
- * @cssprop [--lr-date-input-padding-inline=var(--lr-space-s)] - Inline padding of the input row, scaled by `size`.
- * @cssprop [--lr-date-input-font-size=inherit] - Font size of the text input, scaled by `size`.
+ * @cssprop [--lr-date-input-padding-block=var(--lr-form-control-padding-block)] - Text input block padding, scaled by `size`.
+ * @cssprop [--lr-date-input-padding-inline=var(--lr-form-control-padding-inline)] - Inline padding of the input row, scaled by `size`.
+ * @cssprop [--lr-date-input-font-size=var(--lr-form-control-font-size)] - Font size of the text input, scaled by `size`.
  * @cssprop [--lr-date-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @cssprop [--lr-date-input-gap=var(--lr-space-xs)] - Gap between input-row children.
  * @cssprop [--lr-date-input-radius=var(--lr-radius)] - Input-row corner radius. `pill` changes its
@@ -342,9 +342,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @cssprop [--lr-date-input-action-active-radius=var(--lr-date-input-radius)] - Clear/calendar action corner radius while pressed.
  * @cssprop [--lr-date-input-control-min-height=var(--lr-form-control-height)] - Minimum block size
  *   of the input row, read from the shared form-control height ladder so retuning
- *   `--lr-theme-form-control-height-*` moves this control and every sibling field together. Each
- *   default sits below the row's transitively-pinned height, so it is dead until a consumer raises
- *   it -- the unset render is unchanged.
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
+ *   The smallest tiers can grow to fit the action buttons' 24px minimum and row borders.
  * @cssprop --lr-date-input-control-height - Exact block size of the input row. Undeclared by
  *   default, so the row grows to fit its content (floored by `--lr-date-input-control-min-height`).
  *   Set it to pin a fixed height; the calendar toggle keeps its own 24x24 touch target even when

@@ -74,7 +74,7 @@ export const NoLabelSlot: Story = {
     docs: {
       description: {
         story:
-          'Even at `size="2xs"`, the tier-sized visible box is centered inside the shared ' +
+          'Even at `size="2xs"`, the tier-sized visible box sits at the start of the shared ' +
           "`--lr-icon-button-size` minimum interactive target.",
       },
     },
@@ -305,6 +305,19 @@ export const RemovableError: StoryObj = {
       <button @click=${(event: Event) => {
         (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-checkbox')!.removeAttribute('error-text');
       }}>Remove error message</button>
+    </div>
+  `,
+};
+
+export const CompactLabels: Story = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-20rem)">
+      ${['ltr', 'rtl'].map(direction => html`
+        <lr-checkbox dir=${direction} size="s" checked hint="Supporting text aligns with the label"
+          style="--lr-checkbox-box-size:var(--lr-size-1rem);--lr-checkbox-label-indent:calc(var(--lr-size-1rem) + var(--lr-space-s))">
+          A longer compact option label that wraps onto another line
+        </lr-checkbox>
+      `)}
     </div>
   `,
 };

@@ -6820,6 +6820,13 @@
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart/chart.test.ts",
+              "line": 6574,
+              "test": "fills a compact plot while retaining accessible data, keyboard actions and explicit config overrides",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -12821,29 +12828,36 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 3476,
+              "line": 3468,
               "test": "exposes validationTarget/resetValidity and is accessible while open and populated",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 682,
+              "line": 676,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 2107,
+              "line": 2101,
               "test": "is accessible with adornments slotted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 2262,
+              "line": 2254,
               "test": "stays accessible with a pinned exact control height",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "line": 4874,
+              "test": "tracks inherited theme heights at small and large sizes without extra action padding",
               "target": "el",
               "state": "populated"
             }
@@ -12856,7 +12870,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 582,
+              "line": 576,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -12867,7 +12881,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 2093,
+              "line": 2087,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12884,7 +12898,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 4090,
+              "line": 4082,
               "kind": "320px allocation test signal"
             }
           ]
@@ -13050,7 +13064,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 582,
+              "line": 576,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -13061,7 +13075,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 2093,
+              "line": 2087,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -13078,7 +13092,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 4090,
+              "line": 4082,
               "kind": "320px allocation test signal"
             }
           ]
@@ -21925,6 +21939,20 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/data/heatmap/heatmap-selection.test.ts",
+              "line": 56,
+              "test": "emits an immutable proposal and applies only the controlled assignment",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/heatmap/heatmap-selection.test.ts",
+              "line": 195,
+              "test": "uses calendar date identity for selected gaps and week-column toggles",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/heatmap/heatmap.test.ts",
               "line": 747,
               "test": "renders an opt-in native button overlay with persistent per-cell semantics",
@@ -22023,8 +22051,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 1178,
+              "file": "src/components/data/heatmap/heatmap-selection.test.ts",
+              "line": 17,
               "kind": "320px allocation test signal"
             }
           ]
@@ -22098,7 +22126,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2148,
+              "line": 2214,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -22139,6 +22167,7 @@
           "src/components/data/heatmap/heatmap-remediation.test.ts",
           "src/components/data/heatmap/heatmap-rtl.test.ts",
           "src/components/data/heatmap/heatmap-scale.test.ts",
+          "src/components/data/heatmap/heatmap-selection.test.ts",
           "src/components/data/heatmap/heatmap.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -26141,15 +26170,29 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1456,
+              "line": 1457,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2339,
+              "line": 2340,
               "test": "adds a maplibregl.Marker per entry in markers",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 5374,
+              "test": "styles and localizes peer-added controls inside the shadow root",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 5461,
+              "test": "clusters mixed categories, restores their rendered icons after a style reload and exports them",
               "target": "el",
               "state": "populated"
             }
@@ -26162,7 +26205,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2393,
+              "line": 11,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26173,7 +26216,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3163,
+              "line": 3164,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26258,7 +26301,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 176,
+              "line": 177,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -26270,7 +26313,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 2495,
+              "line": 2701,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39778,6 +39821,13 @@
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/forms/slider/slider.test.ts",
+              "line": 4171,
+              "test": "keeps numeric inline readouts by default and opts into formatted label-row values",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -39890,7 +39940,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 782,
+              "line": 829,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

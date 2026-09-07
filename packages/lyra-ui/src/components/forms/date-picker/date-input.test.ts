@@ -320,12 +320,6 @@ it('supports size="2xs": tighter rendered padding/font-size than the default m t
   const regular = (await fixture(
     html`<lr-date-input></lr-date-input>`
   )) as LyraDateInput;
-  const compactWrapper = compact.shadowRoot!.querySelector(
-    '[part="input-wrapper"]'
-  ) as HTMLElement;
-  const regularWrapper = regular.shadowRoot!.querySelector(
-    '[part="input-wrapper"]'
-  ) as HTMLElement;
   const compactInput = compact.shadowRoot!.querySelector(
     '[part="input"]'
   ) as HTMLElement;
@@ -334,9 +328,9 @@ it('supports size="2xs": tighter rendered padding/font-size than the default m t
   ) as HTMLElement;
 
   expect(
-    Number.parseFloat(getComputedStyle(compactWrapper).paddingTop)
+    Number.parseFloat(getComputedStyle(compactInput).paddingTop)
   ).to.be.lessThan(
-    Number.parseFloat(getComputedStyle(regularWrapper).paddingTop)
+    Number.parseFloat(getComputedStyle(regularInput).paddingTop)
   );
   expect(
     Number.parseFloat(getComputedStyle(compactInput).fontSize)
@@ -2202,16 +2196,14 @@ describe("control min-height knob and exact-height hatch", () => {
     );
   });
 
-  it("leaves the rendered row height byte-identical when the height hatch is unset", async () => {
+  it('returns to the shared row height when the exact-height override is removed', async () => {
     const el = (await fixture(
       html`<lr-date-input value="2026-07-15"></lr-date-input>`
     )) as LyraDateInput;
     await el.updateComplete;
     const w = wrapper(el);
     const natural = getComputedStyle(w).blockSize;
-    // The row height is pinned transitively by the un-gated 40px calendar toggle, well above the
-    // per-tier min-height floor, so the floor is dead until raised -- byte-identical to today.
-    expect(Number.parseFloat(natural)).to.be.greaterThan(
+    expect(Number.parseFloat(natural)).to.equal(
       Number.parseFloat(getComputedStyle(w).minBlockSize)
     );
     el.style.setProperty("--lr-date-input-control-height", "30px");
@@ -4863,4 +4855,33 @@ describe('applied preset readback', () => {
 
     expect(el.appliedPreset).to.equal(undefined);
   });
+});
+
+it('keeps date rows on the shared height ladder with calendar and clear targets of at least 24px', async () => {
+  for (const [size, height] of [['2xs', 26], ['xs', 26], ['s', 30], ['m', 40], ['l', 48], ['xl', 56]] as const) {
+    const el = await fixture<LyraDateInput>(html`<lr-date-input size=${size} value="2026-09-07" with-clear></lr-date-input>`);
+    const row = el.shadowRoot!.querySelector<HTMLElement>('[part="input-wrapper"]')!;
+    expect(row.getBoundingClientRect().height, size).to.be.closeTo(height, 0.1);
+    for (const part of ['clear-button', 'expand-button']) {
+      const rect = el.shadowRoot!.querySelector(`[part="${part}"]`)!.getBoundingClientRect();
+      expect(rect.width, `${size} ${part}`).to.be.at.least(24);
+      expect(rect.height, `${size} ${part}`).to.be.at.least(24);
+      expect(rect.height, `${size} ${part}`).to.be.at.most(row.getBoundingClientRect().height);
+    }
+  }
+});
+
+it('tracks inherited theme heights at small and large sizes without extra action padding', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="--lr-theme-form-control-height-s:36px;--lr-theme-form-control-height-l:60px">
+    <lr-date-input size="small" value="2026-09-07" with-clear></lr-date-input>
+  </div>`);
+  const el = wrapper.querySelector<LyraDateInput>('lr-date-input')!;
+  const row = () => el.shadowRoot!.querySelector<HTMLElement>('[part="input-wrapper"]')!;
+  expect(row().getBoundingClientRect().height).to.equal(36);
+  el.size = 'large';
+  await el.updateComplete;
+  expect(row().getBoundingClientRect().height).to.equal(60);
+  wrapper.style.setProperty('--lr-theme-form-control-height-l', '52px');
+  expect(row().getBoundingClientRect().height).to.equal(52);
+  await expect(el).to.be.accessible();
 });

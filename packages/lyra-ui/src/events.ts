@@ -2772,10 +2772,10 @@ export type LyraSelectEvent =
 export type LyraSelectionActionEvent = LyraSelectionToolbarEventMap['lr-selection-action'];
 
 /**
- * `lr-selection-change` — dispatched by 6 components: `<lr-document-library>`, `<lr-flow-canvas>`,
- * `<lr-graph>`, `<lr-knowledge-graph-explorer>`, `<lr-table>`, `<lr-tree>`.
+ * `lr-selection-change` — dispatched by 7 components: `<lr-document-library>`, `<lr-flow-canvas>`,
+ * `<lr-graph>`, `<lr-heatmap>`, `<lr-knowledge-graph-explorer>`, `<lr-table>`, `<lr-tree>`.
  *
- * A union of 6 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 7 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraDocumentLibraryEventMap['lr-selection-change']`.
  */
@@ -2783,6 +2783,7 @@ export type LyraSelectionChangeEvent =
   | LyraDocumentLibraryEventMap['lr-selection-change']
   | LyraFlowCanvasEventMap['lr-selection-change']
   | LyraGraphEventMap['lr-selection-change']
+  | LyraHeatmapEventMap['lr-selection-change']
   | LyraKnowledgeGraphExplorerEventMap['lr-selection-change']
   | LyraTableEventMap['lr-selection-change']
   | LyraTreeEventMap['lr-selection-change'];

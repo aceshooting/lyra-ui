@@ -37,7 +37,7 @@ import {
 } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_heatmapCalendarCellLabel, LYRA_DEFAULT_heatmapCalendarLabel, LYRA_DEFAULT_heatmapDecorationLimit, LYRA_DEFAULT_heatmapDefaultColLabel, LYRA_DEFAULT_heatmapDefaultRowLabel, LYRA_DEFAULT_heatmapMatrixCellLabel, LYRA_DEFAULT_heatmapMatrixLabel, LYRA_DEFAULT_heatmapNoDataValue, LYRA_DEFAULT_heatmapProjectionLimit, LYRA_DEFAULT_heatmapSelectedCellLabel, LYRA_DEFAULT_heatmapValueLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_heatmapCalendarCellLabel, LYRA_DEFAULT_heatmapCalendarLabel, LYRA_DEFAULT_heatmapDecorationLimit, LYRA_DEFAULT_heatmapDefaultColLabel, LYRA_DEFAULT_heatmapDefaultRowLabel, LYRA_DEFAULT_heatmapMatrixCellLabel, LYRA_DEFAULT_heatmapMatrixLabel, LYRA_DEFAULT_heatmapNoDataValue, LYRA_DEFAULT_heatmapProjectionLimit, LYRA_DEFAULT_heatmapSelectedCellLabel, LYRA_DEFAULT_heatmapSelectedCount, LYRA_DEFAULT_heatmapValueLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Floor for the matrix row-label gutter, and the width it had when it was a fixed constant.
@@ -292,6 +292,15 @@ export interface HeatmapSelectedCell {
   date?: string;
 }
 
+/** Origin of a controlled multiple-selection proposal. */
+export type HeatmapSelectionSource = 'pointer' | 'keyboard' | 'row' | 'column';
+
+/** Frozen proposed selection. Assign selectedCells to accept it; property writes are silent. */
+export interface HeatmapSelectionChangeDetail {
+  readonly selectedCells: readonly Readonly<HeatmapSelectedCell>[];
+  readonly source: HeatmapSelectionSource;
+}
+
 const HEX_RE = /^([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const RGB_RE =
   /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i;
@@ -519,6 +528,7 @@ export type LyraHeatmapMatrixGeometryChangeDetail = { padLeft: number; padTop: n
 export interface LyraHeatmapEventMap {
   'lr-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
   'lr-matrix-geometry-change': CustomEvent<LyraHeatmapMatrixGeometryChangeDetail>;
+  'lr-selection-change': CustomEvent<HeatmapSelectionChangeDetail>;
 }
 /**
  * `<lr-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw
@@ -654,6 +664,11 @@ export interface LyraHeatmapEventMap {
  * `matrixGeometry` (`padLeft`/`padTop`/`cellSize`) differs from the previous draw -- e.g. after
  * `row-label-width="auto"`/`col-label-height="auto"` resolves against new label content or a
  * resize. `detail` is the same object `matrixGeometry` returns. Never fired in calendar mode.
+ * @event lr-selection-change - Non-cancelable controlled multiple-selection proposal with frozen
+ * `HeatmapSelectionChangeDetail { selectedCells, source }`. Click/Enter/Space toggles, Shift+arrows
+ * extends a rectangle, Shift+Space toggles a row and Ctrl/Meta+Space toggles a column. Pointer drag
+ * paints or erases with a transient preview and emits once on release; cancellation discards it.
+ * Assign the proposed array to `selectedCells` to accept. Programmatic assignments are silent.
  * @slot legend - Custom legend content rendered inside the built-in legend row.
  * @csspart base - The heatmap wrapper.
  * @csspart canvas - The heatmap canvas.
@@ -706,15 +721,19 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     heatmapNoDataValue: LYRA_DEFAULT_heatmapNoDataValue,
     heatmapProjectionLimit: LYRA_DEFAULT_heatmapProjectionLimit,
     heatmapSelectedCellLabel: LYRA_DEFAULT_heatmapSelectedCellLabel,
+    heatmapSelectedCount: LYRA_DEFAULT_heatmapSelectedCount,
     heatmapValueLabel: LYRA_DEFAULT_heatmapValueLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze(['lr-selection-change']);
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'data',
     'annotations',
     'legendStops',
     'colorSteps',
+    'selectedCells',
   ]);
   /** `data` is a single opaque record (row/col labels plus a `values` matrix), not an item
    *  sequence -- and a legitimately large matrix (tens of thousands of cells) can exceed the
@@ -1276,6 +1295,27 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    */
   @property({ attribute: false }) selectedCell: HeatmapSelectedCell | null =
     null;
+  /** Enables controlled multiple selection through selectedCells instead of selectedCell.
+   * Click or Enter/Space toggles a cell. Drag paints/erases; Shift+arrows extends a rectangular
+   * range. The default false preserves the existing single-cell event and selection contract. */
+  @property({ type: Boolean, reflect: true }) multiple = false;
+  /** Controlled selection in multiple mode. First MAX_HEATMAP_CELLS entries are clone-owned;
+   * duplicates, invalid/out-of-grid coordinates and non-interactive cells are ignored. Matrix
+   * entries use integer row/col; calendar entries use ISO dates (interactive gaps included).
+   * User actions propose a new array through lr-selection-change, never mutate this property. */
+  @property({ attribute: false }) selectedCells: readonly HeatmapSelectedCell[] = [];
+
+  /** Proposes toggling all interactive cells in one row (calendar: weekday row 0..6).
+   * An entirely selected row is cleared; otherwise it is added. No-op outside multiple mode. */
+  toggleRowSelection(row: number): void {
+    this.toggleSelectionAxis(row, true);
+  }
+
+  /** Proposes toggling all interactive cells in one column (calendar: zero-based week column).
+   * An entirely selected column is cleared; otherwise it is added. No-op outside multiple mode. */
+  toggleColumnSelection(col: number): void {
+    this.toggleSelectionAxis(col, false);
+  }
   /**
    * Renders an opt-in DOM overlay of native buttons over the canvas. Each
    * button has a localized accessible name, explicit `aria-selected="true"` or
@@ -1594,6 +1634,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.cancelSelectionGesture();
+    this.selectionAnchor = null;
+    this.selectionRangeBase = undefined;
     this.accessibleFocusGeneration++;
     this.pendingAccessibleFocus = undefined;
     this.pendingAccessibleFocusOrigin = undefined;
@@ -1790,6 +1833,22 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
     if (collectionChanged || !this.hasUpdated)
       this.rebuildAccessiblePositions();
+    if (collectionChanged || accessibleModeChanged || changed.has('multiple')) {
+      this.cancelSelectionGesture();
+      this.selectionAnchor = null;
+      this.selectionRangeBase = undefined;
+      this.proposedSelectionKeys = undefined;
+    }
+    if (collectionChanged || changed.has('selectedCells') || changed.has('multiple') || !this.hasUpdated) {
+      this.rebuildSelectedPositions();
+      if (changed.has('selectedCells') && this.selectionGesture) this.cancelSelectionGesture();
+      if (changed.has('selectedCells') && this.selectionRangeBase &&
+        (this.proposedSelectionKeys?.size !== this.selectedPositions.size ||
+          [...this.selectedPositions.keys()].some((key) => !this.proposedSelectionKeys?.has(key)))) {
+        this.selectionAnchor = this.focusedCell;
+        this.selectionRangeBase = undefined;
+      }
+    }
     if (accessibleFocusSnapshot) {
       const positions = this.accessibleCellPositions();
       const retained =
@@ -2022,6 +2081,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /** The localized "Selected: <cell>." description appended to the host `aria-label`, or `''` when
    *  `selectedCell` is unset or doesn't resolve to a real cell in the current grid. */
   private selectedCellDescription(): string {
+    if (this.multiple) {
+      const count = this.currentSelectedPositions.size;
+      return count ? this.localize('heatmapSelectedCount', undefined, { count: this.formatCount(count) }) : '';
+    }
     if (!this.selectedCell) return '';
     if (this.effectiveMode === 'calendar') {
       if (this.selectedCell.date == null) return '';
@@ -2114,6 +2177,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'colorSteps',
         'cellColor',
         'selectedCell',
+        'selectedCells',
+        'multiple',
+        'selectionPreview',
         'legendStops',
         'accessibleCells',
         'accessibleTargetSizePx',
@@ -2320,6 +2386,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  `ann.date` against `cells`). Shared by the live-region announcement, which needs to know
    *  whether the just-announced cell *is* the selection. */
   private isSelectedPos(pos: CellPos): boolean {
+    if (this.multiple) return this.currentSelectedPositions.has(this.accessibleCellKey(pos));
     if (!this.selectedCell) return false;
     if ('week' in pos) {
       if (this.selectedCell.date == null) return false;
@@ -2832,9 +2899,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // ring so focus visually layers on top of a selection when both target the same cell.
     // Independent of focusedCell -- unlike the transient focus cursor, this persists across focus
     // moves and hover, driven entirely by the controlled `selectedCell` property.
-    if (this.selectedCell?.date != null) {
-      const match = this.cachedCalendarCellsByDate.get(this.selectedCell.date);
-      if (match) {
+    for (const match of this.selectedPaintPositions()) {
+      if ('week' in match) {
         const x = this.columnXFor(match.week);
         const y = this.rowYFor(match.weekday);
         this.strokeCellState(
@@ -2954,7 +3020,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         this.annotationColor(cs)
       );
     }
-    if (state === 'selected' && this.selectedCell?.row === row && this.selectedCell.col === col) {
+    if (state === 'selected' && this.isSelectedPos({ row, col })) {
       this.strokeCellState(
         ctx,
         x,
@@ -3097,8 +3163,6 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const date = this.calendarDateAt(week, weekday);
     const x = this.columnXFor(week);
     const y = this.rowYFor(weekday);
-    const matches = (candidate: { date?: string } | undefined): boolean =>
-      candidate?.date === date;
     if (state === 'annotation' && this.cachedCalendarCellsByDate.has(date) && this.cachedCalendarAnnotationDates.has(date)) {
       this.strokeCellState(
         ctx,
@@ -3109,7 +3173,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         this.annotationColor(cs)
       );
     }
-    if (state === 'selected' && this.cachedCalendarCellsByDate.has(date) && matches(this.selectedCell ?? undefined)) {
+    if (state === 'selected' && (this.multiple || this.cachedCalendarCellsByDate.has(date)) &&
+      this.isSelectedPos({ week, weekday, date })) {
       this.strokeCellState(
         ctx,
         x,
@@ -3309,8 +3374,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // Persistent "selected" ring, drawn after the annotation ring and before the keyboard focus
     // ring so focus visually layers on top of a selection when both target the same cell.
     // Independent of focusedCell -- see drawCalendar()'s twin of this block.
-    if (this.selectedCell?.row != null && this.selectedCell.col != null) {
-      const { row, col } = this.selectedCell;
+    for (const selected of this.selectedPaintPositions()) {
+      if (!('row' in selected)) continue;
+      const { row, col } = selected;
       if (row >= 0 && row < rows && col >= 0 && col < cols) {
         const x = padLeft + col * cellSize;
         const y = padTop + row * cellSize;
@@ -3785,7 +3851,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.announcementSink?.announce(announcement);
   }
 
-  private emitCellClick(pos: CellPos): void {
+  private emitCellClick(pos: CellPos, source: HeatmapSelectionSource = 'pointer', select = true): void {
     // Pointer clicks are filtered through `isCellInteractive()` at hit-test time (see
     // `hitTestMatrix()`/`hitTestCalendar()`), but the Enter/Space handlers in `onMatrixKeyDown()`/
     // `onCalendarKeyDown()` call here with the stored `focusedCell` directly, with no hit-test in
@@ -3793,6 +3859,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // become non-interactive (e.g. a `values` refresh flips what `cellInteractive` returns for the
     // still-focused position) even if some future caller forgets to reset the cursor first.
     if (!this.isCellInteractive(pos)) return;
+    if (this.multiple && select) {
+      this.selectionAnchor = pos;
+      this.selectionRangeBase = undefined;
+      this.toggleSelectionPositions([pos], source);
+    }
     if ('week' in pos) {
       const { date, value } = this.calendarCellAt(pos);
       this.emit('lr-cell-click', { date, value });
@@ -3800,6 +3871,216 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const value = this.matrixValues[pos.row]?.[pos.col] ?? -1;
       this.emit('lr-cell-click', { row: pos.row, col: pos.col, value });
     }
+  }
+
+  private selectedPositions = new Map<string, CellPos>();
+  @state() private selectionPreview?: ReadonlyMap<string, CellPos>;
+  private selectionAnchor: CellPos | null = null;
+  private selectionRangeBase?: ReadonlyMap<string, CellPos>;
+  private proposedSelectionKeys?: ReadonlySet<string>;
+  private selectionGesture?: {
+    pointerId: number;
+    target: HTMLElement;
+    start: CellPos;
+    previous: CellPos;
+    moved: boolean;
+    selecting: boolean;
+    cells: Map<string, CellPos>;
+  };
+  private suppressSelectionClick = false;
+
+  private get currentSelectedPositions(): ReadonlyMap<string, CellPos> {
+    return this.selectionPreview ?? this.selectedPositions;
+  }
+
+  private selectedPaintPositions(): readonly CellPos[] {
+    if (this.multiple) return [...this.currentSelectedPositions.values()];
+    const selected = this.selectedCell;
+    if (!selected) return [];
+    if (this.effectiveMode === 'calendar') {
+      const match = selected.date ? this.cachedCalendarCellsByDate.get(selected.date) : undefined;
+      return match ? [match] : [];
+    }
+    return selected.row != null && selected.col != null ? [{ row: selected.row, col: selected.col }] : [];
+  }
+
+  private rebuildSelectedPositions(): void {
+    const positions = new Map<string, CellPos>();
+    const dates = this.effectiveMode === 'calendar'
+      ? new Map(this.cachedAccessiblePositions.map((pos) => [this.accessibleCellIdentity(pos), pos]))
+      : undefined;
+    const input = Array.isArray(this.selectedCells) ? this.selectedCells : [];
+    for (const cell of input.slice(0, MAX_HEATMAP_CELLS)) {
+      if (!cell || typeof cell !== 'object') continue;
+      const pos = dates
+        ? (typeof cell.date === 'string' ? dates.get(cell.date) : undefined)
+        : (Number.isInteger(cell.row) && Number.isInteger(cell.col)
+          ? this.cachedAccessiblePositionsByKey.get(`matrix-${cell.row}-${cell.col}`) : undefined);
+      if (pos) positions.set(this.accessibleCellKey(pos), pos);
+    }
+    this.selectedPositions = positions;
+  }
+
+  private selectionCoordinates(pos: CellPos): { row: number; col: number } {
+    return 'week' in pos ? { row: pos.weekday, col: pos.week } : pos;
+  }
+
+  private proposeSelection(positions: ReadonlyMap<string, CellPos>, source: HeatmapSelectionSource): void {
+    if (positions.size === this.selectedPositions.size &&
+      [...positions.keys()].every((key) => this.selectedPositions.has(key))) return;
+    this.proposedSelectionKeys = new Set(positions.keys());
+    const selectedCells = [...positions.values()]
+      .sort((a, b) => {
+        const first = this.selectionCoordinates(a);
+        const second = this.selectionCoordinates(b);
+        return first.row - second.row || first.col - second.col;
+      })
+      .map((pos) => 'week' in pos ? { date: pos.date } : { row: pos.row, col: pos.col });
+    this.emit('lr-selection-change', { selectedCells, source });
+  }
+
+  private toggleSelectionPositions(positions: readonly CellPos[], source: HeatmapSelectionSource): void {
+    if (!this.multiple || positions.length === 0) return;
+    const next = new Map(this.selectedPositions);
+    const remove = positions.every((pos) => next.has(this.accessibleCellKey(pos)));
+    for (const pos of positions) {
+      const key = this.accessibleCellKey(pos);
+      if (remove) next.delete(key);
+      else next.set(key, pos);
+    }
+    this.proposeSelection(next, source);
+  }
+
+  private toggleSelectionAxis(index: number, row: boolean): void {
+    if (!this.multiple || !Number.isInteger(index) || index < 0) return;
+    this.cancelSelectionGesture();
+    this.selectionRangeBase = undefined;
+    this.toggleSelectionPositions(this.cachedAccessiblePositions.filter((pos) => {
+      const coordinates = this.selectionCoordinates(pos);
+      return (row ? coordinates.row : coordinates.col) === index;
+    }), row ? 'row' : 'column');
+  }
+
+  private selectionKeyDown(event: KeyboardEvent, pos: CellPos | null): boolean {
+    if (!this.multiple) return false;
+    if (event.key === 'Escape' && this.selectionGesture) {
+      event.preventDefault();
+      this.cancelSelectionGesture();
+      return true;
+    }
+    if (event.key !== ' ' || !pos || !(event.shiftKey || event.ctrlKey || event.metaKey)) return false;
+    event.preventDefault();
+    const coordinates = this.selectionCoordinates(pos);
+    if (event.ctrlKey || event.metaKey) this.toggleColumnSelection(coordinates.col);
+    else this.toggleRowSelection(coordinates.row);
+    return true;
+  }
+
+  private extendSelection(previous: CellPos | null, next: CellPos, range: boolean): void {
+    if (!this.multiple) return;
+    if (!range) {
+      this.selectionAnchor = next;
+      this.selectionRangeBase = undefined;
+      return;
+    }
+    this.selectionAnchor ??= previous ?? next;
+    this.selectionRangeBase ??= new Map(this.selectedPositions);
+    const from = this.selectionCoordinates(this.selectionAnchor);
+    const to = this.selectionCoordinates(next);
+    const selected = new Map(this.selectionRangeBase);
+    for (const pos of this.cachedAccessiblePositions) {
+      const { row, col } = this.selectionCoordinates(pos);
+      if (row >= Math.min(from.row, to.row) && row <= Math.max(from.row, to.row) &&
+        col >= Math.min(from.col, to.col) && col <= Math.max(from.col, to.col)) {
+        selected.set(this.accessibleCellKey(pos), pos);
+      }
+    }
+    this.proposeSelection(selected, 'keyboard');
+  }
+
+  private selectionPointerPosition(event: PointerEvent): CellPos | null {
+    if (!this.canvas) return null;
+    const rect = this.canvas.getBoundingClientRect();
+    return this.hitTest(event.clientX - rect.left, event.clientY - rect.top);
+  }
+
+  private onSelectionPointerDown = (event: PointerEvent): void => {
+    if (!this.multiple || event.button !== 0 || !event.isPrimary || this.selectionGesture) return;
+    const pos = this.selectionPointerPosition(event);
+    if (!pos) return;
+    event.preventDefault();
+    this.suppressSelectionClick = false;
+    this.selectionRangeBase = undefined;
+    this.selectionAnchor = pos;
+    this.focusedCell = pos;
+    if (this.accessibleCells) this.focusAccessibleCell(pos);
+    else this.canvas?.focus();
+    const target = event.currentTarget as HTMLElement;
+    this.selectionGesture = {
+      pointerId: event.pointerId, target, start: pos, previous: pos, moved: false,
+      selecting: !this.selectedPositions.has(this.accessibleCellKey(pos)),
+      cells: new Map(this.selectedPositions),
+    };
+    try { target.setPointerCapture(event.pointerId); } catch { /* Synthetic events cannot capture. */ }
+    this.paintSelectionTo(pos);
+  };
+
+  private paintSelectionTo(pos: CellPos): void {
+    const gesture = this.selectionGesture;
+    if (!gesture) return;
+    if (!this.samePos(pos, gesture.previous)) gesture.moved = true;
+    const from = this.selectionCoordinates(gesture.previous);
+    const to = this.selectionCoordinates(pos);
+    // Fill skipped cells when a fast pointer crosses several columns between delivered events.
+    const steps = Math.max(Math.abs(to.row - from.row), Math.abs(to.col - from.col), 1);
+    for (let step = 0; step <= steps; step++) {
+      const row = Math.round(from.row + (to.row - from.row) * step / steps);
+      const col = Math.round(from.col + (to.col - from.col) * step / steps);
+      const key = this.effectiveMode === 'calendar' ? `calendar-${col}-${row}` : `matrix-${row}-${col}`;
+      const candidate = this.cachedAccessiblePositionsByKey.get(key);
+      if (!candidate) continue;
+      if (gesture.selecting) gesture.cells.set(key, candidate);
+      else gesture.cells.delete(key);
+    }
+    gesture.previous = pos;
+    this.selectionPreview = new Map(gesture.cells);
+  }
+
+  private onSelectionPointerMove = (event: PointerEvent): void => {
+    if (this.selectionGesture?.pointerId !== event.pointerId) return;
+    const pos = this.selectionPointerPosition(event);
+    if (pos && !this.samePos(pos, this.selectionGesture.previous)) this.paintSelectionTo(pos);
+  };
+
+  private onSelectionPointerUp = (event: PointerEvent): void => {
+    const gesture = this.selectionGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    const pos = this.selectionPointerPosition(event);
+    if (pos) this.paintSelectionTo(pos);
+    this.cancelSelectionGesture();
+    this.proposeSelection(gesture.cells, 'pointer');
+    if (!gesture.moved) this.emitCellClick(gesture.start, 'pointer', false);
+  };
+
+  private onSelectionPointerCancel = (event: PointerEvent): void => {
+    if (this.selectionGesture?.pointerId === event.pointerId) this.cancelSelectionGesture();
+  };
+
+  private cancelSelectionGesture(): void {
+    const gesture = this.selectionGesture;
+    this.selectionGesture = undefined;
+    this.selectionPreview = undefined;
+    if (!gesture) return;
+    this.suppressSelectionClick = true;
+    try {
+      if (gesture.target.hasPointerCapture(gesture.pointerId)) gesture.target.releasePointerCapture(gesture.pointerId);
+    } catch { /* The pointer or its owner document may already have gone away. */ }
+  }
+
+  private consumeSelectionClick(event: MouseEvent): boolean {
+    if (!this.suppressSelectionClick || event.detail === 0) return false;
+    this.suppressSelectionClick = false;
+    return true;
   }
 
   /** The `stickyLabels` scrollport, or `null` in the default unfrozen render, which has none. */
@@ -3957,6 +4238,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   };
 
   private onCanvasClick = (e: MouseEvent): void => {
+    if (this.consumeSelectionClick(e)) return;
     // Only the click's own hit-tested position counts — a click that lands
     // outside the grid (e.g. on the canvas's own padding) is a genuine
     // out-of-grid click and should do nothing, not fall back to whatever
@@ -3969,8 +4251,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (this.selectionKeyDown(e, this.focusedCell)) return;
+    const previous = this.focusedCell;
     if (this.effectiveMode === 'calendar') this.onCalendarKeyDown(e);
     else this.onMatrixKeyDown(e);
+    if (ARROW_KEYS.has(e.key) && this.focusedCell) this.extendSelection(previous, this.focusedCell, e.shiftKey);
   };
 
   private onMatrixKeyDown(e: KeyboardEvent): void {
@@ -3979,7 +4264,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (rows === 0 || cols === 0) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      if (this.focusedCell) this.emitCellClick(this.focusedCell);
+      if (this.focusedCell) this.emitCellClick(this.focusedCell, 'keyboard');
       return;
     }
     if (!ARROW_KEYS.has(e.key)) return;
@@ -4020,7 +4305,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (weekCount === 0) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      if (this.focusedCell) this.emitCellClick(this.focusedCell);
+      if (this.focusedCell) this.emitCellClick(this.focusedCell, 'keyboard');
       return;
     }
     if (!ARROW_KEYS.has(e.key)) return;
@@ -4175,24 +4460,30 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const key = (e.currentTarget as HTMLElement).dataset['cellKey'];
     const pos = key ? this.accessibleCellAtKey(key) : null;
     if (!pos) return;
+    if (!this.samePos(pos, this.focusedCell)) {
+      this.selectionAnchor = pos;
+      this.selectionRangeBase = undefined;
+    }
     this.focusedCell = pos;
     this.announce(pos);
   };
 
   private onAccessibleCellClick = (e: MouseEvent): void => {
+    if (this.consumeSelectionClick(e)) return;
     const key = (e.currentTarget as HTMLElement).dataset['cellKey'];
     const pos = key ? this.accessibleCellAtKey(key) : null;
     if (!pos) return;
     this.focusedCell = pos;
     this.announce(pos);
-    this.emitCellClick(pos);
+    this.emitCellClick(pos, e.detail === 0 ? 'keyboard' : 'pointer');
   };
 
   private onAccessibleCellKeyDown = (e: KeyboardEvent): void => {
-    if (!ARROW_KEYS.has(e.key)) return;
     const key = (e.currentTarget as HTMLElement).dataset['cellKey'];
     const pos = key ? this.accessibleCellAtKey(key) : null;
     if (!pos) return;
+    if (this.selectionKeyDown(e, pos)) return;
+    if (!ARROW_KEYS.has(e.key)) return;
     e.preventDefault();
     this.focusedCell = pos;
     this.onKeyDown(e);
@@ -4239,6 +4530,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         aria-label=${this.authorAriaLabel || this.generatedAriaLabel}
         aria-rowcount=${rowCount}
         aria-colcount=${colCount}
+        aria-multiselectable=${this.multiple ? 'true' : nothing}
         aria-describedby=${this.projectionTruncated
           ? 'projection-limit'
           : nothing}
@@ -4404,6 +4696,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       <div
         part="base"
         tabindex="-1"
+        @pointerdown=${this.onSelectionPointerDown}
+        @pointermove=${this.onSelectionPointerMove}
+        @pointerup=${this.onSelectionPointerUp}
+        @pointercancel=${this.onSelectionPointerCancel}
+        @lostpointercapture=${this.onSelectionPointerCancel}
         data-projection-truncated=${this.projectionTruncated ? 'true' : 'false'}
       >
         ${this.renderGridSurface(projectionDescription)}

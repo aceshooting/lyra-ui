@@ -466,6 +466,7 @@ const strings: LyraLocaleStrings = {
   heatmapDefaultRowLabel: 'שורה {n}',
   heatmapDefaultColLabel: 'עמודה {n}',
   heatmapSelectedCellLabel: 'נבחר: {cell}.',
+  heatmapSelectedCount: 'תאים שנבחרו: {count}.',
   heatmapProjectionLimit: 'מוצגים רק {count} התאים הראשונים במפת החום.',
   heatmapDecorationLimit:
     'במפת החום מוצגים רק {count} הפריטים הראשונים מכל סוג: צבעים, נקודות במקרא וביאורים.',
@@ -507,6 +508,7 @@ const strings: LyraLocaleStrings = {
   mentionResultPosition: 'הצעה {current} מתוך {total}',
   suggestionsLabel: 'הנחיות מוצעות',
   map: 'מפה',
+  mapResetNorth: 'החזרת כיוון המפה לצפון',
   model: 'מודל',
   selectModel: 'בחר מודל…',
   modelSelectNoModels: 'אין מודלים',

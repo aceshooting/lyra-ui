@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 25 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -113,6 +113,15 @@ single numeric string entry.
 - `showValue: boolean = false` (attribute `show-value`) — opt-in numeric readout next to the track;
   a range readout joins both values with an en dash. The explicit HTML spelling
   `show-value="false"` stays false.
+- `valueDisplay: SliderValueDisplay = 'numeric'` (attribute `value-display`) — `'numeric' |
+  'formatted'`. Opt into `formatted` to reuse `valueFormatter` (or `tooltipFormatter` when no
+  value formatter is supplied) for the visible readout too. Each range handle is formatted
+  separately; nullish results fall back to localized numbers. Existing ARIA and tooltip behavior
+  is unchanged. The callback owns its unit labels and locale formatting.
+- `valuePlacement: SliderValuePlacement = 'inline'` (attribute `value-placement`) — `'inline' |
+  'label'`. With `showValue`, `label` places the readout opposite the label in a wrapping row that
+  follows RTL. The readout stays outside the accessible label. These presentation options update
+  on live `lr-input` changes without changing the commit-only `lr-change` contract.
 - `value: number = 0`, `defaultValue: number = 0` (attribute `value`), `valueAsNumber: number`, and
   `valueAsString: string` are synchronized and finite. Values normalize the low/high domain, snap
   to the grid anchored at the low endpoint, then clamp so a non-grid endpoint remains reachable;
@@ -165,7 +174,8 @@ live value bubble per handle, present only with `with-tooltip`), `tooltip-visibl
 `tooltip` element's part list_ while that handle is focused or dragged — visibility is encoded in
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
 `::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
-`tooltip__arrow`. `value` is the opt-in numeric readout.
+`tooltip__arrow`. `value` is the opt-in readout; `label-row` contains the separate label and value
+nodes when `showValue` and `valuePlacement="label"` are enabled.
 
 **CSS custom states:** `disabled`, `dragging`, `focused`, `required`, `optional`, `valid`,
 `invalid`, `user-valid`, and `user-invalid`. A slider always has a finite numeric value, so
@@ -270,8 +280,14 @@ is present for upstream form-surface parity but adds no missing-value constraint
   value); ArrowUp/ArrowDown are never swapped, since direction only affects the horizontal inline axis.
 - Changing `min`/`max`/`step` after mount automatically re-clamps/re-snaps the current `value` in the
   next update — narrowing the domain can silently move the slider's value.
-- `valueFormatter` is presentation-only: `aria-valuenow`, the visible numeric readout, geometry,
-  form value, and emitted values stay numeric. With no formatter, `aria-valuetext` remains the
+- `valueFormatter` is presentation-only: `aria-valuenow`, geometry, form value, and emitted values
+  stay numeric. The visible readout stays numeric unless `valueDisplay="formatted"` is set.
+- Numeric value/domain assignments in the same Lit update batch are normalized against the final
+  `min`, `max`, and `step`, regardless of binding order. Await `updateComplete` to read the settled
+  scalar or range endpoints. Immediate imperative readback remains clamped to the current domain;
+  separate update batches intentionally normalize independently. Programmatic normalization emits
+  no user input/change event.
+  With no formatter, `aria-valuetext` remains the
   numeric string rendered by earlier versions; a nullish formatter result omits it.
 - A pointer drag fires `lr-input` continuously and a single `lr-change` on release; a keyboard step
   fires exactly one of each per press, but OS key-repeat while a key is held re-fires `lr-input` on

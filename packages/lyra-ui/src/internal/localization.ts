@@ -459,6 +459,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   heatmapDefaultRowLabel: 'row {n}',
   heatmapDefaultColLabel: 'col {n}',
   heatmapSelectedCellLabel: 'Selected: {cell}.',
+  heatmapSelectedCount: 'Selected cells: {count}.',
   heatmapProjectionLimit: 'Only the first {count} heatmap cells are shown.',
   heatmapDecorationLimit:
     'Only the first {count} heatmap colors, legend stops, and annotations are shown.',
@@ -496,6 +497,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   mentionResultPosition: 'Suggestion {current} of {total}',
   suggestionsLabel: 'Suggested prompts',
   map: 'Map',
+  mapResetNorth: 'Reset bearing to north',
   model: 'Model',
   selectModel: 'Select a model…',
   modelSelectNoModels: 'No models',

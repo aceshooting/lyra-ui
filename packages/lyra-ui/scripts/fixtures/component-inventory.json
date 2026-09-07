@@ -10052,6 +10052,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -10060,6 +10070,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -10324,6 +10344,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -10341,6 +10371,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -12431,6 +12471,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -12439,6 +12489,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -12703,6 +12763,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -12720,6 +12790,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -16909,6 +16989,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -16917,6 +17007,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -17181,6 +17281,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -17207,6 +17317,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -35506,7 +35626,7 @@
             "name": "--lr-date-input-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "inherit"
+            "default": "var(--lr-form-control-font-size)"
           },
           {
             "name": "--lr-date-input-gap",
@@ -35518,13 +35638,13 @@
             "name": "--lr-date-input-padding-block",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-space-xs)"
+            "default": "var(--lr-form-control-padding-block)"
           },
           {
             "name": "--lr-date-input-padding-inline",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-space-s)"
+            "default": "var(--lr-form-control-padding-inline)"
           },
           {
             "name": "--lr-date-input-placeholder-color",
@@ -40543,6 +40663,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -40551,6 +40681,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -40815,6 +40955,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -40832,6 +40982,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -56186,6 +56346,16 @@
             "hasDefault": false
           },
           {
+            "name": "multiple",
+            "property": "multiple",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "row-label-width",
             "property": "rowLabelWidth",
             "type": "number | 'auto' | undefined",
@@ -56401,6 +56571,16 @@
             "hasDefault": false
           },
           {
+            "name": "multiple",
+            "attribute": "multiple",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "rowLabelWidth",
             "attribute": "row-label-width",
             "type": "number | 'auto' | undefined",
@@ -56428,6 +56608,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "selectedCells",
+            "attribute": null,
+            "type": "readonly HeatmapSelectedCell[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "stickyLabels",
@@ -56464,6 +56654,12 @@
           {
             "name": "lr-matrix-geometry-change",
             "type": "CustomEvent<LyraHeatmapMatrixGeometryChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-selection-change",
+            "type": "CustomEvent<HeatmapSelectionChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -56622,6 +56818,38 @@
             "overloads": [
               {
                 "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "toggleColumnSelection",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "col",
+                    "type": "number",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "toggleRowSelection",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "row",
+                    "type": "number",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "void"
               }
             ]
@@ -57028,6 +57256,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -57046,6 +57284,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 10
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -57320,6 +57568,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -57347,6 +57605,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -66079,6 +66347,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -66087,6 +66365,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -66351,6 +66639,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -66368,6 +66666,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -69021,6 +69329,10 @@
             "deprecated": null
           },
           {
+            "name": "compass",
+            "deprecated": null
+          },
+          {
             "name": "container",
             "deprecated": null
           },
@@ -69057,6 +69369,10 @@
             "deprecated": null
           },
           {
+            "name": "navigation",
+            "deprecated": null
+          },
+          {
             "name": "popup",
             "deprecated": null
           },
@@ -69066,6 +69382,18 @@
           },
           {
             "name": "popup-content",
+            "deprecated": null
+          },
+          {
+            "name": "scale",
+            "deprecated": null
+          },
+          {
+            "name": "zoom-in",
+            "deprecated": null
+          },
+          {
+            "name": "zoom-out",
             "deprecated": null
           }
         ],
@@ -85234,6 +85562,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -85242,6 +85580,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -85506,6 +85854,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -85523,6 +85881,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -86208,6 +86576,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -86216,6 +86594,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -86480,6 +86868,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -86497,6 +86895,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -92532,6 +92940,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -92540,6 +92958,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -92804,6 +93232,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -92821,6 +93259,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -101321,6 +101769,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "property": "axes",
+            "type": "LyraChartAxes",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "begin-at-zero",
             "property": "beginAtZero",
             "type": "boolean",
@@ -101329,6 +101787,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "data-labels",
@@ -101593,6 +102061,16 @@
             "default": false
           },
           {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "LyraChartAxes",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "both"
+          },
+          {
             "name": "beginAtZero",
             "attribute": "begin-at-zero",
             "type": "boolean",
@@ -101610,6 +102088,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "config",
@@ -105542,6 +106030,26 @@
             "default": 0
           },
           {
+            "name": "value-display",
+            "property": "valueDisplay",
+            "type": "SliderValueDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "numeric"
+          },
+          {
+            "name": "value-placement",
+            "property": "valuePlacement",
+            "type": "SliderValuePlacement",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inline"
+          },
+          {
             "name": "with-hint",
             "property": "withHint",
             "type": "boolean",
@@ -105928,6 +106436,16 @@
             "default": "0"
           },
           {
+            "name": "valueDisplay",
+            "attribute": "value-display",
+            "type": "SliderValueDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "numeric"
+          },
+          {
             "name": "valueFormatter",
             "attribute": null,
             "type": "SliderValueFormatter | undefined",
@@ -105935,6 +106453,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "valuePlacement",
+            "attribute": "value-placement",
+            "type": "SliderValuePlacement",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inline"
           },
           {
             "name": "willValidate",
@@ -106095,6 +106623,10 @@
           },
           {
             "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "label-row",
             "deprecated": null
           },
           {

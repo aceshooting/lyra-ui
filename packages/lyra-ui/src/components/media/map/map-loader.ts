@@ -66,6 +66,11 @@ export interface MapLibreMapCapability {
   addLayer(layer: unknown): this;
   removeLayer(id: string): this;
   setPaintProperty(layerId: string, name: string, value: unknown): this;
+  /** Optional image-atlas capabilities; point circles remain usable when a partial peer lacks these. */
+  hasImage?(id: string): boolean;
+  addImage?(id: string, image: ImageData, options: { pixelRatio: number }): unknown;
+  updateImage?(id: string, image: ImageData): unknown;
+  removeImage?(id: string): unknown;
   queryRenderedFeatures(point: unknown, options?: { layers?: string[] }): unknown[];
 }
 

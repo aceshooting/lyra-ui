@@ -8,6 +8,7 @@ import {
   waitUntil,
 } from '@open-wc/testing';
 import { render, type PropertyValues } from 'lit';
+import { sendKeys } from '@web/test-runner-commands';
 import './map.js';
 import {
   LyraMap as LyraMapElement,
@@ -4190,7 +4191,12 @@ describe('dataLayers clustering and heatmap', () => {
   function stubMaplibreMap(el: LyraMap, options: { glyphs?: string } = {}) {
     const sources = new Map<string, Record<string, unknown>>();
     const layers = new Map<string, StubLayer>();
+    const images = new Map<string, ImageData>();
     const map = {
+      hasImage: (id: string) => images.has(id),
+      addImage: (id: string, image: ImageData) => { images.set(id, image); },
+      updateImage: (id: string, image: ImageData) => { images.set(id, image); },
+      removeImage: (id: string) => { images.delete(id); },
       getSource: (id: string) =>
         sources.has(id)
           ? {
@@ -4222,7 +4228,7 @@ describe('dataLayers clustering and heatmap', () => {
     };
     (el as unknown as { _map: unknown })._map = map;
     (el as unknown as { _styleLoaded: boolean })._styleLoaded = true;
-    return { sources, layers };
+    return { sources, layers, images };
   }
 
   const POINTS = {
@@ -4248,6 +4254,187 @@ describe('dataLayers clustering and heatmap', () => {
 
   const suffixes = (layers: Map<string, StubLayer>, sourceId: string): string[] =>
     [...layers.keys()].filter((id) => id.startsWith(sourceId)).map((id) => id.slice(sourceId.length)).sort();
+
+  it('styles categories and registers path icons on one shared clustered source', async () => {
+    const { el } = await connectedMapWithoutMaplibre();
+    const { sources, layers, images } = stubMaplibreMap(el);
+    const point = { field: 'category', colors: [['home', 'red'], ['work', 'blue']], radius: 12,
+      strokeWidth: 2, strokeColor: 'white', iconColor: 'black', iconSize: 18,
+      icons: [{ value: 'home', path: 'M2 12L12 2L22 12V22H2Z' }] };
+    el.dataLayers = entry({ cluster: {}, strokeColor: 'green', point });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(sources.size).to.equal(1);
+    expect(sources.get(sourceId)!['cluster']).to.equal(true);
+    const paint = layers.get(`${sourceId}-circle`)!.paint!;
+    expect(paint['circle-color']).to.deep.equal(['match', ['get', 'category'], 'home', 'red', 'work', 'blue', 'green']);
+    expect(paint['circle-radius']).to.equal(12);
+    expect(paint['circle-stroke-width']).to.equal(2);
+    expect(paint['circle-stroke-color']).to.equal('white');
+    const symbols = layers.get(`${sourceId}-point-icon`)!;
+    expect(symbols.source).to.equal(sourceId);
+    expect(symbols.filter).to.deep.equal(['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]]);
+    expect(symbols.layout!['icon-size']).to.equal(18 / 32);
+    expect(images.size).to.equal(1);
+    expect([...images.values()][0]!.data.some((value, index) => index % 4 === 3 && value > 0)).to.equal(true);
+    const source = sources.get(sourceId);
+    point.icons[0]!.path = 'M0 0H1V1Z';
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(sources.get(sourceId) === source).to.equal(true);
+    el.dataLayers = entry({ cluster: {} });
+    await el.updateComplete;
+    expect(sources.get(sourceId) === source).to.equal(true);
+    expect(images.size).to.equal(0);
+    expect(layers.has(`${sourceId}-point-icon`)).to.equal(false);
+    expect(layers.get(`${sourceId}-circle`)!.paint!['circle-radius']).to.equal(5);
+    expect(layers.get(`${sourceId}-circle`)!.paint!['circle-stroke-width']).to.equal(0);
+  });
+
+  it('bounds category/icon descriptors and keeps unknown categories on the circle fallback', async () => {
+    const { el } = await connectedMapWithoutMaplibre();
+    const { layers, images } = stubMaplibreMap(el);
+    let reads = 0;
+    const point = { field: 'category', colors: [['home', 'red'], ['home', 'blue'], ['bad', 'url(https://example.invalid)']],
+      radius: Infinity, strokeWidth: -1, icons: [
+        { get value() { reads++; return 'bad'; }, path: 'M0 0H24V24H0Z' },
+        { value: 'script', path: '<svg onload="alert(1)"></svg>' },
+        { value: 'large', path: 'M0 0'.repeat(9000) },
+        { value: 'zero', path: 'M0 0H24V24H0Z', viewBox: [0, 0, 0, 24] },
+        { value: 'home', path: 'M0 0H24V24H0Z' },
+      ] };
+    el.dataLayers = entry({ point, strokeColor: 'green' });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const paint = layers.get(`${sourceId}-circle`)!.paint!;
+    expect(reads).to.equal(0);
+    expect(paint['circle-color']).to.deep.equal(['match', ['get', 'category'], 'home', 'red', 'green']);
+    expect(paint['circle-radius']).to.equal(5);
+    expect(paint['circle-stroke-width']).to.equal(0);
+    expect(images.size).to.equal(1);
+    expect((layers.get(`${sourceId}-point-icon`)!.layout!['icon-image'] as unknown[]).at(-1)).to.equal('');
+    el.dataLayers = entry({ point: { icons: Array.from({ length: 100 }, (_, index) => ({
+      value: String(index), path: 'M0 0H24V24H0Z',
+    })), field: 'category' } });
+    await el.updateComplete;
+    expect(images.size).to.equal(32);
+    el.dataLayers = [];
+    await el.updateComplete;
+    expect(images.size).to.equal(0);
+  });
+
+  it('rethemes category circles and icon pixels without rebuilding the source or layers', async () => {
+    const { el } = await connectedMapWithoutMaplibre('--lr-theme-color-success-fill-loud: rgb(1, 2, 3)');
+    const { sources, layers, images } = stubMaplibreMap(el);
+    el.dataLayers = entry({ point: { field: 'category', colors: [['home', 'var(--lr-color-success)']],
+      iconColor: 'var(--lr-color-success)', icons: [{ value: 'home', path: 'M0 0H24V24H0Z' }] } });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const source = sources.get(sourceId);
+    const circle = layers.get(`${sourceId}-circle`)!;
+    const symbols = layers.get(`${sourceId}-point-icon`)!;
+    const imageId = [...images.keys()][0]!;
+    expect([...images.get(imageId)!.data.slice(0, 4)]).to.deep.equal([1, 2, 3, 255]);
+    el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
+    await waitUntil(() => JSON.stringify(circle.paint!['circle-color']).includes('rgb(4, 5, 6)'));
+    expect([...images.get(imageId)!.data.slice(0, 4)]).to.deep.equal([4, 5, 6, 255]);
+    expect(sources.get(sourceId) === source).to.equal(true);
+    expect(layers.get(`${sourceId}-point-icon`) === symbols).to.equal(true);
+  });
+
+  it('paints a numeric line field with sorted continuous stops and a bounded width', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    const stops = [[100, '#ff0000'], [0, '#0000ff'], [100, '#ffffff']];
+    el.dataLayers = entry({ strokeColor: '#008000', line: { field: 'speed', stops, width: 6 } });
+    await el.updateComplete;
+    const paint = layers.get(`${dataLayerResourceId(el, 'pins')}-line`)!.paint!;
+    expect(paint['line-width']).to.equal(6);
+    expect(paint['line-color']).to.deep.equal([
+      'case', ['==', ['typeof', ['get', 'speed']], 'number'],
+      ['interpolate', ['linear'], ['number', ['get', 'speed']],
+        0, '#0000ff', 100, '#ff0000'],
+      '#008000',
+    ]);
+    expect(layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!.paint!['circle-color'])
+      .to.equal('#008000');
+  });
+
+  it('updates and clears line paint in place without recreating resources', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources, layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ line: { field: 'speed', stops: [[0, 'blue'], [10, 'red']], width: 500 } });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const source = sources.get(sourceId);
+    const layer = layers.get(`${sourceId}-line`)!;
+    expect(layer.paint!['line-width']).to.equal(200);
+    el.dataLayers = entry({ strokeColor: 'red' });
+    await el.updateComplete;
+    expect(sources.get(sourceId) === source).to.equal(true);
+    expect(layers.get(`${sourceId}-line`) === layer).to.equal(true);
+    expect(layer.paint!['line-width']).to.equal(2);
+    expect(layer.paint!['line-color']).to.equal('red');
+  });
+
+  it('bounds and clone-owns line options without invoking accessor stops', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    let reads = 0;
+    const hostile = { get field() { reads++; return 'speed'; }, width: Number.NaN };
+    el.dataLayers = entry({ strokeColor: 'red', line: hostile });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(reads).to.equal(0);
+    expect(layers.get(`${sourceId}-line`)!.paint!['line-width']).to.equal(2);
+    const line = { field: 'speed', stops: [[0, 'blue'], [10, 'red']], width: -1 };
+    el.dataLayers = entry({ line });
+    await el.updateComplete;
+    line.stops[0]![1] = 'green';
+    line.width = 9;
+    await el.updateComplete;
+    expect(layers.get(`${sourceId}-line`)!.paint!['line-width']).to.equal(0);
+    expect(JSON.stringify(layers.get(`${sourceId}-line`)!.paint!['line-color'])).to.include('blue');
+  });
+
+  it('reconciles token-colored route paint and legend through theme changes without source churn', async () => {
+    const el = (await fixture(html`<lr-map style="--lr-theme-color-success-fill-loud: rgb(1, 2, 3)"></lr-map>`)) as LyraMap;
+    const { sources, layers } = stubMaplibreMap(el);
+    const stops = [[0, 'var(--lr-color-success)'], [100, 'red']] as const;
+    el.legendGradient = stops;
+    el.dataLayers = entry({ line: { field: 'speed', stops, width: 4, opacity: 0.9 } });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const source = sources.get(sourceId);
+    const layer = layers.get(`${sourceId}-line`)!;
+    expect(JSON.stringify(layer.paint!['line-color'])).to.include('rgb(1, 2, 3)');
+    expect(layer.paint!['line-opacity']).to.equal(0.9);
+    el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
+    await waitUntil(() => JSON.stringify(layer.paint!['line-color']).includes('rgb(4, 5, 6)'));
+    expect(sources.get(sourceId) === source).to.equal(true);
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="legend-gradient"]')!).backgroundImage).to.include('rgb(4, 5, 6)');
+    el.dataLayers = entry({});
+    await el.updateComplete;
+    expect(layer.paint!['line-opacity']).to.equal(1);
+  });
+
+  it('rejects unusable line ramps and bounds hostile stop collections', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ strokeColor: 'red', line: { field: 'speed', stops: [[0, 'url(https://example.invalid)'], [1, 'blue']], opacity: -2 } });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(layers.get(`${sourceId}-line`)!.paint!['line-color']).to.equal('red');
+    expect(layers.get(`${sourceId}-line`)!.paint!['line-opacity']).to.equal(0);
+    const stops = Array.from({ length: 100 }, (_, index) => [index, 'blue']);
+    el.dataLayers = entry({ line: { field: 'speed', stops, width: Number.NaN, opacity: Infinity } });
+    await el.updateComplete;
+    const paint = layers.get(`${sourceId}-line`)!.paint!;
+    const expression = paint['line-color'] as unknown[];
+    expect((expression[2] as unknown[]).length).to.equal(3 + 64 * 2);
+    expect(paint['line-width']).to.equal(2);
+    expect(paint['line-opacity']).to.equal(1);
+  });
 
   it('leaves a data layer unclustered and geometry-split when cluster and kind are unset', async () => {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -5181,4 +5368,153 @@ describe('descriptor-safe map data projections', () => {
     expect(activationDetails[0]!.marker.unsafeHtml).to.equal(unsafeHtml);
     expect(opaqueReflectionAttempts).to.equal(0);
   });
+});
+
+describe('standard peer navigation and scale controls', () => {
+  it('styles and localizes peer-added controls inside the shadow root', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = await fixture<LyraMap>(html`<lr-map style="inline-size: 320px" .mapStyle=${LOCAL_STYLE}
+      .legendGradient=${[[0, 'blue'], [100, 'red']]} .strings=${{ zoomIn: 'Agrandir', zoomOut: 'Réduire', mapResetNorth: 'Nord' }}></lr-map>`);
+    await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
+    const peer = await import('maplibre-gl');
+    const map = el.map as unknown as import('maplibre-gl').Map;
+    map.addControl(new peer.NavigationControl(), 'bottom-right');
+    map.addControl(new peer.ScaleControl(), 'bottom-left');
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part~="zoom-in"]').length === 1);
+    const zoom = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="zoom-in"]')!;
+    const compass = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="compass"]')!;
+    const scale = el.shadowRoot!.querySelector<HTMLElement>('[part~="scale"]')!;
+    expect(zoom.getAttribute('aria-label')).to.equal('Agrandir');
+    expect(compass.getAttribute('aria-label')).to.equal('Nord');
+    expect(zoom.getBoundingClientRect().width).to.be.at.least(24);
+    expect(zoom.getBoundingClientRect().height).to.be.at.least(24);
+    expect(getComputedStyle(scale).borderBottomStyle).to.equal('solid');
+    const glyph = zoom.querySelector<HTMLElement>('.maplibregl-ctrl-icon')!;
+    expect(getComputedStyle(glyph, '::before').content).to.include('+');
+    const legend = el.shadowRoot!.querySelector<HTMLElement>('[part="legend"]')!;
+    await waitUntil(() => legend.getBoundingClientRect().bottom <= scale.getBoundingClientRect().top);
+    expect(legend.getBoundingClientRect().bottom).to.be.at.most(zoom.getBoundingClientRect().top);
+    const before = map.getZoom();
+    zoom.focus();
+    await sendKeys({ press: 'Enter' });
+    await waitUntil(() => map.getZoom() > before);
+    el.strings = { zoomIn: 'Zoom closer', mapResetNorth: 'North up' };
+    await el.updateComplete;
+    expect(zoom.getAttribute('aria-label')).to.equal('Zoom closer');
+    expect(compass.getAttribute('aria-label')).to.equal('North up');
+    el.dir = 'rtl';
+    await el.updateComplete;
+    const hostRect = el.getBoundingClientRect();
+    expect(zoom.getBoundingClientRect().left - hostRect.left).to.be.lessThan(hostRect.width / 2);
+    await expect(el).to.be.accessible();
+  });
+});
+
+it('renders declarative route metrics, restores them after style changes, and exports painted pixels', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = await fixture<LyraMap>(html`<lr-map .mapStyle=${LOCAL_STYLE} zoom="14"
+    .legendGradient=${[[0, 'blue'], [100, 'red']]}
+    legend-gradient-lo-label="0 km/h" legend-gradient-hi-label="100 km/h"></lr-map>`);
+  await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
+  const map = el.map as unknown as import('maplibre-gl').Map;
+  expect(map.getCanvas().getAttribute('aria-describedby')).to.equal('map-legend');
+  const errors: string[] = [];
+  map.on('error', (event) => errors.push(String(event.error)));
+  for (const [field, speed] of [['instant', 30], ['average', 50], ['maximum', 90]] as const) {
+    el.dataLayers = [{ sourceId: 'route', geojson: { type: 'FeatureCollection', features: [{
+      type: 'Feature', id: 'trip', properties: { [field]: speed },
+      geometry: { type: 'LineString', coordinates: [[-0.01, 0], [0.01, 0]] },
+    }] }, line: { field, stops: [[0, 'blue'], [100, 'red']], width: 8, opacity: 0.9 } }];
+    await el.updateComplete;
+    const id = `${dataLayerResourceId(el, 'route')}-line`;
+    await waitUntil(() => map.queryRenderedFeatures({ layers: [id] }).length > 0, 'route visible', { timeout: 5000 });
+    expect(map.getPaintProperty(id, 'line-width')).to.equal(8);
+    expect(map.getPaintProperty(id, 'line-opacity')).to.equal(0.9);
+    expect(JSON.stringify(map.getPaintProperty(id, 'line-color'))).to.include(field);
+  }
+  expect(el.shadowRoot!.querySelector('[part="legend-hi"]')!.textContent).to.equal('100 km/h');
+  el.mapStyle = { version: 8, sources: {}, layers: [] };
+  await el.updateComplete;
+  await waitUntil(() => map.isStyleLoaded() && map.getLayer(`${dataLayerResourceId(el, 'route')}-line`) != null,
+    'route restored after style reload', { timeout: 5000 });
+  await waitUntil(() => map.loaded(), 'route tiles loaded', { timeout: 5000 });
+  const capture = await new Promise<{ png: string; painted: boolean }>((resolve) => {
+    map.once('render', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = map.getCanvas().width;
+      canvas.height = map.getCanvas().height;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(map.getCanvas(), 0, 0);
+      const painted = context.getImageData(0, 0, canvas.width, canvas.height).data.some((value, index) => index % 4 === 3 && value > 0);
+      resolve({ png: canvas.toDataURL('image/png'), painted });
+    });
+    map.triggerRepaint();
+  });
+  expect(capture.png.startsWith('data:image/png;base64,')).to.equal(true);
+  expect(capture.painted).to.equal(true);
+  el.dataLayers = [];
+  await el.updateComplete;
+  expect(errors).to.deep.equal([]);
+  expect(map.queryRenderedFeatures().length).to.equal(0);
+});
+
+it('clusters mixed categories, restores their rendered icons after a style reload and exports them', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = await fixture<LyraMap>(html`<lr-map label="Classified locations" .mapStyle=${LOCAL_STYLE} zoom="8"></lr-map>`);
+  await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
+  const map = el.map as unknown as import('maplibre-gl').Map;
+  const errors: string[] = [];
+  map.on('error', event => errors.push(String(event.error)));
+  const categories = ['home', 'work', 'shop'];
+  el.dataLayers = [{ sourceId: 'places', cluster: {}, geojson: { type: 'FeatureCollection',
+    features: categories.map((category, index) => ({ type: 'Feature', id: index,
+      properties: { category }, geometry: { type: 'Point', coordinates: [index * 0.00015, 0] } })),
+  }, point: { field: 'category', colors: [['home', 'red'], ['work', 'blue'], ['shop', 'green']],
+    radius: 12, iconColor: 'black', iconSize: 8,
+    icons: categories.map(value => ({ value, path: 'M0 0H24V24H0Z' })),
+  } }];
+  await el.updateComplete;
+  let sourceId = dataLayerResourceId(el, 'places');
+  await waitUntil(() => map.queryRenderedFeatures({ layers: [`${sourceId}-cluster`] })
+    .some(feature => feature.properties['point_count'] === 3), 'one mixed-category cluster', { timeout: 5000 });
+  map.setZoom(18);
+  await waitUntil(() => map.queryRenderedFeatures({ layers: [`${sourceId}-point-icon`] }).length === 3,
+    'individual icons rendered', { timeout: 5000 });
+  const clicked = oneEvent(el, 'lr-map-click');
+  map.fire('click', { point: map.project([0, 0]), lngLat: { lng: 0, lat: 0 } });
+  const detail = (await clicked).detail;
+  expect(detail.sourceId).to.equal('places');
+  expect(detail.origin).to.equal('data-layer');
+  expect(detail.feature.id).to.equal(0);
+  expect(detail.feature.properties.category).to.equal('home');
+  el.mapStyle = { version: 8, sources: {}, layers: [] };
+  await el.updateComplete;
+  await waitUntil(() => {
+    sourceId = dataLayerResourceId(el, 'places');
+    return map.isStyleLoaded() && !!map.getLayer(`${sourceId}-point-icon`);
+  }, 'icon layer restored', { timeout: 5000 });
+  await waitUntil(() => map.queryRenderedFeatures({ layers: [`${sourceId}-point-icon`] }).length === 3 && map.loaded(),
+    'all restored icons painted', { timeout: 5000 });
+  const snapshot = await new Promise<{ png: string; center: number[]; circle: number[] }>(resolve => {
+    map.once('render', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = map.getCanvas().width;
+      canvas.height = map.getCanvas().height;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(map.getCanvas(), 0, 0);
+      const position = map.project([0, 0]);
+      const ratio = canvas.width / map.getCanvas().clientWidth;
+      const sample = (offset: number) => [...context.getImageData(
+        Math.floor((position.x + offset) * ratio), Math.floor(position.y * ratio), 1, 1,
+      ).data];
+      resolve({ png: canvas.toDataURL('image/png'), center: sample(0), circle: sample(8) });
+    });
+    map.triggerRepaint();
+  });
+  expect(snapshot.png).to.match(/^data:image\/png;base64,/u);
+  expect(snapshot.center).to.deep.equal([0, 0, 0, 255]);
+  expect(snapshot.circle).to.deep.equal([255, 0, 0, 255]);
+  expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(0);
+  expect(errors).to.deep.equal([]);
+  await expect(el).to.be.accessible();
 });
