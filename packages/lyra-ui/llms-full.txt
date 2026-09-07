@@ -23912,16 +23912,36 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   defaults to 5 CSS pixels and `strokeWidth` to 0; both clamp to `[0, 200]`. `strokeColor` overrides
   the outline only, with the layer's flat color as fallback. Dropping options restores defaults.
 
+  `radius` also accepts `LyraMapPointRadiusOptions { field, stops, interpolation?, fallback? }`
+  for **numeric** feature-driven sizes. `field` is independent of the category field. The first 32
+  pairs are inspected and finite `[value, radius]` pairs are sorted ascending; duplicate thresholds are first-wins and
+  radii clamp to `[0, 200]`. `interpolation` defaults to `'step'`: below the first threshold use
+  its radius, and each threshold is inclusive. `'linear'` interpolates between adjacent stops and
+  clamps outside the domain. One usable stop is a constant for numeric features. Missing, null,
+  non-numeric and non-finite feature values use `fallback` (default 5, clamped to `[0, 200]`), as
+  do an empty field, unusable stops or a linear domain that cannot retain distinct finite intervals.
+  Invalid interpolation values use step. These options style individual/unclustered points;
+  cluster-count radii remain independent. Switching back to a number or removing the radius
+  scale restores the fixed radius without recreating the source.
+
   `point.icons` maps exact category values to `LyraMapPointIcon { value: string; path: string;
-  viewBox?: readonly [number, number, number, number] }`. `iconField` defaults to `field`.
-  Each icon is a **filled SVG path string**, not SVG markup or a URL. Copy an icon's path data,
+  viewBox?: readonly [number, number, number, number]; mode?: LyraMapPointIconMode;
+  strokeWidth?: number; lineCap?: LyraMapPointIconLineCap; lineJoin?: LyraMapPointIconLineJoin }`.
+  `iconField` defaults to `field`. Each icon is **SVG path data**, not SVG markup or a URL. Copy an icon's path data,
   combine filled subpaths in that string, and supply its `[minX, minY, width, height]` viewBox
-  (default `[0, 0, 24, 24]`). Stroke-only drawings must first be converted to filled outlines.
+  (default `[0, 0, 24, 24]`). `mode` defaults to `'fill'`; `'stroke'` draws open outline paths,
+  and `'fill-stroke'` paints both. `strokeWidth` uses **viewBox units** (default 2, clamped to
+  `[0, 200]`; zero omits the stroke), so it scales with the icon. `lineCap` accepts `'butt'`,
+  `'round'`, or `'square'`; `lineJoin` accepts `'miter'`, `'round'`, or `'bevel'`. Both default
+  to round; miter joins retain a limit of 10. Invalid modes/caps/joins restore their defaults,
+  and a non-finite stroke width restores 2. Keep padding inside the viewBox for strokes at its
+  edges, which are clipped to the fixed atlas square. These are icon-path options;
+  `point.strokeWidth` and `point.strokeColor` continue to style the surrounding circle only.
   The first 32 entries are inspected, valid duplicates are first-wins, path data is capped at
   8192 characters, and viewBox coordinates must be finite within ±10000 with dimensions at least
   0.001. Invalid paths are ignored; markup, external references and event handlers cannot execute.
   Rasterization is synchronous and local, with no fetch or HTML/SVG document insertion.
-  `iconColor` accepts CSS variables and defaults to the tone's contrasting foreground; `iconSize`
+  `iconColor` supplies both fill and stroke ink, accepts CSS variables and defaults to the tone's contrasting foreground; `iconSize`
   is the displayed bounding square in CSS pixels (default 16, clamped to `[1, 200]`). The fixed
   64px raster preserves the viewBox aspect ratio. Unknown categories, invalid icons and partial
   peers lacking image-atlas methods retain their colored circles. No sprite or glyph URL is needed.
@@ -23941,11 +23961,14 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   map.dataLayers = [{
     sourceId: 'places', geojson: locations, cluster: {},
     point: {
-      field: 'category', radius: 12, strokeWidth: 1,
+      field: 'category',
+      radius: { field: 'visits', stops: [[0, 10], [10, 12], [50, 14], [100, 16]], fallback: 10 },
+      strokeWidth: 1,
       colors: [['home', 'var(--lr-color-brand)'], ['work', 'var(--lr-color-success)']],
       icons: [
         { value: 'home', path: 'M2 12L12 2L22 12V22H2Z' },
-        { value: 'work', path: 'M8 2H16V6H22V22H2V6H8Z' },
+        { value: 'work', path: 'M8 6V3H16V6M3 6H21V21H3ZM3 11H21',
+          mode: 'stroke', strokeWidth: 1.75, lineCap: 'round', lineJoin: 'round' },
       ],
       iconSize: 14,
     },
@@ -24009,7 +24032,9 @@ payload beside the map.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
 `LyraMapGeoJsonDataLayer`, `LyraMapDataLayerKind`, `LyraMapClusterOptions`, `LyraMapHeatmapOptions`,
-`LyraMapHeatmapZoomValue`, `LyraMapLineOptions`, `LyraMapPointOptions`, `LyraMapPointIcon`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
+`LyraMapHeatmapZoomValue`, `LyraMapLineOptions`, `LyraMapPointOptions`, `LyraMapPointRadiusOptions`,
+`LyraMapPointRadiusInterpolation`, `LyraMapPointIcon`, `LyraMapPointIconMode`,
+`LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
 `LyraMapMarkerActivationSource`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
 The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
 in v9 rather than retained as aliases.
@@ -24082,6 +24107,9 @@ and use `addControl(new NavigationControl(), 'bottom-right')` and
 shadow-root modification is needed: navigation buttons, compass glyph, scale bar and control
 corners are styled with Lyra tokens. The corners follow inline start/end under RTL. The legend
 reserves vertical room for these controls and attribution, including after resize or removal.
+Attribution also reserves legend space when it is the only control. Opposing occupied corners
+share the available width, so expanded attribution wraps without covering a scale or navigation
+control on the other side; controls stay aligned to their logical edge in both text directions.
 Navigation exposes `navigation`, `zoom-in`, `zoom-out`, and `compass` parts; the scale exposes `scale`.
 Button names update through `zoomIn`, `zoomOut`, and `mapResetNorth` locale strings. MapLibre retains
 keyboard activation, compass rotation, zoom limits, scale units and viewport updates. No controls
@@ -26484,12 +26512,16 @@ These named interfaces and helper signatures are available to typed integrations
     readonly value: string;
     readonly path: string;
     readonly viewBox?: readonly [number, number, number, number];
+    readonly mode?: LyraMapPointIconMode;
+    readonly strokeWidth?: number;
+    readonly lineCap?: LyraMapPointIconLineCap;
+    readonly lineJoin?: LyraMapPointIconLineJoin;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapPointOptions {
     readonly field?: string;
     readonly colors?: readonly (readonly [string, string])[];
-    readonly radius?: number;
+    readonly radius?: number | LyraMapPointRadiusOptions;
     readonly strokeWidth?: number;
     readonly strokeColor?: string;
     readonly iconField?: string;
@@ -26497,6 +26529,17 @@ These named interfaces and helper signatures are available to typed integrations
     readonly iconColor?: string;
     readonly iconSize?: number;
   }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapPointRadiusOptions {
+    readonly field: string;
+    readonly stops: readonly (readonly [number, number])[];
+    readonly interpolation?: LyraMapPointRadiusInterpolation;
+    readonly fallback?: number;
+  }`
+  `LyraMapPointRadiusInterpolation = 'step' | 'linear'`;
+  `LyraMapPointIconMode = 'fill' | 'stroke' | 'fill-stroke'`;
+  `LyraMapPointIconLineCap = 'butt' | 'round' | 'square'`;
+  `LyraMapPointIconLineJoin = 'miter' | 'round' | 'bevel'`.
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapInstance {
     getCanvas(): HTMLCanvasElement;

@@ -237,6 +237,7 @@ export const styles = css`
   }
   .legend-gradient .gradient-bar {
     flex: 1 1 var(--lr-size-6rem);
+    inline-size: var(--lr-size-6rem);
     min-inline-size: 0;
     block-size: var(--lr-size-0-5rem);
     border-radius: var(--lr-size-2px);
@@ -320,8 +321,21 @@ export const styles = css`
   .maplibregl-ctrl-bottom-left,
   .maplibregl-ctrl-bottom-right {
     position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-inline-size: 100%;
     z-index: var(--lr-layer-content);
     pointer-events: none;
+  }
+  .maplibregl-ctrl-top-right,
+  .maplibregl-ctrl-bottom-right {
+    align-items: flex-end;
+  }
+  /* Opposing occupied corners each retain usable space when attribution expands. */
+  .maplibregl-control-container:where(:has(.maplibregl-ctrl-top-left:not(:empty))):where(:has(.maplibregl-ctrl-top-right:not(:empty))) :where(.maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right),
+  .maplibregl-control-container:where(:has(.maplibregl-ctrl-bottom-left:not(:empty))):where(:has(.maplibregl-ctrl-bottom-right:not(:empty))) :where(.maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right) {
+    max-inline-size: 50%;
   }
   .maplibregl-ctrl-top-left {
     inset-block-start: 0;
@@ -340,6 +354,9 @@ export const styles = css`
     inset-inline-end: 0;
   }
   .maplibregl-ctrl {
+    box-sizing: border-box;
+    max-inline-size: calc(100% - 2 * var(--lr-space-xs));
+    flex-shrink: 0;
     margin: var(--lr-space-xs);
     pointer-events: auto;
     transform: translate(0);
@@ -412,14 +429,17 @@ export const styles = css`
   }
   .maplibregl-ctrl-scale {
     box-sizing: border-box;
-    padding: var(--lr-space-2xs) var(--lr-space-xs);
+    padding-block: var(--lr-space-2xs);
+    padding-inline: 0;
     border: var(--lr-size-2px) solid currentColor;
     border-block-start: 0;
+    border-inline-width: var(--lr-size-1px);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font-family: var(--lr-font);
     font-size: var(--lr-font-size-xs);
     text-align: center;
+    white-space: nowrap;
   }
   .maplibregl-ctrl-attrib a {
     color: var(--lr-color-text-quiet);

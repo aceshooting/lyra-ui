@@ -9746,7 +9746,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapGeoJsonDataLayer",
       "kind": "interface",
-      "fingerprint": "4bfba9ce55338535da92",
+      "fingerprint": "c9446aea326dff5e10e6",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -15859,7 +15859,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapPointIcon",
       "kind": "interface",
-      "fingerprint": "c8a6515d4c1daf468c69",
+      "fingerprint": "2605db1f9fabdcda86a5",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -15882,7 +15882,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapPointOptions",
       "kind": "interface",
-      "fingerprint": "39bbf1b7adb31cd96b73",
+      "fingerprint": "4180859ff98ba2b6a3b8",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -15899,6 +15899,29 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapPointOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapPointRadiusOptions",
+      "kind": "interface",
+      "fingerprint": "d8d099a2a20f3f8661d5",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapPointRadiusOptions"
       }
     }
   ],

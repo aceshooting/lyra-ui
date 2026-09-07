@@ -539,7 +539,31 @@ export interface LyraMapLineOptions {
   readonly opacity?: number;
 }
 
-/** A category's filled SVG path, rasterized locally without parsing markup or fetching resources. */
+/** Numeric radius interpolation: inclusive threshold bands or a continuous linear ramp. */
+export type LyraMapPointRadiusInterpolation = 'step' | 'linear';
+
+/** A numeric feature field mapped to an individual point's radius, independently of clustering. */
+export interface LyraMapPointRadiusOptions {
+  /** Numeric feature property. Missing, non-numeric and non-finite values use fallback. */
+  readonly field: string;
+  /** First 32 pairs are inspected; finite [value, radius] pairs are sorted and deduplicated first-wins. Radii clamp
+   * to [0, 200] CSS pixels. One usable stop is constant; no usable stops use fallback. */
+  readonly stops: readonly (readonly [number, number])[];
+  /** Defaults to step. Step uses the first radius below the first threshold; linear clamps
+   * outside the domain. An unrepresentable linear domain uses fallback. */
+  readonly interpolation?: LyraMapPointRadiusInterpolation;
+  /** Radius for invalid feature values or unusable scales. Defaults to 5; clamped to [0, 200]. */
+  readonly fallback?: number;
+}
+
+/** How a point icon's path is painted. The existing filled-path behavior remains the default. */
+export type LyraMapPointIconMode = 'fill' | 'stroke' | 'fill-stroke';
+/** Shape of an open point-icon stroke's endpoints. */
+export type LyraMapPointIconLineCap = 'butt' | 'round' | 'square';
+/** Shape where point-icon stroke segments meet. */
+export type LyraMapPointIconLineJoin = 'miter' | 'round' | 'bevel';
+
+/** A category's SVG path, rasterized locally without parsing markup or fetching resources. */
 export interface LyraMapPointIcon {
   /** Exact string category matched against point.iconField, or point.field when omitted. */
   readonly value: string;
@@ -547,6 +571,14 @@ export interface LyraMapPointIcon {
   readonly path: string;
   /** SVG [minX, minY, width, height]. Defaults to [0, 0, 24, 24]; dimensions must be positive. */
   readonly viewBox?: readonly [number, number, number, number];
+  /** Fill, stroke, or both using point.iconColor. Defaults to fill. */
+  readonly mode?: LyraMapPointIconMode;
+  /** Stroke width in viewBox units, clamped to [0, 200]. Defaults to 2. Zero paints no stroke. */
+  readonly strokeWidth?: number;
+  /** Open-path endpoint shape. Defaults to round. */
+  readonly lineCap?: LyraMapPointIconLineCap;
+  /** Segment join shape. Defaults to round; miter joins retain the canvas miter limit of 10. */
+  readonly lineJoin?: LyraMapPointIconLineJoin;
 }
 
 /** Category colors and optional symbols for points, including unclustered points in a cluster source. */
@@ -555,8 +587,8 @@ export interface LyraMapPointOptions {
   readonly field?: string;
   /** [category, CSS color] pairs; first 32 inspected, duplicate categories first-wins. */
   readonly colors?: readonly (readonly [string, string])[];
-  /** Point radius in CSS pixels, clamped to [0, 200]. Defaults to 5. */
-  readonly radius?: number;
+  /** Point radius in CSS pixels, clamped to [0, 200], or a numeric feature-field scale. Defaults to 5. */
+  readonly radius?: number | LyraMapPointRadiusOptions;
   /** Point outline width in CSS pixels, clamped to [0, 200]. Defaults to 0. */
   readonly strokeWidth?: number;
   /** Outline color; defaults to the layer's strokeColor/color/tone. CSS variables resolve on the host. */
@@ -565,7 +597,7 @@ export interface LyraMapPointOptions {
   readonly iconField?: string;
   /** First 32 icons inspected, duplicate values first-wins. Unknown categories keep their circle. */
   readonly icons?: readonly LyraMapPointIcon[];
-  /** Filled icon color; defaults to the layer tone's contrasting foreground. CSS variables supported. */
+  /** Icon fill/stroke ink; defaults to the layer tone's contrasting foreground. CSS variables supported. */
   readonly iconColor?: string;
   /** Icon bounding square in CSS pixels, clamped to [1, 200]. Defaults to 16. */
   readonly iconSize?: number;
@@ -1024,7 +1056,7 @@ interface CanonicalLineOptions {
 interface CanonicalPointOptions {
   readonly field: string | undefined;
   readonly colors: readonly (readonly [string, string])[];
-  readonly radius: number;
+  readonly radius: number | CanonicalPointRadius;
   readonly strokeWidth: number;
   readonly strokeColor: string | undefined;
   readonly iconField: string | undefined;
@@ -1037,6 +1069,49 @@ interface CanonicalPointIcon {
   readonly value: string;
   readonly path: string;
   readonly viewBox: readonly [number, number, number, number];
+  readonly mode: LyraMapPointIconMode;
+  readonly strokeWidth: number;
+  readonly lineCap: LyraMapPointIconLineCap;
+  readonly lineJoin: LyraMapPointIconLineJoin;
+}
+
+interface CanonicalPointRadius {
+  readonly field: string;
+  readonly stops: readonly (readonly [number, number])[];
+  readonly interpolation: LyraMapPointRadiusInterpolation;
+  readonly fallback: number;
+}
+
+function projectPointRadius(value: unknown): number | CanonicalPointRadius {
+  if (!isRuntimeRecord(value)) return finiteRange(typeof value === 'number' ? value : NaN, 5, 0, 200);
+  const read = (key: string): unknown => optionalDescriptorValue(ownDataValue(value, key));
+  const field = read('field');
+  const rawFallback = read('fallback');
+  const fallback = finiteRange(typeof rawFallback === 'number' ? rawFallback : NaN, 5, 0, 200);
+  const stops = normalizedSteps(read('stops'), isFiniteOutput)
+    .map(([threshold, radius]) => Object.freeze([threshold, finiteRange(radius, 5, 0, 200)] as const));
+  if (typeof field !== 'string' || !field.trim() || !stops.length) return fallback;
+  return Object.freeze({ field: field.trim(), stops: Object.freeze(stops), fallback,
+    interpolation: read('interpolation') === 'linear' ? 'linear' : 'step' });
+}
+
+function pointRadiusExpression(radius: number | CanonicalPointRadius): number | unknown[] {
+  if (typeof radius === 'number') return radius;
+  const input: unknown[] = ['number', ['get', radius.field], 0];
+  let domainInput: unknown[] = input;
+  let stops = radius.stops;
+  // Halving a finite overflow-spanning domain keeps the peer's interpolation subtraction finite.
+  // Reject a domain whose smallest distinct stops become indistinguishable during that projection.
+  if (radius.interpolation === 'linear' && !Number.isFinite(stops.at(-1)![0] - stops[0]![0])) {
+    stops = stops.map(([value, output]) => [value / 2, output] as const);
+    if (stops.some(([value], index) => index > 0 && value <= stops[index - 1]![0])) return radius.fallback;
+    domainInput = ['/', input, 2];
+  }
+  const output = stops.length === 1 ? stops[0]![1] : radius.interpolation === 'linear'
+    ? ['interpolate', ['linear'], domainInput, ...stops.flat()]
+    : stepExpression(input, stops);
+  return ['case', ['all', ['==', ['typeof', ['get', radius.field]], 'number'],
+    ['>=', input, -Number.MAX_VALUE], ['<=', input, Number.MAX_VALUE]], output, radius.fallback];
 }
 
 function projectPointOptions(value: unknown): CanonicalPointOptions | undefined {
@@ -1083,9 +1158,19 @@ function projectPointOptions(value: unknown): CanonicalPointOptions | undefined 
       }
       if (box[2]! < 0.001 || box[3]! < 0.001) return;
     }
-    icons.push(Object.freeze({ value: key, path, viewBox: Object.freeze(box) as unknown as CanonicalPointIcon['viewBox'] }));
+    const mode = optionalDescriptorValue(ownDataValue(row, 'mode'));
+    const strokeWidth = optionalDescriptorValue(ownDataValue(row, 'strokeWidth'));
+    const lineCap = optionalDescriptorValue(ownDataValue(row, 'lineCap'));
+    const lineJoin = optionalDescriptorValue(ownDataValue(row, 'lineJoin'));
+    icons.push(Object.freeze({ value: key, path,
+      viewBox: Object.freeze(box) as unknown as CanonicalPointIcon['viewBox'],
+      mode: mode === 'stroke' || mode === 'fill-stroke' ? mode : 'fill',
+      strokeWidth: finiteRange(typeof strokeWidth === 'number' ? strokeWidth : NaN, 2, 0, 200),
+      lineCap: lineCap === 'butt' || lineCap === 'square' ? lineCap : 'round',
+      lineJoin: lineJoin === 'miter' || lineJoin === 'bevel' ? lineJoin : 'round',
+    }));
   });
-  return Object.freeze({ field: string('field'), colors: Object.freeze(colors), radius: number('radius', 5, 0, 200),
+  return Object.freeze({ field: string('field'), colors: Object.freeze(colors), radius: projectPointRadius(read('radius')),
     strokeWidth: number('strokeWidth', 0, 0, 200), strokeColor: string('strokeColor'),
     iconField: string('iconField') ?? string('field'), icons: Object.freeze(icons),
     iconColor: string('iconColor'), iconSize: number('iconSize', 16, 1, 200) });
@@ -1106,8 +1191,18 @@ function rasterPointIcon(host: Element, icon: CanonicalPointIcon, color: string)
     context.translate((POINT_ICON_RASTER_SIZE - width * scale) / 2, (POINT_ICON_RASTER_SIZE - height * scale) / 2);
     context.scale(scale, scale);
     context.translate(-x, -y);
-    context.fillStyle = color;
-    context.fill(new Path(icon.path));
+    const path = new Path(icon.path);
+    if (icon.mode !== 'stroke') {
+      context.fillStyle = color;
+      context.fill(path);
+    }
+    if (icon.mode !== 'fill' && icon.strokeWidth > 0) {
+      context.strokeStyle = color;
+      context.lineWidth = icon.strokeWidth;
+      context.lineCap = icon.lineCap;
+      context.lineJoin = icon.lineJoin;
+      context.stroke(path);
+    }
     return context.getImageData(0, 0, POINT_ICON_RASTER_SIZE, POINT_ICON_RASTER_SIZE);
   } catch {
     return undefined;
@@ -3364,7 +3459,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const id = `${sourceId}-circle`;
     this._map.setPaintProperty(id, 'circle-color', color);
     if (!point && !this.appliedPointPaint.has(sourceId)) return;
-    this._map.setPaintProperty(id, 'circle-radius', point?.radius ?? 5);
+    this._map.setPaintProperty(id, 'circle-radius', pointRadiusExpression(point?.radius ?? 5));
     this._map.setPaintProperty(id, 'circle-stroke-width', point?.strokeWidth ?? 0);
     this._map.setPaintProperty(id, 'circle-stroke-color', point?.strokeColor
       ? resolvedLayerColor(this, point.strokeColor, layer.tone) : fallback);
@@ -3935,9 +4030,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private measurePeerControlInsets(container: HTMLElement): void {
     if (!this.isConnected || this.containerEl !== container) return;
-    const hasControls = container.querySelector('.maplibregl-ctrl-group, .maplibregl-ctrl-scale') !== null;
     for (const edge of ['top', 'bottom']) {
-      const height = !hasControls ? 0 : Math.max(0, ...[...container.querySelectorAll<HTMLElement>(
+      const height = Math.max(0, ...[...container.querySelectorAll<HTMLElement>(
         `.maplibregl-ctrl-${edge}-left, .maplibregl-ctrl-${edge}-right`,
       )].map((corner) => corner.getBoundingClientRect().height));
       container.parentElement?.style.setProperty(`--_lr-map-controls-${edge}`, `${height}px`);

@@ -26242,15 +26242,15 @@
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5414,
+              "line": 5615,
               "test": "styles and localizes peer-added controls inside the shadow root",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5505,
-              "test": "clusters mixed categories, restores their rendered icons after a style reload and exports them",
+              "line": 5706,
+              "test": "clusters sized categories, restores filled and stroked icons after a style reload and exports them",
               "target": "el",
               "state": "populated"
             }
@@ -26371,7 +26371,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 2701,
+              "line": 2796,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -4331,6 +4331,140 @@ describe('dataLayers clustering and heatmap', () => {
     expect(layers.get(`${sourceId}-circle`)!.paint!['circle-stroke-width']).to.equal(0);
   });
 
+  it('maps numeric point radius independently of categories and cluster-count radius', async () => {
+    const { el } = await connectedMapWithoutMaplibre();
+    const { sources, layers } = stubMaplibreMap(el);
+    const radius = { field: 'visits', stops: [[50, 14], [0, 10], [10, 12], [100, 16], [10, 99]], fallback: 8 };
+    el.dataLayers = entry({ cluster: {}, point: { field: 'category', colors: [['home', 'red']], radius } });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const circle = layers.get(`${sourceId}-circle`)!;
+    const expression = circle.paint!['circle-radius'];
+    expect(Array.isArray(expression)).to.equal(true);
+    expect(JSON.stringify(expression)).to.include('visits');
+    expect(JSON.stringify(expression)).to.include('["step",["number",["get","visits"],0],10,0,10,10,12,50,14,100,16]');
+    expect((expression as unknown[]).at(-1)).to.equal(8);
+    expect(JSON.stringify(layers.get(`${sourceId}-cluster`)!.paint!['circle-radius'])).to.include('point_count');
+    expect(sources.size).to.equal(1);
+    const source = sources.get(sourceId);
+    radius.stops[0]![1] = 90;
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(circle.paint!['circle-radius']).to.deep.equal(expression);
+    el.dataLayers = entry({ cluster: {}, point: { radius: 12 } });
+    await el.updateComplete;
+    expect(sources.get(sourceId) === source).to.equal(true);
+    expect(circle.paint!['circle-radius']).to.equal(12);
+    el.dataLayers = entry({ cluster: {} });
+    await el.updateComplete;
+    expect(circle.paint!['circle-radius']).to.equal(5);
+  });
+
+  it('normalizes linear radius scales and bounds descriptor reads and numeric outputs', async () => {
+    const { el } = await connectedMapWithoutMaplibre();
+    const { sources, layers } = stubMaplibreMap(el);
+    const paint = () => layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!.paint!['circle-radius'];
+    el.dataLayers = entry({ point: { radius: { field: ' visits ', interpolation: 'linear',
+      stops: [[10, 300], [0, -1], [10, 6], [Infinity, 20], [20, NaN]], fallback: -2 } } });
+    await el.updateComplete;
+    expect((paint() as unknown[])[2]).to.deep.equal(['interpolate', ['linear'], ['number', ['get', 'visits'], 0], 0, 0, 10, 200]);
+    expect((paint() as unknown[]).at(-1)).to.equal(0);
+    expect(sources.size).to.equal(1);
+    let reads = 0;
+    const stops = [[0, 10], [10, 12]];
+    Object.defineProperty(stops[1], '1', { get() { reads++; return 20; } });
+    el.dataLayers = entry({ point: { radius: { field: 'visits', stops, fallback: Infinity } } });
+    await el.updateComplete;
+    expect(reads).to.equal(0);
+    expect((paint() as unknown[])[2]).to.equal(10);
+    expect((paint() as unknown[]).at(-1)).to.equal(5);
+    el.dataLayers = entry({ point: { radius: { get field() { reads++; return 'visits'; }, stops, fallback: 9 } } });
+    await el.updateComplete;
+    expect(reads).to.equal(0);
+    expect(paint()).to.equal(9);
+    el.dataLayers = entry({ point: { radius: { field: 'visits', stops: [[0, Infinity]], fallback: 300 } } });
+    await el.updateComplete;
+    expect(paint()).to.equal(200);
+    el.dataLayers = entry({ point: { radius: { field: 'visits', interpolation: 'unknown',
+      stops: Array.from({ length: 100 }, (_, index) => [index, index]) } } });
+    await el.updateComplete;
+    expect(((paint() as unknown[])[2] as unknown[]).length).to.equal(3 + 32 * 2);
+    el.dataLayers = entry({ point: { radius: { field: 'visits', interpolation: 'linear',
+      stops: [[-Number.MAX_VALUE, 10], [Number.MAX_VALUE, 20]] } } });
+    await el.updateComplete;
+    expect((paint() as unknown[])[2]).to.deep.equal(['interpolate', ['linear'],
+      ['/', ['number', ['get', 'visits'], 0], 2], -Number.MAX_VALUE / 2, 10, Number.MAX_VALUE / 2, 20]);
+    el.dataLayers = entry({ point: { radius: { field: 'visits', interpolation: 'linear',
+      stops: [[-Number.MAX_VALUE, 10], [0, 11], [Number.MIN_VALUE, 12], [Number.MAX_VALUE, 20]], fallback: 7 } } });
+    await el.updateComplete;
+    expect(paint()).to.equal(7);
+  });
+
+  it('rasterizes open stroke icons with viewBox-scaled ink and reactive theme colors', async () => {
+    const { el } = await connectedMapWithoutMaplibre('--lr-theme-color-success-fill-loud: rgb(1, 2, 3)');
+    const { sources, images } = stubMaplibreMap(el);
+    el.dataLayers = entry({ point: { field: 'category', iconColor: 'var(--lr-color-success)', icons: [
+      { value: 'outline', path: 'M4 12H20', mode: 'stroke', strokeWidth: 2 },
+      { value: 'default', path: 'M4 12H20' },
+      { value: 'filled', path: 'M0 0H24V24H0Z' },
+    ] } });
+    await el.updateComplete;
+    const ids = [...images.keys()];
+    const pixel = (id: string, x: number, y: number) => [...images.get(id)!.data.slice((y * 64 + x) * 4, (y * 64 + x) * 4 + 4)];
+    expect(pixel(ids[0]!, 32, 32)).to.deep.equal([1, 2, 3, 255]);
+    expect(pixel(ids[1]!, 32, 32)[3]).to.equal(0);
+    expect(pixel(ids[2]!, 32, 32)).to.deep.equal([1, 2, 3, 255]);
+    const source = sources.get(dataLayerResourceId(el, 'pins'));
+    el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
+    await waitUntil(() => pixel(ids[0]!, 32, 32)[0] === 4);
+    expect(pixel(ids[0]!, 32, 32)).to.deep.equal([4, 5, 6, 255]);
+    expect(sources.get(dataLayerResourceId(el, 'pins')) === source).to.equal(true);
+    expect([...images.keys()]).to.deep.equal(ids);
+    el.dataLayers = [];
+    await el.updateComplete;
+    expect(images.size).to.equal(0);
+  });
+
+  it('honors stroke caps, joins, fill mode and viewBox scaling while owning icon options', async () => {
+    const { el } = await connectedMapWithoutMaplibre();
+    const { images } = stubMaplibreMap(el);
+    const icons = [
+      { value: 'butt', path: 'M6 12H18', mode: 'stroke', strokeWidth: 4, lineCap: 'butt' },
+      { value: 'round', path: 'M6 12H18', mode: 'stroke', strokeWidth: 4, lineCap: 'round' },
+      { value: 'square', path: 'M6 12H18', mode: 'stroke', strokeWidth: 4, lineCap: 'square' },
+      { value: 'scaled', path: 'M12 24H36', viewBox: [0, 0, 48, 48], mode: 'stroke', strokeWidth: 8, lineCap: 'round' },
+      ...['miter', 'round', 'bevel'].map(lineJoin => ({ value: lineJoin + '-join',
+        path: 'M6 18L12 6L18 18', mode: 'stroke', strokeWidth: 4, lineJoin })),
+      { value: 'both', path: 'M6 6H18V18H6Z', mode: 'fill-stroke', strokeWidth: 4 },
+      { value: 'zero', path: 'M6 12H18', mode: 'stroke', strokeWidth: -1 },
+    ];
+    el.dataLayers = entry({ point: { field: 'category', iconColor: 'red', icons } });
+    await el.updateComplete;
+    const rasters = [...images.values()];
+    const alpha = (index: number, x: number, y: number) => rasters[index]!.data[(y * 64 + x) * 4 + 3];
+    expect(alpha(0, 12, 32)).to.equal(0);
+    expect(alpha(1, 12, 32)).to.equal(255);
+    expect(alpha(2, 12, 28)).to.equal(255);
+    expect([...rasters[1]!.data]).to.deep.equal([...rasters[3]!.data]);
+    expect([...rasters[4]!.data]).to.not.deep.equal([...rasters[5]!.data]);
+    expect([...rasters[5]!.data]).to.not.deep.equal([...rasters[6]!.data]);
+    expect(alpha(7, 32, 32)).to.equal(255);
+    expect(alpha(7, 12, 32)).to.equal(255);
+    expect(rasters[8]!.data.some((value, index) => index % 4 === 3 && value > 0)).to.equal(false);
+    const ids = [...images.keys()];
+    icons[0]!.mode = 'fill';
+    el.requestUpdate();
+    await el.updateComplete;
+    expect([...images.keys()]).to.deep.equal(ids);
+    el.dataLayers = entry({ point: { field: 'category', icons: [
+      { value: 'invalid', path: 'M0 0H24V24H0Z', mode: 'unknown', strokeWidth: Infinity, lineCap: 'unknown', lineJoin: 'unknown' },
+    ] } });
+    await el.updateComplete;
+    expect(images.size).to.equal(1);
+    expect(ids.some(id => images.has(id))).to.equal(false);
+    expect([...images.values()][0]!.data[3]).to.equal(255);
+  });
+
   it('bounds category/icon descriptors and keeps unknown categories on the circle fallback', async () => {
     const { el } = await connectedMapWithoutMaplibre();
     const { layers, images } = stubMaplibreMap(el);
@@ -5411,6 +5545,73 @@ describe('descriptor-safe map data projections', () => {
 });
 
 describe('standard peer navigation and scale controls', () => {
+  it('keeps expanded attribution, opposite controls and legends separate in narrow layouts', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = await fixture<LyraMap>(html`<lr-map style="inline-size: 320px"
+      .mapStyle=${LOCAL_STYLE} .legendGradient=${[[0, 'blue'], [100, 'red']]}></lr-map>`);
+    await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
+    const peer = await import('maplibre-gl');
+    const map = el.map as unknown as import('maplibre-gl').Map;
+    const attribution = new peer.AttributionControl({ compact: true,
+      customAttribution: '<a href="https://example.com">Example map data contributors</a>' });
+    map.addControl(attribution, 'bottom-right');
+    await waitUntil(() => el.shadowRoot!.querySelector('[part~="attribution"]') !== null);
+    const control = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="attribution"]')]
+      .find((node) => node.textContent?.includes('Example map data contributors'))!;
+    control.style.setProperty('--lr-icon-button-size', '24px');
+    const toggle = control.querySelector<HTMLElement>('summary')!;
+    const legend = el.shadowRoot!.querySelector<HTMLElement>('[part="legend"]')!;
+    const openAttribution = async () => {
+      if (!control.classList.contains('maplibregl-compact-show')) toggle.click();
+      await waitUntil(() => control.classList.contains('maplibregl-compact-show'));
+    };
+    await openAttribution();
+    await waitUntil(() => legend.getBoundingClientRect().bottom <= control.getBoundingClientRect().top,
+      'attribution alone reserves legend space');
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="legend-gradient"]')!
+      .getBoundingClientRect().width).to.be.at.least(24);
+    map.addControl(new peer.NavigationControl(), 'bottom-right');
+    map.addControl(new peer.ScaleControl(), 'bottom-left');
+    await waitUntil(() => el.shadowRoot!.querySelector('[part~="scale"]') !== null);
+    const scale = el.shadowRoot!.querySelector<HTMLElement>('[part~="scale"]')!;
+    const navigation = el.shadowRoot!.querySelector<HTMLElement>('[part~="navigation"]')!;
+    for (const width of [256, 320, 390, 740]) {
+      el.style.inlineSize = `${width}px`;
+      el.style.blockSize = width === 740 ? '240px' : '384px';
+      for (const direction of ['ltr', 'rtl']) {
+        el.dir = direction;
+        await el.updateComplete;
+        await openAttribution();
+        await waitUntil(() => {
+          const a = control.getBoundingClientRect();
+          const s = scale.getBoundingClientRect();
+          const n = navigation.getBoundingClientRect();
+          const l = legend.getBoundingClientRect();
+          return (a.right <= s.left || s.right <= a.left) && l.bottom <= Math.min(a.top, s.top, n.top);
+        }, `controls and legend do not overlap at ${width}px ${direction}`);
+        const host = el.getBoundingClientRect();
+        for (const element of [control, scale, navigation, legend]) {
+          const rect = element.getBoundingClientRect();
+          expect(rect.left).to.be.at.least(host.left);
+          expect(rect.right).to.be.at.most(host.right);
+          expect(rect.top).to.be.at.least(host.top);
+          expect(rect.bottom).to.be.at.most(host.bottom);
+        }
+        const a = control.getBoundingClientRect();
+        const n = navigation.getBoundingClientRect();
+        expect(direction === 'ltr' ? n.right : n.left).to.equal(direction === 'ltr' ? a.right : a.left);
+        const scaleText = document.createRange();
+        scaleText.selectNodeContents(scale);
+        const textRect = scaleText.getBoundingClientRect();
+        expect(textRect.left).to.be.at.least(scale.getBoundingClientRect().left);
+        expect(textRect.right).to.be.at.most(scale.getBoundingClientRect().right);
+        toggle.focus();
+        await sendKeys({ press: 'Enter' });
+        await waitUntil(() => !control.classList.contains('maplibregl-compact-show'));
+      }
+    }
+  });
+
   it('styles and localizes peer-added controls inside the shadow root', async function () {
     if (!hasWebGL2) this.skip();
     const el = await fixture<LyraMap>(html`<lr-map style="inline-size: 320px" .mapStyle=${LOCAL_STYLE}
@@ -5502,7 +5703,7 @@ it('renders declarative route metrics, restores them after style changes, and ex
   expect(map.queryRenderedFeatures().length).to.equal(0);
 });
 
-it('clusters mixed categories, restores their rendered icons after a style reload and exports them', async function () {
+it('clusters sized categories, restores filled and stroked icons after a style reload and exports them', async function () {
   if (!hasWebGL2) this.skip();
   let loaded = false;
   const el = await fixture<LyraMap>(html`<lr-map label="Classified locations" .mapStyle=${LOCAL_STYLE} zoom="8"
@@ -5514,10 +5715,13 @@ it('clusters mixed categories, restores their rendered icons after a style reloa
   const categories = ['home', 'work', 'shop'];
   el.dataLayers = [{ sourceId: 'places', cluster: {}, geojson: { type: 'FeatureCollection',
     features: categories.map((category, index) => ({ type: 'Feature', id: index,
-      properties: { category }, geometry: { type: 'Point', coordinates: [index * 0.00015, 0] } })),
+      properties: { category, visits: [1, 20, 100][index] }, geometry: { type: 'Point', coordinates: [index * 0.00015, 0] } })),
   }, point: { field: 'category', colors: [['home', 'red'], ['work', 'blue'], ['shop', 'green']],
-    radius: 12, iconColor: 'black', iconSize: 8,
-    icons: categories.map(value => ({ value, path: 'M0 0H24V24H0Z' })),
+    radius: { field: 'visits', stops: [[0, 10], [10, 12], [50, 14], [100, 16]], fallback: 7 },
+    iconColor: 'black', iconSize: 8,
+    icons: categories.map((value, index) => index === 1
+      ? { value, path: 'M4 12H20', mode: 'stroke', strokeWidth: 6 }
+      : { value, path: 'M0 0H24V24H0Z' }),
   } }];
   await el.updateComplete;
   let sourceId = dataLayerResourceId(el, 'places');
@@ -5526,6 +5730,14 @@ it('clusters mixed categories, restores their rendered icons after a style reloa
   map.setZoom(18);
   await waitUntil(() => map.queryRenderedFeatures({ layers: [`${sourceId}-point-icon`] }).length === 3,
     'individual icons rendered', { timeout: 5000 });
+  const radiusMatches = (index: number, radius: number) => {
+    const position = map.project([index * 0.00015, 0]);
+    const hits = (offset: number) => map.queryRenderedFeatures([position.x + offset, position.y],
+      { layers: [`${sourceId}-circle`] }).some(feature => feature.id === index);
+    return hits(radius - 1) && !hits(radius + 1);
+  };
+  await waitUntil(() => [10, 12, 16].every((radius, index) => radiusMatches(index, radius)),
+    'inclusive visit bands control rendered circle radii', { timeout: 5000 });
   const clicked = oneEvent(el, 'lr-map-click');
   map.fire('click', { point: map.project([0, 0]), lngLat: { lng: 0, lat: 0 } });
   const detail = (await clicked).detail;
@@ -5541,7 +5753,7 @@ it('clusters mixed categories, restores their rendered icons after a style reloa
   }, 'icon layer restored', { timeout: 5000 });
   await waitUntil(() => map.queryRenderedFeatures({ layers: [`${sourceId}-point-icon`] }).length === 3 && map.loaded(),
     'all restored icons painted', { timeout: 5000 });
-  const snapshot = await new Promise<{ png: string; center: number[]; circle: number[] }>(resolve => {
+  const snapshot = await new Promise<{ png: string; center: number[]; circle: number[]; stroke: number[] }>(resolve => {
     map.once('render', () => {
       const canvas = document.createElement('canvas');
       canvas.width = map.getCanvas().width;
@@ -5553,13 +5765,30 @@ it('clusters mixed categories, restores their rendered icons after a style reloa
       const sample = (offset: number) => [...context.getImageData(
         Math.floor((position.x + offset) * ratio), Math.floor(position.y * ratio), 1, 1,
       ).data];
-      resolve({ png: canvas.toDataURL('image/png'), center: sample(0), circle: sample(8) });
+      const outlinePosition = map.project([0.00015, 0]);
+      const stroke = [...context.getImageData(Math.floor(outlinePosition.x * ratio),
+        Math.floor(outlinePosition.y * ratio), 1, 1).data];
+      resolve({ png: canvas.toDataURL('image/png'), center: sample(0), circle: sample(8), stroke });
     });
     map.triggerRepaint();
   });
   expect(snapshot.png).to.match(/^data:image\/png;base64,/u);
   expect(snapshot.center).to.deep.equal([0, 0, 0, 255]);
   expect(snapshot.circle).to.deep.equal([255, 0, 0, 255]);
+  expect(snapshot.stroke).to.deep.equal([0, 0, 0, 255]);
+  await waitUntil(() => [10, 12, 16].every((radius, index) => radiusMatches(index, radius)),
+    'radius scale restored after style reload', { timeout: 5000 });
+  const entry = el.dataLayers[0]!;
+  const geojson = { type: 'FeatureCollection' as const, features: categories.map((category, index) => ({
+    type: 'Feature' as const, id: index, properties: { category, visits: [5, 'invalid', Infinity][index] },
+    geometry: { type: 'Point' as const, coordinates: [index * 0.00015, 0] },
+  })) };
+  el.dataLayers = [{ ...entry, geojson, point: { ...entry.point,
+    radius: { field: 'visits', interpolation: 'linear', stops: [[0, 10], [10, 20]], fallback: 7 } } }];
+  await el.updateComplete;
+  await waitUntil(() => [15, 7, 7].every((radius, index) => radiusMatches(index, radius)),
+    'linear interpolation and invalid/non-finite fallbacks repaint the same source', { timeout: 5000 });
+  expect(dataLayerResourceId(el, 'places')).to.equal(sourceId);
   expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(0);
   expect(errors).to.deep.equal([]);
   await expect(el).to.be.accessible();
