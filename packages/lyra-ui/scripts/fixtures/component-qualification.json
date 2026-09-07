@@ -6812,7 +6812,7 @@
             },
             {
               "file": "src/components/charts/chart/chart-datum-legend.test.ts",
-              "line": 246,
+              "line": 263,
               "test": "wraps long RTL categories and refreshes per-slice theme swatches",
               "target": "el",
               "state": "populated"
@@ -26242,14 +26242,14 @@
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5615,
+              "line": 5623,
               "test": "styles and localizes peer-added controls inside the shadow root",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5706,
+              "line": 5714,
               "test": "clusters sized categories, restores filled and stroked icons after a style reload and exports them",
               "target": "el",
               "state": "populated"

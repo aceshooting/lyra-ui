@@ -428,18 +428,29 @@ export const styles = css`
     content: '▲';
   }
   .maplibregl-ctrl-scale {
+    position: relative;
     box-sizing: border-box;
-    padding-block: var(--lr-space-2xs);
-    padding-inline: 0;
-    border: var(--lr-size-2px) solid currentColor;
-    border-block-start: 0;
-    border-inline-width: var(--lr-size-1px);
+    min-inline-size: max-content;
+    padding: var(--lr-space-2xs) var(--lr-space-xs);
+    padding-block-end: calc(var(--lr-space-2xs) + var(--lr-space-xs));
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font-family: var(--lr-font);
     font-size: var(--lr-font-size-xs);
     text-align: center;
     white-space: nowrap;
+  }
+  .maplibregl-ctrl-scale::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-end: 0;
+    box-sizing: border-box;
+    inline-size: var(--_lr-map-scale-width, 100%);
+    block-size: var(--lr-space-xs);
+    border: var(--lr-size-2px) solid currentColor;
+    border-block-start: 0;
+    pointer-events: none;
   }
   .maplibregl-ctrl-attrib a {
     color: var(--lr-color-text-quiet);

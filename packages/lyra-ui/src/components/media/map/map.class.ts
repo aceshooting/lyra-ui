@@ -4030,6 +4030,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private measurePeerControlInsets(container: HTMLElement): void {
     if (!this.isConnected || this.containerEl !== container) return;
+    for (const scale of container.querySelectorAll<HTMLElement>('.maplibregl-ctrl-scale')) {
+      // The native distance width belongs to the ruler; a wider localized label can own its
+      // background without stretching that geographic measurement.
+      const width = scale.style.width;
+      if (width && scale.style.getPropertyValue('--_lr-map-scale-width') !== width) {
+        scale.style.setProperty('--_lr-map-scale-width', width);
+      }
+    }
     for (const edge of ['top', 'bottom']) {
       const height = Math.max(0, ...[...container.querySelectorAll<HTMLElement>(
         `.maplibregl-ctrl-${edge}-left, .maplibregl-ctrl-${edge}-right`,

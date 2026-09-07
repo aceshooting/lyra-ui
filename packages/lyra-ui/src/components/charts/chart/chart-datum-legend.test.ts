@@ -142,7 +142,8 @@ describe('chart datum legends', () => {
   it('uses source category indexes when the rendered series is sampled', async () => {
     const el = await chart();
     el.labels = Array.from({ length: 2000 }, (_, index) => `Category ${index}`);
-    el.datasets = [{ label: 'Large distribution', data: Array.from({ length: 2000 }, () => 1) }];
+    el.datasets = [{ label: 'Large distribution', data: Array.from({ length: 2000 }, () => 1),
+      color: Array.from({ length: 2000 }, () => 'var(--category-color, red)') }];
     el.hiddenDatums = [1999];
     await el.updateComplete;
     const items = buttons(el);
@@ -155,6 +156,22 @@ describe('chart datum legends', () => {
     items.at(-1)!.click();
     expect(committed).to.deep.equal({ index: 1999, visible: true, hiddenDatums: [] });
     expect(peer(el).getDataVisibility(999)).to.equal(true);
+  });
+
+  it('refreshes repeated token colors and percentage values on later renders', async () => {
+    const el = await chart();
+    const color = ['var(--category-color, red)', 'var(--category-color, red)', 'var(--category-color, red)'];
+    el.legendDisplay = 'percentage';
+    el.datasets = [{ label: 'Distribution', data: [5, 3, 2], color }];
+    await el.updateComplete;
+    expect(labels(el)[0]).to.equal('A: 50%');
+    const swatchColor = () => getComputedStyle(el.shadowRoot!.querySelector('[part="legend-swatch"]')!).backgroundColor;
+    expect(swatchColor()).to.equal('rgb(255, 0, 0)');
+    el.style.setProperty('--category-color', 'blue');
+    el.datasets = [{ label: 'Distribution', data: [2, 4, 4], color }];
+    await el.updateComplete;
+    expect(labels(el)[0]).to.equal('A: 20%');
+    expect(swatchColor()).to.equal('rgb(0, 0, 255)');
   });
 
   it('ignores hostile hidden-index getters and out-of-range entries without invoking them', async () => {

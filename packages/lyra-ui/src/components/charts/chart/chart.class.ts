@@ -4673,6 +4673,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private renderDataTable(): TemplateResult {
     const effective = this.effectiveData();
     const sample = this.dataTableSample(effective);
+    const valuesBySeries = new Map(sample.seriesIndexes.map((index) =>
+      [index, this.datasetValues(effective.datasets[index]!)] as const,
+    ));
     const stackAxes = this.tableStackAxes();
     const stackTotals = new Map(stackAxes.map((axis) => [axis, this.computeStackTotals(axis)]));
     return html`
@@ -4698,7 +4701,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               <th scope="row">${labelText(effective.labels[index]) ||
                 sample.seriesIndexes
                   .map((datasetIndex) =>
-                    normalizedChartPoint(this.datasetValues(effective.datasets[datasetIndex]!)[index]),
+                    normalizedChartPoint(valuesBySeries.get(datasetIndex)![index]),
                   )
                   .find((point): point is LyraChartPoint => point !== null)?.label ||
                 this.localize('chartPointLabel', undefined, {
@@ -4706,7 +4709,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 })}</th>
               ${sample.seriesIndexes.map((datasetIndex) => {
                 const dataset = effective.datasets[datasetIndex]!;
-                const datum = this.datasetValues(dataset)[index];
+                const datum = valuesBySeries.get(datasetIndex)![index];
                 const point = normalizedChartPoint(datum);
                 const value = point?.y ?? chartDatumNumericValue(datum);
                 if (value === undefined) {
@@ -4780,6 +4783,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     datasetIndex: number,
     palette: string[] = this.seriesPalette(),
     datumIndex?: number,
+    colorCache: Map<string, Map<string, string>> = new Map(),
   ): string {
     const fallback = palette[(datumIndex ?? datasetIndex) % palette.length] ?? 'transparent';
     const rawCandidate =
@@ -4793,9 +4797,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR
         ? undefined
         : first?.value ?? rawCandidate;
-    return typeof candidate === 'string'
-      ? resolveCanvasColor(this, candidate, fallback)
-      : fallback;
+    if (typeof candidate !== 'string') return fallback;
+    let cached = colorCache.get(candidate);
+    if (!cached) {
+      cached = new Map();
+      colorCache.set(candidate, cached);
+    }
+    const resolved = cached.get(fallback) ?? resolveCanvasColor(this, candidate, fallback);
+    cached.set(fallback, resolved);
+    return resolved;
   }
 
   private toggleDataset(datasetIndex: number): void {
@@ -4856,14 +4866,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const hiddenDatums = new Set(normalizeHiddenDatasets(this.hiddenDatums, sample.rowCount));
     const needValues = this.legendDisplay !== 'label' &&
       (this.legendDisplay === 'value' || this.legendDisplay === 'percentage' || this.formatter || this.valueFormatter);
+    // Each render owns its projections and color probes, so repeated category entries share work
+    // while subsequent data or theme updates always start with fresh values.
+    const sources = new Map<number, readonly unknown[]>();
+    const colorCache = new Map<string, Map<string, string>>();
     const entries = (datumMode ? sample.rowIndexes : sample.seriesIndexes).map((index) => {
       const datasetIndex = datumMode ? 0 : index;
       const dataset = effective.datasets[datasetIndex]!;
-      const source = this.datasetValues(dataset);
       let value: number | undefined;
       let valueScale = 0;
       let scaledValue = 0;
       if (needValues) {
+        let source = sources.get(datasetIndex);
+        if (!source) {
+          source = this.datasetValues(dataset);
+          sources.set(datasetIndex, source);
+        }
         for (const row of datumMode ? [index] : sample.rowIndexes) {
           const number = chartDatumNumericValue(source[row]);
           if (number !== undefined) {
@@ -4925,6 +4943,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   datasetIndex,
                   palette,
                   datumMode ? index : undefined,
+                  colorCache,
                 )}"
               ></span>
               <span>${this.legendTextFor(label, value, total ? Math.abs(scaledValue) * (valueScale / maximum) / total : 0)}</span>

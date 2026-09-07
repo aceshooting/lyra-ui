@@ -5575,6 +5575,7 @@ describe('standard peer navigation and scale controls', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('[part~="scale"]') !== null);
     const scale = el.shadowRoot!.querySelector<HTMLElement>('[part~="scale"]')!;
     const navigation = el.shadowRoot!.querySelector<HTMLElement>('[part~="navigation"]')!;
+    scale.style.setProperty('--lr-font-size-xs', '20px');
     for (const width of [256, 320, 390, 740]) {
       el.style.inlineSize = `${width}px`;
       el.style.blockSize = width === 740 ? '240px' : '384px';
@@ -5605,11 +5606,18 @@ describe('standard peer navigation and scale controls', () => {
         const textRect = scaleText.getBoundingClientRect();
         expect(textRect.left).to.be.at.least(scale.getBoundingClientRect().left);
         expect(textRect.right).to.be.at.most(scale.getBoundingClientRect().right);
+        expect(parseFloat(getComputedStyle(scale, '::after').width))
+          .to.be.closeTo(parseFloat(scale.style.width), 0.1);
         toggle.focus();
         await sendKeys({ press: 'Enter' });
         await waitUntil(() => !control.classList.contains('maplibregl-compact-show'));
       }
     }
+    const previousWidth = parseFloat(scale.style.width);
+    map.jumpTo({ zoom: 3.2 });
+    await waitUntil(() => parseFloat(scale.style.width) !== previousWidth &&
+      Math.abs(parseFloat(getComputedStyle(scale, '::after').width) - parseFloat(scale.style.width)) < 0.1,
+    'the ruler follows the native geographic width after zooming');
   });
 
   it('styles and localizes peer-added controls inside the shadow root', async function () {
@@ -5629,7 +5637,7 @@ describe('standard peer navigation and scale controls', () => {
     expect(compass.getAttribute('aria-label')).to.equal('Nord');
     expect(zoom.getBoundingClientRect().width).to.be.at.least(24);
     expect(zoom.getBoundingClientRect().height).to.be.at.least(24);
-    expect(getComputedStyle(scale).borderBottomStyle).to.equal('solid');
+    expect(getComputedStyle(scale, '::after').borderBottomStyle).to.equal('solid');
     const glyph = zoom.querySelector<HTMLElement>('.maplibregl-ctrl-icon')!;
     expect(getComputedStyle(glyph, '::before').content).to.include('+');
     const legend = el.shadowRoot!.querySelector<HTMLElement>('[part="legend"]')!;
