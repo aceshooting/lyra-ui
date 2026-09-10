@@ -32,8 +32,19 @@ export interface ComposedAccessibilityTextOptions {
   ancestorBoundary?: Element | null;
   /** Whether connected candidates must participate in rendered layout. Defaults to true. */
   requireRendered?: boolean;
-  /** Skips composed-ancestor validation for supplied roots; their own authored state still applies. */
+  /** Skips composed-ancestor validation for supplied roots; their own authored state still applies.
+   *  This also implies `ignoreInheritedVisibility`, since a walk that ignores its ancestors entirely
+   *  cannot meaningfully honor visibility inherited from them. Prefer `ignoreInheritedVisibility`
+   *  alone when authored ancestor exclusion (`aria-hidden`, `inert`, `hidden`) must still prune. */
   skipRootAncestorValidation?: boolean;
+  /** Computes a name that does not depend on where the roots currently sit. `visibility: hidden`
+   *  inherited from outside the walk -- a closed overlay popup, an inactive slide -- stops
+   *  suppressing text, for the roots and their descendants alike. Inherited and locally declared
+   *  `hidden` are indistinguishable from computed style once a container is hidden, and an absent
+   *  accessible name is the worse of the two failures. Unlike `skipRootAncestorValidation` this
+   *  keeps full composed-ancestor validation, so `aria-hidden`, `inert`, `hidden` and
+   *  `display: none` still prune exactly as before. */
+  ignoreInheritedVisibility?: boolean;
 }
 
 export interface ComposedAccessibilityTextResult {
@@ -233,6 +244,9 @@ interface AccessibilityTextContext {
   shouldPruneNode?: (node: Node) => boolean;
   stack: TextWork[];
   traversedShadowRoots: Set<ShadowRoot>;
+  /** Whether the current root already inherits `visibility: hidden` from outside the walk. Only
+   *  ever true under `ignoreInheritedVisibility` (which `skipRootAncestorValidation` implies). */
+  visibilityBaselineHidden: boolean;
   visited: Set<Node>;
   visitedNodes: number;
   workUnits: number;
@@ -345,6 +359,24 @@ function composedAncestorState(
     ancestor = composedParentElement(ancestor);
   }
   return { available: true, inheritedTextVisible };
+}
+
+/** The visibility a root inherits from its composed parent, before the walk considers the root's
+ *  own state. Used only to decide whether a descendant's `visibility: hidden` is its own or merely
+ *  inherited from a hidden container. This reads one already-cached ancestor's computed style
+ *  rather than traversing, so it deliberately does not spend node budget: charging it would take a
+ *  unit away from the walk itself and shorten every bounded projection by one node. */
+function inheritedVisibilityHidden(
+  context: AccessibilityTextContext,
+  node: Node,
+): boolean {
+  const slottable = node as Node & { assignedSlot?: HTMLSlotElement | null };
+  const ancestor =
+    node.nodeType === 1
+      ? composedParentElement(node as Element)
+      : slottable.assignedSlot ?? node.parentElement;
+  if (!ancestor) return false;
+  return cachedElementState(context, ancestor).visibilityHidden;
 }
 
 function scheduleNode(
@@ -660,7 +692,8 @@ function processAccessibilityTextWork(context: AccessibilityTextContext): void {
       context.requireRendered &&
       !isRenderedAccessibilityBranch(context, element, state.display)
     ) continue;
-    const ownTextVisible = work.referenced || !state.visibilityHidden;
+    const ownTextVisible =
+      work.referenced || !state.visibilityHidden || context.visibilityBaselineHidden;
 
     const labelledBy = ownTextVisible
       ? labelledByElements(context, element)
@@ -746,6 +779,7 @@ export function composedAccessibilityTextResult(
     shouldPruneNode: resolved.shouldPruneNode,
     stack: [],
     traversedShadowRoots: new Set<ShadowRoot>(),
+    visibilityBaselineHidden: false,
     visited: new Set<Node>(),
     visitedNodes: 0,
     workUnits: 0,
@@ -774,9 +808,18 @@ export function composedAccessibilityTextResult(
     }
     if (rootCount > 0) appendBoundedText(context, ' ');
     if (context.reasons.has('characters')) break;
-    const ancestorState = resolved.skipRootAncestorValidation
+    const validated = resolved.skipRootAncestorValidation
       ? { available: true, inheritedTextVisible: true }
       : composedAncestorState(context, root);
+    // Skipping ancestor validation outright cannot honor ancestor-inherited visibility either.
+    const ignoreInheritedVisibility =
+      resolved.skipRootAncestorValidation === true ||
+      resolved.ignoreInheritedVisibility === true;
+    context.visibilityBaselineHidden =
+      ignoreInheritedVisibility && inheritedVisibilityHidden(context, root);
+    const ancestorState = context.visibilityBaselineHidden
+      ? { available: validated.available, inheritedTextVisible: true }
+      : validated;
     scheduleNode(
       context,
       root,

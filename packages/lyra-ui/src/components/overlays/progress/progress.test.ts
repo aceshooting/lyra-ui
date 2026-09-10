@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, oneEvent } from '@open-wc/testing';
 import './progress-bar.js';
 import './progress-ring.js';
 import type { LyraProgressBar, LyraProgressVariant } from './progress-bar.js';
@@ -907,4 +907,26 @@ it('bounds style resolution for adversarially deep slotted progress labels', asy
   } finally {
     ownerWindow.getComputedStyle = original;
   }
+});
+
+/**
+ * Regression: a label projected from slotted content must not depend on whether the component
+ * currently sits inside a rendered container.
+ */
+describe('lr-progress-bar name inside a hidden container', () => {
+  it('names the bar from an element-wrapped label', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden">
+        <lr-progress-bar><span>Wrapped Progress</span></lr-progress-bar>
+      </div>
+    `);
+    await nextFrame();
+    await nextFrame();
+
+    const name = el
+      .querySelector('lr-progress-bar')!
+      .shadowRoot?.querySelector('[part~="progress-bar"]')
+      ?.getAttribute('aria-label');
+    expect(name).to.equal('Wrapped Progress');
+  });
 });

@@ -458,6 +458,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
             : node.nodeType !== 1 || (node as Element).localName !== 'slot',
           shouldPruneNode: (candidate) =>
             !this.contains(candidate) && !isSourceLabelAvailable(candidate),
+          // The remove action's name must survive the chip sitting inside a closed popup or any
+          // other visibility-hidden container; authored hidden branches still prune above.
+          ignoreInheritedVisibility: true,
         })
       )
       .join(' ')

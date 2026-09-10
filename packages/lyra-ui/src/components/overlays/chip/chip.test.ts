@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import './chip.js';
 import type { LyraChip } from './chip.js';
 
@@ -1323,5 +1323,32 @@ describe('a slotted [hidden] adornment', () => {
       expect(getComputedStyle(shown).display, id).to.equal('block');
       expect(shown.getClientRects().length, id).to.equal(1);
     }
+  });
+});
+
+
+/**
+ * Regression: an accessible name computed from slotted content must not depend on whether the
+ * component currently sits inside a rendered container. A closed overlay popup, an inactive slide
+ * or any `visibility: hidden` wrapper otherwise zeroes the name.
+ *
+ */
+describe('lr-chip name stability inside a hidden container', () => {
+  it('names the remove button from the label inside a visibility:hidden container', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden">
+        <lr-chip removable>Bare Chip</lr-chip>
+        <lr-chip removable><span>Wrapped Chip</span></lr-chip>
+      </div>
+    `);
+    await nextFrame();
+    await nextFrame();
+
+    const names = [...el.querySelectorAll('lr-chip')].map((chip) =>
+      chip.shadowRoot
+        ?.querySelector('[part~="remove-button"]')
+        ?.getAttribute('aria-label')
+    );
+    expect(names).to.deep.equal(['Remove Bare Chip', 'Remove Wrapped Chip']);
   });
 });

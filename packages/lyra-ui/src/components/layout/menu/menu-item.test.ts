@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import './menu-item.js';
 import './dropdown-item.js';
 import type { LyraMenuItem } from './menu-item.js';
@@ -1420,8 +1420,10 @@ describe('submenu parent', () => {
     wrapper.style.display = 'none';
     await settleLabel(item);
     expect(item.getTextLabel()).to.equal('');
-    expect(item.getAttribute('aria-label')).to.equal('');
-    expect(panel.getAttribute('aria-label')).to.equal('');
+    // No label text means no attribute at all: an empty `aria-label` is authoritative and would
+    // suppress the row's own content-derived name instead of deferring to it.
+    expect(item.getAttribute('aria-label')).to.equal(null);
+    expect(panel.getAttribute('aria-label')).to.equal(null);
 
     wrapper.style.removeProperty('display');
     await settleLabel(item);
@@ -1473,8 +1475,9 @@ describe('submenu parent', () => {
       item.getTextLabel(),
       'a hidden assignment does not expose the forwarding fallback'
     ).to.equal('');
-    expect(item.getAttribute('aria-label')).to.equal('');
-    expect(panel.getAttribute('aria-label')).to.equal('');
+    // Computed-empty is an absent attribute, not `aria-label=""` -- see the note above.
+    expect(item.getAttribute('aria-label')).to.equal(null);
+    expect(panel.getAttribute('aria-label')).to.equal(null);
 
     replacement.removeAttribute('aria-hidden');
     await settleLabel(item);
@@ -1484,8 +1487,10 @@ describe('submenu parent', () => {
     forwardingSlot.setAttribute('aria-hidden', 'true');
     await settleLabel(item);
     expect(item.getTextLabel()).to.equal('');
-    expect(item.getAttribute('aria-label')).to.equal('');
-    expect(panel.getAttribute('aria-label')).to.equal('');
+    // No label text means no attribute at all: an empty `aria-label` is authoritative and would
+    // suppress the row's own content-derived name instead of deferring to it.
+    expect(item.getAttribute('aria-label')).to.equal(null);
+    expect(panel.getAttribute('aria-label')).to.equal(null);
 
     forwardingSlot.removeAttribute('aria-hidden');
     await settleLabel(item);
@@ -1694,4 +1699,79 @@ it('contains a long menu-item label in exact 320px LTR and RTL allocations', asy
     expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
     expect(getComputedStyle(base).direction).to.equal(direction);
   }
+});
+
+
+/**
+ * Regression: a row's accessible name is derived from its own visible label and must not depend on
+ * whether the menu is currently displayed. An overlay popup is `visibility: hidden` while closed,
+ * which previously zeroed the computed name and wrote it back as an authoritative `aria-label=""`
+ * -- strictly worse than no attribute, because an empty one suppresses the native content-derived
+ * name.
+ */
+describe('lr-menu-item name stability inside a hidden container', () => {
+  const frames = async (count = 6): Promise<void> => {
+    for (let index = 0; index < count; index += 1) await nextFrame();
+  };
+
+  it('names bare and element-wrapped rows inside a visibility:hidden container', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden" role="menu" aria-label="Actions">
+        <lr-menu-item id="bare">Alpha</lr-menu-item>
+        <lr-menu-item id="wrapped"><span>Beta</span></lr-menu-item>
+      </div>
+    `);
+    await frames();
+
+    const items = [...el.querySelectorAll<LyraMenuItem>('lr-menu-item')];
+    expect(items.map((item) => item.getAttribute('aria-label'))).to.deep.equal([
+      'Alpha',
+      'Beta',
+    ]);
+    expect(items.map((item) => item.getTextLabel())).to.deep.equal([
+      'Alpha',
+      'Beta',
+    ]);
+  });
+
+  it('omits aria-label entirely when the row has no label text', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item id="empty"><span slot="icon">*</span></lr-menu-item>
+      </div>
+    `);
+    await frames();
+
+    const item = el.querySelector<LyraMenuItem>('#empty')!;
+    expect(item.hasAttribute('aria-label')).to.equal(false);
+  });
+
+  it('keeps an authored aria-label authoritative', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden" role="menu" aria-label="Actions">
+        <lr-menu-item aria-label="Authored">Alpha</lr-menu-item>
+      </div>
+    `);
+    await frames();
+
+    expect(
+      el.querySelector<LyraMenuItem>('lr-menu-item')!.getAttribute('aria-label')
+    ).to.equal('Authored');
+  });
+
+  it('still excludes display:none, aria-hidden and inert decorations from the name', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden" role="menu" aria-label="Actions">
+        <lr-menu-item id="decorated"
+          >Alpha<span style="display: none">Dropped</span
+          ><span aria-hidden="true">Hidden</span><span inert>Inert</span></lr-menu-item
+        >
+      </div>
+    `);
+    await frames();
+
+    expect(
+      el.querySelector<LyraMenuItem>('#decorated')!.getAttribute('aria-label')
+    ).to.equal('Alpha');
+  });
 });

@@ -209,9 +209,12 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
     this.addEventListener('slotchange', this.onLabelSlotChange);
     this.syncLabelObserver();
     if (this.hasUpdated) {
-      if (this.withRemove) this.recomputeLabelText();
+      if (this.withRemove) this.recomputeLabelText(true);
+      this.ownerDocument.defaultView?.queueMicrotask(() => {
+        if (this.isConnected && this.withRemove) this.recomputeLabelText();
+      });
     } else {
-      this.seedFirstRenderState(() => this.recomputeLabelText());
+      this.seedFirstRenderState(() => this.recomputeLabelText(true));
     }
   }
 
@@ -253,7 +256,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   // Element nodes. That last part matters here: when a consumer interpolates the label through a
   // lit-html expression rather than a static string, lit-html inserts a marker comment alongside
   // the text node, and that comment's own data is internal bookkeeping, not label content.
-  private recomputeLabelText(): void {
+  private recomputeLabelText(preferLightDom = false): void {
     const renderRoot = (this as unknown as { renderRoot?: ParentNode }).renderRoot;
     const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
     const lightDomNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
@@ -274,9 +277,18 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
           element.getAttribute('part')?.split(/\s+/).includes('content')
             ? false
             : isAccessibilitySubtreeExcluded(element),
-        requireRendered: node.nodeType !== 1 || (node as Element).localName !== 'slot',
+        // A first-render or reconnect sample can precede layout, when an element-wrapped label
+        // reports as unrendered and would drop out of the name entirely. It still honors authored
+        // hidden/inert/ARIA state, and the ordinary rendered sample replaces it on slotchange.
+        // Mirrors `<lr-chip>`'s identical pre-layout allowance.
+        requireRendered: preferLightDom
+          ? false
+          : node.nodeType !== 1 || (node as Element).localName !== 'slot',
         shouldPruneNode: (candidate) =>
           !this.contains(candidate) && !isSourceLabelAvailable(candidate),
+        // The remove action's name must survive the tag sitting inside a closed popup or any other
+        // visibility-hidden container; authored hidden branches still prune above.
+        ignoreInheritedVisibility: true,
       }))
       .join(' ')
       .replace(/\s+/g, ' ')

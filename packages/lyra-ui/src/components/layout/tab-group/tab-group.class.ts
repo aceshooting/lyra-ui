@@ -542,6 +542,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       isSubtreeExcluded: (element) => this.isTabLabelSubtreeExcluded(element),
       requireRendered: !options.allowUnprojected,
       skipRootAncestorValidation: options.allowUnprojected,
+      // A tab's name comes from its own label text, not from whether the group is currently
+      // displayed; without this a hidden group falls back to the bare panel id.
+      ignoreInheritedVisibility: true,
     })
       .replace(/\s+/g, ' ')
       .trim();

@@ -603,6 +603,10 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       ancestorBoundary: this,
       isSubtreeExcluded: (element) => this.isLabelSubtreeExcluded(element),
       requireRendered,
+      // A row's name comes from its own label, not from whether the menu is currently displayed.
+      // An overlay popup is `visibility: hidden` while closed, which otherwise zeroes every name
+      // computed before it first opens. Authored hidden/inert/ARIA branches still prune.
+      ignoreInheritedVisibility: true,
     })
       .replace(/\s+/g, ' ')
       .trim();
@@ -793,6 +797,14 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     }
     if (this.hasAttribute('aria-label') && !this.ownsAriaLabel) return;
     this.ownsAriaLabel = true;
+    // An empty computed name is never written. `aria-label=""` is authoritative and suppresses the
+    // row's own content-derived name, so it leaves the row unnamed -- strictly worse than having no
+    // attribute at all. A null owned value records "owned, and correctly absent".
+    if (this.slottedLabel === '') {
+      this.ownedAriaLabelValue = null;
+      if (this.hasAttribute('aria-label')) this.removeAttribute('aria-label');
+      return;
+    }
     this.ownedAriaLabelValue = this.slottedLabel;
     if (this.getAttribute('aria-label') === this.slottedLabel) return;
     this.setAttribute('aria-label', this.slottedLabel);
@@ -820,6 +832,13 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     }
     if (panel.hasAttribute('aria-label') && !this.ownsPanelAriaLabel) return;
     this.ownsPanelAriaLabel = true;
+    // Same rule as the host name above: an empty `aria-label` would leave the submenu's
+    // `role="menu"` unnamed rather than falling back to its own content.
+    if (this.slottedLabel === '') {
+      this.ownedPanelAriaLabelValue = null;
+      if (panel.hasAttribute('aria-label')) panel.removeAttribute('aria-label');
+      return;
+    }
     this.ownedPanelAriaLabelValue = this.slottedLabel;
     if (panel.getAttribute('aria-label') === this.slottedLabel) return;
     panel.setAttribute('aria-label', this.slottedLabel);

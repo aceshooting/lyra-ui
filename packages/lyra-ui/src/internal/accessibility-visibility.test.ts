@@ -367,6 +367,110 @@ describe('composedAccessibilityText / composedAccessibilityTextResult', () => {
     }
   });
 
+  describe('skipRootAncestorValidation and inherited visibility', () => {
+    const squashed = (value: string): string => value.replace(/\s+/g, ' ').trim();
+
+    it('projects an element-wrapped label out of a visibility:hidden container', async () => {
+      const el = await fixture<HTMLElement>(
+        html`<div style="visibility: hidden"><p><span>Wrapped label</span></p></div>`
+      );
+      const wrapper = el.querySelector('p')!;
+
+      expect(
+        composedAccessibilityText(Array.from(wrapper.childNodes), {
+          skipRootAncestorValidation: true,
+        })
+      ).to.equal('Wrapped label');
+    });
+
+    it('projects a bare text label out of a visibility:hidden container', async () => {
+      const el = await fixture<HTMLElement>(
+        html`<div style="visibility: hidden"><p>Bare label</p></div>`
+      );
+      const wrapper = el.querySelector('p')!;
+
+      expect(
+        composedAccessibilityText(Array.from(wrapper.childNodes), {
+          skipRootAncestorValidation: true,
+        })
+      ).to.equal('Bare label');
+    });
+
+    it('still honors a descendant visibility:hidden inside a visible container', async () => {
+      const el = await fixture<HTMLElement>(
+        html`<div><p>Keep <span style="visibility: hidden">Drop</span></p></div>`
+      );
+      const wrapper = el.querySelector('p')!;
+
+      const text = composedAccessibilityText(Array.from(wrapper.childNodes), {
+        skipRootAncestorValidation: true,
+      });
+      expect(squashed(text)).to.equal('Keep');
+    });
+
+    it('still excludes display:none and aria-hidden branches inside a hidden container', async () => {
+      const el = await fixture<HTMLElement>(
+        html`<div style="visibility: hidden">
+          <p>
+            Keep<span style="display: none">DropDisplay</span
+            ><span aria-hidden="true">DropAria</span><span inert>DropInert</span>
+          </p>
+        </div>`
+      );
+      const wrapper = el.querySelector('p')!;
+
+      const text = composedAccessibilityText(Array.from(wrapper.childNodes), {
+        skipRootAncestorValidation: true,
+      });
+      expect(squashed(text)).to.equal('Keep');
+    });
+
+    it('ignoreInheritedVisibility keeps authored ancestor exclusion pruning', async () => {
+      const el = await fixture<HTMLElement>(
+        html`<div style="visibility: hidden">
+          <section aria-hidden="true"><p><span>Excluded</span></p></section>
+        </div>`
+      );
+      const wrapper = el.querySelector('p')!;
+
+      expect(
+        composedAccessibilityText(Array.from(wrapper.childNodes), {
+          ignoreInheritedVisibility: true,
+        })
+      ).to.equal('');
+      // skipRootAncestorValidation deliberately gives that up; the two options are not aliases.
+      expect(
+        squashed(
+          composedAccessibilityText(Array.from(wrapper.childNodes), {
+            skipRootAncestorValidation: true,
+          })
+        )
+      ).to.equal('Excluded');
+    });
+
+    it('ignoreInheritedVisibility projects a wrapped label out of a hidden container', async () => {
+      const el = await fixture<HTMLElement>(
+        html`<div style="visibility: hidden"><p><span>Wrapped label</span></p></div>`
+      );
+      const wrapper = el.querySelector('p')!;
+
+      expect(
+        composedAccessibilityText(Array.from(wrapper.childNodes), {
+          ignoreInheritedVisibility: true,
+        })
+      ).to.equal('Wrapped label');
+    });
+
+    it('leaves the default walk unchanged inside a hidden container', async () => {
+      const el = await fixture<HTMLElement>(
+        html`<div style="visibility: hidden"><p><span>Wrapped label</span></p></div>`
+      );
+      const wrapper = el.querySelector('p')!;
+
+      expect(composedAccessibilityText(Array.from(wrapper.childNodes))).to.equal('');
+    });
+  });
+
   it('the inheritedTextVisible boolean shorthand suppresses a top-level text node when false', () => {
     const node = document.createTextNode('Some text');
     expect(composedAccessibilityText(node, false)).to.equal('');

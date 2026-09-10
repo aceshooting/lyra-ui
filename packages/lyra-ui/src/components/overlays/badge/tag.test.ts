@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./tag.js";
@@ -633,4 +633,31 @@ it("round-trips tag-only and shared upstream tokens through attributes, properti
   expect((el.cloneNode(true) as LyraTag).outerHTML).to.contain(
     'variant="primary"'
   );
+});
+
+
+/**
+ * Regression: an accessible name computed from slotted content must not depend on whether the
+ * component currently sits inside a rendered container. A closed overlay popup, an inactive slide
+ * or any `visibility: hidden` wrapper otherwise zeroes the name.
+ *
+ */
+describe('lr-tag name stability inside a hidden container', () => {
+  it('names the remove button from the label inside a visibility:hidden container', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden">
+        <lr-tag removable>Bare Tag</lr-tag>
+        <lr-tag removable><span>Wrapped Tag</span></lr-tag>
+      </div>
+    `);
+    await nextFrame();
+    await nextFrame();
+
+    const names = [...el.querySelectorAll('lr-tag')].map((tag) =>
+      tag.shadowRoot
+        ?.querySelector('[part~="remove-button"]')
+        ?.getAttribute('aria-label')
+    );
+    expect(names).to.deep.equal(['Remove Bare Tag', 'Remove Wrapped Tag']);
+  });
 });

@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
+import { fixture, expect, nextFrame, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './toast-item.js';
 import './toast.js';
@@ -2070,4 +2070,26 @@ it('parses millisecond and second CSS timing lists before transition completion'
     window.getComputedStyle = nativeGetComputedStyle;
     el.remove();
   }
+});
+
+/**
+ * Regression: a label projected from slotted content must not depend on whether the component
+ * currently sits inside a rendered container.
+ */
+describe('lr-toast-item close-button name inside a hidden container', () => {
+  it('names the close button from an element-wrapped message', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden">
+        <lr-toast-item><span>Wrapped Toast</span></lr-toast-item>
+      </div>
+    `);
+    await nextFrame();
+    await nextFrame();
+
+    const name = el
+      .querySelector('lr-toast-item')!
+      .shadowRoot?.querySelector('[part~="close-button"]')
+      ?.getAttribute('aria-label');
+    expect(name).to.equal('Close: Wrapped Toast');
+  });
 });

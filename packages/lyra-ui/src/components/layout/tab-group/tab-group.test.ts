@@ -1,6 +1,7 @@
 import {
   fixture,
   expect,
+  nextFrame,
   oneEvent,
   html,
   aTimeout,
@@ -2952,5 +2953,33 @@ describe("upstream tab surface", () => {
       <lr-tab-panel name="advanced">Advanced body</lr-tab-panel>
     </lr-tab-group>`);
     await expect(el).to.be.accessible();
+  });
+});
+
+
+/**
+ * Regression: an accessible name computed from slotted content must not depend on whether the
+ * component currently sits inside a rendered container. A closed overlay popup, an inactive slide
+ * or any `visibility: hidden` wrapper otherwise zeroes the name.
+ *
+ */
+describe('lr-tab-group name stability inside a hidden container', () => {
+  it('names a rich tab from its label rather than the panel id when the group is hidden', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden">
+        <lr-tab-group>
+          <lr-tab slot="nav" panel="p1"><span>Wrapped Tab</span></lr-tab>
+          <lr-tab-panel name="p1">Panel</lr-tab-panel>
+        </lr-tab-group>
+      </div>
+    `);
+    await nextFrame();
+    await nextFrame();
+
+    const name = el
+      .querySelector('lr-tab-group')
+      ?.shadowRoot?.querySelector('[part~="tab"]')
+      ?.getAttribute('aria-label');
+    expect(name).to.equal('Wrapped Tab');
   });
 });

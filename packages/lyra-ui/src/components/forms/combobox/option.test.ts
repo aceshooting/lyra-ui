@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './option.js';
 import './combobox.js';
@@ -734,4 +734,43 @@ it('keeps a consumer hover retint visible on the option that is also current', a
   await el.updateComplete;
   expect(el.matches(':state(hover)'), 'sanity: option is hovered').to.equal(true);
   expect(getComputedStyle(base).backgroundColor, 'current and hovered').to.equal('rgb(1, 2, 3)');
+});
+
+/**
+ * Regression: a label projected from slotted content must not depend on whether the component
+ * currently sits inside a rendered container.
+ */
+describe('lr-option text label inside a hidden container', () => {
+  it('projects bare and element-wrapped labels out of a visibility:hidden container', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden">
+        <lr-option value="a">Bare Option</lr-option>
+        <lr-option value="b"><span>Wrapped Option</span></lr-option>
+      </div>
+    `);
+    await nextFrame();
+    await nextFrame();
+
+    const labels = [...el.querySelectorAll('lr-option')].map((option) =>
+      (option as unknown as { getTextLabel(): string }).getTextLabel()
+    );
+    expect(labels).to.deep.equal(['Bare Option', 'Wrapped Option']);
+  });
+
+  it('still excludes a display:none decoration from the text label', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <div style="visibility: hidden">
+        <lr-option value="a"
+          >Kept<span style="display: none">Dropped</span></lr-option
+        >
+      </div>
+    `);
+    await nextFrame();
+    await nextFrame();
+
+    const option = el.querySelector('lr-option')!;
+    expect(
+      (option as unknown as { getTextLabel(): string }).getTextLabel()
+    ).to.equal('Kept');
+  });
 });

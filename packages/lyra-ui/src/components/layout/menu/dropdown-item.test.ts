@@ -3,6 +3,8 @@ import './dropdown-item.js';
 import './menu.js';
 import { LyraDropdownItem } from './dropdown-item.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
+import '../../overlays/overlay/dropdown.js';
 
 async function submenuParent(): Promise<LyraDropdownItem> {
   const wrapper = (await fixture(html`
@@ -461,5 +463,63 @@ describe('<lr-dropdown-item>', () => {
         expect(rowHeight(el), size).to.be.at.least(24);
       }
     });
+  });
+});
+
+/**
+ * Regression: a dropdown that is already `open` on its first render used to leave every row at
+ * `aria-label=""` permanently. The overlay popup is
+ * `visibility: hidden` until it opens, which zeroed the computed name, and the empty result was
+ * written back as an authoritative attribute. The motion preference only changed the timing that
+ * exposed it, so both branches are covered.
+ */
+describe('lr-dropdown-item accessible names do not depend on display state', () => {
+  const frames = async (count = 10): Promise<void> => {
+    for (let index = 0; index < count; index += 1) await nextFrame();
+  };
+
+  afterEach(async () => {
+    await setReducedMotion('no-preference');
+  });
+
+  for (const preference of ['reduce', 'no-preference'] as const) {
+    it(`names rows of a dropdown opened at first render with prefers-reduced-motion: ${preference}`, async () => {
+      await setReducedMotion(preference);
+      const el = (await fixture(html`
+        <lr-dropdown open>
+          <button slot="trigger">Open</button>
+          <lr-dropdown-item value="a">Alpha</lr-dropdown-item>
+          <lr-dropdown-item value="b"><span>Beta</span></lr-dropdown-item>
+        </lr-dropdown>
+      `)) as HTMLElement;
+      await frames();
+
+      const items = [...el.querySelectorAll<LyraDropdownItem>('lr-dropdown-item')];
+      expect(items.map((item) => item.getAttribute('aria-label'))).to.deep.equal([
+        'Alpha',
+        'Beta',
+      ]);
+      expect(items.map((item) => item.getTextLabel())).to.deep.equal([
+        'Alpha',
+        'Beta',
+      ]);
+    });
+  }
+
+  it('names rows of a closed dropdown', async () => {
+    const el = (await fixture(html`
+      <lr-dropdown>
+        <button slot="trigger">Open</button>
+        <lr-dropdown-item value="a">Alpha</lr-dropdown-item>
+        <lr-dropdown-item value="b"><span>Beta</span></lr-dropdown-item>
+      </lr-dropdown>
+    `)) as HTMLElement;
+    await frames();
+
+    const items = [...el.querySelectorAll<LyraDropdownItem>('lr-dropdown-item')];
+    expect(items.map((item) => item.getAttribute('aria-label'))).to.deep.equal([
+      'Alpha',
+      'Beta',
+    ]);
   });
 });
