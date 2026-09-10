@@ -29,8 +29,8 @@ minimumReleaseAgeExclude:
   - '@storybook/web-components-vite@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8 || 10.5.9 || 10.5.10'
   - '@storybook/web-components@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8 || 10.5.9 || 10.5.10'
   - storybook@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8 || 10.5.9 || 10.5.10
-  - libphonenumber-js@1.13.10 || 1.13.11
-  - vite@8.2.0 || 8.2.1 || 8.2.2
+  - libphonenumber-js@1.13.10 || 1.13.11 || 1.13.13
+  - vite@8.2.0 || 8.2.1 || 8.2.2 || 8.3.0
   - '@oxc-parser/binding-android-arm-eabi@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-android-arm64@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-darwin-arm64@0.143.0 || 0.145.0 || 0.148.0'
@@ -96,6 +96,8 @@ minimumReleaseAgeExclude:
   - maplibre-gl@6.4.0 || 6.4.1
   - '@rolldown/binding-darwin-x64@1.2.5'
   - '@rolldown/binding-linux-arm64-gnu@1.2.5'
+  - '@types/react@19.3.0'
+  - react@19.3.0
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

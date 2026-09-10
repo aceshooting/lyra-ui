@@ -61,17 +61,17 @@
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
     "d3-zoom": "^3.0.0",
-    "knip": "^6.34.0",
+    "knip": "^6.35.1",
     "lit": "^3.3.3",
-    "maplibre-gl": "^6.7.0",
+    "maplibre-gl": "^6.9.0",
     "pdfjs-dist": "^6.3.289",
     "playwright": "^1.63.0",
     "publint": "^0.3.24",
-    "react": "^19.2.8",
+    "react": "^19.3.0",
     "secretlint": "^13.0.5",
     "storybook": "10.5.10",
     "tailwindcss": "^4.3.3",
-    "vite": "^8.2.2"
+    "vite": "^8.3.0"
   },
   "packageManager": "pnpm@12.3.4",
   "customElements": "packages/lyra-ui/custom-elements.json"
