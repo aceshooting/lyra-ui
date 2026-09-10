@@ -2499,6 +2499,13 @@ A focusable action row owned by `<lr-menu>`. The host itself carries `role="menu
 - `closeSubmenu(): Promise<void>`
 - `getTextLabel(): string` returns the accessibility-visible label used by type-ahead
 
+The computed name is derived from the row's own visible label and does not depend on whether the
+menu is currently displayed, so a row inside a closed dropdown — whose popup is `visibility:
+hidden` — is named the same as an open one, and `getTextLabel()` drives type-ahead either way.
+A row with no label text carries **no** `aria-label` attribute rather than an empty one, so the
+browser falls back to the row's own content; an `aria-label` or `aria-labelledby` you set yourself,
+including an explicitly empty value, still wins.
+
 A checkbox activation first emits cancelable `lr-menu-item-change` with the proposed
 `detail: { value, checked }`. Preventing that event retains the current checked state; the owning
 menu's canonical `lr-select` still follows. A submenu parent is a disclosure instead of an action:
