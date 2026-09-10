@@ -33,6 +33,43 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
   create them as sibling directories of this repository. Keep the primary checkout cleanly
   identifiable and remove temporary worktrees when their work has been integrated.
 
+## Author's Cygnus / Solarleb workspace goal
+
+| Repository | Role | Local checkout |
+|---|---|---|
+| `cygnus` | Backend language, runtime, storage, services and generated contracts | `../cygnus` |
+| `lyra-ui` | Reusable frontend components and frontend development experience | `.` |
+| `solarleb_cygnus` | Full-stack Solarleb application built with both | `../solarleb_cygnus` |
+
+The author authorizes fixes, modifications and commits across all three
+repositories. Iterate between them to make application development seamless:
+repair reusable backend, contract and tooling gaps in Cygnus, and reusable UI
+component or frontend tooling gaps in Lyra UI; then consume those fixes in
+`solarleb_cygnus`. Keep application-specific domain logic and composition in the
+application. Do not hide framework defects behind application monkey patches,
+duplicated framework code, manual copies of generated contracts or bypasses of
+supported APIs. Follow each repository's own instructions and verification gates.
+These paths locate checkouts relative to this repository; package resolution still uses declared
+dependencies.
+
+GreyCat runtime source is available for read-only inspection at
+`../../greycat/greycat`.
+The author explicitly forbids modifying that repository. It is a reference for
+understanding the comparison control, not another implementation target.
+
+The saved goal is to fully migrate Solarleb from GreyCat to Cygnus, completing
+the backend before frontend migration to Lyra UI. Resume from the Cygnus
+[current checkpoint](../cygnus/docs/IMPLEMENTATION_PROGRESS.md#current-checkpoint)
+and [canonical queue](../cygnus/docs/REMAINING_WORK.md), with application
+integration under `APP-SOLARLEB-BACKEND`. The delivery contract is
+[Solarleb backend roadmap](../cygnus/docs/ROADMAP.md#28-solarleb-backend-migration-and-greycat-comparison).
+Use this as a workspace coordination route; it does not replace Lyra's public API
+contracts or create a second implementation plan here. All builds, tests and
+benchmarks for this work run on `ssh cygnus`, never on the workstation. Use
+`CI_JOBS=60` where supported and verify each runner's actual concurrency budget.
+Application milestones follow the author's regular commit-and-push instruction
+in `solarleb_cygnus/AGENTS.md`.
+
 ## Monorepo layout
 
 pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@12.3.4`.

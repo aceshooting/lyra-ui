@@ -139,7 +139,10 @@ describe('chart datum legends', () => {
     expect(changes).to.equal(0);
   });
 
-  it('uses source category indexes when the rendered series is sampled', async () => {
+  it('uses source category indexes when the rendered series is sampled', async function () {
+    // This fixture renders 1,000 real legend controls and canvas arcs, then redraws on selection.
+    // Keep that complete sampling boundary under concurrent browser sweeps with a scoped budget.
+    this.timeout(15_000);
     const el = await chart();
     el.labels = Array.from({ length: 2000 }, (_, index) => `Category ${index}`);
     el.datasets = [{ label: 'Large distribution', data: Array.from({ length: 2000 }, () => 1),

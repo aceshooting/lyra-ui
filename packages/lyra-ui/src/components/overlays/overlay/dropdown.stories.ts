@@ -73,7 +73,7 @@ export const DisabledOpenNormalizesClosed: StoryObj = {
 };
 
 /** The Web Awesome direct-item submenu shape. The same controller also accepts Shoelace's nested
- * `<lr-menu slot="submenu">` shape, as shown by the consumer-menu story below. */
+ * `<lr-menu slot="submenu">` shape, as shown by the narrow-submenus story below. */
 export const DirectItemSubmenus: StoryObj = {
   render: () => html`
     <lr-dropdown aria-label="Share actions">
@@ -86,6 +86,38 @@ export const DirectItemSubmenus: StoryObj = {
       </lr-dropdown-item>
       <lr-dropdown-item value="remove" variant="danger">Remove access</lr-dropdown-item>
     </lr-dropdown>
+  `,
+};
+
+/** Both submenu authoring shapes remain pointer-interactive outside the positioned menu. */
+export const NarrowSubmenus: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Hover Language or Region, then select a child. Both submenu layouts support pointer and keyboard selection, including in narrow layouts and RTL.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <div style="display: flex; justify-content: end; align-items: start; inline-size: 390px; max-inline-size: 100%; min-block-size: var(--lr-size-20rem);">
+      <lr-dropdown hoist placement="bottom-end" aria-label="Settings" .open=${context.viewMode !== 'docs'}>
+        <button slot="trigger" type="button">Settings</button>
+        <lr-dropdown-item>
+          Language
+          <lr-dropdown-item slot="submenu" value="en">English</lr-dropdown-item>
+          <lr-dropdown-item slot="submenu" value="fr">Français</lr-dropdown-item>
+          <lr-dropdown-item slot="submenu" value="ar">العربية</lr-dropdown-item>
+        </lr-dropdown-item>
+        <lr-dropdown-item>
+          Region
+          <lr-menu slot="submenu">
+            <lr-dropdown-item value="eu">Europe</lr-dropdown-item>
+            <lr-dropdown-item value="asia">Asia</lr-dropdown-item>
+            <lr-dropdown-item value="americas">Americas</lr-dropdown-item>
+          </lr-menu>
+        </lr-dropdown-item>
+      </lr-dropdown>
+    </div>
   `,
 };
 
