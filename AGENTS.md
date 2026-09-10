@@ -51,6 +51,11 @@ duplicated framework code, manual copies of generated contracts or bypasses of
 supported APIs. Follow each repository's own instructions and verification gates.
 These paths locate checkouts; package resolution still uses declared dependencies.
 
+GreyCat runtime source is available for read-only inspection at
+`/mnt/a805817a-3f74-4a91-a611-b695b20df84e/git/greycat/greycat`.
+The author explicitly forbids modifying that repository. It is a reference for
+understanding the comparison control, not another implementation target.
+
 The saved goal is to fully migrate Solarleb from GreyCat to Cygnus, completing
 the backend before frontend migration to Lyra UI. Resume from the Cygnus
 [current checkpoint](../cygnus/docs/IMPLEMENTATION_PROGRESS.md#current-checkpoint)
