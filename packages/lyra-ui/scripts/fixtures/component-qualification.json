@@ -15791,14 +15791,14 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 166,
+              "line": 168,
               "test": "is accessible",
               "target": "menu",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 175,
+              "line": 177,
               "test": "inherits decorative display-slot isolation without losing its host label or action",
               "target": "wrapper",
               "state": "populated"
@@ -15812,7 +15812,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 322,
+              "line": 324,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -15840,7 +15840,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1672,
+              "line": 1677,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27504,14 +27504,14 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 166,
+              "line": 168,
               "test": "is accessible",
               "target": "menu",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 175,
+              "line": 177,
               "test": "inherits decorative display-slot isolation without losing its host label or action",
               "target": "wrapper",
               "state": "populated"
@@ -27602,7 +27602,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 322,
+              "line": 324,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -27630,7 +27630,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1672,
+              "line": 1677,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27850,7 +27850,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 322,
+              "line": 324,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -27878,7 +27878,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1672,
+              "line": 1677,
               "kind": "320px allocation test signal"
             }
           ]
@@ -28016,7 +28016,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
-              "line": 322,
+              "line": 324,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -28044,7 +28044,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1672,
+              "line": 1677,
               "kind": "320px allocation test signal"
             }
           ]
@@ -43260,63 +43260,63 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1483,
+              "line": 1484,
               "test": "omits closed <details> text from a rich tab name and restores it when opened",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 244,
+              "line": 245,
               "test": "is accessible with populated tabs",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1201,
+              "line": 1202,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1229,
+              "line": 1230,
               "test": "keeps a populated disabled active closable <lr-tab> accessible on its own tag",
               "target": "tab",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1270,
+              "line": 1271,
               "test": "keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1335,
+              "line": 1336,
               "test": "derives a rich tab name from accessible default-slot content and observes visibility changes",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1419,
+              "line": 1420,
               "test": "omits a rich label branch skipped by content-visibility:auto",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2776,
+              "line": 2777,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2945,
+              "line": 2946,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -43341,7 +43341,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 104,
+              "line": 105,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -43352,7 +43352,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2506,
+              "line": 2507,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -43363,7 +43363,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1864,
+              "line": 1865,
               "kind": "320px allocation test signal"
             }
           ]
@@ -43482,70 +43482,70 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1483,
+              "line": 1484,
               "test": "omits closed <details> text from a rich tab name and restores it when opened",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 244,
+              "line": 245,
               "test": "is accessible with populated tabs",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 281,
+              "line": 282,
               "test": "a plain slot/label child produces no tab and no rendered panel",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1201,
+              "line": 1202,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1270,
+              "line": 1271,
               "test": "keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1335,
+              "line": 1336,
               "test": "derives a rich tab name from accessible default-slot content and observes visibility changes",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1419,
+              "line": 1420,
               "test": "omits a rich label branch skipped by content-visibility:auto",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2618,
+              "line": 2619,
               "test": "is accessible while the scroll controls are showing",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2776,
+              "line": 2777,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2945,
+              "line": 2946,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -43570,7 +43570,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 104,
+              "line": 105,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -43581,7 +43581,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2506,
+              "line": 2507,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -43592,7 +43592,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1864,
+              "line": 1865,
               "kind": "320px allocation test signal"
             }
           ]
@@ -43724,77 +43724,77 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1483,
+              "line": 1484,
               "test": "omits closed <details> text from a rich tab name and restores it when opened",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 244,
+              "line": 245,
               "test": "is accessible with populated tabs",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1201,
+              "line": 1202,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1229,
+              "line": 1230,
               "test": "keeps a populated disabled active closable <lr-tab> accessible on its own tag",
               "target": "tab",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1242,
+              "line": 1243,
               "test": "keeps active and hidden <lr-tab-panel> instances accessible on their own tags",
               "target": "active",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1242,
+              "line": 1243,
               "test": "keeps active and hidden <lr-tab-panel> instances accessible on their own tags",
               "target": "hidden",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1270,
+              "line": 1271,
               "test": "keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1335,
+              "line": 1336,
               "test": "derives a rich tab name from accessible default-slot content and observes visibility changes",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1419,
+              "line": 1420,
               "test": "omits a rich label branch skipped by content-visibility:auto",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2776,
+              "line": 2777,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2945,
+              "line": 2946,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -43819,7 +43819,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 104,
+              "line": 105,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -43830,7 +43830,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2506,
+              "line": 2507,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -43841,7 +43841,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1864,
+              "line": 1865,
               "kind": "320px allocation test signal"
             }
           ]
