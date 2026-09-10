@@ -1,11 +1,12 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './dropdown.js';
 import '../../layout/menu/dropdown-item.js';
 import '../../layout/menu/menu.js';
 import { LyraDropdown } from './dropdown.class.js';
 import type { LyraDropdownItem } from '../../layout/menu/dropdown-item.class.js';
 import type { LyraMenu } from '../../layout/menu/menu.class.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, sendWheel } from '../../../../test/wtr-mouse.js';
 
 function trigger(el: LyraDropdown): HTMLButtonElement {
   return el.querySelector('[slot="trigger"]') as HTMLButtonElement;
@@ -662,6 +663,157 @@ it('mirrors submenu arrows and preserves the safe pointer corridor under RTL', a
   expect(parent.submenuOpen).to.equal(true);
   await expect(el).to.be.accessible();
 });
+
+for (const shape of ['direct', 'nested'] as const) {
+  for (const { hoist, arrow } of [
+    { hoist: false, arrow: false },
+    { hoist: true, arrow: false },
+    { hoist: true, arrow: true },
+  ]) {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      it(`receives pointer selection outside the popup with ${shape} submenus, hoist=${hoist}, arrow=${arrow}, ${direction}`, async () => {
+        const languages = (slot: string) => html`
+          <lr-dropdown-item slot=${slot} value="en">English</lr-dropdown-item>
+          <lr-dropdown-item slot=${slot} value="fr">Français</lr-dropdown-item>
+          <lr-dropdown-item slot=${slot} value="ar">العربية</lr-dropdown-item>
+        `;
+        const wrapper = await fixture<HTMLElement>(html`
+          <div dir=${direction}>
+            <div style="position: fixed; inset: 0; background: white;"></div>
+            <div style="position: fixed; inset-block-start: 32px; inset-inline-start: 16px; inline-size: 390px; max-inline-size: calc(100vw - 32px); display: flex; justify-content: end;">
+              <lr-dropdown
+                placement="bottom-end"
+                .hoist=${hoist}
+                .arrow=${arrow}
+                style="--show-duration: 0ms; --hide-duration: 0ms; --lr-transition-fast: 0ms;"
+              >
+                <button slot="trigger" type="button">Settings</button>
+                <lr-dropdown-item id="language">
+                  Language
+                  ${shape === 'direct'
+                    ? languages('submenu')
+                    : html`<lr-menu slot="submenu">${languages('')}</lr-menu>`}
+                </lr-dropdown-item>
+              </lr-dropdown>
+            </div>
+          </div>
+        `);
+        const el = wrapper.querySelector('lr-dropdown') as LyraDropdown;
+        const parent = el.querySelector('#language') as LyraDropdownItem;
+        const child = el.querySelector('[value="fr"]') as LyraDropdownItem;
+        const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+        const selected: string[] = [];
+        el.addEventListener('lr-select', (event) => selected.push(event.detail.item.value));
+
+        try {
+          await hoverUntilMatched(trigger(el), 'the settings trigger receives the pointer');
+          const triggerRect = trigger(el).getBoundingClientRect();
+          await sendMouse({ type: 'click', position: [
+            Math.round(triggerRect.left + triggerRect.width / 2),
+            Math.round(triggerRect.top + triggerRect.height / 2),
+          ] });
+          await waitUntil(() => el.open && !popup.hasAttribute('data-hidden'), 'the dropdown opens');
+          await hoverUntilMatched(parent, 'the submenu parent receives the pointer');
+          await waitUntil(() => parent.submenuOpen, 'pointer intent opens the submenu');
+          await waitUntil(() => {
+            const rect = child.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 &&
+              getComputedStyle(child).visibility === 'visible';
+          }, 'the submenu child is visible');
+
+          const childRect = child.getBoundingClientRect();
+          const popupRect = popup.getBoundingClientRect();
+          const x = Math.round(childRect.left + childRect.width / 2);
+          const y = Math.round(childRect.top + childRect.height / 2);
+          expect(x < popupRect.left || x > popupRect.right).to.equal(true);
+          await waitUntil(
+            () => document.elementFromPoint(x, y)?.closest('lr-dropdown-item')?.getAttribute('value') === 'fr',
+            'the visible submenu child must receive hits outside the dropdown popup',
+          );
+          await hoverUntilMatched(child, 'the submenu child receives the pointer');
+          const clickRect = child.getBoundingClientRect();
+          await sendMouse({ type: 'click', position: [
+            Math.round(clickRect.left + clickRect.width / 2),
+            Math.round(clickRect.top + clickRect.height / 2),
+          ] });
+          await waitUntil(() => selected.length > 0 && !el.open, 'selection closes the dropdown');
+          expect(selected).to.deep.equal(['fr']);
+          await waitUntil(() => document.activeElement === trigger(el), 'selection returns focus to the trigger');
+        } finally {
+          await resetMouse();
+        }
+      });
+    }
+  }
+}
+
+for (const consumerMenu of [false, true]) {
+  for (const arrow of [false, true]) {
+    it(`keeps long menu lists scrollable within the popup, consumerMenu=${consumerMenu}, arrow=${arrow}`, async () => {
+      const rows = Array.from({ length: 30 }, (_, index) => html`
+        <lr-dropdown-item value=${String(index)}>Action ${index + 1}</lr-dropdown-item>
+      `);
+      const el = await fixture<LyraDropdown>(html`
+        <lr-dropdown .arrow=${arrow} style="--show-duration: 0ms; --hide-duration: 0ms; --lr-transition-fast: 0ms;">
+          <button slot="trigger" type="button">Actions</button>
+          ${consumerMenu ? html`
+            <lr-menu>
+              <button slot="header" type="button">Filter actions</button>
+              ${rows}
+              <button slot="footer" type="button">Manage actions</button>
+            </lr-menu>
+          ` : rows}
+        </lr-dropdown>
+      `);
+      const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+      popup.style.maxBlockSize = '180px';
+      const selected: string[] = [];
+      el.addEventListener('lr-select', (event) => selected.push(event.detail.item.value));
+
+      try {
+        await el.show();
+        const menu = el.getMenu()!;
+        await menu.updateComplete;
+        const list = menu.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+        const popupRect = popup.getBoundingClientRect();
+        const listRect = list.getBoundingClientRect();
+        expect(list.scrollHeight).to.be.greaterThan(list.clientHeight);
+        expect(listRect.top).to.be.at.least(popupRect.top);
+        expect(listRect.bottom).to.be.at.most(popupRect.bottom);
+        expect(popup.scrollHeight).to.be.at.most(popup.clientHeight + 1);
+        for (const slot of ['header', 'footer']) {
+          const control = el.querySelector(`[slot="${slot}"]`);
+          if (control) {
+            const rect = control.getBoundingClientRect();
+            expect(rect.top).to.be.at.least(popupRect.top);
+            expect(rect.bottom).to.be.at.most(popupRect.bottom);
+          }
+        }
+
+        await hoverUntilMatched(list, 'the scrolling list receives the pointer');
+        await sendWheel({ deltaX: 0, deltaY: 300 });
+        await waitUntil(() => list.scrollTop > 0, 'the menu list responds to native wheel input');
+        (el.querySelector('[value="0"]') as LyraDropdownItem).focus();
+        await sendKeys({ press: 'End' });
+        const last = el.querySelector('[value="29"]') as LyraDropdownItem;
+        await waitUntil(
+          () => document.activeElement === last && list.scrollTop >= list.scrollHeight - list.clientHeight - 1,
+          'End focuses and reveals the last menu item',
+        );
+        await hoverUntilMatched(last, 'the last item receives the pointer after scrolling');
+        const rect = last.getBoundingClientRect();
+        await sendMouse({ type: 'click', position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ] });
+        await waitUntil(() => selected.length > 0 && !el.open, 'the last item can be selected');
+        expect(selected).to.deep.equal(['29']);
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
+}
 
 it('maps hoist and sync into positioning and exposes an immediate reposition method', async () => {
   const el = (await fixture(html`

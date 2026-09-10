@@ -38,7 +38,9 @@ interface ConsumerMenuSnapshot {
  * sole role/name owner and supplies roving focus, type-ahead, nested submenu intent, selection,
  * and focus return for mapped dropdown items. A consumer-supplied `<lr-menu>` in the default slot
  * becomes that contained engine instead of being wrapped in a second menu, preserving its own
- * header/list/footer regions and naming precedence. Motion resolves through
+ * header/list/footer regions and naming precedence. The menu list scrolls within the popup's
+ * height limit while the positioning shell lets nested submenus receive pointer input outside it.
+ * Motion resolves through
  * `dropdown.show`/`dropdown.hide` in the public animation registry without changing the inherited
  * Popover lifecycle. ArrowDown and ArrowUp open the menu and focus its first or last enabled item
  * whether the trigger is slotted or resolved through `for`.

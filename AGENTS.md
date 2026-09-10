@@ -37,9 +37,9 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
 
 | Repository | Role | Local checkout |
 |---|---|---|
-| `cygnus` | Backend language, runtime, storage, services and generated contracts | `/mnt/a805817a-3f74-4a91-a611-b695b20df84e/git/solarserver/cygnus` |
-| `lyra-ui` | Reusable frontend components and frontend development experience | `/mnt/a805817a-3f74-4a91-a611-b695b20df84e/git/solarserver/lyra-ui` |
-| `solarleb_cygnus` | Full-stack Solarleb application built with both | `/mnt/a805817a-3f74-4a91-a611-b695b20df84e/git/solarserver/solarleb_cygnus` |
+| `cygnus` | Backend language, runtime, storage, services and generated contracts | `../cygnus` |
+| `lyra-ui` | Reusable frontend components and frontend development experience | `.` |
+| `solarleb_cygnus` | Full-stack Solarleb application built with both | `../solarleb_cygnus` |
 
 The author authorizes fixes, modifications and commits across all three
 repositories. Iterate between them to make application development seamless:
@@ -49,10 +49,11 @@ component or frontend tooling gaps in Lyra UI; then consume those fixes in
 application. Do not hide framework defects behind application monkey patches,
 duplicated framework code, manual copies of generated contracts or bypasses of
 supported APIs. Follow each repository's own instructions and verification gates.
-These paths locate checkouts; package resolution still uses declared dependencies.
+These paths locate checkouts relative to this repository; package resolution still uses declared
+dependencies.
 
 GreyCat runtime source is available for read-only inspection at
-`/mnt/a805817a-3f74-4a91-a611-b695b20df84e/git/greycat/greycat`.
+`../../greycat/greycat`.
 The author explicitly forbids modifying that repository. It is a reference for
 understanding the comparison control, not another implementation target.
 
@@ -61,7 +62,7 @@ the backend before frontend migration to Lyra UI. Resume from the Cygnus
 [current checkpoint](../cygnus/docs/IMPLEMENTATION_PROGRESS.md#current-checkpoint)
 and [canonical queue](../cygnus/docs/REMAINING_WORK.md), with application
 integration under `APP-SOLARLEB-BACKEND`. The delivery contract is
-[ROADMAP §2.8](../cygnus/docs/ROADMAP.md#28-solarleb-backend-migration-and-greycat-comparison).
+[Solarleb backend roadmap](../cygnus/docs/ROADMAP.md#28-solarleb-backend-migration-and-greycat-comparison).
 Use this as a workspace coordination route; it does not replace Lyra's public API
 contracts or create a second implementation plan here. All builds, tests and
 benchmarks for this work run on `ssh cygnus`, never on the workstation. Use

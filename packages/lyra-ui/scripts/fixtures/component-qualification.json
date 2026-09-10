@@ -6812,7 +6812,7 @@
             },
             {
               "file": "src/components/charts/chart/chart-datum-legend.test.ts",
-              "line": 263,
+              "line": 266,
               "test": "wraps long RTL categories and refreshes per-slice theme swatches",
               "target": "el",
               "state": "populated"
@@ -15561,49 +15561,49 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 114,
+              "line": 115,
               "test": "normalizes the additive inherited popup-role instead of corrupting dropdown semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 445,
+              "line": 446,
               "test": "preserves a consumer menu header/list/footer, live regions, focus order, and supplied name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 607,
+              "line": 608,
               "test": "mirrors submenu arrows and preserves the safe pointer corridor under RTL",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 810,
+              "line": 962,
               "test": "is accessible populated and open with mapped items",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 810,
+              "line": 962,
               "test": "is accessible populated and open with mapped items",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1074,
+              "line": 1078,
               "test": "is accessible, both closed and with its menu open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1074,
+              "line": 1078,
               "test": "is accessible, both closed and with its menu open",
               "target": "el",
               "state": "populated"
@@ -15617,7 +15617,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 250,
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -15628,7 +15628,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 608,
+              "line": 609,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15645,7 +15645,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1582,
+              "line": 1586,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32877,42 +32877,42 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1182,
+              "line": 1186,
               "test": "promotes actionable tooltip content to a focus-persistent dialog surface",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 2194,
+              "line": 2198,
               "test": "normalizes invalid popup roles before projecting them into ARIA",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 2292,
+              "line": 2296,
               "test": "is accessible as a disclosure navigation",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 2876,
+              "line": 2880,
               "test": "is accessible with an arrow rendered",
               "target": "popover",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 962,
+              "line": 966,
               "test": "opens a popover from its slotted trigger and wires dialog semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1663,
+              "line": 1667,
               "test": "opens a popover anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -32926,7 +32926,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 250,
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -32937,7 +32937,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 608,
+              "line": 609,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -32954,7 +32954,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1582,
+              "line": 1586,
               "kind": "320px allocation test signal"
             }
           ]
@@ -47895,21 +47895,21 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1096,
+              "line": 1100,
               "test": "shows a tooltip after focus and describes the trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1182,
+              "line": 1186,
               "test": "promotes actionable tooltip content to a focus-persistent dialog surface",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1762,
+              "line": 1766,
               "test": "opens a tooltip anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -47923,7 +47923,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 250,
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -47934,7 +47934,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 608,
+              "line": 609,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -47951,7 +47951,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1582,
+              "line": 1586,
               "kind": "320px allocation test signal"
             }
           ]

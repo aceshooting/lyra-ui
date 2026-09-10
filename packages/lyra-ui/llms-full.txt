@@ -20433,6 +20433,11 @@ consumer-supplied `lr-menu` in the default slot becomes that contained engine in
 wrapped in another menu. This supports both Web Awesome's direct-item shape and Shoelace's
 consumer-menu shape.
 
+The inner menu list owns scrolling within the popup's height limit, keeping a consumer menu's
+header and footer visible. The outer `popup` and `content` parts allow overflow so nested submenus
+remain clickable outside the parent menu in every supported browser. This works with either
+submenu authoring shape, with or without `hoist` or an arrow; no overflow override is required.
+
 An open lr-dropdown repositions when its effective host or inherited text direction changes,
 preserving open state without emitting lifecycle events.
 

@@ -66,7 +66,7 @@ describe('effective arrow layout', () => {
     expect(getComputedStyle(content).overflow).to.equal('auto');
   });
 
-  it('keeps non-arrow popover and dropdown surfaces bounded', async () => {
+  it('keeps non-arrow popovers scrollable and delegates dropdown scrolling to the menu list', async () => {
     const popover = await fixture<LyraPopover>(html`
       <lr-popover open arrow="false"
         ><button slot="trigger">Open</button>
@@ -80,7 +80,11 @@ describe('effective arrow layout', () => {
     expect(popup(popover).querySelectorAll('[part~="arrow"]').length).to.equal(0);
     expect(getComputedStyle(popup(popover)).overflow).to.equal('auto');
     expect(popup(dropdown).querySelectorAll('[part~="arrow"]').length).to.equal(0);
-    expect(getComputedStyle(popup(dropdown)).overflow).to.equal('auto');
+    expect(getComputedStyle(popup(dropdown)).overflow).to.equal('visible');
+    const menu = dropdown.getMenu()!;
+    await menu.updateComplete;
+    const list = menu.shadowRoot!.querySelector<HTMLElement>('[part="list"]')!;
+    expect(getComputedStyle(list).overflowY).to.equal('auto');
   });
 
   it('uses the effective tooltip arrow state for overflow', async () => {
