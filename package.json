@@ -68,6 +68,7 @@
     "playwright": "^1.63.0",
     "publint": "^0.3.24",
     "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "secretlint": "^13.0.5",
     "storybook": "10.5.10",
     "tailwindcss": "^4.3.3",

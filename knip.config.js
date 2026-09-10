@@ -24,6 +24,8 @@ export default {
         // Loaded by identifier rather than a JavaScript import.
         'secretlint',
         '@secretlint/secretlint-rule-preset-recommend',
+        // Storybook loads this renderer; keep it upgraded alongside its React runtime.
+        'react-dom',
       ],
     },
     'packages/lyra-ui': {

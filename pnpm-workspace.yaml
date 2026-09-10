@@ -98,6 +98,8 @@ minimumReleaseAgeExclude:
   - '@rolldown/binding-linux-arm64-gnu@1.2.5'
   - '@types/react@19.3.0'
   - react@19.3.0
+  - react-dom@19.3.0
+  - scheduler@0.28.0
 allowBuilds:
   esbuild: true
   rs-module-lexer: true
