@@ -217,6 +217,25 @@ it('toggles maximized and emits lr-maximize-change when the maximize button is c
   expect(el.hasAttribute('maximized')).to.be.false;
 });
 
+it('lets a host veto the maximize toggle via preventDefault, leaving maximized unchanged', async () => {
+  const el = (await fixture(
+    html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  await el.updateComplete;
+  expect(el.maximized).to.be.false;
+
+  el.addEventListener('lr-maximize-change', (event) => event.preventDefault());
+  const listener = oneEvent(el, 'lr-maximize-change');
+  (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
+  const event = await listener;
+
+  expect(event.cancelable).to.be.true;
+  expect(event.defaultPrevented).to.be.true;
+  expect(event.detail).to.deep.equal({ maximized: true });
+  expect(el.maximized).to.be.false;
+  expect(el.hasAttribute('maximized')).to.be.false;
+});
+
 it('does not light-dismiss on a backdrop click unless explicitly enabled', async () => {
   const el = await fixture<LyraToolResultDialog>(html`
     <lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>

@@ -1286,3 +1286,28 @@ it('normalizes duplicate entry ids first-wins before rendering', async () => {
   expect(rows[0]!.textContent).to.contain('First entry');
   expect(rows[0]!.textContent).not.to.contain('Later duplicate');
 });
+
+describe('virtualized re-render stability', () => {
+  it('keeps the internal lr-virtual-list .items and .keyFunction identity stable across an unrelated re-render', async () => {
+    const entries = makeEntries(5);
+    const el = await fixture<LyraActivityFeed>(
+      html`<lr-activity-feed expanded virtualize-at="4" .entries=${entries}></lr-activity-feed>`,
+    );
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      items: unknown;
+      keyFunction: unknown;
+    };
+    expect(list).to.exist;
+    const itemsBefore = list.items;
+    const keyFunctionBefore = list.keyFunction;
+
+    // An unrelated property write (not touching `entries`) must not force the
+    // internal virtual list to see a brand-new `.items`/`.keyFunction` reference --
+    // that would defeat its row-offset cache on every unrelated re-render.
+    el.label = 'Renamed label';
+    await el.updateComplete;
+
+    expect(list.items).to.equal(itemsBefore);
+    expect(list.keyFunction).to.equal(keyFunctionBefore);
+  });
+});

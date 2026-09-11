@@ -35,7 +35,7 @@ export const styles = css`
   [part="node"] circle {
     fill: var(--lr-color-brand);
     stroke: transparent;
-    stroke-width: var(--lr-space-xs);
+    stroke-width: var(--lr-border-width-thick);
     transition: stroke var(--lr-transition-fast);
   }
   [part="node"]:hover circle {

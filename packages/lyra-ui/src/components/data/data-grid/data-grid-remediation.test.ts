@@ -88,4 +88,30 @@ describe('data-grid canonical output and interaction', () => {
     element.shadowRoot!.querySelector<HTMLElement>('[role="gridcell"] span')!.click();
     expect(events).to.deep.equal(['first']);
   });
+
+  it('accepts selectionMode/selection-mode as an alias for selectable, mirroring lr-table\'s naming', async () => {
+    const element = await fixture<LyraDataGrid<Row>>(html`<lr-data-grid
+      .rowKey=${'id'} .columns=${[{ field: 'value', label: 'Value' }]}
+      .data=${[row]} selection-mode="multiple"
+    ></lr-data-grid>`);
+    expect(element.selectable).to.equal('multiple');
+    expect(element.selectionMode).to.equal('multiple');
+    element.selectionMode = 'single';
+    await element.updateComplete;
+    expect(element.selectable).to.equal('single');
+    element.selectable = 'none';
+    await element.updateComplete;
+    expect(element.selectionMode).to.equal('none');
+  });
+
+  it('renders a per-cell title from column.cellTitle, mirroring lr-table', async () => {
+    const columns: DataGridColumn<Row>[] = [{
+      field: 'value', label: 'Value', cellTitle: (r) => `full: ${r.value}`,
+    }];
+    const element = await fixture<LyraDataGrid<Row>>(html`<lr-data-grid
+      .rowKey=${'id'} .columns=${columns} .data=${[row]}
+    ></lr-data-grid>`);
+    const cell = element.shadowRoot!.querySelector<HTMLElement>('[role="gridcell"][data-column-id]')!;
+    expect(cell.getAttribute('title')).to.equal('full: One');
+  });
 });

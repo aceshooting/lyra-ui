@@ -129,6 +129,13 @@ span boundary that `Range.surroundContents()` can't wrap stays unpainted (still 
 localized label; later loading and error transitions use the shared document-level polite and
 assertive sinks, respectively, without adding live semantics inside the viewer shadow.
 
+**Known capability boundaries** — deliberate, not defects, and stated here so they need not be
+rediscovered: text search and `LyraAnchor` text-quote resolution match **exact** text only, after
+whitespace and soft-hyphen normalization, with no fuzzy or approximate mode. Non-Latin
+cMap-encoded fonts get no special handling beyond whatever the `pdfjs-dist` peer resolves on its
+own — no `cMapUrl`/`cMapPacked` is configured. A scanned or image-only PDF has no text layer at
+all, so it has nothing to select, search or anchor into; it still renders and paginates normally.
+
 `page`, `page-canvas`, `text-layer`, `text-span`, `search-match` and `search-match-active` are
 rendered inside the virtualizing `lr-virtual-list`'s own shadow root and forwarded out through
 `exportparts`, so `lr-pdf-viewer::part(page)` (and each of the others) works from a consumer

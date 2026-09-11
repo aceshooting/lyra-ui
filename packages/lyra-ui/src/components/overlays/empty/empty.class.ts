@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import {
   isAccessibilityVisible,
 } from '../../../internal/accessibility-visibility.js';
@@ -263,7 +264,10 @@ export class LyraEmpty extends LyraElement {
     const headingLevel = resolveHeadingLevel(this.headingLevel);
     return html`
       <div part="base">
-        <div part="icon" ?hidden=${!this.slotPresence.has()}><slot></slot></div>
+        ${renderInertPresentation(html`<slot></slot>`, {
+          part: 'icon',
+          hidden: !this.slotPresence.has(),
+        })}
         <p
           part="heading"
           role=${headingLevel ? 'heading' : nothing}

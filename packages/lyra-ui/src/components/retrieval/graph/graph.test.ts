@@ -1743,6 +1743,59 @@ describe('node typing', () => {
     expect(items[1]!.getAttribute('style')).to.include('--lr-graph-cat-1'); // index 8 % 8 -> slot 1 again
   });
 
+  it('indexes the categorical palette by label-bearing nodeTypes position, matching lr-graph-legend\'s filtered row order (regression)', async () => {
+    // lr-graph-legend omits a blank-label nodeTypes entry before assigning its swatch index
+    // (graph-legend.class.ts's render() filter). A paired lr-graph must skip the same blank-label
+    // entry when computing the categorical fallback index, or a node's painted color diverges from
+    // its type's legend swatch.
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    el.nodeTypes = [
+      { id: 'blank', label: '' }, // lr-graph-legend renders no row for this entry
+      { id: 'valid', label: 'Valid type' }, // legend's first (only) row -> index 0 -> cat-1
+    ];
+    el.nodes = [{ id: 'a', type: 'valid' }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    const item = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    expect(item.getAttribute('style')).to.include('--lr-graph-cat-1');
+  });
+
+  it('reads selection ring widths from the --lr-border-width-* ladder, not the generic --lr-size-* scale (regression: theming purpose)', async () => {
+    const el = (await fixture(html`
+      <lr-graph
+        style="--lr-theme-border-width-medium: 12px; --lr-theme-border-width-thick: 13px; --lr-theme-size-2px: 22px; --lr-theme-size-3px: 23px;"
+      ></lr-graph>
+    `)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    el.selectionMode = 'single';
+    el.selectedNodeIds = ['a'];
+    el.selectedLinkIds = ['a->b'];
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    const selectedNode = el.shadowRoot!.querySelector(
+      '[part="node"][data-selected]'
+    ) as SVGElement;
+    const selectedLink = el.shadowRoot!.querySelector(
+      '[part="link"][data-selected]'
+    ) as SVGElement;
+    expect(selectedNode, 'selected node renders').to.exist;
+    expect(selectedLink, 'selected link renders').to.exist;
+    // A consumer retuning --lr-theme-border-width-medium/-thick must move these rings; retuning
+    // the unrelated --lr-theme-size-2px/-3px sizing scale must not.
+    expect(getComputedStyle(selectedNode).strokeWidth).to.equal('12px');
+    expect(getComputedStyle(selectedLink).strokeWidth).to.equal('13px');
+  });
+
   it('positions square/diamond shapes via a per-tick transform, not cx/cy', async () => {
     const el = await mountTyped();
     const squareEl = el.shadowRoot!.querySelector(

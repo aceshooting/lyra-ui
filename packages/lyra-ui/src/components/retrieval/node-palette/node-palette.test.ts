@@ -1037,76 +1037,28 @@ it('renders the search focus ring', async () => {
   }, 'the node-palette search keyboard focus ring never painted');
 });
 
-it('removes the native search reset affordance where the engine supplies one', async () => {
+it('replaces the suppressed native search reset affordance with a themed clear button', async () => {
   const el = await fixture<LyraNodePalette>(html`
     <lr-node-palette style="inline-size: 20rem" .items=${items}></lr-node-palette>
   `);
   const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
 
-  if (!CSS.supports('selector(input::-webkit-search-cancel-button)')) {
-    expect(input.type).to.equal('search');
-    expect(
-      el.shadowRoot!.querySelectorAll(
-        '[part="search"] + button, [part="search"] + [role="button"]'
-      ).length
-    ).to.equal(0);
-    return;
-  }
+  // No replacement affordance renders while the field is empty -- there is nothing to clear.
+  expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
 
-  const nativeDecoration = document.createElement('style');
-  nativeDecoration.textContent = `
-    [part='search']::-webkit-search-cancel-button {
-      appearance: auto !important;
-      -webkit-appearance: searchfield-cancel-button !important;
-      display: block !important;
-      opacity: 1 !important;
-      pointer-events: auto !important;
-    }
-  `;
-  el.shadowRoot!.append(nativeDecoration);
-  input.focus();
-  const rect = input.getBoundingClientRect();
-  try {
-    let cancelPosition: [number, number] | undefined;
-    for (let offset = 2; offset <= 48; offset += 2) {
-      input.value = 'clear me';
-      input.dispatchEvent(new InputEvent('input', { bubbles: true }));
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => resolve())
-      );
-      const candidate: [number, number] = [
-        Math.round(rect.right - offset),
-        Math.round(rect.top + rect.height / 2),
-      ];
-      await sendMouse({ type: 'click', position: candidate });
-      if (input.value === '') {
-        cancelPosition = candidate;
-        break;
-      }
-    }
-    expect(
-      cancelPosition !== undefined,
-      'positive control exposes the native clear action'
-    ).to.equal(true);
+  input.value = 'clear me';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  await el.updateComplete;
 
-    input.value = 'keep me';
-    input.dispatchEvent(new InputEvent('input', { bubbles: true }));
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => resolve())
-    );
-    nativeDecoration.remove();
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => resolve())
-    );
-    await sendMouse({ type: 'click', position: cancelPosition! });
-    expect(
-      input.value,
-      'component styling removes the native clear action'
-    ).to.equal('keep me');
-  } finally {
-    nativeDecoration.remove();
-    await resetMouse();
-  }
+  const clearButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]');
+  expect(clearButton, 'a themed replacement clear button must exist once the field has a value').to
+    .exist;
+  expect(clearButton!.getAttribute('aria-label')).to.equal('Clear');
+
+  clearButton!.click();
+  await el.updateComplete;
+  expect(input.value).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
 });
 
 it("renders the search field's ::placeholder in the shared quiet-text token's color instead of the UA default", async () => {

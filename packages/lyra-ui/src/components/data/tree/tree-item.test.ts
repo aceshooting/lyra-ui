@@ -7,7 +7,7 @@ import {
   setTreeItemSelection,
   treeItemOwnerContext,
 } from './tree-owner-controller.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const item = { id: '1', label: 'Root' };
 
@@ -1159,13 +1159,12 @@ it('shows a hover fill on a selected row, distinct from the resting selected fil
   const row = selectedItem!.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
   row.scrollIntoView();
   const resting = getComputedStyle(row).backgroundColor;
-  const rect = row.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
-    expect(getComputedStyle(row).backgroundColor).to.not.equal(resting);
+    await hoverUntilMatched(row, 'selected row never entered :hover');
+    await waitUntil(
+      () => getComputedStyle(row).backgroundColor !== resting,
+      'selected row never painted a distinct hover fill',
+    );
   } finally {
     await resetMouse();
   }

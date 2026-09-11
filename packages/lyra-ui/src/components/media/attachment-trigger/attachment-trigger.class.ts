@@ -3,6 +3,7 @@ import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGT
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './attachment-trigger.styles.js';
@@ -280,6 +281,8 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
   @query('lr-dropdown') private dropdownEl?: LyraDropdown;
+  @query('[part="trigger"], [part="menu-trigger"]') private triggerEl?: HTMLButtonElement;
+  private hasSyncedDescribedByElements = false;
 
   // Which file-backed capability the hidden input's next 'change' event
   // belongs to -- set synchronously right before the synthetic .click(), so
@@ -303,6 +306,21 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     if (changed.has('capabilities')) {
       const normalized = normalizeCapabilities(this.capabilities);
       if (!isCanonicalCapabilitySnapshot(this.capabilities)) this.capabilities = normalized;
+    }
+  }
+
+  // Merges a consumer-set host `aria-describedby` onto whichever internal trigger button is
+  // currently rendered (single-capability or menu) -- the sole semantic owner -- since idrefs
+  // never cross the shadow boundary on their own.
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    const hostDescribedBy = this.getAttribute('aria-describedby');
+    if (hostDescribedBy || this.hasSyncedDescribedByElements) {
+      this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
+        this,
+        this.triggerEl,
+        hostDescribedBy,
+      );
     }
   }
 

@@ -2068,3 +2068,24 @@ describe('explicitly empty host aria-label', () => {
     expect(control.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part~="label"]')!.id);
   });
 });
+
+describe('value/length assignment order (regression)', () => {
+  it('does not permanently truncate a value assigned before a widening length in the same update', async () => {
+    const el = (await fixture(html`<lr-otp-input></lr-otp-input>`)) as LyraOtpInput;
+    await el.updateComplete;
+    // Same microtask, value assigned first against the still-default length=6 -- must not
+    // permanently discard the trailing digits once length widens to 8 in the same batched update.
+    el.value = '12345678';
+    el.length = 8;
+    await el.updateComplete;
+    expect(el.value).to.equal('12345678');
+  });
+
+  it('does not permanently truncate a value assigned before length in a lit template binding order', async () => {
+    const el = (await fixture(
+      html`<lr-otp-input .value=${'12345678'} .length=${8}></lr-otp-input>`,
+    )) as LyraOtpInput;
+    await el.updateComplete;
+    expect(el.value).to.equal('12345678');
+  });
+});

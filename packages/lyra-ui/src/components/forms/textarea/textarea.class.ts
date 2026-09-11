@@ -5,6 +5,10 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import {
+  acquireResolvedAriaRelationship,
+  type ResolvedAriaRelationshipLease,
+} from '../../../internal/aria-controls.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -85,8 +89,11 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * Ships an opt-in `label`/`hint`/`errorText` form-control chrome (props + matching named slots +
  * `form-control-label`/`hint`/`error` parts), mirroring `<lr-select>`'s exact pattern -- left
  * unset, the chrome remains hidden. A consumer preferring their own form-field layout can still
- * ignore these and wrap the element. A host `aria-label` is forwarded to the internal textbox;
- * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
+ * ignore these and wrap the element. A host `aria-label` is forwarded to the internal textbox via
+ * the typed `accessibleLabel` property. A host `aria-describedby` is resolved onto that native
+ * textarea, ahead of its own hint/error descriptions, so externally-owned guidance remains valid
+ * across the shadow boundary. Host `aria-labelledby` is deliberately not projected: the native
+ * `<label>` already owns this control's visible label relationship.
  *
  * `minlength`/`maxlength` are forwarded to the internal native `<textarea>` and bridged into this
  * element's own `ElementInternals` as `tooShort`/`tooLong` by `updateValidity()`.
@@ -326,6 +333,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   private countAnnounceTimer?: number;
   private countAnnounceTimerOwner?: Window;
   private countAnnouncementSink?: AnnouncementSink;
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
 
   constructor() {
     super();
@@ -457,6 +465,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       this.armResizeObserver();
       this.fitToContent();
     }
+    // Recreate the host relationship lease here so its host/root observer belongs to this document.
+    if (this.hasUpdated) {
+      this.syncExternalDescription();
+    }
   }
 
   override disconnectedCallback(): void {
@@ -473,7 +485,39 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.countAnnounceTimerOwner = undefined;
     this.countAnnouncementSink?.release();
     this.countAnnouncementSink = undefined;
+    this.releaseExternalDescription();
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.isConnected && this.hasUpdated) {
+      this.syncExternalDescription();
+    }
+  }
+
+  /** Resolves host-owned descriptions onto the native textarea without copying labelledby. */
+  private syncExternalDescription(): void {
+    const target = this.textareaEl ?? null;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (!this.externalDescriptionLease) {
+      this.externalDescriptionLease = acquireResolvedAriaRelationship(
+        this,
+        target,
+        'aria-describedby',
+      );
+      return;
+    }
+    this.externalDescriptionLease.update(target);
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
   }
 
   /**
@@ -609,6 +653,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       if (this.value === '') this.internals.states.add('blank');
       else this.internals.states.delete('blank');
     }
+    this.syncExternalDescription();
     // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
     // reaches the native textarea only on this render, so validity has to be recomputed after it.
     if (

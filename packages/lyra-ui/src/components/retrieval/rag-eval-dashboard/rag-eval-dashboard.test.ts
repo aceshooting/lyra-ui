@@ -397,3 +397,26 @@ it('normalizes non-array collections and non-finite metric values', async () => 
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
 });
+
+it('never falsely marks metrics[0] selected for an unmatched controlled metricId (regression)', async () => {
+  const el = (await fixture(html`
+    <lr-rag-eval-dashboard
+      .metrics=${metrics}
+      .runs=${runs}
+      metric-id="does-not-exist"
+    ></lr-rag-eval-dashboard>
+  `)) as LyraRagEvalDashboard;
+  // The host's own readback must still report exactly what was authored -- this is never in
+  // question, but stated for contrast with the rendered state below.
+  expect(el.metricId).to.equal('does-not-exist');
+  // No metric may render as selected: silently substituting metrics[0] as "selected" while the
+  // host reads back a different, unmatched metricId is the defect (contrast with the sibling
+  // `slice` property, which renders its own explicit unavailable state for the identical shape).
+  const selected = el.shadowRoot!.querySelectorAll('[part~="metric-selected"]');
+  expect(selected.length).to.equal(0);
+  for (const button of el.shadowRoot!.querySelectorAll('[part~="metric"]')) {
+    expect(button.getAttribute('aria-pressed')).to.equal('false');
+  }
+  // No chart is fabricated from the wrong metric's data either.
+  expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.be.true;
+});

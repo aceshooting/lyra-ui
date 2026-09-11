@@ -72,3 +72,46 @@ it('preserves centered fitting content, uncapped content, and the zoom wrapper',
   const zoomed = await imagePreview(60, true, true);
   expect(zoomed.viewer.shadowRoot!.querySelectorAll('lr-pan-zoom').length).to.equal(1);
 });
+
+async function threeHighlightPreview() {
+  const viewer = await fixture<LyraDocumentPreview>(html`<lr-document-preview
+    mime-type="image/png" src=${imageSource(200, 200)}></lr-document-preview>`);
+  viewer.highlights = [
+    { id: 'a', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 2, height: 2 } } },
+    { id: 'b', anchor: { kind: 'region', rect: { x: 20, y: 20, width: 2, height: 2 } } },
+    { id: 'c', anchor: { kind: 'region', rect: { x: 30, y: 30, width: 2, height: 2 } } },
+  ];
+  await viewer.updateComplete;
+  const actions = [
+    ...viewer.shadowRoot!.querySelectorAll<HTMLElement>('[part="region-highlight-action"]'),
+  ];
+  return { viewer, actions };
+}
+
+it('moves focus with ArrowDown/ArrowUp/Home/End across the region-highlight-action list', async () => {
+  const { actions } = await threeHighlightPreview();
+  expect(actions.length).to.equal(3);
+  actions[0]!.focus();
+  actions[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }));
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[1]).to.be.true;
+  actions[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }));
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[2]).to.be.true;
+  // Clamps at the end instead of wrapping.
+  actions[2]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }));
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[2]).to.be.true;
+  actions[2]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true, cancelable: true }));
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[0]).to.be.true;
+  actions[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true, cancelable: true }));
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[2]).to.be.true;
+  actions[2]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true, cancelable: true }));
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[1]).to.be.true;
+});
+
+it('reverses Arrow direction for the region-highlight-action list under dir="rtl"', async () => {
+  const { viewer, actions } = await threeHighlightPreview();
+  viewer.setAttribute('dir', 'rtl');
+  await viewer.updateComplete;
+  actions[0]!.focus();
+  actions[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true, cancelable: true }));
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[1]).to.be.true;
+});

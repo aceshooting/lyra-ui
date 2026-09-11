@@ -188,9 +188,11 @@ export const styles = css`
     /* This button appears only once the field has a value or is clearable-eligible, so an unscaled
        --lr-icon-button-size floor would grow a field shorter than 40px. min() caps it at the tier's
        own --lr-form-control-height: m and up (already >= 40px) keep the full WCAG 2.5.8 hit-area
-       target, while 2xs/xs/s are never forced past their own control height. */
-    min-inline-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
-    min-block-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
+       target, while 2xs/xs/s yield to this smaller tier's own control height instead of forcing the
+       same jump every undersized tier saw under a flat 40px floor -- but never below the 24px WCAG
+       2.5.8 minimum itself, matching lr-date-input's own clear/expand-button floor. */
+    min-inline-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
+    min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-font-size-m);
   }

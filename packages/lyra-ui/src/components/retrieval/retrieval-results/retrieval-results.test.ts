@@ -988,6 +988,43 @@ describe('selection', () => {
     await el.updateComplete;
     expect(el.selectedChunkIds).to.deep.equal(['c2']);
   });
+
+  /**
+   * Regression: a `chunks` reassignment silently pruning stale selected ids never fired
+   * `lr-select`, so a host's own external copy of `selectedChunkIds` diverged from the
+   * component's with no event to resync it.
+   */
+  it('emits lr-select when a chunks reassignment prunes previously-selected ids', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-results></lr-retrieval-results>`
+    )) as LyraRetrievalResults;
+    el.chunks = chunks;
+    el.selectedChunkIds = ['c1', 'c2'];
+    await el.updateComplete;
+
+    const listener = oneEvent(el, 'lr-select');
+    el.chunks = [chunks[1]!]; // drops c1, keeps c2
+    const event = (await listener) as CustomEvent<RetrievalResultsSelectDetail>;
+
+    expect(event.detail.chunkIds).to.deep.equal(['c2']);
+    expect(event.detail.chunks.map((c) => c.id)).to.deep.equal(['c2']);
+    await el.updateComplete;
+    expect(el.selectedChunkIds).to.deep.equal(['c2']);
+  });
+
+  it('does not emit lr-select on the very first update (nothing to resync yet)', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-results
+        .chunks=${chunks}
+        .selectedChunkIds=${['does-not-exist']}
+      ></lr-retrieval-results>`
+    )) as LyraRetrievalResults;
+    let emitted = 0;
+    el.addEventListener('lr-select', () => emitted++);
+    await el.updateComplete;
+    expect(el.selectedChunkIds).to.deep.equal([]);
+    expect(emitted).to.equal(0);
+  });
 });
 
 describe('presentation', () => {

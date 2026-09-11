@@ -7,7 +7,7 @@ import type { LyraDetails } from "./details.js";
 import type { LyraAccordion } from "./accordion.js";
 import type { LyraAccordionItem } from "./accordion-item.js";
 import { styles as accordionStyles } from "./accordion.styles.js";
-import { resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";
 import '../../forms/checkbox/checkbox.js';
 import '../../overlays/badge/badge.js';
@@ -765,18 +765,11 @@ it("inherits independent appearance and pointer-state paint without retinting sh
 
   const summary =
     items[0]!.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
-  summary.scrollIntoView();
-  const rect = summary.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
-    expect(getComputedStyle(summary).backgroundColor).to.equal(
-      "rgb(19, 20, 21)"
+    await hoverUntilMatched(summary, "the details summary never reported :hover");
+    await waitUntil(
+      () => getComputedStyle(summary).backgroundColor === "rgb(19, 20, 21)",
+      'summary background color never reached its hover value',
     );
     await sendMouse({ type: "down" });
     await waitUntil(() => getComputedStyle(summary).backgroundColor === "rgb(22, 23, 24)", 'summary background color never reached "rgb(22, 23, 24)"');
@@ -802,6 +795,24 @@ it("inherits independent gap and radius hooks across the extreme size tiers", as
     expect(getComputedStyle(base).borderTopLeftRadius).to.equal("19px");
     expect(getComputedStyle(header).columnGap).to.equal("27px");
   }
+});
+
+it("shrinks the summary row's height floor at the 2xs size tier instead of staying flat at --lr-icon-button-size", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-details size="2xs" summary="Small">Content</lr-details>
+      <lr-details summary="Default">Content</lr-details>
+    </div>
+  `);
+  const items = [...wrapper.querySelectorAll("lr-details")] as LyraDetails[];
+  await Promise.all(items.map((item) => item.updateComplete));
+  const [small, medium] = items as [LyraDetails, LyraDetails];
+  const smallHeight = summaryOf(small).getBoundingClientRect().height;
+  const mediumHeight = summaryOf(medium).getBoundingClientRect().height;
+  // Still meets the WCAG 2.5.8 24px minimum even at the tightest tier.
+  expect(smallHeight).to.be.at.least(24);
+  // But no longer flat at the default tier's ~40px icon-button-size floor.
+  expect(smallHeight).to.be.lessThan(mediumHeight);
 });
 
 it("gives lr-accordion its own stylesheet instead of reusing details.styles.ts wholesale", () => {

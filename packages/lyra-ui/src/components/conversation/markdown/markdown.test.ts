@@ -3268,3 +3268,71 @@ describe("shiki dark-theme signal", () => {
     await waitUntil(() => content.getAttribute("data-dark-theme") === "true");
   });
 });
+
+describe("script-child content authoring (wa-markdown migration parity)", () => {
+  it("adopts a <script type=text/markdown> child's text as content when content was never authored", async () => {
+    const el = (await fixture(
+      html`<lr-markdown
+        ><script type="text/markdown"># Title
+
+Body.</script></lr-markdown
+      >`
+    )) as LyraMarkdown;
+    expect(el.content).to.equal("# Title\n\nBody.");
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="heading"]') !== null
+    );
+    expect(
+      el.shadowRoot!.querySelector('[part="heading"]')!.textContent
+    ).to.equal("Title");
+  });
+
+  it("trims leading/trailing whitespace off the adopted script text", async () => {
+    const el = (await fixture(
+      html`<lr-markdown
+        ><script type="text/markdown">
+
+  Body only.
+
+</script></lr-markdown
+      >`
+    )) as LyraMarkdown;
+    expect(el.content).to.equal("Body only.");
+  });
+
+  it("ignores a script child once the content attribute is explicitly authored", async () => {
+    const el = (await fixture(
+      html`<lr-markdown content="Explicit."
+        ><script type="text/markdown">From script.</script></lr-markdown
+      >`
+    )) as LyraMarkdown;
+    expect(el.content).to.equal("Explicit.");
+  });
+
+  it("ignores a script child once content is explicitly the empty string", async () => {
+    const el = (await fixture(
+      html`<lr-markdown content=""
+        ><script type="text/markdown">From script.</script></lr-markdown
+      >`
+    )) as LyraMarkdown;
+    expect(el.content).to.equal("");
+  });
+
+  it("ignores a script child that is not a direct child (not authored via the documented pattern)", async () => {
+    const el = (await fixture(
+      html`<lr-markdown
+        ><div><script type="text/markdown">Nested.</script></div></lr-markdown
+      >`
+    )) as LyraMarkdown;
+    expect(el.content).to.equal("");
+  });
+
+  it("ignores a script child whose type is not text/markdown", async () => {
+    const el = (await fixture(
+      html`<lr-markdown
+        ><script type="application/json">{"a":1}</script></lr-markdown
+      >`
+    )) as LyraMarkdown;
+    expect(el.content).to.equal("");
+  });
+});

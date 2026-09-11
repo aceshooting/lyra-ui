@@ -4,6 +4,12 @@ import type {
   LyraExportButton,
   LyraExportFormatDescriptor,
 } from './export-button.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
+  const element = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
+  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
+}
 
 const rows = [{ id: 'a', name: 'Alpha' }];
 const columns = [
@@ -668,6 +674,28 @@ it('reports non-serializable built-in JSON data through lr-export-error without 
   expect(completed).to.be.false;
 });
 
+it('announces export failure through the live region and marks the trigger visibly', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.rows = [{ id: 'a', count: 10n }];
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part~="trigger"]') as HTMLButtonElement;
+  expect(trigger.getAttribute('part')).to.not.contain('trigger-error');
+  trigger.click();
+  await el.updateComplete;
+
+  const errorEvent = oneEvent(el, 'lr-export-error');
+  const jsonButton = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')].find(
+    (button) => button.textContent?.trim() === 'JSON',
+  )!;
+  jsonButton.click();
+  await errorEvent;
+  await el.updateComplete;
+
+  expect(trigger.getAttribute('part')).to.contain('trigger-error');
+  expect(sinkTexts('polite').length).to.be.greaterThan(0);
+});
+
 it('derives CSV columns from the rows own keys when `columns` is left at its default empty array', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = [
@@ -1121,6 +1149,29 @@ it('bounds and wraps a long rendered format menu within the popover viewport cla
   expect(getComputedStyle(description).overflowWrap).to.equal('anywhere');
 });
 
+it('contains a long rendered format menu within a 320px RTL allocation, mirroring the narrow-content story', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 320px">
+      <lr-export-button
+        open
+        aria-label="Download the complete quarterly performance report"
+        .formats=${[
+          {
+            formatId: 'spreadsheet',
+            label: 'Spreadsheet with all regional performance metrics',
+            description: 'Includes every measured category and the complete reporting history',
+          },
+          { formatId: 'json', label: 'Machine-readable JSON data' },
+        ]}
+      ></lr-export-button>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-export-button') as LyraExportButton;
+  await waitForOpenMenu(el);
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  expect(el.getBoundingClientRect().width).to.be.at.most(wrapper.getBoundingClientRect().width);
+});
+
 describe('label localization', () => {
   it('defaults the trigger button text to the built-in English "Export"', async () => {
     const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
@@ -1134,6 +1185,21 @@ describe('label localization', () => {
     `)) as LyraExportButton;
     const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
     expect(trigger.textContent!.trim()).to.equal('Exporter');
+  });
+
+  it('centers a short label within the icon-button-size floor instead of dumping slack on the trailing side', async () => {
+    const el = (await fixture(html`
+      <lr-export-button label="X"></lr-export-button>
+    `)) as LyraExportButton;
+    const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+    expect(getComputedStyle(trigger).justifyContent).to.equal('center');
+    const triggerRect = trigger.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(trigger);
+    const textRect = range.getBoundingClientRect();
+    const leadingGap = textRect.left - triggerRect.left;
+    const trailingGap = triggerRect.right - textRect.right;
+    expect(Math.abs(leadingGap - trailingGap), 'text is centered, not flush to one side').to.be.at.most(2);
   });
 
   it('still honors an explicit label attribute when no .strings override applies', async () => {

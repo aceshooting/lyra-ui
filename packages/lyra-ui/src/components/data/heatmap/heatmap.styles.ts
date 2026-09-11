@@ -59,7 +59,7 @@ export const styles = css`
     cursor: pointer;
   }
   [part="canvas"]:hover {
-    outline: var(--lr-size-1px) solid
+    outline: var(--lr-border-width-thin) solid
       var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -144,7 +144,7 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
   }
   [part="cell"]:hover {
-    outline: var(--lr-size-1px) solid
+    outline: var(--lr-border-width-thin) solid
       var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }

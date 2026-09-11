@@ -1,8 +1,8 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './span-waterfall.js';
 import type { LyraSpanWaterfall } from './span-waterfall.js';
 import type { LyraSpan } from '../trace-tree/span.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const SPANS: LyraSpan[] = [
@@ -197,26 +197,26 @@ describe('lr-span-waterfall', () => {
     const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`)) as LyraSpanWaterfall;
     await el.updateComplete;
     const bar = el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
-    const rect = bar.getBoundingClientRect();
-    const centre: [number, number] = [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
     // The tint lives on a ::after veil rather than the bar's own background, because a bar's fill is
     // one of five different things (four solid tones, a striped gradient, a transparent dashed box)
     // and no single background declaration tints all of them.
     const veil = (): string => getComputedStyle(bar, '::after').backgroundColor;
     const rest = veil();
     try {
-      await sendMouse({ type: 'move', position: centre });
+      // sendMouse() resolves once the synthesized command completes, not once the browser has
+      // finished processing the resulting pointer event / repaint -- land the pointer with
+      // hoverUntilMatched() and poll the RENDERED result with waitUntil, rather than reading a
+      // hover-dependent computed style straight after a single move (see test/wtr-mouse.ts).
+      await hoverUntilMatched(bar, 'the llm bar receives hover');
+      await waitUntil(() => veil() !== rest, 'hover must move the veil off its resting colour');
       const hovered = veil();
       await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => veil() !== hovered,
+        'pressed must be visibly stronger than hover, not identical to it',
+      );
       const pressed = veil();
       await sendMouse({ type: 'up' });
-      expect(hovered, 'hover must move the veil off its resting colour').to.not.equal(rest);
-      expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(
-        hovered,
-      );
       expect(pressed).to.not.equal(rest);
     } finally {
       await resetMouse();
@@ -780,5 +780,20 @@ it('formats durations with the effective locale', async () => {
       .spans=${[{ id: 'valid', name: 'Valid', kind: 'tool', status: 'success', startMs: 0, endMs: 2500 }]}
     ></lr-span-waterfall>
   `)) as LyraSpanWaterfall;
-  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('2,5 Sek.');
+  // Locale-aware number, library's own terse "{value}s" template (matches lr-trace-tree/
+  // lr-tool-call-chip) -- not the browser's own Intl unit CLDR text ("2,5 Sek.").
+  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('2,5s');
+});
+
+it('routes duration text through the shared duration helper and this.localize() so a strings override reaches it (regression)', async () => {
+  const el = (await fixture(html`
+    <lr-span-waterfall
+      hide-axis
+      .spans=${[{ id: 'valid', name: 'Valid', kind: 'tool', status: 'success', startMs: 0, endMs: 2500 }]}
+    ></lr-span-waterfall>
+  `)) as LyraSpanWaterfall;
+  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('2.5s');
+  el.strings = { durationSeconds: '{value} seconds' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('2.5 seconds');
 });

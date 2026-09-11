@@ -322,6 +322,17 @@ it("gives tree toggles and copy controls the shared minimum hit area", async () 
   expect(getComputedStyle(copy).minBlockSize).to.equal("40px");
 });
 
+it('anchors the toggle glyph to the component font-size token, not the UA control font (regression)', async () => {
+  const el = await withData(sample);
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  // [part="toggle"] wraps a 1em SVG (see internal/icons.ts), so its own resolved font-size is the
+  // glyph's actual rendered size -- it must anchor to the host's own --lr-font-size-sm cascade
+  // (mirroring [part="copy-button"]'s `font: inherit` + explicit font-size), never a native
+  // <button>'s UA default control font.
+  expect(getComputedStyle(toggle).fontSize).to.equal(getComputedStyle(el).fontSize);
+});
+
 it("renders a top-level copy button when copyable, and emits lr-copy with the full JSON on click", async () => {
   const el = await withData(sample);
   el.copyable = true;

@@ -1,5 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './heatmap.js';
 import { resolveRgb, type LyraHeatmap } from './heatmap.js';
 
@@ -161,6 +162,61 @@ for (const decoration of ['annotation', 'selection'] as const) {
     });
   }
 }
+
+/**
+ * Regression: the internal grid/canvas `aria-label` used `||` instead of a presence check, so an
+ * author deliberately writing `aria-label=""` to suppress the generated label had it silently
+ * replaced by `generatedAriaLabel` anyway (an empty string is falsy).
+ */
+it('keeps an explicit empty aria-label on the internal grid, in accessible-cells mode', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      accessible-cells
+      aria-label=""
+      .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B'], values: [[1]] }}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[role="grid"]')!;
+  expect(grid.getAttribute('aria-label')).to.equal('');
+});
+
+it('keeps an explicit empty aria-label on the internal canvas, in canvas mode', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      aria-label=""
+      .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B'], values: [[1]] }}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  expect(canvas.getAttribute('aria-label')).to.equal('');
+});
+
+/**
+ * Regression: the canvas/cell hover ring used the generic `--lr-size-1px` token instead of the
+ * documented `--lr-border-width-thin` retheme input, so retuning
+ * `--lr-theme-border-width-thin` silently left the hover ring's thickness unchanged.
+ */
+it('tracks --lr-theme-border-width-thin for the canvas hover ring', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      style="--lr-theme-border-width-thin: 4px"
+      .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B'], values: [[1]] }}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  try {
+    await hoverUntilMatched(canvas, 'heatmap canvas is hovered');
+    await waitUntil(
+      () => getComputedStyle(canvas).outlineWidth === '4px',
+      'canvas hover outline never tracked the retuned border-width token',
+    );
+  } finally {
+    await resetMouse();
+  }
+});
 
 async function compareFocusWithFullRepaint(element: LyraHeatmap): Promise<void> {
   await aTimeout(100);

@@ -7,6 +7,7 @@ import {
   type SVGTemplateResult,
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -333,9 +334,41 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     );
   }
 
+  // Memoizes the normalized view for as long as neither input actually changed.
+  // `<lr-virtual-list>` keys its own O(n) offset/measurement-cache rebuild on the *reference*
+  // identity of the `items` array it is handed, so returning a freshly-allocated array on every
+  // render made every unrelated update (a locale-independent property, an internal @state
+  // change) rebuild the whole virtualized list and drop measured row heights.
+  private normalizedItemsCache?: {
+    source: unknown;
+    locale: string;
+    result: IngestionQueueItem[];
+  };
+
   private get normalizedItems(): IngestionQueueItem[] {
-    return this.normalizeItems(this.items);
+    const cached = this.normalizedItemsCache;
+    if (
+      cached &&
+      cached.source === this.items &&
+      cached.locale === this.effectiveLocale
+    )
+      return cached.result;
+    const result = this.normalizeItems(this.items);
+    this.normalizedItemsCache = {
+      source: this.items,
+      locale: this.effectiveLocale,
+      result,
+    };
+    return result;
   }
+
+  // Stable bound fields, not inline arrows recreated per render: `<lr-virtual-list>` compares
+  // `renderItem`/`keyFunction` by reference too, and a new closure invalidates the same caches a
+  // new items array would.
+  private readonly renderVirtualItem = (item: unknown): unknown =>
+    this.itemTemplate(item as IngestionQueueItem, false);
+  private readonly ingestionItemKey = (item: unknown): string =>
+    (item as IngestionQueueItem).id;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -591,10 +624,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
           ? html`<lr-virtual-list
               part="list"
               exportparts="item:item, item-header:item-header, item-name:item-name, item-stage:item-stage, item-progress:item-progress, item-meta:item-meta, item-chunk-count:item-chunk-count, item-embedding-status:item-embedding-status, item-attempts:item-attempts, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"
-              .items=${items}
-              .renderItem=${(item: unknown) =>
-                this.itemTemplate(item as IngestionQueueItem, false)}
-              .keyFunction=${(item: unknown) => (item as IngestionQueueItem).id}
+              .items=${guard([items], () => items)}
+              .renderItem=${this.renderVirtualItem}
+              .keyFunction=${this.ingestionItemKey}
             ></lr-virtual-list>`
           : html`<div part="list" role="list">
               ${repeat(

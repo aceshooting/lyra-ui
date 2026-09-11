@@ -30,6 +30,7 @@ import {
   composedContains,
   type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './selection-toolbar.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -162,6 +163,10 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   @query('[part="toolbar"]') private toolbar?: HTMLElement;
   private overlay?: OverlayHandle;
   private stopPositioning?: () => void;
+  /** Announces a copy failure -- the copy button's own `aria-label`/text flipping to
+   *  `localize('copyFailed')` is not reliably re-announced by a screen reader without an
+   *  explicit live region, unlike every other failure/transition state in this family. */
+  private sink?: AnnouncementSink;
   private activeActionIndex = 0;
   private lifecycleGeneration = 0;
   private positioningGeneration = 0;
@@ -192,6 +197,12 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Acquired on connect, not on the first failure: assistive tech has to have been observing a
+    // live region *before* text arrives for the change to be announced at all.
+    this.sink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no update in between, so
     // updated()'s `changed.has('open')` branch never reruns to notice `open` is still true --
@@ -213,6 +224,8 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     this.releaseManagedActionStops();
     this.retirePositioning();
     this.overlay?.suspend();
+    this.sink?.release();
+    this.sink = undefined;
     super.disconnectedCallback();
   }
 
@@ -329,6 +342,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       if (!this.isCurrentLifecycle(generation, owner)) return;
       if (!outcome.ok) {
         this.copyFailed = true;
+        this.sink?.announce(this.localize('copyFailed'));
         this.emit('lr-error', null);
         this.emit('lr-copy-error', outcome);
         return;

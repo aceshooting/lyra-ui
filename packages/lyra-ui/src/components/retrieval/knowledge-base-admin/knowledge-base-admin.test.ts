@@ -191,7 +191,7 @@ describe("lr-knowledge-base-admin", () => {
     expect(details).to.deep.equal([]);
   });
 
-  it("keeps a host name distinct from the visible heading and tablist", async () => {
+  it("lets a host aria-label override the tablist's accessible name while the visible heading keeps showing label", async () => {
     const el = (await fixture(
       html`<lr-knowledge-base-admin
         label="Visible knowledge base"
@@ -203,11 +203,11 @@ describe("lr-knowledge-base-admin", () => {
     const heading = el.shadowRoot!.querySelector('[part="heading"]')!;
     expect(el.getAttribute("aria-label")).to.equal("Author admin region");
     expect(section.getAttribute("aria-label")).to.equal(null);
-    expect(tablist.getAttribute("aria-label")).to.equal("Visible knowledge base");
+    expect(tablist.getAttribute("aria-label")).to.equal("Author admin region");
     expect(heading.textContent).to.equal("Visible knowledge base");
   });
 
-  it("keeps explicit-empty and dynamic host naming distinct from the section and tablist", async () => {
+  it("tracks explicit-empty and dynamic host naming on the tablist, falling back to label only once host naming is absent", async () => {
     const el = (await fixture(
       html`<lr-knowledge-base-admin
         label="Visible knowledge base"
@@ -223,17 +223,17 @@ describe("lr-knowledge-base-admin", () => {
         .getAttribute("aria-label"),
     ];
     expect(el.getAttribute("aria-label")).to.equal("Author admin region");
-    expect(owners()).to.deep.equal([null, "Visible knowledge base"]);
+    expect(owners()).to.deep.equal([null, "Author admin region"]);
 
     el.setAttribute("aria-label", "");
     await el.updateComplete;
     expect(el.getAttribute("aria-label")).to.equal("");
-    expect(owners()).to.deep.equal([null, "Visible knowledge base"]);
+    expect(owners()).to.deep.equal([null, ""]);
 
     el.setAttribute("aria-label", "Revised admin region");
     await el.updateComplete;
     expect(el.getAttribute("aria-label")).to.equal("Revised admin region");
-    expect(owners()).to.deep.equal([null, "Visible knowledge base"]);
+    expect(owners()).to.deep.equal([null, "Revised admin region"]);
 
     el.removeAttribute("aria-label");
     await el.updateComplete;

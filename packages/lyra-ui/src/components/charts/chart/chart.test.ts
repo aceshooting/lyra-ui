@@ -101,6 +101,22 @@ describe('bounded chart surface regressions', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('takes bounded, clone-owned readonly snapshots for annotations/hiddenDatasets, matching lr-box-plot/lr-lite-chart', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const annotations: LyraChartAnnotation[] = [{ axis: 'y', value: 1, label: 'Target' }];
+    const hiddenDatasets = [0];
+    el.annotations = annotations;
+    el.hiddenDatasets = hiddenDatasets;
+
+    expect(el.annotations).to.not.equal(annotations);
+    expect(Object.isFrozen(el.annotations)).to.be.true;
+    expect(() => (el.annotations as unknown as LyraChartAnnotation[]).push({})).to.throw();
+
+    expect(el.hiddenDatasets).to.not.equal(hiddenDatasets);
+    expect(Object.isFrozen(el.hiddenDatasets)).to.be.true;
+    expect(() => (el.hiddenDatasets as unknown as number[]).push(1)).to.throw();
+  });
+
   it('projects descriptor-safe Chart.js inputs once while retaining valid siblings and opaque plugins', () => {
     const el = document.createElement('lr-chart') as LyraChart;
     const hostileSeries = {};
@@ -2317,6 +2333,13 @@ it('keeps the core chart usable and announces localized data-label and stack-tot
   expect(announcementTexts(document, 'assertive')).to.deep.equal(warningTexts);
 });
 
+it('matches its own documented (attribute: false) contract for annotations -- a JSON attribute string is not a live write path', async () => {
+  const el = (await fixture(
+    html`<lr-chart annotations='[{"value":1,"label":"SLO"}]'></lr-chart>`
+  )) as LyraChart;
+  expect(el.annotations).to.deep.equal([]);
+});
+
 it('keeps the core chart usable and announces a localized warning when the annotation peer is unavailable', async () => {
   const mod = await import('chart.js');
   const el = document.createElement('lr-chart') as LyraChart;
@@ -2636,6 +2659,15 @@ it('positions the center slot from chart-area geometry', async () => {
   expect(center.style.left).to.equal('100px');
   expect(center.style.top).to.equal('90px');
   expect(el.chartArea?.width).to.equal(160);
+});
+
+it('degrades a .chartArea=${x} Lit binding to a silent no-op instead of throwing', async () => {
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+  const before = el.chartArea;
+  expect(() => {
+    (el as unknown as { chartArea: unknown }).chartArea = { left: 1, top: 2, right: 3, bottom: 4, width: 2, height: 2 };
+  }).not.to.throw();
+  expect(el.chartArea).to.equal(before);
 });
 
 it('refreshTheme() forces a redraw that re-reads the --lr-chart-* tokens after an out-of-band computed-style change', async () => {
@@ -3899,6 +3931,22 @@ it('locale-formats generated table values, row ordinals, and summary counts', as
       el.shadowRoot!.querySelector('[part="data-table"] tbody td')?.textContent?.trim(),
     ).to.equal('table:€1234.50');
     expect(contexts).to.include('table');
+  });
+
+  it('routes the spoken surface (description and keyboard announcement) through valueFormatter', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [{ label: 'Revenue', data: [1234.5] }];
+    el.valueFormatter = (value, context) => `${context}:€${value.toFixed(2)}`;
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    expect((el as any).chartDescription()).to.contain('table:€1234.50');
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect((el as any).keyboardDatumAnnouncement).to.contain('table:€1234.50');
   });
 
   it('adds formatted totals to the accessible table when stacked and stackTotals are enabled', async () => {
@@ -6664,4 +6712,55 @@ it('retains scriptable bar borders and mixed-series widths through native option
   await el.updateComplete;
   await waitUntil(() => bars()[0]!.options.borderRadius === 2);
   expect(bars()[1]!.options.borderWidth).to.equal(0);
+});
+
+it('lets authored elements.arc.borderWidth win over the generated default on slice charts', async () => {
+  const el = await fixture<LyraChart>(html`<lr-chart type="doughnut" without-animation
+    .labels=${['A', 'B']}
+    .datasets=${[{ label: 'Distribution', data: [1, 2] }]}
+    .config=${{ options: { elements: { arc: { borderWidth: 0 } } } }}></lr-chart>`);
+  const runtime = () => (el as unknown as { chart?: import('chart.js').Chart }).chart;
+  await waitUntil(() => !!runtime());
+  const firstArc = () => runtime()!.getDatasetMeta(0).data[0] as import('chart.js').ArcElement;
+  expect(firstArc().options.borderWidth).to.equal(0);
+  el.config = { options: { datasets: { doughnut: { borderWidth: 4 } } } };
+  await el.updateComplete;
+  await waitUntil(() => firstArc().options.borderWidth === 4);
+  el.config = undefined;
+  await el.updateComplete;
+  await waitUntil(() => firstArc().options.borderWidth !== 4, 'unsetting config restores the generated default');
+  expect(firstArc().options.borderWidth).to.be.greaterThan(0);
+});
+
+it('lets authored elements.point.radius win over the generated default on point-bearing charts', async () => {
+  const el = await fixture<LyraChart>(html`<lr-chart type="line" without-animation
+    .labels=${['A', 'B']}
+    .datasets=${[{ label: 'Series', data: [1, 2] }]}
+    .config=${{ options: { elements: { point: { radius: 0 } } } }}></lr-chart>`);
+  const runtime = () => (el as unknown as { chart?: import('chart.js').Chart }).chart;
+  await waitUntil(() => !!runtime());
+  const firstPoint = () => runtime()!.getDatasetMeta(0).data[0] as import('chart.js').PointElement;
+  expect(firstPoint().options.radius).to.equal(0);
+  el.config = { options: { datasets: { line: { pointRadius: 6 } } } };
+  await el.updateComplete;
+  await waitUntil(() => firstPoint().options.radius === 6);
+  el.config = undefined;
+  await el.updateComplete;
+  await waitUntil(() => firstPoint().options.radius !== 6, 'unsetting config restores the generated default');
+  expect(firstPoint().options.radius).to.be.greaterThan(0);
+});
+
+it('gives radar the same line-weight borderWidth default as line, not the thinner generic border default', async () => {
+  const line = await fixture<LyraChart>(html`<lr-chart type="line" without-animation
+    .labels=${['A', 'B']}
+    .datasets=${[{ label: 'Series', data: [1, 2] }]}></lr-chart>`);
+  const radar = await fixture<LyraChart>(html`<lr-chart type="radar" without-animation
+    .labels=${['A', 'B', 'C']}
+    .datasets=${[{ label: 'Series', data: [1, 2, 3] }]}></lr-chart>`);
+  const runtime = (el: LyraChart) => (el as unknown as { chart?: import('chart.js').Chart }).chart;
+  await waitUntil(() => !!runtime(line));
+  await waitUntil(() => !!runtime(radar));
+  const lineBorderWidth = (runtime(line)!.getDatasetMeta(0).dataset as import('chart.js').LineElement).options.borderWidth;
+  const radarBorderWidth = (runtime(radar)!.getDatasetMeta(0).dataset as import('chart.js').LineElement).options.borderWidth;
+  expect(radarBorderWidth).to.equal(lineBorderWidth);
 });

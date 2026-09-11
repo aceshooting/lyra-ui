@@ -12,13 +12,14 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { firstByIdentity } from '../collection-identity.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './subagent-panel.styles.js';
 import type { AgentRunActivateDetail } from '../run-events.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_subagentPanelCancelRun, LYRA_DEFAULT_subagentPanelEmpty, LYRA_DEFAULT_subagentPanelLabel, LYRA_DEFAULT_subagentPanelLimit, LYRA_DEFAULT_subagentPanelRetry, LYRA_DEFAULT_subagentPanelRetryRun } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_subagentPanelCancelRun, LYRA_DEFAULT_subagentPanelEmpty, LYRA_DEFAULT_subagentPanelLabel, LYRA_DEFAULT_subagentPanelLimit, LYRA_DEFAULT_subagentPanelRetry, LYRA_DEFAULT_subagentPanelRetryRun } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -88,6 +89,14 @@ interface OrderedRuns {
  * @cssprop [--lr-subagent-panel-selected-border=var(--lr-color-brand)] - Selected run border.
  * @cssprop [--lr-subagent-panel-progress-track=var(--lr-color-border)] - Progress track.
  * @cssprop [--lr-subagent-panel-progress-fill=var(--lr-color-brand)] - Progress fill.
+ * @cssprop [--lr-subagent-panel-compact-trigger-padding=var(--lr-space-2xs) var(--lr-space-s)] -
+ *   `[part="run-trigger"]` padding while `compact`.
+ * @cssprop [--lr-subagent-panel-compact-trigger-gap=var(--lr-space-2xs)] - Gap between
+ *   `[part="run-trigger"]`'s label/status/task/model/progress while `compact`.
+ * @cssprop [--lr-subagent-panel-compact-font-size=var(--lr-font-size-2xs)] - `[part="task"]`/
+ *   `[part="model"]` font size while `compact`.
+ * @cssprop [--lr-subagent-panel-compact-action-padding=var(--lr-space-2xs)] - `[part="cancel"]`/
+ *   `[part="retry"]` padding while `compact`.
  * @status stable
  * @since 7.0.0
  */
@@ -103,6 +112,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     agentRunStatusQueued: LYRA_DEFAULT_agentRunStatusQueued,
     agentRunStatusWaitingApproval: LYRA_DEFAULT_agentRunStatusWaitingApproval,
     agentRunStatusWaitingInput: LYRA_DEFAULT_agentRunStatusWaitingInput,
+    progress: LYRA_DEFAULT_progress,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
     subagentPanelCancelRun: LYRA_DEFAULT_subagentPanelCancelRun,
@@ -128,6 +138,18 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   /** Optional accessible-name override for the `role="tree"` element. Omission localizes the
    *  default; any supplied string, including `''`, is rendered verbatim. */
   @property() label?: string;
+
+  /** Tighter run-row padding/gaps and smaller task/model text -- same convention as
+   *  `lr-task-list`/`lr-stack-trace`/`lr-thinking-panel`/`lr-terminal`'s `compact`. Defaults to
+   *  `false`, i.e. full padding. Purely a density knob: each row's own border stays, so use
+   *  `frame="plain"` instead to drop the chrome entirely. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome for each run row, in the library's shared container-frame vocabulary. `'card'`
+   *  (the default) keeps each row's own border/radius; `'plain'` drops it, for a transcript or
+   *  message-bubble context that already draws its own border around a nested
+   *  `<lr-subagent-panel>` and would otherwise double it. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** Roving-tabindex focus target. `null` defaults the first rendered row to `tabindex="0"`. */
   @state() private focusedId: string | null = null;
@@ -375,7 +397,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
               ? html`<span
                   part="progress"
                   role="progressbar"
-                  aria-label=${run.label}
+                  aria-label=${run.label || this.localize('progress')}
                   aria-valuemin="0"
                   aria-valuemax="100"
                   aria-valuenow=${Math.round(progress * 100)}

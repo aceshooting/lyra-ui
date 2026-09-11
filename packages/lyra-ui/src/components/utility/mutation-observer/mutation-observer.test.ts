@@ -207,6 +207,36 @@ describe('<lr-mutation-observer>', () => {
       expect(el.subtree).to.equal(true);
     });
 
+    it('subtree="false" (plain HTML attribute) excludes a nested-descendant mutation that the true default includes (unset regression)', async () => {
+      const scoped = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer child-list subtree="false"><div><span></span></div></lr-mutation-observer>`,
+      );
+      expect(scoped.subtree).to.equal(false);
+      await scoped.updateComplete;
+      const nestedGrandchild = scoped.querySelector('span')!;
+
+      let fired = false;
+      scoped.addEventListener('lr-mutation', () => {
+        fired = true;
+      });
+      nestedGrandchild.append(document.createElement('em'));
+      await aTimeout(20);
+      expect(fired, 'a mutation nested below the direct slotted child must NOT be reported when subtree=false').to.equal(false);
+
+      // Contrast: the identical nested mutation, observed with the true default, IS reported --
+      // proving the assertion above exercises subtree's real MutationObserverInit wiring rather
+      // than some other suppression.
+      const defaulted = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer child-list><div><span></span></div></lr-mutation-observer>`,
+      );
+      await defaulted.updateComplete;
+      const defaultedGrandchild = defaulted.querySelector('span')!;
+      const event = oneEvent(defaulted, 'lr-mutation');
+      defaultedGrandchild.append(document.createElement('em'));
+      const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
+      expect(result.detail.records.length).to.be.greaterThan(0);
+    });
+
     it('enables child-list from its plain HTML boolean attribute', async () => {
       const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`);
       expect(el.childList).to.equal(true);

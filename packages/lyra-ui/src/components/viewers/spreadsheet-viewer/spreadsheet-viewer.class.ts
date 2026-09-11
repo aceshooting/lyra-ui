@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -511,6 +512,14 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     >`;
   }
 
+  // Stable across every render (unlike an inline arrow literal in the template), and paired with
+  // `.items`'s `guard()` against the sheet's own `rows` reference -- together these keep an
+  // unrelated reactive update (e.g. `activeSheetIndex`, `activeRowKey`) from forcing a full O(n)
+  // offset recompute on the composed `<lr-virtual-list>`, since a fresh `.keyFunction` closure
+  // and a fresh `[header, ...body]` destructure (recomputed every render regardless) otherwise
+  // appear to change identity even when the sheet's row data did not.
+  private readonly virtualListKeyFunction = (_item: unknown, bodyIndex: number): number => bodyIndex;
+
   private renderSheet(sheet: SpreadsheetSheet, index: number): TemplateResult {
     const [header, ...body] = sheet.rows;
     if (!header)
@@ -534,7 +543,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         part="rows"
         exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
         data-sheet-index=${index}
-        .items=${body}
+        .items=${guard([sheet.rows], () => body)}
         .renderItem=${(row: unknown, bodyIndex: number) =>
           this.renderRow(
             row as unknown[],
@@ -543,7 +552,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
             bodyIndex + 2,
             sheet.name
           )}
-        .keyFunction=${(_item: unknown, bodyIndex: number) => bodyIndex}
+        .keyFunction=${this.virtualListKeyFunction}
         .activeItemId=${index === this.activeSheetIndex ? this.activeRowKey : ''}
         item-role="row"
         row-index-offset="1"

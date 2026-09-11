@@ -661,6 +661,23 @@ describe('lr-commit-card', () => {
   });
 });
 
+it('reads its border widths from --lr-border-width-thin, not the generic --lr-size-1px scale (regression: theming purpose)', async () => {
+  const el = (await fixture(html`
+    <lr-commit-card
+      hash="abcdef1"
+      style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;"
+    ></lr-commit-card>
+  `)) as LyraCommitCard;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const copyButton = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+  expect(copyButton, 'copy button renders (copyable defaults true)').to.exist;
+  // A consumer retuning the documented --lr-theme-border-width-thin input must move these
+  // borders; retuning the unrelated --lr-theme-size-1px sizing scale must not.
+  expect(getComputedStyle(base).borderTopWidth).to.equal('11px');
+  expect(getComputedStyle(copyButton).borderTopWidth).to.equal('11px');
+});
+
 it('normalizes duplicate file paths first-wins before diffstat and row events', async () => {
   const el = await fixture<LyraCommitCard>(html`
     <lr-commit-card

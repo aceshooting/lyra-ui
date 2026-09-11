@@ -495,8 +495,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this._datasets = normalizeLiteChartSeries(value);
     this.requestUpdate('datasets', previous);
   }
+  /**
+   * Deliberately opt-in (default `false`), unlike `lr-chart`'s negative-polarity `withoutLegend`
+   * (legend shown by default): `lr-lite-chart`'s typical single-series sparkline-adjacent usage is
+   * more often legend-redundant than `lr-chart`'s typical multi-dataset case.
+   */
   @property({ type: Boolean }) legend = false;
-  /** Logical placement for the optional DOM legend. */
+  /** Logical placement for the optional DOM legend. Deliberately `'bottom'`, unlike `lr-chart`'s
+   *  `'top'` default -- shared with `lr-box-plot` via `chart-chrome.ts`'s
+   *  `normalizeChartChromeLegendPosition()` default. */
   @property({
     attribute: 'legend-position',
     converter: { fromAttribute: normalizeChartChromeLegendPosition },

@@ -402,7 +402,20 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         normalized.length !== this.selectedChunkIds.length ||
         normalized.some((id, index) => id !== this.selectedChunkIds[index])
       ) {
+        // A `chunks` reassignment dropping previously-selected ids is a self-mutation of public
+        // state (`selectedChunkIds`), not just an internal cache repair -- without `lr-select`, a
+        // host's own external copy of `selectedChunkIds` silently diverges with no way to resync.
+        // Skipped on `selectedChunkIds` alone (an explicit controlled write already reflects the
+        // caller's own intent) and on the very first update (nothing to resync yet).
+        const shouldAnnounce = this.hasUpdated && changed.has('chunks');
         this.selectedChunkIds = normalized;
+        if (shouldAnnounce) {
+          const selected = new Set(normalized);
+          this.emit('lr-select', {
+            chunkIds: normalized,
+            chunks: this.canonicalChunks().filter((chunk) => selected.has(chunk.id)),
+          });
+        }
       }
     }
     if (

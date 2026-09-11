@@ -49,7 +49,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text);
     background: transparent;
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     min-inline-size: 0;

@@ -2273,6 +2273,23 @@ describe("storage-key persistence", () => {
     expect(el2.railWidthPx).to.equal(260);
   });
 
+  it("lets an explicit railWidthPx binding win over stale persisted state on mount, with default persist", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(
+      `lr-app-rail:${key}`,
+      JSON.stringify({ open: false, railWidthPx: 260 })
+    );
+
+    const el = (await fixture(
+      html`<lr-app-rail resizable storage-key=${key} .railWidthPx=${240}
+        ><a href="/a">A</a></lr-app-rail
+      >`
+    )) as LyraAppRail;
+    await el.updateComplete;
+
+    expect(el.railWidthPx).to.equal(240);
+  });
+
   it("does not touch localStorage when storage-key is unset", async () => {
     const el = (await fixture(
       html`<lr-app-rail resizable><a href="/a">A</a></lr-app-rail>`

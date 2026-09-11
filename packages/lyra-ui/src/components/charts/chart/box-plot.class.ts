@@ -11,7 +11,16 @@ import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { resolveCanvasColor, seriesPalette } from './chart-colors.js';
+import {
+  FALLBACK_GRID_COLOR,
+  FALLBACK_LEGEND_COLOR,
+  FALLBACK_TICK_COLOR,
+  FALLBACK_TOOLTIP_BG,
+  FALLBACK_TOOLTIP_TEXT,
+  resolveCanvasColor,
+  seriesPalette,
+  type ChartThemeColors as ThemeColors,
+} from './chart-colors.js';
 import {
   createForcedColorPattern,
   forcedColorEncoding,
@@ -91,27 +100,9 @@ function normalizeBoxPlotSeries(value: unknown): readonly LyraBoxPlotSeries[] {
   }
 }
 
-// Defensive JS-side fallbacks for themeColors() below, mirroring the
-// light-mode default of each `--lr-chart-*` token's own fallback chain
-// (see box-plot.styles.ts) — only reached if getComputedStyle somehow can't
-// resolve the custom property at all (e.g. host detached from the document).
-// Same values as chart.ts's own fallbacks, since both default to the same
-// semantic tokens.
-const FALLBACK_GRID_COLOR = '#8a8a90';
-const FALLBACK_TICK_COLOR = '#6b7280';
-const FALLBACK_LEGEND_COLOR = '#1a1a1a';
-const FALLBACK_TOOLTIP_BG = '#fff';
-const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
-
-// Mirrors chart.ts's own `ThemeColors` shape (all 5 `--lr-chart-*` tokens)
-// so scales, legends, and tooltips share the same canvas theme contract.
-interface ThemeColors {
-  grid: string;
-  tick: string;
-  legend: string;
-  tooltipBg: string;
-  tooltipText: string;
-}
+// FALLBACK_GRID_COLOR/FALLBACK_TICK_COLOR/FALLBACK_LEGEND_COLOR/FALLBACK_TOOLTIP_BG/
+// FALLBACK_TOOLTIP_TEXT/ThemeColors (imported above as ChartThemeColors) now live in
+// chart-colors.ts, shared verbatim with chart.class.ts's identical fallback chain.
 
 type BrowserWindow = Window & typeof globalThis;
 
@@ -282,6 +273,34 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @cssprop --lr-box-plot-data-table-toggle-active-bg - Pressed background of the `dataTableToggle`
  *   disclosure button; defaults to a mix of the hover background with the shared active mix
  *   partner.
+ * @cssprop [--lr-box-plot-border-width=var(--lr-border-width-thin)] - Canvas box-outline stroke
+ *   width, in pixels. Same override mechanism as `<lr-chart>`'s `--border-width`.
+ * @cssprop [--lr-box-plot-item-radius=0] - Radius, in pixels, of the individual raw-sample dots
+ *   drawn alongside each box; `0` (the default) disables them.
+ * @cssprop [--lr-box-plot-border-color-1=var(--lr-color-chart-1)] - First series box-outline color.
+ * @cssprop [--lr-box-plot-border-color-2=var(--lr-color-chart-2)] - Second series box-outline color.
+ * @cssprop [--lr-box-plot-border-color-3=var(--lr-color-chart-3)] - Third series box-outline color.
+ * @cssprop [--lr-box-plot-border-color-4=var(--lr-color-chart-4)] - Fourth series box-outline color.
+ * @cssprop [--lr-box-plot-border-color-5=var(--lr-color-chart-5)] - Fifth series box-outline color.
+ * @cssprop [--lr-box-plot-border-color-6=var(--lr-color-chart-6)] - Sixth series box-outline color.
+ * @cssprop [--lr-box-plot-border-color-7=var(--lr-color-chart-7)] - Seventh series box-outline color.
+ * @cssprop [--lr-box-plot-border-color-8=var(--lr-color-chart-8)] - Eighth series box-outline color.
+ * @cssprop [--lr-box-plot-fill-color-1=var(--lr-color-chart-1)] - First series box-fill and
+ *   legend-swatch color.
+ * @cssprop [--lr-box-plot-fill-color-2=var(--lr-color-chart-2)] - Second series box-fill and
+ *   legend-swatch color.
+ * @cssprop [--lr-box-plot-fill-color-3=var(--lr-color-chart-3)] - Third series box-fill and
+ *   legend-swatch color.
+ * @cssprop [--lr-box-plot-fill-color-4=var(--lr-color-chart-4)] - Fourth series box-fill and
+ *   legend-swatch color.
+ * @cssprop [--lr-box-plot-fill-color-5=var(--lr-color-chart-5)] - Fifth series box-fill and
+ *   legend-swatch color.
+ * @cssprop [--lr-box-plot-fill-color-6=var(--lr-color-chart-6)] - Sixth series box-fill and
+ *   legend-swatch color.
+ * @cssprop [--lr-box-plot-fill-color-7=var(--lr-color-chart-7)] - Seventh series box-fill and
+ *   legend-swatch color.
+ * @cssprop [--lr-box-plot-fill-color-8=var(--lr-color-chart-8)] - Eighth series box-fill and
+ *   legend-swatch color.
  * @csspart error - Static visible error shown instead of the canvas when the optional box-plot
  *   peer fails to load; its transition is announced through a shared light-DOM alert.
  * @csspart data-truncation - Explanation shown when the generated accessible alternative samples
@@ -381,8 +400,16 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
   /** Complete controlled legend visibility state. `undefined` keeps the default all-visible state. */
   @property({ attribute: false }) hiddenDatasets?: readonly number[];
+  /**
+   * Deliberately opt-in (default `false`), unlike `lr-chart`'s negative-polarity
+   * `withoutLegend` (legend shown by default): a box plot's single/few-series comparison usage is
+   * more often legend-redundant (category labels already identify each box) than `lr-chart`'s
+   * typical multi-dataset case.
+   */
   @property({ type: Boolean }) legend = false;
-  /** Logical placement for the optional DOM legend. */
+  /** Logical placement for the optional DOM legend. Deliberately `'bottom'`, unlike `lr-chart`'s
+   *  `'top'` default -- shared with `lr-lite-chart` via `chart-chrome.ts`'s
+   *  `normalizeChartChromeLegendPosition()` default. */
   @property({
     attribute: 'legend-position',
     converter: { fromAttribute: normalizeChartChromeLegendPosition },
@@ -744,6 +771,25 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   /**
+   * `seriesColor()`, then layered with a `--lr-box-plot-border-color-N` CSS override (`N` 1-8,
+   * wrapping like the underlying `--lr-color-chart-N` ramp) — mirrors `<lr-chart>`'s
+   * `--border-color-N`/`--fill-color-N` palette-override mechanism for the canvas box outline.
+   */
+  private seriesBorderColor(index: number, palette: string[] = seriesPalette(this)): string {
+    const base = this.seriesColor(index, palette);
+    return this.styleColor(`--lr-box-plot-border-color-${(index % 8) + 1}`, base);
+  }
+
+  /**
+   * `seriesColor()`, then layered with a `--lr-box-plot-fill-color-N` CSS override for the canvas
+   * box fill and the matching legend swatch.
+   */
+  private seriesFillColor(index: number, palette: string[] = seriesPalette(this)): string {
+    const base = this.seriesColor(index, palette);
+    return this.styleColor(`--lr-box-plot-fill-color-${(index % 8) + 1}`, base);
+  }
+
+  /**
    * The forced-colors texture painted over a box's fill, or `undefined` while the user is on a
    * normal palette. Mirrors `<lr-chart>`'s accommodation for its proportional types: forced-colors
    * mode collapses the eight-color `--lr-color-chart-*` ramp onto a repeating three-value system
@@ -769,6 +815,38 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     return value ? resolveCanvasColor(this, value, fallback) : fallback;
   }
 
+  /**
+   * Resolves a themeable numeric geometry token the same way `themeColors()`/`styleColor()`
+   * resolve color tokens — via `getComputedStyle` on every draw, since the peer renders to canvas
+   * and can't consume a CSS `var()` directly. `fallbackToken`, when given, is tried before the
+   * hard-coded `fallback` so the token can itself default to a `--lr-*` design token (mirrors
+   * `LyraChart.styleNumber()`).
+   */
+  private styleNumber(name: string, fallback: number, fallbackToken?: string): number {
+    const view = this.ownerWindow;
+    const cs = view ? view.getComputedStyle(this) : this.style;
+    const value =
+      cs.getPropertyValue(name).trim() ||
+      (fallbackToken ? cs.getPropertyValue(fallbackToken).trim() : '');
+    const direct = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(?:px)?$/i.exec(value);
+    if (direct) {
+      const resolved = Number.parseFloat(direct[1]!);
+      if (Number.isFinite(resolved) && resolved >= 0) return resolved;
+    }
+    if (!value || !view) return fallback;
+    const probe = this.ownerDocument.createElement('span');
+    probe.hidden = true;
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.inlineSize = value;
+    (this.shadowRoot ?? this).append(probe);
+    try {
+      const resolved = Number.parseFloat(view.getComputedStyle(probe).inlineSize);
+      return Number.isFinite(resolved) && resolved >= 0 ? resolved : fallback;
+    } finally {
+      probe.remove();
+    }
+  }
+
   private buildConfig(): BoxPlotChartConfiguration {
     const theme = this.themeColors();
     const palette = seriesPalette(this);
@@ -780,7 +858,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         labels: sample.rowIndexes.map((index) => this.labels[index] ?? ''),
         datasets: sample.seriesIndexes.map((sourceIndex) => {
           const s = this.datasets[sourceIndex]!;
-          const color = this.seriesColor(sourceIndex, palette);
+          const fillColor = this.seriesFillColor(sourceIndex, palette);
+          const borderColor = this.seriesBorderColor(sourceIndex, palette);
           return {
             label: s.label,
             // The peer annotates each summary object in place. Never pass a caller-owned object
@@ -789,8 +868,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
               const point = s.data[index];
               return this.validPoint(point) ? summaryOf(point) : null;
             }),
-            backgroundColor: this.forcedColorFill(sourceIndex, color),
-            borderColor: color,
+            backgroundColor: this.forcedColorFill(sourceIndex, fillColor),
+            borderColor,
           };
         }),
       },
@@ -801,6 +880,12 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         animation: prefersReducedMotion(this.ownerWindow) ? false : undefined,
         onClick: (event: unknown, _elements: unknown, chart: BoxPlotChartRuntime) =>
           this.handlePointClick(event, chart),
+        elements: {
+          boxandwhiskers: {
+            borderWidth: this.styleNumber('--lr-box-plot-border-width', 1, '--lr-border-width-thin'),
+            itemRadius: this.styleNumber('--lr-box-plot-item-radius', 0),
+          },
+        },
         plugins: {
           // The normal-flow DOM legend below can wrap long public labels; a canvas legend cannot.
           legend: { display: false, labels: { color: theme.legend } },
@@ -901,6 +986,13 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     if (this.legend) this.requestUpdate();
   }
 
+  /** A blank/missing `series.label` must never reach an accessible name (legend toggle) or a
+   *  rendered cell as empty text -- mirrors `LyraChart.datasetLabel()`'s fallback shape, reusing
+   *  this file's own existing `chartSeriesLabel` fallback (see `markAnnouncement()`). */
+  private seriesDisplayLabel(series: LyraBoxPlotSeries): string {
+    return series.label || this.localize('chartSeriesLabel');
+  }
+
   private formatValue(
     value: number,
     surface: LyraChartFormatSurface,
@@ -944,7 +1036,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         };
         rows.push([
           this.labels[index] ?? '',
-          series.label,
+          this.seriesDisplayLabel(series),
           this.formatValue(point.min, 'export', { ...metadata, statistic: 'min' }),
           this.formatValue(point.q1, 'export', { ...metadata, statistic: 'q1' }),
           this.formatValue(point.median, 'export', { ...metadata, statistic: 'median' }),
@@ -988,7 +1080,9 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         }
         count++;
       }
-      if (count === 0) return this.localize('chartSeriesNoData', undefined, { label: series.label });
+      if (count === 0) {
+        return this.localize('chartSeriesNoData', undefined, { label: this.seriesDisplayLabel(series) });
+      }
       const trend =
         last > first
           ? this.localize('chartTrendIncreasing')
@@ -996,7 +1090,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
             ? this.localize('chartTrendDecreasing')
             : this.localize('chartTrendFlat');
       return this.localize('boxPlotSeriesSummary', undefined, {
-        label: series.label,
+        label: this.seriesDisplayLabel(series),
         count: getNumberFormat(this.effectiveLocale).format(count),
         min: this.formatValue(min, 'spoken', {
           datasetIndex: index,
@@ -1242,7 +1336,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
                   <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, {
                     n: numberFormat.format(index + 1),
                   })}</th>
-                  <td>${series.label}</td>
+                  <td>${this.seriesDisplayLabel(series)}</td>
                   <td>${this.formatValue(point.min, 'table', { ...metadata, statistic: 'min' })}</td>
                   <td>${this.formatValue(point.q1, 'table', { ...metadata, statistic: 'q1' })}</td>
                   <td>${this.formatValue(point.median, 'table', { ...metadata, statistic: 'median' })}</td>
@@ -1298,7 +1392,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       <div part="legend" role="group" aria-label=${this.accessibleName(this.localize('boxPlot'))}>
         ${sample.seriesIndexes.map((index) => {
           const series = this.datasets[index]!;
-          const color = this.seriesColor(index, palette);
+          const color = this.seriesFillColor(index, palette);
           // As in `LyraChart`, public controlled state replaces unobservable Chart.js metadata.
           const visible = controlledHiddenSet === undefined || !controlledHiddenSet.has(index);
           const encoding: ForcedColorEncodingName | undefined = forced
@@ -1316,7 +1410,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
                 data-encoding=${encoding ?? nothing}
                 style="background-color:${color}"
               ></span>
-              <span>${series.label}</span>
+              <span>${this.seriesDisplayLabel(series)}</span>
             </button>
           `;
         })}

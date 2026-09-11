@@ -22,6 +22,10 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  acquireResolvedAriaRelationship,
+  type ResolvedAriaRelationshipLease,
+} from '../../../internal/aria-controls.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphQueryBuilderLabel, LYRA_DEFAULT_graphQueryDeleteWithContext, LYRA_DEFAULT_graphQueryDirectionLabel, LYRA_DEFAULT_graphQueryEndLabel, LYRA_DEFAULT_graphQueryHopRangeInvalid, LYRA_DEFAULT_graphQueryLoadWithContext, LYRA_DEFAULT_graphQueryMaxHopsLabel, LYRA_DEFAULT_graphQueryMinHopsLabel, LYRA_DEFAULT_graphQueryNodeTypeLabel, LYRA_DEFAULT_graphQueryRelationshipTypeLabel, LYRA_DEFAULT_graphQueryRun, LYRA_DEFAULT_graphQuerySaveButton, LYRA_DEFAULT_graphQuerySaveNameLabel, LYRA_DEFAULT_graphQuerySavedQueriesLabel, LYRA_DEFAULT_graphQueryStartLabel, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_noData, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -500,6 +504,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       }
     | { kind: 'saved'; targetId?: string };
   private removalFocusGeneration = 0;
+  /** Projects a host `aria-describedby` onto the internal `role="group"` owner --
+   *  IDREFs are scoped per shadow root, so the host's own attribute cannot reach across the
+   *  boundary on its own. Mirrors `<lr-slider>`'s `externalDescriptionLease`. */
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
 
   constructor() {
     super();
@@ -516,10 +524,33 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.syncFormState();
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
+  }
+
   override disconnectedCallback(): void {
     this.removalFocusGeneration++;
     this.pendingRemovalFocus = undefined;
+    this.releaseExternalDescription();
     super.disconnectedCallback();
+  }
+
+  private syncExternalDescription(): void {
+    const target = this.isConnected
+      ? (this.renderRoot.querySelector<HTMLElement>('[part="base"]') ?? null)
+      : null;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
   }
 
   get form(): HTMLFormElement | null {
@@ -916,6 +947,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.publishValiditySnapshot();
+    this.syncExternalDescription();
     const pending = this.pendingRemovalFocus;
     if (!pending) return;
     this.pendingRemovalFocus = undefined;

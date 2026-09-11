@@ -111,18 +111,24 @@ export const styles = css`
   }
 
   [part~='close-button']:where(:hover) {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    background: var(
+      --lr-alert-close-hover-bg,
+      color-mix(
+        in oklab,
+        transparent,
+        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+      )
     );
   }
 
   [part~='close-button']:where(:active) {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-alert-close-active-bg,
+      color-mix(
+        in oklab,
+        transparent,
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
 

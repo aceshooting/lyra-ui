@@ -128,6 +128,31 @@ it("keeps a definite flex-basis when --lr-prompt-input-control-width is unset", 
   // computed-value time, which invalidates the whole `flex` shorthand declaration and falls the
   // basis back to its initial `auto` -- a definite length here proves the fallback took effect.
   expect(getComputedStyle(control).flexBasis).to.not.equal("auto");
+  // Same failure mode, but for the sibling min-inline-size declaration: only the cssText source
+  // was previously asserted for this one, never the rendered/computed effect.
+  expect(getComputedStyle(control).minWidth).to.not.equal("auto");
+});
+
+it("does not inflate a control to the row-mode flex-basis height once the narrow breakpoint flips controls to a column", async () => {
+  const el = (await fixture(
+    html`<lr-prompt-input
+      style="inline-size: 300px"
+      .modelCatalog=${["fast", "accurate"]}
+    ></lr-prompt-input>`
+  )) as LyraPromptInput;
+  await el.updateComplete;
+  const control = el.shadowRoot!.querySelector(
+    '[part="controls"] > *'
+  ) as HTMLElement;
+  expect(control != null, "expected at least one rendered control").to.equal(
+    true
+  );
+  // In row mode `flex: 1 1 var(--lr-prompt-input-control-width, ...)` gives the control a
+  // 12rem (192px) *width* basis. Below the 319.98px container breakpoint, [part='controls']
+  // flips to flex-direction: column -- in a column flex container flex-basis sets the *height*
+  // basis instead, so the same declaration would balloon the control to ~192px tall unless the
+  // narrow-breakpoint rule also resets it.
+  expect(control.getBoundingClientRect().height).to.be.lessThan(100);
 });
 
 it("composes attachments, model, voice, sources, queue, and the chat composer", async () => {

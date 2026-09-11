@@ -6,7 +6,7 @@ import '../../forms/button/button.js';
 import { LyraKnownDate, type LyraKnownDateParts } from './known-date.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 class KnownDateErrorForwardWrapper extends HTMLElement {
   constructor() {
@@ -934,6 +934,22 @@ describe('valueAsDate', () => {
     expect(el.value).to.equal('0099-12-31');
     expect(el.valueAsDate?.getFullYear()).to.equal(99);
   });
+
+  it('clears to empty, not a malformed non-4-digit-year string, for a year outside 0000-9999', async () => {
+    const el = await fixture<LyraKnownDate>(html`<lr-known-date></lr-known-date>`);
+    el.valueAsDate = new Date(10000, 0, 1);
+    expect(el.value).to.equal('');
+    expect(el.valueAsDate).to.equal(null);
+
+    el.valueAsDate = new Date(2026, 2, 5);
+    expect(el.value).to.equal('2026-03-05');
+
+    const negative = new Date(0);
+    negative.setFullYear(-1, 0, 1);
+    el.valueAsDate = negative;
+    expect(el.value).to.equal('');
+    expect(el.valueAsDate).to.equal(null);
+  });
 });
 
 describe(':state(blank)', () => {
@@ -1422,13 +1438,12 @@ describe('field-input hover (mouse-user parity with :focus-visible)', () => {
     await el.updateComplete;
     const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
     const restBorder = getComputedStyle(field).borderColor;
-    const rect = field.getBoundingClientRect();
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
-      expect(getComputedStyle(field).borderColor).to.not.equal(restBorder);
+      await hoverUntilMatched(field, 'field-input never received the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(field).borderColor !== restBorder,
+        'field-input never picked up its hover border',
+      );
     } finally {
       await resetMouse();
     }

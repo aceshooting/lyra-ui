@@ -191,6 +191,20 @@ it('does not recreate Chart.js after a values update is disconnected in the same
   expect((el as any).chart).to.equal(undefined);
 });
 
+it('paints visible pixels for an all-identical-value degenerate distribution', async () => {
+  const el = (await fixture(html`<lr-histogram without-animation bins="5"
+    style="inline-size:320px;block-size:200px"></lr-histogram>`)) as LyraHistogram;
+  el.values = [7, 7, 7, 7, 7, 7];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, 'chart never initialized', { timeout: 2000 });
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
+  expect(
+    pixels.some((value, index) => index % 4 === 3 && value > 0),
+    'a single-bucket degenerate distribution still paints a visible bar instead of nothing',
+  ).to.equal(true);
+});
+
 it('keeps histogram value redraws visibility-gated', async () => {
   const el = (await fixture(html`<lr-histogram .values=${[1, 2, 3]}></lr-histogram>`)) as LyraHistogram;
   await el.updateComplete;

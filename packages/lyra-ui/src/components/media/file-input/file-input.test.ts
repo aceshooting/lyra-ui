@@ -2827,6 +2827,16 @@ it("trims files to a single entry when multiple flips off while several are sele
   expect(el.files[0]!.name).to.equal("a.csv");
 });
 
+it("keeps every file when .files binds before .multiple in the same template update", async () => {
+  const a = makeFile("a.csv", "text/csv");
+  const b = makeFile("b.csv", "text/csv");
+  const el = (await fixture(
+    html`<lr-file-input .files=${[a, b]} .multiple=${true}></lr-file-input>`
+  )) as LyraFileInput;
+  await el.updateComplete;
+  expect(el.files.map((file) => file.name)).to.deep.equal(["a.csv", "b.csv"]);
+});
+
 it("falls back to a null multiple form value when FormData cannot be constructed", async () => {
   const el = (await fixture(
     html`<lr-file-input multiple name="attachment"></lr-file-input>`
@@ -4280,4 +4290,27 @@ it("maps a malformed object-validator result to the localized generic failure", 
   expect(el.checkValidity()).to.be.false;
   expect(el.validity.customError).to.be.true;
   expect(el.validationMessage).to.equal("Upload policy unavailable.");
+});
+
+describe("aria-describedby forwarding", () => {
+  it('resolves host description ids onto the inner role="button" dropzone control', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="upload-policy">Files are scanned before upload.</span>
+        <lr-file-input aria-describedby="upload-policy"></lr-file-input>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-file-input") as LyraFileInput;
+    const description = wrapper.querySelector("#upload-policy")!;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+
+    if (Reflect.has(base, "ariaDescribedByElements")) {
+      const ids = (base.ariaDescribedByElements ?? []).map((element) => element);
+      expect(ids).to.include(description);
+    } else {
+      expect(base.getAttribute("aria-describedby")).to.contain("upload-policy");
+    }
+  });
 });

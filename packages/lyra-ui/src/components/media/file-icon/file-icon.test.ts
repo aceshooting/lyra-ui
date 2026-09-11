@@ -185,6 +185,23 @@ describe('lr-file-icon', () => {
     expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Visible file label');
   });
 
+  it('never leaves the default icon-only role="img" unnamed when label is explicitly empty', async () => {
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/pdf" label=""></lr-file-icon>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('PDF');
+  });
+
+  it('still suppresses only the visible mode="label" text when label is explicitly empty', async () => {
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/pdf" mode="label" label=""></lr-file-icon>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
+  });
+
   it('formats the size number with the effective locale', async () => {
     const el = await fixture(html`
       <lr-file-icon lang="ar-EG" mime-type="application/pdf" mode="label" bytes="2415919"></lr-file-icon>

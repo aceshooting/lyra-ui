@@ -30,7 +30,7 @@ const RESPONSIVE_PANEL_MODE = literalSetConverter<LyraResponsivePanelMode>(
  *  account -- `'auto'` never appears here. */
 export type LyraResponsivePanelEffectiveMode = 'inline' | 'overlay';
 
-export type LyraResponsivePanelVariant = 'fullscreen' | 'bottom-sheet';
+export type LyraResponsivePanelShape = 'fullscreen' | 'bottom-sheet';
 
 /** Reason the panel was closed, forwarded as the `lr-close` event detail --
  *  mirrors lr-dialog's own `DialogCloseReason` shape. `'escape'` and
@@ -145,7 +145,7 @@ export function resolveResponsivePanelEffectiveMode(
  * @cssprop [--lr-responsive-panel-overlay-panel-shadow=var(--lr-shadow-l)] - Shadow of
  *   `[part="panel"]` in the overlay presentation.
  * @cssprop [--lr-responsive-panel-sheet-max-block-size=85dvh] - Maximum height of the
- *   `variant="bottom-sheet"` overlay panel (falls back to `85vh` where `dvh` is unsupported).
+ *   `shape="bottom-sheet"` overlay panel (falls back to `85vh` where `dvh` is unsupported).
  * @status stable
  * @since 4.0.0
  */
@@ -186,8 +186,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   /** Only affects the overlay presentation's visual treatment -- `'fullscreen'` (default) covers
    *  the whole viewport; `'bottom-sheet'` anchors to the block-end edge and doesn't cover the full
-   *  height. No entrance motion is implied by the variant. */
-  @property({ reflect: true }) variant: LyraResponsivePanelVariant = 'fullscreen';
+   *  height. No entrance motion is implied by the shape. This is a presentation-shape axis, not
+   *  the library's shared semantic-tone `variant` vocabulary (`lr-button`/`lr-badge`/etc.) -- it
+   *  deliberately uses a different property name to avoid colliding with that meaning. */
+  @property({ reflect: true }) shape: LyraResponsivePanelShape = 'fullscreen';
 
   /** Accessible name for the overlay presentation's `role="dialog"`. Unused in the inline
    *  presentation, which has no dialog semantics to name. When empty, falls back to the `header`

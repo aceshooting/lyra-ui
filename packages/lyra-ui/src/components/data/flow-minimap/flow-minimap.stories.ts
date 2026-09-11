@@ -30,6 +30,27 @@ export const Default: Story = {
   `,
 };
 
+export const PlainInPanel: Story = {
+  name: 'frame="plain" (inside a host panel)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'With `frame="plain"` the minimap drops its border, background and corner radius, so it sits flush in a host panel that already draws a surface instead of doubling the frame. The map hover/click affordances and viewport rect are unchanged.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="display:inline-block; padding:0.5rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface);"
+    >
+      <lr-flow-canvas id="plain-canvas" style="width:24rem;height:16rem" .nodes=${nodes} .edges=${edges}>
+        <lr-flow-minimap slot="bottom-end" frame="plain"></lr-flow-minimap>
+      </lr-flow-canvas>
+    </div>
+  `,
+};
+
 export const ExternalPlacement: Story = {
   render: () => html`
     <div style="display:flex;flex-direction:column;gap:0.5rem">

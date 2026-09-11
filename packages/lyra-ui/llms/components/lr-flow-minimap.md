@@ -28,12 +28,18 @@ disagree.
   is used (the slotted-into-a-corner-slot case, the primary wiring)
 - `label: string = ''` — accessible name for the map region. A host `aria-label` takes precedence,
   followed by `label`, then the localized default
+- `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+  vocabulary. `'plain'` removes `[part="base"]`'s border, background and corner radius, for a
+  minimap placed in a host panel or toolbar that already draws its own surface, so the frame isn't
+  doubled. The map's own hover/click affordances and the viewport rect stay either way — only the
+  outer `base` decoration goes. Mirrors `lr-flow-controls`'/`lr-flow-run-status`'s identical `frame`.
 
 **Events:** none.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `map` (the scaled SVG), `node` (one rect per node), `viewport` (the
+**CSS parts:** `base` (the root wrapper; drops its border, background and corner radius under
+`frame="plain"`), `map` (the scaled SVG), `node` (one rect per node), `viewport` (the
 exact visible view rectangle), `viewport-hit-area` (the transparent draggable/focusable target),
 `instructions` (visually hidden keyboard help), and `live-region` (the `aria-hidden` mirror of the
 latest viewport-change text).

@@ -542,3 +542,27 @@ it('preserves literal native ring tooltip text and segment updates', async () =>
   await el.updateComplete;
   assertTitle(`Updated ${text}: 50`);
 });
+
+/**
+ * Regression: a near-zero-ratio segment's own inter-segment separator border could equal or
+ * exceed its computed flex-basis width, leaving nothing but a surface-colored hairline where its
+ * tone should be visible.
+ */
+it('floors a near-zero-ratio segment width so its tone stays visible past the separator border', async () => {
+  const el = (await fixture(html`
+    <lr-context-meter
+      style="inline-size: 400px"
+      total="100000"
+      .segments=${[
+        { label: 'Rest', value: 99999, tone: 'brand' },
+        { label: 'Tiny', value: 1, tone: 'warning' },
+      ]}
+    ></lr-context-meter>
+  `)) as LyraContextMeter;
+  const segments = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="segment"]');
+  expect(segments.length).to.equal(2);
+  const tiny = segments[1]!;
+  const borderWidthPx = parseFloat(getComputedStyle(tiny).borderInlineStartWidth || '0');
+  const tinyRect = tiny.getBoundingClientRect();
+  expect(tinyRect.width).to.be.greaterThan(borderWidthPx);
+});

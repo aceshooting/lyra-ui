@@ -661,6 +661,10 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     const mobile = this.view === 'mobile';
     const overlayOpen = mobile && this.navOpen;
     const navigationLabel = this.accessibleLabel ?? this.localize('navigation');
+    // The host idref lives in light DOM; role="dialog" lives on this shadow-internal drawer,
+    // which never inherits it across the shadow boundary on its own -- forward it explicitly so a
+    // consumer's <lr-page aria-describedby="hint"> reaches the dialog AT actually announces.
+    const hostDescribedBy = this.getAttribute('aria-describedby');
     return html`
       <div part="base page" @click=${this.onPageClick}>
         <a
@@ -714,6 +718,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
               role=${overlayOpen ? 'dialog' : nothing}
               aria-modal=${overlayOpen ? 'true' : nothing}
               aria-label=${overlayOpen ? navigationLabel : nothing}
+              aria-describedby=${overlayOpen && hostDescribedBy ? hostDescribedBy : nothing}
               aria-hidden=${mobile && !this.navOpen ? 'true' : nothing}
               tabindex=${overlayOpen ? '-1' : nothing}
               ?inert=${mobile && !this.navOpen}

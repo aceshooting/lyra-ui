@@ -259,6 +259,13 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   private readonly errorId = nextId('otp-input-error');
   @state() private activeSegmentIndex = 0;
   private segmentValues: string[] = [];
+  /** The last raw string passed to the `value` setter, before length/format-dependent truncation.
+   *  `willUpdate()` re-derives the live value from this (not from the already-truncated `value`)
+   *  whenever `type`/`case`/`length`/`format` changes, so a `value` assignment that lands in the
+   *  same batched update as a widening `length`/`format` (e.g. `el.value = '12345678'; el.length =
+   *  8;`, or the same template-binding order) never permanently loses the characters truncated
+   *  against the stale, not-yet-updated segment count. */
+  private rawValue = '';
   private segmentEditPendingChange = false;
   /** Invalidates a deferred autosubmission whose completion has since been superseded. */
   private autosubmitToken = 0;
@@ -283,7 +290,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
 
   override set value(next: string | null) {
     this.autosubmitToken += 1;
-    const normalized = this.sanitize(next ?? '');
+    this.rawValue = next ?? '';
+    const normalized = this.sanitize(this.rawValue);
     this.packSegmentValues(normalized);
     super.value = normalized;
   }
@@ -666,7 +674,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     // A narrower `type`/`case`/`length` must not leave a stale value that the same input could no
     // longer produce.
     if (changed.has('type') || changed.has('case') || changed.has('length') || changed.has('format')) {
-      const next = this.sanitize(this.value);
+      // Re-derive from the last RAW assignment, not from `this.value` -- the setter may already
+      // have truncated it against the stale segment count from before this same update batch.
+      const next = this.sanitize(this.rawValue);
       if (next !== this.value) this.value = next;
       else this.packSegmentValues(next);
     }

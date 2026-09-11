@@ -194,6 +194,10 @@ export const styles = css`
     margin: 0;
     max-inline-size: 100%;
     max-block-size: var(--lr-size-8rem);
+    /* overflow-x paired with overflow-y so a caption that never actually overflows horizontally
+       (max-inline-size + overflow-wrap already prevent that) cannot show a spurious empty
+       horizontal scrollbar from sub-pixel rounding on a single-axis overflow: auto. */
+    overflow-x: hidden;
     overflow-y: auto;
     align-self: center;
     padding: var(--lr-space-xs) var(--lr-space-s);

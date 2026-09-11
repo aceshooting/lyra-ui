@@ -2,7 +2,9 @@ import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type P
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   acquireAnnouncementSink,
@@ -62,7 +64,8 @@ const DEFAULT_VIEWPORT_MIN_SIZE_PX = 40;
  * available for click-to-center navigation.
  *
  * @customElement lr-flow-minimap
- * @csspart base - The root wrapper.
+ * @csspart base - The root wrapper. Drops its floating-surface chrome (border, background,
+ *   radius) under `frame="plain"`.
  * @csspart map - The scaled SVG.
  * @csspart node - One rect per node.
  * @csspart viewport - The exact visible canvas-view rectangle.
@@ -108,6 +111,13 @@ export class LyraFlowMinimap extends LyraElement {
   @property() for = '';
   /** Accessible name for the map region; falls back to a host `aria-label`, then `flowMinimapLabel`. */
   @property() label = '';
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
+   *  bordered, filled corner surface. `'plain'` removes the border, background and corner radius,
+   *  for a minimap placed in a host panel or toolbar that already draws its own surface, so the
+   *  frame isn't doubled. The map's own hover/click affordances and the viewport rect stay either
+   *  way -- only the outer `[part="base"]` decoration goes. Mirrors `lr-flow-controls`'/
+   *  `lr-flow-run-status`'s identical `frame`. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private snapshot: FlowStructureSnapshot | null = null;
   @state() private liveText = '';
@@ -244,6 +254,15 @@ export class LyraFlowMinimap extends LyraElement {
     if (this.hasUpdated && changed.has('for')) {
       this.companionController.targetIdChanged();
     }
+  }
+
+  // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never reaches
+  // `[part="base"]`'s own `role="region"` (which owns the accessible description) unless it is
+  // explicitly reflected there. Mirrors lr-checkbox's identical `syncAriaDescribedByElements` use.
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]') ?? undefined;
+    syncAriaDescribedByElements(this, base, this.getAttribute('aria-describedby'));
   }
 
   private attachCanvas(canvas: FlowCanvasLike | null): void {

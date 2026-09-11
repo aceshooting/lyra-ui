@@ -3397,6 +3397,35 @@ it("hides the hint region and adds no aria-describedby when no hint is provided"
   expect(thumb.hasAttribute("aria-describedby")).to.be.false;
 });
 
+it('projects a host aria-describedby onto both handles of a two-handle range slider', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <span id="range-note">External note</span>
+      <lr-slider range aria-describedby="range-note"></lr-slider>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraSlider>('lr-slider')!;
+  await el.updateComplete;
+  const [minThumb, maxThumb] = handles(el);
+  const note = wrapper.querySelector<HTMLElement>('#range-note')!;
+
+  expect(el.getAttribute('aria-describedby')).to.equal('range-note');
+  const described = (thumb: HTMLElement & { ariaDescribedByElements?: readonly Element[] | null }):
+    readonly Element[] | undefined => {
+    if (!('ariaDescribedByElements' in thumb)) return undefined;
+    return thumb.ariaDescribedByElements ?? [];
+  };
+  const minDescribed = described(minThumb!);
+  const maxDescribed = described(maxThumb!);
+  if (minDescribed === undefined || maxDescribed === undefined) {
+    // Engines without cross-shadow element-reference reflection cannot serialize the host id into
+    // either shadow root; the host source remains intact and the bridge fails closed.
+    return;
+  }
+  expect([...minDescribed]).to.include(note);
+  expect([...maxDescribed]).to.include(note);
+});
+
 // ---------------------------------------------------------------------------
 // unset-regression + adversarial fixtures
 // ---------------------------------------------------------------------------

@@ -67,6 +67,15 @@ describe('<lr-funnel>', () => {
     expect(parts(el, 'dropoff').length).to.equal(0);
   });
 
+  it('accepts dropoff="false" as a plain-HTML attribute string, not just a property binding', async () => {
+    const el = (await fixture(
+      html`<lr-funnel dropoff="false" .stages=${SIGNUP_FUNNEL}></lr-funnel>`,
+    )) as LyraFunnel;
+    expect(el.dropoff).to.be.false;
+    await el.updateComplete;
+    expect(parts(el, 'dropoff').length).to.equal(0);
+  });
+
   it('reports a re-entry stage above 100% in text while clamping its bar', async () => {
     const el = await fixture<LyraFunnel>(
       html`<lr-funnel

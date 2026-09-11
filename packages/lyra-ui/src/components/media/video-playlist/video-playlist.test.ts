@@ -1298,3 +1298,44 @@ it('forwards host focus()/blur()/click() to the arrow-navigation playlist row an
   expect(sequence).to.deep.equal(['focus', 'blur', 'focus']);
   expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
 });
+
+function unavailableActiveElement(root: ShadowRoot): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(root, 'activeElement');
+  Object.defineProperty(root, 'activeElement', {
+    configurable: true,
+    get() { throw new TypeError('Unavailable activeElement'); },
+  });
+  return () => {
+    if (descriptor) Object.defineProperty(root, 'activeElement', descriptor);
+    else Reflect.deleteProperty(root, 'activeElement');
+  };
+}
+
+it('reconciles children without an unhandled error when shadowRoot.activeElement throws (e.g. a downstream consumer\'s happy-dom test environment)', async () => {
+  const el = await fixture<LyraVideoPlaylist>(html`
+    <lr-video-playlist>
+      <lr-video title="First"></lr-video>
+    </lr-video-playlist>
+  `);
+  await settle(el);
+  const restore = unavailableActiveElement(el.shadowRoot!);
+  const errors: ErrorEvent[] = [];
+  const onError = (event: ErrorEvent): void => {
+    errors.push(event);
+  };
+  window.addEventListener('error', onError);
+  try {
+    const video = document.createElement('lr-video') as LyraVideo;
+    video.title = 'Second';
+    el.append(video);
+    await settle(el);
+  } finally {
+    window.removeEventListener('error', onError);
+    restore();
+  }
+  expect(
+    errors.filter((event) => event.message.includes('Unavailable activeElement')),
+    'no uncaught error should escape reconcileChildren()'
+  ).to.deep.equal([]);
+  expect(childVideos(el).length).to.equal(2);
+});

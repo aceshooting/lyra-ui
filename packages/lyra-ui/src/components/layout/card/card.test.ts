@@ -1,8 +1,8 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./card.js";
 import "../../forms/button/button.js";
 import type { LyraCard } from "./card.js";
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function base(el: LyraCard): HTMLElement {
   return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -509,6 +509,20 @@ describe("lr-card", () => {
       expect(activation.getAttribute("aria-label")).to.equal("Annual chart");
     });
 
+    it("falls back to a non-empty accessible name when the card content has no derivable text", async () => {
+      const el = (await fixture(html`
+        <lr-card actionable>
+          <img slot="image" alt="" />
+        </lr-card>
+      `)) as LyraCard;
+      const activation = el.shadowRoot!.querySelector(
+        '[part="activation-button"]'
+      ) as HTMLButtonElement;
+      expect(activation.getAttribute("aria-label")).to.not.equal("");
+      expect(activation.hasAttribute("aria-label")).to.be.true;
+      await expect(el).to.be.accessible();
+    });
+
     it("uses the native activation button for keyboard-equivalent activation", async () => {
       const el = (await fixture(
         html`<lr-card actionable>body</lr-card>`
@@ -918,6 +932,31 @@ it("restores the declared appearance and orientation defaults when attributes ar
   expect(el.orientation).to.equal("vertical");
 });
 
+it('retunes the accent leading stripe width from the shared border-width-thick token', async () => {
+  const el = (await fixture(
+    html`<lr-card appearance="accent" style="--lr-theme-border-width-thick: 9px">Accent</lr-card>`
+  )) as LyraCard;
+  expect(getComputedStyle(base(el)).borderInlineStartWidth).to.equal('9px');
+});
+
+it('mirrors the accent leading stripe to the physically opposite edge under dir="rtl"', async () => {
+  const ltr = (await fixture(
+    html`<lr-card appearance="accent">Accent</lr-card>`
+  )) as LyraCard;
+  const rtl = (await fixture(
+    html`<lr-card appearance="accent" dir="rtl">Accent</lr-card>`
+  )) as LyraCard;
+  const ltrComputed = getComputedStyle(base(ltr));
+  const rtlComputed = getComputedStyle(base(rtl));
+
+  // The thick stripe stays on the *logical* start edge -- physically the left in ltr, the right
+  // in rtl -- so it swaps sides between the two fixtures, and each fixture's own two physical
+  // sides differ from each other.
+  expect(ltrComputed.borderLeftWidth).to.equal(rtlComputed.borderRightWidth);
+  expect(ltrComputed.borderLeftWidth).to.not.equal(ltrComputed.borderRightWidth);
+  expect(rtlComputed.borderLeftWidth).to.not.equal(rtlComputed.borderRightWidth);
+});
+
 it('inherits independent appearance and interactive-state paint from an ancestor', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="
@@ -942,14 +981,18 @@ it('inherits independent appearance and interactive-state paint from an ancestor
 
   const target = base(cards[3]!);
   cards[3]!.style.setProperty('--lr-transition-fast', '0ms');
-  target.scrollIntoView();
-  const rect = target.getBoundingClientRect();
   try {
-    await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
-    expect(getComputedStyle(target).borderTopColor).to.equal('rgb(10, 11, 12)');
+    await hoverUntilMatched(target, 'the interactive card never reported :hover');
+    await waitUntil(
+      () => getComputedStyle(target).borderTopColor === 'rgb(10, 11, 12)',
+      'target border color never reached its hover value',
+    );
     await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => getComputedStyle(target).borderTopColor === 'rgb(13, 14, 15)',
+      'target border color never reached its pressed value',
+    );
     const pressed = getComputedStyle(target);
-    expect(pressed.borderTopColor).to.equal('rgb(13, 14, 15)');
     expect(pressed.backgroundImage).to.include('rgb(16, 17, 18)');
   } finally {
     await resetMouse();
@@ -980,5 +1023,20 @@ describe("a slotted [hidden] media child", () => {
     await el.updateComplete;
     const findable = el.querySelector<HTMLElement>("#findable")!;
     expect(getComputedStyle(findable).display).to.equal("block");
+  });
+
+  it('localizes the activation fallback name and honours a .strings override', async () => {
+    // `card.class.ts` falls back to localize('open') for an activatable card whose content has no
+    // text of its own (an image-only or chart tile), so that the button still has a non-empty
+    // accessible name. That fallback must go through the localization layer, not a hard-coded
+    // literal -- a literal would defeat registerLyraLocale() permanently.
+    const el = await fixture<LyraCard>(html`<lr-card actionable></lr-card>`);
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="activation-button"]') as HTMLElement;
+    expect(button.getAttribute('aria-label')).to.equal('Open');
+
+    el.strings = { open: 'Ouvrir' };
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Ouvrir');
   });
 });

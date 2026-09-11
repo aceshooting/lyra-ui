@@ -3,6 +3,7 @@ import './menu.js';
 import './menu-item.js';
 import './menu-label.js';
 import type { LyraMenuItem } from './menu-item.class.js';
+import type { LyraMenu } from './menu.class.js';
 
 for (const change of ['disable', 'remove'] as const) {
   for (const focus of ['outside', 'header', 'footer', 'item'] as const) {
@@ -33,3 +34,33 @@ for (const change of ['disable', 'remove'] as const) {
     });
   }
 }
+
+/**
+ * Regression: ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby`
+ * never reached `[part="list"]`'s own `role="menu"`, which is the element that actually owns the
+ * accessible description.
+ */
+describe('lr-menu host aria-describedby reflection', () => {
+  it('merges a host-authored aria-describedby onto the list description', async () => {
+    const root = await fixture<HTMLElement>(html`<div>
+      <p id="extra-context">Extra context for the menu.</p>
+      <lr-menu label="Actions" aria-describedby="extra-context">
+        <lr-menu-item value="rename">Rename</lr-menu-item>
+      </lr-menu>
+    </div>`);
+    const menu = root.querySelector('lr-menu') as LyraMenu;
+    await menu.updateComplete;
+
+    const list = menu.shadowRoot!.querySelector('[part="list"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+    const extra = root.querySelector('#extra-context') as HTMLElement;
+    if (Reflect.has(list, 'ariaDescribedByElements')) {
+      expect(list.ariaDescribedByElements ?? [], 'reflected description').to.include(extra);
+    } else {
+      expect(list.getAttribute('aria-describedby') ?? '', 'fallback description').to.contain(
+        'extra-context'
+      );
+    }
+  });
+});

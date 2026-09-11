@@ -11,7 +11,13 @@ import { parseSync } from 'oxc-parser';
 // a ratchet, so a new component cannot quietly widen the blind spot -- lower it when a call site
 // becomes decidable, raise it (with the reason in the commit) only when a genuinely runtime key is
 // unavoidable. `node scripts/check-default-strings.mjs --list-unresolved` prints the current set.
-const UNRESOLVED_CEILING = 27;
+// Raised 27 -> 28: `<lr-span-waterfall>`'s duration text used to call `Intl.NumberFormat` directly,
+// which silently defeated `registerLyraLocale()` and `.strings` for both its visible text and its
+// `aria-label`. Routing it through the shared `durationMessageValue()` helper fixes that and makes
+// it consistent with `<lr-thinking-panel>` and `<lr-tool-result-dialog>`, which already localize the
+// same way -- but that helper picks its key by magnitude (ms/s/m/h) at runtime, so the call site
+// cannot take a literal shape. One unavoidable runtime key traded for one real localization bug.
+const UNRESOLVED_CEILING = 28;
 
 const componentsRoot = fileURLToPath(new URL('../src/components/', import.meta.url));
 const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url));

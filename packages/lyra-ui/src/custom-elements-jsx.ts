@@ -601,7 +601,8 @@ export type LyraAlertReactProps = LyraReactElementProps<
   | 'lr-after-show'
   | 'lr-hide'
   | 'lr-show',
-never,
+  | '--lr-alert-close-active-bg'
+  | '--lr-alert-close-hover-bg',
   {}
 >;
 
@@ -1075,6 +1076,7 @@ export type LyraBarChartReactProps = LyraReactElementProps<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -1199,8 +1201,26 @@ export type LyraBoxPlotReactProps = LyraReactElementProps<
   | 'lr-datum-activate'
   | 'lr-legend-visibility-change'
   | 'lr-point-click',
+  | '--lr-box-plot-border-color-1'
+  | '--lr-box-plot-border-color-2'
+  | '--lr-box-plot-border-color-3'
+  | '--lr-box-plot-border-color-4'
+  | '--lr-box-plot-border-color-5'
+  | '--lr-box-plot-border-color-6'
+  | '--lr-box-plot-border-color-7'
+  | '--lr-box-plot-border-color-8'
+  | '--lr-box-plot-border-width'
   | '--lr-box-plot-data-table-toggle-active-bg'
   | '--lr-box-plot-data-table-toggle-hover-bg'
+  | '--lr-box-plot-fill-color-1'
+  | '--lr-box-plot-fill-color-2'
+  | '--lr-box-plot-fill-color-3'
+  | '--lr-box-plot-fill-color-4'
+  | '--lr-box-plot-fill-color-5'
+  | '--lr-box-plot-fill-color-6'
+  | '--lr-box-plot-fill-color-7'
+  | '--lr-box-plot-fill-color-8'
+  | '--lr-box-plot-item-radius'
   | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-grid-color'
@@ -1303,6 +1323,7 @@ export type LyraBubbleChartReactProps = LyraReactElementProps<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -1693,6 +1714,7 @@ export type LyraChartReactProps = LyraReactElementProps<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -2879,6 +2901,7 @@ export type LyraDataGridReactProps = LyraReactElementProps<
   | 'selectedKeys'
   | 'selectedRowKeys'
   | 'selectedRows'
+  | 'selectionMode'
   | 'server'
   | 'size'
   | 'sort'
@@ -2912,6 +2935,7 @@ export type LyraDataGridReactProps = LyraReactElementProps<
   | 'lr-row-expand'
   | 'lr-row-select'
   | 'lr-sort-change'
+  | 'lr-sort-request'
   | 'request',
   | '--accent-color'
   | '--background-color'
@@ -2948,6 +2972,7 @@ export type LyraDataGridReactProps = LyraReactElementProps<
     'max-multi-sort'?: LyraDataGrid['maxMultiSort'];
     'page-size'?: LyraDataGrid['pageSize'];
     'row-key'?: LyraDataGrid['rowKey'];
+    'selection-mode'?: LyraDataGrid['selectionMode'];
     'sort-desc-first'?: LyraDataGrid['sortDescFirst'];
     'with-column-menu'?: LyraDataGrid['withColumnMenu'];
     'with-columns-menu'?: LyraDataGrid['withColumnsMenu'];
@@ -3367,6 +3392,7 @@ export type LyraDocumentCompareReactProps = LyraReactElementProps<
   | 'language'
   | 'languages'
   | 'locale'
+  | 'maxHeight'
   | 'newVersion'
   | 'oldVersion'
   | 'strings'
@@ -3383,6 +3409,7 @@ export type LyraDocumentCompareReactProps = LyraReactElementProps<
   | '--lr-document-compare-pane-max-height',
   {
     'diff-layout'?: LyraDocumentCompare['diffLayout'];
+    'max-height'?: LyraDocumentCompare['maxHeight'];
     'sync-scroll'?: LyraDocumentCompare['syncScroll'];
   }
 >;
@@ -3525,6 +3552,7 @@ export type LyraDoughnutChartReactProps = LyraReactElementProps<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -3761,11 +3789,15 @@ export type LyraDropdownItemReactProps = LyraReactElementProps<
   LyraDropdownItem,
   | 'checked'
   | 'disabled'
+  | 'download'
+  | 'href'
   | 'loading'
   | 'locale'
+  | 'rel'
   | 'size'
   | 'strings'
   | 'submenuOpen'
+  | 'target'
   | 'type'
   | 'value'
   | 'variant',
@@ -4317,7 +4349,8 @@ export type LyraFlowCanvasReactProps = LyraReactElementProps<
   | 'orientation'
   | 'selectedEdgeIds'
   | 'selectedNodeIds'
-  | 'strings',
+  | 'strings'
+  | 'viewport',
   {},
   LyraFlowCanvasEventMap,
   | 'lr-connect'
@@ -4372,6 +4405,7 @@ never,
 export type LyraFlowMinimapReactProps = LyraReactElementProps<
   LyraFlowMinimap,
   | 'for'
+  | 'frame'
   | 'label'
   | 'locale'
   | 'strings',
@@ -4921,10 +4955,10 @@ export type LyraHistogramReactProps = LyraReactElementProps<
   | 'beginAtZero'
   | 'bins'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
-  | 'datasets'
   | 'dataTableToggle'
   | 'description'
   | 'formatter'
@@ -4934,7 +4968,6 @@ export type LyraHistogramReactProps = LyraReactElementProps<
   | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
-  | 'labels'
   | 'legendDisplay'
   | 'legendMode'
   | 'legendPosition'
@@ -5135,6 +5168,7 @@ export type LyraIconButtonReactProps = LyraReactElementProps<
   | 'library'
   | 'locale'
   | 'name'
+  | 'rel'
   | 'src'
   | 'strings'
   | 'target',
@@ -5157,10 +5191,12 @@ export type LyraIconButtonReactProps = LyraReactElementProps<
   | '--lr-icon-button-size',
   {
     'aria-controls'?: LyraAttributeValue<string | null>;
+    'aria-current'?: LyraAttributeValue<string | null>;
     'aria-describedby'?: LyraAttributeValue<string | null>;
     'aria-expanded'?: LyraAttributeValue<string | null>;
     'aria-haspopup'?: LyraAttributeValue<string | null>;
     'aria-label'?: LyraIconButton['accessibleLabel'];
+    'aria-pressed'?: LyraAttributeValue<string | null>;
   }
 >;
 
@@ -5677,6 +5713,7 @@ export type LyraLineChartReactProps = LyraReactElementProps<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -6162,11 +6199,15 @@ export type LyraMenuItemReactProps = LyraReactElementProps<
   LyraMenuItem,
   | 'checked'
   | 'disabled'
+  | 'download'
+  | 'href'
   | 'loading'
   | 'locale'
+  | 'rel'
   | 'size'
   | 'strings'
   | 'submenuOpen'
+  | 'target'
   | 'type'
   | 'value'
   | 'variant',
@@ -6259,6 +6300,7 @@ export type LyraMessagePartsReactProps = LyraReactElementProps<
   | 'accessibleLabel'
   | 'contentMode'
   | 'locale'
+  | 'maxRenderedParts'
   | 'parts'
   | 'renderPart'
   | 'showReasoning'
@@ -6290,6 +6332,7 @@ export type LyraMessagePartsReactProps = LyraReactElementProps<
   {
     'aria-label'?: LyraMessageParts['accessibleLabel'];
     'content-mode'?: LyraMessageParts['contentMode'];
+    'max-rendered-parts'?: LyraMessageParts['maxRenderedParts'];
     'show-reasoning'?: LyraMessageParts['showReasoning'];
   }
 >;
@@ -6530,7 +6573,6 @@ export type LyraNativeTimeInputReactProps = LyraReactElementProps<
   | 'withLabel'
   | 'withoutSpinButtons',
   {
-    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraInputEventMap,
@@ -6633,6 +6675,7 @@ export type LyraNotebookViewerReactProps = LyraReactElementProps<
   | 'name'
   | 'notebook'
   | 'outputCollapseLines'
+  | 'source'
   | 'src'
   | 'strings',
   {},
@@ -6710,7 +6753,6 @@ export type LyraNumberInputReactProps = LyraReactElementProps<
   | 'withoutSpinButtons'
   | 'withoutSteppers',
   {
-    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraNumberInputEventMap,
@@ -7164,6 +7206,7 @@ export type LyraPieChartReactProps = LyraReactElementProps<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -7271,6 +7314,7 @@ export type LyraPolarAreaChartReactProps = LyraReactElementProps<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -7808,6 +7852,7 @@ export type LyraRadarChartReactProps = LyraReactElementProps<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -8280,8 +8325,8 @@ export type LyraResponsivePanelReactProps = LyraReactElementProps<
   | 'mode'
   | 'open'
   | 'overlayBreakpoint'
-  | 'strings'
-  | 'variant',
+  | 'shape'
+  | 'strings',
   {},
   LyraResponsivePanelEventMap,
   | 'lr-close'
@@ -8486,6 +8531,7 @@ export type LyraScatterChartReactProps = LyraReactElementProps<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -8950,6 +8996,7 @@ export type LyraSourceListReactProps = LyraReactElementProps<
   | 'label'
   | 'labelPlural'
   | 'locale'
+  | 'sourceCount'
   | 'strings',
   {},
   LyraSourceListEventMap,
@@ -9274,6 +9321,8 @@ never,
 
 export type LyraSubagentPanelReactProps = LyraReactElementProps<
   LyraSubagentPanel,
+  | 'compact'
+  | 'frame'
   | 'label'
   | 'locale'
   | 'runs'
@@ -9284,6 +9333,10 @@ export type LyraSubagentPanelReactProps = LyraReactElementProps<
   | 'lr-cancel'
   | 'lr-run-activate'
   | 'lr-run-retry',
+  | '--lr-subagent-panel-compact-action-padding'
+  | '--lr-subagent-panel-compact-font-size'
+  | '--lr-subagent-panel-compact-trigger-gap'
+  | '--lr-subagent-panel-compact-trigger-padding'
   | '--lr-subagent-panel-progress-fill'
   | '--lr-subagent-panel-progress-track'
   | '--lr-subagent-panel-selected-border',

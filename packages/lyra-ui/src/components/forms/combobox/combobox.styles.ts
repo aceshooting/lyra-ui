@@ -262,12 +262,14 @@ export const styles = css`
     padding: 0;
   }
   /* Unlike [part='expand-icon'], [part='clear-button'] is a real focusable <button>
-     (combobox.class.ts's @click), so it takes the full shared icon-button hit-area floor instead of
-     the capped box above. */
+     (combobox.class.ts's @click), so it takes the shared icon-button hit-area floor instead of
+     the capped box above -- but capped by the tier's own --lr-form-control-height (never below the
+     24px WCAG 2.5.8 minimum), matching lr-input's/lr-date-input's own clear-button ladder so a
+     compact combobox row does not get forced to the full 40px floor. */
   [part="clear-button"] {
     font: inherit;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    min-inline-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
+    min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
     line-height: var(--lr-line-height-none);
   }
   [part="expand-icon"] svg {

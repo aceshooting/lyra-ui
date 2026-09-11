@@ -520,6 +520,12 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private _keys: readonly RubricKey[] = EMPTY_KEYS;
   private _value: RubricValue = EMPTY_VALUE;
   private _defaultValue: RubricValue = EMPTY_VALUE;
+  // The pre-normalization input behind `_value`/`_defaultValue`, retained so a later `.keys`
+  // assignment can re-normalize from the caller's *original* data instead of from the already-
+  // narrowed `_value`/`_defaultValue` -- otherwise `.value`/`.defaultValue` assigned before
+  // `.keys` normalizes against an empty schema and permanently discards every field.
+  private _rawValue: unknown = EMPTY_VALUE;
+  private _rawDefaultValue: unknown = EMPTY_VALUE;
   private _valueDirty = false;
   private _itemId = '';
   private _hasNext = false;
@@ -603,12 +609,20 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
   set keys(next: readonly RubricKey[]) {
     const old = this._keys;
+    // Only the transition away from "no schema yet" re-normalizes from the caller's original,
+    // pre-normalization input -- once a real schema is already in place, a later schema change
+    // deliberately re-narrows from the *current* (already-normalized) value/defaultValue, matching
+    // the library's cascading-renormalization contract across repeated `.keys` reassignment.
+    const recoverFromRaw = old.length === 0;
     this._keys = normalizeRubricKeys(next ?? EMPTY_KEYS);
     const oldDefault = this._defaultValue;
     const oldValue = this._value;
-    this._defaultValue = normalizeRubricValue(this._defaultValue, this._keys);
+    this._defaultValue = normalizeRubricValue(
+      recoverFromRaw ? this._rawDefaultValue : this._defaultValue,
+      this._keys,
+    );
     this._value = this._valueDirty
-      ? normalizeRubricValue(this._value, this._keys)
+      ? normalizeRubricValue(recoverFromRaw ? this._rawValue : this._value, this._keys)
       : cloneRubricValue(this._defaultValue);
     this.syncFormState();
     this.requestUpdate('keys', old);
@@ -631,14 +645,16 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
   set defaultValue(next: RubricValue) {
     const old = this._defaultValue;
-    this._defaultValue = normalizeRubricValue(next ?? EMPTY_VALUE, this._keys);
+    this._rawDefaultValue = next ?? EMPTY_VALUE;
+    this._defaultValue = normalizeRubricValue(this._rawDefaultValue, this._keys);
     if (!this._valueDirty) this.setLiveValue(this._defaultValue, false);
     this.requestUpdate('defaultValue', old);
   }
 
   private setLiveValue(next: unknown, dirty: boolean): void {
     const old = this._value;
-    this._value = normalizeRubricValue(next ?? EMPTY_VALUE, this._keys);
+    this._rawValue = next ?? EMPTY_VALUE;
+    this._value = normalizeRubricValue(this._rawValue, this._keys);
     this._valueDirty = dirty;
     this.syncFormState();
     this.requestUpdate('value', old);

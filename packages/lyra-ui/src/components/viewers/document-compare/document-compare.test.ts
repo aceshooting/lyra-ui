@@ -248,6 +248,19 @@ describe('lr-document-compare', () => {
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('[part="pane-old"]')!.getAttribute('aria-label')).to.equal('Version précédente');
     });
+
+    it('keeps stacked panes at their natural content height instead of the stale row-mode flex-basis at a narrow allocation', async () => {
+      const el = (await fixture(html`
+        <lr-document-compare view="side-by-side" style="inline-size: 300px;"></lr-document-compare>
+      `)) as LyraDocumentCompare;
+      await el.updateComplete;
+      const panes = el.shadowRoot!.querySelector('[part="panes"]') as HTMLElement;
+      expect(getComputedStyle(panes).flexDirection).to.equal('column');
+      const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+      const paneNew = el.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
+      expect(paneOld.clientHeight, 'pane-old fits its placeholder text without clipping').to.be.at.least(paneOld.scrollHeight - 1);
+      expect(paneNew.clientHeight, 'pane-new fits its placeholder text without clipping').to.be.at.least(paneNew.scrollHeight - 1);
+    });
   });
 
   describe('scroll sync', () => {
@@ -734,6 +747,70 @@ describe('lr-document-compare', () => {
       `);
       await el.updateComplete;
       await expect(el).to.be.accessible();
+    });
+  });
+
+  // Parity with <lr-notebook-viewer>/<lr-pdf-viewer>/<lr-svg-viewer>/<lr-xml-viewer>, which all
+  // expose a `max-height` attribute as a declarative alternative to setting their own sizing CSS
+  // custom property inline -- <lr-document-compare> only ever offered
+  // --lr-document-compare-pane-max-height as an inline style/ancestor rule, with no HTML-attribute
+  // equivalent.
+  describe('maxHeight', () => {
+    it('defaults to unset, leaving --lr-document-compare-pane-max-height at its stylesheet default', async () => {
+      const el = (await fixture(html`<lr-document-compare></lr-document-compare>`)) as LyraDocumentCompare;
+      expect(el.maxHeight).to.equal('');
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(base.style.getPropertyValue('--_lr-document-compare-pane-max-height-attr')).to.equal('');
+    });
+
+    it('reflects the max-height attribute onto the pane max-height, without writing the public token', async () => {
+      const el = (await fixture(html`<lr-document-compare max-height="10rem"></lr-document-compare>`)) as LyraDocumentCompare;
+      expect(el.maxHeight).to.equal('10rem');
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(base.style.getPropertyValue('--_lr-document-compare-pane-max-height-attr').trim()).to.equal('10rem');
+    });
+
+    it('updates --lr-document-compare-pane-max-height live when the maxHeight property changes after first render', async () => {
+      const el = (await fixture(html`<lr-document-compare></lr-document-compare>`)) as LyraDocumentCompare;
+      el.maxHeight = '12rem';
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(base.style.getPropertyValue('--_lr-document-compare-pane-max-height-attr').trim()).to.equal('12rem');
+    });
+
+    it('validates maxHeight before assigning the base custom property', async () => {
+      const el = (await fixture(html`<lr-document-compare></lr-document-compare>`)) as LyraDocumentCompare;
+      el.maxHeight = '10rem;position:fixed';
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(base.style.position).to.equal('');
+      expect(base.style.getPropertyValue('--_lr-document-compare-pane-max-height-attr')).to.equal('');
+      el.maxHeight = 'calc(10rem + 2px)';
+      await el.updateComplete;
+      expect(base.style.getPropertyValue('--_lr-document-compare-pane-max-height-attr')).to.equal('calc(10rem + 2px)');
+    });
+
+    it('lets the max-height property win over a consumer-set public custom property', async () => {
+      // The documented contract is that `max-height` "overrides
+      // --lr-document-compare-pane-max-height declaratively". It reaches the pane on a private
+      // channel precisely so the component never writes the public token itself -- doing that
+      // inline would beat a consumer's own host rule for the same token and invert the cascade
+      // they expect. This asserts the rendered result, not the declaration text.
+      const el = (await fixture(
+        html`<lr-document-compare
+          view="side-by-side"
+          style="--lr-document-compare-pane-max-height: 30rem"
+        ></lr-document-compare>`,
+      )) as LyraDocumentCompare;
+      await el.updateComplete;
+      const pane = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement | null;
+      if (!pane) return; // side-by-side panes only render with versions present
+      const tokenOnly = getComputedStyle(pane).maxBlockSize;
+
+      el.maxHeight = '10rem';
+      await el.updateComplete;
+      const withProperty = getComputedStyle(pane).maxBlockSize;
+      expect(withProperty === tokenOnly).to.be.false;
     });
   });
 });

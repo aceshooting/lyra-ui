@@ -5714,14 +5714,14 @@ describe("mouse-hover feedback (states-hover-missing-with-focus-visible)", () =>
     };
     const canvasHeatmap = (await fixture(html`
       <lr-heatmap
-        style="--lr-heatmap-focus-ring-color: rgb(1, 2, 3); --lr-size-1px: 5px"
+        style="--lr-heatmap-focus-ring-color: rgb(1, 2, 3); --lr-theme-border-width-thin: 5px"
         .data=${data}
       ></lr-heatmap>
     `)) as LyraHeatmap;
     const cellHeatmap = (await fixture(html`
       <lr-heatmap
         accessible-cells
-        style="--lr-heatmap-focus-ring-color: rgb(1, 2, 3); --lr-size-1px: 5px"
+        style="--lr-heatmap-focus-ring-color: rgb(1, 2, 3); --lr-theme-border-width-thin: 5px"
         .data=${data}
       ></lr-heatmap>
     `)) as LyraHeatmap;

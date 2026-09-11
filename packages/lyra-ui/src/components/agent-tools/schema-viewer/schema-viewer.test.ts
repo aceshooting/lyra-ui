@@ -76,6 +76,10 @@ it('renders nested JSON Schema structure, constraints, required state, and valid
   expect(el.shadowRoot!.textContent).to.contain('Search query');
   expect(el.shadowRoot!.textContent).to.contain('Required');
   expect(el.shadowRoot!.textContent).to.contain('Query is required');
+  // The only other axe assertion in this file targets the malformed/circular-schema fallback --
+  // this is the fully-populated nested-schema-with-required-fields-and-validation-issues state a
+  // real consumer's schema viewer is in most of the time.
+  await expect(el).shadowDom.to.be.accessible();
 });
 
 it('emits the selected JSON Pointer and record', async () => {

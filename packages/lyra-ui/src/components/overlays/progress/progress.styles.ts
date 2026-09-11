@@ -149,7 +149,7 @@ export const ringStyles = css`
     );
     stroke-width: var(
       --lr-progress-ring-track-width,
-      var(--track-width, var(--lr-size-4px))
+      var(--track-width, var(--lr-theme-border-width-thick, var(--lr-size-4px)))
     );
   }
   [part="indicator"] {
@@ -169,7 +169,7 @@ export const ringStyles = css`
         --indicator-width,
         var(
           --lr-progress-ring-track-width,
-          var(--track-width, var(--lr-size-4px))
+          var(--track-width, var(--lr-theme-border-width-thick, var(--lr-size-4px)))
         )
       )
     );

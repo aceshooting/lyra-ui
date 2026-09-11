@@ -96,7 +96,7 @@ it("pads an open bottom sheet with the --lr-safe-area-bottom token, not a hardco
   const el = (await fixture(html`
     <lr-responsive-panel
       mode="overlay"
-      variant="bottom-sheet"
+      shape="bottom-sheet"
       open
       label="Actions"
       style="--lr-safe-area-bottom: 24px"
@@ -112,7 +112,7 @@ it("caps an open bottom sheet at 85% of the dynamic viewport by default", async 
   const el = (await fixture(
     html`<lr-responsive-panel
       mode="overlay"
-      variant="bottom-sheet"
+      shape="bottom-sheet"
       open
       label="Actions"
       ><button>Share</button></lr-responsive-panel
@@ -129,7 +129,7 @@ it("lets a host override the bottom-sheet height through --lr-responsive-panel-s
     <div style="--lr-responsive-panel-sheet-max-block-size: 120px">
       <lr-responsive-panel
         mode="overlay"
-        variant="bottom-sheet"
+        shape="bottom-sheet"
         open
         label="Actions"
       >
@@ -188,13 +188,13 @@ describe("resolveResponsivePanelEffectiveMode", () => {
   });
 });
 
-it('defaults to mode="auto", variant="fullscreen", closed, overlay-breakpoint="768px"', async () => {
+it('defaults to mode="auto", shape="fullscreen", closed, overlay-breakpoint="768px"', async () => {
   const el = (await fixture(
     html`<lr-responsive-panel>body</lr-responsive-panel>`
   )) as LyraResponsivePanel;
   expect(el.mode).to.equal("auto");
   expect(el.getAttribute("mode")).to.equal("auto");
-  expect(el.variant).to.equal("fullscreen");
+  expect(el.shape).to.equal("fullscreen");
   expect(el.open).to.be.false;
   expect(el.overlayBreakpoint).to.equal("768px");
   expect(el.effectiveMode).to.equal("inline");
@@ -802,11 +802,11 @@ it("renders the header/footer wrappers visible on first paint when content is pr
   expect(footer.hasAttribute("hidden")).to.be.false;
 });
 
-it("reflects the variant attribute", async () => {
+it("reflects the shape attribute", async () => {
   const el = (await fixture(
-    html`<lr-responsive-panel variant="bottom-sheet">body</lr-responsive-panel>`
+    html`<lr-responsive-panel shape="bottom-sheet">body</lr-responsive-panel>`
   )) as LyraResponsivePanel;
-  expect(el.getAttribute("variant")).to.equal("bottom-sheet");
+  expect(el.getAttribute("shape")).to.equal("bottom-sheet");
 });
 
 it("is accessible while closed (empty/default state)", async () => {
@@ -1017,11 +1017,11 @@ it("captures lastTrigger only on a genuine open transition, so it survives a lat
   outsideTrigger.remove();
 });
 
-it("is accessible while open in the bottom-sheet overlay variant", async () => {
+it("is accessible while open in the bottom-sheet overlay shape", async () => {
   const el = (await fixture(
     html`<lr-responsive-panel
       mode="overlay"
-      variant="bottom-sheet"
+      shape="bottom-sheet"
       open
       label="Actions"
       ><button>Share</button></lr-responsive-panel
@@ -1103,7 +1103,7 @@ describe("overlay state cssprops", () => {
 
   it("keeps the pre-cssprop scrim and overlay-surface treatment when the props are unset", async () => {
     const el = (await fixture(
-      html`<lr-responsive-panel mode="overlay" variant="bottom-sheet" open label="Actions"
+      html`<lr-responsive-panel mode="overlay" shape="bottom-sheet" open label="Actions"
         ><button>Share</button></lr-responsive-panel
       >`
     )) as LyraResponsivePanel;
@@ -1136,7 +1136,7 @@ describe("overlay state cssprops", () => {
           --lr-responsive-panel-overlay-panel-shadow: none;
         "
       >
-        <lr-responsive-panel mode="overlay" variant="bottom-sheet" open label="Actions"
+        <lr-responsive-panel mode="overlay" shape="bottom-sheet" open label="Actions"
           ><button>Share</button></lr-responsive-panel
         >
       </div>

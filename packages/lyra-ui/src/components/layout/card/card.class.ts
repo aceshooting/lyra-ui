@@ -12,6 +12,10 @@ import { safeLinkHref } from '../../../internal/safe-url.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 import { styles } from './card.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraCardEventMap {
   'lr-card-activate': CustomEvent<null>;
@@ -122,6 +126,14 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @since 4.0.0
  */
 export class LyraCard extends LyraElement<LyraCardEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    open: LYRA_DEFAULT_open,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)
@@ -429,13 +441,18 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     const href = safeLinkHref(this.href);
     const activatable = this.actionable && !href;
     const accessibleLabel = hostAriaLabel(this) ?? this.accessibleLabel;
+    // Non-text content (an image-only or chart tile with no `alt`) leaves `accessibleContentText`
+    // empty -- an activation control must still get a non-empty accessible name (axe `button-name`/
+    // `link-name`), so a generic localized fallback closes the gap the same way the composed-text
+    // computation cannot.
+    const fallbackAccessibleLabel = this.accessibleContentText || this.localize('open');
     const body = html`
       ${activatable
         ? html`<button
             part="activation-button"
             type="button"
             tabindex="0"
-            aria-label=${accessibleLabel ?? (this.accessibleContentText || nothing)}
+            aria-label=${accessibleLabel ?? fallbackAccessibleLabel}
           ></button>`
         : nothing}
       <div part="media image" ?hidden=${!hasMedia}>

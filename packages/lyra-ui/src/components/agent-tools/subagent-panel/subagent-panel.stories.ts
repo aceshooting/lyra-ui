@@ -67,3 +67,29 @@ export const Depth12Narrow: Story = {
     </div>
   `,
 };
+
+const densityRuns: SubagentRun[] = [
+  { id: 'research', label: 'Researcher', status: 'running', task: 'Find primary sources', progressRatio: 0.6 },
+  { id: 'writer', parentId: 'research', label: 'Writer', status: 'waiting-input', task: 'Draft the response' },
+];
+
+export const DensityAndChrome: Story = {
+  name: 'compact + frame="plain"',
+  render: () => html`
+    <div style="display:grid; gap:1rem; max-width:32rem;">
+      <lr-subagent-panel .runs=${densityRuns}></lr-subagent-panel>
+      <lr-subagent-panel compact .runs=${densityRuns}></lr-subagent-panel>
+      <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
+        <lr-subagent-panel frame="plain" .runs=${densityRuns}></lr-subagent-panel>
+      </div>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Top to bottom: the default card, `compact` (tighter run-trigger padding, gap, and task/model typography with each row\'s own border intact), and `frame="plain"` nested inside a container that already draws its own border -- without `plain` the two frames would double up.',
+      },
+    },
+  },
+};

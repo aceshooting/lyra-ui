@@ -1188,10 +1188,23 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return this.resolveNodeType(node)?.shape ?? 'circle';
   }
 
+  /** `nodeTypes` filtered to a non-blank `label`, in the same order `lr-graph-legend` renders its
+   *  rows in (its `render()` applies an identical filter before assigning a row its palette
+   *  index). Keeping this filter in sync here is what keeps a node's categorical fallback color
+   *  matching the swatch color a paired legend shows for the same type. */
+  private labeledNodeTypes(): readonly LyraNodeTypeStyle[] {
+    return this.graphModel.nodeTypes.filter(
+      (candidate) =>
+        typeof candidate?.label === 'string' && candidate.label.trim().length > 0
+    );
+  }
+
   /** Resolution precedence: `node.color` (existing, most specific) > matched `LyraNodeTypeStyle.color`
-   *  > the ordered categorical fallback palette by the type's index in `nodeTypes` > (returns
-   *  `undefined`, letting the untyped `--lr-node-fill` token default apply). Both data-driven
-   *  color sources pass the existing `sanitizeNodeColor()`. */
+   *  > the ordered categorical fallback palette by the type's index among label-bearing `nodeTypes`
+   *  entries, matching `lr-graph-legend`'s own row order > (returns `undefined`, letting the
+   *  untyped `--lr-node-fill` token default apply). Both data-driven color sources pass the
+   *  existing `sanitizeNodeColor()`. A blank-label type itself (never shown as its own legend row)
+   *  falls back to its raw `nodeTypes` position, since there is no legend row to stay in sync with. */
   private nodeFill(node: LyraGraphNode): string | undefined {
     const ownColor = sanitizeNodeColor(node.color);
     if (ownColor) return ownColor;
@@ -1199,7 +1212,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!type) return undefined;
     const typeColor = sanitizeNodeColor(type.color);
     if (typeColor) return typeColor;
-    return categoricalPaletteColor(this.graphModel.nodeTypes.indexOf(type));
+    const labeledIndex = this.labeledNodeTypes().indexOf(type);
+    return categoricalPaletteColor(
+      labeledIndex === -1 ? this.graphModel.nodeTypes.indexOf(type) : labeledIndex
+    );
   }
 
   /** `this.nodes` filtered down to the ids `hiddenTypes` doesn't hide -- an untyped node (`type ==

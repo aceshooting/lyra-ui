@@ -1,5 +1,6 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { expandIcon } from '../../../internal/icons.js';
@@ -111,7 +112,41 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     return finiteCount(this.virtualizeAt, 100);
   }
 
+  // Memoized across renders that do not actually change the identity-deduped/sorted/grouped
+  // output, so the `.items`/`.groups` bindings on the composed `<lr-virtual-list>` keep the same
+  // array reference and it never has to clear its measured row heights / recompute offsets for an
+  // unrelated reactive update (e.g. `expandable`, `label`). `willUpdate()` refreshes the cache
+  // before `render()` ever reads it, mirroring `lr-retrieval-results`'s `processedChunksCache`.
+  private sortedRowsCache: readonly LyraNeighborRow[] = [];
+  private groupsCache: LyraVirtualListGroup[] | undefined;
+  private hasComputedRows = false;
+  private processedSignature = '';
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    // Locale (and a `strings` override) affect both the collator used to sort and the group
+    // header text/count formatting, but neither reaches this component through a tracked
+    // `@property`, so the signature captures the resolved locale directly rather than relying on
+    // `changed`.
+    const signature = `${this.effectiveLocale} ${this.groupByRelation}`;
+    if (
+      !this.hasComputedRows ||
+      changed.has('rows') ||
+      changed.has('groupByRelation') ||
+      signature !== this.processedSignature
+    ) {
+      this.hasComputedRows = true;
+      this.processedSignature = signature;
+      this.sortedRowsCache = this.computeSortedRows();
+      this.groupsCache = this.computeGroups(this.sortedRowsCache);
+    }
+  }
+
   private sortedRows(): readonly LyraNeighborRow[] {
+    return this.sortedRowsCache;
+  }
+
+  private computeSortedRows(): readonly LyraNeighborRow[] {
     const rows = firstByRetrievalIdentity(this.rows, (row) => row?.node?.id);
     if (!this.groupByRelation) return rows;
     // Array.prototype.sort is spec-guaranteed stable (ES2019+) -- rows sharing a relation keep
@@ -122,6 +157,13 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   }
 
   private groups(
+    sorted: readonly LyraNeighborRow[]
+  ): LyraVirtualListGroup[] | undefined {
+    if (sorted === this.sortedRowsCache) return this.groupsCache;
+    return this.computeGroups(sorted);
+  }
+
+  private computeGroups(
     sorted: readonly LyraNeighborRow[]
   ): LyraVirtualListGroup[] | undefined {
     if (!this.groupByRelation) return undefined;
@@ -172,6 +214,12 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
 
   private renderRow = (item: unknown): TemplateResult =>
     this.renderNeighborRow(item as LyraNeighborRow);
+
+  // Stable across every render (unlike an inline arrow literal in the template) so the composed
+  // `<lr-virtual-list>`'s `.keyFunction` binding never appears to change on an unrelated
+  // re-render, which would otherwise force it to rebuild row identity/offsets from scratch.
+  private readonly virtualListKeyFunction = (item: unknown): string =>
+    (item as LyraNeighborRow).node.id;
 
   /** Returns only a row's *content*, not its surrounding `role="listitem"`/`part="row"` wrapper:
    *  `<lr-virtual-list>` already supplies exactly such a wrapper (exported from here as `row`) for
@@ -264,9 +312,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         <div part="base" role=${role ?? nothing} aria-label=${label ?? nothing}>
           <lr-virtual-list
             exportparts="row:row, node-label:node-label, direction:direction, relation:relation, node-meta:node-meta, expand-button:expand-button, group:group-header"
-            .items=${sorted}
+            .items=${guard([sorted], () => sorted)}
             .renderItem=${this.renderRow}
-            .keyFunction=${(item: unknown) => (item as LyraNeighborRow).node.id}
+            .keyFunction=${this.virtualListKeyFunction}
             .groups=${this.groups(sorted)}
           ></lr-virtual-list>
         </div>

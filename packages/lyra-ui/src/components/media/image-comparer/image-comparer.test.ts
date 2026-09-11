@@ -718,3 +718,25 @@ describe('a slotted [hidden] comparison pane child', () => {
     }
   });
 });
+
+describe('aria-describedby forwarding', () => {
+  it('resolves host description ids onto the inner type="range" handle', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="comparer-hint">Drag the handle to compare.</span>
+        <lr-image-comparer aria-describedby="comparer-hint"></lr-image-comparer>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-image-comparer') as LyraImageComparer;
+    const description = wrapper.querySelector('#comparer-hint')!;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+
+    if (Reflect.has(input, 'ariaDescribedByElements')) {
+      expect(input.ariaDescribedByElements ?? []).to.include(description);
+    } else {
+      expect(input.getAttribute('aria-describedby')).to.contain('comparer-hint');
+    }
+  });
+});

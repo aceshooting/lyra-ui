@@ -528,3 +528,19 @@ it('keeps a hover tint on a revealed toggle, not only on the hidden ones', async
     await resetMouse();
   }
 });
+
+it('reads its reveal/copy button border widths from --lr-border-width-thin, not the generic --lr-size-1px scale (regression: theming purpose)', async () => {
+  const el = (await fixture(html`
+    <lr-env-list
+      .entries=${[{ name: 'API_KEY', value: 'secret1', secret: true }]}
+      style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;"
+    ></lr-env-list>
+  `)) as LyraEnvList;
+  await el.updateComplete;
+  const reveal = el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLElement;
+  const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+  // A consumer retuning the documented --lr-theme-border-width-thin input must move these
+  // borders; retuning the unrelated --lr-theme-size-1px sizing scale must not.
+  expect(getComputedStyle(reveal).borderTopWidth).to.equal('11px');
+  expect(getComputedStyle(copy).borderTopWidth).to.equal('11px');
+});

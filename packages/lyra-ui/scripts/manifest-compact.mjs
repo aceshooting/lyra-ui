@@ -57,11 +57,24 @@ function mergeIdentity(key, entry) {
   return `${entry.kind}:${String(entry.name ?? '')}:${JSON.stringify(parameters)}`;
 }
 
-const SUBCLASS_ANNOTATION_KEYS = Object.freeze(['description', 'summary', 'default', 'deprecated']);
+const SUBCLASS_ANNOTATION_KEYS = Object.freeze([
+  'description',
+  'summary',
+  'default',
+  'deprecated',
+  // `type` belongs here for the same reason the other four do, and its absence was a real defect:
+  // a subclass that narrows or re-types an inherited property (`LyraMarkdownCore.languages` making
+  // the base's optional `languages?` required, `LyraNativeTimeInput.min`/`max`, and
+  // `LyraNumberInput.withoutSpinButtons` changing converter) had its override pruned, so the
+  // published manifest showed the BASE type text plus a false `inheritedFrom`. That is what
+  // consumers, editors and the generated reference read, and it flows verbatim into the generated
+  // React/Vue/Svelte declarations -- so the wrong type reached every framework consumer.
+  'type',
+]);
 
 /** The analyzer marks a subclass's explicit same-name annotation with `inheritedFrom` even when
- * its authored prose/default differs from the base. Such an entry is an override, not a redundant
- * inherited copy, and has to survive compaction so expansion can let it win. */
+ * its authored prose/default/type differs from the base. Such an entry is an override, not a
+ * redundant inherited copy, and has to survive compaction so expansion can let it win. */
 function hasSubclassAnnotationOverride(key, entry, superclass) {
   const inherited = (superclass[key] ?? []).find(
     (candidate) => mergeIdentity(key, candidate) === mergeIdentity(key, entry),

@@ -354,25 +354,18 @@ it('shows hover and pressed feedback layered on top of an already-selected day, 
     'sanity: the selected-bg cssprop must actually apply while resting',
   ).to.equal('rgb(9, 9, 9)');
 
-  const rect = day.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   try {
-    await sendMouse({ type: 'move', position });
-    const hoveredColor = getComputedStyle(day).backgroundColor;
-    expect(
-      hoveredColor,
+    await hoverUntilMatched(day, 'selected calendar day is hovered');
+    await waitUntil(
+      () => getComputedStyle(day).backgroundColor !== restingColor,
       'a hovered selected day must show hover feedback, not just the static selected fill',
-    ).to.not.equal(restingColor);
+    );
 
     await sendMouse({ type: 'down' });
-    const pressedColor = getComputedStyle(day).backgroundColor;
-    expect(
-      pressedColor,
+    await waitUntil(
+      () => day.matches(':active') && getComputedStyle(day).backgroundColor !== restingColor,
       'a pressed selected day must show active feedback, not just the static selected fill',
-    ).to.not.equal(restingColor);
+    );
   } finally {
     await sendMouse({ type: 'up' });
     await resetMouse();
@@ -437,6 +430,19 @@ it('inherits independent selected, outside-month, and today paint hooks from a t
 it('is accessible', async () => {
   const el = await fixture(html`<lr-calendar aria-label="Schedule"></lr-calendar>`);
   await expect(el).to.be.accessible();
+});
+
+// Regression: the today cell never got aria-current="date", so a screen reader user tabbing/
+// arrowing through the grid heard every date announced identically with no "today" cue.
+it('marks the today cell with aria-current="date" and no other cell', async () => {
+  const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
+  await el.updateComplete;
+  const today = el.shadowRoot!.querySelector<HTMLElement>('[data-today="true"]')!;
+  expect(today.getAttribute('aria-current')).to.equal('date');
+  const others = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="day"]:not([data-today="true"])'),
+  ];
+  expect(others.every((day) => !day.hasAttribute('aria-current'))).to.equal(true);
 });
 
 it('is accessible with a populated month view (selection + multiple events per day)', async () => {
@@ -536,19 +542,17 @@ it('shows a rendered hover and a stronger pressed overlay on a white event chip,
   const restingImage = getComputedStyle(chip).backgroundImage;
   const restingColor = getComputedStyle(chip).backgroundColor;
   expect(restingImage).to.equal('none');
-  const rect = chip.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   try {
-    await sendMouse({ type: 'move', position });
+    await hoverUntilMatched(chip, 'event chip is hovered');
+    await waitUntil(
+      () => getComputedStyle(chip).backgroundImage !== 'none',
+      'a hovered chip must paint an overlay',
+    );
     const hoveredImage = getComputedStyle(chip).backgroundImage;
-    expect(hoveredImage, 'a hovered chip must paint an overlay').to.not.equal('none');
     await sendMouse({ type: 'down' });
-    const pressedImage = getComputedStyle(chip).backgroundImage;
-    expect(pressedImage, 'the pressed overlay must be stronger than the hovered one').to.not.equal(
-      hoveredImage,
+    await waitUntil(
+      () => chip.matches(':active') && getComputedStyle(chip).backgroundImage !== hoveredImage,
+      'the pressed overlay must be stronger than the hovered one',
     );
     expect(
       getComputedStyle(chip).backgroundColor,

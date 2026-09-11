@@ -2430,3 +2430,25 @@ it("inherits the documented --lr-markdown-font-mono hook in the core variant", a
   ) as HTMLElement;
   expect(getComputedStyle(code).fontFamily).to.contain("Courier New");
 });
+
+it('does not recognize a GFM table when gfm is disabled (regression)', async () => {
+  const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
+  el.gfm = false;
+  el.content = '| a | b |\n| --- | --- |\n| 1 | 2 |\n';
+  await el.updateComplete;
+  await waitUntil(
+    () => (el as unknown as { renderedHtml: string | null }).renderedHtml !== null,
+  );
+  expect(el.shadowRoot!.querySelector('[part="table"]') == null).to.be.true;
+});
+
+it('recognizes a GFM table with the unset (true) gfm default (regression)', async () => {
+  const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
+  expect(el.gfm).to.equal(true);
+  el.content = '| a | b |\n| --- | --- |\n| 1 | 2 |\n';
+  await el.updateComplete;
+  await waitUntil(
+    () => (el as unknown as { renderedHtml: string | null }).renderedHtml !== null,
+  );
+  expect(el.shadowRoot!.querySelector('[part="table"]')).to.exist;
+});

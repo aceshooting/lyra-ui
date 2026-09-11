@@ -149,6 +149,16 @@ describe('lr-test-results', () => {
     expect(region.textContent).to.equal('');
   });
 
+  it('omits aria-label on the per-suite list rather than an explicit empty string when the suite name is blank', async () => {
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results
+        .suites=${[{ id: 's1', name: '', tests: [{ id: 't1', name: 'test', status: 'passed' }] }]}
+      ></lr-test-results>
+    `);
+    const list = el.shadowRoot!.querySelector('[part="suite"] [role="list"]')!;
+    expect(list.hasAttribute('aria-label')).to.equal(false);
+  });
+
   it('does not correlate completion across a run-id replacement', async () => {
     const el = await fixture<LyraTestResults>(html`
       <lr-test-results run-id="run-1" run-state="running" .suites=${suites}></lr-test-results>

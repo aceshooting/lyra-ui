@@ -3957,6 +3957,39 @@ function resolved(
 }
 
 describe("multiple", () => {
+  /**
+   * Regression: `value`'s setter truncates to a single entry while `multiple` is still (or
+   * defaults to) `false` -- a `.value=${array}` binding placed before a later `.multiple=${true}`
+   * in the same template (Lit commits property bindings in source order) permanently dropped every
+   * entry past the first, with no error, event, or recovery path.
+   */
+  it("resolves an initial multi-value binding set before multiple in the same template", async () => {
+    const el = (await fixture(html`
+      <lr-select .value=${["a", "c"]} .multiple=${true}>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(["a", "c"]);
+  });
+
+  it("resolves an initial default-value binding set before multiple in the same template", async () => {
+    const el = (await fixture(html`
+      <lr-select .defaultValue=${["a", "c"]} .multiple=${true}>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+
+    expect(el.defaultValue).to.deep.equal(["a", "c"]);
+    expect(el.value).to.deep.equal(["a", "c"]);
+  });
+
   it("exposes an array value and keeps the listbox open while picking several options", async () => {
     const el = (await fixture(multi())) as LyraSelect;
     expect(el.multiple).to.be.true;

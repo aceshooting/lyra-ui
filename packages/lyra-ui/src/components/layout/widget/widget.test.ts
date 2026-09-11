@@ -9,7 +9,7 @@ import "./widget.js";
 import type { LyraWidget } from "./widget.js";
 import { styles } from "./widget.styles.js";
 import { registerLyraLocale } from "../../../internal/localization.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 // A stand-in for a slotted component (e.g. lr-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host
@@ -2326,6 +2326,33 @@ describe("storage-key persistence", () => {
     await el.updateComplete;
     expect(localStorage.length).to.equal(before);
   });
+
+  /**
+   * Regression: willUpdate() applied a stored `collapsed` preference unconditionally, so an
+   * explicit `.collapsed=${…}` binding on the same mount was silently overwritten with no
+   * `lr-collapse-change` event -- the exact bug shape already fixed once in lr-app-rail's
+   * `loadPersisted()`, which this mirrors via a `changed.has('collapsed')` guard.
+   */
+  it("keeps an explicit collapsed binding authoritative over a stale persisted value", async () => {
+    const key = `lr-test-widget-explicit-${Math.random()}`;
+    const fullKey = `lr-widget:${key}`;
+    localStorage.setItem(fullKey, JSON.stringify({ collapsed: false }));
+
+    let changeEvents = 0;
+    const el = document.createElement("lr-widget") as LyraWidget;
+    el.addEventListener("lr-collapse-change", () => changeEvents++);
+    el.setAttribute("storage-key", key);
+    el.setAttribute("collapsible", "");
+    el.collapsed = true;
+    document.body.append(el);
+    await el.updateComplete;
+
+    expect(el.collapsed).to.be.true;
+    expect(changeEvents).to.equal(0);
+
+    el.remove();
+    localStorage.removeItem(fullKey);
+  });
 });
 
 describe("view-toggle active-state cssprops", () => {
@@ -2728,11 +2755,16 @@ describe("view-toggle pressed feedback", () => {
 
     try {
       await resetMouse();
-      await moveMouseTo(pressed);
+      // Land the pointer with hoverUntilMatched() -- a single-shot sendMouse move followed by a
+      // synchronous read is racy under a busy multi-page browser run (the pointer event may not
+      // have been processed yet), so re-read the rect and re-dispatch until :hover actually
+      // matches before trusting the rendered style.
+      await hoverUntilMatched(pressed, "the pressed view toggle never reported :hover");
       // Hovering the pressed toggle deliberately keeps its own fill -- the hover rule sits below
       // the [aria-pressed='true'] rule on purpose, exactly like lr-tab-group's selected tab.
-      expect(getComputedStyle(pressed).backgroundColor).to.equal(
-        "rgb(0, 51, 102)"
+      await waitUntil(
+        () => getComputedStyle(pressed).backgroundColor === "rgb(0, 51, 102)",
+        "the pressed view toggle kept its resting fill while hovered"
       );
       await sendMouse({ type: "down" });
       await waitUntil(
@@ -2759,9 +2791,12 @@ describe("view-toggle pressed feedback", () => {
     );
     try {
       await resetMouse();
-      await moveMouseTo(unpressed);
-      expect(getComputedStyle(unpressed).backgroundColor).to.equal(
-        "rgb(9, 121, 5)"
+      // Same hoverUntilMatched() + waitUntil landing as the pressed-toggle case above -- a
+      // single-shot move followed by a synchronous hover-dependent read is racy per engine.
+      await hoverUntilMatched(unpressed, "the unpressed view toggle never reported :hover");
+      await waitUntil(
+        () => getComputedStyle(unpressed).backgroundColor === "rgb(9, 121, 5)",
+        "the unpressed view toggle never picked up its hover fill"
       );
       await sendMouse({ type: "down" });
       await waitUntil(

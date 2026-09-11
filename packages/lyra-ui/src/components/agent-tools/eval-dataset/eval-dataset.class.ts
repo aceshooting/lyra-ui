@@ -10,9 +10,10 @@ import type { LyraFileInputEventMap } from '../../media/file-input/file-input.cl
 import type { LyraExportFormatOption, LyraExportButtonEventMap } from '../../utility/export-button/export-button.class.js';
 import { styles } from './eval-dataset.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
+import { closeIcon } from '../../../internal/icons.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -110,6 +111,8 @@ export interface LyraEvalDatasetEventMap {
  * @csspart export - The internal `<lr-export-button>`.
  * @csspart search - The search field's wrapper. Only rendered while `searchable`.
  * @csspart search-input - The `<input type="search">`. Only rendered while `searchable`.
+ * @csspart search-clear - The clear-search button, replacing the native search-cancel glyph the
+ *   component resets. Only rendered while the field has text.
  * @csspart tag-filter - The tag-filter chip group's wrapper. Only rendered while `examples`
  *   carries at least one tag.
  * @csspart grid - The internal `<lr-table>`.
@@ -121,6 +124,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
     evalDatasetAddExample: LYRA_DEFAULT_evalDatasetAddExample,
     evalDatasetColumnExpectedOutput: LYRA_DEFAULT_evalDatasetColumnExpectedOutput,
     evalDatasetColumnInput: LYRA_DEFAULT_evalDatasetColumnInput,
@@ -344,6 +348,15 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     this.searchText = (e.target as HTMLInputElement).value;
   };
 
+  // The native `::-webkit-search-cancel-button` reset in eval-dataset.styles.ts removes the
+  // browser's own clear affordance with no replacement -- this button, and the search input's
+  // refocus afterward, restore a real one-click way to reset the filter.
+  private onClearSearch = (): void => {
+    if (this.disabled) return;
+    this.searchText = '';
+    this.renderRoot.querySelector<HTMLInputElement>('[part="search-input"]')?.focus();
+  };
+
   // Native focus/blur neither bubble nor cross the shadow boundary, so a host listening for
   // focus/blur directly on <lr-eval-dataset> (e.g. to commit a pending search on blur) would
   // never hear about the internal search field without this bridge.
@@ -422,6 +435,17 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           @focus=${this.onSearchFocus}
           @blur=${this.onSearchBlur}
         />
+        ${this.searchText
+          ? html`<button
+              part="search-clear"
+              type="button"
+              ?disabled=${this.disabled}
+              aria-label=${this.localize('clear')}
+              @click=${this.onClearSearch}
+            >
+              <span aria-hidden="true" inert>${closeIcon()}</span>
+            </button>`
+          : nothing}
       </div>
     `;
   }

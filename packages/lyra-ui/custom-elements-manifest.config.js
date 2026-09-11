@@ -1326,6 +1326,58 @@ export default {
       },
     },
     {
+      name: 'lr-histogram-derived-members',
+      // `labels` and `datasets` are derived from `values`/`bins` on <lr-histogram>: writes are
+      // accepted and silently ignored. Because `LyraChart` declares both as plain decorator-managed
+      // class fields, TypeScript forbids re-declaring them as accessors in subclass syntax (TS2611),
+      // so histogram.class.ts installs the accessor pair on the prototype with
+      // `Object.defineProperty` after the class body. CEM's inheritance resolution cannot observe
+      // that, so both members were dropped from the published declaration entirely.
+      //
+      // The consequence is the quiet kind: `histogramEl.labels = [...]` type-checks against the
+      // inherited writable signature, compiles everywhere, and no-ops at runtime with nothing --
+      // not the .d.ts, not the manifest, not the generated framework declarations -- saying so.
+      // Project the real read-only/derived contract so every generated surface reports it.
+      packageLinkPhase({ customElementsManifest }) {
+        const DERIVED = new Map([
+          ['labels', 'readonly string[]'],
+          ['datasets', 'readonly LyraChartSeries[]'],
+        ]);
+        const NOTE =
+          'Derived from `values`/`bins` on `<lr-histogram>`; assignment is accepted and silently ignored.';
+
+        let projected = 0;
+        for (const module of customElementsManifest.modules ?? []) {
+          for (const declaration of module.declarations ?? []) {
+            if (declaration.tagName !== 'lr-histogram') continue;
+            declaration.members ??= [];
+            for (const [name, type] of DERIVED) {
+              const existing = declaration.members.find(
+                (candidate) => candidate.kind === 'field' && candidate.name === name
+              );
+              const member = existing ?? { kind: 'field', name, privacy: 'public' };
+              member.readonly = true;
+              member.type = { text: type };
+              member.description = member.description ? `${member.description} ${NOTE}` : NOTE;
+              // A projected subclass contract, not an inherited copy -- keep it through compaction.
+              delete member.inheritedFrom;
+              if (!existing) declaration.members.push(member);
+              projected += 1;
+            }
+          }
+        }
+
+        if (projected !== DERIVED.size) {
+          throw new Error(
+            `lr-histogram derived-member projection expected ${DERIVED.size} members, projected ${projected}. ` +
+              'Either the tag stopped being generated or histogram.class.ts no longer derives labels/datasets.'
+          );
+        }
+
+        sortManifest(customElementsManifest);
+      },
+    },
+    {
       name: 'lr-inherited-public-member-contracts',
       packageLinkPhase({ customElementsManifest }) {
         const declarations = new Map();

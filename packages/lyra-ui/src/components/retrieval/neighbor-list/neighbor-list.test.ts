@@ -730,3 +730,42 @@ describe('row part styling reaches both rendering paths', () => {
     expect(getComputedStyle(header).outlineColor).to.equal('rgb(21, 43, 65)');
   });
 });
+
+it('keeps a stable items reference and keyFunction/group content on the composed lr-virtual-list across an unrelated re-render', async () => {
+  const many: LyraNeighborRow[] = Array.from({ length: 5 }, (_, i) => ({
+    relation: i % 2 === 0 ? 'related_to' : 'works_for',
+    direction: 'out' as const,
+    node: { id: `n${i}`, label: `Node ${i}` },
+  }));
+  const el = (await fixture(
+    html`<lr-neighbor-list virtualize-at="3" group-by-relation></lr-neighbor-list>`
+  )) as LyraNeighborList;
+  el.rows = many;
+  await el.updateComplete;
+  const virtual = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
+    items: unknown;
+    keyFunction: unknown;
+    groups: { key: string; label: string; startIndex: number }[];
+  };
+  const items = virtual.items;
+  const keyFunction = virtual.keyFunction;
+  const groups = virtual.groups.map((g) => ({ ...g }));
+  expect(items, 'items should be populated').to.not.be.undefined;
+  expect(groups.length, 'groups should be populated when grouping is on').to.be.greaterThan(0);
+
+  // An unrelated reactive property (not rows/groupByRelation) must not rebind fresh
+  // array/closure references, or the composed lr-virtual-list clears its measured row heights
+  // and recomputes every offset even though the row data itself never changed. `items` has no
+  // deep-equality `hasChanged` on lr-virtual-list, so it needs an actually-stable reference
+  // (guard()); `groups` does (`virtualListGroupsChanged`), so content equality is the real
+  // contract even though the owned-collection boundary still clones the array on every write.
+  el.expandable = true;
+  await el.updateComplete;
+
+  expect(virtual.items, 'items reference').to.equal(items);
+  expect(virtual.keyFunction, 'keyFunction reference').to.equal(keyFunction);
+  expect(
+    virtual.groups.map((g) => ({ key: g.key, label: g.label, startIndex: g.startIndex })),
+    'groups content'
+  ).to.deep.equal(groups);
+});

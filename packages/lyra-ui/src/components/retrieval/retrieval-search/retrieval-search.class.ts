@@ -21,6 +21,7 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { canonicalIdentityList, isRecord } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -392,6 +393,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
           <lr-input
             part="query"
             type="search"
+            clearable
             placeholder=${this.placeholder || this.localize('search')}
             .value=${this.query}
             @lr-input=${this.onQueryInput}
@@ -427,7 +429,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
                     const chip = event.currentTarget as HTMLElement;
                     this.removeScope(
                       s,
-                      chip.shadowRoot?.activeElement !== null
+                      activeElementIn(chip.shadowRoot) !== null
                     );
                   }}
                   >${s}</lr-chip
@@ -442,7 +444,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
                     const chip = event.currentTarget as HTMLElement;
                     this.removeFilter(
                       k,
-                      chip.shadowRoot?.activeElement !== null
+                      activeElementIn(chip.shadowRoot) !== null
                     );
                   }}
                   >${this.localize('retrievalFilterChipLabel', undefined, {

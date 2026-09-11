@@ -72,7 +72,7 @@ in `solarleb_cygnus/AGENTS.md`.
 
 ## Monorepo layout
 
-pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@12.3.4`.
+pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@12.4.1`.
 The published package supports Node ≥ 20; contributor generation, measured-quality, release, and
 primary CI work use the exact Node `22.23.2` recorded in [`.nvmrc`](.nvmrc). Run `nvm use` before
 those commands rather than relying on an arbitrary Node 22 patch.
@@ -116,7 +116,11 @@ lyra-ui/                          (repo root — this file lives here)
 directory to already be fresh. After a doc-affecting change, run `./package.sh` directly rather
 than `pnpm run llms` followed by a separate `./package.sh` call: `pnpm lint`'s freshness checks
 cover `llms/` but not the packaged copy under `plugins/`, so the second step going unrun is easy to
-miss locally and only surfaces days later in CI's `docs-and-storybook` job.
+miss locally. CI catches it in the **`static-checks`** job, which runs `./package.sh` and then
+`git diff --exit-code` over `plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md`,
+`plugins/lyra-ui/skills/lyra-ui/references/`, `skills/lyra-ui.skill` and
+`skills/compose-lyra-interfaces.skill` — so it fails on the very next run, not days later, and not
+in `docs-and-storybook`.
 
 ## Dev commands and gates
 

@@ -113,6 +113,27 @@ it('forwards native editing properties to the search input', async () => {
   expect(search.getAttribute('enterkeyhint')).to.equal('search');
 });
 
+it('shows a clear button once the search query has text, and clears it on click', async () => {
+  const el = (await fixture(
+    html`<lr-tool-select-dialog open .tools=${TOOLS}></lr-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
+
+  search.value = 'python';
+  search.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+  const clear = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]');
+  expect(clear).to.not.equal(null);
+  expect(clear!.getAttribute('aria-label')).to.equal('Clear');
+
+  clear!.click();
+  await el.updateComplete;
+  // `query` is private; the rendered input value is the observable contract.
+  expect(search.value).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
+});
+
 it('parses a literal spellcheck="false" HTML attribute as false, not the presence-based Boolean default', async () => {
   // Deliberately a plain attribute string (not a `.spellcheck=${false}` property binding) --
   // Lit's default `type: Boolean` converter is presence-based, so without a dedicated converter
@@ -1082,21 +1103,26 @@ it("renders the search-input's placeholder with the live quiet color at full opa
   expect(placeholder.opacity).to.equal('1');
 });
 
-it('renders the native search field without cancel or decoration chrome', async () => {
+it('renders the native search field without native cancel/decoration chrome, replaced by the rendered clear button', async () => {
   const el = (await fixture(html`<lr-tool-select-dialog open .tools=${TOOLS}></lr-tool-select-dialog>`)) as LyraToolSelectDialog;
   const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
   expect(input.type).to.equal('search');
   expect(getComputedStyle(input).appearance).to.equal('textfield');
   input.value = 'python';
   input.dispatchEvent(new Event('input', { bubbles: true }));
-  const bounds = input.getBoundingClientRect();
+  await el.updateComplete;
+  // The region where the browser's native cancel button would have rendered now hosts this
+  // component's own [part="search-clear"] replacement -- clicking there clears the query,
+  // proving the suppressed native chrome has a real, clickable substitute rather than nothing.
+  const clear = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]')!;
+  const bounds = clear.getBoundingClientRect();
   try {
     await sendMouse({
       type: 'click',
-      position: [Math.floor(bounds.right - 8), Math.floor(bounds.top + bounds.height / 2)],
+      position: [Math.floor(bounds.left + bounds.width / 2), Math.floor(bounds.top + bounds.height / 2)],
     });
-    expect(input.value).to.equal('python');
-    expect((el as unknown as { query: string }).query).to.equal('python');
+    expect(input.value).to.equal('');
+    expect((el as unknown as { query: string }).query).to.equal('');
   } finally {
     await resetMouse();
   }

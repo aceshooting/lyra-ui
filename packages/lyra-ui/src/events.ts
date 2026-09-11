@@ -2899,13 +2899,15 @@ export type LyraSortEvent =
 export type LyraSortChangeEvent = LyraDataGridEventMap['lr-sort-change'];
 
 /**
- * `lr-sort-request` — dispatched by 2 components: `<lr-document-library>`, `<lr-table>`.
+ * `lr-sort-request` — dispatched by 3 components: `<lr-data-grid>`, `<lr-document-library>`,
+ * `<lr-table>`.
  *
- * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
- * `LyraDocumentLibraryEventMap['lr-sort-request']`.
+ * `LyraDataGridEventMap['lr-sort-request']`.
  */
 export type LyraSortRequestEvent =
+  | LyraDataGridEventMap['lr-sort-request']
   | LyraDocumentLibraryEventMap['lr-sort-request']
   | LyraTableEventMap['lr-sort-request'];
 

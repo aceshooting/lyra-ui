@@ -104,6 +104,25 @@ describe('lr-rag-answer', () => {
     );
   });
 
+  it('restores the true default for showSources/showClaims once their attribute is removed', async () => {
+    const el = await fixture<LyraRagAnswer>(html`
+      <lr-rag-answer
+        answer="Answer"
+        show-sources="false"
+        show-claims="false"
+      ></lr-rag-answer>
+    `);
+    expect(el.showSources).to.equal(false);
+    expect(el.showClaims).to.equal(false);
+
+    el.removeAttribute('show-sources');
+    el.removeAttribute('show-claims');
+    await el.updateComplete;
+
+    expect(el.showSources).to.equal(true);
+    expect(el.showClaims).to.equal(true);
+  });
+
   it('renders per-instance strings overrides on every localized answer surface', async () => {
     const strings = {
       ragAnswerLabel: 'Réponse étayée',

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -38,7 +38,7 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   `searchable`; empty string leaves the corresponding browser default in effect
 - `accept: string = ''` — forwarded to the internal `lr-file-input`'s `accept` (e.g. `'.json,.csv'`);
   empty accepts any type
-- `exportFormats: ExportFormatOption[] = ['csv', 'json']` (attribute: false) — forwarded to the
+- `exportFormats: readonly LyraExportFormatOption[] = ['csv', 'json']` (attribute: false) — forwarded to the
   internal `lr-export-button`
 - `disabled: boolean = false` (reflected) — disables every add/remove/import/export affordance, e.g.
   while a host-side mutation is still in flight
@@ -57,8 +57,9 @@ loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 All three built-in columns are sortable; activating one of their headers produces that commit for
 the host to apply to its controlled `examples` array.
 
-**CSS parts:** `base`, `toolbar`, `search`, `search-input`, `tag-filter`, `grid`,
-`add-button`, `remove-button`, `import`, `export`.
+**CSS parts:** `base`, `toolbar`, `search`, `search-input`, `search-clear` (replaces the native
+search-cancel glyph the component resets; rendered only while the field has text), `tag-filter`,
+`grid`, `add-button`, `remove-button`, `import`, `export`.
 
 **Known gotchas:**
 

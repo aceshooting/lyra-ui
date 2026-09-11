@@ -35,6 +35,31 @@ export const styles = css`
   }
   [part='actions'] { display: flex; }
   [part='cancel'], [part='retry'] { min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size); padding: var(--lr-space-xs); border: 0; border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; cursor: pointer; }
+  /* Density escape -- same convention as lr-task-list/lr-stack-trace/lr-thinking-panel/
+     lr-terminal's compact. Values sit behind inline var() fallbacks, not :host declarations that
+     every instance re-declares and so shadows an ancestor value, so a transcript can retune every
+     embedded panel at once. */
+  :host([compact]) [part='run-trigger'] {
+    padding: var(--lr-subagent-panel-compact-trigger-padding, var(--lr-space-2xs) var(--lr-space-s));
+    gap: var(--lr-subagent-panel-compact-trigger-gap, var(--lr-space-2xs));
+  }
+  :host([compact]) [part='task'], :host([compact]) [part='model'] {
+    font-size: var(--lr-subagent-panel-compact-font-size, var(--lr-font-size-2xs));
+  }
+  :host([compact]) [part='cancel'], :host([compact]) [part='retry'] {
+    padding: var(--lr-subagent-panel-compact-action-padding, var(--lr-space-2xs));
+  }
+  /* Chrome escape -- same convention as siblings' frame="plain": drops each run row's own
+     border/radius so a panel nested in a container that already draws a border (a message
+     bubble, an agent-run panel) doesn't double it. */
+  :host([frame="plain"]) [part~='run'] {
+    border: 0;
+    border-radius: 0;
+  }
+  /* Density escape -- same convention as lr-task-list/lr-stack-trace/lr-thinking-panel/
+     lr-terminal's compact. Values sit behind inline var() fallbacks, not :host declarations that
+     every instance re-declares and so shadows an ancestor value, so a transcript can retune every
+     embedded panel at once. */
   @container (max-inline-size: 20rem) {
     [part~='run'] { margin-inline-start: calc(var(--lr-subagent-depth, 0) * var(--lr-space-s)); }
     [part='run-trigger'] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

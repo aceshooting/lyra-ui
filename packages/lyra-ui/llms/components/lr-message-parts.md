@@ -27,6 +27,13 @@ allocating every preceding part for each citation in a citation-heavy or growing
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
+`maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
+part, unbounded, matching every prior release; a positive value windows rendering to the newest N
+parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
+are still derived from the full sequence first, in the same linear prepass, so a badge's number
+stays stable even once an earlier citation rolls out of the rendered window. Opt in for a message
+that can grow an unusually large number of interleaved parts (e.g. a long agentic run with many
+tool-call/tool-result pairs), where unbounded live DOM can visibly stall the main thread.
 `renderPart?: MessagePartRenderer` (attribute: false), where returning `undefined` delegates that
 part to the built-in renderer; `accessibleLabel: string | null = null` (attribute `aria-label`).
 

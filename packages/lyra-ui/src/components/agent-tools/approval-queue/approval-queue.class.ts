@@ -216,17 +216,24 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
 
   private renderRequest(request: ToolApprovalRequest): TemplateResult {
     const status = request.status ?? 'pending';
+    // The badge is the only place the resolved decision (approved/denied) is rendered, but the
+    // button already carries an explicit `aria-label`, which -- per the accessible-name
+    // computation -- excludes the badge's own text from the name. `aria-describedby` back onto
+    // the badge keeps that decision reachable to assistive tech without touching the localized
+    // `approvalQueueOpen` message itself.
+    const statusId = `approval-queue-status-${request.id}`;
     return html`<div role="listitem"><button
       part="request"
       type="button"
       data-selected=${request.id === this.selectedInvocationId ? 'true' : 'false'}
       aria-current=${request.id === this.selectedInvocationId ? 'true' : 'false'}
       aria-label=${this.localize('approvalQueueOpen', undefined, { tool: request.toolName })}
+      aria-describedby=${statusId}
       ?disabled=${status !== 'pending'}
       @click=${() => this.select(request)}
     >
       <span part="request-info"><span part="tool-name">${request.toolName}</span><span part="request-id">${request.id}</span></span>
-      <lr-badge part="status" variant=${this.statusVariant(status)}>${this.statusLabel(status)}</lr-badge>
+      <lr-badge id=${statusId} part="status" variant=${this.statusVariant(status)}>${this.statusLabel(status)}</lr-badge>
     </button></div>`;
   }
 

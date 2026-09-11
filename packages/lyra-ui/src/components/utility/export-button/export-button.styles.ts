@@ -5,9 +5,10 @@ export const styles = css`
     display: inline-block;
     position: relative;
   }
-  [part='trigger'] {
+  [part~='trigger'] {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -22,22 +23,29 @@ export const styles = css`
   /* :where() zeroes the wrapped selectors' specificity, leaving :hover alone at (0,1,0). Unwrapped,
      [part='trigger']:hover:not(:disabled) is (0,3,0) and out-ranks the source-later :active rule
      below, swallowing the pressed state. */
-  :where([part='trigger']):hover:where(:not(:disabled)) {
+  :where([part~='trigger']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
   /* Same :where() shape as the hover rule above, so the two tie at (0,1,0) and source order hands
      this one the press. */
-  :where([part='trigger']):active:where(:not(:disabled)) {
+  :where([part~='trigger']):active:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  [part='trigger']:disabled {
+  [part~='trigger']:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='trigger']:focus-visible {
+  [part~='trigger']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* Present alongside 'trigger' after a built-in CSV/JSON export fails, until the next attempt --
+     see the matching 'lr-export-error' JSDoc. Paired with a live-region announcement of the same
+     failure, since color alone is not an accessible signal. */
+  [part~='trigger-error'] {
+    border-color: var(--lr-color-danger);
+    color: var(--lr-color-danger);
   }
   [part='menu'] {
     /* Closed state: invisible and slightly raised. visibility, not display:none, so opacity and

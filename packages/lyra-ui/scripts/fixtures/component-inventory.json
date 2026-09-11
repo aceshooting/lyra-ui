@@ -4385,7 +4385,20 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-alert-close-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-alert-close-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -10032,16 +10045,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -10169,7 +10172,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -10344,16 +10347,6 @@
         ],
         "properties": [
           {
-            "name": "annotations",
-            "attribute": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "attribute": "area",
             "type": "boolean",
@@ -10509,7 +10502,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -11420,6 +11413,60 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-box-plot-border-color-1",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-1)"
+          },
+          {
+            "name": "--lr-box-plot-border-color-2",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-2)"
+          },
+          {
+            "name": "--lr-box-plot-border-color-3",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-3)"
+          },
+          {
+            "name": "--lr-box-plot-border-color-4",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-4)"
+          },
+          {
+            "name": "--lr-box-plot-border-color-5",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-5)"
+          },
+          {
+            "name": "--lr-box-plot-border-color-6",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-6)"
+          },
+          {
+            "name": "--lr-box-plot-border-color-7",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-7)"
+          },
+          {
+            "name": "--lr-box-plot-border-color-8",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-8)"
+          },
+          {
+            "name": "--lr-box-plot-border-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
+          },
+          {
             "name": "--lr-box-plot-data-table-toggle-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -11429,6 +11476,60 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-box-plot-fill-color-1",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-1)"
+          },
+          {
+            "name": "--lr-box-plot-fill-color-2",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-2)"
+          },
+          {
+            "name": "--lr-box-plot-fill-color-3",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-3)"
+          },
+          {
+            "name": "--lr-box-plot-fill-color-4",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-4)"
+          },
+          {
+            "name": "--lr-box-plot-fill-color-5",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-5)"
+          },
+          {
+            "name": "--lr-box-plot-fill-color-6",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-6)"
+          },
+          {
+            "name": "--lr-box-plot-fill-color-7",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-7)"
+          },
+          {
+            "name": "--lr-box-plot-fill-color-8",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-8)"
+          },
+          {
+            "name": "--lr-box-plot-item-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "--lr-chart-canvas-hover-outline-color",
@@ -12503,16 +12604,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -12640,7 +12731,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -12815,16 +12906,6 @@
         ],
         "properties": [
           {
-            "name": "annotations",
-            "attribute": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "attribute": "area",
             "type": "boolean",
@@ -12980,7 +13061,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -17093,16 +17174,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -17230,7 +17301,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -17406,7 +17477,7 @@
         "properties": [
           {
             "name": "annotations",
-            "attribute": "annotations",
+            "attribute": null,
             "type": "readonly LyraChartAnnotation[]",
             "readonly": false,
             "reflects": false,
@@ -17457,7 +17528,7 @@
             "name": "chartArea",
             "attribute": null,
             "type": "LyraChartArea | undefined",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -17616,7 +17687,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -32645,6 +32716,15 @@
             "default": "none"
           },
           {
+            "name": "selection-mode",
+            "property": "selectionMode",
+            "type": "'none' | 'single' | 'multiple'",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "server",
             "property": "server",
             "type": "boolean",
@@ -33078,6 +33158,15 @@
             "hasDefault": false
           },
           {
+            "name": "selectionMode",
+            "attribute": "selection-mode",
+            "type": "'none' | 'single' | 'multiple'",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "server",
             "attribute": "server",
             "type": "boolean",
@@ -33310,6 +33399,12 @@
             "name": "lr-sort-change",
             "type": "CustomEvent<Readonly<{ sort: DataGridSortingState }>>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-sort-request",
+            "type": "CustomEvent<Readonly<{ sort: DataGridSortingState }>>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -37231,7 +37326,25 @@
         ],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "clear",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "click",
             "overloads": [
               {
                 "parameters": [],
@@ -37298,6 +37411,8 @@
             "input"
           ],
           "delegatedMethods": [
+            "blur",
+            "click",
             "focus"
           ]
         }
@@ -39107,6 +39222,16 @@
             "default": ""
           },
           {
+            "name": "max-height",
+            "property": "maxHeight",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "sync-scroll",
             "property": "syncScroll",
             "type": "boolean",
@@ -39180,6 +39305,16 @@
             "type": "string",
             "readonly": false,
             "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "maxHeight",
+            "attribute": "max-height",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
             "deprecated": null,
             "hasDefault": true,
             "default": ""
@@ -40829,16 +40964,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -40966,7 +41091,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -41141,16 +41266,6 @@
         ],
         "properties": [
           {
-            "name": "annotations",
-            "attribute": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "attribute": "area",
             "type": "boolean",
@@ -41306,7 +41421,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -43450,6 +43565,24 @@
             "default": false
           },
           {
+            "name": "download",
+            "property": "download",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "href",
+            "property": "href",
+            "type": "string | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "loading",
             "property": "loading",
             "type": "boolean",
@@ -43468,6 +43601,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "rel",
+            "property": "rel",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "size",
@@ -43493,6 +43635,15 @@
             "name": "submenuopen",
             "property": "submenuopen",
             "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "target",
+            "property": "target",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -43551,6 +43702,24 @@
             "default": false
           },
           {
+            "name": "download",
+            "attribute": "download",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "href",
+            "attribute": "href",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "loading",
             "attribute": "loading",
             "type": "boolean",
@@ -43571,6 +43740,15 @@
             "default": ""
           },
           {
+            "name": "rel",
+            "attribute": "rel",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "size",
             "attribute": "size",
             "type": "LyraSize",
@@ -43589,6 +43767,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "target",
+            "attribute": "target",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "type",
@@ -47235,6 +47422,10 @@
             "deprecated": null
           },
           {
+            "name": "search-clear",
+            "deprecated": null
+          },
+          {
             "name": "search-input",
             "deprecated": null
           },
@@ -48103,6 +48294,10 @@
           },
           {
             "name": "trigger",
+            "deprecated": null
+          },
+          {
+            "name": "trigger-error",
             "deprecated": null
           }
         ],
@@ -50713,7 +50908,7 @@
             "name": "viewport",
             "attribute": null,
             "type": "Readonly<{ x: number; y: number; zoom: number }>",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -51362,6 +51557,16 @@
             "default": ""
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string",
@@ -51392,6 +51597,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "label",
@@ -57554,16 +57769,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -57701,7 +57906,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -57886,16 +58091,6 @@
         ],
         "properties": [
           {
-            "name": "annotations",
-            "attribute": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "attribute": "area",
             "type": "boolean",
@@ -57974,6 +58169,15 @@
             "default": false
           },
           {
+            "name": "datasets",
+            "attribute": null,
+            "type": "readonly LyraChartSeries[]",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "dataTableToggle",
             "attribute": "data-table-toggle",
             "type": "boolean",
@@ -58036,8 +58240,8 @@
           {
             "name": "labels",
             "attribute": null,
-            "type": "string[]",
-            "readonly": false,
+            "type": "readonly string[]",
+            "readonly": true,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
@@ -58061,7 +58265,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -59744,6 +59948,16 @@
             "default": null
           },
           {
+            "name": "aria-current",
+            "property": "triggerCurrent",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "aria-describedby",
             "property": "triggerDescribedBy",
             "type": "string | null",
@@ -59782,6 +59996,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "aria-pressed",
+            "property": "triggerPressed",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "disabled",
@@ -59859,6 +60083,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "rel",
+            "property": "rel",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "src",
@@ -59975,6 +60208,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "rel",
+            "attribute": "rel",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "src",
@@ -60199,7 +60441,7 @@
           "upstream": "webawesome",
           "tag": "wa-comparison",
           "tier": "free",
-          "classification": "exact"
+          "classification": "unsupported"
         }
       ],
       "surface": {
@@ -66697,16 +66939,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -66834,7 +67066,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -67009,16 +67241,6 @@
         ],
         "properties": [
           {
-            "name": "annotations",
-            "attribute": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "attribute": "area",
             "type": "boolean",
@@ -67174,7 +67396,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -72444,6 +72666,24 @@
             "default": false
           },
           {
+            "name": "download",
+            "property": "download",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "href",
+            "property": "href",
+            "type": "string | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "loading",
             "property": "loading",
             "type": "boolean",
@@ -72464,6 +72704,15 @@
             "default": ""
           },
           {
+            "name": "rel",
+            "property": "rel",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "size",
             "property": "size",
             "type": "LyraSize",
@@ -72472,6 +72721,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "target",
+            "property": "target",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "type",
@@ -72526,11 +72784,29 @@
             "default": false
           },
           {
+            "name": "download",
+            "attribute": "download",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "hasSubmenu",
             "attribute": null,
             "type": "boolean",
             "readonly": true,
             "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "href",
+            "attribute": "href",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": false
           },
@@ -72555,6 +72831,15 @@
             "default": ""
           },
           {
+            "name": "rel",
+            "attribute": "rel",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "size",
             "attribute": "size",
             "type": "LyraSize",
@@ -72568,6 +72853,15 @@
             "name": "submenuOpen",
             "attribute": null,
             "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "target",
+            "attribute": "target",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -73752,6 +74046,16 @@
             "default": ""
           },
           {
+            "name": "max-rendered-parts",
+            "property": "maxRenderedParts",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
             "name": "show-reasoning",
             "property": "showReasoning",
             "type": "boolean",
@@ -73791,6 +74095,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "maxRenderedParts",
+            "attribute": "max-rendered-parts",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "parts",
@@ -76434,12 +76748,11 @@
           {
             "name": "autocorrect",
             "property": "autocorrect",
-            "type": "boolean | 'off' | 'on'",
+            "type": "boolean",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": true
+            "hasDefault": false
           },
           {
             "name": "autofocus",
@@ -76850,12 +77163,11 @@
           {
             "name": "autocorrect",
             "attribute": "autocorrect",
-            "type": "boolean | 'off' | 'on'",
+            "type": "boolean",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": true
+            "hasDefault": false
           },
           {
             "name": "autofocus",
@@ -78302,6 +78614,14 @@
           {
             "name": "search",
             "deprecated": null
+          },
+          {
+            "name": "search-clear",
+            "deprecated": null
+          },
+          {
+            "name": "search-field",
+            "deprecated": null
           }
         ],
         "cssProperties": [],
@@ -78524,7 +78844,7 @@
             "name": "source",
             "attribute": null,
             "type": "LyraNotebookViewerSource",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -78864,12 +79184,11 @@
           {
             "name": "autocorrect",
             "property": "autocorrect",
-            "type": "boolean | 'off' | 'on'",
+            "type": "boolean",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": true
+            "hasDefault": false
           },
           {
             "name": "autofocus",
@@ -79301,12 +79620,11 @@
           {
             "name": "autocorrect",
             "attribute": "autocorrect",
-            "type": "boolean | 'off' | 'on'",
+            "type": "boolean",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": true
+            "hasDefault": false
           },
           {
             "name": "autofocus",
@@ -85988,16 +86306,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -86125,7 +86433,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -86300,16 +86608,6 @@
         ],
         "properties": [
           {
-            "name": "annotations",
-            "attribute": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "attribute": "area",
             "type": "boolean",
@@ -86465,7 +86763,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -87054,16 +87352,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -87191,7 +87479,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -87366,16 +87654,6 @@
         ],
         "properties": [
           {
-            "name": "annotations",
-            "attribute": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "attribute": "area",
             "type": "boolean",
@@ -87531,7 +87809,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -90680,7 +90958,7 @@
             "name": "--lr-progress-ring-track-width",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-size-4px)"
+            "default": "var(--lr-theme-border-width-thick,var(--lr-size-4px))"
           },
           {
             "name": "--size",
@@ -93470,16 +93748,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -93607,7 +93875,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -93782,16 +94050,6 @@
         ],
         "properties": [
           {
-            "name": "annotations",
-            "attribute": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "attribute": "area",
             "type": "boolean",
@@ -93947,7 +94205,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -99737,9 +99995,9 @@
             "default": "768px"
           },
           {
-            "name": "variant",
-            "property": "variant",
-            "type": "LyraResponsivePanelVariant",
+            "name": "shape",
+            "property": "shape",
+            "type": "LyraResponsivePanelShape",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -99807,9 +100065,9 @@
             "default": "768px"
           },
           {
-            "name": "variant",
-            "attribute": "variant",
-            "type": "LyraResponsivePanelVariant",
+            "name": "shape",
+            "attribute": "shape",
+            "type": "LyraResponsivePanelShape",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -102351,16 +102609,6 @@
       "surface": {
         "attributes": [
           {
-            "name": "annotations",
-            "property": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "property": "area",
             "type": "boolean",
@@ -102488,7 +102736,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legend-position",
@@ -102663,16 +102911,6 @@
         ],
         "properties": [
           {
-            "name": "annotations",
-            "attribute": "annotations",
-            "type": "readonly LyraChartAnnotation[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
-          },
-          {
             "name": "area",
             "attribute": "area",
             "type": "boolean",
@@ -102828,7 +103066,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "dataset"
+            "default": "auto"
           },
           {
             "name": "legendPosition",
@@ -108095,7 +108333,7 @@
             "name": "sourceCount",
             "attribute": null,
             "type": "number",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -111680,6 +111918,26 @@
       "surface": {
         "attributes": [
           {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -111710,6 +111968,26 @@
           }
         ],
         "properties": [
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
           {
             "name": "label",
             "attribute": "label",
@@ -111838,6 +112116,30 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-subagent-panel-compact-action-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-subagent-panel-compact-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
+          },
+          {
+            "name": "--lr-subagent-panel-compact-trigger-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-subagent-panel-compact-trigger-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs) var(--lr-space-s)"
+          },
           {
             "name": "--lr-subagent-panel-progress-fill",
             "deprecated": null,
@@ -124499,6 +124801,7 @@
       },
       "dependencies": {
         "direct": [
+          "lr-number-input",
           "lr-option",
           "lr-select"
         ],
@@ -125164,7 +125467,7 @@
           {
             "name": "lr-maximize-change",
             "type": "CustomEvent<{ readonly maximized: boolean }>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -125987,6 +126290,10 @@
           },
           {
             "name": "panel",
+            "deprecated": null
+          },
+          {
+            "name": "search-clear",
             "deprecated": null
           },
           {

@@ -42,6 +42,10 @@ plain text) — this component has no dependency on either.
   behavior differences, see prose below.
 - `durationMs?: number` (attribute `duration-ms`) — how long the reasoning took. Omitted entirely
   (nothing rendered in `'post-hoc'`, a pulsing placeholder in `'live'`) while unset.
+- `follow: boolean = true` (reflected) — whether live, expanded content follows the transcript tail.
+  A user scroll updates this property and emits `lr-follow-change`; a direct assignment is
+  controlled input and emits nothing. Being a `true`-defaulting boolean, `follow="false"` in plain
+  HTML is honoured (it uses `trueDefaultBooleanConverter`), so the attribute form is load-bearing.
 
 **Methods:** `scrollToBottom(): void` — scrolls `[part="body"]` to its current bottom immediately
 (no smooth-scroll animation). Safe to call directly, e.g. from a host that wants to force a

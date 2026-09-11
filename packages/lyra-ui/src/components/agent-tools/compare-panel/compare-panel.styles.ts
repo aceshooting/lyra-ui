@@ -151,6 +151,12 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    [part="vote-button"] {
+      transition: none !important;
+    }
+  }
+
   @container (max-inline-size: 639.98px) {
     [part="panes"] {
       flex-direction: column;

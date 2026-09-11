@@ -17,6 +17,8 @@ import { styles } from './tool-param-form.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import '../../forms/select/select.class.js';
 import '../../forms/combobox/option.class.js';
+import type { LyraNumberInput } from '../../forms/input/number-input.class.js';
+import '../../forms/input/number-input.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   attachInternalsSafely,
@@ -702,17 +704,20 @@ export interface LyraToolParamFormEventMap {
  * the field that changed.
  * @event lr-validity-change - Effective native validity or errors changed. The frozen
  * `detail: { valid, errors }` includes custom errors and own/fieldset validation barring.
- * @event focus - Re-dispatched when a generated native text/number input receives focus. Composed
- * controls (`<lr-select>`) already expose their own bubbling, composed bridge.
- * @event blur - Re-dispatched when a generated native text/number input loses focus.
+ * @event focus - Re-dispatched when a generated native `'string'` text input receives focus.
+ * Composed controls (`<lr-select>`, `<lr-number-input>`) already expose their own bubbling,
+ * composed bridge.
+ * @event blur - Re-dispatched when a generated native `'string'` text input loses focus.
  * @event lr-invalid - The complete parameter form failed a validity check. Cancelable;
  * preventing it also prevents the native `invalid` event's default validation UI.
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One property's wrapper (label + control + description + error).
  * @csspart label - A field's label.
- * @csspart control - The native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'`
- * field. Shared part on both the text and number inputs; not present on the `'boolean'`/enum
- * (`<lr-select>`) or unsupported-type fallback branches.
+ * @csspart control - The native `<input>` for a `'string'` (non-enum) field, or the composed
+ * `<lr-number-input>` for a `'number'`/`'integer'` field (its own increment/decrement steppers
+ * replace the field type's native spin buttons — see `<lr-number-input>`'s own docs for its
+ * further-forwarded parts). Not present on the `'boolean'`/enum (`<lr-select>`) or
+ * unsupported-type fallback branches.
  * @csspart description - A field's helper text, from `schema.description`.
  * @csspart error - A field-level or form-level validation message.
  * @csspart unsupported - The fallback note rendered in place of a control for
@@ -1441,7 +1446,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
 
   private onNumberInput(key: string, e: Event): void {
-    const raw = e.target as HTMLInputElement;
+    // Mirrors onSelectChange's boundary: the composed <lr-number-input>'s own native-style
+    // `input` is this field's real driver, so it's stopped here rather than left to bubble
+    // out of <lr-tool-param-form> alongside this component's own separately-emitted `lr-input`.
+    e.stopPropagation();
+    const raw = e.target as LyraNumberInput;
     const n = raw.valueAsNumber;
     this.setFieldValue(key, Number.isNaN(n) ? undefined : n);
   }
@@ -1540,21 +1549,22 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     }
     if (prop.type === 'number' || prop.type === 'integer') {
       const numValue = typeof effective === 'number' && !Number.isNaN(effective) ? String(effective) : '';
-      return html`<input
-        class="control"
+      return html`<lr-number-input
         part="control"
-        type="number"
         id=${fieldId}
-        step=${prop.type === 'integer' ? '1' : 'any'}
-        aria-describedby=${describedBy || nothing}
+        .label=${label}
+        .hint=${prop.description ?? ''}
+        .errorText=${errorMessage}
+        .required=${false}
         aria-required=${required ? 'true' : 'false'}
-        aria-invalid=${errorMessage ? 'true' : 'false'}
+        .step=${prop.type === 'integer' ? 1 : 'any'}
         .value=${numValue}
         ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onNumberInput(key, e)}
-        @focus=${this.onFieldFocus}
-        @blur=${this.onFieldBlur}
-      />`;
+        @lr-input=${this.stopNestedControlEvent}
+        @change=${this.stopNestedControlEvent}
+        @lr-change=${this.stopNestedControlEvent}
+      ></lr-number-input>`;
     }
     if (prop.type === 'boolean') {
       const selected = effective === true ? 'true' : effective === false ? 'false' : '';
@@ -1600,19 +1610,22 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const effective = this._effectiveValue[key];
     const isBoolean = prop.type === 'boolean';
     const isComposedSelect = prop.type === 'string' && Boolean(prop.enum?.length);
+    // number/integer fields compose <lr-number-input>, which renders its own label/hint/error
+    // from the props passed in renderControl -- same reasoning as the isComposedSelect branch.
+    const isComposedNumber = prop.type === 'number' || prop.type === 'integer';
 
     return html`
       <div part="field" class="field" data-key=${key} data-type=${prop.type} ?data-required=${required}
         @focusout=${() => this.markTouched(key)}
       >
-        ${isBoolean || isComposedSelect
+        ${isBoolean || isComposedSelect || isComposedNumber
           ? nothing
           : html`<label part="label" for=${fieldId}>${label}</label>`}
         ${this.renderControl(key, prop, fieldId, label, required, describedBy, errorMessage, effective)}
-        ${prop.description && !isComposedSelect
+        ${prop.description && !isComposedSelect && !isComposedNumber
           ? html`<p part="description" id=${descId}>${prop.description}</p>`
           : nothing}
-        ${hasError && !isComposedSelect
+        ${hasError && !isComposedSelect && !isComposedNumber
           ? html`<p part="error" id=${errId}>${this._errors[key]}</p>`
           : nothing}
       </div>

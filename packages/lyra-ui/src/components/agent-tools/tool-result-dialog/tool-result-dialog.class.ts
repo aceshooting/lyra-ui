@@ -204,8 +204,11 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * @event lr-close - `detail: ToolResultDialogCloseReason`. Fired
  * exactly once per dismissal, via Escape, an opted-in backdrop click, the built-in
  * close button, or a `close()` call.
- * @event lr-maximize-change - `detail: { maximized: boolean }` (the new `maximized`
- * state), fired when the header's maximize/restore toggle is clicked.
+ * @event lr-maximize-change - Cancelable. `detail: { maximized: boolean }` (the would-be new
+ * `maximized` state), fired when the header's maximize/restore toggle is clicked, *before*
+ * `maximized` itself changes. Calling `preventDefault()` vetoes the toggle and leaves `maximized`
+ * unchanged -- e.g. a host persisting a per-user "prefers maximized" layout preference can hold the
+ * transition until a save round-trip completes.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open).
  * @csspart header - The row containing the tool name, status, duration, and toggle/close buttons.
@@ -393,8 +396,10 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   };
 
   private toggleMaximized = (): void => {
-    this.maximized = !this.maximized;
-    this.emit('lr-maximize-change', Object.freeze({ maximized: this.maximized }));
+    const next = !this.maximized;
+    if (this.emit('lr-maximize-change', Object.freeze({ maximized: next }), { cancelable: true })
+      .defaultPrevented) return;
+    this.maximized = next;
   };
 
   private activateOverlay(): void {

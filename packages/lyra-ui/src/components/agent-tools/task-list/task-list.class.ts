@@ -36,6 +36,14 @@ function normalizeTaskStatus(value: unknown): TaskStatus {
 const DEEP_NESTING_WARNING_KEY = 'lyra-task-list-nesting-depth';
 const DEEP_NESTING_WARNING = '<lr-task-list>: task nesting deeper than one level is ignored.';
 
+/** Ceiling on top-level rows actually mounted into the DOM, matching the shared cap this family's
+ *  other bounded lists use (`trace-tree`/`span-waterfall`'s `MAX_RENDERED_LYRA_SPANS`,
+ *  `subagent-panel`'s `MAX_RENDERED_RUNS`). `total`/`completed` in the header summary still count
+ *  every item in `items`, not just the rendered subset -- only the row DOM is capped. Reorder
+ *  index math is unaffected: it reads sibling order from `items`/`item.children` directly, never
+ *  from what is actually rendered. */
+const MAX_RENDERED_TASKS = 500;
+
 function validTaskItems(value: unknown): TaskItem[] {
   const items: TaskItem[] = [];
   for (const item of Array.isArray(value) ? value : []) {
@@ -177,6 +185,11 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
+ * Only the first 500 top-level items are mounted into the DOM (matching the render ceiling this
+ * family's other bounded lists use); the header's "N of M completed" summary still counts every
+ * item in `items`, and reorder index math still reads full sibling order from `items` regardless
+ * of what is actually rendered.
  *
  * @customElement lr-task-list
  * @slot detail-<id> - Dynamic, one per item id (e.g. `slot="detail-step-3"`). Rich detail under
@@ -568,6 +581,9 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     const items = validTaskItems(this.items);
     const total = items.length;
     const completed = items.filter((item) => normalizeTaskStatus(item.status) === 'success').length;
+    // Bounds the actual DOM node count for a very large plan; the summary above still counts every
+    // item in `items`, not just this rendered subset. See MAX_RENDERED_TASKS.
+    const renderedItems = items.slice(0, MAX_RENDERED_TASKS);
     const canReorder = this.canReorderItems();
     const number = getNumberFormat(this.effectiveLocale);
     const summary = this.localize('taskListCompletedOfTotal', undefined, {
@@ -605,11 +621,11 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
         <div part="body" id=${this.bodyId} role="list" aria-label=${ariaLabel} ?hidden=${!this.expanded}>
           ${canReorder
             ? repeat(
-                items,
+                renderedItems,
                 (item) => item.id,
                 (item) => this.renderItem(item, 0, null, canReorder),
               )
-            : items.map((item) => this.renderItem(item, 0, null, canReorder))}
+            : renderedItems.map((item) => this.renderItem(item, 0, null, canReorder))}
         </div>
         <lr-live-region></lr-live-region>
       </div>

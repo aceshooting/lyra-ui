@@ -18,7 +18,7 @@ import {
 import { styles } from './retrieval-trace.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEvidenceToggle, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEvidenceToggle, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** One of the five fixed stages a retrieval pipeline moves through, in order. */
@@ -176,6 +176,8 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
     expand: LYRA_DEFAULT_expand,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,

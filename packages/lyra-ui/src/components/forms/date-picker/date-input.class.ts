@@ -2051,7 +2051,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
     const hasLabel =
       this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
-    const invalid = this.touched && !this.internals.validity.valid;
+    const invalid = hasError || (this.touched && !this.internals.validity.valid);
     const describedBy = this.localDescriptionIds = [
       hasError ? 'date-input-error' : '',
       hasHint ? 'date-input-hint' : '',

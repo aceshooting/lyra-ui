@@ -1147,6 +1147,16 @@ describe('lr-input', () => {
     }
   });
 
+  it('keeps the clear-button hit target at the WCAG 2.5.8 24px floor even at the 2xs size tier', async () => {
+    const el = (await fixture(html`
+      <lr-input size="2xs" clearable value="content" aria-label="Name"></lr-input>
+    `)) as LyraInput;
+    const button = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement;
+    const rect = button.getBoundingClientRect();
+    expect(rect.width).to.be.at.least(24);
+    expect(rect.height).to.be.at.least(24);
+  });
+
   it('contains long RTL action/adornment content in an exact 320px allocation', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div dir="rtl" style="inline-size: 320px; max-inline-size: 320px">

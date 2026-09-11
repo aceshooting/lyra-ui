@@ -1567,3 +1567,34 @@ it('registers a lyra:dataset renderer whose matches() and render() behave as dec
     'render() produces the viewer element'
   ).to.exist;
 });
+
+it('keeps a stable items reference and keyFunction on the composed lr-virtual-list across an unrelated re-render', async () => {
+  const el = (await fixture(
+    html`<lr-dataset-viewer></lr-dataset-viewer>`
+  )) as LyraDatasetViewer;
+  const restore = fetchText(GRID_DATASET);
+  try {
+    el.src = 'https://example.test/data.csv';
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+    );
+    const virtual = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      items: unknown;
+      keyFunction: unknown;
+    };
+    const items = virtual.items;
+    const keyFunction = virtual.keyFunction;
+    expect(items, 'items should be populated').to.not.be.undefined;
+
+    // An unrelated reactive property must not rebind fresh array/closure references, or the
+    // composed lr-virtual-list clears its measured row heights and recomputes every offset even
+    // though the row data itself never changed.
+    el.name = 'Renamed dataset';
+    await el.updateComplete;
+
+    expect(virtual.items, 'items reference').to.equal(items);
+    expect(virtual.keyFunction, 'keyFunction reference').to.equal(keyFunction);
+  } finally {
+    restore();
+  }
+});

@@ -13,6 +13,8 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
  * It is intentionally a subclass of `<lr-menu-item>`, so it participates in
  * the same roving focus, checkbox, selection, and menu event contracts — and
  * in the same `size` ladder, including the `small`/`medium`/`large` spellings.
+ * It also inherits `<lr-menu-item>`'s `href`/`target`/`rel`/`download` link-item support, mirroring
+ * `wa-dropdown-item`'s identical navigation surface — see that class's doc.
  *
  * @customElement lr-dropdown-item
  * @slot - The item's visual label content. Its flattened subtree is inert and hidden from assistive

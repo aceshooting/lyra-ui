@@ -56,7 +56,7 @@ export const styles = css`
     padding-block: var(--lr-size-2px);
     padding-inline: var(--lr-size-6px);
     border-radius: var(--lr-radius-xs);
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     z-index: var(--lr-layer-content);
     transform: translate(var(--lr-size-6px), calc(-100% - var(--lr-size-6px)));
     max-inline-size: min(
@@ -165,7 +165,7 @@ export const styles = css`
     pointer-events: none;
     paint-order: stroke;
     stroke: var(--lr-graph-edge-label-halo, var(--lr-color-surface));
-    stroke-width: var(--lr-size-3px);
+    stroke-width: var(--lr-border-width-thick);
   }
   g[data-edge-labels-hidden] [part="link-label"],
   g[data-edge-labels-hidden] [part="community-label"] {
@@ -187,26 +187,26 @@ export const styles = css`
   [part="expand-indicator"] circle {
     fill: var(--lr-color-surface);
     stroke: var(--lr-color-border-strong);
-    stroke-width: var(--lr-size-1px);
+    stroke-width: var(--lr-border-width-thin);
   }
   [part="expand-indicator"] path {
     stroke: var(--lr-color-text);
-    stroke-width: var(--lr-size-1px);
+    stroke-width: var(--lr-border-width-thin);
     fill: none;
   }
   [part="focus-halo"] {
     fill: none;
     stroke: var(--lr-graph-focus-halo-color, var(--lr-color-brand));
-    stroke-width: var(--lr-size-2px);
+    stroke-width: var(--lr-border-width-medium);
     pointer-events: none;
   }
   [part="node"][data-selected] {
     stroke: var(--lr-graph-selected-color, var(--lr-color-success));
-    stroke-width: var(--lr-size-2px);
+    stroke-width: var(--lr-border-width-medium);
   }
   [part="link"][data-selected] {
     stroke: var(--lr-graph-selected-color, var(--lr-color-success)) !important;
-    stroke-width: var(--lr-size-3px);
+    stroke-width: var(--lr-border-width-thick);
   }
   [part="node"][data-dimmed] {
     opacity: var(--lr-graph-dimmed-opacity, 0.35);
@@ -262,6 +262,6 @@ export const styles = css`
     pointer-events: none;
     paint-order: stroke;
     stroke: var(--lr-graph-edge-label-halo, var(--lr-color-surface));
-    stroke-width: var(--lr-size-3px);
+    stroke-width: var(--lr-border-width-thick);
   }
 `;

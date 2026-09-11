@@ -32,6 +32,7 @@ import { composedAccessibilityText } from '../../../internal/accessibility-visib
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { tag } from '../../../internal/prefix.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import './menu-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -383,6 +384,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never
+    // reaches `[part="list"]`'s own `role="menu"` (which owns the accessible description) unless
+    // it is explicitly reflected there. Mirrors lr-checkbox's/lr-flow-minimap's identical
+    // `syncAriaDescribedByElements` use.
+    const list = this.renderRoot.querySelector<HTMLElement>('[part~="list"]') ?? undefined;
+    syncAriaDescribedByElements(this, list, this.getAttribute('aria-describedby'));
     if (
       changed.has('presentationOpen') ||
       changed.has('dropdownOpen') ||
@@ -895,6 +902,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         if (current?.hasSubmenu) {
           this.closeSubmenus(current);
           current.openSubmenu('first');
+        } else if (current?.isLinkItem) {
+          // A link item's real DOM click target lives inside its shadow root, not on the roving-
+          // focused host -- forward through the host's own click() (which the pointer path already
+          // uses) so the anchor's native default action (navigation) runs, exactly as a mouse click
+          // on the row would. select() alone never touches that inner anchor.
+          current.click();
         } else current?.select();
         break;
       // Tab is deliberately absent here: a private submenu surface handles it below,

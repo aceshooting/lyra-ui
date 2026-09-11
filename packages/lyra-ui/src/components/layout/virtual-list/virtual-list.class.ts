@@ -53,6 +53,30 @@ export interface LyraVirtualListGroup {
   startIndex: number;
 }
 
+/** Structural (not referential) equality for `groups` -- the shared collection-ownership
+ *  boundary always clones every assignment into a fresh frozen array/objects (see
+ *  `snapshotPublicCollection`), so a plain `!==` `hasChanged` treats a composing parent's
+ *  fresh-but-content-identical re-render (a common, otherwise-harmless Lit rebinding pattern) as
+ *  a real groups change, discarding every measured sticky/group-marker height for no reason.
+ *  `LyraVirtualListGroup`'s shape is small and entirely primitive fields, so a shallow
+ *  per-entry compare is cheap relative to the O(n) recompute + measurement-cache loss it avoids. */
+function virtualListGroupsChanged(
+  value: unknown,
+  oldValue: unknown
+): boolean {
+  if (value === oldValue) return false;
+  const next = value as readonly LyraVirtualListGroup[] | undefined;
+  const previous = oldValue as readonly LyraVirtualListGroup[] | undefined;
+  if (next == null || previous == null) return next !== previous;
+  if (next.length !== previous.length) return true;
+  for (let index = 0; index < next.length; index += 1) {
+    const a = next[index]!;
+    const b = previous[index]!;
+    if (a.key !== b.key || a.label !== b.label || a.startIndex !== b.startIndex) return true;
+  }
+  return false;
+}
+
 /** The ARIA role pairing each rendered row participates in -- see `itemRole`'s own doc for what
  *  each value maps to. */
 export type LyraVirtualListItemRole = 'listitem' | 'row';
@@ -350,7 +374,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * ordinary row (and would otherwise get two stacked headers) but still needs
    * this component to know where each group starts, e.g. to drive
    * `renderStickyGroup`. Omitting `label` entirely still falls back to `key`. */
-  @property({ attribute: false }) groups?: readonly LyraVirtualListGroup[];
+  @property({ attribute: false, hasChanged: virtualListGroupsChanged })
+  groups?: readonly LyraVirtualListGroup[];
 
   /** Renders the pinned copy of whichever `groups` entry the viewport is
    *  currently inside, into a `[part="sticky-group"]` overlay layer that stays

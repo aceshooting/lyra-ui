@@ -191,3 +191,21 @@ export const ClearContent: Story = {
     </div>
   `,
 };
+
+/** Migrating a `<wa-markdown><script type="text/markdown">...</script></wa-markdown>` usage: a
+ * direct `<script type="text/markdown">` child is read once at connect and adopted as `content`,
+ * as long as `content` was never explicitly authored. Prefer the `content` property directly for
+ * anything that needs to update after first connect -- the script child is not re-read. */
+export const ScriptChildContent: Story = {
+  name: 'Script-child content (wa-markdown migration)',
+  render: () => html`
+    <lr-markdown>
+      <script type="text/markdown">
+# Migrated from wa-markdown
+
+This document was authored as a script-child, the same pattern wa-markdown documents, and adopted
+once at connect.
+      </script>
+    </lr-markdown>
+  `,
+};

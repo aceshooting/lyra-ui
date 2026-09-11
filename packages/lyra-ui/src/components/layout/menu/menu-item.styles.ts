@@ -39,6 +39,9 @@ export const styles = css`
     padding-inline: var(--lr-form-control-padding-inline);
     border-radius: var(--lr-menu-item-radius, var(--lr-form-control-radius));
     cursor: pointer;
+    /* A link-item's [part='base'] renders as a real <a>; the plain (non-link) row stays a <span>,
+       for which this is a no-op. */
+    text-decoration: none;
     font: inherit;
     font-size: var(--lr-form-control-font-size);
     color: inherit;

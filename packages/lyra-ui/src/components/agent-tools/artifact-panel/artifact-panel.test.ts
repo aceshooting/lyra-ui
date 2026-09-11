@@ -585,6 +585,23 @@ describe('lr-artifact-panel', () => {
   });
 });
 
+it('reads its border widths from --lr-border-width-thin, not the generic --lr-size-1px scale (regression: theming purpose)', async () => {
+  const el = (await fixture(html`
+    <lr-artifact-panel kind="text" style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;">
+      <pre slot="code">code</pre>
+    </lr-artifact-panel>
+  `)) as LyraArtifactPanel;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const kind = el.shadowRoot!.querySelector('[part="kind"]') as HTMLElement;
+  const viewButton = el.shadowRoot!.querySelector('[part="view-button"]') as HTMLElement;
+  // A consumer retuning the documented --lr-theme-border-width-thin input must move these
+  // borders; retuning the unrelated --lr-theme-size-1px sizing scale must not.
+  expect(getComputedStyle(base).borderTopWidth).to.equal('11px');
+  expect(getComputedStyle(kind).borderTopWidth).to.equal('11px');
+  expect(getComputedStyle(viewButton).borderTopWidth).to.equal('11px');
+});
+
 it('normalizes duplicate version ids first-wins before navigation and labels', async () => {
   const el = await fixture<LyraArtifactPanel>(html`
     <lr-artifact-panel .versions=${[

@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -691,6 +692,13 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     event.stopPropagation();
   };
 
+  // Stable across every render (unlike an inline arrow literal in the template), and the
+  // composed `<lr-virtual-list>`'s `.items` binding is `guard()`-ed against the same table's
+  // `rows` reference -- together these keep an unrelated reactive update (e.g. `searchQuery`,
+  // `activeRowKey`) from forcing a full O(n) offset recompute, since `.keyFunction` and `.items`
+  // otherwise appear to change identity on every render even when the row data itself did not.
+  private readonly virtualListKeyFunction = (_item: unknown, index: number): number => index;
+
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded': {
@@ -722,10 +730,10 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
             </div>
             <lr-virtual-list
               exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
-              .items=${rows}
+              .items=${guard([rows], () => rows)}
               .renderItem=${(row: unknown, index: number) =>
                 this.renderRow(row as Record<string, string>, index, fields)}
-              .keyFunction=${(_item: unknown, index: number) => index}
+              .keyFunction=${this.virtualListKeyFunction}
               .activeItemId=${this.activeRowKey}
               item-role="row"
               row-index-offset="1"

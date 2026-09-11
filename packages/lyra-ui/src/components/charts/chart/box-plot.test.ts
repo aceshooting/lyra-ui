@@ -485,6 +485,17 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
   expect(chart.isDatasetVisible(1)).to.be.false;
 });
 
+it('falls back to a localized series label when a legend toggle would otherwise be unnamed', async () => {
+  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.datasets = [{ label: '', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  expect(button.textContent!.trim().length).to.be.greaterThan(0);
+  await expect(el).to.be.accessible();
+});
+
 it('uses the shared cancellable legend visibility contract instead of private Chart.js state', async () => {
   const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
@@ -1018,6 +1029,39 @@ it('gives uncolored box-plot series concrete themed palette colors', async () =>
   expect(b.borderColor).to.equal('rgb(20, 140, 155)');
 });
 
+it('defaults the box-outline width and item radius, then honors --lr-box-plot-* overrides', async () => {
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+
+  const defaults = (el as any).buildConfig().options.elements.boxandwhiskers;
+  expect(defaults.borderWidth).to.equal(1);
+  expect(defaults.itemRadius).to.equal(0);
+
+  el.style.setProperty('--lr-box-plot-border-width', '3');
+  el.style.setProperty('--lr-box-plot-item-radius', '5');
+  await el.updateComplete;
+  const overridden = (el as any).buildConfig().options.elements.boxandwhiskers;
+  expect(overridden.borderWidth).to.equal(3);
+  expect(overridden.itemRadius).to.equal(5);
+});
+
+it('honors independent --lr-box-plot-border-color-N/--lr-box-plot-fill-color-N overrides', async () => {
+  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.style.setProperty('--lr-box-plot-border-color-1', 'rgb(9, 9, 9)');
+  el.style.setProperty('--lr-box-plot-fill-color-1', 'rgb(8, 8, 8)');
+  await el.updateComplete;
+
+  const [dataset] = (el as any).buildConfig().data.datasets;
+  expect(dataset.borderColor).to.equal('rgb(9, 9, 9)');
+  expect(dataset.backgroundColor).to.equal('rgb(8, 8, 8)');
+
+  // The legend swatch tracks the fill override, matching what the canvas paints.
+  const swatch = el.shadowRoot!.querySelector('[part~="legend-swatch"]') as HTMLElement;
+  expect(swatch.style.backgroundColor).to.equal('rgb(8, 8, 8)');
+});
+
 it('disables Chart.js animation when the user prefers reduced motion', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
@@ -1271,6 +1315,31 @@ describe('box-plot robustness regressions', () => {
     const dataset = (el as any).buildConfig().data.datasets[0];
     expect(dataset.backgroundColor).to.equal('rgb(12, 34, 56)');
     expect(dataset.borderColor).to.equal('rgb(12, 34, 56)');
+  });
+
+  it('paints visible pixels for a degenerate min===max five-number summary', async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = (query: string) =>
+      mediaQueryList(query, query === '(prefers-reduced-motion: reduce)');
+    try {
+      const el = (await fixture(html`
+        <lr-box-plot style="inline-size:320px;block-size:200px"></lr-box-plot>
+      `)) as LyraBoxPlot;
+      el.labels = ['A'];
+      el.datasets = [
+        { label: 'Flat', data: [{ min: 5, q1: 5, median: 5, q3: 5, max: 5 }] },
+      ];
+      await el.updateComplete;
+      await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+      const canvas = el.shadowRoot!.querySelector('canvas')!;
+      const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
+      expect(
+        pixels.some((value, index) => index % 4 === 3 && value > 0),
+        'a zero-IQR box/whisker still paints visible pixels instead of collapsing to nothing',
+      ).to.equal(true);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
   });
 
   it('styles its public peer-load error as an error state', async () => {

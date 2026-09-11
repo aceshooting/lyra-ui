@@ -16,6 +16,7 @@ import { composedAccessibilityText } from '../../../internal/accessibility-visib
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
+import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import {
@@ -239,6 +240,62 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
 
   /** Shows progress and makes the row interaction-disabled while an action is pending. */
   @property({ type: Boolean, reflect: true }) loading = false;
+
+  /** When set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative — see
+   *  `safeLinkHref`, or `safeDownloadHref` which drops `mailto:` when `download` is set),
+   *  `[part="base"]` renders as a real `<a href=…>` instead of a `<span>`, and activation (click,
+   *  or the parent's Enter/Space handling, which forwards through `click()` for a link item so the
+   *  anchor's own native default action runs) navigates there in addition to firing the usual
+   *  `select()`/`lr-select` contract. An unsafe/unparseable `href` falls back to the plain `<span>`,
+   *  matching `lr-button`'s identical fallback. Mirrors `wa-dropdown-item`'s link-item support. */
+  @property({ reflect: true }) href?: string;
+
+  /** Native anchor `target`, used only while `href` resolves to a link. Setting this to `'_blank'`
+   *  (or any other target) always contributes `noopener noreferrer` to the rendered anchor's `rel`
+   *  — matching `lr-button`'s identical pattern. */
+  @property() target?: string;
+
+  /** Independently settable author relationship tokens for the rendered link (no default).
+   *  `opener` is always stripped, and any `target` force-adds the non-removable
+   *  `noopener noreferrer` guard — see `target`. */
+  @property() rel?: string;
+
+  /** Native anchor `download` attribute, used only while `href` resolves to a link. Narrows the
+   *  safe-URL allowlist to `safeDownloadHref`'s, which drops `mailto:` — a mail handoff names no
+   *  retrievable bytes, so it cannot be a download target. */
+  @property() download?: string;
+
+  /** Resolved `rel` for the rendered anchor: author tokens minus `opener`, plus the
+   *  `noopener noreferrer` guard whenever `target` is set. `undefined` when nothing remains, so the
+   *  attribute is omitted entirely rather than rendered empty. */
+  private get resolvedRel(): string | undefined {
+    const authored = (this.rel ?? '')
+      .split(/\s+/)
+      .filter((token) => token && token !== 'opener');
+    if (this.target) {
+      for (const guard of ['noopener', 'noreferrer']) {
+        if (!authored.includes(guard)) authored.push(guard);
+      }
+    }
+    return authored.length ? authored.join(' ') : undefined;
+  }
+
+  /** Resolved, safety-checked `href` for the rendered anchor, or `undefined` when `href` is unset
+   *  or fails the allowlist for its sink (`download` present narrows to `safeDownloadHref`). */
+  private get resolvedHref(): string | undefined {
+    const hasDownload = this.download !== undefined;
+    const href = hasDownload
+      ? safeDownloadHref(this.href)
+      : safeLinkHref(this.href);
+    return href ?? undefined;
+  }
+
+  /** @internal Whether this item is currently a navigable link — used by `<lr-menu>`'s Enter/Space
+   *  handling to forward through `click()` (so the anchor's native default action can run) instead
+   *  of calling `select()` directly. */
+  get isLinkItem(): boolean {
+    return this.resolvedHref !== undefined;
+  }
 
   // [part='icon'] never matches a bare :empty selector -- see menu-item.styles.ts's
   // own comment on that part. Same fix as lr-tool-call-chip's hasDetailSlot.
@@ -850,47 +907,68 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   }
 
   override render(): TemplateResult {
-    return html`
-      <span part="base" @click=${() => this.select()}>
-        <span part="icon" aria-hidden="true" inert ?hidden=${!this.hasIconSlot}>
-          <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
-          <span part="prefix"
-            ><slot name="prefix" @slotchange=${this.onIconSlotChange}></slot
-          ></span>
-        </span>
-        <span part="label" aria-hidden="true" inert
-          ><slot @slotchange=${this.onLabelSlotChange}></slot
+    const baseContent = html`
+      <span part="icon" aria-hidden="true" inert ?hidden=${!this.hasIconSlot}>
+        <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
+        <span part="prefix"
+          ><slot name="prefix" @slotchange=${this.onIconSlotChange}></slot
         ></span>
-        <span
-          part="details"
-          aria-hidden="true"
-          inert
-          ?hidden=${!this.hasDetailsSlot}
-        >
-          <slot name="details" @slotchange=${this.onDetailsSlotChange}></slot>
-        </span>
-        <span
-          part="suffix"
-          aria-hidden="true"
-          inert
-          ?hidden=${!this.hasSuffixSlot}
-        >
-          <slot name="suffix" @slotchange=${this.onSuffixSlotChange}></slot>
-        </span>
-        ${this.loading
-          ? html`<span part="spinner spinner__base" aria-hidden="true"
-              >${spinnerIcon()}</span
-            >`
-          : nothing}
-        ${this.type === 'checkbox' && this.checked
-          ? html`<span part="checked-icon">${checkmarkGlyph()}</span>`
-          : nothing}
-        ${this.submenuAssigned
-          ? html`<span part="submenu-icon" aria-hidden="true"
-              >${chevronIcon()}</span
-            >`
-          : nothing}
       </span>
+      <span part="label" aria-hidden="true" inert
+        ><slot @slotchange=${this.onLabelSlotChange}></slot
+      ></span>
+      <span
+        part="details"
+        aria-hidden="true"
+        inert
+        ?hidden=${!this.hasDetailsSlot}
+      >
+        <slot name="details" @slotchange=${this.onDetailsSlotChange}></slot>
+      </span>
+      <span
+        part="suffix"
+        aria-hidden="true"
+        inert
+        ?hidden=${!this.hasSuffixSlot}
+      >
+        <slot name="suffix" @slotchange=${this.onSuffixSlotChange}></slot>
+      </span>
+      ${this.loading
+        ? html`<span part="spinner spinner__base" aria-hidden="true"
+            >${spinnerIcon()}</span
+          >`
+        : nothing}
+      ${this.type === 'checkbox' && this.checked
+        ? html`<span part="checked-icon">${checkmarkGlyph()}</span>`
+        : nothing}
+      ${this.submenuAssigned
+        ? html`<span part="submenu-icon" aria-hidden="true"
+            >${chevronIcon()}</span
+          >`
+        : nothing}
+    `;
+    // A resolved, safety-checked href renders [part='base'] as a real anchor so a link item
+    // navigates on click (and, via click()'s DOM-click forwarding, on the parent menu's
+    // Enter/Space handling too) -- see the class doc and `resolvedHref`/`isLinkItem`. tabindex="-1"
+    // keeps the anchor out of sequential focus navigation: the host remains the sole roving-
+    // tabindex target, exactly as for the plain [part='base'] span.
+    const href = this.resolvedHref;
+    const base =
+      href !== undefined
+        ? html`<a
+            part="base"
+            href=${href}
+            target=${this.target || nothing}
+            rel=${this.resolvedRel ?? nothing}
+            download=${this.download !== undefined ? this.download ?? '' : nothing}
+            tabindex="-1"
+            @click=${() => this.select()}
+          >
+            ${baseContent}
+          </a>`
+        : html`<span part="base" @click=${() => this.select()}>${baseContent}</span>`;
+    return html`
+      ${base}
       <!-- Outside [part='base'] on purpose: a click inside the submenu must not read as an
            activation of the row that owns it. -->
       ${this.submenuKind === 'items'

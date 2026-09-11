@@ -118,8 +118,13 @@ const MIN_PICK_TARGET_PX = 24;
 /** Exact-color picking deliberately rejects anti-aliased edge pixels. One physical pixel on each
  *  side keeps the full 24px interior decodable instead of rounding its outermost color to zero. */
 const PICK_RASTER_GUARD_PX = 2;
-/** Matches the SVG renderer's edge/community label halo stroke width (`--lr-size-3px`). */
+/** Matches the SVG renderer's edge/community label halo stroke width (`--lr-border-width-thick`). */
 const LABEL_HALO_WIDTH = 3;
+/** Matches the SVG renderer's `[part="link"][data-selected]` rule, which always sets
+ *  stroke-width to `var(--lr-border-width-thick)` -- overriding the link's own configured
+ *  `width` rather than adding to it -- so a selected link reads identically thick in either
+ *  renderer. */
+const SELECTED_LINK_STROKE_WIDTH = 3;
 /** Matches `graph.class.ts`'s own `EXPAND_BADGE_R` (world px, the "+" badge circle radius) --
  *  reimplemented locally so this module stays independent of `graph.class.ts` (same rationale as
  *  this file's local shape-path math). */
@@ -246,7 +251,7 @@ export function drawGraphScene(
     // and its arrowhead while the caller keeps the link in the graph's topology.
     if (link.width <= 0) continue;
     ctx.strokeStyle = link.selected ? scene.selectedColor : link.color;
-    ctx.lineWidth = link.width;
+    ctx.lineWidth = link.selected ? SELECTED_LINK_STROKE_WIDTH : link.width;
     ctx.setLineDash(link.dash ? [...link.dash] : []);
     ctx.globalAlpha = link.dimmed ? dimmedOpacity : 1;
     ctx.beginPath();

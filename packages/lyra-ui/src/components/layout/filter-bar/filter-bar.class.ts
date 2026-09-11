@@ -76,8 +76,12 @@ export interface LyraFilterBarCustomControlAdapter {
    * used (with shallow string-array equality for array clear values). */
   readonly isEmpty?: (value: LyraFilterBarFieldValue) => boolean;
   /** Formats the stored value for the active-filter chip. When omitted, strings and arrays use
-   * the same list formatting as built-in choice filters and booleans render as `true`/`false`. */
-  readonly formatValue?: (value: LyraFilterBarFieldValue) => string;
+   * the same list formatting as built-in choice filters and booleans render as `true`/`false`.
+   * `locale` is `effectiveLocale`, the same value every built-in filter type's own chip formatting
+   * (`getListFormat`/`getDateTimeFormat`) already receives -- an existing single-argument
+   * `formatValue` implementation keeps working unchanged, since JS simply ignores a second
+   * argument it never declared. */
+  readonly formatValue?: (value: LyraFilterBarFieldValue, locale: string) => string;
 }
 
 /** Context supplied to a custom filter renderer. The renderer owns the custom control's markup
@@ -636,6 +640,12 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
 
   private _filters: readonly LyraFilterBarFilterDefinition[] = EMPTY_FILTERS;
   private _value: LyraFilterBarValue = EMPTY_VALUE;
+  /** The last value passed to the `value` setter, cloned but NOT yet filtered down to the filter
+   *  ids known at that moment. `filters`'s setter re-derives `_value` from this (not from the
+   *  already-filtered `_value`) so a `value` assignment landing before its matching `filters`
+   *  assignment -- same microtask/script order, or the same Lit template's binding order -- never
+   *  permanently drops fields for filters that simply hadn't been declared yet. */
+  private rawValue: LyraFilterBarValue = EMPTY_VALUE;
   // One in-flight `debounce` timer per `'text'` filter id, plus the keystroke it will commit.
   // Presence in `debounceTimers` is also what marks that field as "the user is mid-edit", which
   // suppresses the external-value sync in `syncTextControls()`.
@@ -701,7 +711,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       [...this.touchedFilters].filter((id) => ids.has(id))
     );
     const oldValue = this._value;
-    this._value = this.normalizeValue(this._value);
+    this._value = this.normalizeValue(this.rawValue);
     this.requestUpdate('filters', old);
     if (this._value !== oldValue) this.requestUpdate('value', oldValue);
   }
@@ -716,6 +726,14 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   }
   set value(next: LyraFilterBarValue | null | undefined) {
     const old = this._value;
+    // Best-effort, defensively-guarded: this snapshot only feeds `filters`'s later re-derivation
+    // (below), so a hostile/unclonable `next` must still leave `_value` itself computed exactly as
+    // before (never throwing, never changed by this snapshot's own field-dropping rules).
+    try {
+      this.rawValue = cloneFilterValue(next ?? EMPTY_VALUE);
+    } catch {
+      this.rawValue = EMPTY_VALUE;
+    }
     this._value = this.normalizeValue(next);
     this.requestUpdate('value', old);
   }
@@ -1007,7 +1025,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     value: LyraFilterBarFieldValue
   ): string {
     if (def.type === 'custom') {
-      const formatted = def.custom?.adapter.formatValue?.(value);
+      const formatted = def.custom?.adapter.formatValue?.(value, this.effectiveLocale);
       if (formatted !== undefined) return formatted;
       if (Array.isArray(value)) {
         return getListFormat(this.effectiveLocale, {

@@ -100,9 +100,9 @@ export const styles = css`
      preview, when a keyboard user most needs it. The rule below restores it on a second channel
      rather than reordering these two. */
   [part="cell"][data-collision] {
-    outline: var(--lr-size-2px) solid
+    outline: var(--lr-border-width-medium) solid
       var(--lr-dashboard-grid-collision-outline-color, var(--lr-color-danger));
-    outline-offset: var(--lr-size-2px);
+    outline-offset: var(--lr-border-width-medium);
   }
 
   /* The focus ring as a box-shadow ring (lr-otp-input's shape), because the collision rule above

@@ -110,6 +110,17 @@ it('clears stale controlled selection when non-array ids are assigned', async ()
   expect(el.shadowRoot!.querySelectorAll('[part="node"][data-selected="true"]')).to.have.length(0);
 });
 
+it('resolves a controlled selection assigned before the referenced nodes/edges exist', async () => {
+  const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  el.selectedNodeIds = ['a'];
+  el.selectedEdgeIds = ['a-b'];
+  el.nodes = [{ id: 'a' }, { id: 'b' }];
+  el.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+  await el.updateComplete;
+  expect(el.selectedNodeIds).to.deep.equal(['a']);
+  expect(el.selectedEdgeIds).to.deep.equal(['a-b']);
+});
+
 it('renders decorated edges without an owner document during SSR', () => {
   const el = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
   el.nodes = [{ id: 'source' }];

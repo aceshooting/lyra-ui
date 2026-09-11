@@ -187,8 +187,11 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
       if (this.itemCount <= 1) this.rejectInvalidPlayingRequest();
       else this.startIfPossible();
       // Re-clamp `currentIndex` into the new `[0, itemCount)` range on any shrink, not
-      // just the <= 1 case above, so it never lingers out of bounds.
-      if (this.currentIndex > this.maxIndex) this.currentIndex = this.maxIndex;
+      // just the <= 1 case above, so it never lingers out of bounds. Goes through
+      // `setIndex()` (not a raw assignment) so a consumer synced via `lr-sequence-step`
+      // (e.g. an external step-N-of-M label) learns about this self-mutation too --
+      // otherwise it would go stale while the component's own position already moved.
+      if (this.currentIndex > this.maxIndex) this.setIndex(this.maxIndex);
     }
   }
 

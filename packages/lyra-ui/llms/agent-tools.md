@@ -577,8 +577,9 @@ already apply live via `lr-change`, so this slot is purely optional; only visual
 assigned elements.
 
 **CSS parts:** `backdrop`, `panel`, `header`, `title`, `subtitle`, `search-row`, `search-input`,
-`defaults-row`, `defaults-toggle`, `defaults-hint`, `body` (the keyboard-focusable scroll region),
-`empty`, `category`, `category-heading`,
+`search-clear` (replaces the native search-cancel glyph the component resets; rendered only while
+the field has text), `defaults-row`, `defaults-toggle`, `defaults-hint`, `body` (the
+keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 `category-count`, `category-list`, `tool-row`, `tool-checkbox`, `tool-name`, `tool-icon`,
 `tool-description`, `tool-disabled-reason`, `limit`, `load-more`, `footer`
 
@@ -673,6 +674,10 @@ plain text) — this component has no dependency on either.
   behavior differences, see prose below.
 - `durationMs?: number` (attribute `duration-ms`) — how long the reasoning took. Omitted entirely
   (nothing rendered in `'post-hoc'`, a pulsing placeholder in `'live'`) while unset.
+- `follow: boolean = true` (reflected) — whether live, expanded content follows the transcript tail.
+  A user scroll updates this property and emits `lr-follow-change`; a direct assignment is
+  controlled input and emits nothing. Being a `true`-defaulting boolean, `follow="false"` in plain
+  HTML is honoured (it uses `trueDefaultBooleanConverter`), so the attribute form is load-bearing.
 
 **Methods:** `scrollToBottom(): void` — scrolls `[part="body"]` to its current bottom immediately
 (no smooth-scroll animation). Safe to call directly, e.g. from a host that wants to force a
@@ -2465,7 +2470,7 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   `searchable`; empty string leaves the corresponding browser default in effect
 - `accept: string = ''` — forwarded to the internal `lr-file-input`'s `accept` (e.g. `'.json,.csv'`);
   empty accepts any type
-- `exportFormats: ExportFormatOption[] = ['csv', 'json']` (attribute: false) — forwarded to the
+- `exportFormats: readonly LyraExportFormatOption[] = ['csv', 'json']` (attribute: false) — forwarded to the
   internal `lr-export-button`
 - `disabled: boolean = false` (reflected) — disables every add/remove/import/export affordance, e.g.
   while a host-side mutation is still in flight
@@ -2484,8 +2489,9 @@ loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 All three built-in columns are sortable; activating one of their headers produces that commit for
 the host to apply to its controlled `examples` array.
 
-**CSS parts:** `base`, `toolbar`, `search`, `search-input`, `tag-filter`, `grid`,
-`add-button`, `remove-button`, `import`, `export`.
+**CSS parts:** `base`, `toolbar`, `search`, `search-input`, `search-clear` (replaces the native
+search-cancel glyph the component resets; rendered only while the field has text), `tag-filter`,
+`grid`, `add-button`, `remove-button`, `import`, `export`.
 
 **Known gotchas:**
 
@@ -3034,7 +3040,14 @@ parents remain renderable instead of recursing forever.
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
 `selectedRunId: string | null = null` (attribute `selected-run-id`); `label?: string` — an
 accessible-name override for the `role="tree"` element, where omission reads back `undefined` and
-localizes the default while any supplied string, including `''`, renders verbatim.
+localizes the default while any supplied string, including `''`, renders verbatim; `compact: boolean
+= false` (reflected) — tighter run-row padding/gaps and smaller task/model text, the same density
+convention `lr-task-list`/`lr-stack-trace`/`lr-thinking-panel`/`lr-terminal` already pair with
+`frame`; purely a density knob, since each run's own border stays, so reach for `frame="plain"` to
+drop the chrome entirely; `frame: LyraFrame = 'card'` (reflected) — container treatment for each run
+row, in the library-wide `frame` vocabulary (`'card' | 'plain'`). `'card'` keeps each run's own
+border/radius; `'plain'` drops it, for a transcript or message-bubble context that already draws its
+own border around a nested `<lr-subagent-panel>` and would otherwise double it.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
 string; model?: string; readonly progressRatio?: number; startedAt?: number; endedAt?: number;
 metadata?: Record<string, unknown> }`. `progressRatio` represents completion from `0` to `1`,
@@ -3067,6 +3080,14 @@ import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-pane
 - `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
+- `--lr-subagent-panel-compact-trigger-padding` — `[part="run-trigger"]` padding while `compact`.
+  Default: `var(--lr-space-2xs) var(--lr-space-s)`.
+- `--lr-subagent-panel-compact-trigger-gap` — Gap between `[part="run-trigger"]`'s
+  label/status/task/model/progress while `compact`. Default: `var(--lr-space-2xs)`.
+- `--lr-subagent-panel-compact-font-size` — `[part="task"]`/`[part="model"]` font size while
+  `compact`. Default: `var(--lr-font-size-2xs)`.
+- `--lr-subagent-panel-compact-action-padding` — `[part="cancel"]`/`[part="retry"]` padding while
+  `compact`. Default: `var(--lr-space-2xs)`.
 
 ## Consumer integration notes
 

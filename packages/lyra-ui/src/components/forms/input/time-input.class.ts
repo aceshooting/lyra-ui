@@ -367,6 +367,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private draft: TimeDraft = blankDraft();
   private partial = false;
   private secondsVisible = false;
+  /** The last explicitly assigned/typed value, normalized but never step-padded. The committed
+   *  `value` is always re-derived from this (see `committedValue`), so second-precision padding
+   *  applies and reverts consistently regardless of `value`/`step` assignment order instead of
+   *  depending on which was assigned first. */
+  private genuineValue = '';
   private digitBuffer = '';
   private digitSegment?: SegmentName;
   private pendingSegmentFocus?: SegmentName;
@@ -446,9 +451,15 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       const numeric = finiteNumber(Number(next), 60);
       this._step = numeric > 0 ? numeric : 60;
     }
-    const parsedValue = parseTimeValue(this.value);
+    const genuinePrecision = parseTimeValue(this.genuineValue)?.precision;
     this.secondsVisible = this.numericStep < 60 ||
-      (parsedValue !== undefined && parsedValue.precision !== 'minute');
+      (genuinePrecision !== undefined && genuinePrecision !== 'minute');
+    // Re-derives the committed string from `genuineValue` rather than padding `this.value` in
+    // place: keeps `value`/`step` assignment order-independent (a step requiring second precision
+    // pads a minute-only value the same way regardless of which was assigned first) and reverts
+    // cleanly on a later coarse step instead of leaving a stale, step-injected ":00" behind.
+    const committed = this.committedValue;
+    if (committed !== this.value) super.value = committed;
     this.updateValidity();
     this.requestUpdate('step', old);
   }
@@ -468,10 +479,8 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override set value(next: string | Date | null) {
-    let normalized = normalizeTimeValue(next);
-    if (normalized && this.numericStep < 60 && parseTimeValue(normalized)?.precision === 'minute') {
-      normalized += ':00';
-    }
+    this.genuineValue = normalizeTimeValue(next);
+    const normalized = this.committedValue;
     this.partial = false;
     this.resetDigitBuffer();
     this.syncDraft(normalized);
@@ -510,6 +519,20 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   private get numericStep(): number {
     return this.step === 'any' ? 60 : finiteNumber(this.step, 60);
+  }
+
+  /** Pads a canonical time string to second precision when the step currently in effect requires
+   *  it, so the committed `value` string is identical no matter which of `value`/`step` was
+   *  assigned first. */
+  private padToStepPrecision(value: string): string {
+    return value && this.numericStep < 60 && parseTimeValue(value)?.precision === 'minute'
+      ? `${value}:00`
+      : value;
+  }
+
+  /** `genuineValue` padded for the step currently in effect -- what `value` actually commits to. */
+  private get committedValue(): string {
+    return this.padToStepPrecision(this.genuineValue);
   }
 
   private get includeSeconds(): boolean {
@@ -568,7 +591,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       second: parsed.second,
       dayPeriod: parsed.hour >= 12 ? 'pm' : 'am',
     };
-    this.secondsVisible = this.numericStep < 60 || parsed.precision !== 'minute';
+    // Reads precision off `genuineValue`, not the (possibly step-padded) `value` passed in here,
+    // so a step-injected ":00" never masquerades as a genuine seconds-precision value.
+    const genuinePrecision = parseTimeValue(this.genuineValue)?.precision;
+    this.secondsVisible = this.numericStep < 60 ||
+      (genuinePrecision !== undefined && genuinePrecision !== 'minute');
   }
 
   private canonicalDraftValue(): string {
@@ -702,6 +729,9 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const before = super.value;
     const next = this.canonicalDraftValue();
     this.partial = this.draftHasAny && !this.draftComplete;
+    // Keeps `genuineValue` (the padding/precision source of truth) in sync with segment-typed
+    // commits too, not just programmatic `value` assignment.
+    this.genuineValue = next;
     super.value = next;
     this.syncComponentStates();
     dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });

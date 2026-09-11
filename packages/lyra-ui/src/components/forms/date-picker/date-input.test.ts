@@ -1601,6 +1601,19 @@ it("does not override an explicit `label` slot with the fallback aria-label", as
   expect(input.getAttribute("aria-label")).to.not.equal("Date");
 });
 
+it("reports aria-invalid=true for an author-supplied error-text even before the field is touched", async () => {
+  const el = (await fixture(
+    html`<lr-date-input error-text="Required"></lr-date-input>`
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector("input") as HTMLInputElement;
+  expect(input.getAttribute("aria-invalid")).to.equal("true");
+
+  el.errorText = "";
+  await el.updateComplete;
+  expect(input.getAttribute("aria-invalid")).to.equal("false");
+});
+
 it("wires aria-describedby to the visible hint/error text", async () => {
   const el = (await fixture(
     html`<lr-date-input

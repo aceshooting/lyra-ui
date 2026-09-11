@@ -3559,14 +3559,9 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/artifact-panel/artifact-panel.styles.ts",
         "src/components/agent-tools/browser-frame/browser-frame.styles.ts",
-        "src/components/agent-tools/commit-card/commit-card.styles.ts",
-        "src/components/agent-tools/terminal/terminal.styles.ts",
         "src/components/agent-tools/test-results/test-results.styles.ts",
-        "src/components/data/env-list/env-list.styles.ts",
         "src/components/data/flow-canvas/flow-canvas.styles.ts",
-        "src/components/data/heatmap/heatmap.styles.ts",
         "src/components/data/pagination/pagination.styles.ts",
         "src/components/data/sequence-strip/sequence-strip.styles.ts",
         "src/components/data/table/table.styles.ts",
@@ -3574,12 +3569,10 @@
         "src/components/forms/textarea/textarea.styles.ts",
         "src/components/forms/token-input/token-input.styles.ts",
         "src/components/layout/app-rail/app-rail-item.styles.ts",
-        "src/components/media/flag/flag.styles.ts",
         "src/components/media/image-comparer/image-comparer.class.ts",
         "src/components/media/image-comparer/image-comparer.styles.ts",
         "src/components/overlays/spinner/spinner.styles.ts",
         "src/components/retrieval/graph/graph-canvas.ts",
-        "src/components/retrieval/graph/graph.styles.ts",
         "src/components/utility/copy-button/copy-button.styles.ts",
         "src/components/utility/export-button/export-button.styles.ts"
       ]
@@ -3924,7 +3917,6 @@
         "src/components/forms/switch/switch.class.ts",
         "src/components/forms/switch/switch.styles.ts",
         "src/components/forms/time-range/time-range.styles.ts",
-        "src/components/layout/dashboard-grid/dashboard-grid.styles.ts",
         "src/components/layout/menu/menu-item.styles.ts",
         "src/components/media/map/map.styles.ts",
         "src/components/retrieval/chunk-inspector/chunk-inspector.styles.ts",
@@ -4138,12 +4130,9 @@
         "src/components/data/flow-canvas/flow-canvas.styles.ts",
         "src/components/data/heatmap/heatmap.styles.ts",
         "src/components/layout/app-rail/app-rail.styles.ts",
-        "src/components/layout/card/card.styles.ts",
         "src/components/layout/dock-panel/dock-panel.styles.ts",
         "src/components/layout/multi-split/multi-split.class.ts",
         "src/components/layout/multi-split/multi-split.styles.ts",
-        "src/components/retrieval/graph/graph-canvas.ts",
-        "src/components/retrieval/graph/graph.styles.ts",
         "src/components/viewers/document-preview/document-preview.styles.ts"
       ]
     },
@@ -4570,7 +4559,6 @@
         "src/components/forms/textarea/textarea.styles.ts",
         "src/components/layout/app-rail/app-rail-item.styles.ts",
         "src/components/layout/tab-group/tab-group.styles.ts",
-        "src/components/overlays/kbd/kbd.styles.ts",
         "src/components/utility/copy-button/copy-button.styles.ts"
       ]
     },

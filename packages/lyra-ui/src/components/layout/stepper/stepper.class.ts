@@ -12,6 +12,7 @@ import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { styles } from './stepper.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 
 export type LyraStepState = 'pending' | 'current' | 'completed' | 'error';
 
@@ -387,6 +388,12 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never
+    // reaches `[part="base"]`'s own `role="list"` (which owns the accessible description) unless
+    // it is explicitly reflected there. Mirrors lr-checkbox's/lr-flow-minimap's identical
+    // `syncAriaDescribedByElements` use.
+    const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]') ?? undefined;
+    syncAriaDescribedByElements(this, base, this.getAttribute('aria-describedby'));
     // Each step's own intrinsic geometry (a label, image, font, or slot change) can alter scroll
     // reachability without [part="base"]'s own border box changing at all -- the primary observer
     // above only watches that one container, so every current step rides along on its single

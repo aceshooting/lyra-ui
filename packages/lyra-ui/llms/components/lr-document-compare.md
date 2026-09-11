@@ -47,6 +47,11 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   `sync-scroll="false"`.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — sends the same target to both
   preview panes; repeated assignment of the same value still re-runs.
+- `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"30rem"`) that overrides
+  `--lr-document-compare-pane-max-height` declaratively, giving each `view="side-by-side"` pane its
+  maximum block size before it scrolls internally. The value is sanitized as a CSS length, so an
+  invalid one is ignored and the token default applies; the unset default `''` also defers to the
+  token, so setting nothing preserves existing behaviour.
 
 **Exported types:** `DocumentCompareVersion`; `LyraDocumentCompareView = 'diff' |
 'side-by-side'`; `DocumentComparePaneSide = 'old' | 'new'`.

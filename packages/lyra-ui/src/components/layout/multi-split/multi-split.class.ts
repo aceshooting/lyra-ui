@@ -363,6 +363,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   /** Layout/resize axis used below `orientationBreakpoint`. */
   @property({ reflect: true, attribute: 'narrow-orientation' })
   narrowOrientation: LyraOrientation = 'vertical';
+  /** When set, this instance's panel sizes are persisted to `localStorage`, keyed by this value
+   *  plus each panel's identity (`panel-id`, falling back to DOM order), and restored on the next
+   *  mount. Initialization-time precedence, highest first: an already-valid `sizes` binding (an
+   *  explicit authored layout for THIS mount always wins and is never silently replaced), then a
+   *  valid persisted layout, then `defaultSizes`, then equal distribution. Restoring persisted
+   *  state never fires an event -- read `sizes` after the component's first update to observe it. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
   /** Optional px and/or percent min/max per panel, index-aligned with `sizes`. A
    *  `null`/missing entry leaves that panel purely percent-based (the
@@ -471,6 +477,11 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private overlayActive = false;
   private justOpened = false;
   private overlayHandle?: OverlayHandle;
+  /** The panel `role`/`aria-modal` were last overwritten on and their prior values, so closing the
+   *  drawer restores exactly what the consumer had authored rather than assuming it was unset. */
+  private floatingDialogPanel: HTMLElement | null = null;
+  private floatingDialogPreviousRole: string | null = null;
+  private floatingDialogPreviousAriaModal: string | null = null;
   // Keyed by pointerId so an interrupted or concurrent (multi-touch) drag on
   // one divider never reads or clobbers another pointer's drag state.
   private drags = new Map<number, DragState>();
@@ -1041,8 +1052,11 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private initializeSizes(): void {
-    if (this.loadPersisted()) return;
+    // An already explicit, valid `sizes` binding is the strongest authored signal and wins over
+    // whatever stale layout `storage-key` happens to find -- checked first. See `storageKey`'s own
+    // doc comment for the full initialization-time precedence order.
     if (this.validInitialSizes(this.sizes)) return;
+    if (this.loadPersisted()) return;
     const resolved = this.resolveDefaultSizes();
     if (resolved) {
       this.sizes = resolved;
@@ -1905,6 +1919,20 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private activateFloatingOverlay(): void {
+    // The 'floating' drawer is a genuine modal surface -- focus-trapped, backdropped, and making
+    // sibling panes inert (see the class doc) -- but its target is the consumer's own slotted
+    // light-DOM panel (see `floatingPanelEl`'s doc comment), so nothing here renders a `role` for
+    // it on its behalf the way `<lr-app-rail>`'s shadow-DOM `[part="panel"]` can. Apply/restore it
+    // directly on that element instead, mirroring `applyOwnedPanelCollapseState`'s existing
+    // apply-then-restore shape for other panel attributes this component owns transiently.
+    const panel = this.floatingPanelEl;
+    if (panel) {
+      this.floatingDialogPanel = panel;
+      this.floatingDialogPreviousRole = panel.getAttribute('role');
+      this.floatingDialogPreviousAriaModal = panel.getAttribute('aria-modal');
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-modal', 'true');
+    }
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.floatingPanelEl,
@@ -1919,6 +1947,13 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private deactivateFloatingOverlay(): void {
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
+    const panel = this.floatingDialogPanel;
+    this.floatingDialogPanel = null;
+    if (!panel) return;
+    if (this.floatingDialogPreviousRole === null) panel.removeAttribute('role');
+    else panel.setAttribute('role', this.floatingDialogPreviousRole);
+    if (this.floatingDialogPreviousAriaModal === null) panel.removeAttribute('aria-modal');
+    else panel.setAttribute('aria-modal', this.floatingDialogPreviousAriaModal);
   }
 
   private onBackdropClick = (): void => {

@@ -14,6 +14,15 @@ export const styles = css`
     background: var(--lr-color-surface);
     overflow: hidden;
   }
+  /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" (lr-flow-controls,
+     lr-flow-run-status): a minimap embedded in a host toolbar or panel that already draws its own
+     border/background doubles the frame. Only the box decoration goes -- overflow: hidden stays,
+     since it clips the map/viewport geometry rather than decorating the surface. */
+  :host([frame='plain']) [part='base'] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
   [part='map'] {
     display: block;
     inline-size: 100%;

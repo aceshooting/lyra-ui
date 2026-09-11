@@ -617,6 +617,22 @@ it("exposes the exact public defaults", async () => {
   expect(element.withSearch).to.equal(false);
 });
 
+/**
+ * Unset-regression: extensive positive coverage elsewhere proves these opt-in toggles work when
+ * explicitly enabled, but nothing proved the inverse -- that a grid left at its documented
+ * defaults renders no column-menu button, no columns-menu toggle, and no search box. A regression
+ * making any of them render unconditionally would previously go uncaught.
+ */
+it("renders no toolbar, search box, columns-menu, or per-column menu button at defaults", async () => {
+  const element = await dataGrid(
+    html`<lr-data-grid label="People" row-key="id" .columns=${columns} .data=${rows}></lr-data-grid>`
+  );
+  expect(element.shadowRoot!.querySelector('[part="toolbar"]') === null).to.be.true;
+  expect(element.shadowRoot!.querySelector('[part="search"]') === null).to.be.true;
+  expect(element.shadowRoot!.querySelector('[part="columns-menu"]') === null).to.be.true;
+  expect(element.shadowRoot!.querySelector('[part="column-menu-button"]') === null).to.be.true;
+});
+
 it("maps writable selectedRows onto current source-row keys", async () => {
   const rows = [
     { id: 1, name: "Ada", team: "Compiler", score: 7 },
@@ -639,6 +655,22 @@ it("maps writable selectedRows onto current source-row keys", async () => {
   await element.updateComplete;
   expect(element.selectedKeys).to.deep.equal([1]);
   expect(element.selectedRows).to.deep.equal([rows[0]]);
+});
+
+/**
+ * Regression: a template binding `.selectedRows=${…}` before `.data=${…}` (Lit commits property
+ * bindings in source order) previously resolved `selectedRows` against the still-default empty
+ * `data`, dropping the initial selection permanently -- `willUpdate()`'s own pruning pass only ever
+ * removes now-invalid keys, it never re-derives them from the originally-assigned candidate rows.
+ */
+it('resolves an initial selectedRows binding set before data in the same template', async () => {
+  const initialRows = [rows[1]!];
+  const element = await dataGrid(
+    html`<lr-data-grid row-key="id" .selectedRows=${initialRows} .data=${rows}></lr-data-grid>`
+  );
+
+  expect(element.selectedKeys).to.deep.equal([2]);
+  expect(element.selectedRows).to.deep.equal([rows[1]]);
 });
 
 it('canonicalizes row and column identities while retaining mirrored state aliases', async () => {
@@ -1187,6 +1219,41 @@ it("sorts from the header and emits the public change event", async () => {
   ]);
 });
 
+/**
+ * Regression: unlike lr-table's lr-sort-request/lr-sort veto-then-commit contract, data-grid's
+ * lr-sort-change fired only after the fact with no cancelable predecessor, so a consumer had no
+ * way to intercept/reject a user-initiated sort.
+ */
+it("lets a listener veto a proposed sort via the cancelable lr-sort-request event", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  let changeEvents = 0;
+  element.addEventListener("lr-sort-change", () => changeEvents++);
+  const requestPromise = oneEvent(element, "lr-sort-request");
+  element.addEventListener(
+    "lr-sort-request",
+    (event) => event.preventDefault(),
+    { once: true }
+  );
+  (
+    element.shadowRoot!.querySelector('[part~="header-cell"]') as HTMLElement
+  ).click();
+  const requestEvent = await requestPromise;
+
+  expect(requestEvent.cancelable).to.equal(true);
+  expect(requestEvent.detail.sort).to.deep.equal([{ id: "name", desc: false }]);
+  expect(element.sort).to.deep.equal([]);
+  expect(changeEvents).to.equal(0);
+  expect(element.getProcessedRows().map((row) => row.name)).to.deep.equal(
+    rows.map((row) => row.name)
+  );
+});
+
 it('renders aria-sort="none" (not omitted) on an unsorted sortable header, then tracks ascending/descending, and omits it entirely on a non-sortable column', async () => {
   const mixedColumns: DataGridColumn<Person>[] = [
     { field: "name", label: "Name" },
@@ -1297,15 +1364,12 @@ it("shows a hover fill on an already-selected row, distinct from the resting sel
   selected.scrollIntoView();
   await delay(200);
   const resting = getComputedStyle(selected).backgroundColor;
-  const rect = selected.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   try {
-    await sendMouse({ type: "move", position });
-    await delay(200);
-    expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
+    await hoverUntilMatched(selected, "already-selected row is hovered");
+    await waitUntil(
+      () => getComputedStyle(selected).backgroundColor !== resting,
+      "hovered selected row never painted its distinct hover fill",
+    );
   } finally {
     await resetMouse();
   }
@@ -1334,15 +1398,9 @@ it("shows a pressed fill on an already-selected row", async () => {
   selected.scrollIntoView();
   await delay(200);
   const resting = getComputedStyle(selected).backgroundColor;
-  const rect = selected.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   try {
-    await sendMouse({ type: "move", position });
+    await hoverUntilMatched(selected, "already-selected row is hovered");
     await sendMouse({ type: "down" });
-    await delay(200);
     await waitUntil(() => getComputedStyle(selected).backgroundColor !== resting, 'selected background color never moved off resting');
   } finally {
     await sendMouse({ type: "up" });

@@ -214,6 +214,52 @@ describe('lr-csv-viewer', () => {
       restore();
     }
   });
+  /**
+   * Regression: a fresh `body` array and `renderItem`/`keyFunction` closures on every render()
+   * defeated `<lr-virtual-list>`'s own offset-cache memoization on every unrelated re-render (a
+   * search keystroke, active-row change, locale change), not just on data changes -- forcing its
+   * O(n) recomputeOffsets() and clearing measured row heights.
+   */
+  it('keeps items/renderItem/keyFunction referentially stable across an unrelated re-render', async () => {
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    const restore = fetchText(CSV);
+    try {
+      el.src = 'https://example.test/stable.csv';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+      );
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
+        renderItem: unknown;
+        keyFunction: unknown;
+      };
+      // renderItem/keyFunction are plain property assignments <lr-virtual-list> stores verbatim
+      // (unlike items, which it normalizes on every write -- an internal detail of that owned-
+      // elsewhere component, not what this fix controls), so reading them back through the DOM
+      // directly proves csv-viewer passed a stable reference.
+      const { renderItem, keyFunction } = list;
+      const cachedBody = (
+        el as unknown as { virtualListInputsCache?: { body: unknown[][] } }
+      ).virtualListInputsCache?.body;
+      expect(cachedBody, 'sanity: the memoized body must exist once loaded').to.not.equal(
+        undefined
+      );
+
+      // locale is unrelated to the parsed CSV data.
+      el.locale = 'fr-FR';
+      await el.updateComplete;
+
+      expect(
+        (el as unknown as { virtualListInputsCache?: { body: unknown[][] } })
+          .virtualListInputsCache?.body,
+        'the memoized body must stay the same array across an unrelated re-render'
+      ).to.equal(cachedBody);
+      expect(list.renderItem).to.equal(renderItem);
+      expect(list.keyFunction).to.equal(keyFunction);
+    } finally {
+      restore();
+    }
+  });
+
   it('preserves auto-detected delimiters and quoted newlines through the bounded parser path', async () => {
     const el = (await fixture(
       html`<lr-csv-viewer></lr-csv-viewer>`

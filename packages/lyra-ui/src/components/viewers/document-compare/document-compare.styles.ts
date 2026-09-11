@@ -35,9 +35,17 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     padding: var(--lr-space-m);
+    /* The max-height property wins over the public custom property when set, which is what its
+       documented "overrides it declaratively" contract promises. It arrives on its own private
+       channel rather than the component writing the public token from runtime code: writing a
+       documented consumer input inline would beat a consumer's own host rule for it and invert the
+       cascade they expect. */
     max-block-size: var(
-      --lr-document-compare-pane-max-height,
-      var(--_lr-document-compare-pane-max-height)
+      --_lr-document-compare-pane-max-height-attr,
+      var(
+        --lr-document-compare-pane-max-height,
+        var(--_lr-document-compare-pane-max-height)
+      )
     );
     overflow-x: hidden;
     overflow-y: auto;
@@ -72,6 +80,10 @@ export const styles = css`
   @container (max-inline-size: 639.98px) {
     [part="panes"] {
       flex-direction: column;
+    }
+    [part="pane-old"],
+    [part="pane-new"] {
+      flex-basis: auto;
     }
   }
 `;

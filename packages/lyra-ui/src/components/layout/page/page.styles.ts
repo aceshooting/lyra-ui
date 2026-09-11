@@ -21,6 +21,7 @@ export const styles = css`
     min-inline-size: 0;
     min-block-size: 100dvh;
     overflow-x: clip;
+    overflow-y: clip;
     background: var(--lr-color-surface);
   }
 

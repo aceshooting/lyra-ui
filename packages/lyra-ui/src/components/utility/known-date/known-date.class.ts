@@ -94,9 +94,12 @@ function parseISO(value: string): Date | null {
   return date;
 }
 
-/** Format a Date as local `YYYY-MM-DD`. Local port of
- *  `date-picker/calendar-core.ts#formatISO` -- see {@link parseISO}. */
+/** Format a supported Date as local `YYYY-MM-DD`, or an empty string outside years 0000-9999.
+ *  Local port of `date-picker/calendar-core.ts#formatISO` -- see {@link parseISO}. */
 function formatISO(date: Date): string {
+  if (!Number.isFinite(date.getTime()) || date.getFullYear() < 0 || date.getFullYear() > 9999) {
+    return '';
+  }
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
   return `${String(date.getFullYear()).padStart(4, '0')}-${mm}-${dd}`;

@@ -1088,7 +1088,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       <div
         part="base"
         role="group"
-        aria-label=${this.getAttribute('aria-label') || nothing}
+        aria-label=${this.getAttribute('aria-label') ?? nothing}
         @pointerdown=${this.onBasePointerDown}
       >
         <div part="track"></div>

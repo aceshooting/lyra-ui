@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,7 +23,14 @@ parents remain renderable instead of recursing forever.
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
 `selectedRunId: string | null = null` (attribute `selected-run-id`); `label?: string` — an
 accessible-name override for the `role="tree"` element, where omission reads back `undefined` and
-localizes the default while any supplied string, including `''`, renders verbatim.
+localizes the default while any supplied string, including `''`, renders verbatim; `compact: boolean
+= false` (reflected) — tighter run-row padding/gaps and smaller task/model text, the same density
+convention `lr-task-list`/`lr-stack-trace`/`lr-thinking-panel`/`lr-terminal` already pair with
+`frame`; purely a density knob, since each run's own border stays, so reach for `frame="plain"` to
+drop the chrome entirely; `frame: LyraFrame = 'card'` (reflected) — container treatment for each run
+row, in the library-wide `frame` vocabulary (`'card' | 'plain'`). `'card'` keeps each run's own
+border/radius; `'plain'` drops it, for a transcript or message-bubble context that already draws its
+own border around a nested `<lr-subagent-panel>` and would otherwise double it.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
 string; model?: string; readonly progressRatio?: number; startedAt?: number; endedAt?: number;
 metadata?: Record<string, unknown> }`. `progressRatio` represents completion from `0` to `1`,
@@ -56,3 +63,11 @@ import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-pane
 - `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
+- `--lr-subagent-panel-compact-trigger-padding` — `[part="run-trigger"]` padding while `compact`.
+  Default: `var(--lr-space-2xs) var(--lr-space-s)`.
+- `--lr-subagent-panel-compact-trigger-gap` — Gap between `[part="run-trigger"]`'s
+  label/status/task/model/progress while `compact`. Default: `var(--lr-space-2xs)`.
+- `--lr-subagent-panel-compact-font-size` — `[part="task"]`/`[part="model"]` font size while
+  `compact`. Default: `var(--lr-font-size-2xs)`.
+- `--lr-subagent-panel-compact-action-padding` — `[part="cancel"]`/`[part="retry"]` padding while
+  `compact`. Default: `var(--lr-space-2xs)`.

@@ -322,6 +322,46 @@ describe("drawGraphScene", () => {
     expect([pixel[0], pixel[1], pixel[2]]).to.deep.equal([0, 255, 0]);
   });
 
+  it('thickens a selected link stroke to at least the SVG renderer\'s selection width, regardless of its own width (regression: renderer parity)', () => {
+    // `ctx.lineWidth` is unreadable after drawGraphScene() returns -- the function wraps its
+    // whole body in save()/restore(), so the property always reverts to its pre-call value.
+    // Measure the rendered stroke visually instead, the same way the sibling "paints non-color
+    // dashed keyboard focus cues" test above does.
+    function verticalOpaqueSpan(selected: boolean): number {
+      const ctx = make2dContext();
+      drawGraphScene(
+        ctx,
+        { k: 1, x: 0, y: 0 },
+        {
+          hulls: [],
+          links: [
+            { x1: 10, y1: 50, x2: 90, y2: 50, color: '#000000', width: 1, selected },
+          ],
+          edgeLabels: [],
+          nodes: [],
+          nodeLabels: [],
+          showNodeLabels: true,
+          haloColor: '#000',
+          selectedColor: '#000000',
+          labelColor: '#000',
+          labelHaloColor: '#fff',
+          font: '10px sans-serif',
+        }
+      );
+      const column = ctx.getImageData(50, 40, 1, 20).data;
+      let opaqueRows = 0;
+      for (let row = 0; row < 20; row++) {
+        if (column[row * 4 + 3]! > 0) opaqueRows++;
+      }
+      return opaqueRows;
+    }
+
+    // graph.styles.ts's `[part="link"][data-selected]` rule always sets stroke-width to
+    // var(--lr-border-width-thick) (3px), overriding the link's own configured `width` -- the
+    // canvas renderer must apply the identical override, not just recolor the stroke.
+    expect(verticalOpaqueSpan(true)).to.be.greaterThan(verticalOpaqueSpan(false));
+  });
+
   it("draws the focus halo and keyboard focus ring without throwing", () => {
     const ctx = make2dContext();
     expect(() =>

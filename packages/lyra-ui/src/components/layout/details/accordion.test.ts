@@ -5,7 +5,7 @@ import './details.js';
 import type { LyraAccordion } from './accordion.js';
 import type { LyraAccordionItem } from './accordion-item.js';
 import type { LyraDetails } from './details.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const quickMotion = '--show-duration: 1ms; --hide-duration: 1ms;';
 
@@ -79,14 +79,12 @@ describe('<lr-accordion>', () => {
     expect(getComputedStyle(itemBases[2]!).backgroundColor).to.equal('rgb(25, 26, 27)');
 
     const button = buttonFor(items[0]!);
-    button.scrollIntoView();
-    const rect = button.getBoundingClientRect();
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
-      expect(getComputedStyle(button).backgroundColor).to.equal('rgb(28, 29, 30)');
+      await hoverUntilMatched(button, 'the accordion-item trigger never reported :hover');
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor === 'rgb(28, 29, 30)',
+        'button background color never reached its hover value',
+      );
       await sendMouse({ type: 'down' });
       await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(31, 32, 33)', 'button background color never reached rgb(31, 32, 33)');
     } finally {

@@ -1,5 +1,5 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./color-picker.js";
 import type { LyraColorPicker } from "./color-picker.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -523,16 +523,12 @@ it("lets a consumer hover rule override the trigger part without important", asy
   `)) as HTMLElement;
   const el = frame.querySelector("lr-color-picker") as LyraColorPicker;
   const trigger = part(el, "trigger");
-  const rect = trigger.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
-    expect(getComputedStyle(trigger).borderColor).to.equal("rgb(1, 2, 3)");
+    await hoverUntilMatched(trigger, "trigger never received the pointer hover state");
+    await waitUntil(
+      () => getComputedStyle(trigger).borderColor === "rgb(1, 2, 3)",
+      "consumer hover rule never rendered",
+    );
   } finally {
     await resetMouse();
   }
@@ -1877,16 +1873,19 @@ it("gives the full slider target distinct rendered hover and pressed feedback wi
   await new Promise<void>((resolve) =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
   );
-  const rect = slider.getBoundingClientRect();
-  const centre: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   const resting = getComputedStyle(slider).outlineWidth;
   try {
-    await sendMouse({ type: "move", position: centre });
+    await hoverUntilMatched(slider, "hue-slider never received the pointer hover state");
+    await waitUntil(
+      () => getComputedStyle(slider).outlineWidth !== resting,
+      "hue-slider hover outline never rendered",
+    );
     const hovered = getComputedStyle(slider).outlineWidth;
     await sendMouse({ type: "down" });
+    await waitUntil(
+      () => getComputedStyle(slider).outlineWidth !== hovered,
+      "hue-slider pressed outline never rendered",
+    );
     const pressed = getComputedStyle(slider).outlineWidth;
     expect(hovered).to.not.equal(resting);
     expect(pressed).to.not.equal(hovered);

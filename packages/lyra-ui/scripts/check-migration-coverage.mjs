@@ -64,10 +64,61 @@ function polarity(name) {
   return NEGATING.test(name) ? -1 : ASSERTING.test(name) ? 1 : 0;
 }
 
-function hasInvertedPolarity(fromName, toName) {
+export function hasInvertedPolarity(fromName, toName) {
   const from = polarity(fromName);
   const to = polarity(toName);
   return from !== to && (from === -1 || to === -1);
+}
+
+/**
+ * A rename pair this check can actually render a verdict on: the two names must differ (an identity
+ * entry is not a rename) and at least one side must carry a polarity prefix (comparing two
+ * polarity-neutral names can never produce a finding).
+ *
+ * This exists because the polarity gate had silently become vacuous. The fixture's
+ * `attributeRenames` list held ten entries, nine of which were identity mappings (`from === to`)
+ * that `generate-component-inventory.mjs` already filters out downstream, and the tenth was a
+ * case normalization (`submenuOpen` -> `submenu-open`) with no polarity on either side. So the
+ * loop ran, reported success, and had literally nothing it was capable of failing on -- which
+ * reads as coverage in CI while catching nothing. An inverted rename is the worst parity break in
+ * this library (`light-dismiss` -> `no-light-dismiss`: the migrated markup still parses, nothing
+ * warns, and the component quietly behaves the other way round), so a gate that cannot see one is
+ * worse than no gate.
+ */
+export function isPolarityCheckable({ from, to }) {
+  return from !== to && (polarity(from) !== 0 || polarity(to) !== 0);
+}
+
+/**
+ * The same attribute name with its polarity flipped, or `null` when the name carries no polarity.
+ * `without-legend` <-> `with-legend`, `no-header` <-> `with-header`, `hide-x` <-> `show-x`.
+ */
+export function invertedName(name) {
+  const flip = [
+    [/^without-/, 'with-'],
+    [/^no-/, 'with-'],
+    [/^not-/, 'with-'],
+    [/^hide-/, 'show-'],
+    [/^disable-/, 'enable-'],
+    [/^with-/, 'without-'],
+    [/^show-/, 'hide-'],
+    [/^enable-/, 'disable-'],
+  ];
+  for (const [pattern, replacement] of flip) {
+    if (pattern.test(name)) return name.replace(pattern, replacement);
+  }
+  return null;
+}
+
+/** tag -> the set of attribute names custom-elements.json says that tag accepts. */
+function manifestAttributes(manifest) {
+  const attributes = new Map();
+  for (const declaration of manifestDeclarations(manifest)) {
+    const names = attributes.get(declaration.tagName) ?? new Set();
+    for (const attribute of declaration.attributes ?? []) if (attribute.name) names.add(attribute.name);
+    attributes.set(declaration.tagName, names);
+  }
+  return attributes;
 }
 
 function catalog(upstreamTags) {
@@ -104,11 +155,13 @@ function namedReadmeUpstream(readme) {
  */
 export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme }) {
   const errors = [];
+  const polarityCheckablePairs = [];
   const expected = catalog(upstreamTags);
   const knownUpstream = new Set(expected.map((entry) => entry.tag));
   const expandedLyraManifest = expandManifestInheritance(lyraManifest);
   const lyraTags = manifestTags(expandedLyraManifest);
   const lyraEvents = manifestEvents(expandedLyraManifest);
+  const lyraAttributeNames = manifestAttributes(expandedLyraManifest);
   const inventoryMappings = Array.isArray(inventory?.mappings) ? inventory.mappings : [];
   const mappingByTag = new Map();
   const upstreamSurfaces = new Map(
@@ -166,6 +219,7 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
       errors.push(`${mapping.upstreamTag} -> ${mapping.targetTag}: automatic target is not a registered Lyra tag`);
     }
     for (const rewrite of mapping.rewrites?.attributes ?? []) {
+      if (isPolarityCheckable(rewrite)) polarityCheckablePairs.push(`${mapping.upstreamTag}: ${rewrite.from} -> ${rewrite.to}`);
       if (hasInvertedPolarity(rewrite.from, rewrite.to)) {
         errors.push(`${mapping.upstreamTag}: ${rewrite.from} -> ${rewrite.to} inverts attribute polarity`);
       }
@@ -261,8 +315,50 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
   // Preserve the explicit v7-to-v8 attribute-rename safety fixture. These are local migration
   // rewrites rather than upstream mappings, so they remain a separate polarity input.
   for (const rename of upstreamTags.attributeRenames ?? []) {
+    if (isPolarityCheckable(rename)) polarityCheckablePairs.push(`${rename.component} ${rename.from} -> ${rename.to}`);
     if (hasInvertedPolarity(rename.from, rename.to)) {
       errors.push(`${rename.component} ${rename.from} -> ${rename.to}: rename inverts attribute polarity`);
+    }
+  }
+
+  // The two loops above only ever saw the hand-maintained rename lists, which between them
+  // contained zero polarity-bearing pairs -- so the gate ran green while being structurally
+  // incapable of rejecting anything. This loop gives it real work: every polarity-bearing
+  // attribute an upstream tag actually declares is checked against what the mirrored Lyra tag
+  // actually declares, so an inversion is caught from the shipped surfaces rather than from a
+  // list someone has to remember to update.
+  //
+  // An inverted rename is the quietest parity break in this library: `light-dismiss` ->
+  // `no-light-dismiss` still parses as valid markup, nothing warns, and the component behaves the
+  // other way round.
+  for (const [upstreamTag, { component }] of upstreamSurfaces) {
+    const mapping = mappingByTag.get(upstreamTag);
+    if (!mapping || mapping.classification === 'unsupported') continue;
+    const lyraAttributes = lyraAttributeNames.get(mapping.targetTag);
+    if (!lyraAttributes) continue;
+    const rewrites = new Map(
+      (mapping.rewrites?.attributes ?? []).map((rewrite) => [rewrite.from, rewrite.to]),
+    );
+    for (const attribute of component.surface?.attributes ?? []) {
+      const from = attribute.name;
+      if (!from || polarity(from) === 0) continue;
+      const to = rewrites.get(from) ?? from;
+      polarityCheckablePairs.push(`${upstreamTag}.${from}`);
+      if (hasInvertedPolarity(from, to)) {
+        errors.push(`${upstreamTag} -> ${mapping.targetTag}: ${from} -> ${to} inverts attribute polarity`);
+        continue;
+      }
+      // The declared migration target is absent from the Lyra tag while its polarity-inverted
+      // twin is present: an undeclared inversion. The codemod rewrites markup to `to`, which
+      // matches no attribute, so the consumer silently gets the default while the opposite-meaning
+      // attribute sits there unused.
+      const opposite = invertedName(to);
+      if (!lyraAttributes.has(to) && opposite && lyraAttributes.has(opposite)) {
+        errors.push(
+          `${upstreamTag} -> ${mapping.targetTag}: upstream '${from}' migrates to '${to}', which ` +
+            `${mapping.targetTag} does not declare, while it does declare the inverted '${opposite}'`,
+        );
+      }
     }
   }
 

@@ -623,6 +623,38 @@ describe("label/hint/error chrome", () => {
     expect(textarea.getAttribute("aria-invalid")).to.equal("true");
   });
 
+  it("merges a host aria-describedby into the internal textarea's own aria-describedby", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <span id="textarea-external-description">External description</span>
+        <lr-textarea
+          aria-describedby="textarea-external-description"
+          hint="Keep it short"
+          error-text="Required"
+        ></lr-textarea>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-textarea") as LyraTextarea;
+    await el.updateComplete;
+    const textarea = el.shadowRoot!.querySelector(
+      "textarea"
+    ) as HTMLTextAreaElement & {
+      ariaDescribedByElements?: readonly Element[] | null;
+    };
+    const hint = el.shadowRoot!.querySelector(
+      '[part~="hint"]'
+    ) as HTMLElement;
+    const error = el.shadowRoot!.querySelector(
+      '[part="error"]'
+    ) as HTMLElement;
+    const describedByIds = Reflect.has(textarea, "ariaDescribedByElements")
+      ? Array.from(textarea.ariaDescribedByElements ?? []).map((node) => node.id)
+      : textarea.getAttribute("aria-describedby")?.match(/\S+/g) ?? [];
+    expect(describedByIds).to.include("textarea-external-description");
+    expect(describedByIds).to.include(error.id);
+    expect(describedByIds).to.include(hint.id);
+  });
+
   it("supports label, hint, and error slots with same-shadow description ids", async () => {
     const el = (await fixture(html`
       <lr-textarea>

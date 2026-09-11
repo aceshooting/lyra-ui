@@ -35,6 +35,79 @@ const optionalPeers = Object.keys(uiPackageJson.peerDependencies ?? {})
   .filter((name) => uiPackageJson.peerDependenciesMeta?.[name]?.optional === true)
   .sort();
 
+/**
+ * Optional peers the npm `--strict-peer-deps` fixture actually installs, so their declared ranges
+ * are resolved against the real registry and verified with `npm ls` rather than merely being
+ * syntactically valid in `package.json`.
+ *
+ * An optional-peer range can be perfectly well-formed and still operationally unusable: it can
+ * conflict with an otherwise-unused installed major, or name a version the public registry does
+ * not carry. Only a real install proves otherwise, and previously exactly one peer
+ * (`maplibre-gl`) got that treatment while the other 28 were taken on faith.
+ */
+const FIXTURE_OPTIONAL_PEERS = Object.freeze({
+  '@sgratzl/chartjs-chart-boxplot': '^4.4.5',
+  'chart.js': '^4.5.1',
+  'chartjs-plugin-zoom': '^2.2.0',
+  'd3-drag': '^3.0.0',
+  'd3-force': '^3.0.0',
+  'd3-selection': '^3.0.0',
+  'd3-zoom': '^3.0.0',
+  dompurify: '^3.4.12',
+  marked: '^18.0.6',
+  shiki: '^4.3.1',
+});
+
+/**
+ * Optional peers deliberately NOT installed by the fixture, each with the reason. Anything absent
+ * from both this map and `FIXTURE_OPTIONAL_PEERS` fails the coverage assertion below, so adding a
+ * new optional peer forces an explicit decision instead of silently landing uncovered.
+ */
+const OPTIONAL_PEER_COVERAGE_EXEMPTIONS = Object.freeze({
+  '@aceshooting/lyra-flags': 'installed from the packed workspace tarball, not the registry',
+  xlsx: 'the supported >=0.20.3 range is published only on the SheetJS CDN, not the public npm registry',
+  'maplibre-gl': 'installed with an explicit version by the dedicated v5/v6 fixtures below',
+  react: 'framework declaration peer; type-only, exercised by the packed type-consumer checks',
+  svelte: 'framework declaration peer; type-only, exercised by the packed type-consumer checks',
+  vue: 'framework declaration peer; type-only, exercised by the packed type-consumer checks',
+  '@aiden0z/pptx-renderer': 'heavy viewer peer; range verified by resolution, not installed in CI',
+  epubjs: 'heavy viewer peer; range verified by resolution, not installed in CI',
+  'ical.js': 'heavy viewer peer; range verified by resolution, not installed in CI',
+  katex: 'heavy render peer; range verified by resolution, not installed in CI',
+  mammoth: 'heavy viewer peer; range verified by resolution, not installed in CI',
+  'pdfjs-dist': 'heavy viewer peer; range verified by resolution, not installed in CI',
+  papaparse: 'parser peer; range verified by resolution, not installed in CI',
+  'postal-mime': 'parser peer; range verified by resolution, not installed in CI',
+  qrcode: 'generator peer; range verified by resolution, not installed in CI',
+  'libphonenumber-js': 'data peer; range verified by resolution, not installed in CI',
+  'emoji-picker-element-data': 'data peer; range verified by resolution, not installed in CI',
+  'chartjs-plugin-annotation': 'chart plugin peer; range verified by resolution, not installed in CI',
+  'chartjs-plugin-datalabels': 'chart plugin peer; range verified by resolution, not installed in CI',
+});
+
+{
+  const covered = new Set([
+    ...Object.keys(FIXTURE_OPTIONAL_PEERS),
+    ...Object.keys(OPTIONAL_PEER_COVERAGE_EXEMPTIONS),
+  ]);
+  const uncovered = optionalPeers.filter((name) => !covered.has(name));
+  if (uncovered.length > 0) {
+    throw new Error(
+      `Optional peers with no install coverage and no documented exemption: ${uncovered.join(', ')}. ` +
+        'Add each to FIXTURE_OPTIONAL_PEERS so its range is really installed and verified, or to ' +
+        'OPTIONAL_PEER_COVERAGE_EXEMPTIONS with the reason it cannot be.',
+    );
+  }
+  const stale = Object.keys(OPTIONAL_PEER_COVERAGE_EXEMPTIONS).filter(
+    (name) => !optionalPeers.includes(name),
+  );
+  if (stale.length > 0) {
+    throw new Error(
+      `OPTIONAL_PEER_COVERAGE_EXEMPTIONS names peers that are no longer optional peers: ${stale.join(', ')}.`,
+    );
+  }
+}
+
 // The authoritative registration inventory, so the packed contract fixture below asserts against
 // the same source `src/all.ts` and `src/ssr/all.ts` are generated from rather than a hand-kept list
 // that would rot on the next `pnpm create:component`.
@@ -488,17 +561,8 @@ async function writeFixture(
   };
   if (withOptionalPeers) {
     Object.assign(devDependencies, {
-      '@sgratzl/chartjs-chart-boxplot': '^4.4.5',
-      'chart.js': '^4.5.1',
-      'chartjs-plugin-zoom': '^2.2.0',
-      'd3-drag': '^3.0.0',
-      'd3-force': '^3.0.0',
-      'd3-selection': '^3.0.0',
-      'd3-zoom': '^3.0.0',
-      dompurify: '^3.4.12',
+      ...FIXTURE_OPTIONAL_PEERS,
       'maplibre-gl': maplibreVersion,
-      marked: '^18.0.6',
-      shiki: '^4.3.1',
     });
   }
 
@@ -1463,6 +1527,14 @@ async function main() {
       maplibreV5Fixture,
       'MapLibre v5 peer tree check',
     );
+
+    // Every optional peer the strict fixture installs gets its own resolved-tree check, not just
+    // MapLibre. `npm install --strict-peer-deps` above already fails on an unsatisfiable range;
+    // `npm ls <name>` additionally proves the package resolved to a real tree entry rather than
+    // being quietly skipped, which is the failure mode an optional peer is most prone to.
+    for (const peer of Object.keys(FIXTURE_OPTIONAL_PEERS)) {
+      await run(npm, ['ls', peer, '--all'], maplibreV5Fixture, `${peer} peer tree check`);
+    }
 
     await verifyNoWorkspaceProtocolLeaked(coreFixture);
     await verifyNoWorkspaceProtocolLeaked(maplibreV5Fixture);

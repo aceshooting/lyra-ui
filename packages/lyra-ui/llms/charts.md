@@ -17,7 +17,7 @@ toggle, not a duplicate). The deprecated type aliases `ChartPoint`, `Series` (su
 removed — update TypeScript imports to the canonical `Lyra*`-prefixed names. The internal
 `lockChartType` helper is no longer exported from the public `chart.ts` entry point; it is now used
 solely by `<lr-histogram>` to keep its `type` fixed to `'bar'` — every other `lr-*-chart` subclass
-keeps its `type` writable, matching its mirrored WA counterpart. `chart-loader.ts`'s v8 compatibility
+keeps its `type` writable, matching its mirrored WA counterpart. `chart-core-loader.ts`'s v8 compatibility
 facade is removed; `./components/charts/chart/chart-core-loader.js` and
 `./components/charts/chart/chart-feature-loader.js` are now the real public entry points.
 
@@ -106,7 +106,8 @@ structured points retain their y-value formatting.
 - `datasets: readonly LyraChartSeries[] = []` (attribute: false) — `LyraChartSeries { readonly
   label: string; readonly data?: readonly (number|null)[]; readonly points?: readonly
   LyraChartPoint[]; readonly color?: string|readonly string[]; ... }`. The deprecated `Series` and
-  `ChartPoint` names remain aliases for migration. `LyraChartPoint { readonly x: number; readonly
+  `ChartPoint` names were removed in 9.0.0 — import `LyraChartSeries`/`LyraChartPoint` instead.
+  `LyraChartPoint { readonly x: number; readonly
   y: number; readonly r?: number; readonly label?: string }`: `r` is the bubble
   radius, and the optional per-point `label` is retained by events, CSV export, keyboard
   announcements, generated summaries, and the accessible table. Point wording is localized as
@@ -140,9 +141,11 @@ structured points retain their y-value formatting.
   would clip. Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is
   defined, otherwise the effective dataset's declarative `hidden` value before Chart.js is ready
   and across chart type/plugin rebuilds.
-- `legendMode: LyraChartLegendMode = 'dataset'` (attribute `legend-mode`) — `dataset` preserves
-  dataset toggles. `datum` shows one category toggle per slice in pie, doughnut and polar-area
-  charts; other types retain dataset legends. Category names use source labels with localized
+- `legendMode: LyraChartLegendMode = 'auto'` (attribute `legend-mode`) — `auto` resolves to `datum`
+  on pie, doughnut and polar-area charts and to `dataset` everywhere else, so a single-dataset slice
+  chart labels every slice rather than emitting one aggregate row that identifies only the first
+  colour. `dataset` forces dataset toggles even on a slice chart. `datum` shows one category toggle
+  per slice in pie, doughnut and polar-area charts; other types retain dataset legends. Category names use source labels with localized
   numbered fallbacks. Colors and values come from the first dataset. With multiple datasets/rings,
   a category toggle hides that source index in every ring, matching Chart.js category visibility.
 - `hiddenDatums: readonly number[] = []` (attribute: false) — clone-owned hidden source category
@@ -316,6 +319,12 @@ scope, or pass `null` to request the light-mode fallback directly. When a scope 
 token layer yet, the helper reads the `--lr-theme-color-chart-N` inputs directly. Both forms return
 a fresh eight-color array each call (safe to mutate) and let chart-adjacent UI, KPI tiles, or the
 `Series` array itself come from one source of truth.
+
+The same module also exports `ChartThemeColors`, the resolved chrome colours a chart paints around
+its series. Every field is an already-resolved CSS colour string, because canvas silently ignores a
+raw `var(--lr-…)` string and would paint nothing; `<lr-box-plot>` consumes the same shape, so a
+consumer drawing its own canvas overlay beside a chart can match the grid, tick, legend and tooltip
+chrome exactly rather than re-deriving it.
 
 Import the standalone form from `.../chart/chart-colors.js`, not from `.../chart/chart.js`: the
 latter is `<lr-chart>`'s registration entry, so it defines the element (and pulls in `<lr-skeleton>`)
@@ -548,7 +557,8 @@ passthrough). Not a subclass of `LyraChart`.
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraLiteChartSeries[] = []` (attribute: false) —
   `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
-  readonly color?: string }`; the deprecated `LiteSeries` name remains an alias for migration.
+  readonly color?: string }`. The legacy `LiteSeries` name was removed in 9.0.0 — import
+  `LyraLiteChartSeries` instead.
   `color` accepts a valid CSS `color`, while invalid values,
   declaration-breaking input, and `url()` paint servers fall back to the built-in palette. A
   runtime entry whose required `data` member is not an array is dropped while valid siblings
@@ -1100,7 +1110,23 @@ bounded-alternative sampling notice)
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
 re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
 that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
-so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-pattern-step`
+so `--lr-theme-color-chart-*` retheming reaches box plots too. That resolved color then layers two
+further per-series override tokens for the canvas paint, each wrapping modulo 8 like the underlying
+ramp and mirroring `lr-chart`'s own `--border-color-N`/`--fill-color-N` palette-override mechanism
+under a box-plot-namespaced name, since box-plot has no raw `config` passthrough to piggyback on:
+`--lr-box-plot-border-color-1` through `--lr-box-plot-border-color-8` (defaulting respectively to
+`--lr-color-chart-1` through `--lr-color-chart-8`) set the box-outline stroke color, and
+`--lr-box-plot-fill-color-1` through `--lr-box-plot-fill-color-8` (the same eight defaults) set the
+box fill and its legend swatch. In full, the stroke tokens are `--lr-box-plot-border-color-1`,
+`--lr-box-plot-border-color-2`, `--lr-box-plot-border-color-3`, `--lr-box-plot-border-color-4`,
+`--lr-box-plot-border-color-5`, `--lr-box-plot-border-color-6`, `--lr-box-plot-border-color-7` and
+`--lr-box-plot-border-color-8`; the fill tokens are `--lr-box-plot-fill-color-1`,
+`--lr-box-plot-fill-color-2`, `--lr-box-plot-fill-color-3`, `--lr-box-plot-fill-color-4`,
+`--lr-box-plot-fill-color-5`, `--lr-box-plot-fill-color-6`, `--lr-box-plot-fill-color-7` and
+`--lr-box-plot-fill-color-8`. `--lr-box-plot-border-width` (default `var(--lr-border-width-thin)`)
+sets the canvas box-outline stroke width in pixels — the same override mechanism as `lr-chart`'s
+`--border-width`. `--lr-box-plot-item-radius` (default `0`) sets the radius, in pixels, of the
+individual raw-sample dots drawn alongside each box; `0` disables them. `--lr-chart-pattern-step`
 (default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
 hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color)`) sets
@@ -1131,8 +1157,9 @@ loads are memoized per page.
 ```
 
 **Known gotchas:**
-- no raw `config` passthrough — limited to the properties above; can't reach the underlying
-  controller's own options (`itemRadius`, `outlierRadius`, `coef`).
+- no raw `config` passthrough — limited to the properties above, plus the `--lr-box-plot-border-width`
+  and `--lr-box-plot-item-radius` CSS hooks; the underlying controller's other options
+  (`outlierRadius`, `coef`) remain unreachable.
 - Chart.js receives `effectiveLocale`; generated numeric summaries use it, the y axis moves to
   logical start in RTL, and live ancestor `lang`/`dir` changes redraw the already-mounted canvas
   without requiring another box property write. Canvas tooltip/axis colors are token-driven, and
@@ -1194,6 +1221,14 @@ These named interfaces and helper signatures are available to typed integrations
   }`
 
 - **`components-charts-chart-chart-colors-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart-colors.js`.
+  `ChartThemeColors {
+    grid: string;
+    tick: string;
+    legend: string;
+    tooltipBg: string;
+    tooltipText: string;
+  }`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart-colors.js`.
   `seriesPalette(element?: Element | null): string[]`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart-colors.js`.

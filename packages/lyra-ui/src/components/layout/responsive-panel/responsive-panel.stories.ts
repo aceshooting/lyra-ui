@@ -68,7 +68,7 @@ export const ThemedOverlay: Story = {
         --lr-responsive-panel-overlay-panel-shadow: var(--lr-shadow-xl);
       "
     >
-      <lr-responsive-panel mode="overlay" variant="bottom-sheet" open label="Themed settings">
+      <lr-responsive-panel mode="overlay" shape="bottom-sheet" open label="Themed settings">
         <span slot="header" style="font-weight: 600;">Themed settings</span>
         <p style="margin: 0;">This sheet inherits its scrim, surface, and elevation from its wrapper.</p>
         <div slot="footer"><button type="button">Apply</button></div>
@@ -78,11 +78,11 @@ export const ThemedOverlay: Story = {
 };
 
 export const ForcedOverlayFullscreen: Story = {
-  name: 'mode="overlay" variant="fullscreen"',
+  name: 'mode="overlay" shape="fullscreen"',
   render: () => html`
     <div>
       <button @click=${openPanel}>Open panel</button>
-      <lr-responsive-panel mode="overlay" variant="fullscreen" label="Settings">
+      <lr-responsive-panel mode="overlay" shape="fullscreen" label="Settings">
         <span slot="header" style="font-weight: 600;">Settings</span>
         <p style="margin: 0;">Fullscreen covers the entire viewport -- no docked layout, no visible backdrop.</p>
         <div slot="footer">
@@ -99,13 +99,13 @@ export const ForcedOverlayFullscreen: Story = {
 };
 
 export const ForcedOverlayBottomSheet: Story = {
-  name: 'mode="overlay" variant="bottom-sheet"',
+  name: 'mode="overlay" shape="bottom-sheet"',
   render: (_args, context) => html`
     <div>
       <button @click=${openPanel}>Open panel</button>
       <lr-responsive-panel
         mode="overlay"
-        variant="bottom-sheet"
+        shape="bottom-sheet"
         label="Share"
         .open=${context.viewMode !== 'docs'}
       >
@@ -132,7 +132,7 @@ export const CancelableClose: Story = {
   render: () => html`
     <lr-responsive-panel
       mode="overlay"
-      variant="bottom-sheet"
+      shape="bottom-sheet"
       open
       label="Unsaved changes"
       @lr-close=${vetoPanelClose}
@@ -202,7 +202,7 @@ export const SettingsSidebarPattern: Story = {
       <lr-responsive-panel
         mode="auto"
         overlay-breakpoint="28rem"
-        variant="bottom-sheet"
+        shape="bottom-sheet"
         open
         label="Settings"
         style="min-inline-size: 16rem;"

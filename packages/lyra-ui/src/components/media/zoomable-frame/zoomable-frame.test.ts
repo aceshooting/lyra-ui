@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import './zoomable-frame.js';
 import type { LyraZoomableFrame } from './zoomable-frame.js';
 import * as classModule from './zoomable-frame.class.js';
-import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 const INLINE_DOCUMENT = '<!doctype html><html><body><p>Inline preview</p></body></html>';
 
@@ -340,16 +340,12 @@ describe('zoom controls and interaction', () => {
     const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-out-button"]')!;
     expect(button.disabled).to.equal(true);
     const rest = getComputedStyle(button).backgroundColor;
-    const rect = button.getBoundingClientRect();
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
-      await aTimeout(0);
+      await hoverUntilMatched(button, 'the disabled zoom-out button never reported :hover');
+      // A hover that must change nothing cannot be polled for; settle first so the read is real.
+      await settlePointer();
       expect(getComputedStyle(button).backgroundColor).to.equal(rest);
       await sendMouse({ type: 'down' });
-      await aTimeout(0);
       // A press that must change nothing cannot be polled for; settle first so the read is real.
       await settlePointer();
       expect(getComputedStyle(button).backgroundColor).to.equal(rest);

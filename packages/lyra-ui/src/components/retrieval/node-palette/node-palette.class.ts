@@ -17,9 +17,10 @@ import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.class
 import { styles } from './node-palette.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { closeIcon } from '../../../internal/icons.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_nodePaletteDragHint, LYRA_DEFAULT_nodePaletteEmpty, LYRA_DEFAULT_nodePaletteLabel, LYRA_DEFAULT_nodePalettePlaceholder, LYRA_DEFAULT_nodePaletteResultCount, LYRA_DEFAULT_reorderItemMoved, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_nodePaletteDragHint, LYRA_DEFAULT_nodePaletteEmpty, LYRA_DEFAULT_nodePaletteLabel, LYRA_DEFAULT_nodePalettePlaceholder, LYRA_DEFAULT_nodePaletteResultCount, LYRA_DEFAULT_reorderItemMoved, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraPaletteItem {
@@ -265,12 +266,16 @@ export interface LyraNodePaletteEventMap {
  *   search field loses focus; preserves `relatedTarget` and crosses the shadow boundary.
  * @csspart base - The root wrapper.
  * @csspart search - The search input.
+ * @csspart search-clear - The button that clears the search field, rendered only while it has a
+ *   value -- the native `type="search"` cancel button is suppressed (its unthemed glyph does not
+ *   match the field's own border/background), so this replaces it rather than merely hiding it.
  * @csspart list - The listbox.
  * @csspart group-header - A category heading (`role="presentation"`).
  * @csspart item - A single option row.
  * @csspart item-icon - An item's icon wrapper.
  * @csspart item-label - An item's label text.
  * @csspart item-description - An item's description text.
+ * @csspart search-field - The wrapper around the search input and its clear button.
  * @csspart empty - The no-results message.
  * @csspart live-region - The result-count announcement.
  * @status stable
@@ -281,6 +286,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
     nodePaletteDragHint: LYRA_DEFAULT_nodePaletteDragHint,
     nodePaletteEmpty: LYRA_DEFAULT_nodePaletteEmpty,
     nodePaletteLabel: LYRA_DEFAULT_nodePaletteLabel,
@@ -595,6 +601,14 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     this.activeIndex = 0;
   };
 
+  /** Replaces the suppressed native `type="search"` cancel button -- see `search-clear`'s doc. */
+  private onSearchClear = (): void => {
+    if (this.queryText === '') return;
+    this.queryText = '';
+    this.activeIndex = 0;
+    this.renderRoot.querySelector<HTMLInputElement>('[part="search"]')?.focus();
+  };
+
   // Native focus/blur neither bubble nor cross the shadow boundary, so a host listening for
   // focus/blur directly on <lr-node-palette> (e.g. to highlight the field as active) would never
   // hear about the internal search field without this bridge.
@@ -815,18 +829,30 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         : componentLabel;
     return html`<div part="base">
       <slot name="header"></slot>
-      <input
-        part="search"
-        type="search"
-        aria-label=${this.localize('search')}
-        aria-controls=${this.listId}
-        placeholder=${this.localize('nodePalettePlaceholder')}
-        .value=${this.queryText}
-        @input=${this.onSearchInput}
-        @keydown=${this.onFieldKeyDown}
-        @focus=${this.onSearchFocus}
-        @blur=${this.onSearchBlur}
-      />
+      <div part="search-field">
+        <input
+          part="search"
+          type="search"
+          aria-label=${this.localize('search')}
+          aria-controls=${this.listId}
+          placeholder=${this.localize('nodePalettePlaceholder')}
+          .value=${this.queryText}
+          @input=${this.onSearchInput}
+          @keydown=${this.onFieldKeyDown}
+          @focus=${this.onSearchFocus}
+          @blur=${this.onSearchBlur}
+        />
+        ${this.queryText === ''
+          ? nothing
+          : html`<button
+              part="search-clear"
+              type="button"
+              aria-label=${this.localize('clear')}
+              @click=${this.onSearchClear}
+            >
+              <span aria-hidden="true" inert>${closeIcon()}</span>
+            </button>`}
+      </div>
       <div part="list" id=${this.listId} role="listbox" aria-label=${listLabel}>
         ${groups.length === 0
           ? html`<div

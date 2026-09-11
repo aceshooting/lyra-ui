@@ -77,7 +77,7 @@ export const styles = css`
   }
   :host([appearance="accent"]) [part="base"] {
     border-color: transparent;
-    border-inline-start: var(--lr-size-3px) solid var(--lr-card-accent-border-color, var(--lr-color-brand));
+    border-inline-start: var(--lr-border-width-thick) solid var(--lr-card-accent-border-color, var(--lr-color-brand));
   }
   :host([appearance="plain"]) [part="base"] {
     border-color: transparent;

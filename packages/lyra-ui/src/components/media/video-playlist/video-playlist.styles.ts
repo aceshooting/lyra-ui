@@ -146,7 +146,7 @@ export const styles = css`
     line-height: var(--lr-line-height-normal);
   }
 
-  @container (max-width: 40rem) {
+  @container (max-inline-size: 40rem) {
     [part~='video-playlist'] {
       grid-template-columns: minmax(0, 1fr);
     }

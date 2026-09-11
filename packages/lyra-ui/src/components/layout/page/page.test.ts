@@ -183,6 +183,33 @@ it('localizes the skip link, navigation landmark, and open/close toggle names', 
   expect(toggle.getAttribute('aria-label')).to.equal('Fermer la navigation');
 });
 
+it('forwards a host aria-describedby onto the internal role="dialog" mobile drawer', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px" aria-describedby="page-hint">
+      <span id="page-hint" hidden>Extra context for assistive tech</span>
+    </lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  page.showNavigation();
+  await page.updateComplete;
+
+  const drawer = byPart(page, 'drawer');
+  expect(drawer.getAttribute('role')).to.equal('dialog');
+  expect(drawer.getAttribute('aria-describedby')).to.equal('page-hint');
+});
+
+it('pins overflow-y alongside overflow-x on [part="page"] so the unset axis cannot compute to auto', async () => {
+  const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+  await page.updateComplete;
+  const style = getComputedStyle(byPart(page, 'page'));
+  // Per the CSS overflow spec, an axis left at its `visible` initial value computes to `auto`
+  // once the other axis is pinned to a non-visible value (here overflow-x: clip) -- the same
+  // mechanism that produced lr-tab-group's previously-fixed phantom vertical scrollbar.
+  expect(style.overflowX).to.equal('clip');
+  expect(style.overflowY).to.equal('clip');
+});
+
 it('uses rich skip-to-content slot content in place of the localized fallback', async () => {
   const page = (await fixture(html`
     <lr-page

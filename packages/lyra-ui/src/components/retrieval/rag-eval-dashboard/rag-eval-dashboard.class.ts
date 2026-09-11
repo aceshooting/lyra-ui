@@ -112,7 +112,10 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     [];
   /** Evaluation runs displayed in the trend chart and run history. */
   @property({ attribute: false }) runs: readonly LyraRagEvaluationRun[] = [];
-  /** Controlled id of the active metric; empty selects the first available metric. */
+  /** Controlled id of the active metric; empty selects the first available metric. A non-empty
+   *  value that matches no declared `metrics` entry selects no metric at all (no button renders
+   *  `aria-pressed="true"`, and no chart renders) rather than silently substituting the first
+   *  metric -- the host's own readback always agrees with what is rendered. */
   @property({ attribute: 'metric-id' }) metricId = '';
   /** Controlled evaluation slice. An unavailable value is preserved and renders an explicit
    * localized state until the host changes it or supplies a matching run. */
@@ -157,7 +160,14 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   private activeMetric(
     metrics: readonly LyraRagEvaluationMetric[]
   ): LyraRagEvaluationMetric | undefined {
-    return metrics.find((metric) => metric.id === this.metricId) ?? metrics[0];
+    // An explicitly controlled but unmatched metricId must never silently substitute metrics[0] --
+    // that would render a metric as selected/aria-pressed="true" while the host's own readback
+    // still reports the (rejected) requested id, with no signal anything was substituted. Only an
+    // EMPTY metricId (the documented "select first available metric" default) falls through to
+    // metrics[0].
+    return this.metricId
+      ? metrics.find((metric) => metric.id === this.metricId)
+      : metrics[0];
   }
 
   private slices(runs: readonly LyraRagEvaluationRun[]): string[] {

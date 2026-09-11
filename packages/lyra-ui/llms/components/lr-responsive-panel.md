@@ -28,7 +28,7 @@ invention (no `wa-*`/`sl-*` counterpart).
   against the component's allocation; `'inline'`/`'overlay'` force that presentation.
 - `effectiveMode: LyraResponsivePanelEffectiveMode` (readonly) — the currently resolved
   `'inline'|'overlay'` presentation.
-- `variant: LyraResponsivePanelVariant = 'fullscreen'` (reflected) — only affects the overlay
+- `shape: LyraResponsivePanelShape = 'fullscreen'` (reflected) — only affects the overlay
   presentation's visual treatment: `'fullscreen'` covers the whole viewport; `'bottom-sheet'`
   anchors to its block-end edge and does not cover the full height. Has no visual effect while the effective
   presentation resolves to `'inline'`.
@@ -115,7 +115,7 @@ presentation participates in the shared modal stack rather than nesting a `<lr-d
 The granular route exports the pure
 `resolveResponsivePanelEffectiveMode(mode: LyraResponsivePanelMode,
 belowBreakpoint: boolean): LyraResponsivePanelEffectiveMode` resolver alongside the
-`LyraResponsivePanelMode`/`LyraResponsivePanelEffectiveMode`/`LyraResponsivePanelVariant`/
+`LyraResponsivePanelMode`/`LyraResponsivePanelEffectiveMode`/`LyraResponsivePanelShape`/
 `LyraResponsivePanelCloseReason`/`LyraResponsivePanelModeChangeDetail` types. It's the same logic
 the element's allocation observer calls: `'inline'`/`'overlay'` pass straight through
 unchanged; `'auto'` resolves to `'overlay'` when `belowBreakpoint` is true, `'inline'` otherwise —

@@ -85,6 +85,11 @@ export const styles = css`
 
     [part='controls'] > * {
       inline-size: 100%;
+      /* [part='controls'] > * carries a row-mode flex: 1 1 <control-width> for the width
+         basis. In a column flex container flex-basis sets the *block-size* basis instead, so
+         without this reset that same declaration would balloon each control to the row-mode
+         control-width value as a height once flex-direction flips to column here. */
+      flex-basis: auto;
     }
   }
 `;

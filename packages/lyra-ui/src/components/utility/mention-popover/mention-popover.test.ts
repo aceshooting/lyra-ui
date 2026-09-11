@@ -115,6 +115,29 @@ it('renders items as listbox rows, with icon/description parts only when set', a
   expect(el.shadowRoot!.querySelectorAll('[part="option-description"]').length).to.equal(2);
 });
 
+it('mirrors option icon/label ordering under dir="rtl" through logical flex flow, not DOM reordering', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div dir="rtl"></div>`);
+  const anchor = document.createElement('div');
+  wrapper.appendChild(anchor);
+  const el = document.createElement('lr-mention-popover') as LyraMentionPopover;
+  wrapper.appendChild(el);
+  el.anchor = anchor;
+  el.items = [{ suggestionId: 'bob', label: 'Bob Nakamura', icon: '🤖' }];
+  el.open = true;
+  await el.updateComplete;
+  await waitFor(
+    () => getComputedStyle(listbox(el)).visibility,
+    (visibility) => visibility === 'visible',
+  );
+  const icon = el.shadowRoot!.querySelector('[part="option-icon"]') as HTMLElement;
+  const label = el.shadowRoot!.querySelector('[part="option-label"]') as HTMLElement;
+  // DOM order stays icon-then-label (no reordering needed); logical flex flow under dir="rtl"
+  // places the first inline item ([part="option-icon"]) at the visual trailing (right) edge.
+  const iconRect = icon.getBoundingClientRect();
+  const labelRect = label.getBoundingClientRect();
+  expect(iconRect.left, 'the icon renders visually after (to the right of) the label under RTL').to.be.at.least(labelRect.right - 1);
+});
+
 it('shows the empty-text row when items is empty', async () => {
   const el = await openWithItems([]);
   const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
@@ -173,6 +196,20 @@ it('omits malformed labels while a valid neighboring suggestion remains filterab
     index: 3,
     label: 'Kept suggestion',
   });
+});
+
+it('omits a blank-string label, not just a non-string one', async () => {
+  const el = await openWithItems([
+    { suggestionId: 'blank', label: '' },
+    { suggestionId: 'whitespace', label: '   ' },
+    { suggestionId: 'kept', label: 'Kept suggestion' },
+  ] as unknown as LyraMentionItem[]);
+
+  expect(el.filteredItems.map((item) => item.suggestionId)).to.deep.equal(['kept']);
+  expect(rows(el)).to.have.length(1);
+  for (const row of Array.from(rows(el))) {
+    expect((row.textContent ?? '').trim().length).to.be.greaterThan(0);
+  }
 });
 
 it('uses the effective locale for built-in case-insensitive filtering', async () => {

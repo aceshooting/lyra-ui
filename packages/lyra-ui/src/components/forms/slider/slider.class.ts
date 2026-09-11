@@ -741,20 +741,37 @@ export class LyraSlider extends LyraSliderBase {
   private rangeFocusTransfer?: { origin: Element; target: SliderHandle };
   private rangeFocusGeneration = 0;
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+  /** Second handle's lease while `range` -- a two-handle slider has no single "the thumb" a host
+   *  `aria-describedby` could bind to, so both handles pick up the same external description. */
+  private externalDescriptionLeaseMax?: ResolvedAriaRelationshipLease;
 
   private syncExternalDescription(): void {
-    const target = this.isConnected && !this.range ? this.firstThumb() : null;
-    if (!target) {
-      this.releaseExternalDescription();
-      return;
+    const primary = this.isConnected ? (this.range ? this.handleElement('min') : this.firstThumb()) : null;
+    if (!primary) {
+      this.externalDescriptionLease?.release();
+      this.externalDescriptionLease = undefined;
+    } else if (this.externalDescriptionLease) {
+      this.externalDescriptionLease.update(primary);
+    } else {
+      this.externalDescriptionLease = acquireResolvedAriaRelationship(this, primary, 'aria-describedby');
     }
-    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
-    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+
+    const secondary = this.isConnected && this.range ? this.handleElement('max') : null;
+    if (!secondary) {
+      this.externalDescriptionLeaseMax?.release();
+      this.externalDescriptionLeaseMax = undefined;
+    } else if (this.externalDescriptionLeaseMax) {
+      this.externalDescriptionLeaseMax.update(secondary);
+    } else {
+      this.externalDescriptionLeaseMax = acquireResolvedAriaRelationship(this, secondary, 'aria-describedby');
+    }
   }
 
   private releaseExternalDescription(): void {
     this.externalDescriptionLease?.release();
     this.externalDescriptionLease = undefined;
+    this.externalDescriptionLeaseMax?.release();
+    this.externalDescriptionLeaseMax = undefined;
   }
 
   override connectedCallback(): void {

@@ -79,10 +79,11 @@ highlighted markup.
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
   `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
   the type-only granular import emits no registration side effect.
-  `refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
-  **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
-  resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
-  when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
+
+**Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
+resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
+when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
+`refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
 
 **Events:** `lr-copy` (frozen `detail: { ok: true, text }` — fires only after the raw `code` value
 was written successfully), `lr-error` (`detail: null` — generic notification when clipboard writing

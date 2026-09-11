@@ -36,10 +36,16 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import {
+  FALLBACK_GRID_COLOR,
+  FALLBACK_LEGEND_COLOR,
+  FALLBACK_TICK_COLOR,
+  FALLBACK_TOOLTIP_BG,
+  FALLBACK_TOOLTIP_TEXT,
   resolveCanvasColor,
   resolveCanvasColors,
   seriesPalette,
   translucentAreaColor,
+  type ChartThemeColors as ThemeColors,
 } from './chart-colors.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import {
@@ -147,7 +153,7 @@ export type LyraChartLayoutPosition =
   | { [scaleId: string]: number };
 export type LyraChartLegendPosition = LyraChartLayoutPosition | 'start' | 'end' | 'auto';
 /** Dataset toggles, or shared category toggles for pie/doughnut/polar-area charts. */
-export type LyraChartLegendMode = 'dataset' | 'datum';
+export type LyraChartLegendMode = 'auto' | 'dataset' | 'datum';
 /** Text shown in the DOM legend, independently of tooltip and axis formatting. */
 export type LyraChartLegendDisplay = 'auto' | 'label' | 'value' | 'percentage';
 export type LyraChartValueFormatterContext = 'tick' | 'tooltip' | 'legend' | 'table';
@@ -247,6 +253,9 @@ export interface LyraChartConfiguration {
   plugins?: LyraChartPlugin[];
 }
 
+/** A single Chart.js hit-test result, as returned by `LyraChartInstance.getElementsAtEventForMode()`.
+ *  Exported so the documented `LyraChartInstance` reference (`llms/charts.md`) names a real,
+ *  importable symbol instead of an inaccessible internal interface. */
 interface ChartHit {
   datasetIndex: number;
   index: number;
@@ -271,6 +280,9 @@ interface DataLabelsContext {
   dataIndex: number;
 }
 
+/** Structural shape of a live Chart.js instance, without imposing `chart.js` as a type dependency
+ *  on consumers. Exported so `LyraChartInstance`'s documented `extends RuntimeChart` reference
+ *  names a real, importable symbol. */
 interface RuntimeChart {
   data: {
     labels?: unknown[];
@@ -373,6 +385,22 @@ function normalizeLegendPosition(value: unknown): LyraChartLegendPosition {
  */
 type EffectiveChartType = LyraChartType | (string & {});
 type ChartFeatureState = 'idle' | 'loading' | 'available' | 'unavailable';
+
+/** Dataset types Chart.js renders through its `ArcElement` (`elements.arc.*`). */
+function isArcDatasetType(datasetType: string): boolean {
+  return datasetType === 'pie' || datasetType === 'doughnut' || datasetType === 'polarArea';
+}
+
+/** Dataset types Chart.js renders through its `PointElement` (`elements.point.*`), i.e. every
+ *  controller that plots discrete markers. */
+function isPointDatasetType(datasetType: string): boolean {
+  return (
+    datasetType === 'line' ||
+    datasetType === 'radar' ||
+    datasetType === 'scatter' ||
+    datasetType === 'bubble'
+  );
+}
 
 /**
  * Establishes only that a value can be passed to descriptor-safe record readers. It deliberately
@@ -1249,23 +1277,9 @@ function projectChartConfiguration(value: unknown): LyraChartConfiguration | und
 // skipped unconditionally regardless of `base`'s own shape.
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
-// Defensive JS-side fallbacks for themeColors() below, mirroring the
-// light-mode default of each `--lr-chart-*` token's own fallback chain
-// (see chart.styles.ts) — only reached if getComputedStyle somehow can't
-// resolve the custom property at all (e.g. host detached from the document).
-const FALLBACK_GRID_COLOR = '#8a8a90';
-const FALLBACK_TICK_COLOR = '#6b7280';
-const FALLBACK_LEGEND_COLOR = '#1a1a1a';
-const FALLBACK_TOOLTIP_BG = '#fff';
-const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
-
-interface ThemeColors {
-  grid: string;
-  tick: string;
-  legend: string;
-  tooltipBg: string;
-  tooltipText: string;
-}
+// FALLBACK_GRID_COLOR/FALLBACK_TICK_COLOR/FALLBACK_LEGEND_COLOR/FALLBACK_TOOLTIP_BG/
+// FALLBACK_TOOLTIP_TEXT/ThemeColors (imported above as ChartThemeColors) now live in
+// chart-colors.ts, shared verbatim with box-plot.class.ts's identical fallback chain.
 
 interface ChartStyleOptions {
   borderColors: string[];
@@ -1587,6 +1601,10 @@ function chartDatasetAxis(dataset: unknown): 'y' | 'y2' {
  * `LyraChartSeries` shape the rest of this component family (subclasses, box-plot,
  * histogram) is built on.
  *
+ * `datasets`, `annotations`, and `hiddenDatasets` take bounded, clone-owned readonly snapshots.
+ * Create a new collection and reassign it after changes; mutating the assigned array does not
+ * update the view. `labels` does not yet share this contract.
+ *
  * @customElement lr-chart
  * @event lr-zoom - `detail: { zoomed }`.
  * @event lr-point-click - Fired when pointer input lands on a data point/segment, when a generated
@@ -1757,6 +1775,21 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     'lr-datum-visibility-change',
   ]);
 
+  // `datasets` already owns its cloning/freezing through its own hand-written accessor (see
+  // `set datasets()` below) and is deliberately excluded here to avoid double-wrapping it.
+  // `annotations` and `hiddenDatasets` are plain Lit-generated accessors with no such protection of
+  // their own, unlike their `LyraBoxPlot`/`LyraLiteChart` siblings' identically named properties —
+  // enrolling them here gives every `lr-*-chart` subclass the same "bounded, clone-owned readonly
+  // snapshot" contract. `labels` is deliberately NOT enrolled here: `chart.test.ts`'s "drops a label
+  // array revoked during descriptor admission" test pins a revocable-Proxy hazard through
+  // `canonicalLabels()`'s own `projectChartStrings()` safety net, which reads `this.labels` lazily
+  // at `buildConfig()` time; the shared ownership boundary instead snapshots eagerly at assignment
+  // time and handles that same self-revoking-mid-enumeration Proxy differently (see handoffs).
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'annotations',
+    'hiddenDatasets',
+  ]);
+
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   constructor() {
@@ -1848,11 +1881,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /**
    * `datum` renders category toggles for pie/doughnut/polar-area charts. Categories use the first
    * dataset's colors and values; a toggle affects that category in every ring. Other chart types
-   * retain dataset legends. Both modes use the generated accessible-data sampling budget.
+   * retain dataset legends. `auto` (the default) resolves to `datum` on pie/doughnut/polar-area
+   * charts -- where a single-dataset legend would otherwise enumerate one entry for the whole
+   * dataset instead of one per visible slice -- and to `dataset` everywhere else. `dataset` always
+   * forces the dataset legend, even on a slice chart. Both non-`auto` modes use the generated
+   * accessible-data sampling budget.
+   * @default 'auto'
    */
   @property({ attribute: 'legend-mode', converter: {
-    fromAttribute: (value) => value === 'datum' ? 'datum' : 'dataset',
-  } }) legendMode: LyraChartLegendMode = 'dataset';
+    fromAttribute: (value) => value === 'datum' ? 'datum' : value === 'dataset' ? 'dataset' : 'auto',
+  } }) legendMode: LyraChartLegendMode = 'auto';
   /**
    * `auto` retains optional legend formatting; `label` omits values even with a formatter; `value`
    * appends a formatted value. `percentage` uses locale percentages of the absolute represented
@@ -1924,7 +1962,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    *
    * Entries are included in the generated accessible description, mirroring `lr-heatmap`.
    */
-  @property({ type: Array }) annotations: readonly LyraChartAnnotation[] = [];
+  @property({ attribute: false }) annotations: readonly LyraChartAnnotation[] = [];
   /** Maximum value-axis bound. Non-finite values are ignored. */
   @property({ type: Number }) max: number | null = null;
   /** Minimum value-axis bound. Non-finite values are ignored. */
@@ -3196,11 +3234,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       fill,
       ...(datasetType === 'bar' && this.hasConfiguredBarOption('borderRadius')
         ? {} : { borderRadius: chartStyle.borderRadius }),
-      ...(datasetType === 'bar' && !Number.isFinite(series.width) && this.hasConfiguredBarOption('borderWidth')
-        ? {} : { borderWidth: nonNegativeFinite(
-          series.width,
-          datasetType === 'line' ? chartStyle.lineBorderWidth : chartStyle.borderWidth
-        ) }),
+      ...(
+        (datasetType === 'bar' && !Number.isFinite(series.width) && this.hasConfiguredBarOption('borderWidth')) ||
+        (isArcDatasetType(datasetType) && this.hasConfiguredElementOption(datasetType, 'arc', 'borderWidth'))
+          ? {} : { borderWidth: nonNegativeFinite(
+            series.width,
+            // radar draws the same kind of connected-polygon stroke a line chart draws, so it
+            // uses the line-weight default too, not the thinner generic border default.
+            datasetType === 'line' || datasetType === 'radar' ? chartStyle.lineBorderWidth : chartStyle.borderWidth
+          ) }),
       borderDash: series.dash ? [4, 4] : chartStyle.forcedColors ? [...encoding.dash] : undefined,
       pointStyle: chartStyle.forcedColors ? encoding.pointStyle : undefined,
       backgroundColor: encodedBackgroundColor,
@@ -3212,12 +3254,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             colors?.[0] ?? borderFallback ?? 'transparent'
           )
         : undefined,
-      pointRadius: pointRadii
-        ? (rowIndexes
-            ? rowIndexes.map((rowIndex) => pointRadii[rowIndex])
-            : pointRadii
-          ).map((radius) => nonNegativeFinite(radius, chartStyle.pointRadius))
-        : nonNegativeFinite(series.pointRadius, chartStyle.pointRadius),
+      ...(isPointDatasetType(datasetType) && this.hasConfiguredElementOption(datasetType, 'point', 'radius')
+        ? {}
+        : { pointRadius: pointRadii
+            ? (rowIndexes
+                ? rowIndexes.map((rowIndex) => pointRadii[rowIndex])
+                : pointRadii
+              ).map((radius) => nonNegativeFinite(radius, chartStyle.pointRadius))
+            : nonNegativeFinite(series.pointRadius, chartStyle.pointRadius) }),
       // `segment` is Chart.js's per-line-segment scriptable-options hook (line controller only),
       // keyed by the segment's *starting* point index. Only spread in when the series actually
       // sets `segmentColors`, so a series without it produces the exact dataset object it always
@@ -3234,9 +3278,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     };
   }
 
-  /** Let Chart.js resolve authored bar defaults, including scriptable/indexable values, at their
-   * native scope. A generated per-dataset fallback would shadow every chart-level scope. */
-  private hasConfiguredBarOption(option: 'borderWidth' | 'borderRadius'): boolean {
+  /** Let Chart.js resolve an authored default -- including scriptable/indexable values -- at its
+   * native `datasets.<datasetTypeKey>` / `elements.<elementKey>` / top-level `options` scope,
+   * instead of shadowing every one of those scopes with a generated per-dataset fallback.
+   * Generalizes the bar-only precedence check to every element type Chart.js resolves the same
+   * way (arc for pie/doughnut/polar-area, point for radius on any point-bearing dataset type). */
+  private hasConfiguredElementOption(datasetTypeKey: string, elementKey: string, option: string): boolean {
     const read = (value: unknown, key: string): unknown => {
       if (!isChartRecord(value)) return undefined;
       const descriptor = chartRecordValue(value, key);
@@ -3244,10 +3291,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         ? undefined : descriptor.value;
     };
     const options = this.effectiveConfig()?.options;
-    const dataset = read(read(options, 'datasets'), 'bar');
-    const scopes = [dataset, read(read(dataset, 'elements'), 'bar'), read(read(options, 'elements'), 'bar'), options];
-    const prefixed = `bar${option[0]!.toUpperCase()}${option.slice(1)}`;
+    const dataset = read(read(options, 'datasets'), datasetTypeKey);
+    const scopes = [
+      dataset,
+      read(read(dataset, 'elements'), elementKey),
+      read(read(options, 'elements'), elementKey),
+      options,
+    ];
+    const prefixed = `${elementKey}${option[0]!.toUpperCase()}${option.slice(1)}`;
     return scopes.some(scope => read(scope, prefixed) !== undefined || read(scope, option) !== undefined);
+  }
+
+  private hasConfiguredBarOption(option: 'borderWidth' | 'borderRadius'): boolean {
+    return this.hasConfiguredElementOption('bar', 'bar', option);
   }
 
   /**
@@ -4132,9 +4188,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
   }
 
-  /** The current Chart.js chart-area geometry in canvas-local coordinates. */
+  /** The current Chart.js chart-area geometry in canvas-local coordinates. Read-only -- derived
+   *  from the live Chart.js instance's own layout pass, never assignable. The setter is a
+   *  documented no-op (matching `lr-histogram`'s `labels`/`datasets` pattern) so an accidental
+   *  `.chartArea=${x}` Lit template binding degrades silently instead of throwing from inside
+   *  lit-html's property-commit. */
   get chartArea(): LyraChartArea | undefined {
     return this.resolvedChartArea;
+  }
+  set chartArea(_value: LyraChartArea | undefined) {
+    /* read-only, derived from the live Chart.js instance; direct writes are silently ignored */
   }
 
   private buildConfig(): RuntimeChartConfiguration {
@@ -4527,13 +4590,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /** The `'spoken'` surface, for the live announcement a keyboard user hears. Falls back to the
-   *  locale number format, which is what it always used. */
+   *  legacy `valueFormatter` (mapped to its `'table'` context, matching `formatTableValue()`/
+   *  `formatExportValue()`), then the locale number format. */
   private formatSpokenValue(
     value: number,
     metadata: LyraChartFormatterMetadata = {},
   ): string {
     return (
       this.formatter?.({ value, surface: 'spoken', ...metadata }) ??
+      this.valueFormatter?.(value, 'table') ??
       this.formatSummaryValue(value)
     );
   }
@@ -4858,7 +4923,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (!effective.datasets.length) return nothing;
     const sample = this.dataTableSample(effective);
     let palette = this.seriesPalette();
-    const datumMode = this.legendMode === 'datum' && this.isSliceChart();
+    // 'dataset' always forces dataset legends; 'datum' and the 'auto' default both resolve to
+    // per-slice datum legends, but only on chart types that actually have slices.
+    const datumMode = this.legendMode !== 'dataset' && this.isSliceChart();
     if (datumMode) palette = palette.map((fallback, index) =>
       index < 6 ? this.styleColor(`--fill-color-${index + 1}`, fallback) : fallback,
     );

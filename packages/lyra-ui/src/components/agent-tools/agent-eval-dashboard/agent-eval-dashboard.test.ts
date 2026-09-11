@@ -7,6 +7,27 @@ import type { LyraLiteChart } from '../../charts/chart/lite-chart.class.js';
 describe('lr-agent-eval-dashboard', () => {
   it('renders metrics, trend, and runs', async () => { const el = (await fixture(html`<lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }} .metrics=${[{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard; await el.updateComplete; expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist; expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1); });
 
+  it('suppresses the chart when show-chart is set false, including the literal-string attribute form', async () => {
+    const props = {
+      metrics: [{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }],
+      runs: [{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }],
+    };
+    const el = await fixture<LyraAgentEvalDashboard>(html`
+      <lr-agent-eval-dashboard .metrics=${props.metrics} .runs=${props.runs}></lr-agent-eval-dashboard>
+    `);
+    expect(el.showChart).to.equal(true);
+    expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist;
+
+    el.setAttribute('show-chart', 'false');
+    await el.updateComplete;
+    expect(el.showChart).to.equal(false);
+    expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.be.true;
+
+    el.showChart = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist;
+  });
+
   it('defaults a missing runtime run status to idle without losing the dashboard', async () => {
     const el = await fixture<LyraAgentEvalDashboard>(html`
       <lr-agent-eval-dashboard

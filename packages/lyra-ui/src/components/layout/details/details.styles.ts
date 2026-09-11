@@ -59,7 +59,10 @@ export const styles = css`
     display: flex;
     align-items: center;
     gap: var(--lr-details-gap, var(--lr-space-s));
-    min-block-size: var(--lr-icon-button-size);
+    /* Yields to a smaller size tier's own control height instead of forcing every tier open to the
+       same flat --lr-icon-button-size floor, but never below the 24px WCAG 2.5.8 minimum itself --
+       same shape as lr-input's clear-button floor. */
+    min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
     padding-block: var(
       --spacing,
       var(--lr-details-spacing, var(--_lr-details-spacing))

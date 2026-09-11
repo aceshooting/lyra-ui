@@ -57,6 +57,16 @@ describe('defaults', () => {
     expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/fallback.ipynb' });
   });
 
+  it('does not throw when source is assigned, e.g. from a lit-html property binding', async () => {
+    const el = (await fixture(html`<lr-notebook-viewer src="https://example.test/a.ipynb"></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/a.ipynb' });
+    expect(() => {
+      (el as unknown as { source: unknown }).source = { kind: 'inline', value: 'x' };
+    }).to.not.throw();
+    // The assignment is inert -- source stays live-derived from src/notebook.
+    expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/a.ipynb' });
+  });
+
   it('synchronously owns and freezes parsed notebook assignments', () => {
     const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
     const source = {

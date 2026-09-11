@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraVariant } from '../../../internal/variants.js';
@@ -235,6 +236,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   private readonly headerId = nextId('activity-feed-header');
   private readonly bodyId = nextId('activity-feed-body');
+
+  /** Stable across renders on purpose -- a fresh closure here would defeat the internal
+   *  `<lr-virtual-list>`'s row-offset cache (it treats a `keyFunction` identity change the
+   *  same as an `items` change) on every unrelated re-render. */
+  private readonly activityEntryKey = (item: unknown): string => (item as ActivityEntry).id;
 
   /** `true` until the first completed update -- gates the mode-transition announcement so
    *  mounting in a non-default mode never announces historical state. */
@@ -637,9 +643,9 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           ${virtualized
             ? html`<lr-virtual-list
                 exportparts="entry:entry, entry-icon:entry-icon, variant-dot:variant-dot, variant-dot-neutral:variant-dot-neutral, variant-dot-brand:variant-dot-brand, variant-dot-success:variant-dot-success, variant-dot-warning:variant-dot-warning, variant-dot-danger:variant-dot-danger, entry-text:entry-text, entry-timestamp:entry-timestamp"
-                .items=${entries}
+                .items=${guard([this.entries], () => entries)}
                 .renderItem=${(item: unknown) => this.entryTemplate(item as ActivityEntry, false)}
-                .keyFunction=${(item: unknown) => (item as ActivityEntry).id}
+                .keyFunction=${this.activityEntryKey}
                 aria-label=${listAriaLabel}
                 @lr-visible-range-change=${this.onVirtualListRangeChanged}
                 @lr-virtual-scroll=${this.stopOwnedEvent}

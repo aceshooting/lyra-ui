@@ -4,7 +4,7 @@ import './radio.js';
 import './radio-group.js';
 import type { LyraRadioButton } from './radio-button.class.js';
 import type { LyraRadioGroup } from './radio-group.class.js';
-import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 it('themes the button-content gap for both button authoring paths', async () => {
   for (const markup of [
@@ -336,9 +336,9 @@ describe('lr-radio-button hover and press feedback', () => {
       const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       const resting = getComputedStyle(base).backgroundColor;
       try {
-        await sendMouse({ type: 'move', position: centerOf(base) });
+        await hoverUntilMatched(base, `${label} segment never received the pointer hover state`);
+        await waitUntil(() => getComputedStyle(base).backgroundColor !== resting, `${label} hover vs resting`);
         const hovered = getComputedStyle(base).backgroundColor;
-        expect(hovered, `${label} hover vs resting`).to.not.equal(resting);
         await sendMouse({ type: 'down' });
         await waitUntil(() => getComputedStyle(base).backgroundColor !== hovered, `${label} pressed vs hovered`);
       } finally {
@@ -373,6 +373,8 @@ describe('lr-radio-button hover and press feedback', () => {
       expect(getComputedStyle(base).opacity, `${radio.localName} opacity`).to.equal('0.5');
       try {
         await sendMouse({ type: 'move', position: centerOf(base) });
+        // A hover that must change nothing cannot be polled for; settle first so the read is real.
+        await settlePointer();
         expect(getComputedStyle(painted).backgroundColor, `${radio.localName} hover background`).to.equal(restingBackground);
         expect(getComputedStyle(painted).borderTopColor, `${radio.localName} hover border`).to.equal(restingBorder);
         await sendMouse({ type: 'down' });
@@ -401,6 +403,8 @@ describe('lr-radio-button hover and press feedback', () => {
       const resting = getComputedStyle(base).backgroundColor;
       try {
         await sendMouse({ type: 'move', position: centerOf(base) });
+        // A hover that must change nothing cannot be polled for; settle first so the read is real.
+        await settlePointer();
         expect(getComputedStyle(base).backgroundColor, `disabled ${label} hover vs resting`).to.equal(
           resting,
         );
@@ -431,8 +435,11 @@ describe('lr-radio-button hover and press feedback', () => {
     `);
     const uncheckedBase = unchecked.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     try {
-      await sendMouse({ type: 'move', position: centerOf(uncheckedBase) });
-      expect(getComputedStyle(uncheckedBase).backgroundColor).to.equal('rgb(1, 2, 3)');
+      await hoverUntilMatched(uncheckedBase, 'uncheckedBase never received the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(uncheckedBase).backgroundColor === 'rgb(1, 2, 3)',
+        'uncheckedBase background color never reached rgb(1, 2, 3)',
+      );
       expect(getComputedStyle(uncheckedBase).borderTopColor).to.equal('rgb(4, 5, 6)');
       await sendMouse({ type: 'down' });
       await waitUntil(() => getComputedStyle(uncheckedBase).backgroundColor === 'rgb(7, 8, 9)', 'uncheckedBase background color never reached rgb(7, 8, 9)');
@@ -460,8 +467,11 @@ describe('lr-radio-button hover and press feedback', () => {
     expect(getComputedStyle(checkedBase).borderTopColor).to.equal('rgb(16, 17, 18)');
     expect(getComputedStyle(checkedBase).color).to.equal('rgb(19, 20, 21)');
     try {
-      await sendMouse({ type: 'move', position: centerOf(checkedBase) });
-      expect(getComputedStyle(checkedBase).backgroundColor).to.equal('rgb(22, 23, 24)');
+      await hoverUntilMatched(checkedBase, 'checkedBase never received the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(checkedBase).backgroundColor === 'rgb(22, 23, 24)',
+        'checkedBase background color never reached rgb(22, 23, 24)',
+      );
       await sendMouse({ type: 'down' });
       await waitUntil(() => getComputedStyle(checkedBase).backgroundColor === 'rgb(25, 26, 27)', 'checkedBase background color never reached rgb(25, 26, 27)');
     } finally {

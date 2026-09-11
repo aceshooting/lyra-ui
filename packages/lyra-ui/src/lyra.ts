@@ -860,7 +860,7 @@ export {
 export type {
   LyraResponsivePanelMode,
   LyraResponsivePanelEffectiveMode,
-  LyraResponsivePanelVariant,
+  LyraResponsivePanelShape,
   LyraResponsivePanelCloseReason,
   LyraResponsivePanelModeChangeDetail,
 } from './components/layout/responsive-panel/responsive-panel.class.js';

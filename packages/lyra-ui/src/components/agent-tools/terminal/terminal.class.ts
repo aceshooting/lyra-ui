@@ -26,6 +26,13 @@ import type {
   HighlightActivateDetail,
   TextSelectDetail,
 } from '../../viewers/document-viewer/anchors.js';
+export type {
+  LyraAnchor,
+  LyraHighlight,
+  LyraHighlightTone,
+  HighlightActivateDetail,
+  TextSelectDetail,
+} from '../../viewers/document-viewer/anchors.js';
 import { styles } from './terminal.styles.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';

@@ -1,5 +1,6 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -59,9 +60,9 @@ function normalizeOrientation(value: unknown): LyraImageComparerOrientation {
  * @csspart divider - The visible divider line.
  * @csspart handle - Wrapper around the native range interaction surface and visible handle.
  * @csspart input - The transparent native range input.
- * @cssprop [--lr-image-comparer-divider-width=var(--divider-width, var(--lr-size-1px))] - Width of
- *   the dividing line. The canonical, namespaced override; prefer it over the bare compat name,
- *   which inherits and so retunes every element in the subtree reading that generic name.
+ * @cssprop [--lr-image-comparer-divider-width=var(--divider-width, var(--lr-size-1px))] -
+ *   Width of the dividing line. The canonical, namespaced override; prefer it over the bare compat
+ *   name, which inherits and so retunes every element in the subtree reading that generic name.
  * @cssprop [--lr-image-comparer-handle-size=var(--handle-size, var(--lr-icon-button-size))] - Inline
  *   and block size of the visible compare handle. Canonical, namespaced override.
  * @cssprop [--divider-width=var(--lr-size-1px)] - Retained Shoelace-compat source for
@@ -112,6 +113,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @query('[part="input"]') private handleEl?: HTMLInputElement;
+  private hasSyncedDescribedByElements = false;
   private activePointerId?: number;
   private keyboardDirty = false;
 
@@ -206,6 +208,20 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   override disconnectedCallback(): void {
     this.onPointerEnd();
     super.disconnectedCallback();
+  }
+
+  // Merges a consumer-set host `aria-describedby` onto the internal `type="range"` handle -- the
+  // sole semantic owner -- since idrefs never cross the shadow boundary on their own.
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    const hostDescribedBy = this.getAttribute('aria-describedby');
+    if (hostDescribedBy || this.hasSyncedDescribedByElements) {
+      this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
+        this,
+        this.handleEl,
+        hostDescribedBy,
+      );
+    }
   }
 
   /** Focus the internal native range handle; a pre-render call is a no-op. */

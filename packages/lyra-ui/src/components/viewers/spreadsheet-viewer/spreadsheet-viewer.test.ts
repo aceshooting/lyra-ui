@@ -2072,3 +2072,42 @@ it('registers the same renderer under both spreadsheet MIME types', async () => 
   expect(viewer.anchor).to.be.null;
   expect(viewer.highlights).to.deep.equal([]);
 });
+
+it('keeps a stable items reference and keyFunction on the composed lr-virtual-list across an unrelated re-render', async () => {
+  const el = (await fixture(
+    html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
+  )) as LyraSpreadsheetViewer;
+  const restore = fetchBuffer(
+    buffer({
+      Sheet1: [
+        ['Name', 'Qty'],
+        ['Widget', 12],
+        ['Gadget', 5],
+      ],
+    })
+  );
+  try {
+    el.src = 'https://example.test/book.xlsx';
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+    );
+    const virtual = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      items: unknown;
+      keyFunction: unknown;
+    };
+    const items = virtual.items;
+    const keyFunction = virtual.keyFunction;
+    expect(items, 'items should be populated').to.not.be.undefined;
+
+    // An unrelated reactive property must not rebind fresh array/closure references, or the
+    // composed lr-virtual-list clears its measured row heights and recomputes every offset even
+    // though the sheet's row data never changed.
+    el.maxHeight = '400px';
+    await el.updateComplete;
+
+    expect(virtual.items, 'items reference').to.equal(items);
+    expect(virtual.keyFunction, 'keyFunction reference').to.equal(keyFunction);
+  } finally {
+    restore();
+  }
+});

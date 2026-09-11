@@ -65,3 +65,25 @@ export function translucentAreaColor(scope: Element, color: string): string {
     concrete,
   );
 }
+
+/**
+ * Defensive JS-side fallbacks for `themeColors()`-style resolvers, mirroring the light-mode default
+ * of each `--lr-chart-*` token's own CSS fallback chain -- only reached if `getComputedStyle`
+ * somehow can't resolve the custom property at all (e.g. host detached from the document). Shared
+ * by `chart.class.ts` and `box-plot.class.ts`, which both default to the same semantic tokens.
+ */
+export const FALLBACK_GRID_COLOR = '#8a8a90';
+export const FALLBACK_TICK_COLOR = '#6b7280';
+export const FALLBACK_LEGEND_COLOR = '#1a1a1a';
+export const FALLBACK_TOOLTIP_BG = '#fff';
+export const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
+
+/** Shared canvas theme-color contract every `chart.class.ts`/`box-plot.class.ts` scale, legend, and
+ *  tooltip resolver reads from. */
+export interface ChartThemeColors {
+  grid: string;
+  tick: string;
+  legend: string;
+  tooltipBg: string;
+  tooltipText: string;
+}

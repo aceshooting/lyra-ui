@@ -27,6 +27,25 @@ it('inherits its public radius from an ancestor theme wrapper', async () => {
 /** A 1x1 inline SVG, so `<lr-flag>` renders synchronously with no peer-package round trip. */
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
 
+it('forwards host aria-pressed and aria-current reactively to the internal control', async () => {
+  const el = await fixture<LyraIconButton>(
+    html`<lr-icon-button icon="star" aria-label="Favorite" aria-pressed="true" aria-current="page"></lr-icon-button>`
+  );
+  const control = () => el.shadowRoot!.querySelector<HTMLElement>('[part~="button"]')!;
+  expect(control().getAttribute('aria-pressed')).to.equal('true');
+  expect(control().getAttribute('aria-current')).to.equal('page');
+
+  el.setAttribute('aria-pressed', 'false');
+  await el.updateComplete;
+  expect(control().getAttribute('aria-pressed')).to.equal('false');
+
+  el.removeAttribute('aria-pressed');
+  el.removeAttribute('aria-current');
+  await el.updateComplete;
+  expect(control().hasAttribute('aria-pressed')).to.equal(false);
+  expect(control().hasAttribute('aria-current')).to.equal(false);
+});
+
 it('forwards its accessible label and click event', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
   expect(el.shadowRoot!.querySelector('button')!.getAttribute('aria-label')).to.equal('Dismiss');
@@ -568,6 +587,25 @@ describe('lr-icon-button — mapped Shoelace surface', () => {
     expect(anchor.rel).to.equal('noopener noreferrer');
     expect(anchor.download).to.equal('icon.svg');
     await expect(el).to.be.accessible();
+  });
+
+  it('accepts a settable rel, strips opener, and force-adds the guard whenever target is set', async () => {
+    const withoutTarget = (await fixture(html`
+      <lr-icon-button name="close" label="Profile" href="https://example.com" rel="nofollow me"></lr-icon-button>
+    `)) as LyraIconButton;
+    const withoutTargetAnchor = withoutTarget.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    expect(withoutTarget.rel).to.equal('nofollow me');
+    expect(withoutTargetAnchor.getAttribute('rel')).to.equal('nofollow me');
+
+    const withTarget = (await fixture(html`
+      <lr-icon-button name="close" label="Open" href="https://example.com" target="_blank" rel="opener nofollow"></lr-icon-button>
+    `)) as LyraIconButton;
+    const withTargetAnchor = withTarget.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    const rendered = withTargetAnchor.getAttribute('rel')!.split(' ');
+    expect(rendered).to.not.include('opener');
+    expect(rendered).to.include('nofollow');
+    expect(rendered).to.include('noopener');
+    expect(rendered).to.include('noreferrer');
   });
 
   it('preserves an empty download attribute and rejects non-downloadable schemes', async () => {

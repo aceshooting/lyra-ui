@@ -870,6 +870,30 @@ it("persists sizes to localStorage when storageKey is set", async () => {
   });
 });
 
+it('honors an explicit, valid sizes binding over stale persisted localStorage data (regression)', async () => {
+  const storageKey = 'test-split-explicit-sizes-wins-' + Math.random();
+  localStorage.setItem(
+    `lr-multi-split:${storageKey}:panels`,
+    JSON.stringify({
+      version: 1,
+      panels: [
+        { panelId: 'content', size: 25 },
+        { panelId: 'navigation', size: 75 },
+      ],
+    }),
+  );
+
+  const el = (await fixture(html`
+    <lr-multi-split storage-key=${storageKey} .sizes=${[30, 70]}
+      ><div panel-id="content">Content</div>
+      <div panel-id="navigation">Navigation</div></lr-multi-split
+    >
+  `)) as LyraMultiSplit;
+  await elementUpdated(el);
+
+  expect(el.sizes).to.deep.equal([30, 70]);
+});
+
 it("restores and reconciles persisted sizes by panelId across a reordered panel sequence", async () => {
   const storageKey = "test-split-identity-" + Math.random();
   localStorage.setItem(
@@ -3323,6 +3347,38 @@ it("transitions collapseState across both breakpoints (wide -> rail -> floating)
     expect(el.collapseState).to.equal("wide");
     expect(computedA.position).to.equal("static");
     expect(panelA.style.flex).to.include("%");
+  } finally {
+    spy.restore();
+  }
+});
+
+it('marks the open floating drawer as a modal dialog and restores its prior role/aria-modal on close (regression)', async () => {
+  const spy = installStubResizeObserver();
+  try {
+    const el = (await fixture(html`
+      <lr-multi-split collapse="start" style="inline-size: 300px; block-size: 200px"
+        ><div role="region" aria-modal="false">A</div>
+        <div>B</div></lr-multi-split
+      >
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+
+    fireCollapseResize(spy.callbacks[0]!, 300); // < floatBreakpoint(400) -> floating
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('floating');
+
+    const [panelA] = [...el.children] as [HTMLElement];
+    expect(panelA.getAttribute('role'), 'closed: no dialog role yet').to.equal('region');
+
+    el.open = true;
+    await elementUpdated(el);
+    expect(panelA.getAttribute('role'), 'open: announced as a dialog').to.equal('dialog');
+    expect(panelA.getAttribute('aria-modal'), 'open: announced as modal').to.equal('true');
+
+    el.open = false;
+    await elementUpdated(el);
+    expect(panelA.getAttribute('role'), 'closed again: original role restored').to.equal('region');
+    expect(panelA.getAttribute('aria-modal'), 'closed again: original aria-modal restored').to.equal('false');
   } finally {
     spy.restore();
   }

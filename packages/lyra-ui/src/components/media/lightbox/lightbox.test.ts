@@ -24,6 +24,20 @@ it('renders the image frame and exposes a dialog when opened', async () => {
   el.open = false;
 });
 
+it('never shows a horizontal scrollbar on the caption, only a vertical one when content overflows', async () => {
+  const longCaption = Array.from({ length: 40 }, (_, i) => `word${i}`).join(' ');
+  const el = (await fixture(html`
+    <lr-lightbox .images=${[{ ...image, caption: longCaption }]}></lr-lightbox>
+  `)) as LyraLightbox;
+  el.open = true;
+  await el.updateComplete;
+  const caption = el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement;
+  expect(getComputedStyle(caption).overflowX).to.not.equal('auto');
+  expect(getComputedStyle(caption).overflowX).to.not.equal('scroll');
+  expect(caption.scrollWidth).to.be.at.most(caption.clientWidth);
+  el.open = false;
+});
+
 it('owns a bounded immutable image snapshot and skips malformed or hostile records', async () => {
   const authored = { ...image };
   const input = [authored];

@@ -130,6 +130,14 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * missing `katex` peer renders the literal, unparsed TeX source (delimiters included) and fires one
  * `lr-render-error`.
  *
+ * Migrating a `<wa-markdown><script type="text/markdown">...</script></wa-markdown>` usage: on
+ * connect, a direct `<script type="text/markdown">` child's text is read once and adopted as
+ * `content` (leading/trailing whitespace trimmed) -- but only while `content` has never been
+ * authored (no `content` attribute/property set, including an explicitly empty one). Setting
+ * `content` -- then or later -- always wins; the script child is not re-read after connect, so
+ * mutating its text in place has no effect. Prefer the reactive `content` property directly for
+ * anything that updates after first connect.
+ *
  * @customElement lr-markdown
  * @event lr-link-click - Fired (and the click prevented) when a rendered
  *   link's `href` starts with `internal-link-prefix`. `detail: { href: string }`.
@@ -303,6 +311,22 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   /** Renders `$...$`/`$$...$$` TeX via the optional `katex` peer, as MathML. `false` (the
    *  default) renders `$...$` literally, unparsed -- today's exact output. */
   @property({ type: Boolean }) override math = false;
+
+  // Reads a wa-markdown-style script-child once at connect -- see the class JSDoc's migration
+  // paragraph. Scoped to lr-markdown only (lr-markdown-core mirrors nothing and has no such
+  // migration obligation), so this stays local to this subclass rather than the shared runtime base.
+  override connectedCallback(): void {
+    this.adoptScriptContent();
+    super.connectedCallback();
+  }
+
+  private adoptScriptContent(): void {
+    if (this.hasAttribute('content') || this.content) return;
+    const script = this.querySelector(':scope > script[type="text/markdown"]');
+    const text = script?.textContent;
+    if (text == null) return;
+    this.content = text.trim();
+  }
 
   // Deliberately not tagged internal -- these implement MarkdownRuntimeBase's own abstract
   // markdownVariant/tokenizePendingHighlight members; stripping either leaves this concrete class's

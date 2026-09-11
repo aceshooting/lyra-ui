@@ -271,6 +271,14 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   get sourceCount(): number {
     return this.slottedCount;
   }
+  /** Intentionally inert -- `sourceCount` is always derived live from the actual slotted
+   *  children. A getter with no setter throws (in strict-mode module code, which every consumer
+   *  runs) the moment anything assigns to it, including a stray `.sourceCount=${x}` template
+   *  binding; this no-op keeps that assignment harmless instead of throwing from inside
+   *  framework internals. */
+  set sourceCount(_value: number) {
+    // Deliberate no-op; see getter doc comment above.
+  }
 
   private onSlotChange = (e: Event): void => {
     const elements = (e.target as HTMLSlotElement).assignedElements({

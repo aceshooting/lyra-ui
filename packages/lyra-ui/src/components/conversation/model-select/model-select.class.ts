@@ -14,6 +14,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
@@ -230,7 +231,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    *  Empty string omits the attribute (browser default). Named `autoCorrect` (capital `C`), not
    *  `autocorrect`, purely to dodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a
    *  `boolean`-typed `HTMLElement.autocorrect` IDL member, which conflicts with this string-typed
-   *  property of the same name -- same fix as `<lr-textarea>`/`<lr-date-input>`. The explicit
+   *  property of the same name -- same rename fix as `<lr-date-input>` (`<lr-textarea>` instead
+   *  keeps the native `autocorrect` name and overrides it as a boolean accessor). The explicit
    *  attribute mapping preserves the lowercase wire name in generated component metadata. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   /** Native editing and virtual-keyboard hints forwarded to free-text mode's input. */
@@ -267,6 +269,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   declare customError: string | null;
   private listId = nextId('model-select-list');
   private controlId = nextId('model-select-control');
+  /** Whether a host `aria-describedby` was last reflected onto the active control -- see
+   *  `checkbox.class.ts`'s identically-named field for why the sync call must stay guarded. */
+  private hasSyncedDescribedByElements = false;
   private _fieldsetDisabled = false;
   private _name = '';
   private _disabled = false;
@@ -656,6 +661,26 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Reflects the host's own `aria-describedby` (e.g. a form-wide instructions block living
+    // outside this component) onto the active semantic control, alongside the trigger/input's own
+    // hint/error ids already rendered into its literal `aria-describedby` string above -- idrefs
+    // authored on the host never resolve across the shadow boundary on their own, mirroring
+    // `checkbox.class.ts`'s `syncAriaDescribedByElements` usage. Guarded exactly like that
+    // reference: assigning `ariaDescribedByElements = null` unconditionally on every update -- even
+    // when there was never anything to sync -- makes the browser drop the literal hint/error
+    // `aria-describedby` string this same render already set.
+    const hostDescribedBy = this.getAttribute('aria-describedby');
+    if (hostDescribedBy || this.hasSyncedDescribedByElements) {
+      // `querySelector`, not `getElementById`: `renderRoot` is typed `HTMLElement | ShadowRoot`,
+      // and `getElementById` exists only on the `DocumentFragment` half. Matches how
+      // `checkbox.class.ts` resolves its own control for the same helper.
+      const control = this.renderRoot.querySelector<HTMLElement>(`#${CSS.escape(this.controlId)}`);
+      this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
+        this,
+        control ?? undefined,
+        hostDescribedBy,
+      );
+    }
     const reposition =
       changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     this.catalogPicker.updated(reposition);
@@ -839,7 +864,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const hasLabel = this.hasVisibleLabel;
     const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
     const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
+    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
       .filter(Boolean)
       .join(' ');
     return html`
@@ -881,7 +906,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const hasLabel = this.hasVisibleLabel;
     const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
     const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
+    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
       .filter(Boolean)
       .join(' ');
     return html`

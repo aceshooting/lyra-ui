@@ -1775,3 +1775,115 @@ describe('lr-menu-item name stability inside a hidden container', () => {
     ).to.equal('Alpha');
   });
 });
+
+/**
+ * Regression: a migrated <lr-dropdown-item href="..."> (or a plain <lr-menu-item href="...">)
+ * previously rendered as a plain non-navigating row -- href/target/rel/download were declared
+ * nowhere in the class, so clicking or pressing Enter/Space never navigated. `[part="base"]` now
+ * renders as a real anchor for a safe href, mirroring `wa-dropdown-item`'s link-item support and
+ * `lr-button`'s resolvedRel guard.
+ */
+describe('lr-menu-item link support (href/target/rel/download)', () => {
+  function base(item: LyraMenuItem): HTMLElement {
+    return item.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  }
+
+  it('renders [part="base"] as a real anchor for a safe href', async () => {
+    const item = await fixtureInMenu(
+      html`<lr-menu-item href="https://example.com/docs">Docs</lr-menu-item>`
+    );
+    const el = base(item);
+    expect(el.tagName).to.equal('A');
+    expect(el.getAttribute('href')).to.equal('https://example.com/docs');
+    // The host stays the sole roving-tabindex target -- the inner anchor must not add a second
+    // sequential-focus stop.
+    expect(el.getAttribute('tabindex')).to.equal('-1');
+  });
+
+  it('falls back to a plain span for an unset href', async () => {
+    const item = await fixtureInMenu(html`<lr-menu-item>Rename</lr-menu-item>`);
+    expect(base(item).tagName).to.equal('SPAN');
+    expect(item.isLinkItem).to.equal(false);
+  });
+
+  it('falls back to a plain span for an unsafe href', async () => {
+    const item = await fixtureInMenu(
+      html`<lr-menu-item href="javascript:alert(1)">Bad</lr-menu-item>`
+    );
+    expect(base(item).tagName).to.equal('SPAN');
+    expect(item.isLinkItem).to.equal(false);
+  });
+
+  it('force-adds noopener noreferrer whenever target is set, merging author rel', async () => {
+    const item = await fixtureInMenu(
+      html`<lr-menu-item href="https://example.com" target="_blank" rel="me"
+        >Profile</lr-menu-item
+      >`
+    );
+    expect(base(item).getAttribute('rel')).to.equal('me noopener noreferrer');
+  });
+
+  it('strips an author-supplied opener token', async () => {
+    const item = await fixtureInMenu(
+      html`<lr-menu-item href="https://example.com" rel="opener">Profile</lr-menu-item>`
+    );
+    expect(base(item).hasAttribute('rel')).to.equal(false);
+  });
+
+  it('renders download on the anchor', async () => {
+    const item = await fixtureInMenu(
+      html`<lr-menu-item href="https://example.com/file.csv" download="data.csv"
+        >Export</lr-menu-item
+      >`
+    );
+    expect(base(item).getAttribute('download')).to.equal('data.csv');
+  });
+
+  it('drops a mailto: href when download is set, narrowing the safe-scheme allowlist', async () => {
+    const item = await fixtureInMenu(
+      html`<lr-menu-item href="mailto:a@b.com" download="x">Email</lr-menu-item>`
+    );
+    expect(base(item).tagName).to.equal('SPAN');
+  });
+
+  it('forwards host click() to a real click on the anchor', async () => {
+    const item = await fixtureInMenu(
+      html`<lr-menu-item href="https://example.com/docs">Docs</lr-menu-item>`
+    );
+    const anchor = base(item) as HTMLAnchorElement;
+    let clicked = false;
+    anchor.addEventListener('click', (e) => {
+      clicked = true;
+      e.preventDefault();
+    });
+    item.click();
+    expect(clicked).to.equal(true);
+  });
+
+  it("still fires the owning menu's lr-select for a link item", async () => {
+    const { menu, item } = await fixtureInOwnedMenu(
+      html`<lr-menu-item value="docs" href="https://example.com/docs">Docs</lr-menu-item>`
+    );
+    const anchor = base(item) as HTMLAnchorElement;
+    anchor.addEventListener('click', (e) => e.preventDefault());
+    const selectPromise = oneEvent(menu, 'lr-select');
+    item.click();
+    const event = (await selectPromise) as CustomEvent<{ item: LyraMenuItem }>;
+    expect(event.detail.item === item).to.be.true;
+  });
+
+  it('lr-dropdown-item inherits href/target/rel/download link-item support', async () => {
+    const wrapper = (await fixture(
+      html`<div role="menu" aria-label="Actions">
+        <lr-dropdown-item href="https://example.com/docs" target="_blank"
+          >Docs</lr-dropdown-item
+        >
+      </div>`
+    )) as HTMLElement;
+    const item = wrapper.querySelector('lr-dropdown-item') as LyraMenuItem;
+    const el = base(item);
+    expect(el.tagName).to.equal('A');
+    expect(el.getAttribute('href')).to.equal('https://example.com/docs');
+    expect(el.getAttribute('rel')).to.equal('noopener noreferrer');
+  });
+});

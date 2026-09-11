@@ -94,6 +94,12 @@ ARIA values as page-local positions rather than as the dataset-wide total.
   The mirrored `selectedKeys` spelling remains a compatibility alias for this same state.
 - `selectedRows: readonly Row[]` (writable, JS-only) — assigning rows that belong to the current source
   maps them to `selectedRowKeys`; detached rows are ignored and single-selection mode keeps the first.
+- `selectionMode: 'none' | 'single' | 'multiple'` (`selection-mode`) — alias of `selectable` using
+  `<lr-table>`'s `selectionMode`/`selection-mode` spelling for the same row-selection concept, so a
+  consumer migrating between the two grid components doesn't need to remember two names.
+  `selectable` remains canonical (mirrored from `wa-data-grid`); this alias reads and writes
+  `selectable` directly, so there is no separate value to fall out of sync, and the bare `''`
+  shorthand for `selectable`'s own `multiple` normalizes to `'multiple'` when read back through it.
 - `server: boolean = false` (`server`, reflected).
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (`size`, reflected).
 - `sort: readonly Array<{ readonly id: string; readonly desc: boolean }> = []` (JS-only).
@@ -106,11 +112,15 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 - `withSearch: boolean = false` (`with-search`, reflected).
 
 `DataGridColumn<Row>` accepts `id`, dot-path `field`, `label`, `align`, numeric `width` /
-`minWidth` / `maxWidth`, `flex`, `formatter(value, row)`, computed `value(row)`, `sortable`,
-`sortFn`, `comparator`, `sortDescFirst`, `sortUndefined`, `searchable`, `filterable`, `filterType`,
-`filterFn`, `hidden`, `hideable`, `resizable`, `movable`, `pinnable`, `pinned`, `footer`,
-`aggregation`, and `aggregatedFormatter`. A column with neither `field` nor `value` is an action
-column: its formatter receives `undefined`, and it is not sorted or searched by default.
+`minWidth` / `maxWidth`, `flex`, `formatter(value, row)`, `cellTitle(row)`, computed `value(row)`,
+`sortable`, `sortFn`, `comparator`, `sortDescFirst`, `sortUndefined`, `searchable`, `filterable`,
+`filterType`, `filterFn`, `hidden`, `hideable`, `resizable`, `movable`, `pinnable`, `pinned`,
+`footer`, `aggregation`, and `aggregatedFormatter`. A column with neither `field` nor `value` is an
+action column: its formatter receives `undefined`, and it is not sorted or searched by default.
+`cellTitle(row) => string | undefined` renders as the generated cell's native `title`, symmetrical
+with `<lr-table>`'s `columns[].cellTitle` — e.g. the untruncated text behind an ellipsized cell, or
+a formatted timestamp behind a relative one. Returning `undefined` or `''` omits the `title`
+attribute entirely rather than rendering `title=""`, which would suppress an ancestor's own tooltip.
 
 Built-in sort algorithms are `alphanumeric`, `alphanumericCaseSensitive`, `text`,
 `textCaseSensitive`, `datetime`, and `basic`; `comparator` takes precedence. Built-in filter types
@@ -187,12 +197,16 @@ restores the exact pre-gesture width state; after a live move it emits the resto
 `lr-filter-change`; `lr-page-change`; `lr-row-collapse`; `lr-row-expand`; `lr-group-collapse` and
 `lr-group-expand` (frozen `{ key, columnId, value, rows }` snapshots); `lr-row-select` with
 canonical `{ selectedRowKeys, selectedRows }` plus mirrored `selectedKeys`; row expand/collapse
-details use canonical `rowKey` plus mirrored `key`;
-`lr-sort-change`; `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
+details use canonical `rowKey` plus mirrored `key`; cancelable `lr-sort-request` (frozen readonly
+`detail: { sort }`) precedes `lr-sort-change`; vetoing it leaves `sort` unchanged and suppresses
+`lr-sort-change`, mirroring `<lr-table>`'s identical `lr-sort-request`/`lr-sort` veto-then-commit
+contract;
+`lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
-notification with no raw platform error text). Every library event bubbles and is composed; only `lr-cell-contextmenu` is
-cancelable. Structured details and their owned collections are frozen. The toolbar search and active column-filter inputs re-dispatch `focus` and `blur` once
-from the grid host as bubbling, composed native `FocusEvent`s, preserving `relatedTarget` so
+notification with no raw platform error text). Every library event bubbles and is composed; only
+`lr-cell-contextmenu` and `lr-sort-request` are cancelable. Structured details and their owned
+collections are frozen. The toolbar search and active column-filter inputs re-dispatch `focus` and
+`blur` once from the grid host as bubbling, composed native `FocusEvent`s, preserving `relatedTarget` so
 delegated ancestors can observe editor entry and exit without crossing the shadow boundary.
 
 **Slots:** `empty`, `loading`, `no-results`.

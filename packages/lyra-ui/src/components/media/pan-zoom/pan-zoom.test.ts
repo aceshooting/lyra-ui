@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './pan-zoom.js';
 import type { LyraPanZoom } from './pan-zoom.js';
-import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 it('preserves the former zoomable-frame slotted pan/zoom contract under lr-pan-zoom', async () => {
   const el = await fixture<LyraPanZoom>(html`
@@ -22,12 +22,10 @@ it('keeps a bound-disabled zoom control visually inert on hover and press', asyn
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-out"]')!;
   expect(button.disabled).to.equal(true);
   const rest = getComputedStyle(button).backgroundColor;
-  const rect = button.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    await hoverUntilMatched(button, 'the disabled zoom-out button never reported :hover');
+    // A hover that must change nothing cannot be polled for; settle first so the read is real.
+    await settlePointer();
     expect(getComputedStyle(button).backgroundColor).to.equal(rest);
     await sendMouse({ type: 'down' });
     // A press that must change nothing cannot be polled for; settle first so the read is real.

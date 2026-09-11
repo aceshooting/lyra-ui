@@ -836,13 +836,15 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     this.syncActiveDescendant(control);
   }
 
-  /** The current candidate set: runtime rows without a string `label` are omitted, then the
-   *  remaining `items` are filtered by `query` via `filter` (or the built-in default). */
+  /** The current candidate set: runtime rows without a non-blank string `label` are omitted (a
+   *  blank/whitespace-only label would otherwise render a focusable `role="option"` with no
+   *  accessible name), then the remaining `items` are filtered by `query` via `filter` (or the
+   *  built-in default). */
   get filteredItems(): readonly Readonly<LyraMentionItem>[] {
     const locale = this.effectiveLocale;
     const q = (this.query ?? '').trim().toLocaleLowerCase(locale);
     return this.items.filter((item) => {
-      if (typeof item.label !== 'string') return false;
+      if (typeof item.label !== 'string' || item.label.trim().length === 0) return false;
       if (!q) return true;
       if (this.filter) return this.filter(item, q);
       return item.label.toLocaleLowerCase(locale).includes(q) ||

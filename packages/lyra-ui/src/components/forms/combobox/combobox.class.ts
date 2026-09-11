@@ -1786,6 +1786,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
 
   private labelFor(value: string): string {
+    // An explicitly blank (or whitespace-only) label carries no useful information -- fall
+    // through to the next candidate (ultimately the raw value) exactly as a missing label would,
+    // rather than rendering/announcing an empty segment.
+    const nonBlank = (label: string | undefined): string | undefined =>
+      label !== undefined && label.trim().length > 0 ? label : undefined;
     // Checked in order: an explicit pick's own label (works even after the
     // source rows backing it have since changed), a slotted `<lr-option>`
     // (local mode), then the last-fetched async row set (source mode) -- a
@@ -1794,10 +1799,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // so without this last fallback it would render as the raw value string
     // instead of its label.
     return (
-      (!this.source && !this.multiple && this.singleSelectedOption?.value === value ? this.singleSelectedOption.label : undefined) ??
-      this._selectedLabelCache.get(value) ??
-      this.options.find((o) => o.value === value)?.label ??
-      this.asyncRows.find((r) => r.value === value)?.label ??
+      (!this.source && !this.multiple && this.singleSelectedOption?.value === value ? nonBlank(this.singleSelectedOption.label) : undefined) ??
+      nonBlank(this._selectedLabelCache.get(value)) ??
+      nonBlank(this.options.find((o) => o.value === value)?.label) ??
+      nonBlank(this.asyncRows.find((r) => r.value === value)?.label) ??
       value
     );
   }

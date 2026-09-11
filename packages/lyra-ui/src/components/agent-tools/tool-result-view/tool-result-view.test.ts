@@ -380,6 +380,20 @@ it('copyable also forwards to lr-json-viewer in the default json fallback', asyn
   expect(viewer.copyable).to.be.true;
 });
 
+it('leaves copyable unset (false) by default: no fallback-text copy button, and forwards false to lr-json-viewer (unset regression)', async () => {
+  const textEl = (await fixture(html`
+    <lr-tool-result-view tool-name="unregistered" fallback="text" .result=${'no copy affordance'}></lr-tool-result-view>
+  `)) as LyraToolResultView;
+  expect(textEl.copyable).to.be.false;
+  expect(base(textEl).querySelector('lr-copy-button') === null).to.be.true;
+
+  const jsonEl = (await fixture(html`
+    <lr-tool-result-view tool-name="unregistered" .result=${{ ok: true }}></lr-tool-result-view>
+  `)) as LyraToolResultView;
+  const viewer = base(jsonEl).querySelector('lr-json-viewer') as HTMLElement & { copyable: boolean };
+  expect(viewer.copyable).to.be.false;
+});
+
 describe('status / context.reportStatus', () => {
   it('defaults status to "success" for a renderer that never calls reportStatus (unset regression)', async () => {
     registerToolRenderer('get_weather', {

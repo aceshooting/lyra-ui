@@ -574,7 +574,7 @@ async function probeToolParamFormRegistrationGraph() {
 const toolParamRegistrationProbe = await probeToolParamFormRegistrationGraph();
 assert.equal(
   toolParamRegistrationProbe.registrations.length,
-  3,
+  4,
   'each rendered control must register exactly once even when reached transitively',
 );
 assert.deepEqual(
@@ -582,16 +582,22 @@ assert.deepEqual(
     left.localeCompare(right)
   ),
   [
+    ['number-input', 'LyraNumberInput'],
     ['option', 'LyraOption'],
     ['select', 'LyraSelect'],
     ['tool-param-form', 'LyraToolParamForm'],
   ],
-  'the executed granular module graph must register the form, select, and option controls',
+  // `number-input` joined this set when a number/integer field's `control` part stopped being a
+  // raw `<input type="number">` whose native spin buttons were hidden with no replacement, and
+  // became the composed `<lr-number-input>` that ships its own stepper. That is a declared
+  // breaking change for this release, so the registration graph legitimately grew by one.
+  'the executed granular module graph must register the form, select, option and number-input controls',
 );
 for (const input of [
   'src/components/agent-tools/tool-param-form/tool-param-form.ts',
   'src/components/forms/combobox/option.ts',
   'src/components/forms/select/select.ts',
+  'src/components/forms/input/number-input.ts',
 ]) {
   assert.ok(
     toolParamRegistrationProbe.inputs.includes(input),

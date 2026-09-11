@@ -17,7 +17,7 @@ leaks through as the composite element's own focus/blur.
 Sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on
 two optional peer dependencies — `marked` (parsing) and `dompurify` (sanitizing) — both lazy-loaded
 independently via `markdown-loader.ts`'s `loadMarkdownDeps()` on first connect, cached per page the
-same way `chart-loader.ts`/`map-loader.ts` cache their load promise so every `<lr-markdown>`
+same way `chart-core-loader.ts`/`map-loader.ts` cache their load promise so every `<lr-markdown>`
 instance on a page shares one load. `heading`/`code`/`blockquote`/`table`/`link`/`image` tokens are
 rendered through a `marked` renderer override that injects `part="..."` attributes directly into the
 produced HTML in a single pass (no second DOM walk after insertion).
@@ -178,7 +178,7 @@ rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/
 `--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
-`loadMarkdownDeps()`, mirroring `chart-loader.ts`'s two-independent-optional-peers shape). Each half
+`loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half
 is loaded and caught independently — a consumer who installs only `marked` and explicitly sets
 `html-mode="trusted"` (so `dompurify` is never needed) is a valid, supported combination. Also `shiki`,
 the same optional peer `<lr-code-block>` uses, for `highlightCode`'s fenced-block syntax
@@ -1620,10 +1620,11 @@ highlighted markup.
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
   `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
   the type-only granular import emits no registration side effect.
-  `refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
-  **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
-  resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
-  when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
+
+**Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
+resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
+when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
+`refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
 
 **Events:** `lr-copy` (frozen `detail: { ok: true, text }` — fires only after the raw `code` value
 was written successfully), `lr-error` (`detail: null` — generic notification when clipboard writing
@@ -1935,7 +1936,10 @@ The internal `lr-slider` renders with its own value readout suppressed (`.showVa
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
 which formats `temperature` through the cached `Intl.NumberFormat` for the effective locale with up
 to 20 fractional digits, matching `lr-slider`'s own numeric readout. For example, `temperature="0.7"`
-under `locale="de-DE"` displays `0,7`.
+under `locale="de-DE"` displays `0,7`. When the full decimal expansion would exceed 24 characters —
+reachable only through an extreme `temperatureMin`/`temperatureMax`/`temperatureStep` combination —
+the readout switches to bounded scientific notation at up to 6 significant digits instead, so
+`1e308` renders as `7E+307` rather than a 300-digit string that would overflow the label.
 
 The panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
 `lr-input` events (drag/key-repeat), not just its committed `lr-change` — so `temperature` (and
@@ -3303,6 +3307,13 @@ allocating every preceding part for each citation in a citation-heavy or growing
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
+`maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
+part, unbounded, matching every prior release; a positive value windows rendering to the newest N
+parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
+are still derived from the full sequence first, in the same linear prepass, so a badge's number
+stays stable even once an earlier citation rolls out of the rendered window. Opt in for a message
+that can grow an unusually large number of interleaved parts (e.g. a long agentic run with many
+tool-call/tool-result pairs), where unbounded live DOM can visibly stall the main thread.
 `renderPart?: MessagePartRenderer` (attribute: false), where returning `undefined` delegates that
 part to the built-in renderer; `accessibleLabel: string | null = null` (attribute `aria-label`).
 

@@ -22,7 +22,7 @@ import { loadMaplibre } from './map-loader.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 
 interface TestMapSource {
@@ -147,6 +147,47 @@ it('floors an empty peer-owned marker target to 24px in both axes without WebGL'
   const rect = marker.getBoundingClientRect();
   expect(rect.width).to.be.at.least(24);
   expect(rect.height).to.be.at.least(24);
+});
+
+it('retunes the nav/zoom control group border and internal divider from the shared border-width-thin token', async () => {
+  const { el } = await connectedMapWithoutMaplibre('--lr-theme-border-width-thin: 5px');
+  const group = document.createElement('div');
+  group.className = 'maplibregl-ctrl-group';
+  const first = document.createElement('button');
+  const second = document.createElement('button');
+  group.append(first, second);
+  el.shadowRoot!.append(group);
+
+  expect(getComputedStyle(group).borderTopWidth).to.equal('5px');
+  expect(getComputedStyle(second).borderBlockStartWidth).to.equal('5px');
+});
+
+it('retunes the scale-bar bracket border from the shared border-width-medium token', async () => {
+  const { el } = await connectedMapWithoutMaplibre('--lr-theme-border-width-medium: 6px');
+  const scale = document.createElement('div');
+  scale.className = 'maplibregl-ctrl-scale';
+  el.shadowRoot!.append(scale);
+
+  expect(getComputedStyle(scale, '::after').borderBottomWidth).to.equal('6px');
+});
+
+it('gives an interactive marker a pointer cursor and a themed focus ring', async () => {
+  const { el } = await connectedMapWithoutMaplibre(
+    '--lr-theme-focus-ring-width: 5px; --lr-theme-color-focus: rgb(9, 8, 7)'
+  );
+  const marker = document.createElement('div');
+  marker.className = 'maplibregl-marker';
+  marker.setAttribute('role', 'button');
+  marker.tabIndex = 0;
+  el.shadowRoot!.append(marker);
+
+  expect(getComputedStyle(marker).cursor).to.equal('pointer');
+  await sendKeys({ press: 'Tab' });
+  marker.focus();
+  await waitUntil(
+    () => getComputedStyle(marker).outlineWidth === '5px' && getComputedStyle(marker).outlineColor === 'rgb(9, 8, 7)',
+    'the interactive marker focus ring never painted',
+  );
 });
 
 it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps to the container', async function () {
@@ -2600,15 +2641,13 @@ it('lets inherited CSS properties theme popup-close-button hover and active stat
   };
 
   const rect = close.getBoundingClientRect();
-  const centre: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   expect(rect.width, 'the close button has real geometry to point at').to.be.greaterThan(0);
   try {
-    await sendMouse({ type: 'move', position: centre });
-    expect(getComputedStyle(close).backgroundColor).to.equal(
-      resolvedInShadow('background: var(--lr-color-brand-quiet)', 'background-color'),
+    await hoverUntilMatched(close, 'the popup close button never reported :hover');
+    const expectedHoverBackground = resolvedInShadow('background: var(--lr-color-brand-quiet)', 'background-color');
+    await waitUntil(
+      () => getComputedStyle(close).backgroundColor === expectedHoverBackground,
+      'close background color never reached its hover value',
     );
     expect(getComputedStyle(close).color).to.equal(
       resolvedInShadow('color: var(--lr-color-brand)', 'color'),

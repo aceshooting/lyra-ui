@@ -108,11 +108,17 @@ LOG_DIR="$(mktemp -d)"
 cleanup_logs() {
   local exit_status=$?
   trap - EXIT
+  # Keep the lane logs when anything failed. A failing lane prints only `tail -n 60`, and the
+  # interesting part of a browser-engine failure is routinely further up than that -- deleting the
+  # directory on the way out left the operator with a path that no longer exists and no way back to
+  # the full output short of re-running the entire sweep.
+  if [[ "$exit_status" != "0" ]]; then
+    echo "lane logs preserved for inspection: $LOG_DIR" >&2
+    exit "$exit_status"
+  fi
   if ! rm -rf -- "$LOG_DIR"; then
     echo "failed to remove temporary lane logs: $LOG_DIR" >&2
-    if [[ "$exit_status" == "0" ]]; then
-      exit_status=1
-    fi
+    exit_status=1
   fi
   exit "$exit_status"
 }

@@ -100,6 +100,23 @@ A focusable action row owned by `<lr-menu>`. The host itself carries `role="menu
 - `type: 'normal' | 'checkbox' = 'normal'`
 - `checked: boolean = false` — meaningful only for `type="checkbox"`
 - `loading: boolean = false`
+- `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
+  `safeLinkHref`, or `safeDownloadHref` when `download` is set, which drops `mailto:`),
+  `[part="base"]` renders as a real `<a href=…>` instead of a `<span>`, and activation (click, or
+  the owning menu's Enter/Space handling, which forwards through `click()` for a link item so the
+  anchor's own native default action runs) navigates there in addition to firing the usual
+  `select()`/`lr-select` contract. An unsafe/unparseable value falls back to the plain `<span>`,
+  matching `lr-button`'s identical fallback
+- `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
+  (e.g. `'_blank'`) always force-adds `noopener noreferrer` to the rendered anchor's `rel`,
+  matching `lr-button`'s identical pattern
+- `rel?: string` — independently settable author relationship tokens, no default. Author tokens are
+  merged rather than replaced: `opener` is always stripped, and whenever `target` is set the
+  non-removable `noopener noreferrer` floor is added, so a same-tab link (no `target`) keeps
+  exactly the author's tokens while a link opening a new context can never lose the guard
+- `download?: string` — native anchor `download` attribute, used only while `href` resolves to a
+  link. Presence narrows the safe-URL allowlist to `safeDownloadHref`'s, which drops `mailto:` — a
+  mail handoff names no retrievable bytes, so it cannot be a download target
 - `hasSubmenu: boolean` (read-only)
 - `submenuOpen: boolean = false` — transient live state; assigning it drives an existing submenu
   without moving focus and disconnect resets it
@@ -189,6 +206,13 @@ The Web Awesome-compatible name for the same item implementation. It shares all 
 properties, slots, parts, methods, checkbox/state events, roving focus, and canonical parent
 `lr-select` behavior. Its host also exposes native, non-bubbling, composed `focus` and `blur`
 events.
+
+**Attributes:** `href`, `target`, `rel`, and `download` — the same link-rendering properties
+documented above for `<lr-menu-item>`, settable directly in markup
+(`<lr-dropdown-item href="/settings" target="_blank">`). The `rel` guard is identical: author
+tokens merge rather than get replaced, `opener` is always stripped, and setting `target` force-adds
+the non-removable `noopener noreferrer` floor, so a same-tab link keeps exactly the author's tokens
+while a link opening a new context can never lose the guard.
 
 **Events:** native, non-bubbling, composed, non-cancelable `focus` and `blur` (`FocusEvent`) when
 the focusable host gains or loses focus, plus the shared menu-item events above.

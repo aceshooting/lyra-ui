@@ -35,11 +35,12 @@ export const styles = css`
   }
   /* The shared required marker (internal/form-control.styles.ts). The one component where
      "required" is per FIELD, not per host, which is why that sheet carries a second selector on
-     [part="field"][data-required] beside the usual :host([required]). Boolean and enum labels
-     belong to their nested <lr-select>. */
+     [part="field"][data-required] beside the usual :host([required]). Boolean, enum and
+     number/integer labels belong to their nested <lr-select>/<lr-number-input>. */
   ${formControlRequiredMarker}
 
   [part='field'] > lr-select,
+  [part='field'] > lr-number-input,
   [part='field'] > input.control {
     inline-size: 100%;
     min-inline-size: 0;
@@ -56,14 +57,6 @@ export const styles = css`
     color: inherit;
     font: inherit;
     font-size: var(--lr-font-size-m);
-  }
-  input.control {
-    appearance: textfield;
-  }
-  input.control::-webkit-inner-spin-button,
-  input.control::-webkit-outer-spin-button {
-    appearance: none;
-    margin: 0;
   }
   input.control:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -1338,7 +1338,7 @@ it('shows a rendered hover affordance on the public filter control', async () =>
       type: 'move',
       position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
     });
-    expect(getComputedStyle(filter).backgroundColor).to.not.equal(before);
+    await waitUntil(() => getComputedStyle(filter).backgroundColor !== before, 'filter control hover fill never landed');
   } finally {
     await resetMouse();
   }
@@ -1362,7 +1362,7 @@ it('shows a rendered hover affordance on the public cell editor', async () => {
       type: 'move',
       position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
     });
-    expect(getComputedStyle(editor).backgroundColor).to.not.equal(before);
+    await waitUntil(() => getComputedStyle(editor).backgroundColor !== before, 'cell editor hover fill never landed');
   } finally {
     await resetMouse();
   }
@@ -4792,7 +4792,7 @@ describe('--lr-table-row-selected-bg', () => {
     const position: [number, number] = [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
     try {
       await sendMouse({ type: 'move', position });
-      expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
+      await waitUntil(() => getComputedStyle(selected).backgroundColor !== resting, 'already-selected row hover fill never landed');
     } finally {
       await resetMouse();
     }

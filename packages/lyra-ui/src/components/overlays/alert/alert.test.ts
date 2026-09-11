@@ -2,6 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraAlert } from './alert.js';
 import './alert.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 const motionless = '--lr-duration-fast: 0ms;';
 
@@ -1102,4 +1103,20 @@ it('never offers a veto for initially-open markup', async () => {
   await el.updateComplete;
   expect(el.open).to.be.true;
   expect(vetoable, 'declarative state is not a transition').to.equal(0);
+});
+
+it('retints the close button hover fill through a scoped --lr-alert-close-hover-bg, independent of the shared color-mix tokens', async () => {
+  const el = (await fixture(
+    html`<lr-alert open closable style="${motionless} --lr-alert-close-hover-bg: rgb(1, 2, 3);">Message</lr-alert>`
+  )) as LyraAlert;
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!;
+  try {
+    await hoverUntilMatched(close, 'the close button receives the pointer');
+    await waitUntil(
+      () => getComputedStyle(close).backgroundColor === 'rgb(1, 2, 3)',
+      'the retinted hover background applies',
+    );
+  } finally {
+    await resetMouse();
+  }
 });

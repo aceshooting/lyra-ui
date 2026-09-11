@@ -71,7 +71,11 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * slotted `<lr-flag>`) is never run through it.
  *
  * Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
- * native button. Host `aria-describedby` IDREFs are resolved through `ariaDescribedByElements`.
+ * native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions (mute,
+ * favorite, pin); `aria-current` (`page`, `step`, `location`, `date`, `time`, `true`, `false`)
+ * supports current-item icon buttons. Both follow attribute changes, removal and button/link
+ * replacement without changing the native role; empty or unsupported tokens are omitted. Host
+ * `aria-describedby` IDREFs are resolved through `ariaDescribedByElements`.
  * Description targets follow same-ID replacement, removal, reinsertion, reconnection and document
  * adoption, including transitions between the native button and anchor.
  * When host `aria-controls` names elements in the host's own root, the controls relationship is
@@ -92,9 +96,10 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * renders no glyph unless a matching library is registered, including through
  * `registerIconLibrary('default', { resolver })`.
  *
- * A safe `href` switches the interactive root to a native anchor. `target` derives
- * `rel="noopener noreferrer"`; `download` narrows URL validation to downloadable schemes. A
- * disabled link keeps the anchor anatomy but removes `href`, so it cannot navigate.
+ * A safe `href` switches the interactive root to a native anchor. `rel` is independently
+ * settable (no default); `opener` is always stripped and any `target` force-adds the
+ * non-removable `noopener noreferrer` guard. `download` narrows URL validation to downloadable
+ * schemes. A disabled link keeps the anchor anatomy but removes `href`, so it cannot navigate.
  *
  * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
  * ancestor theme wrapper override the built-in fallback. A value set directly on the icon button
@@ -103,6 +108,10 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @customElement lr-icon-button
  * @event focus - Native focus relayed once from the internal button.
  * @event blur - Native blur relayed once from the internal button.
+ * @attr aria-pressed - Toggle state forwarded reactively to the internal control: true, false or mixed.
+ * @attr aria-current - Current-item state forwarded reactively to the internal control: page, step, location, date, time, true or false.
+ * @attr rel - Independently settable author relationship tokens (no default). `opener` is always
+ *   stripped, and any `target` force-adds the non-removable `noopener noreferrer` guard.
  * @slot - Optional custom icon content, rendered beside (not inside) the `icon` glyph.
  * @csspart base - Shoelace compatibility name for the interactive native control; use `button`.
  * @csspart button - Native button, or the native anchor in safe link mode. The same node also
@@ -194,11 +203,22 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   @property({ attribute: 'aria-expanded' }) private triggerExpanded: string | null = null;
   @property({ attribute: 'aria-controls' }) private triggerControls: string | null = null;
   @property({ attribute: 'aria-describedby' }) private triggerDescribedBy: string | null = null;
+  @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
+  @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
   @property() label = '';
   /** Safe link URL. When valid, the native root is an anchor rather than a button. */
   @property() href?: string;
   /** Native anchor target. A non-empty target always derives a safe `rel`. */
   @property() target?: string;
+  /** Author relationship tokens for the rendered anchor, e.g. `nofollow me license` -- mirrors
+   *  `wa-icon-button`/`sl-icon-button`'s own `rel`, so values a migrating consumer already relies
+   *  on survive a `wa-`/`sl-` -> `lr-` rename instead of being silently dropped. Two rules are
+   *  enforced regardless of what an author writes: `opener` is always stripped (the one token that
+   *  re-opens the reverse-tabnabbing vector), and `noopener noreferrer` is force-added whenever
+   *  `target` is set. With no `target` there is no new browsing context to protect, so a same-tab
+   *  link renders exactly the author's tokens. Deliberately left with no default, matching
+   *  `<lr-button>`'s own `rel`. */
+  @property() rel?: string;
   /** Native anchor download filename; also selects the stricter download URL allowlist. */
   @property() download?: string;
   @query('[part~="button"]') private baseEl?: HTMLButtonElement | HTMLAnchorElement;
@@ -208,6 +228,21 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
    *  geometry with no SVG parent of its own -- see `needsSvgNamespaceFallback`. Mounts the internal
    *  `[part="fallback"]` SVG, which `updated()` then populates via `syncFallbackGeometry()`. */
   @state() private hasBareGeometry = false;
+
+  /** Resolved `rel` for the rendered anchor: author tokens minus `opener`, plus the
+   *  `noopener noreferrer` guard whenever `target` is set. `undefined` when nothing remains, so the
+   *  attribute is omitted rather than rendered empty. Mirrors `<lr-button>`'s own `resolvedRel`. */
+  private get resolvedRel(): string | undefined {
+    const authored = (this.rel ?? '')
+      .split(/\s+/)
+      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
+    const tokens = new Set(authored);
+    if (this.target) {
+      tokens.add('noopener');
+      tokens.add('noreferrer');
+    }
+    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
+  }
 
   /** Activates the internal native action or link. */
   override click(): void {
@@ -287,6 +322,10 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   }
 
   override render(): TemplateResult {
+    const pressed = ['true', 'false', 'mixed'].includes(this.triggerPressed ?? '')
+      ? this.triggerPressed : nothing;
+    const current = ['page', 'step', 'location', 'date', 'time', 'true', 'false'].includes(this.triggerCurrent ?? '')
+      ? this.triggerCurrent : nothing;
     const label = this.accessibleLabel || this.label || this.localize('iconButtonLabel');
     const content = html`${this.icon || this.src
       ? html`<lr-icon
@@ -308,11 +347,13 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
         part="base button"
         href=${disabled ? nothing : href}
         target=${this.target || nothing}
-        rel=${this.target ? 'noopener noreferrer' : nothing}
+        rel=${this.resolvedRel ?? nothing}
         download=${hasDownload ? this.download ?? '' : nothing}
         aria-label=${label}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-pressed=${pressed}
+        aria-current=${current}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
         aria-disabled=${disabled ? 'true' : 'false'}
@@ -329,6 +370,8 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
       aria-label=${label}
       aria-haspopup=${this.triggerHasPopup ?? nothing}
       aria-expanded=${this.triggerExpanded ?? nothing}
+      aria-pressed=${pressed}
+      aria-current=${current}
       aria-controls=${this.triggerControls || nothing}
       aria-describedby=${this.triggerDescribedBy || nothing}
       @focus=${this.onFocus}

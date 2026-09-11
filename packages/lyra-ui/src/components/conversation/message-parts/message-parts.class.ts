@@ -10,6 +10,7 @@ import type { LyraAttachmentChipEventMap } from '../../media/attachment-chip/att
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
 import type { LyraJsonViewerEventMap } from '../../utility/json-viewer/json-viewer.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { finiteCount } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -173,6 +174,14 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** Optional host renderer. Returning `undefined` delegates to the built-in renderer. */
   @property({ attribute: false }) renderPart?: MessagePartRenderer;
 
+  /** `0` (the default) renders every part -- unbounded, matching every prior release. A positive
+   *  value windows rendering to the newest N parts (host `parts` data is untouched); citation
+   *  ranks are still computed against the full sequence first, so a badge's number stays stable
+   *  even once an earlier citation rolls out of the rendered window. Opt in for a message that can
+   *  grow an unusually large number of parts (e.g. a long agentic run with many interleaved
+   *  tool-call/tool-result parts), where unbounded live DOM can visibly stall the main thread. */
+  @property({ type: Number, attribute: 'max-rendered-parts' }) maxRenderedParts = 0;
+
   /** Accessible name override for the internal message-part group. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   private knownErrorIds = new Set<string>();
@@ -213,6 +222,24 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       seen.add(id);
       return true;
     });
+  }
+
+  /** `maxRenderedParts`, normalized to a finite non-negative integer (falling back to the
+   *  property's own default of `0`) -- a raw `NaN` (e.g. an invalid `max-rendered-parts`
+   *  attribute) would otherwise make `maxRenderedParts > 0` always false, which happens to already
+   *  match the "render all" fallback, but only by the same accidental-`NaN`-comparison quirk this
+   *  guard exists to remove. */
+  private get effectiveMaxRenderedParts(): number {
+    return finiteCount(this.maxRenderedParts, 0);
+  }
+
+  /** `effectiveParts`, windowed to the newest `effectiveMaxRenderedParts` entries when that cap is
+   *  positive. Never affects citation numbering -- ranks are always derived from the full
+   *  `effectiveParts` sequence before this window is applied. */
+  private get renderedParts(): readonly MessagePart[] {
+    const parts = this.effectiveParts;
+    const max = this.effectiveMaxRenderedParts;
+    return max > 0 && parts.length > max ? parts.slice(-max) : parts;
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -368,17 +395,20 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   override render(): TemplateResult {
     const label = this.accessibleLabel ?? this.localize('messagePartsLabel');
-    const parts = this.effectiveParts;
-    const citationRanks = new Array<number>(parts.length).fill(0);
+    // Ranks are derived from the FULL sequence, before any rendering window is applied, so a
+    // citation's number stays stable even once an earlier citation rolls out of view.
+    const allParts = this.effectiveParts;
+    const citationRanks = new Map<string, number>();
     let citationRank = 0;
-    for (let index = 0; index < parts.length; index++) {
-      if (parts[index]?.type === 'citation') citationRanks[index] = ++citationRank;
+    for (const part of allParts) {
+      if (part.type === 'citation') citationRanks.set(part.id, ++citationRank);
     }
+    const parts = this.renderedParts;
     return html`<div part="base" role="group" aria-label=${label}>
       ${repeat(
         parts,
         (part) => part.id,
-        (part, index) => this.renderOne(part, index, citationRanks[index] ?? 0)
+        (part, index) => this.renderOne(part, index, citationRanks.get(part.id) ?? 0)
       )}
     </div>`;
   }

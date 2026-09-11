@@ -27,6 +27,22 @@ it('composes connection status, voice activity, transcript, and capture controls
     'voice-session-a'
   );
   expect(el.shadowRoot!.textContent).to.contain('Connected');
+  await expect(el).to.be.accessible();
+});
+
+it('audits clean against axe as the real, composed custom element -- not just its serialized shadow tree -- in both the default and connected states', async () => {
+  const disconnected = (await fixture(html`<lr-realtime-session></lr-realtime-session>`)) as LyraRealtimeSession;
+  await expect(disconnected).to.be.accessible();
+
+  const connected = (await fixture(
+    html`<lr-realtime-session
+      state="connected"
+      voice-state="speaking"
+      level="0.7"
+      .entries=${[{ id: '1', speaker: 'Assistant', text: 'Hello' }]}
+    ></lr-realtime-session>`
+  )) as LyraRealtimeSession;
+  await expect(connected).to.be.accessible();
 });
 
 it('types and preserves every composed push-to-talk event unchanged', async () => {

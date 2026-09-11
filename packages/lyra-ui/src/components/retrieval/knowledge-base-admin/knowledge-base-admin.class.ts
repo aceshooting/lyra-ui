@@ -8,6 +8,7 @@ import type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.clas
 export type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 import { styles } from './knowledge-base-admin.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_knowledgeBaseAdminIngestionTab, LYRA_DEFAULT_knowledgeBaseAdminLabel, LYRA_DEFAULT_knowledgeBaseAdminSourcesTab } from '../../../internal/default-strings.generated.js';
@@ -173,13 +174,17 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   override render(): TemplateResult {
     const visibleLabel =
       this.label == null ? this.localize('knowledgeBaseAdminLabel') : this.label;
+    // A host aria-label wins over the internal tablist's computed accessible name (the visible
+    // heading always keeps showing `visibleLabel` regardless -- only the announced name changes).
+    const hostLabel = hostAriaLabel(this);
+    const tablistLabel = hostLabel === null ? visibleLabel : hostLabel;
     const tab: KnowledgeBaseAdminTab =
       this.activeTab === 'ingestion' && !this.hideIngestion
         ? 'ingestion'
         : 'sources';
     return html`<section part="base">
       <h2 part="heading">${visibleLabel}</h2>
-      <div part="tabs" role="tablist" aria-label=${visibleLabel}>
+      <div part="tabs" role="tablist" aria-label=${tablistLabel}>
         <button
           part="tab"
           id=${this.tabId('sources')}

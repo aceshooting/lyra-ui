@@ -139,6 +139,18 @@ export const HighCitationDensity: Story = {
   render: () => html`<lr-message-parts .parts=${citationDenseParts}></lr-message-parts>`,
 };
 
+export const WindowedRendering: Story = {
+  name: 'Windowed rendering',
+  parameters: {
+    docs: {
+      description: {
+        story: 'Opting into `max-rendered-parts` windows a large part list to the newest N entries; citation ranks stay derived from the full sequence, so a rendered badge keeps the number it would have had unwindowed.',
+      },
+    },
+  },
+  render: () => html`<lr-message-parts .parts=${citationDenseParts} max-rendered-parts="12"></lr-message-parts>`,
+};
+
 export const Narrow: Story = {
   render: () => html`
     <div style="max-width: 320px;">

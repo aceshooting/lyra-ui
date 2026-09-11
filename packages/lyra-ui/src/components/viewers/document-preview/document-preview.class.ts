@@ -258,6 +258,9 @@ export interface LyraDocumentPreviewEventMap {
  * @csspart highlight-actions - Non-overlapping actions used when multiple region highlights would
  *   otherwise create overlapping minimum hit areas (image format only).
  * @csspart region-highlight-action - One action in the non-overlapping highlight action list.
+ *   ArrowDown/ArrowUp (or ArrowLeft/ArrowRight under RTL) plus Home/End move focus across this
+ *   list, matching `<lr-highlight-layer>`'s roving shortcut; every action keeps its own native
+ *   tabindex, so Tab still steps through each one individually.
  * @cssprop [--lr-document-preview-max-height=none] - Maximum body block size before the preview scrolls internally.
  * @cssprop [--lr-document-preview-font=var(--lr-font-mono)] - Font used for plain-text previews.
  * @cssprop [--lr-document-preview-download-link-hover-bg=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Hover background of the generic download link.
@@ -705,6 +708,26 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     </div>`;
   }
 
+  /** Moves focus among the `region-highlight-action` list to match `<lr-highlight-layer>`'s
+   *  roving arrow-key shortcut. Every action button keeps its own native tabindex (this list
+   *  isn't a roving-tabindex widget), so this only offers ArrowDown/ArrowUp/Home/End as a
+   *  faster alternative to repeated Tab, direction-aware under RTL. */
+  private onHighlightActionKeyDown(e: KeyboardEvent, index: number, total: number): void {
+    const rtl = this.effectiveDirection === 'rtl';
+    const forward = e.key === 'ArrowDown' || (rtl ? e.key === 'ArrowLeft' : e.key === 'ArrowRight');
+    const backward = e.key === 'ArrowUp' || (rtl ? e.key === 'ArrowRight' : e.key === 'ArrowLeft');
+    let nextIndex: number | undefined;
+    if (forward) nextIndex = Math.min(total - 1, index + 1);
+    else if (backward) nextIndex = Math.max(0, index - 1);
+    else if (e.key === 'Home') nextIndex = 0;
+    else if (e.key === 'End') nextIndex = total - 1;
+    if (nextIndex === undefined || nextIndex === index) return;
+    e.preventDefault();
+    this.renderRoot
+      .querySelectorAll<HTMLElement>('[part="region-highlight-action"]')
+      [nextIndex]?.focus();
+  }
+
   private renderHighlightActions(
     regionHighlights: readonly ProjectedRegionHighlight[],
   ): TemplateResult | typeof nothing {
@@ -719,6 +742,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
           data-highlight-id=${highlight.id}
           aria-label=${label}
           @click=${() => this.emit('lr-highlight-activate', { highlightId: highlight.id })}
+          @keydown=${(e: KeyboardEvent) =>
+            this.onHighlightActionKeyDown(e, index, regionHighlights.length)}
         >
           ${highlight.label || label}
         </button>

@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/t
 import { LitElement, type PropertyValues } from 'lit';
 import './sequence-playback.js';
 import { LyraSequencePlayback } from './sequence-playback.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
@@ -28,6 +28,16 @@ it('registers only the explicit sequence-playback identity and removes the gener
   el.next();
   expect((await sequenceStep).detail).to.deep.equal({ currentIndex: 2 });
   expect(genericSteps).to.equal(0);
+});
+
+it('emits lr-sequence-step when a shrinking itemCount re-clamps currentIndex', async () => {
+  const el = (await fixture(
+    html`<lr-sequence-playback item-count="5" current-index="4"></lr-sequence-playback>`,
+  )) as LyraSequencePlayback;
+  const sequenceStep = oneEvent(el, 'lr-sequence-step');
+  el.itemCount = 2;
+  expect((await sequenceStep).detail).to.deep.equal({ currentIndex: 1 });
+  expect(el.currentIndex).to.equal(1);
 });
 
 it('does not leak an untracked duplicate timer chain when play() is called synchronously from a lr-sequence-step listener during tick()', async () => {
@@ -104,6 +114,21 @@ it('stops at the last index when loop="false" is set as a plain HTML attribute',
   await aTimeout(30);
   expect(el.playing).to.be.false;
   expect(el.currentIndex).to.equal(1);
+});
+
+it('removing loop="false" restores the true-defaulting loop behavior', async () => {
+  const el = (await fixture(
+    html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1" loop="false"></lr-sequence-playback>`,
+  )) as LyraSequencePlayback;
+  expect(el.loop).to.be.false;
+
+  el.removeAttribute('loop');
+  expect(el.loop).to.be.true;
+
+  el.play();
+  await aTimeout(30);
+  expect(el.playing).to.be.true;
+  el.pause();
 });
 
 it('no-ops play() when length <= 1', async () => {
@@ -719,19 +744,19 @@ it('gives the enabled range slider a pointer cursor and rendered hover and press
   expect(getComputedStyle(slider).cursor).to.equal('pointer');
 
   const resting = getComputedStyle(slider).accentColor;
-  const rect = slider.getBoundingClientRect();
-  const centre: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   try {
-    await sendMouse({ type: 'move', position: centre });
+    await hoverUntilMatched(slider, 'the range slider never reported :hover');
+    await waitUntil(
+      () => getComputedStyle(slider).accentColor !== resting,
+      'hover moves the slider ink off its resting accent',
+    );
     const hovered = getComputedStyle(slider).accentColor;
-    expect(hovered, 'hover moves the slider ink off its resting accent').to.not.equal(resting);
 
     await sendMouse({ type: 'down' });
-    const pressed = getComputedStyle(slider).accentColor;
-    expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+    await waitUntil(
+      () => getComputedStyle(slider).accentColor !== hovered,
+      'pressed is a further step, not a repeat of hover',
+    );
     await sendMouse({ type: 'up' });
   } finally {
     await resetMouse();
@@ -750,11 +775,7 @@ describe('play-button pressed paint', () => {
   }
 
   async function press(button: HTMLElement): Promise<void> {
-    const rect = button.getBoundingClientRect();
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    await hoverUntilMatched(button, 'the play button never reported :hover');
     await sendMouse({ type: 'down' });
   }
 
@@ -764,15 +785,16 @@ describe('play-button pressed paint', () => {
 
     try {
       await press(button);
-      const style = getComputedStyle(button);
-      expect(style.backgroundColor).to.equal(
-        resolvedInShadow(
-          el,
-          'background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
-          'background-color',
-        ),
+      const expectedBackground = resolvedInShadow(
+        el,
+        'background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+        'background-color',
       );
-      expect(style.borderTopColor).to.equal(
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor === expectedBackground,
+        'play button background color never reached its pressed value',
+      );
+      expect(getComputedStyle(button).borderTopColor).to.equal(
         resolvedInShadow(el, 'border-top-color: var(--lr-color-brand)', 'border-top-color'),
       );
     } finally {
@@ -797,9 +819,11 @@ describe('play-button pressed paint', () => {
 
     try {
       await press(button);
-      const style = getComputedStyle(button);
-      expect(style.backgroundColor).to.equal('rgb(7, 8, 9)');
-      expect(style.borderTopColor).to.equal('rgb(10, 11, 12)');
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor === 'rgb(7, 8, 9)',
+        'play button background color never reached rgb(7, 8, 9)',
+      );
+      expect(getComputedStyle(button).borderTopColor).to.equal('rgb(10, 11, 12)');
     } finally {
       await resetMouse();
       el.pause();

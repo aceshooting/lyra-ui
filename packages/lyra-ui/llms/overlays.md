@@ -2267,8 +2267,16 @@ once. Toast-owned work instead settles and is discarded when its region disconne
 subtree remains visible but is inert and aria-hidden.
 
 **CSS parts:** `base`, `icon`, `message`, and `close-button` / `close-button__base` on the same
-native close button. The pinned surface exposes no component CSS custom properties, custom states,
-form association, native-event relays, or delegated native methods.
+native close button. The pinned surface exposes no custom states, form association, native-event
+relays, or delegated native methods.
+
+**Themeable custom properties:** the close button's two state hooks are
+`--lr-alert-close-hover-bg` (its `:hover` surface; default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) and `--lr-alert-close-active-bg` (its
+`:active` surface, scoped independently from the hover property; default `color-mix(in oklab,
+transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))`). Each is an inline fallback
+at the relevant state, so setting one on the alert or an ancestor rethemes only that close-button
+state.
 
 By default the light-DOM `<lr-alert>` host owns `role="alert"`, so initially-open/static alerts and
 alerts shown later expose one assertive, content-derived semantic surface without duplicating it in

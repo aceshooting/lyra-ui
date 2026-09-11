@@ -7,7 +7,7 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-terminal-surface-color, var(--lr-color-surface-raised));
     overflow: hidden;
@@ -27,7 +27,7 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-size-1px) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   /* Density escape -- same convention as lr-task-list's/lr-thinking-panel's compact. Inline var()
      fallbacks, not a :host declaration every instance would re-declare and so shadow an ancestor
@@ -43,7 +43,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
     background: none;
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     cursor: pointer;
@@ -184,5 +184,10 @@ export const styles = css`
   [part='jump-to-latest']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='jump-to-latest'] {
+      transition: none !important;
+    }
   }
 `;

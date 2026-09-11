@@ -9,6 +9,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { finiteRange } from '../../../internal/numbers.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import {
   attachInternalsSafely,
   getFormOwner,
@@ -431,6 +432,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
    *  text. */
   private politeSink?: AnnouncementSink;
   private assertiveSink?: AnnouncementSink;
+  private hasSyncedDescribedByElements = false;
   /** False until the first render has committed, so mounting never announces a resting state. */
   private announcementsArmed = false;
   private _name: string | null = null;
@@ -497,7 +499,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   set files(next: readonly File[]) {
     const old = this._files;
     const valid = Array.isArray(next) ? next.filter(isFileValue) : [];
-    this._files = this.effectiveMultiple ? [...valid] : valid.slice(0, 1);
+    // Truncation to a single file when `!effectiveMultiple` is NOT applied here: `multiple`/
+    // `directory` may still be about to change within the same synchronous property-assignment
+    // batch (e.g. a Lit template binding `.files` before `.multiple`), and `effectiveMultiple`
+    // read at this instant could be stale. `willUpdate()` re-derives the truncation once every
+    // property in the batch has landed, which is order-independent.
+    this._files = [...valid];
     const oldCount = this._fileCount;
     this._fileCount = this._files.length;
     this.syncThumbnailUrls();
@@ -577,8 +584,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (changed.has('multiple') || changed.has('directory')) {
-      if (!this.effectiveMultiple && this._files.length > 1) this.files = this._files;
+    if (changed.has('multiple') || changed.has('directory') || changed.has('files')) {
+      if (!this.effectiveMultiple && this._files.length > 1) this.files = this._files.slice(0, 1);
       else this.syncFormValue();
     }
   }
@@ -625,6 +632,18 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     if (changed.has('validators')) {
       this.updateValidity();
       this.syncValidatorAttributeObserver();
+    }
+    // Merges a consumer-set host `aria-describedby` onto the internal `role="button"` dropzone
+    // control -- the sole semantic owner -- since idrefs never cross the shadow boundary on their
+    // own. `describedBy` (rendered into the control's own `aria-describedby`) already covers the
+    // internal hint/error ids; this projects the host's external reference alongside them.
+    const hostDescribedBy = this.getAttribute('aria-describedby');
+    if (hostDescribedBy || this.hasSyncedDescribedByElements) {
+      this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
+        this,
+        this.baseEl,
+        hostDescribedBy,
+      );
     }
     // The very first render is a mount, not a transition: a component appearing on the page must
     // not announce its resting state.

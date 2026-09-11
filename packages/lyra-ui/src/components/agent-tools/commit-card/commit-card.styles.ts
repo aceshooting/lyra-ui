@@ -10,7 +10,7 @@ export const styles = css`
     box-sizing: border-box;
     min-inline-size: 0;
     max-inline-size: 100%;
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     padding: var(--lr-space-m);
   }
@@ -131,7 +131,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     background: none;
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     cursor: pointer;

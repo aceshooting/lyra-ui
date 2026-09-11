@@ -10,6 +10,7 @@ async function settleClipboard(el: LyraTerminal): Promise<void> {
   await el.updateComplete;
 }
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 
@@ -1782,4 +1783,50 @@ describe('compact / frame escape hatches', () => {
     );
     await expect(plain).to.be.accessible();
   });
+});
+
+it('stops the jump-to-latest opacity transition under reduced motion', async () => {
+  try {
+    await setReducedMotion('no-preference');
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
+    list.dispatchEvent(
+      new CustomEvent('lr-visible-range-change', {
+        detail: { start: 0, end: 0 },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="jump-to-latest"]') as HTMLButtonElement;
+    expect(button != null).to.equal(true);
+    expect(getComputedStyle(button).transitionDuration).to.not.equal('0s');
+
+    await setReducedMotion('reduce');
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+    expect(getComputedStyle(button).transitionDuration).to.equal('0s');
+  } finally {
+    await setReducedMotion('no-preference');
+  }
+});
+
+it('reads its border widths from --lr-border-width-thin, not the generic --lr-size-1px scale (regression: theming purpose)', async () => {
+  const el = (await fixture(html`
+    <lr-terminal style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;"></lr-terminal>
+  `)) as LyraTerminal;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  const copyButton = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+  expect(copyButton, 'copy button renders (copyable defaults true)').to.exist;
+  // A consumer retuning the documented --lr-theme-border-width-thin input must move these
+  // borders; retuning the unrelated --lr-theme-size-1px sizing scale must not.
+  expect(getComputedStyle(base).borderTopWidth).to.equal('11px');
+  expect(getComputedStyle(toolbar).borderBottomWidth).to.equal('11px');
+  expect(getComputedStyle(copyButton).borderTopWidth).to.equal('11px');
 });

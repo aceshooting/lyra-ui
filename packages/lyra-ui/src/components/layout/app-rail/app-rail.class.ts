@@ -499,9 +499,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     );
   }
 
-  /** Restore the selected persisted fields. Runs once, before the first render. Effective `mode`
-   *  remains breakpoint-derived; only the optional non-mobile `preferredMode` input is restorable. */
-  private loadPersisted(): boolean {
+  /** Restore the selected persisted fields. Runs once, before the first render, and never
+   *  overwrites a field the consumer already bound to an explicit, non-default value before this
+   *  point (`changed.has(...)`) -- a controlled `.open=${false}`/`.railWidthPx=${240}` binding
+   *  stays authoritative over stale `localStorage` state instead of being silently clobbered by
+   *  it, with no `lr-toggle` (or equivalent) firing for a change the consumer never asked for.
+   *  Effective `mode` remains breakpoint-derived; only the optional non-mobile `preferredMode`
+   *  input is restorable. */
+  private loadPersisted(changed: PropertyValues): boolean {
     const parsed = readPersistedState(
       this.storageFullKey,
       (v): v is { open?: unknown; railWidthPx?: unknown; preferredMode?: unknown;
@@ -510,9 +515,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     );
     if (!parsed) return false;
     const fields = this.persistFields;
-    if (fields.has('open') && typeof parsed.open === 'boolean') this.open = parsed.open;
+    if (fields.has('open') && !changed.has('open') && typeof parsed.open === 'boolean') {
+      this.open = parsed.open;
+    }
     if (
       fields.has('width') &&
+      !changed.has('railWidthPx') &&
       typeof parsed.railWidthPx === 'number' &&
       Number.isFinite(parsed.railWidthPx)
     ) {
@@ -520,6 +528,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
     if (
       fields.has('preferred-mode') &&
+      !changed.has('preferredMode') &&
       (parsed.preferredMode === 'full' || parsed.preferredMode === 'icon-only')
     ) {
       this.preferredMode = parsed.preferredMode;
@@ -553,7 +562,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
-      const restoredPreferredMode = this.loadPersisted();
+      const restoredPreferredMode = this.loadPersisted(changed);
       if (restoredPreferredMode && !this.forced) {
         // Fold the restored preference into the first render without emitting a user-facing mode
         // change event during mount or scheduling a second update from inside willUpdate().

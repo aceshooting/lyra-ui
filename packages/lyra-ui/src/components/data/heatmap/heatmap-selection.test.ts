@@ -106,6 +106,24 @@ describe('lr-heatmap controlled multiple selection', () => {
     expect(details.at(-1)!.selectedCells.length).to.equal(3);
   });
 
+  /**
+   * Regression: onMatrixKeyDown()/onCalendarKeyDown() used to announce the newly-focused cell
+   * *before* onKeyDown() called extendSelection() for the same key press, so a screen reader was
+   * always told a cell just added to a Shift+Arrow range selection was still unselected -- the
+   * announcement read isSelectedPos() against the pre-extension selection.
+   */
+  it('announces a cell as selected as soon as a keyboard range extends onto it', async () => {
+    const el = await matrix();
+    el.addEventListener('lr-selection-change', (event) => {
+      el.selectedCells = (event as CustomEvent<SelectionDetail>).detail.selectedCells;
+    });
+    cell(el, 0, 0).focus();
+
+    key(cell(el, 0, 0), 'ArrowRight', { shiftKey: true });
+
+    expect((el as unknown as { liveText: string }).liveText).to.contain('Selected');
+  });
+
   it('toggles rows and columns through public methods and keyboard shortcuts', async () => {
     const el = await matrix();
     const details = changes(el);

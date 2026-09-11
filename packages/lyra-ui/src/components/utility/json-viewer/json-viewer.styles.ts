@@ -86,6 +86,10 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     border-radius: var(--lr-radius);
     cursor: pointer;
+    /* The chevron renders at 1em (internal/icons.ts), so this native <button>'s own font-size IS
+       the glyph's rendered size -- anchor it to the host's own --lr-font-size-sm cascade rather
+       than the UA control font, mirroring [part="copy-button"]'s identical font-inherit rule. */
+    font: inherit;
   }
   /* An author declaration beats the UA '[hidden] { display: none }' regardless of specificity,
      !important aside, so this only needs to add visibility, not re-declare display. Keeping the box

@@ -562,3 +562,20 @@ it('normalizes duplicate request ids first-wins before selection and dialog look
   expect(rows[0]!.textContent).to.contain('first_tool');
   expect(rows[0]!.textContent).not.to.contain('later_tool');
 });
+
+it("exposes a resolved request's decision to assistive tech via aria-describedby on the row button", async () => {
+  const el = await fixture<LyraApprovalQueue>(html`
+    <lr-approval-queue .requests=${[
+      { id: 'call-1', toolName: 'web_search', args: {}, status: 'approved' },
+    ]}></lr-approval-queue>
+  `);
+  const button = el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement;
+  const describedByIds = (button.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean);
+  expect(describedByIds.length, 'button must reference a description').to.be.greaterThan(0);
+  const described = describedByIds
+    .map((id) => el.shadowRoot!.getElementById(id))
+    .filter((node): node is HTMLElement => node !== null);
+  expect(described.length, 'the referenced id must resolve to a real element').to.be.greaterThan(0);
+  const describedText = described.map((node) => node.textContent ?? '').join(' ');
+  expect(describedText).to.contain('Approved');
+});

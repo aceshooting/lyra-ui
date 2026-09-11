@@ -26,7 +26,7 @@ export const styles = css`
   }
   /* Bottom-sheet anchors its panel to the block-end edge instead of stretching it full-height like
      fullscreen does. */
-  :host([variant='bottom-sheet'][open]) [part='base'].overlay {
+  :host([shape='bottom-sheet'][open]) [part='base'].overlay {
     align-items: flex-end;
   }
 
@@ -54,7 +54,7 @@ export const styles = css`
     overflow: auto;
   }
 
-  /* Overlay/fullscreen (default variant): the panel fills the viewport edge-to-edge, so no backdrop
+  /* Overlay/fullscreen (default shape): the panel fills the viewport edge-to-edge, so no backdrop
      is visible around it, but the backdrop element still renders and still carries the shared
      Escape/backdrop-click dismissal wiring described on the class. */
   [part='base'].overlay [part='panel'] {
@@ -84,7 +84,7 @@ export const styles = css`
 
   /* Overlay/bottom-sheet: a partial-height sheet rounded only on the top edge, leaving the backdrop
      and whatever page content sits behind it visible above. */
-  :host([variant='bottom-sheet']) [part='base'].overlay [part='panel'] {
+  :host([shape='bottom-sheet']) [part='base'].overlay [part='panel'] {
     block-size: auto;
     max-block-size: var(--lr-responsive-panel-sheet-max-block-size, 85vh);
     border-start-start-radius: var(--lr-radius);
@@ -95,7 +95,7 @@ export const styles = css`
      once the value comes from a custom property, an unsupported dvh unit fails at computed-value
      time and resets max-block-size to none instead of falling back to the vh declaration. */
   @supports (max-block-size: 1dvh) {
-    :host([variant='bottom-sheet']) [part='base'].overlay [part='panel'] {
+    :host([shape='bottom-sheet']) [part='base'].overlay [part='panel'] {
       max-block-size: var(--lr-responsive-panel-sheet-max-block-size, 85dvh);
     }
   }

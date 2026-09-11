@@ -15,9 +15,10 @@ import '../../forms/checkbox/checkbox.class.js';
 import '../../forms/switch/switch.class.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { closeIcon } from '../../../internal/icons.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectLimit, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectLimit, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -327,6 +328,8 @@ interface ToolProjection {
  * @csspart tool-disabled-reason - A disabled row's `disabledReason` text, slotted inside
  * `tool-checkbox` (alongside `tool-name`/`tool-description`) so it contributes to the
  * checkbox's accessible name/description instead of going unannounced.
+ * @csspart search-clear - The clear-search button, replacing the native search-cancel glyph the
+ *   component resets. Only rendered while the field has text.
  * @csspart footer - The wrapper around the `footer` slot.
  * @cssprop [--lr-tool-select-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  * @status stable
@@ -337,6 +340,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     loadMore: LYRA_DEFAULT_loadMore,
     noMatchesQuery: LYRA_DEFAULT_noMatchesQuery,
@@ -546,6 +550,15 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   };
   private onSearchFocus = (): void => { this.emit('focus'); };
   private onSearchBlur = (): void => { this.emit('blur'); };
+
+  // The native `::-webkit-search-cancel-button` reset below removes the browser's own clear
+  // affordance with no replacement -- this button, and the search input's refocus afterward,
+  // restore a real one-click way to reset the filter.
+  private onClearSearch = (): void => {
+    this.query = '';
+    this.renderedToolLimit = MAX_RENDERED_TOOLS;
+    this.renderRoot.querySelector<HTMLInputElement>('[part="search-input"]')?.focus();
+  };
 
   private stopNestedControlEvent = (event: Event): void => {
     event.stopPropagation();
@@ -808,6 +821,16 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
             @focus=${this.onSearchFocus}
             @blur=${this.onSearchBlur}
           />
+          ${this.query
+            ? html`<button
+                part="search-clear"
+                type="button"
+                aria-label=${this.localize('clear')}
+                @click=${this.onClearSearch}
+              >
+                <span aria-hidden="true" inert>${closeIcon()}</span>
+              </button>`
+            : nothing}
         </div>
         <div part="defaults-row">
           <lr-switch

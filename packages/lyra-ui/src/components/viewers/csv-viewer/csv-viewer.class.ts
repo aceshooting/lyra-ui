@@ -71,6 +71,14 @@ function headerOffset(hasHeaderRow: boolean): number {
   return hasHeaderRow ? 1 : 0;
 }
 
+/** A stable, module-level `<lr-virtual-list>.keyFunction` -- a fresh closure identity on every
+ *  render() would defeat the virtual list's own offset-cache memoization (see its
+ *  `.items`/`.renderItem` doc in render() below) on every unrelated re-render (a search keystroke,
+ *  active-row change, locale change), not just on data changes. */
+function indexKeyFunction(_item: unknown, index: number): number {
+  return index;
+}
+
 /** One `highlights` entry resolved against the parsed grid, alongside its parsed `cell-range`. */
 interface ResolvedCellHighlight {
   highlight: LyraHighlight;
@@ -609,6 +617,42 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     event.stopPropagation();
   };
 
+  /** Memoized `<lr-virtual-list>.items`/`.renderItem` inputs, keyed on the exact `rows` array
+   *  reference and `hasHeaderRow` -- a fresh `body` array and `renderItem` closure on every
+   *  render() (a search keystroke, active-row change, locale change, all unrelated to the data
+   *  itself) would otherwise defeat the virtual list's own offset-cache memoization on every one
+   *  of those, forcing its O(n) `recomputeOffsets()` and clearing measured row heights. `renderItem`
+   *  still reads live `this` state (highlights, etc.) on every call -- only its own identity is
+   *  cached, not its output. */
+  private virtualListInputsCache?: {
+    rows: unknown[][];
+    hasHeaderRow: boolean;
+    body: unknown[][];
+    renderItem: (row: unknown, index: number) => TemplateResult;
+  };
+
+  private virtualListInputs(
+    rows: unknown[][],
+    hasHeaderRow: boolean
+  ): { body: unknown[][]; renderItem: (row: unknown, index: number) => TemplateResult } {
+    const cached = this.virtualListInputsCache;
+    if (cached && cached.rows === rows && cached.hasHeaderRow === hasHeaderRow) {
+      return cached;
+    }
+    const body = hasHeaderRow ? rows.slice(1) : rows;
+    const count = columns(rows);
+    const renderItem = (row: unknown, index: number): TemplateResult =>
+      this.renderRow(
+        row as unknown[],
+        count,
+        'data-row',
+        index + 1 + headerOffset(hasHeaderRow)
+      );
+    const next = { rows, hasHeaderRow, body, renderItem };
+    this.virtualListInputsCache = next;
+    return next;
+  }
+
   override render(): TemplateResult {
     const label = viewerSemanticLabel(
       this,
@@ -621,8 +665,11 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
         content = html`<p class="empty-note">${this.localize('noData')}</p>`;
       else {
         const header = this.hasHeaderRow ? rows[0] : undefined;
-        const body = this.hasHeaderRow ? rows.slice(1) : rows;
         const count = columns(rows);
+        const { body, renderItem } = this.virtualListInputs(
+          rows,
+          this.hasHeaderRow
+        );
         const tableLabel = hostAriaLabel(this)
           ?? (this.name || this.localize('csvViewerLabel'));
         content = html`<div
@@ -638,14 +685,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
             part="rows"
             exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
             .items=${body}
-            .renderItem=${(row: unknown, index: number) =>
-              this.renderRow(
-                row as unknown[],
-                count,
-                'data-row',
-                index + 1 + headerOffset(this.hasHeaderRow)
-              )}
-            .keyFunction=${(_item: unknown, index: number) => index}
+            .renderItem=${renderItem}
+            .keyFunction=${indexKeyFunction}
             .activeItemId=${this.activeRowKey}
             item-role="row"
             row-index-offset=${this.hasHeaderRow ? '1' : '0'}

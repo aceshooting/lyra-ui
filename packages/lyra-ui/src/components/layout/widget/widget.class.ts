@@ -213,6 +213,17 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  // `collapsed` needs a hand-rolled accessor (mirrors `lr-select`'s identical `noAccessor`
+  // pattern for `value`/`multiple`) so its setter can record whether it was ever explicitly
+  // assigned -- Lit's own dirty-tracking can't distinguish that from the class field's own
+  // `= false` default landing during construction: both land in the very same first-update
+  // batch, and `_changedProperties` only ever remembers the *first* `oldValue` recorded for a
+  // property within one batch, not whether a later assignment also occurred. See `collapsed`'s
+  // own getter/setter doc.
+  static override properties = {
+    collapsed: { type: Boolean, reflect: true, noAccessor: true },
+  };
+
   // Two independent observers: either header row can overflow on its own, and each one gates its
   // own edge fade -- the same measurement-gated affordance lr-segmented/lr-stepper/lr-tab-group
   // already use for their scrolling control rows. Without it a narrow widget clips the row with
@@ -238,7 +249,26 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   /** Secondary header copy. Removed or empty attributes render no fallback text. */
   @property() sublabel = '';
   @property({ type: Boolean, reflect: true }) collapsible = false;
-  @property({ type: Boolean, reflect: true }) collapsed = false;
+  private _collapsed = false;
+  /** Explicitly assigned at least once (attribute, property, or `requestCollapse()`) -- lets
+   *  `willUpdate()`'s `storage-key` restore skip an explicit `.collapsed=${…}`/`collapsed`
+   *  binding on the very same mount instead of silently overwriting it, mirroring `lr-app-rail`'s
+   *  `loadPersisted()` guard. `changed.has('collapsed')` alone can't do this: the class field
+   *  default and an explicit binding both land in the same first-update batch, and Lit's
+   *  `_changedProperties` only remembers the *first* recorded `oldValue`. */
+  private _collapsedExplicitlySet = false;
+  /** Whether the body is collapsed. Reflects to the `collapsed` attribute.
+   *  @default false */
+  get collapsed(): boolean {
+    return this._collapsed;
+  }
+  set collapsed(next: boolean) {
+    this._collapsedExplicitlySet = true;
+    const old = this._collapsed;
+    this._collapsed = Boolean(next);
+    this.toggleAttribute('collapsed', this._collapsed);
+    this.requestUpdate('collapsed', old);
+  }
   /** Persists `collapsed` to `localStorage` across reloads when set. Namespaced as
    *  `lr-widget:${storageKey}` -- mirrors `lr-app-rail`'s/`lr-table`'s identical `storage-key`
    *  pattern. Unset (the default) touches storage not at all. */
@@ -342,11 +372,21 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
       // lr-table's/lr-app-rail's restore in their own willUpdate(). The `persistReady` gate in
       // updated() keeps this restored value from being written straight back.
+      // Never overwrites `collapsed` when the consumer already bound it to an explicit value
+      // before this point (`_collapsedExplicitlySet` -- see its own doc for why `changed.has`
+      // can't do this) -- a controlled `.collapsed=${false}` binding stays authoritative over
+      // stale `localStorage` state instead of being silently clobbered by it, with no
+      // `lr-collapse-change` firing for a change the consumer never asked for. Mirrors
+      // `lr-app-rail`'s identical `loadPersisted()` guard.
       const parsed = readPersistedState(
         this.storageFullKey,
         (v): v is { collapsed?: unknown } => typeof v === 'object' && v !== null
       );
-      if (parsed && typeof parsed.collapsed === 'boolean')
+      if (
+        parsed &&
+        typeof parsed.collapsed === 'boolean' &&
+        !this._collapsedExplicitlySet
+      )
         this.collapsed = parsed.collapsed;
     }
     if (changed.has('fullscreen')) {

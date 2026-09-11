@@ -558,7 +558,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     return html`
       <div part="suite">
         <div part="suite-header">${suite.name}</div>
-        <div role="list" aria-label=${suite.name}
+        <div role="list" aria-label=${suite.name || nothing}
           >${visibleTests.map(({ test, testIndex }) =>
             this.renderTest(suite.id, suite.name, test, suiteIndex, testIndex))}</div
         >

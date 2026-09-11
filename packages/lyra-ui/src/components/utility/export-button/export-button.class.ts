@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -19,9 +19,10 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -123,13 +124,18 @@ export interface LyraExportButtonEventMap {
  *   to substitute the built-in client-side download with a server-generated one.
  * @event lr-export-complete - Fired after a non-cancelled download completes.
  * @event lr-export-error - Fired when a built-in CSV/JSON export cannot be serialized or
- *   downloaded. `detail: { format, error }`.
+ *   downloaded. `detail: { format, error }`. The same failure is also announced through the
+ *   shared light-DOM live region and marks the trigger with the `trigger-error` part token, so a
+ *   screen-reader user and a sighted user both learn the export failed without needing to listen
+ *   for this event.
  * @event lr-show - The format menu is about to open, however `open` became true. Cancelable —
  *   `preventDefault()` leaves it closed. Not fired for markup that renders open from the start.
  * @event lr-hide - The format menu is about to close. Cancelable on the same terms as `lr-show`.
  *   A close this component imposes on itself (disablement, `loading`, or a format list collapsing
  *   to one entry) emits no lifecycle event and therefore offers no veto point.
  * @csspart trigger - The button that triggers the export (or opens the format menu).
+ * @csspart trigger-error - Present alongside `trigger` after a built-in CSV/JSON export fails,
+ *   until the next export attempt. Style with `::part(trigger-error)`.
  * @csspart menu - The format-choice menu, shown when more than one format is configured.
  * @csspart menu-item - A single format option inside the menu.
  * @csspart format-label - A format option's primary label.
@@ -144,6 +150,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     ...super.defaultStrings,
     exportButtonLabel: LYRA_DEFAULT_exportButtonLabel,
     exportFormatMenuLabel: LYRA_DEFAULT_exportFormatMenuLabel,
+    statusError: LYRA_DEFAULT_statusError,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -227,8 +234,16 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property({ type: Boolean, reflect: true }) open = false;
 
-  @query('[part="trigger"]') private triggerEl?: HTMLButtonElement;
+  @query('[part~="trigger"]') private triggerEl?: HTMLButtonElement;
   @query('[part="menu"]') private menuEl?: HTMLElement;
+
+  /** True from a failed built-in CSV/JSON export until the next export attempt starts; drives
+   *  the visible `trigger-error` part token. */
+  @state() private exportFailed = false;
+  /** Handle on the shared light-DOM live region export outcomes announce through -- a region
+   *  rendered inside this shadow root is not reliably announced. Acquired on connect, not on the
+   *  first failure, so assistive tech is already observing before any text arrives. */
+  private sink?: AnnouncementSink;
 
   private readonly menuId = nextId('export-menu');
   private cleanup?: DeferredOperationHandle;
@@ -254,6 +269,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.connectionGeneration += 1;
     this.connectedDocument = this.ownerDocument;
     super.connectedCallback();
+    this.sink ??= acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
     if (pendingDisconnectDocument) {
       if (pendingDisconnectDocument === this.ownerDocument) {
         this.deactivateMenuOverlay(false);
@@ -281,6 +300,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.unbindDocumentPointer();
     this.overlay?.suspend();
     this.restoreFocusOnMenuClose = false;
+    this.sink?.release();
+    this.sink = undefined;
     queueDocumentMicrotask(disconnectDocument, () => {
       if (
         this.connectionGeneration !== generation ||
@@ -301,6 +322,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.cleanup = undefined;
     this.unbindDocumentPointer();
     this.overlay?.suspend();
+    this.sink?.release();
+    this.sink = undefined;
   }
 
   private bindDocumentPointer(): void {
@@ -595,6 +618,9 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     if (this.disabled || this.loading) return;
     this.closeMenu();
     this.triggerEl?.focus();
+    // A fresh attempt clears any earlier failure's visible/announced state, whether or not this
+    // attempt reaches the try block below.
+    this.exportFailed = false;
     const format = this.formatId(formatOption);
     const ev = this.emit('lr-export', Object.freeze({ format }), { cancelable: true });
     if (ev.defaultPrevented) return;
@@ -622,6 +648,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       }
       this.emit('lr-export-complete', Object.freeze({ format }));
     } catch (error) {
+      this.exportFailed = true;
+      this.sink?.announce(this.localize('statusError'));
       this.emit('lr-export-error', Object.freeze({ format, error }));
     }
   }
@@ -664,7 +692,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       this.accessibleLabel !== null || !labelNamesTrigger ? accessibleLabel : nothing;
     return html`
       <button
-        part="trigger"
+        part=${this.exportFailed ? 'trigger trigger-error' : 'trigger'}
         type="button"
         ?disabled=${this.disabled || this.loading || this.formats.length === 0}
         aria-label=${triggerAriaLabel}

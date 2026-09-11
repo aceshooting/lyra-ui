@@ -24,6 +24,7 @@ export const styles = css`
     max-inline-size: 100%;
     min-block-size: 0;
     max-block-size: 100%;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
   }

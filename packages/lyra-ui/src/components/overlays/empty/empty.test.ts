@@ -429,6 +429,15 @@ it('does not collapse the icon wrapper when icon content is slotted', async () =
   expect(icon.hasAttribute('hidden')).to.be.false;
 });
 
+it('mutes the icon/illustration slot wrapper from the accessibility tree and focus/activation, like lr-alert\'s icon slot (regression)', async () => {
+  const el = (await fixture(
+    html`<lr-empty heading="Nothing here"><span role="img" aria-label="a stray accessible name">icon</span></lr-empty>`,
+  )) as LyraEmpty;
+  const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+  expect(icon.getAttribute('aria-hidden')).to.equal('true');
+  expect(icon.hasAttribute('inert')).to.be.true;
+});
+
 it('keeps meaningful default-slot text visible after slot reconciliation', async () => {
   const el = (await fixture(
     html`<lr-empty heading="No results">🔍</lr-empty>`,

@@ -2435,6 +2435,16 @@ describe("canonical rubric schema/value model", () => {
     expect(el.value).to.deep.equal({});
   });
 
+  it("does not discard a .value assigned before .keys is set", async () => {
+    const el = (await fixture(
+      html`<lr-rubric-form></lr-rubric-form>`
+    )) as LyraRubricForm;
+    el.value = { accuracy: 5, comment: "Looks solid" };
+    el.keys = KEYS;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ accuracy: 5, comment: "Looks solid" });
+  });
+
   it("skips a value field whose access throws instead of propagating", async () => {
     const el = (await fixture(
       html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`

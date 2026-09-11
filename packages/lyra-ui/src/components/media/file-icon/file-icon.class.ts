@@ -112,7 +112,9 @@ export class LyraFileIcon extends LyraElement {
     this._mode = normalized;
     this.requestUpdate('mode', old);
   }
-  /** Optional visible/accessibility label override. Explicit empty text is preserved. */
+  /** Optional visible/accessibility label override. Explicit empty text is preserved for the
+   *  visible `mode="label"` text, but never leaves a non-decorative `role="img"` unnamed -- the
+   *  computed accessible name falls back to the resolved file-type metadata label instead. */
   @property() label?: string;
   /** Immutable metadata authority for this instance. */
   @property({ attribute: false }) registry: LyraFileTypeMetadataRegistry = defaultFileTypeMetadataRegistry;
@@ -146,9 +148,14 @@ export class LyraFileIcon extends LyraElement {
             (value) => getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 1 }).format(value),
           )
         : '';
+    // An explicit empty `label` is preserved for the VISIBLE text above (`renderedLabel`), but
+    // never leaves a non-decorative `role="img"` unnamed: the accessible-name chain below falls
+    // back to the metadata-derived label instead. A host `aria-label`, including an explicitly
+    // empty one, still wins outright over both.
+    const accessibleNameBase = renderedLabel || metadataLabel;
     const fallbackLabel = sizeText
-      ? this.localize('fileTypeWithSize', undefined, { label: renderedLabel, size: sizeText })
-      : renderedLabel;
+      ? this.localize('fileTypeWithSize', undefined, { label: accessibleNameBase, size: sizeText })
+      : accessibleNameBase;
     const accessibleLabel = hostAriaLabel(this) ?? fallbackLabel;
     const descriptionId =
       this.mode === 'label' && metadata.provenance === 'consumer' && metadata.description

@@ -38,8 +38,10 @@ export const styles = css`
     color: var(--lr-color-text);
     font-weight: var(--lr-font-weight-medium);
     /* A bottom-weighted inset shadow reads as a slightly-raised physical key cap rather than a
-       flat label chip, echoing lr-chip/lr-checkbox's own bordered-box treatment. */
-    box-shadow: inset 0 var(--lr-size-neg-1px) 0 var(--lr-color-border);
+       flat label chip, echoing lr-chip/lr-checkbox's own bordered-box treatment. Its offset tracks
+       the real border's own width (the border-width ladder, not a generic size token) so the two
+       lines retheme together and keep reading as one continuous raised edge. */
+    box-shadow: inset 0 calc(-1 * var(--lr-border-width-thin)) 0 var(--lr-color-border);
   }
 
   .sep {

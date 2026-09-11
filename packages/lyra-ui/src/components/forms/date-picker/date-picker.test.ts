@@ -2613,6 +2613,34 @@ describe("date-picker coverage gaps", () => {
     expect(el.shadowRoot!.activeElement === item).to.be.true;
   });
 
+  it("blur() forwards to the roving day cell, since the host itself never took focus", async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-07-15"></lr-date-picker>`
+    )) as LyraDatePicker;
+    await el.updateComplete;
+    el.focus();
+    const day = el.shadowRoot!.querySelector(
+      '[data-date="2026-07-15"]'
+    ) as HTMLButtonElement;
+    expect(el.shadowRoot!.activeElement === day).to.be.true;
+    el.blur();
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+  });
+
+  it("click() forwards to and activates the roving day cell", async () => {
+    const el = (await fixture(
+      html`<lr-date-picker value="2026-07-15"></lr-date-picker>`
+    )) as LyraDatePicker;
+    await el.updateComplete;
+    let clicks = 0;
+    const day = el.shadowRoot!.querySelector(
+      '[data-date="2026-07-15"]'
+    ) as HTMLButtonElement;
+    day.addEventListener("click", () => clicks++);
+    el.click();
+    expect(clicks).to.equal(1);
+  });
+
   const viewItems = (el: LyraDatePicker): HTMLButtonElement[] =>
     Array.from(
       el.shadowRoot!.querySelectorAll('[part~="view-item"]')

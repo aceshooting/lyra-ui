@@ -1404,10 +1404,9 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
   // [part="collapse-toggle"] (unlike [part="handle"]) animates background/color across
   // --lr-transition-fast (120ms by default); reading getComputedStyle() synchronously right
   // after the hover/press pointer event would still see the *starting* value mid-transition, not
-  // the settled target -- real timer, margined well past the token default, never fake timers
-  // (wtr does not support @sinonjs/fake-timers).
-  const settleTransition = (): Promise<void> =>
-    new Promise((resolve) => setTimeout(resolve, 200));
+  // the settled target -- poll for the exact settled value with waitUntil (real timers, wtr does
+  // not support @sinonjs/fake-timers) rather than a fixed delay, which either wastes time past the
+  // token default or still races a slower run.
 
   it("lets --lr-dock-panel-collapse-toggle-hover-bg/-hover-color retint the collapse toggle on hover, and feeds the pressed state through color-mix()", async () => {
     const el = await fixture<HTMLDivElement>(html`
@@ -1433,13 +1432,16 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     ];
     try {
       await sendMouse({ type: "move", position });
-      await settleTransition();
-      expect(getComputedStyle(toggle).backgroundColor).to.equal(
-        "rgb(10, 20, 30)"
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor === "rgb(10, 20, 30)",
+        'collapse-toggle hover background never settled at "rgb(10, 20, 30)"'
       );
       expect(getComputedStyle(toggle).color).to.equal("rgb(40, 50, 60)");
       await sendMouse({ type: "down" });
-      await settleTransition();
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor !== "rgb(10, 20, 30)",
+        "collapse-toggle pressed background never moved off its hover color"
+      );
       const pressedBg = getComputedStyle(toggle).backgroundColor;
       // The pressed state derives from the same hover-bg token via color-mix(), so an override
       // reaches it too -- but visibly mixed further toward --lr-color-mix-partner, not identical
@@ -1478,10 +1480,12 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     ];
     try {
       await sendMouse({ type: "move", position });
-      await settleTransition();
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor === expectedHoverBg,
+        "collapse-toggle hover background never settled at the resolved brand-quiet color"
+      );
       const hovered = getComputedStyle(toggle).backgroundColor;
       expect(hovered).to.not.equal(resting);
-      expect(hovered).to.equal(expectedHoverBg);
       expect(getComputedStyle(toggle).color).to.equal(expectedHoverColor);
     } finally {
       await resetMouse();
@@ -1512,8 +1516,9 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     ];
     try {
       await sendMouse({ type: "move", position });
-      expect(getComputedStyle(handle).backgroundColor).to.equal(
-        "rgb(70, 80, 90)"
+      await waitUntil(
+        () => getComputedStyle(handle).backgroundColor === "rgb(70, 80, 90)",
+        'handle background color never reached "rgb(70, 80, 90)"'
       );
       expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
       await sendMouse({ type: "down" });
@@ -1547,9 +1552,16 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     ];
     try {
       await sendMouse({ type: "move", position });
+      await waitUntil(
+        () => getComputedStyle(handle).backgroundColor === "rgb(200, 0, 0)",
+        'handle background color never reached "rgb(200, 0, 0)"'
+      );
       const hovered = getComputedStyle(handle).backgroundColor;
-      expect(hovered).to.equal("rgb(200, 0, 0)");
       await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(handle).backgroundColor !== hovered,
+        "handle pressed color never moved off its hover color"
+      );
       const pressed = getComputedStyle(handle).backgroundColor;
       // No --lr-dock-panel-handle-active-color override here, so the pressed color must be a
       // color-mix() of the *overridden* hover color, not the original default brand token.

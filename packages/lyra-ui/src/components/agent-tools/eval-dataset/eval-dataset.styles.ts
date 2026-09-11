@@ -58,19 +58,57 @@ export const styles = css`
   }
   [part='search'] {
     display: block;
+    position: relative;
   }
   [part='search-input'] {
     box-sizing: border-box;
     inline-size: 100%;
     -webkit-appearance: none;
     appearance: none;
-    padding-inline: var(--lr-space-s);
+    padding-inline-start: var(--lr-space-s);
+    padding-inline-end: var(--lr-icon-button-size);
     padding-block: var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+  }
+  /* Replaces the native ::-webkit-search-cancel-button suppressed below -- same "opt-out chrome
+     needs a rendered replacement" contract lr-input's own [part='clear-button'] documents. */
+  [part='search-clear'] {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--lr-color-text-quiet);
+    padding: var(--lr-space-xs);
+  }
+  [part='search-clear']:not(:disabled):hover {
+    color: var(--lr-color-text);
+  }
+  [part='search-clear']:not(:disabled):active {
+    color: var(--lr-color-text);
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part='search-clear']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
+  [part='search-clear']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
   }
   [part='search-input']::placeholder {
     color: var(--lr-color-text-quiet);

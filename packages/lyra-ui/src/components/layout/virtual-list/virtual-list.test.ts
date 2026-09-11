@@ -678,6 +678,78 @@ it("uses a group marker's rendered height when a ResizeObserver entry omits bord
   }
 });
 
+it("keeps a measured group height when a fresh-but-content-identical groups array is reassigned", async () => {
+  interface ResizeRecord {
+    callback: ResizeObserverCallback;
+    observer: ResizeObserver;
+  }
+
+  const originalResizeObserver = window.ResizeObserver;
+  const records: ResizeRecord[] = [];
+  class TestResizeObserver {
+    readonly record: ResizeRecord;
+
+    constructor(callback: ResizeObserverCallback) {
+      this.record = {
+        callback,
+        observer: this as unknown as ResizeObserver,
+      };
+      records.push(this.record);
+    }
+
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (
+    window as unknown as { ResizeObserver: typeof ResizeObserver }
+  ).ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+
+  try {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${["a", "b"]}
+        .groups=${[{ key: "first", label: "First", startIndex: 0 }]}
+        .renderItem=${renderText}
+      ></lr-virtual-list>`
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    const marker = el.shadowRoot!.querySelector(
+      '[part="group"]'
+    ) as HTMLElement;
+    Object.defineProperty(marker, "getBoundingClientRect", {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 64),
+    });
+    const groupObserver = (
+      el as unknown as { groupResizeObserver?: ResizeObserver }
+    ).groupResizeObserver;
+    const record = records.find(
+      (candidate) => candidate.observer === groupObserver
+    );
+    record!.callback(
+      [{ target: marker } as unknown as ResizeObserverEntry],
+      record!.observer
+    );
+    await el.updateComplete;
+    expect(el.offsetForIndex(1)).to.equal(64 + 40);
+
+    // A fresh array reference with identical group content (same key/label/startIndex) -- the
+    // shape an unrelated parent re-render commonly rebinds. The measured height must survive
+    // since nothing about the groups actually changed.
+    el.groups = [{ key: "first", label: "First", startIndex: 0 }];
+    await el.updateComplete;
+    expect(el.offsetForIndex(1)).to.equal(64 + 40);
+  } finally {
+    (
+      window as unknown as { ResizeObserver: typeof ResizeObserver }
+    ).ResizeObserver = originalResizeObserver;
+  }
+});
+
 it("adjusts an indexed source's offset by real measured deltas from earlier auto-height rows", async () => {
   interface ResizeRecord {
     callback: ResizeObserverCallback;

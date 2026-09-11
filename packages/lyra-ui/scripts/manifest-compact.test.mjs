@@ -80,4 +80,81 @@ assert.deepEqual(
   ['--lr-fixture-base-color', '--lr-fixture-child-color'],
 );
 
+// A subclass that re-types an inherited member is an override, not a redundant inherited copy.
+// Before `type` joined SUBCLASS_ANNOTATION_KEYS this entry was pruned, so the published manifest
+// reported the BASE type text plus a false `inheritedFrom` -- and that text is what the generated
+// reference, the editor data and the React/Vue/Svelte declarations all read.
+{
+  const retyped = {
+    schemaVersion: '2.1.0',
+    modules: [
+      {
+        kind: 'javascript-module',
+        path: 'base.js',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'FixtureBase',
+            members: [
+              {
+                kind: 'field',
+                name: 'languages',
+                privacy: 'public',
+                type: { text: 'Readonly<Record<string, unknown>> | undefined' },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'javascript-module',
+        path: 'child.js',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'FixtureChild',
+            superclass: { name: 'FixtureBase', module: 'base.js' },
+            members: [
+              {
+                kind: 'field',
+                name: 'languages',
+                privacy: 'public',
+                // `type` is the ONLY field that differs from the base entry. Every other
+                // annotation is identical on purpose: if this fixture also varied `default` or
+                // `description`, the override would survive through one of the pre-existing keys
+                // and the assertion below would pass even with `type` absent from
+                // SUBCLASS_ANNOTATION_KEYS -- proving nothing.
+                type: { text: 'Readonly<Record<string, unknown>>' },
+                inheritedFrom: { name: 'FixtureBase', module: 'base.js' },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const compactRetyped = compactManifest(retyped);
+  const childMember = compactRetyped.modules[1].declarations[0].members?.find(
+    ({ name }) => name === 'languages',
+  );
+  assert.ok(
+    childMember,
+    'a subclass that narrows an inherited member type must survive compaction, not be pruned as an inherited copy',
+  );
+  assert.equal(
+    childMember.type.text,
+    'Readonly<Record<string, unknown>>',
+    'the retained override must carry the subclass type, not the base type',
+  );
+
+  const expandedRetyped = expandManifestInheritance(compactRetyped);
+  assert.equal(
+    expandedRetyped.modules[1].declarations[0].members.find(({ name }) => name === 'languages').type
+      .text,
+    'Readonly<Record<string, unknown>>',
+    'expansion must let the subclass type win over the inherited one',
+  );
+}
+
 console.log('manifest compaction and inheritance expansion tests passed.');

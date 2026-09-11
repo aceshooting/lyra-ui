@@ -12,6 +12,7 @@ import {
   type ResolvedAriaRelationshipLease,
 } from '../../../internal/aria-controls.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { styles } from './code-editor.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
@@ -504,7 +505,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const textarea = event.target;
     // Native focus dispatch may restore the selection only after its listeners return.
     queueMicrotask(() => {
-      if (this.isConnected && this.textarea === textarea && this.shadowRoot?.activeElement === textarea)
+      if (this.isConnected && this.textarea === textarea && activeElementIn(this.shadowRoot) === textarea)
         this.syncCaretOffset();
     });
     relayNativeEvent(this, event);

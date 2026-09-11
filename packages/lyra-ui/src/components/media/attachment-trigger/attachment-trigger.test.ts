@@ -798,3 +798,46 @@ it('ignores a stale picker result after disconnect and reconnect', async () => {
   expect(emissions).to.equal(0);
   el.remove();
 });
+
+describe('aria-describedby forwarding', () => {
+  it('resolves host description ids onto the single-capability trigger button', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="attach-hint">Attach a file up to 10MB.</span>
+        <lr-attachment-trigger aria-describedby="attach-hint"></lr-attachment-trigger>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-attachment-trigger') as LyraAttachmentTrigger;
+    const description = wrapper.querySelector('#attach-hint')!;
+    const button = trigger(el) as HTMLButtonElement & { ariaDescribedByElements?: Element[] | null };
+
+    if (Reflect.has(button, 'ariaDescribedByElements')) {
+      expect(button.ariaDescribedByElements ?? []).to.include(description);
+    } else {
+      expect(button.getAttribute('aria-describedby')).to.contain('attach-hint');
+    }
+  });
+
+  it('resolves host description ids onto the menu-trigger button', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="attach-hint">Attach a file up to 10MB.</span>
+        <lr-attachment-trigger
+          aria-describedby="attach-hint"
+          .capabilities=${['files', 'image']}
+        ></lr-attachment-trigger>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-attachment-trigger') as LyraAttachmentTrigger;
+    const description = wrapper.querySelector('#attach-hint')!;
+    const button = menuTriggerButton(el) as HTMLButtonElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+
+    if (Reflect.has(button, 'ariaDescribedByElements')) {
+      expect(button.ariaDescribedByElements ?? []).to.include(description);
+    } else {
+      expect(button.getAttribute('aria-describedby')).to.contain('attach-hint');
+    }
+  });
+});

@@ -20,6 +20,28 @@ async function chart(type: 'pie' | 'doughnut' | 'polarArea' | 'bar' = 'doughnut'
 }
 
 describe('chart datum legends', () => {
+  it('defaults the unset legend-mode to per-slice datum legends on pie/doughnut/polar-area, and to dataset legends elsewhere', async () => {
+    const slice = await fixture<LyraChart>(html`<lr-chart type="doughnut"
+      without-animation style="inline-size:320px;block-size:320px"
+      .labels=${['A', 'B', 'C']}
+      .datasets=${[{ label: 'Distribution', data: [5, 3, 2], color: ['red', 'green', 'blue'] }]}
+    ></lr-chart>`);
+    await waitUntil(() => !!slice.chart, 'Chart.js initialized', { timeout: 5000 });
+    await slice.updateComplete;
+    expect(slice.legendMode).to.equal('auto');
+    expect(labels(slice)).to.deep.equal(['A', 'B', 'C']);
+
+    const cartesian = await fixture<LyraChart>(html`<lr-chart type="bar"
+      without-animation style="inline-size:320px;block-size:320px"
+      .labels=${['A', 'B', 'C']}
+      .datasets=${[{ label: 'Distribution', data: [5, 3, 2] }]}
+    ></lr-chart>`);
+    await waitUntil(() => !!cartesian.chart, 'Chart.js initialized', { timeout: 5000 });
+    await cartesian.updateComplete;
+    expect(cartesian.legendMode).to.equal('auto');
+    expect(labels(cartesian)).to.deep.equal(['Distribution']);
+  });
+
   for (const type of ['pie', 'doughnut', 'polarArea'] as const) {
     it(`${type} exposes one named, color-matched category toggle per slice`, async () => {
       const el = await chart(type);
@@ -32,9 +54,9 @@ describe('chart datum legends', () => {
     });
   }
 
-  it('preserves unset dataset legends and lets label-only display bypass legend formatting alone', async () => {
+  it('supports forcing dataset legends and lets label-only display bypass legend formatting alone', async () => {
     const el = await chart();
-    el.removeAttribute('legend-mode');
+    el.legendMode = 'dataset';
     el.valueFormatter = (value) => `$${value}`;
     await el.updateComplete;
     expect(el.legendMode).to.equal('dataset');
@@ -246,7 +268,7 @@ describe('chart datum legends', () => {
     el.setAttribute('legend-mode', 'unknown');
     await el.updateComplete;
     expect(el.legendDisplay).to.equal('auto');
-    expect(el.legendMode).to.equal('dataset');
+    expect(el.legendMode).to.equal('auto');
     expect(labels(el)).to.deep.equal(['Distribution', 'Other']);
   });
 

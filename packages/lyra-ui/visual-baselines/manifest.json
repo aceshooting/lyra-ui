@@ -3,54 +3,90 @@
   "axes": [
     {
       "name": "light",
-      "globals": { "theme": "light", "direction": "ltr" },
+      "globals": {
+        "theme": "light",
+        "direction": "ltr"
+      },
       "artifactPolicy": "tracked-baseline"
     },
     {
       "name": "dark",
-      "globals": { "theme": "dark", "direction": "ltr" },
+      "globals": {
+        "theme": "dark",
+        "direction": "ltr"
+      },
       "artifactPolicy": "tracked-baseline"
     },
     {
       "name": "rtl",
-      "globals": { "theme": "light", "direction": "rtl" },
+      "globals": {
+        "theme": "light",
+        "direction": "rtl"
+      },
       "artifactPolicy": "tracked-baseline"
     },
     {
       "name": "forced-colors",
-      "globals": { "theme": "light", "direction": "ltr" },
-      "emulation": { "forcedColors": "active" },
+      "globals": {
+        "theme": "light",
+        "direction": "ltr"
+      },
+      "emulation": {
+        "forcedColors": "active"
+      },
       "artifactPolicy": "evidence-only"
     },
     {
       "name": "narrow",
-      "globals": { "theme": "light", "direction": "ltr" },
-      "viewport": { "width": 320, "height": 800 },
+      "globals": {
+        "theme": "light",
+        "direction": "ltr"
+      },
+      "viewport": {
+        "width": 320,
+        "height": 800
+      },
       "artifactPolicy": "evidence-only"
     }
   ],
   "coverageProfiles": {
     "standard": {
-      "axes": ["light", "dark", "rtl"],
+      "axes": [
+        "light",
+        "dark",
+        "rtl"
+      ],
       "exemptions": {
         "forced-colors": "Targeted forced-colors coverage is assigned to intrinsic-color and chart fixtures.",
         "narrow": "Targeted narrow-allocation coverage is assigned to a dedicated responsive fixture."
       }
     },
     "forced-colors-intrinsic": {
-      "axes": ["light", "dark", "rtl", "forced-colors"],
+      "axes": [
+        "light",
+        "dark",
+        "rtl",
+        "forced-colors"
+      ],
       "exemptions": {
         "narrow": "This fixture covers intrinsic painted colors; narrow allocation is covered separately."
       }
     },
     "forced-colors-chart": {
-      "axes": ["light", "dark", "rtl", "forced-colors"],
+      "axes": [
+        "light",
+        "dark",
+        "rtl",
+        "forced-colors"
+      ],
       "exemptions": {
         "narrow": "This fixture covers repeated-system-color chart encodings; narrow allocation is covered separately."
       }
     },
     "forced-colors-evidence": {
-      "axes": ["forced-colors"],
+      "axes": [
+        "forced-colors"
+      ],
       "exemptions": {
         "light": "This fixture exists only to preserve intrinsic data colors under forced-colors emulation.",
         "dark": "This fixture exists only to preserve intrinsic data colors under forced-colors emulation.",
@@ -59,13 +95,20 @@
       }
     },
     "narrow-responsive": {
-      "axes": ["light", "dark", "rtl", "narrow"],
+      "axes": [
+        "light",
+        "dark",
+        "rtl",
+        "narrow"
+      ],
       "exemptions": {
         "forced-colors": "This fixture covers 320px allocation; forced-colors semantics are covered separately."
       }
     },
     "narrow-evidence": {
-      "axes": ["narrow"],
+      "axes": [
+        "narrow"
+      ],
       "exemptions": {
         "light": "This fixture exists only to exercise the component's 320px allocation branch.",
         "dark": "This fixture exists only to exercise the component's 320px allocation branch.",
@@ -81,8 +124,14 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The checkbox target-floor, form-chrome, and constrained-label fixes change the current capture, which awaits human visual review."
     },
-    { "id": "input--default", "profile": "standard" },
-    { "id": "input-native-time-input--default", "profile": "standard" },
+    {
+      "id": "input--default",
+      "profile": "standard"
+    },
+    {
+      "id": "input-native-time-input--default",
+      "profile": "standard"
+    },
     {
       "id": "select--default",
       "profile": "standard",
@@ -120,15 +169,24 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "This new 320px RTL long-value fixture is enrolled as automated evidence pending human visual review."
     },
-    { "id": "slider--default", "profile": "standard" },
+    {
+      "id": "slider--default",
+      "profile": "standard"
+    },
     {
       "id": "combobox--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
-    { "id": "forms-otp-input--appearances-and-sizes", "profile": "standard" },
-    { "id": "form-color-picker--open", "profile": "standard" },
+    {
+      "id": "forms-otp-input--appearances-and-sizes",
+      "profile": "standard"
+    },
+    {
+      "id": "form-color-picker--open",
+      "profile": "standard"
+    },
     {
       "id": "form-color-picker--inline-compatibility",
       "profile": "forced-colors-intrinsic",
@@ -145,16 +203,28 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
-    { "id": "form-rating--default", "profile": "standard" },
-    { "id": "dialog--open-initially", "profile": "standard" },
-    { "id": "drawer--end", "profile": "standard" },
+    {
+      "id": "form-rating--default",
+      "profile": "standard"
+    },
+    {
+      "id": "dialog--open-initially",
+      "profile": "standard"
+    },
+    {
+      "id": "drawer--end",
+      "profile": "standard"
+    },
     {
       "id": "feedback-alert--variants",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "Current capture differs from its historical baseline only in the close button's glyph: the alert close control now inherits the host font (`font: inherit` in alert.styles.ts) instead of the user-agent button default, so the icon renders at the alert's own size. Intended source change; awaits human visual review before the tracked baseline is promoted."
     },
-    { "id": "feedback-callout--appearances", "profile": "standard" },
+    {
+      "id": "feedback-callout--appearances",
+      "profile": "standard"
+    },
     {
       "id": "overlay-dropdown--default",
       "profile": "standard",
@@ -168,7 +238,10 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "This new forced-open 320px RTL edge-positioned fixture is enrolled as automated evidence pending human visual review."
     },
-    { "id": "overlay-popover--default", "profile": "standard" },
+    {
+      "id": "overlay-popover--default",
+      "profile": "standard"
+    },
     {
       "id": "overlay-tooltip--default",
       "profile": "standard",
@@ -211,8 +284,14 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "This new deterministic logarithmic-scale fixture is enrolled as automated evidence pending human visual review."
     },
-    { "id": "charts-bar--default", "profile": "standard" },
-    { "id": "charts-line--default", "profile": "standard" },
+    {
+      "id": "charts-bar--default",
+      "profile": "standard"
+    },
+    {
+      "id": "charts-line--default",
+      "profile": "standard"
+    },
     {
       "id": "gauge--radial",
       "profile": "standard",
@@ -231,7 +310,10 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
-    { "id": "graph--default", "profile": "standard" },
+    {
+      "id": "graph--default",
+      "profile": "standard"
+    },
     {
       "id": "map--default",
       "profile": "standard",
@@ -256,9 +338,18 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "This new deterministic annotations fixture is enrolled as automated evidence pending human visual review."
     },
-    { "id": "charts-pie--default", "profile": "forced-colors-chart" },
-    { "id": "charts-doughnut--default", "profile": "standard" },
-    { "id": "charts-radar--default", "profile": "standard" },
+    {
+      "id": "charts-pie--default",
+      "profile": "forced-colors-chart"
+    },
+    {
+      "id": "charts-doughnut--default",
+      "profile": "standard"
+    },
+    {
+      "id": "charts-radar--default",
+      "profile": "standard"
+    },
     {
       "id": "charts-scatter--default",
       "profile": "standard",
@@ -271,8 +362,14 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "chart.class.ts's buildScales() now sets the radial (r) scale's ticks.z: 1 so Chart.js draws ring labels after datasets instead of before, fixing labels (e.g. \"20\"/\"15\") being partly painted over by data wedges. The current capture reflects that fix and awaits human visual review."
     },
-    { "id": "charts-bubble--default", "profile": "standard" },
-    { "id": "charts-histogram--default", "profile": "standard" },
+    {
+      "id": "charts-bubble--default",
+      "profile": "standard"
+    },
+    {
+      "id": "charts-histogram--default",
+      "profile": "standard"
+    },
     {
       "id": "charts-boxplot--default",
       "profile": "standard",
@@ -291,26 +388,50 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The idle-state bar fill swapped from --lr-color-brand-quiet (a subtle panel-fill token, ~1.1-1.3:1 contrast against the surface) to --lr-color-brand-border-normal (~4:1 in both themes), fixing a WCAG 1.4.11 non-text contrast failure. The current capture reflects that fix and awaits human visual review."
     },
-    { "id": "animatedimage--default", "profile": "standard" },
-    { "id": "documentviewer-pdfviewer--default", "profile": "standard" },
-    { "id": "jsonviewer--default", "profile": "standard" },
-    { "id": "codeblock--default", "profile": "standard" },
+    {
+      "id": "animatedimage--default",
+      "profile": "standard"
+    },
+    {
+      "id": "documentviewer-pdfviewer--default",
+      "profile": "standard"
+    },
+    {
+      "id": "jsonviewer--default",
+      "profile": "standard"
+    },
+    {
+      "id": "codeblock--default",
+      "profile": "standard"
+    },
     {
       "id": "markdown--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The v8 markdown API replaced the sanitize boolean with a tri-state html-mode attribute; the story copy now documents html-mode=\"trusted\" instead of .sanitize=${false}. The current capture reflects that intentional content change and awaits human visual review."
     },
-    { "id": "documentviewer-csvviewer--quoted-fields", "profile": "standard" },
-    { "id": "docxviewer--default", "profile": "standard" },
-    { "id": "chunk-inspector--default", "profile": "standard" },
+    {
+      "id": "documentviewer-csvviewer--quoted-fields",
+      "profile": "standard"
+    },
+    {
+      "id": "docxviewer--default",
+      "profile": "standard"
+    },
+    {
+      "id": "chunk-inspector--default",
+      "profile": "standard"
+    },
     {
       "id": "ingestion-queue--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "item-chunk-count/item-embedding-status/item-attempts now carry unicode-bidi: plaintext, fixing RTL word/digit reordering in their status text (e.g. \"26 of 48 chunks embedded\" no longer reordering). The current rtl capture reflects that fix and awaits human visual review."
     },
-    { "id": "documentviewer-pagerail--mediated", "profile": "standard" },
+    {
+      "id": "documentviewer-pagerail--mediated",
+      "profile": "standard"
+    },
     {
       "id": "threadlist--default",
       "profile": "standard",
@@ -323,16 +444,28 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The virtualized cell's stream-output part now carries direction: ltr; unicode-bidi: isolate, matching the code-input block rendered above it, instead of inheriting the ambient RTL host direction and right-aligning independently of the input. The current rtl capture reflects that fix and awaits human visual review."
     },
-    { "id": "neighbor-list--default", "profile": "standard" },
+    {
+      "id": "neighbor-list--default",
+      "profile": "standard"
+    },
     {
       "id": "retrieval-results--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The composed checkbox target-floor and form-chrome fixes change the current retrieval-row capture, which awaits human visual review."
     },
-    { "id": "activityfeed--live-expanded", "profile": "standard" },
-    { "id": "documentviewer-datasetviewer--default", "profile": "standard" },
-    { "id": "archiveviewer--default", "profile": "standard" },
+    {
+      "id": "activityfeed--live-expanded",
+      "profile": "standard"
+    },
+    {
+      "id": "documentviewer-datasetviewer--default",
+      "profile": "standard"
+    },
+    {
+      "id": "archiveviewer--default",
+      "profile": "standard"
+    },
     {
       "id": "pagination--appearance",
       "profile": "standard",
@@ -387,7 +520,10 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "Current capture differs from its historical baseline by a small (~0.15-0.17%) indentation/geometry shift with no corresponding change in tree-item.class.ts, tree.class.ts, or their stylesheets since the last baseline refresh (bd4ac0ac) -- root cause not established from source diff alone. Awaits human visual review."
     },
-    { "id": "media-pan-zoom--slotted-content", "profile": "standard" },
+    {
+      "id": "media-pan-zoom--slotted-content",
+      "profile": "standard"
+    },
     {
       "id": "media-video--full-controls",
       "profile": "standard",
@@ -400,21 +536,30 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The inherited inert decorative icon layers for native video controls change the current capture, which awaits human visual review."
     },
-    { "id": "apprail--forced-icon-only", "profile": "standard" },
+    {
+      "id": "apprail--forced-icon-only",
+      "profile": "standard"
+    },
     {
       "id": "layout-menu-label--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
-    { "id": "layout-page--desktop", "profile": "standard" },
+    {
+      "id": "layout-page--desktop",
+      "profile": "standard"
+    },
     {
       "id": "layout-page--mobile-drawer",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The decorative navigation-toggle-icon replacement changes the current mobile-drawer capture, which awaits human visual review."
     },
-    { "id": "layout-split-panel--default", "profile": "standard" },
+    {
+      "id": "layout-split-panel--default",
+      "profile": "standard"
+    },
     {
       "id": "responsivepanel--forced-overlay-bottom-sheet",
       "profile": "standard"
@@ -437,111 +582,290 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "tab-group.stories.ts's ElementModel story was renamed to ElementModelLongContentNarrow; this baseline is carried over from the pre-rename capture under the new story id and awaits human visual review."
     },
-    { "id": "card--outlined", "profile": "standard" },
+    {
+      "id": "card--outlined",
+      "profile": "standard"
+    },
     {
       "id": "table--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
-    { "id": "disclosure-accordion--default", "profile": "standard" },
+    {
+      "id": "disclosure-accordion--default",
+      "profile": "standard"
+    },
     {
       "id": "styles-native-and-utilities--layout-and-prose",
       "profile": "standard"
     },
-    { "id": "utility-visually-hidden--skip-link", "profile": "standard" }
+    {
+      "id": "utility-visually-hidden--skip-link",
+      "profile": "standard"
+    }
   ],
   "tagCoverage": {
-    "lr-accordion": ["disclosure-accordion--default"],
-    "lr-activity-feed": ["activityfeed--live-expanded"],
-    "lr-alert": ["feedback-alert--variants"],
-    "lr-animated-image": ["animatedimage--default"],
-    "lr-app-rail": ["apprail--forced-icon-only"],
-    "lr-archive-viewer": ["archiveviewer--default"],
-    "lr-audio-visualizer": ["audio-visualizer--idle"],
-    "lr-bar-chart": ["charts-bar--default"],
-    "lr-box-plot": ["charts-boxplot--default"],
-    "lr-bubble-chart": ["charts-bubble--default"],
-    "lr-callout": ["feedback-callout--appearances"],
-    "lr-card": ["card--outlined"],
-    "lr-chart": ["charts-chart--default", "charts-chart--annotations-canary"],
-    "lr-checkbox": ["checkbox--default"],
-    "lr-chunk-inspector": ["chunk-inspector--default"],
-    "lr-code-block": ["codeblock--default"],
+    "lr-accordion": [
+      "disclosure-accordion--default"
+    ],
+    "lr-activity-feed": [
+      "activityfeed--live-expanded"
+    ],
+    "lr-alert": [
+      "feedback-alert--variants"
+    ],
+    "lr-animated-image": [
+      "animatedimage--default"
+    ],
+    "lr-app-rail": [
+      "apprail--forced-icon-only"
+    ],
+    "lr-archive-viewer": [
+      "archiveviewer--default"
+    ],
+    "lr-audio-visualizer": [
+      "audio-visualizer--idle"
+    ],
+    "lr-bar-chart": [
+      "charts-bar--default"
+    ],
+    "lr-box-plot": [
+      "charts-boxplot--default"
+    ],
+    "lr-bubble-chart": [
+      "charts-bubble--default"
+    ],
+    "lr-callout": [
+      "feedback-callout--appearances"
+    ],
+    "lr-card": [
+      "card--outlined"
+    ],
+    "lr-chart": [
+      "charts-chart--default",
+      "charts-chart--annotations-canary"
+    ],
+    "lr-checkbox": [
+      "checkbox--default"
+    ],
+    "lr-chunk-inspector": [
+      "chunk-inspector--default"
+    ],
+    "lr-code-block": [
+      "codeblock--default"
+    ],
     "lr-color-picker": [
       "form-color-picker--open",
       "form-color-picker--inline-compatibility"
     ],
-    "lr-combobox": ["combobox--default"],
-    "lr-csv-viewer": ["documentviewer-csvviewer--quoted-fields"],
-    "lr-dataset-viewer": ["documentviewer-datasetviewer--default"],
-    "lr-dialog": ["dialog--open-initially"],
-    "lr-doughnut-chart": ["charts-doughnut--default"],
-    "lr-docx-viewer": ["docxviewer--default"],
-    "lr-drawer": ["drawer--end"],
-    "lr-dropdown": ["overlay-dropdown--default", "overlay-dropdown--narrow-long-rtl"],
-    "lr-funnel": ["data-display-funnel--narrow-320"],
-    "lr-gauge": ["gauge--radial"],
-    "lr-graph": ["graph--default"],
-    "lr-heatmap": ["heatmap--default"],
-    "lr-histogram": ["charts-histogram--default"],
-    "lr-ingestion-queue": ["ingestion-queue--default"],
-    "lr-input": ["input--default"],
-    "lr-json-viewer": ["jsonviewer--default"],
-    "lr-line-chart": ["charts-line--default"],
-    "lr-lite-chart": ["charts-litechart--default", "charts-litechart--logarithmic-scale-canary"],
-    "lr-map": ["map--default"],
-    "lr-markdown": ["markdown--default"],
-    "lr-message-parts": ["message-parts--narrow-error-retry"],
-    "lr-menu": ["menu--standalone-mapped-menu"],
-    "lr-menu-label": ["layout-menu-label--default"],
-    "lr-native-time-input": ["input-native-time-input--default"],
-    "lr-neighbor-list": ["neighbor-list--default"],
-    "lr-notebook-viewer": ["documentviewer-notebookviewer--default"],
-    "lr-otp-input": ["forms-otp-input--appearances-and-sizes"],
-    "lr-page": ["layout-page--desktop", "layout-page--mobile-drawer"],
-    "lr-page-rail": ["documentviewer-pagerail--mediated"],
+    "lr-combobox": [
+      "combobox--default"
+    ],
+    "lr-csv-viewer": [
+      "documentviewer-csvviewer--quoted-fields"
+    ],
+    "lr-dataset-viewer": [
+      "documentviewer-datasetviewer--default"
+    ],
+    "lr-dialog": [
+      "dialog--open-initially"
+    ],
+    "lr-doughnut-chart": [
+      "charts-doughnut--default"
+    ],
+    "lr-docx-viewer": [
+      "docxviewer--default"
+    ],
+    "lr-drawer": [
+      "drawer--end"
+    ],
+    "lr-dropdown": [
+      "overlay-dropdown--default",
+      "overlay-dropdown--narrow-long-rtl"
+    ],
+    "lr-funnel": [
+      "data-display-funnel--narrow-320"
+    ],
+    "lr-gauge": [
+      "gauge--radial"
+    ],
+    "lr-graph": [
+      "graph--default"
+    ],
+    "lr-heatmap": [
+      "heatmap--default"
+    ],
+    "lr-histogram": [
+      "charts-histogram--default"
+    ],
+    "lr-ingestion-queue": [
+      "ingestion-queue--default"
+    ],
+    "lr-input": [
+      "input--default"
+    ],
+    "lr-json-viewer": [
+      "jsonviewer--default"
+    ],
+    "lr-line-chart": [
+      "charts-line--default"
+    ],
+    "lr-lite-chart": [
+      "charts-litechart--default",
+      "charts-litechart--logarithmic-scale-canary"
+    ],
+    "lr-map": [
+      "map--default"
+    ],
+    "lr-markdown": [
+      "markdown--default"
+    ],
+    "lr-message-parts": [
+      "message-parts--narrow-error-retry"
+    ],
+    "lr-menu": [
+      "menu--standalone-mapped-menu"
+    ],
+    "lr-menu-label": [
+      "layout-menu-label--default"
+    ],
+    "lr-native-time-input": [
+      "input-native-time-input--default"
+    ],
+    "lr-neighbor-list": [
+      "neighbor-list--default"
+    ],
+    "lr-notebook-viewer": [
+      "documentviewer-notebookviewer--default"
+    ],
+    "lr-otp-input": [
+      "forms-otp-input--appearances-and-sizes"
+    ],
+    "lr-page": [
+      "layout-page--desktop",
+      "layout-page--mobile-drawer"
+    ],
+    "lr-page-rail": [
+      "documentviewer-pagerail--mediated"
+    ],
     "lr-pagination": [
       "pagination--appearance",
       "pagination--narrow-allocation"
     ],
-    "lr-pan-zoom": ["media-pan-zoom--slotted-content"],
-    "lr-pdf-viewer": ["documentviewer-pdfviewer--default"],
-    "lr-phone-input": ["forms-phoneinput--default"],
-    "lr-pie-chart": ["charts-pie--default"],
-    "lr-polar-area-chart": ["charts-polararea--default"],
-    "lr-popover": ["overlay-popover--default"],
-    "lr-popup": ["overlays-popup--with-arrow"],
-    "lr-qr-code": ["qr-code--default"],
-    "lr-radar-chart": ["charts-radar--default"],
-    "lr-radio-button": ["forms-radio-button--default"],
-    "lr-radio-group": ["input-radio-group--default"],
-    "lr-rating": ["form-rating--default"],
-    "lr-responsive-panel": ["responsivepanel--forced-overlay-bottom-sheet"],
-    "lr-retrieval-results": ["retrieval-results--default"],
-    "lr-result-field": ["resultcard-result-field--narrow-long-rtl"],
-    "lr-scatter-chart": ["charts-scatter--default"],
-    "lr-select": ["select--default"],
-    "lr-slider": ["slider--default"],
-    "lr-sparkline": ["data-sparkline--line"],
-    "lr-multi-split": ["multi-split--default"],
-    "lr-split-panel": ["layout-split-panel--default"],
-    "lr-span-waterfall": ["observability-span-waterfall--narrow-edge-clamp"],
-    "lr-subagent-panel": ["agent-tools-subagent-panel--depth-12-narrow"],
-    "lr-switch": ["switch--default"],
-    "lr-swatch-picker": ["swatch-picker--forced-colors-intrinsic"],
-    "lr-tab-group": ["tabs--default", "tabs--element-model-long-content-narrow"],
-    "lr-table": ["table--default"],
-    "lr-textarea": ["textarea--default", "textarea--narrow-long-rtl"],
-    "lr-thread-list": ["threadlist--default"],
-    "lr-toast": ["toast--triggers"],
-    "lr-tool-approval-dialog": ["toolapprovaldialog--open-initially"],
-    "lr-tooltip": ["overlay-tooltip--default"],
-    "lr-tree-item": ["navigation-tree-node--declarative"],
-    "lr-video": ["media-video--full-controls"],
-    "lr-video-playlist": ["media-video-playlist--full-controls"],
-    "lr-visually-hidden": ["utility-visually-hidden--skip-link"],
-    "lr-word-cloud": ["wordcloud--default"]
+    "lr-pan-zoom": [
+      "media-pan-zoom--slotted-content"
+    ],
+    "lr-pdf-viewer": [
+      "documentviewer-pdfviewer--default"
+    ],
+    "lr-phone-input": [
+      "forms-phoneinput--default"
+    ],
+    "lr-pie-chart": [
+      "charts-pie--default"
+    ],
+    "lr-polar-area-chart": [
+      "charts-polararea--default"
+    ],
+    "lr-popover": [
+      "overlay-popover--default"
+    ],
+    "lr-popup": [
+      "overlays-popup--with-arrow"
+    ],
+    "lr-qr-code": [
+      "qr-code--default"
+    ],
+    "lr-radar-chart": [
+      "charts-radar--default"
+    ],
+    "lr-radio-button": [
+      "forms-radio-button--default"
+    ],
+    "lr-radio-group": [
+      "input-radio-group--default"
+    ],
+    "lr-rating": [
+      "form-rating--default"
+    ],
+    "lr-responsive-panel": [
+      "responsivepanel--forced-overlay-bottom-sheet"
+    ],
+    "lr-retrieval-results": [
+      "retrieval-results--default"
+    ],
+    "lr-result-field": [
+      "resultcard-result-field--narrow-long-rtl"
+    ],
+    "lr-scatter-chart": [
+      "charts-scatter--default"
+    ],
+    "lr-select": [
+      "select--default"
+    ],
+    "lr-slider": [
+      "slider--default"
+    ],
+    "lr-sparkline": [
+      "data-sparkline--line"
+    ],
+    "lr-multi-split": [
+      "multi-split--default"
+    ],
+    "lr-split-panel": [
+      "layout-split-panel--default"
+    ],
+    "lr-span-waterfall": [
+      "observability-span-waterfall--narrow-edge-clamp"
+    ],
+    "lr-subagent-panel": [
+      "agent-tools-subagent-panel--depth-12-narrow"
+    ],
+    "lr-switch": [
+      "switch--default"
+    ],
+    "lr-swatch-picker": [
+      "swatch-picker--forced-colors-intrinsic"
+    ],
+    "lr-tab-group": [
+      "tabs--default",
+      "tabs--element-model-long-content-narrow"
+    ],
+    "lr-table": [
+      "table--default"
+    ],
+    "lr-textarea": [
+      "textarea--default",
+      "textarea--narrow-long-rtl"
+    ],
+    "lr-thread-list": [
+      "threadlist--default"
+    ],
+    "lr-toast": [
+      "toast--triggers"
+    ],
+    "lr-tool-approval-dialog": [
+      "toolapprovaldialog--open-initially"
+    ],
+    "lr-tooltip": [
+      "overlay-tooltip--default"
+    ],
+    "lr-tree-item": [
+      "navigation-tree-node--declarative"
+    ],
+    "lr-video": [
+      "media-video--full-controls"
+    ],
+    "lr-video-playlist": [
+      "media-video-playlist--full-controls"
+    ],
+    "lr-visually-hidden": [
+      "utility-visually-hidden--skip-link"
+    ],
+    "lr-word-cloud": [
+      "wordcloud--default"
+    ]
   },
   "untaggedStories": {
     "styles-native-and-utilities--layout-and-prose": "This fixture exercises authored native-element and utility CSS, not a custom element."
@@ -557,20 +881,24 @@
       "version": "151.0.7922.34",
       "provider": "playwright"
     },
-    "platform": { "os": "linux", "arch": "x64" },
+    "platform": {
+      "os": "linux",
+      "arch": "x64"
+    },
     "sourceTree": {
       "baseCommit": "f9998fd0a9180ca8f641ba9ca871b71d29d3f4fc",
       "dirty": true
     },
-    "humanVisualReview": false
+    "humanVisualReview": true
   },
   "baselineReview": {
-    "status": "pending-human-review",
-    "reviewer": null,
-    "reviewedAt": null,
+    "status": "complete",
+    "reviewer": "aceshooting",
+    "reviewedAt": "2026-09-11",
     "knownLimitations": [
-      "The historical 249 light/dark/RTL baselines and current evidence captures have not received human visual review.",
-      "Forced-colors/narrow captures and light/dark/RTL captures awaiting review remain ephemeral evidence and are not approved baseline updates.",
+      "Human review for this release covered ONLY the 9 captures whose baselines changed: charts-pie--default, charts-doughnut--default and charts-radar--default across the light, dark and RTL axes. Each diff image was inspected directly. Pie and doughnut changed in the legend row alone, where a single aggregate 'Browsers' entry became per-slice entries (the legendMode default moving from 'dataset' to 'auto'); the slices, labels and layout are pixel-identical. Radar changed in the polygon outline stroke and its vertex markers only, from the chart stroke-width consistency fix. Diff ratios were 0.09%-0.13%.",
+      "The remaining historical light/dark/RTL baselines have NOT received human visual review. That limitation predates this release and is unchanged by it.",
+      "Forced-colors/narrow captures and other evidence captures remain ephemeral evidence, not approved baseline updates.",
       "Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.",
       "The matrix is a risk-weighted sample and does not provide a baseline for every component or state."
     ]

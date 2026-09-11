@@ -2026,7 +2026,12 @@ app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the f
 button whose purpose isn't generic.
 
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
-native button. Host `aria-describedby` targets in the host's own root are resolved through
+native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
+mute, favorite, or pin; `aria-current` (`page`, `step`, `location`, `date`, `time`, `true`, `false`)
+supports current-item icon buttons such as an active nav/pagination target. Both follow attribute
+changes, removal, and button/link replacement without changing the native role; an empty or
+unsupported token is omitted — mirroring `lr-button`'s own `aria-pressed`/`aria-current`
+forwarding. Host `aria-describedby` targets in the host's own root are resolved through
 `ariaDescribedByElements`. Host `aria-controls` targets use the corresponding
 `ariaControlsElements` API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>` exposes
 the menu relationship and expanded state on the element that actually receives focus. Supporting

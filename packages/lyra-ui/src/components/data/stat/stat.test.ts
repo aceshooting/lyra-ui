@@ -3,7 +3,7 @@ import type { PropertyValues } from 'lit';
 import './stat.js';
 import type { LyraStat } from './stat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 
 it('renders label, value, and unit', async () => {
@@ -792,6 +792,11 @@ it('renders the help cursor only while an exact-value headline or row is hovered
       type: 'move',
       position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
     });
+    // A "must not change" assertion cannot poll for its own outcome -- give the browser two frames
+    // to actually process the already-dispatched pointer event before reading (see
+    // test/wtr-mouse.ts's settlePointer() doc); otherwise this passes vacuously whether or not the
+    // pointer ever really arrived.
+    await settlePointer();
     expect(getComputedStyle(roundedOnly).cursor).to.not.equal('help');
   } finally {
     await resetMouse();
@@ -984,13 +989,19 @@ it('gives a linked plain stat a rendered text-underline hover/focus affordance, 
   `)) as LyraStat;
   const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
   const value = el.shadowRoot!.querySelector<HTMLElement>('[part="value"]')!;
-  const rect = value.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
-    expect(getComputedStyle(value).textDecorationLine).to.contain('underline');
+    // sendMouse() resolves once the synthesized command completes, not once the browser has
+    // actually applied the resulting :hover state -- land the pointer with hoverUntilMatched() and
+    // poll the RENDERED result with waitUntil (see test/wtr-mouse.ts), rather than reading a
+    // hover-dependent computed style straight after a single move. The rule is
+    // `.linked-shell:hover .linked-content [part='value']` -- `.linked-content` (and so
+    // `[part="value"]`, which has no `title` here) is `pointer-events: none`, so the anchor itself
+    // (the actual hit-testable element) is what must receive hover, not `value`.
+    await hoverUntilMatched(anchor, 'the linked anchor receives hover');
+    await waitUntil(
+      () => getComputedStyle(value).textDecorationLine.includes('underline'),
+      'hover must render the underline affordance',
+    );
     expect(getComputedStyle(anchor).boxShadow).to.equal('none');
   } finally {
     await resetMouse();

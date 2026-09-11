@@ -1042,13 +1042,35 @@ const active = activeElementIn(this.renderRoot as ShadowRoot);
     this.viewDate = this.clampViewAnchor(addMonths(this.viewDate, delta * page));
   }
 
+  /** The current roving-tabindex target: the day cell (day view) or view-item (years/decades
+   *  view) currently reachable via Tab -- the actual focusable/clickable surface, since the host
+   *  itself never takes focus. Shared by `focus()`/`blur()`/`click()` so the three forward to the
+   *  same element. */
+  private get rovingTarget(): HTMLElement | null {
+    return (
+      this.renderRoot?.querySelector<HTMLElement>(
+        '[part~="day"][tabindex="0"], [part~="view-item"][tabindex="0"]:not(:disabled)'
+      ) ?? null
+    );
+  }
+
   /** Focus the current roving day (or the first item in a non-day view). */
   override focus(options?: FocusOptions): void {
-    const target = this.renderRoot?.querySelector<HTMLElement>(
-      '[part~="day"][tabindex="0"], [part~="view-item"][tabindex="0"]:not(:disabled)'
-    );
-    target?.focus(options);
+    this.rovingTarget?.focus(options);
   }
+
+  /** Blur the current roving day/view-item -- mirrors `focus()`: the host itself is never the
+   *  actual focus target. */
+  override blur(): void {
+    this.rovingTarget?.blur();
+  }
+
+  /** Activate the current roving day/view-item, mirroring `focus()`/`blur()`'s forwarding to the
+   *  same actual interactive target instead of the (never-interactive) host. */
+  override click(): void {
+    this.rovingTarget?.click();
+  }
+
 
   private viewPeriodMonths(view = this.effectiveView): number {
     if (view === 'years') return 12;

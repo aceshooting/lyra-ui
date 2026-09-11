@@ -2,7 +2,7 @@ import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type T
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
-import { hasRealContent, nextId } from '../../../internal/a11y.js';
+import { hasRealContent, hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import '../../layout/details/details.class.js';
 import '../../utility/json-viewer/json-viewer.class.js';
@@ -314,8 +314,14 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   override render(): TemplateResult {
     const decided = this.decision != null;
+    const hostLabel = hostAriaLabel(this);
     return html`
-      <div part="base" role="group" aria-labelledby=${this.headingId}>
+      <div
+        part="base"
+        role="group"
+        aria-label=${hostLabel ?? nothing}
+        aria-labelledby=${hostLabel === null ? this.headingId : nothing}
+      >
         <div part="heading" id=${this.headingId}>${this.renderHeading()}</div>
         <div part="body" ?hidden=${!this.hasBodySlot}><slot @slotchange=${this.onBodySlotChange}></slot></div>
         ${this.args !== undefined

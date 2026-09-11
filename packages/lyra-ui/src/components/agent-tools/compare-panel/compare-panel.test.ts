@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/t
 import './compare-panel.js';
 import type { LyraComparePanel } from './compare-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 describe('lr-compare-panel', () => {
   it('renders labelA/labelB, falling back to the localized defaults when unset', async () => {
@@ -453,6 +454,24 @@ describe('lr-compare-panel', () => {
       expect(getComputedStyle(button).backgroundColor).to.not.equal(rest);
     } finally {
       await resetMouse();
+    }
+  });
+
+  it('stops the vote-button hover/press color transition under reduced motion', async () => {
+    try {
+      await setReducedMotion('no-preference');
+      const el = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
+      const button = el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement;
+      expect(getComputedStyle(button).transitionDuration).to.not.equal('0s');
+
+      await setReducedMotion('reduce');
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+      expect(getComputedStyle(button).transitionDuration).to.equal('0s');
+    } finally {
+      await setReducedMotion('no-preference');
     }
   });
 });

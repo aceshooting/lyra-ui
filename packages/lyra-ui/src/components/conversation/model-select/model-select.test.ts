@@ -2219,6 +2219,48 @@ describe("hint/error chrome", () => {
     )) as LyraModelSelect;
     expect(trigger(el).hasAttribute("aria-describedby")).to.be.false;
   });
+
+  it('resolves a host-authored aria-describedby onto the trigger (regression)', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="external-help-text">External guidance</span>
+        <lr-model-select aria-describedby="external-help-text" hint="Pick a model" .catalog=${CATALOG}></lr-model-select>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-model-select') as LyraModelSelect;
+    const external = wrapper.querySelector('#external-help-text')!;
+    const control = trigger(el) as HTMLButtonElement & { ariaDescribedByElements?: Element[] };
+    if (Reflect.has(control, 'ariaDescribedByElements')) {
+      const ids = (control.ariaDescribedByElements ?? []).map((element) => element.id);
+      expect(ids).to.include('external-help-text');
+      expect(control.ariaDescribedByElements?.includes(external)).to.equal(true);
+    } else {
+      expect(control.getAttribute('aria-describedby') ?? '').to.contain('external-help-text');
+    }
+    // The trigger's own hint chrome stays reachable either way -- it's rendered as a literal id
+    // in the control's `aria-describedby` string, independent of the host-reflection branch.
+    expect(el.shadowRoot!.querySelector('[part="hint"]')).to.exist;
+  });
+
+  it('resolves a host-authored aria-describedby onto the free-text combobox input (regression)', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="external-help-text-2">External guidance</span>
+        <lr-model-select allow-custom aria-describedby="external-help-text-2" error-text="Required"></lr-model-select>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-model-select') as LyraModelSelect;
+    const external = wrapper.querySelector('#external-help-text-2')!;
+    const control = input(el) as HTMLInputElement & { ariaDescribedByElements?: Element[] };
+    if (Reflect.has(control, 'ariaDescribedByElements')) {
+      const ids = (control.ariaDescribedByElements ?? []).map((element) => element.id);
+      expect(ids).to.include('external-help-text-2');
+      expect(control.ariaDescribedByElements?.includes(external)).to.equal(true);
+    } else {
+      expect(control.getAttribute('aria-describedby') ?? '').to.contain('external-help-text-2');
+    }
+    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+  });
 });
 
 // -- Editing-assistance and event-bridging passthrough (free-text mode) -----

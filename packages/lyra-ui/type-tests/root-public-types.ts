@@ -250,7 +250,7 @@ import type {
   LyraResponsivePanelEffectiveMode,
   LyraResponsivePanelMode,
   LyraResponsivePanelModeChangeDetail,
-  LyraResponsivePanelVariant,
+  LyraResponsivePanelShape,
   LyraRetrievalCompareEventMap,
   LyraSegmentedItem,
   LyraSequencePlaybackEventMap,
@@ -624,8 +624,12 @@ import type { WidgetView as RemovedWidgetView } from '../src/lyra.js';
 import type { ResponsivePanelMode as RemovedResponsivePanelMode } from '../src/lyra.js';
 // @ts-expect-error ResponsivePanelEffectiveMode was replaced by LyraResponsivePanelEffectiveMode.
 import type { ResponsivePanelEffectiveMode as RemovedResponsivePanelEffectiveMode } from '../src/lyra.js';
-// @ts-expect-error ResponsivePanelVariant was replaced by LyraResponsivePanelVariant.
+// @ts-expect-error ResponsivePanelVariant was replaced by LyraResponsivePanelShape.
 import type { ResponsivePanelVariant as RemovedResponsivePanelVariant } from '../src/lyra.js';
+// @ts-expect-error LyraResponsivePanelVariant was renamed to LyraResponsivePanelShape: its values
+// ('fullscreen' | 'bottom-sheet') describe a presentation shape, not the shared semantic-tone
+// `variant` vocabulary (neutral/brand/success/warning/danger) that lr-button and lr-badge use.
+import type { LyraResponsivePanelVariant as RenamedResponsivePanelVariant } from '../src/lyra.js';
 // @ts-expect-error ResponsivePanelCloseReason was replaced by LyraResponsivePanelCloseReason.
 import type { ResponsivePanelCloseReason as RemovedResponsivePanelCloseReason } from '../src/lyra.js';
 // @ts-expect-error ResponsivePanelModeChangeDetail was replaced by LyraResponsivePanelModeChangeDetail.
@@ -1120,7 +1124,7 @@ const rootPublicTypes:
       LyraResponsivePanelEffectiveMode,
       LyraResponsivePanelMode,
       LyraResponsivePanelModeChangeDetail,
-      LyraResponsivePanelVariant,
+      LyraResponsivePanelShape,
       LyraRetrievalCompareEventMap,
       LyraSegmentedItem,
       LyraSequencePlaybackEventMap,

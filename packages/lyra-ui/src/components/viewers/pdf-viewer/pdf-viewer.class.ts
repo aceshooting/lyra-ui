@@ -490,6 +490,11 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * genuine activation click).
  * The composed virtual-list lifecycle is an implementation detail: visible-range changes update
  * `page`, while raw `lr-visible-range-change` and `lr-virtual-scroll` events stay contained.
+ * Known capability boundaries: `search()`/text-quote anchors match exact (whitespace- and
+ * soft-hyphen-normalized) text only -- there is no fuzzy/approximate mode (see `internal/
+ * text-quote.ts`'s own doc comment for the exact normalization rules). Non-Latin cMap-encoded fonts
+ * get no special handling beyond whatever `pdfjs-dist` resolves on its own. A scanned or
+ * image-only PDF has no text layer at all, so it has nothing to select or search.
  *
  * @customElement lr-pdf-viewer
  * @event lr-render-error - Fired when fetching, parsing, or rendering fails, including synchronous

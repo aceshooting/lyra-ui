@@ -4491,3 +4491,15 @@ describe("active-preset pointer feedback", () => {
     );
   });
 });
+
+it('forwards an explicit empty aria-label="" override to the internal group, distinct from leaving it unset (regression)', async () => {
+  const explicitEmpty = (await fixture(
+    html`<lr-time-range aria-label=""></lr-time-range>`
+  )) as LyraTimeRange;
+  const base = explicitEmpty.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-label')).to.equal('');
+
+  const unset = (await fixture(html`<lr-time-range></lr-time-range>`)) as LyraTimeRange;
+  const unsetBase = unset.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(unsetBase.hasAttribute('aria-label')).to.equal(false);
+});

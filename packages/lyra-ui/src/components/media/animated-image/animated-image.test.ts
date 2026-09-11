@@ -401,6 +401,35 @@ describe('play / playing / reduced-motion arbitration', () => {
     }
   });
 
+  it('removing respect-reduced-motion after setting it false restores the true-defaulting behavior', async () => {
+    const stub = stubReducedMotion(true);
+    try {
+      const el = (await fixture(
+        html`<lr-animated-image alt="Pixel" respect-reduced-motion="false"></lr-animated-image>`,
+      )) as LyraAnimatedImage;
+      expect(el.respectReducedMotion).to.be.false;
+
+      el.removeAttribute('respect-reduced-motion');
+      await el.updateComplete;
+      expect(el.respectReducedMotion).to.be.true;
+
+      await loaded(el);
+      const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+      let playFired = false;
+      el.addEventListener('lr-play', () => {
+        playFired = true;
+      });
+      el.play = true;
+      await el.updateComplete;
+
+      expect(button.disabled).to.be.true;
+      expect(el.playing).to.be.false;
+      expect(playFired).to.be.false;
+    } finally {
+      stub.restore();
+    }
+  });
+
   it('reacts live to an OS-level reduced-motion preference change while already connected', async () => {
     const stub = stubReducedMotion(false);
     try {

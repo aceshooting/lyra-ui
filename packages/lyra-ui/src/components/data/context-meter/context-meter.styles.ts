@@ -46,6 +46,11 @@ export const styles = css`
   [part='segment'] {
     display: block;
     flex: 0 0 auto;
+    /* A near-zero-ratio segment's own inter-segment separator border (below) can equal or exceed
+       its computed flex-basis width, leaving nothing but surface-colored hairline where its tone
+       should be. Floor it at twice the separator's own width so the tone always has visible fill
+       past the border, derived from the same border-width token rather than a new literal. */
+    min-inline-size: calc(var(--lr-border-width-thin) * 2);
     block-size: 100%;
     background: var(--lr-color-border);
     transition: flex-basis var(--lr-transition-base);

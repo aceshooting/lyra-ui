@@ -9,6 +9,7 @@ import type {
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
+import type { LyraNumberInput } from '../../forms/input/number-input.class.js';
 
 it('provides rendered hover feedback for native text and number controls', async () => {
   const el = await fixture<LyraToolParamForm>(html`
@@ -101,16 +102,16 @@ it('renders one control per property, in schema key order, matched to its type',
   expect(field(el, 'city').querySelector('input[type="text"]')).to.exist;
   expect(field(el, 'units').querySelector('lr-select')).to.exist;
   expect(field(el, 'units').querySelectorAll('lr-option').length).to.equal(2);
-  const daysInput = field(el, 'days').querySelector('input[type="number"]') as HTMLInputElement;
+  const daysInput = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
   expect((daysInput) != null).to.equal(true);
-  expect(daysInput.step).to.equal('1');
+  expect(daysInput.step).to.equal(1);
   expect(field(el, 'notify').querySelector('lr-select')).to.exist;
 });
 
-it('exposes the string and number/integer native inputs as [part="control"] for external theming', async () => {
+it('exposes the string native input and the composed lr-number-input as [part="control"] for external theming', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const textInput = field(el, 'city').querySelector('input[type="text"]') as HTMLInputElement;
-  const numberInput = field(el, 'days').querySelector('input[type="number"]') as HTMLInputElement;
+  const numberInput = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
   expect(textInput.getAttribute('part')).to.equal('control');
   expect(numberInput.getAttribute('part')).to.equal('control');
 });
@@ -138,9 +139,9 @@ it('marks a required field without applying HTML nonempty semantics to the inner
   expect(input.getAttribute('aria-required')).to.equal('true');
 });
 
-it('renders aria-required="false" (not omitted) on a non-required native input and a non-required lr-select', async () => {
+it('renders aria-required="false" (not omitted) on a non-required lr-number-input and a non-required lr-select', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
-  const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
+  const daysInput = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
   expect(daysInput.getAttribute('aria-required')).to.equal('false');
   const notifySelect = field(el, 'notify').querySelector('lr-select') as HTMLElement;
   expect(notifySelect.getAttribute('aria-required')).to.equal('false');
@@ -169,8 +170,10 @@ it('renders aria-invalid="false" (not omitted) on a native input until touched w
   await el.updateComplete;
   expect(cityInput.getAttribute('aria-invalid')).to.equal('true');
 
-  const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
-  expect(daysInput.getAttribute('aria-invalid')).to.equal('false');
+  // days has no validation error, so the composed <lr-number-input>'s own errorText (which drives
+  // its internal aria-invalid, mirroring the raw text input's own attribute above) stays empty.
+  const daysInput = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
+  expect(daysInput.errorText).to.equal('');
 });
 
 it('renders the group owner aria-invalid explicitly only after interaction and never while barred', async () => {
@@ -236,7 +239,7 @@ it('updates the group owner aria-invalid when reportValidity reveals an existing
 
 it('falls back to schema default for a field missing from value, without mutating the value property', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
-  const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
+  const daysInput = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
   expect(daysInput.value).to.equal('3');
   expect(el.value['days']).to.be.undefined;
   expect(el.effectiveValue['days']).to.equal(3);
@@ -246,7 +249,7 @@ it('renders an explicit value over the schema default', async () => {
   const el = (await fixture(
     html`<lr-tool-param-form .schema=${basicSchema} .value=${{ days: 10 }}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
-  const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
+  const daysInput = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
   expect(daysInput.value).to.equal('10');
 });
 
@@ -268,7 +271,7 @@ it('emits lr-input with the full resolved value object on a text field edit', as
 
 it('emits lr-input on a number field edit, clearing to undefined on an empty input', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
-  const input = field(el, 'days').querySelector('input') as HTMLInputElement;
+  const input = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
 
   setTimeout(() => {
     input.value = '7';
@@ -348,8 +351,13 @@ it('bridges a string field\'s native focus/blur out through the shadow boundary 
 });
 
 it('bridges a number field\'s native focus/blur out through the shadow boundary as host focus/blur events', async () => {
+  // Unlike the string field above, the composed <lr-number-input> already re-dispatches its own
+  // bubbling, composed focus/blur (see its class doc) -- so the synthetic native event starts one
+  // shadow level deeper, on its own internal native <input>, and <lr-tool-param-form> adds no
+  // relay of its own (which would otherwise double-fire it).
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
-  const input = field(el, 'days').querySelector('input') as HTMLInputElement;
+  const numberInput = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
+  const input = numberInput.shadowRoot!.querySelector('input') as HTMLInputElement;
 
   const focusPromise = oneEvent(el, 'focus');
   input.dispatchEvent(new Event('focus'));
@@ -1166,7 +1174,7 @@ it('flags a fractional value on an integer field as invalid, independent of requ
   const el = (await fixture(
     html`<lr-tool-param-form .schema=${basicSchema} .value=${{ city: 'Paris' }}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
-  const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
+  const daysInput = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
 
   setTimeout(() => {
     daysInput.value = '3.5';
@@ -1364,7 +1372,7 @@ it('temporarily disables every field through a fieldset without overwriting auth
   expect(el.effectiveDisabled).to.be.true;
   expect((field(el, 'city').querySelector('input') as HTMLInputElement).disabled).to.be.true;
   expect((field(el, 'units').querySelector('lr-select') as HTMLElement & { disabled: boolean }).disabled).to.be.true;
-  expect((field(el, 'days').querySelector('input') as HTMLInputElement).disabled).to.be.true;
+  expect((field(el, 'days').querySelector('lr-number-input') as HTMLElement & { disabled: boolean }).disabled).to.be.true;
   expect(
     (field(el, 'notify').querySelector('lr-select') as HTMLElement & { disabled: boolean }).disabled,
   ).to.be.true;
@@ -1376,7 +1384,7 @@ it('temporarily disables every field through a fieldset without overwriting auth
   expect(el.effectiveDisabled).to.be.false;
   expect((field(el, 'city').querySelector('input') as HTMLInputElement).disabled).to.be.false;
   expect((field(el, 'units').querySelector('lr-select') as HTMLElement & { disabled: boolean }).disabled).to.be.false;
-  expect((field(el, 'days').querySelector('input') as HTMLInputElement).disabled).to.be.false;
+  expect((field(el, 'days').querySelector('lr-number-input') as HTMLElement & { disabled: boolean }).disabled).to.be.false;
   expect(
     (field(el, 'notify').querySelector('lr-select') as HTMLElement & { disabled: boolean }).disabled,
   ).to.be.false;
@@ -1440,22 +1448,30 @@ it('is accessible in a populated state with a required, unfilled field revealed'
   await expect(el).to.be.accessible();
 });
 
-it('renders numeric controls with textfield chrome and no native spin buttons', async () => {
+it('renders numeric controls as lr-number-input with a working increment/decrement stepper', async () => {
+  // The raw <input type="number"> this used to compose suppressed the native spin buttons with no
+  // replacement (the defect this component now fixes by composing <lr-number-input>, which
+  // provides its own stepper pair in their place).
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
-  const input = field(el, 'days').querySelector<HTMLInputElement>('input.control')!;
-  expect(input.type).to.equal('number');
-  expect(getComputedStyle(input).appearance).to.equal('textfield');
-  const bounds = input.getBoundingClientRect();
-  try {
-    await sendMouse({
-      type: 'click',
-      position: [Math.floor(bounds.right - 4), Math.floor(bounds.top + bounds.height / 4)],
-    });
-    expect(input.value).to.equal('3');
-    expect(Object.hasOwn(el.value, 'days')).to.be.false;
-  } finally {
-    await resetMouse();
-  }
+  const numberInput = field(el, 'days').querySelector('lr-number-input') as LyraNumberInput;
+  expect(numberInput.type).to.equal('number');
+  const increment = numberInput.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[part~="stepper-increment"]',
+  )!;
+  const decrement = numberInput.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[part~="stepper-decrement"]',
+  )!;
+  expect(increment).to.exist;
+  expect(decrement).to.exist;
+
+  const incrementPromise = oneEvent(el, 'lr-input');
+  increment.click();
+  expect((await incrementPromise).detail.value.days).to.equal(4);
+  expect(numberInput.value).to.equal('4');
+
+  const decrementPromise = oneEvent(el, 'lr-input');
+  decrement.click();
+  expect((await decrementPromise).detail.value.days).to.equal(3);
 });
 
 it('associates enum and boolean descriptions/errors without imposing must-check semantics', async () => {

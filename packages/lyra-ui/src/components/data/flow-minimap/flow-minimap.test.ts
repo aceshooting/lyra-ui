@@ -1125,3 +1125,108 @@ describe('explicitly empty host aria-label', () => {
     expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Overview');
   });
 });
+
+/**
+ * Regression: ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby`
+ * never reached `[part="base"]`'s own `role="region"`, which is the element that actually owns
+ * the accessible description. Mirrors lr-checkbox's `syncAriaDescribedByElements` fix pattern.
+ */
+describe('host aria-describedby reflection', () => {
+  it('merges a host-authored aria-describedby onto the base region description', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <p id="extra-context">Extra context for the minimap.</p>
+        <lr-flow-canvas>
+          <lr-flow-minimap slot="bottom-end" aria-describedby="extra-context"></lr-flow-minimap>
+        </lr-flow-canvas>
+      </div>
+    `)) as HTMLElement;
+    const canvas = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    canvas.nodes = nodes;
+    await canvas.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await minimap.updateComplete;
+
+    const base = minimap.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+    const extra = wrapper.querySelector('#extra-context') as HTMLElement;
+    if (Reflect.has(base, 'ariaDescribedByElements')) {
+      expect(base.ariaDescribedByElements ?? [], 'reflected description').to.include(extra);
+    } else {
+      expect(base.getAttribute('aria-describedby') ?? '', 'fallback description').to.contain('extra-context');
+    }
+  });
+});
+
+/**
+ * Regression: unlike its flow-canvas-corner siblings lr-flow-controls and lr-flow-run-status,
+ * lr-flow-minimap had no `frame` escape hatch -- its border/radius/background were unconditional,
+ * so a consumer embedding the minimap inside a panel or toolbar that already draws its own surface
+ * always got a doubled frame. Mirrors the shared `LyraFrame` vocabulary those siblings already use.
+ */
+describe('frame', () => {
+  const baseChrome = (el: LyraFlowMinimap) => {
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const s = getComputedStyle(base);
+    return {
+      borderTopWidth: s.borderTopWidth,
+      borderTopLeftRadius: s.borderTopLeftRadius,
+      backgroundColor: s.backgroundColor,
+    };
+  };
+
+  it('defaults to frame="card", rendering identically to that value restated', async () => {
+    const wrapper = (await fixture(html`
+      <lr-flow-canvas style="width:400px;height:300px">
+        <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    wrapper.nodes = nodes;
+    await wrapper.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const implicit = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await implicit.updateComplete;
+
+    expect(implicit.frame).to.equal('card');
+    expect(implicit.getAttribute('frame')).to.equal('card');
+
+    const chrome = baseChrome(implicit);
+    expect(chrome.borderTopWidth).to.equal('1px');
+    expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('drops border, background and radius under frame="plain"', async () => {
+    const wrapper = (await fixture(html`
+      <lr-flow-canvas style="width:400px;height:300px">
+        <lr-flow-minimap slot="bottom-end" frame="plain"></lr-flow-minimap>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    wrapper.nodes = nodes;
+    await wrapper.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const el = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await el.updateComplete;
+
+    expect(el.getAttribute('frame')).to.equal('plain');
+    const chrome = baseChrome(el);
+    expect(chrome.borderTopWidth).to.equal('0px');
+    expect(chrome.borderTopLeftRadius).to.equal('0px');
+    expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('is accessible under frame="plain" with a resolved canvas', async () => {
+    const wrapper = (await fixture(html`
+      <lr-flow-canvas style="width:400px;height:300px">
+        <lr-flow-minimap slot="bottom-end" frame="plain"></lr-flow-minimap>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    wrapper.nodes = nodes;
+    await wrapper.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const el = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

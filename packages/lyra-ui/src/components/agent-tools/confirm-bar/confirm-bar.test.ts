@@ -241,6 +241,16 @@ it('is role="group" labeled by the heading', async () => {
   expect((el.shadowRoot!.getElementById(labelledBy!)) === (el.shadowRoot!.querySelector('[part="heading"]'))).to.equal(true);
 });
 
+it('lets a host aria-label override the heading-derived accessible name', async () => {
+  const el = (await fixture(
+    html`<lr-confirm-bar tool-name="run_shell" aria-label="Destructive command approval"></lr-confirm-bar>`,
+  )) as LyraConfirmBar;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('role')).to.equal('group');
+  expect(base.getAttribute('aria-label')).to.equal('Destructive command approval');
+  expect(base.hasAttribute('aria-labelledby')).to.equal(false);
+});
+
 it('is accessible before and after a decision, with and without args', async () => {
   const plain = (await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
   await expect(plain).to.be.accessible();

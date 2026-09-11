@@ -70,6 +70,12 @@ export interface DataGridColumn<Row = Record<string, unknown>> {
   readonly maxWidth?: number;
   readonly flex?: number;
   readonly formatter?: (value: unknown, row: Row) => string | TemplateResult | Node | unknown;
+  /** Applied as the generated cell's native `title`, symmetrical with `<lr-table>`'s
+   *  `columns[].cellTitle` -- e.g. the untruncated text behind an ellipsized cell, or a formatted
+   *  timestamp behind a relative one. Returning `undefined` (or an empty string) omits the
+   *  attribute entirely rather than rendering `title=""`, which would suppress an ancestor's own
+   *  tooltip. */
+  readonly cellTitle?: (row: Row) => string | undefined;
   readonly value?: (row: Row) => unknown;
   readonly sortable?: boolean;
   readonly sortFn?: DataGridSortAlgorithm;
@@ -275,6 +281,7 @@ export interface LyraDataGridEventMap<Row = Record<string, unknown>> {
   'lr-row-collapse': CustomEvent<DataGridRowDetail<Row>>;
   'lr-row-expand': CustomEvent<DataGridRowDetail<Row>>;
   'lr-row-select': CustomEvent<Readonly<DataGridSelectionDetail<Row>>>;
+  'lr-sort-request': CustomEvent<Readonly<{ sort: DataGridSortingState }>>;
   'lr-sort-change': CustomEvent<Readonly<{ sort: DataGridSortingState }>>;
   'lr-error': CustomEvent<null>;
 }

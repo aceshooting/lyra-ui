@@ -143,6 +143,15 @@ it('updates query as the composed lr-input reports user edits', async () => {
   expect(el.query).to.equal('solar inverter faults');
 });
 
+it('opts the composed query lr-input into its own clear affordance', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-search query="solar inverter faults"></lr-retrieval-search>`
+  )) as LyraRetrievalSearch;
+  const query = queryInputOf(el) as HTMLElement & { clearable: boolean };
+  expect(query.clearable).to.equal(true);
+  expect(query.hasAttribute('clearable')).to.equal(true);
+});
+
 it('suppresses raw child input and mode-change events after consuming them', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
@@ -348,6 +357,45 @@ describe('active filters/scope chips', () => {
       filters: { type: 'pdf' },
       scope: ['support-tickets'],
     });
+  });
+
+  it('removes a chip without throwing when the chip shadow-root activeElement getter is unavailable', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search></lr-retrieval-search>`
+    )) as LyraRetrievalSearch;
+    el.scope = ['engineering-docs'];
+    await el.updateComplete;
+    const chip = el.shadowRoot!.querySelector(
+      '[part="filters"] lr-chip[value="engineering-docs"]'
+    ) as HTMLElement;
+    const descriptor = Object.getOwnPropertyDescriptor(chip.shadowRoot!, 'activeElement');
+    Object.defineProperty(chip.shadowRoot!, 'activeElement', {
+      configurable: true,
+      get() { throw new TypeError('Unavailable activeElement'); },
+    });
+    let errors = 0;
+    const onError = (event: ErrorEvent): void => {
+      if (event.message.includes('Unavailable activeElement')) {
+        errors++;
+        event.preventDefault();
+      }
+    };
+    window.addEventListener('error', onError);
+    try {
+      chip.dispatchEvent(
+        new CustomEvent('lr-remove', {
+          detail: { value: 'engineering-docs' },
+          bubbles: true,
+        })
+      );
+      await el.updateComplete;
+    } finally {
+      if (descriptor) Object.defineProperty(chip.shadowRoot!, 'activeElement', descriptor);
+      else Reflect.deleteProperty(chip.shadowRoot!, 'activeElement');
+      window.removeEventListener('error', onError);
+    }
+    expect(errors, 'the remove handler must not throw').to.equal(0);
+    expect(el.scope).to.deep.equal([]);
   });
 
   it('removing a filter chip updates filters and emits lr-filters-change', async () => {

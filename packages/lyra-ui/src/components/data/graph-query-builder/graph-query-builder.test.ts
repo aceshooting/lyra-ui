@@ -1007,6 +1007,30 @@ describe('lr-graph-query-builder', () => {
     expect(el.shadowRoot!.querySelector('slot[name="error"]')).to.exist;
   });
 
+  it('projects a host aria-describedby onto the internal role="group" owner', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <span id="external-note">External note</span>
+        <lr-graph-query-builder aria-describedby="external-note"></lr-graph-query-builder>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraGraphQueryBuilder>('lr-graph-query-builder')!;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+      ariaDescribedByElements?: readonly Element[] | null;
+    };
+    const note = wrapper.querySelector<HTMLElement>('#external-note')!;
+
+    expect(el.getAttribute('aria-describedby')).to.equal('external-note');
+    if (!('ariaDescribedByElements' in base)) {
+      // Engines without cross-shadow element-reference reflection cannot serialize the host id
+      // into this shadow root; the host source remains intact and the bridge fails closed.
+      return;
+    }
+    const described = [...(base.ariaDescribedByElements ?? [])];
+    expect(described).to.include(note);
+  });
+
   it('formStateRestoreCallback falls back to the empty value for malformed JSON', async () => {
     const el = (await fixture(
       html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`

@@ -2279,14 +2279,6 @@ describe("lr-button hover and press feedback", () => {
     return painted;
   }
 
-  const center = (node: Element): [number, number] => {
-    const rect = node.getBoundingClientRect();
-    return [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
-  };
-
   for (const appearance of ["quiet", "plain"] as const) {
     it(`paints a hovered appearance="${appearance}" button something other than the page surface`, async () => {
       const el = (await fixture(
@@ -2303,7 +2295,11 @@ describe("lr-button hover and press feedback", () => {
       const surface = surfaceColor(el);
       const resting = getComputedStyle(base).backgroundColor;
       try {
-        await sendMouse({ type: "move", position: center(base) });
+        await hoverUntilMatched(base, `${appearance} button never received the pointer hover state`);
+        await waitUntil(
+          () => getComputedStyle(base).backgroundColor !== resting,
+          `${appearance} hover vs resting never rendered`,
+        );
         const hovered = getComputedStyle(base).backgroundColor;
         // Both hover defaults used to resolve to --lr-color-surface itself, i.e. the page
         // background, so hovering changed nothing at all on a default page.
@@ -2325,10 +2321,19 @@ describe("lr-button hover and press feedback", () => {
     )) as LyraButton;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const resting = getComputedStyle(base).backgroundColor;
     try {
-      await sendMouse({ type: "move", position: center(base) });
+      await hoverUntilMatched(base, "quiet button never received the pointer hover state");
+      await waitUntil(
+        () => getComputedStyle(base).backgroundColor !== resting,
+        "quiet button hover never rendered",
+      );
       const hovered = getComputedStyle(base).backgroundColor;
       await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(base).backgroundColor !== hovered,
+        "quiet button pressed background never rendered",
+      );
       const pressed = getComputedStyle(base).backgroundColor;
       expect(pressed, "pressed vs hovered").to.not.equal(hovered);
       expect(pressed, "pressed vs page surface").to.not.equal(surfaceColor(el));
@@ -2351,7 +2356,11 @@ describe("lr-button hover and press feedback", () => {
     const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const resting = getComputedStyle(base).backgroundColor;
     try {
-      await sendMouse({ type: "move", position: center(base) });
+      await hoverUntilMatched(base, "accent button never received the pointer hover state");
+      await waitUntil(
+        () => getComputedStyle(base).backgroundColor !== resting,
+        "accent button hover never rendered",
+      );
       const hovered = getComputedStyle(base);
       expect(hovered.backgroundColor, "accent hover vs resting").to.not.equal(
         resting

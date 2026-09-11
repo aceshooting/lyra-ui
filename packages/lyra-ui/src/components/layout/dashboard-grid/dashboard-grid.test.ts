@@ -3605,3 +3605,20 @@ describe("collision preview must not erase the focus indicator", () => {
     ).to.equal(true);
   });
 });
+
+it('reads the collision outline width from --lr-border-width-medium, not the generic --lr-size-2px scale (regression: theming purpose)', async () => {
+  const el = (await fixture(html`
+    <lr-dashboard-grid
+      style="--lr-theme-border-width-medium: 12px; --lr-theme-size-2px: 22px;"
+    ></lr-dashboard-grid>
+  `)) as LyraDashboardGrid;
+  el.layout = twoCells();
+  await el.updateComplete;
+  const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+  cell.setAttribute('data-collision', '');
+  // A consumer retuning the documented --lr-theme-border-width-medium input must move this
+  // outline (matching the sibling [part='cell']:hover outline, which already tracks
+  // --lr-border-width-thin); retuning the unrelated --lr-theme-size-2px sizing scale must not.
+  expect(getComputedStyle(cell).outlineWidth).to.equal('12px');
+  expect(getComputedStyle(cell).outlineOffset).to.equal('12px');
+});

@@ -596,7 +596,8 @@ export type LyraAlertVueProps = LyraVueCustomElement<
   | 'lr-after-show'
   | 'lr-hide'
   | 'lr-show',
-never,
+  | '--lr-alert-close-active-bg'
+  | '--lr-alert-close-hover-bg',
   {}
 >;
 
@@ -1070,6 +1071,7 @@ export type LyraBarChartVueProps = LyraVueCustomElement<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -1194,8 +1196,26 @@ export type LyraBoxPlotVueProps = LyraVueCustomElement<
   | 'lr-datum-activate'
   | 'lr-legend-visibility-change'
   | 'lr-point-click',
+  | '--lr-box-plot-border-color-1'
+  | '--lr-box-plot-border-color-2'
+  | '--lr-box-plot-border-color-3'
+  | '--lr-box-plot-border-color-4'
+  | '--lr-box-plot-border-color-5'
+  | '--lr-box-plot-border-color-6'
+  | '--lr-box-plot-border-color-7'
+  | '--lr-box-plot-border-color-8'
+  | '--lr-box-plot-border-width'
   | '--lr-box-plot-data-table-toggle-active-bg'
   | '--lr-box-plot-data-table-toggle-hover-bg'
+  | '--lr-box-plot-fill-color-1'
+  | '--lr-box-plot-fill-color-2'
+  | '--lr-box-plot-fill-color-3'
+  | '--lr-box-plot-fill-color-4'
+  | '--lr-box-plot-fill-color-5'
+  | '--lr-box-plot-fill-color-6'
+  | '--lr-box-plot-fill-color-7'
+  | '--lr-box-plot-fill-color-8'
+  | '--lr-box-plot-item-radius'
   | '--lr-chart-canvas-hover-outline-color'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-grid-color'
@@ -1298,6 +1318,7 @@ export type LyraBubbleChartVueProps = LyraVueCustomElement<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -1688,6 +1709,7 @@ export type LyraChartVueProps = LyraVueCustomElement<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -2874,6 +2896,7 @@ export type LyraDataGridVueProps = LyraVueCustomElement<
   | 'selectedKeys'
   | 'selectedRowKeys'
   | 'selectedRows'
+  | 'selectionMode'
   | 'server'
   | 'size'
   | 'sort'
@@ -2907,6 +2930,7 @@ export type LyraDataGridVueProps = LyraVueCustomElement<
   | 'lr-row-expand'
   | 'lr-row-select'
   | 'lr-sort-change'
+  | 'lr-sort-request'
   | 'request',
   | '--accent-color'
   | '--background-color'
@@ -2943,6 +2967,7 @@ export type LyraDataGridVueProps = LyraVueCustomElement<
     'max-multi-sort'?: LyraDataGrid['maxMultiSort'];
     'page-size'?: LyraDataGrid['pageSize'];
     'row-key'?: LyraDataGrid['rowKey'];
+    'selection-mode'?: LyraDataGrid['selectionMode'];
     'sort-desc-first'?: LyraDataGrid['sortDescFirst'];
     'with-column-menu'?: LyraDataGrid['withColumnMenu'];
     'with-columns-menu'?: LyraDataGrid['withColumnsMenu'];
@@ -3362,6 +3387,7 @@ export type LyraDocumentCompareVueProps = LyraVueCustomElement<
   | 'language'
   | 'languages'
   | 'locale'
+  | 'maxHeight'
   | 'newVersion'
   | 'oldVersion'
   | 'strings'
@@ -3378,6 +3404,7 @@ export type LyraDocumentCompareVueProps = LyraVueCustomElement<
   | '--lr-document-compare-pane-max-height',
   {
     'diff-layout'?: LyraDocumentCompare['diffLayout'];
+    'max-height'?: LyraDocumentCompare['maxHeight'];
     'sync-scroll'?: LyraDocumentCompare['syncScroll'];
   }
 >;
@@ -3520,6 +3547,7 @@ export type LyraDoughnutChartVueProps = LyraVueCustomElement<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -3756,11 +3784,15 @@ export type LyraDropdownItemVueProps = LyraVueCustomElement<
   LyraDropdownItem,
   | 'checked'
   | 'disabled'
+  | 'download'
+  | 'href'
   | 'loading'
   | 'locale'
+  | 'rel'
   | 'size'
   | 'strings'
   | 'submenuOpen'
+  | 'target'
   | 'type'
   | 'value'
   | 'variant',
@@ -4312,7 +4344,8 @@ export type LyraFlowCanvasVueProps = LyraVueCustomElement<
   | 'orientation'
   | 'selectedEdgeIds'
   | 'selectedNodeIds'
-  | 'strings',
+  | 'strings'
+  | 'viewport',
   {},
   LyraFlowCanvasEventMap,
   | 'lr-connect'
@@ -4367,6 +4400,7 @@ never,
 export type LyraFlowMinimapVueProps = LyraVueCustomElement<
   LyraFlowMinimap,
   | 'for'
+  | 'frame'
   | 'label'
   | 'locale'
   | 'strings',
@@ -4916,10 +4950,10 @@ export type LyraHistogramVueProps = LyraVueCustomElement<
   | 'beginAtZero'
   | 'bins'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
-  | 'datasets'
   | 'dataTableToggle'
   | 'description'
   | 'formatter'
@@ -4929,7 +4963,6 @@ export type LyraHistogramVueProps = LyraVueCustomElement<
   | 'hiddenDatums'
   | 'indexAxis'
   | 'label'
-  | 'labels'
   | 'legendDisplay'
   | 'legendMode'
   | 'legendPosition'
@@ -5130,6 +5163,7 @@ export type LyraIconButtonVueProps = LyraVueCustomElement<
   | 'library'
   | 'locale'
   | 'name'
+  | 'rel'
   | 'src'
   | 'strings'
   | 'target',
@@ -5152,10 +5186,12 @@ export type LyraIconButtonVueProps = LyraVueCustomElement<
   | '--lr-icon-button-size',
   {
     'aria-controls'?: LyraAttributeValue<string | null>;
+    'aria-current'?: LyraAttributeValue<string | null>;
     'aria-describedby'?: LyraAttributeValue<string | null>;
     'aria-expanded'?: LyraAttributeValue<string | null>;
     'aria-haspopup'?: LyraAttributeValue<string | null>;
     'aria-label'?: LyraIconButton['accessibleLabel'];
+    'aria-pressed'?: LyraAttributeValue<string | null>;
   }
 >;
 
@@ -5672,6 +5708,7 @@ export type LyraLineChartVueProps = LyraVueCustomElement<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -6157,11 +6194,15 @@ export type LyraMenuItemVueProps = LyraVueCustomElement<
   LyraMenuItem,
   | 'checked'
   | 'disabled'
+  | 'download'
+  | 'href'
   | 'loading'
   | 'locale'
+  | 'rel'
   | 'size'
   | 'strings'
   | 'submenuOpen'
+  | 'target'
   | 'type'
   | 'value'
   | 'variant',
@@ -6254,6 +6295,7 @@ export type LyraMessagePartsVueProps = LyraVueCustomElement<
   | 'accessibleLabel'
   | 'contentMode'
   | 'locale'
+  | 'maxRenderedParts'
   | 'parts'
   | 'renderPart'
   | 'showReasoning'
@@ -6285,6 +6327,7 @@ export type LyraMessagePartsVueProps = LyraVueCustomElement<
   {
     'aria-label'?: LyraMessageParts['accessibleLabel'];
     'content-mode'?: LyraMessageParts['contentMode'];
+    'max-rendered-parts'?: LyraMessageParts['maxRenderedParts'];
     'show-reasoning'?: LyraMessageParts['showReasoning'];
   }
 >;
@@ -6525,7 +6568,6 @@ export type LyraNativeTimeInputVueProps = LyraVueCustomElement<
   | 'withLabel'
   | 'withoutSpinButtons',
   {
-    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraInputEventMap,
@@ -6628,6 +6670,7 @@ export type LyraNotebookViewerVueProps = LyraVueCustomElement<
   | 'name'
   | 'notebook'
   | 'outputCollapseLines'
+  | 'source'
   | 'src'
   | 'strings',
   {},
@@ -6705,7 +6748,6 @@ export type LyraNumberInputVueProps = LyraVueCustomElement<
   | 'withoutSpinButtons'
   | 'withoutSteppers',
   {
-    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraNumberInputEventMap,
@@ -7159,6 +7201,7 @@ export type LyraPieChartVueProps = LyraVueCustomElement<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -7266,6 +7309,7 @@ export type LyraPolarAreaChartVueProps = LyraVueCustomElement<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -7803,6 +7847,7 @@ export type LyraRadarChartVueProps = LyraVueCustomElement<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -8275,8 +8320,8 @@ export type LyraResponsivePanelVueProps = LyraVueCustomElement<
   | 'mode'
   | 'open'
   | 'overlayBreakpoint'
-  | 'strings'
-  | 'variant',
+  | 'shape'
+  | 'strings',
   {},
   LyraResponsivePanelEventMap,
   | 'lr-close'
@@ -8481,6 +8526,7 @@ export type LyraScatterChartVueProps = LyraVueCustomElement<
   | 'axes'
   | 'beginAtZero'
   | 'chart'
+  | 'chartArea'
   | 'compact'
   | 'config'
   | 'dataLabels'
@@ -8945,6 +8991,7 @@ export type LyraSourceListVueProps = LyraVueCustomElement<
   | 'label'
   | 'labelPlural'
   | 'locale'
+  | 'sourceCount'
   | 'strings',
   {},
   LyraSourceListEventMap,
@@ -9269,6 +9316,8 @@ never,
 
 export type LyraSubagentPanelVueProps = LyraVueCustomElement<
   LyraSubagentPanel,
+  | 'compact'
+  | 'frame'
   | 'label'
   | 'locale'
   | 'runs'
@@ -9279,6 +9328,10 @@ export type LyraSubagentPanelVueProps = LyraVueCustomElement<
   | 'lr-cancel'
   | 'lr-run-activate'
   | 'lr-run-retry',
+  | '--lr-subagent-panel-compact-action-padding'
+  | '--lr-subagent-panel-compact-font-size'
+  | '--lr-subagent-panel-compact-trigger-gap'
+  | '--lr-subagent-panel-compact-trigger-padding'
   | '--lr-subagent-panel-progress-fill'
   | '--lr-subagent-panel-progress-track'
   | '--lr-subagent-panel-selected-border',

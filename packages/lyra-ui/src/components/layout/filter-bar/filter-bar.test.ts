@@ -412,6 +412,36 @@ describe("custom filters", () => {
     expect(chip.textContent!.trim()).to.equal("Flag: true");
   });
 
+  it('threads effectiveLocale into a custom filter formatValue, like every built-in filter type (regression)', async () => {
+    const seenLocales: string[] = [];
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'flag',
+        label: 'Flag',
+        type: 'custom',
+        custom: {
+          adapter: {
+            valueFromEvent: () => true,
+            clearValue: false,
+            formatValue: (value, locale) => {
+              seenLocales.push(locale);
+              return `${value}/${locale}`;
+            },
+          },
+          render: () => html`<span></span>`,
+        },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar lang="fr" .filters=${filters}></lr-filter-bar>`,
+    )) as LyraFilterBar;
+    el.value = { flag: true };
+    await el.updateComplete;
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    expect(chip.textContent!.trim()).to.equal('Flag: true/fr');
+    expect(seenLocales).to.deep.equal(['fr']);
+  });
+
   it("drops a stale custom control write after its filter schema has been superseded", async () => {
     let capturedSetValue: ((value: string) => void) | undefined;
     const buildFilters = (): LyraFilterBarFilterDefinition[] => [
@@ -2818,5 +2848,25 @@ describe("date-range presets", () => {
     expect(Object.keys(ev.detail.value)).to.deep.equal(["period"]);
     expect(ev.detail.filterId).to.equal("period");
     expect(ev.detail.appliedPreset).to.equal(undefined);
+  });
+});
+
+describe('value/filters assignment order (regression)', () => {
+  it('does not permanently drop a value field assigned before its matching filters definition', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar></lr-filter-bar>`);
+    // Same microtask -- .value lands while _filters is still empty, so 'status' is not yet a
+    // known filter id. Must not be permanently discarded once `filters` declares it right after.
+    el.value = { status: 'open' };
+    el.filters = basicFilters;
+    await el.updateComplete;
+    expect(el.value['status']).to.equal('open');
+  });
+
+  it('does not permanently drop a value field in the equivalent Lit template binding order', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .value=${{ status: 'open' }} .filters=${basicFilters}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(el.value['status']).to.equal('open');
   });
 });

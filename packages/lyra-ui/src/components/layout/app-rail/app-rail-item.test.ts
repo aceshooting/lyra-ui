@@ -2,7 +2,7 @@ import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./app-rail-item.js";
 import "./app-rail.js";
 import type { LyraAppRailItem } from "./app-rail-item.js";
-import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 if (!customElements.get('app-rail-icon-forwarder')) {
   customElements.define(
@@ -49,10 +49,12 @@ it('inherits independent hover and pressed paint from an ancestor', async () => 
   `);
   const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
   const target = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
-  const rect = target.getBoundingClientRect();
   try {
-    await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
-    expect(getComputedStyle(target).backgroundColor).to.equal('rgb(1, 2, 3)');
+    await hoverUntilMatched(target, 'the app-rail-item never reported :hover');
+    await waitUntil(
+      () => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)',
+      'target background color never reached its hover value',
+    );
     expect(getComputedStyle(target).color).to.equal('rgb(4, 5, 6)');
     await sendMouse({ type: 'down' });
     await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(7, 8, 9)', 'target background color never reached rgb(7, 8, 9)');

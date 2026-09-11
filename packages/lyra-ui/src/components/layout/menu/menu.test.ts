@@ -223,6 +223,52 @@ it('treats Enter on a submenu parent as disclosure activation rather than select
   expect(selections).to.equal(0);
 });
 
+/**
+ * Regression: Enter/Space previously called `current.select()` directly, which never touches the
+ * item's own shadow-DOM anchor -- so a link item (`href` set) never navigated from the keyboard,
+ * only from a mouse click. Forwarding through `click()` for a link item reaches the same real
+ * anchor a pointer click would.
+ */
+it('forwards Enter on a link item to click() so its anchor click fires', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item value="docs" href="https://example.com/docs">Docs</lr-menu-item>
+    </lr-menu>
+  `);
+  const [item] = ownItems(menu) as [LyraMenuItem];
+  const anchor = item.shadowRoot!.querySelector('[part~="base"]') as HTMLAnchorElement;
+  let clicked = false;
+  anchor.addEventListener('click', (e) => {
+    clicked = true;
+    e.preventDefault();
+  });
+
+  item.focus();
+  press(item, 'Enter');
+
+  expect(clicked).to.equal(true);
+});
+
+it('still fires lr-select for a link item activated via Enter', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item value="docs" href="https://example.com/docs">Docs</lr-menu-item>
+    </lr-menu>
+  `);
+  const [item] = ownItems(menu) as [LyraMenuItem];
+  const anchor = item.shadowRoot!.querySelector('[part~="base"]') as HTMLAnchorElement;
+  anchor.addEventListener('click', (e) => e.preventDefault());
+  const selected: string[] = [];
+  menu.addEventListener('lr-select', (event) => {
+    selected.push((event as CustomEvent<{ item: LyraMenuItem }>).detail.item.value);
+  });
+
+  item.focus();
+  press(item, 'Enter');
+
+  expect(selected).to.deep.equal(['docs']);
+});
+
 it('skips disabled, hidden, aria-hidden, and inert items', async () => {
   const menu = await fixture<LyraMenu>(html`
     <lr-menu label="Actions">

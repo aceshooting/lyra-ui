@@ -37,7 +37,10 @@ import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generat
  * @csspart indicator - The SVG indicator.
  * @csspart label - The center label.
  * @cssprop [--lr-progress-ring-size=var(--lr-size-2-5rem)] - Outer diameter of the ring.
- * @cssprop [--lr-progress-ring-track-width=var(--lr-size-4px)] - Track stroke width.
+ * @cssprop [--lr-progress-ring-track-width=var(--lr-theme-border-width-thick,var(--lr-size-4px))] - Track stroke
+ *   width. Bridges the shared border-width theme input directly (not the `--lr-border-width-*`
+ *   alias, whose own literal default is a different value) so retuning it moves this ring's
+ *   stroke the same way it moves every other bordered/ringed surface in the family.
  * @cssprop [--lr-progress-ring-track-color=var(--lr-color-brand-quiet)] - Track stroke color.
  * @cssprop [--lr-progress-ring-indicator-width=var(--lr-progress-ring-track-width)] - Indicator stroke width.
  * @cssprop [--lr-progress-ring-indicator-color=var(--lr-progress-ring-indicator-variant-color)] -

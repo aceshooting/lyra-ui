@@ -226,6 +226,39 @@ it('keeps the final logical gutter line visible when scrolling a large wrapped s
 });
 
 
+function unavailableActiveElement(root: ShadowRoot): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(root, 'activeElement');
+  Object.defineProperty(root, 'activeElement', {
+    configurable: true,
+    get() { throw new TypeError('Unavailable activeElement'); },
+  });
+  return () => {
+    if (descriptor) Object.defineProperty(root, 'activeElement', descriptor);
+    else Reflect.deleteProperty(root, 'activeElement');
+  };
+}
+
+it('does not throw from the focus handler when the shadow-root activeElement getter is unavailable', async () => {
+  const el = await fixture<LyraCodeEditor>(html`<lr-code-editor></lr-code-editor>`);
+  const restore = unavailableActiveElement(el.shadowRoot!);
+  let errors = 0;
+  const onError = (event: ErrorEvent): void => {
+    if (event.message.includes('Unavailable activeElement')) {
+      errors++;
+      event.preventDefault();
+    }
+  };
+  window.addEventListener('error', onError);
+  try {
+    el.input!.focus();
+    await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  } finally {
+    restore();
+    window.removeEventListener('error', onError);
+  }
+  expect(errors, 'the queued focus callback must not throw').to.equal(0);
+});
+
 it('does not reacquire external-description observers from a queued update after disconnect', async () => {
   const Original = window.MutationObserver;
   const active = new Map<MutationObserver, Node>();

@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './chunk-inspector.js';
 import type { LyraChunkInspector, LyraChunk } from './chunk-inspector.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 const chunks: LyraChunk[] = [
   { id: 'c1', text: 'Radium and polonium were both discovered by Marie and Pierre Curie in 1898.', score: 0.92, sourceId: 's1', title: 'curie-bio.pdf', page: 3 },
@@ -519,31 +519,26 @@ it('renders open-button and toggle hover/focus-visible feedback', async () => {
     (part) => el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!
   );
 
-  for (const target of targets) {
-    target.scrollIntoView({ block: 'center' });
-    const rect = target.getBoundingClientRect();
-    try {
-      await sendMouse({
-        type: 'move',
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+  try {
+    for (const target of targets) {
+      await hoverUntilMatched(
+        target,
+        `${target.getAttribute('part')} never received hover`
+      );
       await waitUntil(
         () => getComputedStyle(target).textDecorationLine.includes('underline'),
         `${target.getAttribute('part')} never painted its hover underline`
       );
-    } finally {
-      await resetMouse();
-    }
 
-    await sendKeys({ press: 'Tab' });
-    target.focus();
-    await waitUntil(() => {
-      const computed = getComputedStyle(target);
-      return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(4, 5, 6)';
-    }, `${target.getAttribute('part')} never painted its keyboard focus ring`);
+      await sendKeys({ press: 'Tab' });
+      target.focus();
+      await waitUntil(() => {
+        const computed = getComputedStyle(target);
+        return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(4, 5, 6)';
+      }, `${target.getAttribute('part')} never painted its keyboard focus ring`);
+    }
+  } finally {
+    await resetMouse();
   }
 });
 

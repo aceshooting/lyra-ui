@@ -447,6 +447,19 @@ describe('localization', () => {
   });
 });
 
+it('ties the key-cap bevel shadow offset to the border-width ladder so it retints with the real border', async () => {
+  const el = (await fixture(html`
+    <div style="--lr-theme-border-width-thin: 5px">
+      <lr-kbd keys="mod"></lr-kbd>
+    </div>
+  `)) as HTMLDivElement;
+  const kbd = el.querySelector('lr-kbd') as LyraKbd;
+  await kbd.updateComplete;
+  const key = kbd.shadowRoot!.querySelector('[part="key"]') as HTMLElement;
+  const shadow = getComputedStyle(key).boxShadow;
+  expect(shadow).to.include('-5px');
+});
+
 it('is accessible in the default (empty) state', async () => {
   const el = (await fixture(html`<lr-kbd></lr-kbd>`)) as LyraKbd;
   await expect(el).to.be.accessible();

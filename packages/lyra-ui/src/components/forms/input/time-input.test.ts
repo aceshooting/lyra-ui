@@ -1473,6 +1473,29 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
     }
   });
 
+  it('commits the same value string regardless of whether value or step is assigned first', async () => {
+    const valueFirst = document.createElement('lr-time-input') as LyraTimeInput;
+    valueFirst.value = '14:30';
+    valueFirst.step = 1;
+    document.body.append(valueFirst);
+    await valueFirst.updateComplete;
+
+    const stepFirst = document.createElement('lr-time-input') as LyraTimeInput;
+    stepFirst.step = 1;
+    stepFirst.value = '14:30';
+    document.body.append(stepFirst);
+    await stepFirst.updateComplete;
+
+    try {
+      expect(valueFirst.value).to.equal('14:30:00');
+      expect(stepFirst.value).to.equal('14:30:00');
+      expect(valueFirst.value).to.equal(stepFirst.value);
+    } finally {
+      valueFirst.remove();
+      stepFirst.remove();
+    }
+  });
+
   it('recomputes seconds in both step directions and rehomes focus when a segment disappears', async () => {
     const el = await fixture<LyraTimeInput>(html`
       <lr-time-input hour-format="24" step="60" value="09:30"></lr-time-input>

@@ -822,6 +822,32 @@ describe('virtualization', () => {
     await nextFrame();
   });
 
+  it('keeps the virtual list items reference stable across an unrelated re-render', async () => {
+    const items = [
+      item({ id: '1', stage: 'queued' }),
+      item({ id: '2', stage: 'uploading' }),
+    ];
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        virtualize-at="1"
+        .items=${items}
+      ></lr-ingestion-queue>`
+    )) as LyraIngestionQueue;
+    const virtualList = el.shadowRoot!.querySelector(
+      'lr-virtual-list'
+    ) as LyraVirtualList;
+    await nextFrame();
+    const itemsBefore = virtualList.items;
+
+    // `items` itself is unchanged; only an unrelated reactive property changes. The composer
+    // must not rebind a freshly-allocated `items`/`keyFunction` to <lr-virtual-list> just because
+    // it re-rendered for an unrelated reason.
+    el.label = 'Uploads';
+    await el.updateComplete;
+
+    expect(virtualList.items).to.equal(itemsBefore);
+  });
+
   // 9.0.0 renamed `virtualizeThreshold`/`virtualize-threshold` -> `virtualizeAt`/`virtualize-at`
   // AND switched the comparison from `>=` to `>`, so `="2"` now means the same thing here as it
   // does on <lr-chunk-inspector>, <lr-retrieval-results> and <lr-neighbor-list>: exactly 2 items

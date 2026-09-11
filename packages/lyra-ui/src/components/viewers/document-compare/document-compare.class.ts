@@ -1,6 +1,8 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import type {
   HighlightActivateDetail,
@@ -324,6 +326,12 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
    *  class doc's "Synchronized anchors" section. */
   @property({ attribute: 'sync-scroll', converter: trueDefaultBooleanConverter }) syncScroll = true;
 
+  /** A CSS length (e.g. `"30rem"`); once set, overrides `--lr-document-compare-pane-max-height` --
+   *  the max block size of each `view="side-by-side"` pane -- declaratively, the same `max-height`
+   *  attribute every other content-viewer sibling exposes, rather than requiring a consumer to set
+   *  the differently-named CSS custom property inline. Invalid values are ignored. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
+
   /** A shared scroll-to-anchor target forwarded to both `view="side-by-side"` panes'
    *  `scrollToAnchor()`. `hasChanged: () => true` so re-assigning the same value (e.g. re-clicking
    *  the same source reference) still re-fires, mirroring `<lr-document-viewer>`'s identical
@@ -487,8 +495,16 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   }
 
   override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`
-      <div part="base" role=${viewerSemanticRole(this, 'group') ?? nothing} aria-label=${viewerSemanticLabel(this, this.localize('documentCompareLabel')) ?? nothing}>
+      <div
+        part="base"
+        role=${viewerSemanticRole(this, 'group') ?? nothing}
+        aria-label=${viewerSemanticLabel(this, this.localize('documentCompareLabel')) ?? nothing}
+        style=${maxHeight
+          ? styleMap({ '--_lr-document-compare-pane-max-height-attr': maxHeight })
+          : nothing}
+      >
         ${this.view === 'side-by-side' ? this.renderSideBySide() : this.renderDiff()}
       </div>
     `;

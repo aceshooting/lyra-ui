@@ -11,6 +11,7 @@ import type {
   LyraSelectionToolbar,
   SelectionActionDetail,
 } from "./selection-toolbar.class.js";
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
 interface SelectionToolbarVisualViewportStub {
   readonly offsetLeft: number;
@@ -1036,6 +1037,41 @@ it("shows a localized failure and emits the full denied clipboard outcome withou
     expect(
       el.shadowRoot!.querySelector('[data-action="copy"]')!.textContent?.trim()
     ).to.equal("Copy");
+  } finally {
+    if (originalClipboard)
+      Object.defineProperty(navigator, "clipboard", originalClipboard);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
+});
+
+it("announces a copy failure through the shared live region, not just the button label", async () => {
+  const originalClipboard = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard"
+  );
+  const rejection = new DOMException(
+    "private platform detail",
+    "NotAllowedError"
+  );
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: () => Promise.reject(rejection) },
+  });
+  try {
+    const el = (await fixture(html`
+      <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+    `)) as LyraSelectionToolbar;
+    const detailedError = oneEvent(el, "lr-copy-error");
+    (
+      el.shadowRoot!.querySelector('[data-action="copy"]') as HTMLElement
+    ).click();
+    await detailedError;
+    await el.updateComplete;
+    const sink = document.querySelector(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`
+    );
+    expect(sink, "an assertive announcement sink is mounted").to.exist;
+    expect(sink!.textContent).to.contain("Copy failed");
   } finally {
     if (originalClipboard)
       Object.defineProperty(navigator, "clipboard", originalClipboard);

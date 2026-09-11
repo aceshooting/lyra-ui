@@ -202,6 +202,81 @@ it("computes citation ranks with at most one pass over a large mixed part list",
   ]).to.deep.equal([1, 100, 200]);
 });
 
+it("renders every part with no ceiling by default, even a very large count", async () => {
+  const source: MessagePart[] = Array.from(
+    { length: 800 },
+    (_, index): MessagePart => ({
+      id: `text-${index}`,
+      type: "text",
+      text: `Chunk ${index}`,
+    })
+  );
+  const el = (await fixture(
+    html`<lr-message-parts .parts=${source}></lr-message-parts>`
+  )) as LyraMessageParts;
+  expect(el.maxRenderedParts).to.equal(0);
+  expect(
+    el.shadowRoot!.querySelectorAll('[part~="part"]')
+  ).to.have.lengthOf(800);
+});
+
+it("windows to the newest N parts once max-rendered-parts opts in, keeping citation ranks stable against the full sequence", async () => {
+  const source: MessagePart[] = Array.from(
+    { length: 10 },
+    (_, index): MessagePart =>
+      index % 2 === 0
+        ? { id: `text-${index}`, type: "text", text: `Chunk ${index}` }
+        : {
+            id: `citation-${index}`,
+            type: "citation",
+            citation: {
+              id: `cite-${index}`,
+              sourceId: `source-${index}`,
+              label: `Source ${index}`,
+            },
+          }
+  );
+  const el = (await fixture(
+    html`<lr-message-parts
+      .parts=${source}
+      max-rendered-parts="4"
+    ></lr-message-parts>`
+  )) as LyraMessageParts;
+  expect(el.maxRenderedParts).to.equal(4);
+  const rendered = el.shadowRoot!.querySelectorAll('[part~="part"]');
+  expect(rendered).to.have.lengthOf(4);
+  // Newest 4 of 10 parts (indices 6..9), oldest 6 dropped.
+  expect(
+    Array.from(rendered, (node) => node.getAttribute("data-type"))
+  ).to.deep.equal(["text", "citation", "text", "citation"]);
+  const badge = el.shadowRoot!.querySelector(
+    "lr-citation-badge"
+  ) as HTMLElement & { index: number };
+  // Rank 4 in the full 10-part sequence (citations at index 1,3,5,7,9), not renumbered
+  // to 1 just because earlier citations were windowed out of view.
+  expect(badge.index).to.equal(4);
+});
+
+it("treats an explicit 0 the same as the unset default -- renders every part", async () => {
+  const source: MessagePart[] = Array.from(
+    { length: 12 },
+    (_, index): MessagePart => ({
+      id: `text-${index}`,
+      type: "text",
+      text: `Chunk ${index}`,
+    })
+  );
+  const el = (await fixture(
+    html`<lr-message-parts
+      .parts=${source}
+      max-rendered-parts="0"
+    ></lr-message-parts>`
+  )) as LyraMessageParts;
+  expect(
+    el.shadowRoot!.querySelectorAll('[part~="part"]')
+  ).to.have.lengthOf(12);
+});
+
 it("declares and preserves intentional composed child-event passthroughs", async () => {
   const el = (await fixture(
     html`<lr-message-parts .parts=${[parts[1]!]}></lr-message-parts>`

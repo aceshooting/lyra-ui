@@ -694,3 +694,16 @@ it('renders each status label visually hidden, not duplicated as visible text', 
   expect(rect.width, 'sr-only marker width').to.be.at.most(1);
   expect(rect.height, 'sr-only marker height').to.be.at.most(1);
 });
+
+it('caps the number of rendered rows for a very large items array', async () => {
+  const manyItems: TaskItem[] = Array.from({ length: 600 }, (_, i) => ({
+    id: `task-${i}`,
+    label: `Task ${i}`,
+    status: 'pending',
+  }));
+  const el = (await fixture(html`<lr-task-list .items=${manyItems}></lr-task-list>`)) as LyraTaskList;
+  await el.updateComplete;
+  const rendered = el.shadowRoot!.querySelectorAll('[role="listitem"]');
+  expect(rendered.length).to.be.lessThan(600);
+  expect(rendered.length).to.be.greaterThan(0);
+});

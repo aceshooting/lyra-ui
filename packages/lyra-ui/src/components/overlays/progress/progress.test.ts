@@ -930,3 +930,24 @@ describe('lr-progress-bar name inside a hidden container', () => {
     expect(name).to.equal('Wrapped Progress');
   });
 });
+
+it('reads lr-progress-ring track/indicator stroke width from the documented --lr-theme-border-width-thick input, not a raw literal (regression: theming purpose)', async () => {
+  const defaultRing = (await fixture(
+    html`<lr-progress-ring value="50"></lr-progress-ring>`
+  )) as LyraProgressRing;
+  const defaultTrack = defaultRing.shadowRoot!.querySelector<SVGCircleElement>('[part="track"]')!;
+  // Retuning the shared theme input must not change the default rendering when the consumer
+  // never opts in.
+  expect(getComputedStyle(defaultTrack).strokeWidth).to.equal('4px');
+
+  const retunedRing = (await fixture(
+    html`<lr-progress-ring
+      value="50"
+      style="--lr-theme-border-width-thick: 11px;"
+    ></lr-progress-ring>`
+  )) as LyraProgressRing;
+  const track = retunedRing.shadowRoot!.querySelector<SVGCircleElement>('[part="track"]')!;
+  const indicator = retunedRing.shadowRoot!.querySelector<SVGCircleElement>('[part="indicator"]')!;
+  expect(getComputedStyle(track).strokeWidth).to.equal('11px');
+  expect(getComputedStyle(indicator).strokeWidth).to.equal('11px');
+});

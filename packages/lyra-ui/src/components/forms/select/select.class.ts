@@ -508,6 +508,28 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // A restored value must win over declarative selected markup collected by
   // the first asynchronous slotchange. Cleared by the next ordinary value write.
   private _restoredStateActive = false;
+  // `value`/`selectedOptions`/`defaultValue` all truncate to a single entry while `multiple` is
+  // still (or defaults to) `false`. Before this element's first update, an enclosing template's
+  // property bindings commit in source order -- e.g. `.value=${arr}` before a later
+  // `.multiple=${true}` -- so the setter can truncate against a `multiple` that hasn't landed yet
+  // for this same update. Retaining the raw pre-truncation argument here and re-applying it once
+  // more from `willUpdate()`, after `multiple` has settled for this update, re-derives the correct
+  // multi-value selection without changing the synchronous, immediately-readable-back behavior a
+  // post-mount assignment already relies on. See each setter's own doc.
+  private _pendingInitialValue?: string | string[];
+  private _pendingInitialSelectedOptions?: LyraOption[];
+  private _pendingInitialDefaultValue?: string | string[];
+  // Suppresses re-stashing while willUpdate() re-invokes a setter above -- `hasUpdated` is still
+  // `false` at that point (it only flips after this first update fully completes).
+  private _resolvingPendingInitialSelection = false;
+  // Set once the `defaultValue` *property* (as opposed to the `default-value` *attribute*, which
+  // `hasAttribute('default-value')` already detects) has been explicitly written. Without this,
+  // `collectOptions()`'s first pass and `refreshOptionDefaults()` -- both of which capture
+  // `_defaultSelected` from declarative `<lr-option selected>`/`defaultSelected` markup whenever
+  // `default-value` is absent -- run on every option connecting and silently discard an explicit
+  // `.defaultValue = …` property write the instant the *next* option connects, since neither one
+  // has any other way to know the default was already set programmatically.
+  private _defaultValueDirty = false;
   // Standard listbox type-ahead: printable keystrokes accumulate into this
   // buffer and reset ~500ms after the last one, so "b" then "a" narrows to
   // "ba" instead of restarting the search on every keystroke.
@@ -631,6 +653,35 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // -- capture that distinction here, while it's still reliable, for
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
+    // Re-apply a `value`/`defaultValue`/`selectedOptions` assignment that landed before this first
+    // update, now that `multiple` has settled for this update -- see each pending field's own doc.
+    if (
+      this._isFirstUpdate &&
+      (this._pendingInitialDefaultValue !== undefined ||
+        this._pendingInitialValue !== undefined ||
+        this._pendingInitialSelectedOptions !== undefined)
+    ) {
+      this._resolvingPendingInitialSelection = true;
+      try {
+        if (this._pendingInitialDefaultValue !== undefined) {
+          const pending = this._pendingInitialDefaultValue;
+          this._pendingInitialDefaultValue = undefined;
+          this.defaultValue = pending;
+        }
+        if (this._pendingInitialValue !== undefined) {
+          const pending = this._pendingInitialValue;
+          this._pendingInitialValue = undefined;
+          this.value = pending;
+        }
+        if (this._pendingInitialSelectedOptions !== undefined) {
+          const pending = this._pendingInitialSelectedOptions;
+          this._pendingInitialSelectedOptions = undefined;
+          this.selectedOptions = pending;
+        }
+      } finally {
+        this._resolvingPendingInitialSelection = false;
+      }
+    }
     this.announceOpenTransition(changed);
     if (changed.has('open') && !this.open && !this.openVetoed) {
       // The veto has already run synchronously. Clear only for an accepted close, so a vetoed
@@ -797,6 +848,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return this.multiple ? [...this._selected] : this._selected[0] ?? '';
   }
   set value(next: string | string[]) {
+    if (!this.hasUpdated && !this._resolvingPendingInitialSelection) this._pendingInitialValue = next;
     this._restoredStateActive = false;
     this._valueDirty = true;
     const values = (Array.isArray(next) ? next : next ? [next] : []).filter(
@@ -820,6 +872,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       : this._defaultSelected[0] ?? '';
   }
   set defaultValue(next: string | string[]) {
+    if (!this.hasUpdated && !this._resolvingPendingInitialSelection) this._pendingInitialDefaultValue = next;
+    this._defaultValueDirty = true;
     const old = this.multiple
       ? [...this._defaultSelected]
       : this._defaultSelected[0] ?? '';
@@ -848,6 +902,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return [...this._selectedOptions];
   }
   set selectedOptions(next: LyraOption[]) {
+    if (!this.hasUpdated && !this._resolvingPendingInitialSelection) this._pendingInitialSelectedOptions = next;
     this._restoredStateActive = false;
     this._valueDirty = true;
     const candidates = Array.isArray(next) ? next : [];
@@ -1147,6 +1202,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       // `_defaultSelected` is set; picking an option later (the `value`
       // setter) never redefines the reset default.
       const hasDefaultValue = this.hasAttribute('default-value');
+      // An explicitly-written `defaultValue` *property* is just as authoritative as the
+      // `default-value` *attribute* -- see `_defaultValueDirty`'s own doc.
+      const explicitDefault = hasDefaultValue || this._defaultValueDirty;
       const allDefaults = this.options.filter(
         (option) => option.defaultSelected
       );
@@ -1162,7 +1220,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       const dirtySelected = this.options.filter(
         (option) => isOptionSelectedDirty(option) && option.selected
       );
-      if (!hasDefaultValue) {
+      if (!explicitDefault) {
         const resetOptions =
           defaults.length > 0
             ? defaults
@@ -1176,14 +1234,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           this._defaultSelected
         );
       }
-      const fromDefaults = hasDefaultValue || defaults.length > 0;
+      const fromDefaults = explicitDefault || defaults.length > 0;
       const initial = optionDirty
         ? this.multiple
           ? allLive
           : dirtySelected.slice(-1)[0]
           ? dirtySelected.slice(-1)
           : live
-        : hasDefaultValue
+        : explicitDefault
         ? this._defaultSelectedOptions
         : fromDefaults
         ? defaults
@@ -1201,7 +1259,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         return; // setSelection() already called reflectSelected()
       }
       if (optionDirty) this._valueDirty = true;
-      if (hasDefaultValue && !this._valueDirty && !this._restoredStateActive) {
+      if (explicitDefault && !this._valueDirty && !this._restoredStateActive) {
         this.setSelection(
           [...this._defaultSelected],
           [...this._defaultSelectedOptions]
@@ -1243,7 +1301,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   };
 
   private refreshOptionDefaults(): void {
-    if (this.hasAttribute('default-value')) return;
+    if (this.hasAttribute('default-value') || this._defaultValueDirty) return;
     const declared = this.options.filter((option) => option.defaultSelected);
     const defaults = this.multiple ? declared : declared.slice(0, 1);
     this._defaultSelected = defaults.map((option) => option.value);

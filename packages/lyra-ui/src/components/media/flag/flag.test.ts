@@ -596,6 +596,24 @@ describe('flag-peer-bulk-standard.js (tier-committed bulk registration entry)', 
   });
 });
 
+/**
+ * Regression: the image frame's inset ring used the generic `--lr-size-1px` token instead of the
+ * documented `--lr-border-width-thin` retheme input, so retuning `--lr-theme-border-width-thin`
+ * silently left the ring's thickness unchanged.
+ */
+describe('image frame ring border-width token', () => {
+  afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
+
+  it('tracks --lr-theme-border-width-thin for the image frame ring', async () => {
+    setFlagUrlResolver(async () => TEST_FLAG_SRC);
+    const el = (await fixture(
+      html`<lr-flag country="fr" style="--lr-theme-border-width-thin: 4px"></lr-flag>`,
+    )) as LyraFlag;
+    const image = await img(el);
+    expect(getComputedStyle(image).boxShadow).to.contain('4px');
+  });
+});
+
 describe('live resolver registration', () => {
   afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
 

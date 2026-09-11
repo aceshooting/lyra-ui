@@ -135,6 +135,7 @@ const DATA_GRID_COLUMN_PROPERTIES = [
   'maxWidth',
   'flex',
   'formatter',
+  'cellTitle',
   'value',
   'sortable',
   'sortFn',
@@ -158,6 +159,7 @@ const DATA_GRID_COLUMN_PROPERTIES = [
 
 const DATA_GRID_COLUMN_CALLBACK_PROPERTIES = new Set<string>([
   'formatter',
+  'cellTitle',
   'value',
   'comparator',
   'filterFn',
@@ -611,7 +613,11 @@ function normalizedGroupBy(
  *   `rowKey` plus the mirrored `key` compatibility alias.
  * @event lr-row-select - Fired after a user changes selection with canonical `selectedRowKeys`
  *   plus the mirrored `selectedKeys` compatibility alias.
- * @event lr-sort-change - Fired after a user changes sorting.
+ * @event lr-sort-request - Cancelable sort proposal, fired before `sort` commits. Frozen readonly
+ *   `detail: { sort }`. Vetoing it leaves `sort` unchanged and suppresses `lr-sort-change`.
+ *   Mirrors `<lr-table>`'s identical `lr-sort-request`/`lr-sort` veto-then-commit contract.
+ * @event lr-sort-change - Fired after a user changes sorting, unless a preceding `lr-sort-request`
+ *   was vetoed.
  * @event focus - Native focus relayed once from the toolbar search or active column-filter input.
  * @event blur - Native blur relayed once from the toolbar search or active column-filter input.
  * @csspart body - The sole vertical and horizontal scroll viewport; header and footer columns
@@ -960,6 +966,21 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Row-selection behavior. A bare attribute means `multiple`. */
   @property({ reflect: true, converter: selectableConverter })
   selectable: DataGridSelectable = 'none';
+  /** Alias of {@link selectable} using `<lr-table>`'s `selectionMode`/`selection-mode` spelling,
+   *  so a consumer migrating between the two grid components doesn't need to remember that they
+   *  chose different property names for the same row-selection concept. `selectable` remains the
+   *  canonical spelling (mirrored from `<wa-data-grid>`, so it is never renamed); reading and
+   *  writing `selectionMode` reads and writes `selectable` directly through the same underlying
+   *  state -- there is no separate value to fall out of sync. The bare `''` attribute shorthand
+   *  for `'multiple'` (`selectable`'s own convenience form) normalizes to `'multiple'` when read
+   *  back through this alias. */
+  @property({ attribute: 'selection-mode' })
+  get selectionMode(): 'none' | 'single' | 'multiple' {
+    return this.selectable === '' ? 'multiple' : this.selectable;
+  }
+  set selectionMode(value: 'none' | 'single' | 'multiple') {
+    this.selectable = value;
+  }
   /** Callback disabling selection for individual rows. */
   @property({ attribute: false }) selectableRows:
     | ((row: Row) => boolean)
@@ -993,10 +1014,26 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     );
   }
   set selectedRows(next: readonly Row[]) {
+    const candidates = Array.isArray(next) ? next : [];
+    // Before this element's first update, Lit property bindings from an enclosing template commit
+    // in source order -- `.selectedRows=${…}` can run before a later `.data=${…}` in the very same
+    // synchronous pass, while `allSourceRows` (derived from `data`/`rowKey`) is still the pre-`data`
+    // default. Resolving eagerly here would then permanently drop the initial selection: `willUpdate()`
+    // only ever *prunes* `selectedKeys` against valid keys, it never re-derives them from candidate
+    // rows. Retrying once more from `willUpdate()`, once `data` has settled for this update, covers
+    // exactly that declarative-binding-order case without changing the synchronous, immediately-
+    // readable-back behavior a post-mount `el.selectedRows = …` assignment already relies on.
+    if (!this.hasUpdated) this.pendingInitialSelectedRows = candidates;
+    this.resolveSelectedRowsAssignment(candidates);
+  }
+  /** @internal Raw `selectedRows` candidates from a setter call before this element's first
+   *  update, re-resolved from `willUpdate()` once `data`/`rowKey` have settled for that update --
+   *  see `selectedRows`'s setter doc. */
+  private pendingInitialSelectedRows?: readonly Row[];
+  private resolveSelectedRowsAssignment(candidates: readonly Row[]): void {
     const source = this.allSourceRows;
     const sourceSet = new Set(source);
     const sourceIndexes = this.sourceIndexMap(source);
-    const candidates = Array.isArray(next) ? next : [];
     const seen = new Set<Row>();
     const rows = candidates.filter((row) => {
       if (!sourceSet.has(row) || seen.has(row)) return false;
@@ -1220,6 +1257,15 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     }
     if (changed.has('columns')) this.handleColumnsChange();
     this.reconcileRowMeasurementCache(changed);
+
+    // Re-resolve a `selectedRows` assignment that landed before this first update against the now-
+    // settled `data`/`rowKey` -- see the setter's doc. `!this.hasUpdated` here (checked before
+    // super.updated() ever flips it) still means "this is the first update".
+    if (!this.hasUpdated && this.pendingInitialSelectedRows !== undefined) {
+      const pending = this.pendingInitialSelectedRows;
+      this.pendingInitialSelectedRows = undefined;
+      this.resolveSelectedRowsAssignment(pending);
+    }
 
     if (
       !this.usesServerData &&
@@ -2361,12 +2407,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     }
   }
 
-  private get selectionMode(): 'none' | 'single' | 'multiple' {
-    if (this.selectable === '' || this.selectable === 'multiple')
-      return 'multiple';
-    return this.selectable;
-  }
-
   private get selectionEnabled(): boolean {
     return this.selectionMode !== 'none';
   }
@@ -3352,14 +3392,20 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const limit = finiteCount(this.maxMultiSort);
     if (limit > 0 && next.length > limit)
       next = next.slice(next.length - limit);
+    const proposedSort = frozenArray(
+      next.map((item) => Object.freeze({ ...item }))
+    );
+    // Mirrors lr-table's lr-sort-request/lr-sort veto-then-commit contract: a listener can reject
+    // a user-initiated sort before it ever touches `sort` or re-renders any row.
+    const requestEvent = this.emit(
+      'lr-sort-request',
+      Object.freeze({ sort: proposedSort }),
+      { cancelable: true }
+    );
+    if (requestEvent.defaultPrevented) return;
     this.sort = next;
     this.page = 0;
-    this.emit(
-      'lr-sort-change',
-      Object.freeze({
-        sort: frozenArray(this.sort.map((item) => Object.freeze({ ...item }))),
-      })
-    );
+    this.emit('lr-sort-change', Object.freeze({ sort: proposedSort }));
   }
 
   private onHeaderClick(event: MouseEvent, id: string): void {
@@ -4483,6 +4529,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               data-column-id=${id}
               data-align=${column.align ?? 'start'}
               data-pin=${normalizePinSide(this.getColumnPin(id)) || nothing}
+              title=${column.cellTitle?.(item.row) || nothing}
               style=${styleMap(this.columnStyle(column, id))}
               @focus=${() => {
                 this.focusedRow = rowPosition;

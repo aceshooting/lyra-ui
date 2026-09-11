@@ -1757,3 +1757,34 @@ describe("state-styling cssprops", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+/**
+ * Regression: ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby`
+ * never reached `[part="base"]`'s own `role="list"`, which is the element that actually owns the
+ * accessible description.
+ */
+describe("lr-stepper host aria-describedby reflection", () => {
+  it("merges a host-authored aria-describedby onto the base list description", async () => {
+    const root = await fixture<HTMLElement>(html`<div>
+      <p id="extra-context">Extra context for the stepper.</p>
+      <lr-stepper
+        aria-describedby="extra-context"
+        .steps=${[{ stepId: "a", label: "A", state: "current" }]}
+      ></lr-stepper>
+    </div>`);
+    const stepper = root.querySelector("lr-stepper") as LyraStepper;
+    await stepper.updateComplete;
+
+    const base = stepper.shadowRoot!.querySelector("[part='base']") as HTMLElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+    const extra = root.querySelector("#extra-context") as HTMLElement;
+    if (Reflect.has(base, "ariaDescribedByElements")) {
+      expect(base.ariaDescribedByElements ?? [], "reflected description").to.include(extra);
+    } else {
+      expect(base.getAttribute("aria-describedby") ?? "", "fallback description").to.contain(
+        "extra-context"
+      );
+    }
+  });
+});

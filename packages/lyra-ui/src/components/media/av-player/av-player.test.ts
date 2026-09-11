@@ -2716,23 +2716,18 @@ describe('active-state cssprop escape hatches', () => {
     expect(rect.width, 'the marker has real geometry to point at').to.be.greaterThan(0);
     const resting = getComputedStyle(target).backgroundColor;
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
-      await aTimeout(0);
-      const hit = el.shadowRoot!.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      expect(
-        target.matches(':hover'),
-        `the native pointer reaches the marker (rect ${rect.left},${rect.top},${rect.width},${rect.height}; viewport ${innerWidth}x${innerHeight}; hit ${(hit as Element | null)?.getAttribute('part') ?? (hit as Element | null)?.localName ?? 'none'})`,
-      ).to.be.true;
+      await hoverUntilMatched(target, 'the native pointer never reached the marker');
+      await waitUntil(
+        () => getComputedStyle(target).backgroundColor !== resting,
+        'hover moves the marker off its resting fill',
+      );
       const hovered = getComputedStyle(target).backgroundColor;
-      expect(hovered, 'hover moves the marker off its resting fill').to.not.equal(resting);
 
       await sendMouse({ type: 'down' });
-      await aTimeout(0);
-      const pressed = getComputedStyle(target).backgroundColor;
-      expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+      await waitUntil(
+        () => getComputedStyle(target).backgroundColor !== hovered,
+        'pressed is a further step, not a repeat of hover',
+      );
       await sendMouse({ type: 'up' });
     } finally {
       await resetMouse();

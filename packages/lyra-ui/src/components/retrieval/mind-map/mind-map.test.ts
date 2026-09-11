@@ -158,6 +158,19 @@ it('keeps compact node pointer targets at the 40px floor and activates through t
   }
 });
 
+it('builds the node circle hover/press ring stroke-width from the border-width ladder', async () => {
+  const el = (await fixture(html`
+    <div style="--lr-theme-border-width-thick: 9px">
+      <lr-mind-map></lr-mind-map>
+    </div>
+  `)) as HTMLDivElement;
+  const mindMap = el.querySelector('lr-mind-map') as LyraMindMap;
+  mindMap.topics = [{ id: 'root', label: 'Root' }];
+  await mindMap.updateComplete;
+  const circle = mindMap.shadowRoot!.querySelector<SVGCircleElement>('[part="node"] circle')!;
+  expect(getComputedStyle(circle).strokeWidth).to.equal('9px');
+});
+
 it('emits lr-topic-toggle when a parent node is clicked, and reveals its children', async () => {
   const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;

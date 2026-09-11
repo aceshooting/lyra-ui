@@ -105,6 +105,28 @@ it('clears a private search filter when searchable becomes false', async () => {
   expect(gridRowCount(el)).to.equal(3);
 });
 
+it('shows a clear button once the search filter has text, and clears it on click', async () => {
+  const el = (await fixture(
+    html`<lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>`,
+  )) as LyraEvalDataset;
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
+
+  search.value = 'bonjour';
+  search.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+  expect(gridRowCount(el)).to.equal(1);
+  const clear = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]');
+  expect(clear).to.not.equal(null);
+  expect(clear!.getAttribute('aria-label')).to.equal('Clear');
+
+  clear!.click();
+  await el.updateComplete;
+  expect(search.value).to.equal('');
+  expect(gridRowCount(el)).to.equal(3);
+  expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
+});
+
 it('forwards native editing-assistance and virtual-keyboard hints to the search input', async () => {
   const el = (await fixture(html`
     <lr-eval-dataset

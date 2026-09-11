@@ -4,7 +4,7 @@ import './svg-viewer.js';
 import type { LyraSvgViewer } from './svg-viewer.js';
 import { styles } from './svg-viewer.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 function response(body: string, ok = true): Response {
   return { ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Error', text: () => Promise.resolve(body) } as Response;
@@ -516,12 +516,11 @@ describe('region highlights', () => {
       const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
       const region = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
       const before = getComputedStyle(region).backgroundColor;
-      const rect = target.getBoundingClientRect();
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
-      expect(getComputedStyle(region).backgroundColor).to.not.equal(before);
+      await hoverUntilMatched(target, 'region-highlight-target is hovered');
+      await waitUntil(
+        () => getComputedStyle(region).backgroundColor !== before,
+        'region highlight never painted its hover treatment',
+      );
     } finally {
       await resetMouse();
       restore();

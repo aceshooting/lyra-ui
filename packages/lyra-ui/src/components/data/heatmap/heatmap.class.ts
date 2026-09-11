@@ -3934,9 +3934,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  The selected state goes through the same `heatmapSelectedCellLabel`
    *  template as the host aria-label, so a locale can place the "selected"
    *  wording anywhere around the cell text instead of it being appended. */
-  private announce(pos: CellPos): void {
+  /** `isSelectedOverride`, when given, wins over `isSelectedPos(pos)` -- a controlled `multiple`
+   *  selection only actually becomes selected once the consumer round-trips its proposed
+   *  `lr-selection-change` back through `selectedCells`, so a caller that already knows the
+   *  proposed outcome (a keyboard range extension) can announce it immediately rather than reading
+   *  the not-yet-updated committed state. */
+  private announce(pos: CellPos, isSelectedOverride?: boolean): void {
     const text = this.resolveCellText(pos);
-    const announcement = this.isSelectedPos(pos)
+    const isSelected = isSelectedOverride ?? this.isSelectedPos(pos);
+    const announcement = isSelected
       ? this.localize('heatmapSelectedCellLabel', undefined, { cell: text })
       : text;
     this.liveText = announcement;
@@ -4068,12 +4074,21 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return true;
   }
 
-  private extendSelection(previous: CellPos | null, next: CellPos, range: boolean): void {
-    if (!this.multiple) return;
+  /** Returns the just-proposed selection's key set for a `multiple` + `range` extension, or
+   *  `undefined` otherwise (non-`multiple`, or a plain non-shift move that leaves selection
+   *  untouched) -- so a caller that needs to announce the outcome doesn't have to wait for
+   *  `proposeSelection()`'s `lr-selection-change` proposal to round-trip back through the
+   *  controlled `selectedCells` property before `isSelectedPos()` would reflect it. */
+  private extendSelection(
+    previous: CellPos | null,
+    next: CellPos,
+    range: boolean
+  ): ReadonlySet<string> | undefined {
+    if (!this.multiple) return undefined;
     if (!range) {
       this.selectionAnchor = next;
       this.selectionRangeBase = undefined;
-      return;
+      return undefined;
     }
     this.selectionAnchor ??= previous ?? next;
     this.selectionRangeBase ??= new Map(this.selectedPositions);
@@ -4088,6 +4103,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       }
     }
     this.proposeSelection(selected, 'keyboard');
+    return new Set(selected.keys());
   }
 
   private selectionPointerPosition(event: PointerEvent): CellPos | null {
@@ -4347,7 +4363,20 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const previous = this.focusedCell;
     if (this.effectiveMode === 'calendar') this.onCalendarKeyDown(e);
     else this.onMatrixKeyDown(e);
-    if (ARROW_KEYS.has(e.key) && this.focusedCell) this.extendSelection(previous, this.focusedCell, e.shiftKey);
+    // The sole announcement for an arrow-key move: onMatrixKeyDown()/onCalendarKeyDown() move focus
+    // but never announce it themselves (see their own comments), specifically so this fires *after*
+    // extendSelection() -- announcing from inside them would read isSelectedPos() against the
+    // not-yet-extended selection, always confirming the cell just added to a keyboard range
+    // selection as unselected. extendSelection() returns the just-proposed key set directly (for a
+    // multiple + shift range extension) so the announcement doesn't have to wait for that proposal
+    // to round-trip back through the controlled `selectedCells` property.
+    if (ARROW_KEYS.has(e.key) && this.focusedCell) {
+      const proposedKeys = this.extendSelection(previous, this.focusedCell, e.shiftKey);
+      this.announce(
+        this.focusedCell,
+        proposedKeys?.has(this.accessibleCellKey(this.focusedCell))
+      );
+    }
   };
 
   private onMatrixKeyDown(e: KeyboardEvent): void {
@@ -4365,7 +4394,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const next = this.firstInteractiveMatrixCell(rows, cols);
       if (!next) return;
       this.focusedCell = next;
-      this.announce(next);
+      // Announced by the caller, onKeyDown(), after extendSelection() -- see its comment.
       this.scrollCellIntoView(next);
       return;
     }
@@ -4388,7 +4417,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       cols
     );
     this.focusedCell = next;
-    this.announce(next);
+    // Announced by the caller, onKeyDown(), after extendSelection() -- see its comment.
     this.scrollCellIntoView(next);
   }
 
@@ -4406,7 +4435,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const next = this.firstInteractiveCalendarCell(weekCount);
       if (!next) return;
       this.focusedCell = next;
-      this.announce(next);
+      // Announced by the caller, onKeyDown(), after extendSelection() -- see its comment.
       return;
     }
     const { week, weekday } = this.focusedCell;
@@ -4426,7 +4455,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       weekCount
     );
     this.focusedCell = next;
-    this.announce(next);
+    // Announced by the caller, onKeyDown(), after extendSelection() -- see its comment.
   }
 
   /** Cache of resolved colors for the current draw pass, cleared at the top
@@ -4619,7 +4648,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       <div
         part="cells"
         role="grid"
-        aria-label=${this.authorAriaLabel || this.generatedAriaLabel}
+        aria-label=${this.authorAriaLabel ?? this.generatedAriaLabel}
         aria-rowcount=${rowCount}
         aria-colcount=${colCount}
         aria-multiselectable=${this.multiple ? 'true' : nothing}
@@ -4730,7 +4759,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         role=${this.accessibleCells ? nothing : 'application'}
         aria-label=${this.accessibleCells
           ? nothing
-          : this.authorAriaLabel || this.generatedAriaLabel}
+          : this.authorAriaLabel ?? this.generatedAriaLabel}
         aria-describedby=${!this.accessibleCells && projectionDescription
           ? 'projection-limit'
           : nothing}

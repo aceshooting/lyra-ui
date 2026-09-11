@@ -118,6 +118,20 @@ it('reports sourceCount as 0 for an empty list', async () => {
   expect(el.sourceCount).to.equal(0);
 });
 
+it('does not throw when sourceCount is assigned, e.g. from a lit-html property binding', async () => {
+  const el = (await fixture(
+    html`<lr-source-list>
+      <lr-source-card title="a.pdf"></lr-source-card>
+    </lr-source-list>`,
+  )) as LyraSourceList;
+  expect(el.sourceCount).to.equal(1);
+  expect(() => {
+    (el as unknown as { sourceCount: number }).sourceCount = 99;
+  }).to.not.throw();
+  // The assignment is inert -- sourceCount stays live-derived from the actual slotted count.
+  expect(el.sourceCount).to.equal(1);
+});
+
 it("keeps willUpdate's pre-count in sync with firstUpdated's authoritative count when a direct child carries a foreign slot attribute, avoiding a wasted second update", async () => {
   // `fixtureSync` (unlike `fixture`) hands back the element before its first
   // Lit update microtask has run, so `updated` can be wrapped in time to

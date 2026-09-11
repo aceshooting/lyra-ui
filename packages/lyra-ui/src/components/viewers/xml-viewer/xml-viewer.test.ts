@@ -1647,3 +1647,28 @@ describe('per-row copy-button reveal', () => {
     expect(getComputedStyle(toolbarButton).opacity).to.equal('1');
   });
 });
+
+it('keeps the per-node copy button visible in coarse/no-hover mode instead of depending on a hover/focus gesture', async () => {
+  const el = (await fixture(
+    html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`,
+  )) as LyraXmlViewer;
+  await el.updateComplete;
+  const mediaRule = el
+    .shadowRoot!.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules])
+    .find(
+      (rule): rule is CSSMediaRule =>
+        rule instanceof CSSMediaRule &&
+        rule.conditionText.includes('hover: none') &&
+        rule.conditionText.includes('pointer: coarse'),
+    );
+  expect(mediaRule !== undefined, 'the coarse/no-hover media rule must exist').to.be.true;
+  const original = mediaRule!.media.mediaText;
+  try {
+    mediaRule!.media.mediaText = 'all';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const button = el.shadowRoot!.querySelector('.row [part="copy-button"]') as HTMLElement;
+    expect(getComputedStyle(button).opacity).to.equal('1');
+  } finally {
+    mediaRule!.media.mediaText = original;
+  }
+});

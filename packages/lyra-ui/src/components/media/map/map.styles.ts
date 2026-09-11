@@ -64,6 +64,19 @@ export const styles = css`
     box-sizing: border-box;
     will-change: transform;
   }
+  /* Interactive markers get role="button"/tabindex in configureMarkerInteraction() -- filter
+     (not transform, which MapLibre owns inline for positioning) and outline keep the hover/focus
+     affordance from fighting the marker's own placement. */
+  .maplibregl-marker[role='button'] {
+    cursor: pointer;
+  }
+  .maplibregl-marker[role='button']:hover {
+    filter: brightness(0.9);
+  }
+  .maplibregl-marker[role='button']:focus-visible {
+    outline: var(--lr-focus-ring);
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+  }
   .maplibregl-popup {
     position: absolute;
     top: 0;
@@ -372,7 +385,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     inline-size: fit-content;
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     box-shadow: var(--lr-shadow);
@@ -392,7 +405,7 @@ export const styles = css`
     cursor: pointer;
   }
   .maplibregl-ctrl-group button:where(:not(:first-child)) {
-    border-block-start: var(--lr-size-1px) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   .maplibregl-ctrl-group button:hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
@@ -448,7 +461,7 @@ export const styles = css`
     box-sizing: border-box;
     inline-size: var(--_lr-map-scale-width, 100%);
     block-size: var(--lr-space-xs);
-    border: var(--lr-size-2px) solid currentColor;
+    border: var(--lr-border-width-medium) solid currentColor;
     border-block-start: 0;
     pointer-events: none;
   }

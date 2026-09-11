@@ -319,6 +319,11 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    * rolls back every active gesture before retiring its global listeners. */
   @property({ type: Boolean, reflect: true }) locked = false;
   private _selectedNodeIds: readonly string[] = Object.freeze([]);
+  /** The last-assigned candidate ids, syntactically sanitized (capped/deduped/nonblank) but not
+   *  yet filtered against `nodes` -- kept separately so a selection assigned before its
+   *  referenced nodes exist can still resolve once `nodes` catches up, instead of being
+   *  permanently discarded by a filter that ran against the stale (still-empty) node set. */
+  private _requestedSelectedNodeIds: readonly string[] = Object.freeze([]);
   /** Frozen, unique snapshot of at most the first 10,000 valid nonblank node ids. */
   @property({ attribute: false })
   get selectedNodeIds(): readonly string[] {
@@ -326,14 +331,18 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
   set selectedNodeIds(value: readonly string[]) {
     const previous = this._selectedNodeIds;
+    this._requestedSelectedNodeIds = this.sanitizeSelectionCandidates(value);
     this._selectedNodeIds = this.snapshotSelectedIds(
-      value,
+      this._requestedSelectedNodeIds,
       new Set(this.nodes.map((node) => node.id)),
     );
     this.requestUpdate('selectedNodeIds', previous);
   }
 
   private _selectedEdgeIds: readonly string[] = Object.freeze([]);
+  /** The last-assigned candidate ids, syntactically sanitized but not yet filtered against
+   *  `edges` -- see `_requestedSelectedNodeIds`. */
+  private _requestedSelectedEdgeIds: readonly string[] = Object.freeze([]);
   /** Frozen, unique snapshot of at most the first 10,000 valid nonblank edge ids. */
   @property({ attribute: false })
   get selectedEdgeIds(): readonly string[] {
@@ -341,14 +350,17 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
   set selectedEdgeIds(value: readonly string[]) {
     const previous = this._selectedEdgeIds;
+    this._requestedSelectedEdgeIds = this.sanitizeSelectionCandidates(value);
     this._selectedEdgeIds = this.snapshotSelectedIds(
-      value,
+      this._requestedSelectedEdgeIds,
       new Set(this.edges.map((edge) => edge.id)),
     );
     this.requestUpdate('selectedEdgeIds', previous);
   }
 
-  private snapshotSelectedIds(value: unknown, validIds: ReadonlySet<string>): readonly string[] {
+  /** Caps, dedupes, and drops non-string/blank candidates. Existence against the current
+   *  node/edge set is intentionally NOT applied here -- see `_requestedSelectedNodeIds`. */
+  private sanitizeSelectionCandidates(value: unknown): readonly string[] {
     if (!Array.isArray(value)) return Object.freeze([]);
     const selected: string[] = [];
     const seen = new Set<string>();
@@ -356,13 +368,20 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       if (
         typeof candidate !== 'string' ||
         candidate.trim().length === 0 ||
-        !validIds.has(candidate) ||
         seen.has(candidate)
       ) continue;
       seen.add(candidate);
       selected.push(candidate);
     }
     return Object.freeze(selected);
+  }
+
+  private snapshotSelectedIds(
+    value: readonly string[],
+    validIds: ReadonlySet<string>,
+  ): readonly string[] {
+    const selected = value.filter((candidate) => validIds.has(candidate));
+    return selected.length === value.length ? value : Object.freeze(selected);
   }
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.25;
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 2;
@@ -725,12 +744,12 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.pruneNodeCaches();
       this.syncAuthoredCards();
       const nodeIds = new Set(this.nodes.map((node) => node.id));
-      this._selectedNodeIds = this.snapshotSelectedIds(this.selectedNodeIds, nodeIds);
+      this._selectedNodeIds = this.snapshotSelectedIds(this._requestedSelectedNodeIds, nodeIds);
     }
     if (changed.has('edges')) {
       this.cancelModelBoundGestures();
       const edgeIds = new Set(this.edges.map((edge) => edge.id));
-      this._selectedEdgeIds = this.snapshotSelectedIds(this.selectedEdgeIds, edgeIds);
+      this._selectedEdgeIds = this.snapshotSelectedIds(this._requestedSelectedEdgeIds, edgeIds);
     }
     if (
       (changed.has('locked') && this.locked) ||
@@ -1203,6 +1222,17 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   get viewport(): Readonly<{ x: number; y: number; zoom: number }> {
     return Object.freeze({ x: this.panX, y: this.panY, zoom: this.zoomLevel });
+  }
+  /**
+   * Read-only, derived from the live layout — {@link setViewport} is the mutator. The setter
+   * exists and is a documented no-op because this getter's return shape is exactly
+   * `setViewport()`'s input shape, which invites `.viewport=${next}` in a Lit template. A
+   * getter-only accessor makes that binding throw from inside lit-html's property commit on a
+   * *later* render, blaming framework internals rather than the offending line; degrading to a
+   * silent ignore is the kinder failure. Mirrors `LyraChart`'s `chartArea`.
+   */
+  set viewport(_value: Readonly<{ x: number; y: number; zoom: number }>) {
+    /* read-only, derived from the live layout; direct writes are silently ignored */
   }
 
   setViewport(next: { x: number; y: number; zoom: number }): void {

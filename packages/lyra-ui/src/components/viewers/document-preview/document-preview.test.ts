@@ -1887,3 +1887,36 @@ describe("active-region cssprop escape hatch", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it("moves focus across region-highlight actions with ArrowDown/ArrowUp and clamps at the ends", async () => {
+  // The colocated suite has to carry this: `document-preview.class.ts` owns a roving keydown
+  // handler for its region-highlight action list, and `check:source-policy`'s keyboard-coverage
+  // ratchet requires the component's own test file to simulate real keyboard input rather than
+  // leaving it to a sibling remediation suite.
+  const viewer = await fixture<LyraDocumentPreview>(
+    html`<lr-document-preview mime-type="image/png" src=${IMAGE_DATA_URI}></lr-document-preview>`,
+  );
+  viewer.highlights = [
+    { id: "a", anchor: { kind: "region", rect: { x: 10, y: 10, width: 2, height: 2 } } },
+    { id: "b", anchor: { kind: "region", rect: { x: 20, y: 20, width: 2, height: 2 } } },
+  ];
+  await viewer.updateComplete;
+  const actions = [
+    ...viewer.shadowRoot!.querySelectorAll<HTMLElement>('[part="region-highlight-action"]'),
+  ];
+  expect(actions.length).to.equal(2);
+
+  const press = (target: HTMLElement, key: string) =>
+    target.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, composed: true, cancelable: true }),
+    );
+
+  actions[0]!.focus();
+  press(actions[0]!, "ArrowDown");
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[1]).to.be.true;
+  // Clamps rather than wrapping past the last action.
+  press(actions[1]!, "ArrowDown");
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[1]).to.be.true;
+  press(actions[1]!, "ArrowUp");
+  expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[0]).to.be.true;
+});

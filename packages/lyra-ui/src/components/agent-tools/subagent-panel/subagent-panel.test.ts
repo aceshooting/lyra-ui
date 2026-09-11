@@ -635,3 +635,35 @@ it('uses break-word, not anywhere, on label/task text', async () => {
   expect(getComputedStyle(label).overflowWrap).to.equal('break-word');
   expect(getComputedStyle(task).overflowWrap).to.equal('break-word');
 });
+
+it('falls back to a generic accessible name for the progressbar when a run has a blank label', async () => {
+  const blankLabelRuns: SubagentRun[] = [
+    { id: 'blank', label: '', status: 'running', progressRatio: 0.25 },
+  ];
+  const el = (await fixture(
+    html`<lr-subagent-panel .runs=${blankLabelRuns}></lr-subagent-panel>`
+  )) as LyraSubagentPanel;
+  const progressbar = el.shadowRoot!.querySelector('[part="progress"]')!;
+  expect(progressbar.getAttribute('aria-label')).to.equal('Progress');
+});
+
+it('reflects compact and reduces run-trigger padding without dropping each row\'s own border', async () => {
+  const normal = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  const el = (await fixture(html`<lr-subagent-panel compact .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  expect(el.hasAttribute('compact')).to.be.true;
+  const normalTrigger = normal.shadowRoot!.querySelector('[part="run-trigger"]') as HTMLElement;
+  const compactTrigger = el.shadowRoot!.querySelector('[part="run-trigger"]') as HTMLElement;
+  const run = el.shadowRoot!.querySelector('[part~="run"]') as HTMLElement;
+  expect(
+    parseFloat(getComputedStyle(compactTrigger).paddingBlockStart)
+  ).to.be.lessThan(parseFloat(getComputedStyle(normalTrigger).paddingBlockStart));
+  expect(getComputedStyle(run).borderTopWidth).to.not.equal('0px');
+});
+
+it('drops each run row\'s border/radius under frame="plain"', async () => {
+  const el = (await fixture(html`<lr-subagent-panel frame="plain" .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  expect(el.getAttribute('frame')).to.equal('plain');
+  const run = el.shadowRoot!.querySelector('[part~="run"]') as HTMLElement;
+  expect(getComputedStyle(run).borderTopWidth).to.equal('0px');
+  expect(getComputedStyle(run).borderRadius).to.equal('0px');
+});

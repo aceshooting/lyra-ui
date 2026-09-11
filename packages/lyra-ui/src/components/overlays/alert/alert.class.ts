@@ -112,6 +112,12 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  *   the same native button as `close-button`.
  * @csspart icon - The optional inert, aria-hidden icon wrapper.
  * @csspart message - The alert's main-content wrapper.
+ * @cssprop [--lr-alert-close-hover-bg=color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ *   The close button's hover background, scoped so a consumer can retint just this control
+ *   without touching the shared `--lr-color-mix-partner`/`--lr-color-mix-hover` tokens every
+ *   other interactive surface in the library also reads.
+ * @cssprop [--lr-alert-close-active-bg=color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ *   The close button's pressed background, independently scoped from `--lr-alert-close-hover-bg`.
  * @status stable
  * @since 8.0.0
  */

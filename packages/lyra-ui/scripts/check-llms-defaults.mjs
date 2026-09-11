@@ -68,6 +68,21 @@ export function collectManifestMembers(manifest) {
  * The manifest records the widened setter signature, so documenting `= []` there is correct and
  * only the union carrying BOTH `null` and `undefined` has that shape.
  */
+/**
+ * KNOWN COVERAGE BOUNDARY -- this gate validates roughly 82% of public fields, not all of them.
+ *
+ * A member reaches `'other'` when the manifest records a type but no `default`. That is the normal
+ * shape for a property backed by a getter/setter pair: the analyzer sees the accessor signature,
+ * not the initializer, so there is nothing to compare a documented `= x` against and the member is
+ * skipped. At the time of writing that is 580 of 3,148 public fields across 285 tags -- including
+ * `lr-compare-panel.disabled`, `lr-stack-trace.internalPatterns` and `lr-json-schema-viewer.schema`.
+ *
+ * The consequence is specific and worth stating rather than leaving for the next reviewer to
+ * rediscover: a documented default on an accessor-backed property can drift from source
+ * indefinitely and this check will stay green. Closing it means teaching the manifest pipeline to
+ * record accessor initializers, not loosening the classification here -- widening `'other'` into a
+ * validated bucket without that data would only produce false findings.
+ */
 export function classifyMember(entry) {
   if (!entry) return null;
   const parts = new Set(entry.type.split('|').map((part) => part.trim()));

@@ -374,6 +374,24 @@ it("emits the same native input/change pair when a selected tag is removed", asy
   expect(events.every((event) => !event.cancelable)).to.be.true;
 });
 
+it("falls back to the raw value in a remove-tag's accessible name when the option's computed label is blank", async () => {
+  const el = (await fixture(html`
+    <lr-combobox multiple>
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="x"></lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  el.value = ["a", "x"];
+  await el.updateComplete;
+  const removeButtons = [
+    ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+      '[part="tag__remove-button"]'
+    ),
+  ];
+  const blankOptionButton = removeButtons[1]!;
+  expect(blankOptionButton.getAttribute("aria-label")).to.equal("Remove x");
+});
+
 it("emits the native input/change pair when Backspace removes the last tag", async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.multiple = true;
@@ -3655,6 +3673,34 @@ describe("size", () => {
         trigger.getBoundingClientRect().height,
         `laid-out height at size=${size}`
       ).to.equal(px);
+    }
+  });
+
+  it("scales the clear-button hit-area floor down at compact tiers instead of forcing the full unscaled icon-button-size on every tier", async () => {
+    async function triggerHeight(size: string): Promise<number> {
+      const el = (await fixture(html`
+        <lr-combobox size=${size} label="Tags" clearable>
+          <lr-option value="a" selected>Apple</lr-option>
+        </lr-combobox>
+      `)) as LyraCombobox;
+      await el.updateComplete;
+      expect(
+        el.shadowRoot!.querySelector('[part="clear-button"]'),
+        `clear button present at size=${size}`
+      ).to.not.equal(null);
+      return (
+        el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement
+      ).getBoundingClientRect().height;
+    }
+    // Before this fix, [part="clear-button"] forced min-inline/block-size to the unscaled
+    // --lr-icon-button-size at every tier: this component's theme resolves that to 42px, so a
+    // 2xs/xs/s row (whose own un-clearable height ladder is 20/24/30px) was always forced to 42.
+    // Each compact tier's row must now render strictly under that unscaled floor.
+    for (const size of ["2xs", "xs", "s"]) {
+      expect(
+        await triggerHeight(size),
+        `size=${size} clear-button row must scale below the unscaled 42px --lr-icon-button-size floor`
+      ).to.be.lessThan(42);
     }
   });
 

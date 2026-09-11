@@ -213,6 +213,14 @@ export const styles = css`
   .row:focus-within [part='copy-button'] {
     opacity: 1;
   }
+  /* No hover capability (touch) or an imprecise pointer: the button stays visible instead of
+     depending on a hover/focus gesture the input can't perform, matching lr-json-viewer's
+     identical per-row copy-button convention. */
+  @media (hover: none), (pointer: coarse) {
+    .row [part='copy-button'] {
+      opacity: 1;
+    }
+  }
   [part='error'] {
     color: var(--lr-color-danger);
     padding: var(--lr-space-l);

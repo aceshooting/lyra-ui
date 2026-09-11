@@ -2,7 +2,7 @@ import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/t
 import './attachment-chip.js';
 import type { LyraAttachmentChip } from './attachment-chip.js';
 import { formatFileSize } from './attachment-chip.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
@@ -647,16 +647,18 @@ describe('remove affordance', () => {
     const rect = btn.getBoundingClientRect();
     expect(rect.width, 'the remove button has real geometry to point at').to.be.greaterThan(0);
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
+      await hoverUntilMatched(btn, 'the remove button never reported :hover');
+      await waitUntil(
+        () => getComputedStyle(btn).backgroundColor !== resting,
+        'hover tints the transparent button',
+      );
       const hovered = getComputedStyle(btn).backgroundColor;
-      expect(hovered, 'hover tints the transparent button').to.not.equal(resting);
 
       await sendMouse({ type: 'down' });
-      const pressed = getComputedStyle(btn).backgroundColor;
-      expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+      await waitUntil(
+        () => getComputedStyle(btn).backgroundColor !== hovered,
+        'pressed is a further step, not a repeat of hover',
+      );
       await sendMouse({ type: 'up' });
     } finally {
       await resetMouse();
