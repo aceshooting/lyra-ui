@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -117,7 +117,23 @@ bounded-alternative sampling notice)
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
 re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
 that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
-so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-pattern-step`
+so `--lr-theme-color-chart-*` retheming reaches box plots too. That resolved color then layers two
+further per-series override tokens for the canvas paint, each wrapping modulo 8 like the underlying
+ramp and mirroring `lr-chart`'s own `--border-color-N`/`--fill-color-N` palette-override mechanism
+under a box-plot-namespaced name, since box-plot has no raw `config` passthrough to piggyback on:
+`--lr-box-plot-border-color-1` through `--lr-box-plot-border-color-8` (defaulting respectively to
+`--lr-color-chart-1` through `--lr-color-chart-8`) set the box-outline stroke color, and
+`--lr-box-plot-fill-color-1` through `--lr-box-plot-fill-color-8` (the same eight defaults) set the
+box fill and its legend swatch. In full, the stroke tokens are `--lr-box-plot-border-color-1`,
+`--lr-box-plot-border-color-2`, `--lr-box-plot-border-color-3`, `--lr-box-plot-border-color-4`,
+`--lr-box-plot-border-color-5`, `--lr-box-plot-border-color-6`, `--lr-box-plot-border-color-7` and
+`--lr-box-plot-border-color-8`; the fill tokens are `--lr-box-plot-fill-color-1`,
+`--lr-box-plot-fill-color-2`, `--lr-box-plot-fill-color-3`, `--lr-box-plot-fill-color-4`,
+`--lr-box-plot-fill-color-5`, `--lr-box-plot-fill-color-6`, `--lr-box-plot-fill-color-7` and
+`--lr-box-plot-fill-color-8`. `--lr-box-plot-border-width` (default `var(--lr-border-width-thin)`)
+sets the canvas box-outline stroke width in pixels — the same override mechanism as `lr-chart`'s
+`--border-width`. `--lr-box-plot-item-radius` (default `0`) sets the radius, in pixels, of the
+individual raw-sample dots drawn alongside each box; `0` disables them. `--lr-chart-pattern-step`
 (default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
 hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color)`) sets
@@ -148,8 +164,9 @@ loads are memoized per page.
 ```
 
 **Known gotchas:**
-- no raw `config` passthrough — limited to the properties above; can't reach the underlying
-  controller's own options (`itemRadius`, `outlierRadius`, `coef`).
+- no raw `config` passthrough — limited to the properties above, plus the `--lr-box-plot-border-width`
+  and `--lr-box-plot-item-radius` CSS hooks; the underlying controller's other options
+  (`outlierRadius`, `coef`) remain unreachable.
 - Chart.js receives `effectiveLocale`; generated numeric summaries use it, the y axis moves to
   logical start in RTL, and live ancestor `lang`/`dir` changes redraw the already-mounted canvas
   without requiring another box property write. Canvas tooltip/axis colors are token-driven, and

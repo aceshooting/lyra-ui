@@ -88,7 +88,10 @@ The internal `lr-slider` renders with its own value readout suppressed (`.showVa
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
 which formats `temperature` through the cached `Intl.NumberFormat` for the effective locale with up
 to 20 fractional digits, matching `lr-slider`'s own numeric readout. For example, `temperature="0.7"`
-under `locale="de-DE"` displays `0,7`.
+under `locale="de-DE"` displays `0,7`. When the full decimal expansion would exceed 24 characters —
+reachable only through an extreme `temperatureMin`/`temperatureMax`/`temperatureStep` combination —
+the readout switches to bounded scientific notation at up to 6 significant digits instead, so
+`1e308` renders as `7E+307` rather than a 300-digit string that would overflow the label.
 
 The panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
 `lr-input` events (drag/key-repeat), not just its committed `lr-change` — so `temperature` (and

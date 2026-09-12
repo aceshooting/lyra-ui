@@ -93,7 +93,8 @@ structured points retain their y-value formatting.
 - `datasets: readonly LyraChartSeries[] = []` (attribute: false) — `LyraChartSeries { readonly
   label: string; readonly data?: readonly (number|null)[]; readonly points?: readonly
   LyraChartPoint[]; readonly color?: string|readonly string[]; ... }`. The deprecated `Series` and
-  `ChartPoint` names remain aliases for migration. `LyraChartPoint { readonly x: number; readonly
+  `ChartPoint` names were removed in 9.0.0 — import `LyraChartSeries`/`LyraChartPoint` instead.
+  `LyraChartPoint { readonly x: number; readonly
   y: number; readonly r?: number; readonly label?: string }`: `r` is the bubble
   radius, and the optional per-point `label` is retained by events, CSV export, keyboard
   announcements, generated summaries, and the accessible table. Point wording is localized as
@@ -127,9 +128,11 @@ structured points retain their y-value formatting.
   would clip. Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is
   defined, otherwise the effective dataset's declarative `hidden` value before Chart.js is ready
   and across chart type/plugin rebuilds.
-- `legendMode: LyraChartLegendMode = 'dataset'` (attribute `legend-mode`) — `dataset` preserves
-  dataset toggles. `datum` shows one category toggle per slice in pie, doughnut and polar-area
-  charts; other types retain dataset legends. Category names use source labels with localized
+- `legendMode: LyraChartLegendMode = 'auto'` (attribute `legend-mode`) — `auto` resolves to `datum`
+  on pie, doughnut and polar-area charts and to `dataset` everywhere else, so a single-dataset slice
+  chart labels every slice rather than emitting one aggregate row that identifies only the first
+  colour. `dataset` forces dataset toggles even on a slice chart. `datum` shows one category toggle
+  per slice in pie, doughnut and polar-area charts; other types retain dataset legends. Category names use source labels with localized
   numbered fallbacks. Colors and values come from the first dataset. With multiple datasets/rings,
   a category toggle hides that source index in every ring, matching Chart.js category visibility.
 - `hiddenDatums: readonly number[] = []` (attribute: false) — clone-owned hidden source category
@@ -303,6 +306,12 @@ scope, or pass `null` to request the light-mode fallback directly. When a scope 
 token layer yet, the helper reads the `--lr-theme-color-chart-N` inputs directly. Both forms return
 a fresh eight-color array each call (safe to mutate) and let chart-adjacent UI, KPI tiles, or the
 `Series` array itself come from one source of truth.
+
+The same module also exports `ChartThemeColors`, the resolved chrome colours a chart paints around
+its series. Every field is an already-resolved CSS colour string, because canvas silently ignores a
+raw `var(--lr-…)` string and would paint nothing; `<lr-box-plot>` consumes the same shape, so a
+consumer drawing its own canvas overlay beside a chart can match the grid, tick, legend and tooltip
+chrome exactly rather than re-deriving it.
 
 Import the standalone form from `.../chart/chart-colors.js`, not from `.../chart/chart.js`: the
 latter is `<lr-chart>`'s registration entry, so it defines the element (and pulls in `<lr-skeleton>`)

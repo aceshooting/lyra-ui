@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -59,13 +59,18 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 substitute your own server-generated download instead of the built-in client-side one),
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
 built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
-unknown }`, fires when a built-in export cannot be serialized or downloaded; activation does not
-throw into consumer code), `lr-show`, `lr-hide` (cancelable format-menu visibility transitions;
-self-imposed closes caused by disablement, loading, or an unusable format list emit neither event)
+unknown }`, fires when a built-in export cannot be serialized or downloaded; the same failure is
+also shown via the trigger's `trigger-error` part and announced through the shared light-DOM live
+region, so a listener is needed only for additional handling; activation does not throw into
+consumer code), `lr-show`, `lr-hide` (cancelable format-menu visibility transitions; self-imposed
+closes caused by disablement, loading, or an unusable format list emit neither event)
 
 **Slots:** none.
 
-**CSS parts:** `trigger`, `menu`, `menu-item`, `format-label`, `format-description`
+**CSS parts:** `trigger`, `trigger-error` (present alongside `trigger` on the same button —
+`part="trigger trigger-error"` — after a built-in CSV/JSON export fails; cleared on the next export
+attempt regardless of outcome — style with `::part(trigger-error)`), `menu`, `menu-item`,
+`format-label`, `format-description`
 
 **Themeable custom properties:** shared tokens only, including `--lr-popover-viewport-clamp`
 (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed

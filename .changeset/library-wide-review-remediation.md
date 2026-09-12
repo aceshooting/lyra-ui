@@ -2,13 +2,11 @@
 "@aceshooting/lyra-ui": major
 ---
 
-Library-wide review remediation: 222 fixes across all 285 components, plus five deliberate public
+Library-wide consistency release: fixes across all 285 components, plus five deliberate public
 API changes.
 
-A full-library review swept every component against the incident checklist and the historical issue
-catalogue. The recurring theme it surfaced was that several past fixes had been applied only to the
-component a report named and never swept to structurally identical siblings — so most of this
-release is those sweeps finishing.
+Most of this release extends earlier single-component fixes to every structurally identical
+sibling, so behaviour that was already correct on one element is now correct across the family.
 
 ### Breaking changes
 

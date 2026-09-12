@@ -193,7 +193,10 @@ abort stale contexts, whose callbacks become inert.
 
 The adapter's required `clearValue` is used when the active chip is removed. Its optional
 `isEmpty(value)` defines domain emptiness; without one, the bar compares against `clearValue`
-(including shallow string-array equality). Its optional `formatValue` controls chip display.
+(including shallow string-array equality). Its optional `formatValue(value, locale)` controls chip
+display; `locale` is the filter bar's `effectiveLocale`, the same value every built-in filter
+type's own chip formatting already receives, so an existing single-argument `formatValue`
+implementation keeps working unchanged — JS simply ignores a second parameter it never declared.
 Consequently `false` remains a meaningful active value unless the adapter explicitly declares it
 empty. Custom values may be strings, string arrays, booleans, or `undefined`, so controls such as
 `lr-time-range`, `lr-checkbox`, and an async-backed `lr-combobox` can participate in the same

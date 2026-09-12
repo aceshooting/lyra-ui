@@ -19,7 +19,7 @@
 Sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on
 two optional peer dependencies — `marked` (parsing) and `dompurify` (sanitizing) — both lazy-loaded
 independently via `markdown-loader.ts`'s `loadMarkdownDeps()` on first connect, cached per page the
-same way `chart-loader.ts`/`map-loader.ts` cache their load promise so every `<lr-markdown>`
+same way `chart-core-loader.ts`/`map-loader.ts` cache their load promise so every `<lr-markdown>`
 instance on a page shares one load. `heading`/`code`/`blockquote`/`table`/`link`/`image` tokens are
 rendered through a `marked` renderer override that injects `part="..."` attributes directly into the
 produced HTML in a single pass (no second DOM walk after insertion).
@@ -180,7 +180,7 @@ rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/
 `--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
-`loadMarkdownDeps()`, mirroring `chart-loader.ts`'s two-independent-optional-peers shape). Each half
+`loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half
 is loaded and caught independently — a consumer who installs only `marked` and explicitly sets
 `html-mode="trusted"` (so `dompurify` is never needed) is a valid, supported combination. Also `shiki`,
 the same optional peer `<lr-code-block>` uses, for `highlightCode`'s fenced-block syntax

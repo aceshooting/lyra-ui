@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -66,9 +66,10 @@ re-rendered group order confirms the host applied it.
 **Slots:** `header` (content above the search field, e.g. a heading or tabs), `footer` (content
 below the list).
 
-**CSS parts:** `base`, `search`, `list` (the listbox), `group-header`, `item`, `item-icon`,
-`item-label`, `item-description`, `empty` (no-results message), `live-region` (result-count
-announcement).
+**CSS parts:** `base`, `search-field` (wrapper around the search input and its clear button),
+`search`, `search-clear` (clears the query; rendered only while the field has text), `list` (the
+listbox), `group-header`, `item`, `item-icon`, `item-label`, `item-description`, `empty`
+(no-results message), `live-region` (result-count announcement).
 
 **Themeable custom properties:** shared tokens only.
 

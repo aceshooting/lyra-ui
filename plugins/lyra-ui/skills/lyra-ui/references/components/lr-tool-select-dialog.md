@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 25 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -97,8 +97,9 @@ already apply live via `lr-change`, so this slot is purely optional; only visual
 assigned elements.
 
 **CSS parts:** `backdrop`, `panel`, `header`, `title`, `subtitle`, `search-row`, `search-input`,
-`defaults-row`, `defaults-toggle`, `defaults-hint`, `body` (the keyboard-focusable scroll region),
-`empty`, `category`, `category-heading`,
+`search-clear` (replaces the native search-cancel glyph the component resets; rendered only while
+the field has text), `defaults-row`, `defaults-toggle`, `defaults-hint`, `body` (the
+keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 `category-count`, `category-list`, `tool-row`, `tool-checkbox`, `tool-name`, `tool-icon`,
 `tool-description`, `tool-disabled-reason`, `limit`, `load-more`, `footer`
 

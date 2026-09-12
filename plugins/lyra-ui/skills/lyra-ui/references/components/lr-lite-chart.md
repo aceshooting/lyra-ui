@@ -28,7 +28,8 @@ passthrough). Not a subclass of `LyraChart`.
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraLiteChartSeries[] = []` (attribute: false) —
   `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
-  readonly color?: string }`; the deprecated `LiteSeries` name remains an alias for migration.
+  readonly color?: string }`. The legacy `LiteSeries` name was removed in 9.0.0 — import
+  `LyraLiteChartSeries` instead.
   `color` accepts a valid CSS `color`, while invalid values,
   declaration-breaking input, and `url()` paint servers fall back to the built-in palette. A
   runtime entry whose required `data` member is not an array is dropped while valid siblings

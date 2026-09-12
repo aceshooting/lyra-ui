@@ -89,7 +89,7 @@ activated by pointer, Enter, or Space. Its non-cancelable, bubbling, composed
 `detail: LyraTimelineClusterActivateDetail` is `{ items: readonly LyraTimelineItem[] }`: a fresh
 frozen snapshot of the cluster members in document order, preserving each element's identity.
 `LyraTimelineClusterActivateDetail {
-  items: unknown;
+  items: readonly LyraTimelineItem[];
 }`
 Use it to open a consumer-owned popover, dialog, or detail view. `lr-timeline-item` emits no events.
 Read the reactive `itemCount` property after changing assigned items; the internal slot's
