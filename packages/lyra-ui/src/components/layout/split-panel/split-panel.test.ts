@@ -59,6 +59,57 @@ function installResizeObserverStub(): {
   };
 }
 
+/** Collects Lit's dev-mode "scheduled an update" warnings raised while `run` executes.
+ *  Lit dedupes each warning string globally through `litIssuedWarnings`, so a previously
+ *  issued entry has to be cleared first or this guard silently observes nothing. */
+async function recordScheduledUpdateWarnings(run: () => Promise<void>): Promise<string[]> {
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  globalWarnings?.forEach((warning) => {
+    if (warning.includes('scheduled an update')) globalWarnings.delete(warning);
+  });
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    await run();
+  } finally {
+    console.warn = originalWarn;
+  }
+  return calls
+    .flat()
+    .map(String)
+    .filter((message) => message.includes('scheduled an update'));
+}
+
+it('does not schedule a Lit update from the initial container measurement', async () => {
+  let rendered = false;
+  const warnings = await recordScheduledUpdateWarnings(async () => {
+    const element = await fixture<LyraSplitPanel>(
+      html`<lr-split-panel style="inline-size: 400px; block-size: 200px"></lr-split-panel>`,
+    );
+    await element.updateComplete;
+    rendered = base(element).style.getPropertyValue('--_lr-split-panel-start-position') !== '';
+  });
+  expect(rendered).to.equal(true);
+  expect(warnings).to.deep.equal([]);
+});
+
+it('does not schedule a Lit update when an orientation change re-measures', async () => {
+  const element = await fixture<LyraSplitPanel>(
+    html`<lr-split-panel style="inline-size: 400px; block-size: 200px"></lr-split-panel>`,
+  );
+  await element.updateComplete;
+
+  // `updated()` re-measures on an orientation change, so this is the second measurement path
+  // that runs inside Lit's update lifecycle -- the one place scheduling another update warns.
+  const warnings = await recordScheduledUpdateWarnings(async () => {
+    element.orientation = 'vertical';
+    await element.updateComplete;
+  });
+  expect(element.orientation).to.equal('vertical');
+  expect(warnings).to.deep.equal([]);
+});
+
 it('reflects string snap points and removes the attribute for function/empty writes', async () => {
   const element = await fixture<LyraSplitPanel>(html`<lr-split-panel snap="25% 200px"></lr-split-panel>`);
   expect(element.snap).to.equal('25% 200px');

@@ -41174,14 +41174,14 @@
           "evidence": [
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 969,
+              "line": 1020,
               "test": "is accessible with populated start, end, and custom divider slots",
               "target": "element",
               "state": "populated"
             },
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 983,
+              "line": 1034,
               "test": "keeps custom divider content inert while preserving the separator as the sole resize control",
               "target": "element",
               "state": "populated"
@@ -41206,7 +41206,7 @@
           "evidence": [
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 114,
+              "line": 165,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -41223,7 +41223,7 @@
           "evidence": [
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 115,
+              "line": 166,
               "kind": "320px allocation test signal"
             }
           ]
