@@ -1184,6 +1184,68 @@ describe("selected/hover cssprops", () => {
   });
 });
 
+describe('lr-tab host color inheritance (BUG fr_KzqYEzRfpJxnZLS2wJMcDw)', () => {
+  // Regression: <lr-tab>'s own stylesheet used to declare display: contents with no color/font, so
+  // it inherited LyraElement's base color: var(--lr-color-text) (tokens.styles.ts) instead of the
+  // real [part="tab"] button's computed color -- silently blocking
+  // --lr-tab-group-selected-color/--lr-tab-group-hover-color from ever reaching a tab's label
+  // text. Every prior selected/hover cssprop test above reads [part="tab"] itself, which was never
+  // broken; these read the projected <lr-tab> element, which was.
+
+  it("inherits the selected tab button's themed color onto the projected <lr-tab> element itself", async () => {
+    const el = (await fixture(html`
+      <lr-tab-group style="--lr-tab-group-selected-color: rgb(0, 51, 102);">
+        <lr-tab panel="input">Input</lr-tab>
+        <lr-tab panel="preview">Preview</lr-tab>
+        <lr-tab-panel name="input">Raw input</lr-tab-panel>
+        <lr-tab-panel name="preview">Rendered preview</lr-tab-panel>
+      </lr-tab-group>
+    `)) as LyraTabGroup;
+    await el.updateComplete;
+    const [selectedTab] = [...el.querySelectorAll("lr-tab")] as LyraTab[];
+    const selectedButton = tabButtons(el)[0]!;
+    expect(getComputedStyle(selectedButton).color).to.equal("rgb(0, 51, 102)");
+    expect(getComputedStyle(selectedTab!).color).to.equal("rgb(0, 51, 102)");
+  });
+
+  it('inherits the hover color onto the projected <lr-tab> element while its real tab button is hovered', async () => {
+    const el = (await fixture(html`
+      <lr-tab-group style="--lr-tab-group-hover-color: rgb(7, 8, 9);">
+        <lr-tab panel="input">Input</lr-tab>
+        <lr-tab panel="preview">Preview</lr-tab>
+        <lr-tab-panel name="input">Raw input</lr-tab-panel>
+        <lr-tab-panel name="preview">Rendered preview</lr-tab-panel>
+      </lr-tab-group>
+    `)) as LyraTabGroup;
+    el.style.setProperty("--lr-transition-fast", "0ms");
+    const tabs = [...el.querySelectorAll("lr-tab")] as LyraTab[];
+    const unselectedTab = tabs[1]!;
+    const unselectedButton = tabButtons(el)[1]!;
+    try {
+      await resetMouse();
+      await moveMouseTo(unselectedButton);
+      await waitUntil(
+        () => getComputedStyle(unselectedTab).color === "rgb(7, 8, 9)",
+        "the projected <lr-tab> element never inherited the hover color"
+      );
+      expect(getComputedStyle(unselectedTab).color).to.equal("rgb(7, 8, 9)");
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('never lets the LyraElement base color/font win over the real tab button when no cssprop is themed', async () => {
+    const el = (await fixture(basic())) as LyraTabGroup;
+    const [selectedTab] = [...el.querySelectorAll("lr-tab")] as LyraTab[];
+    const selectedButton = tabButtons(el)[0]!;
+    const buttonStyle = getComputedStyle(selectedButton);
+    const tabStyle = getComputedStyle(selectedTab!);
+    expect(tabStyle.color).to.equal(buttonStyle.color);
+    expect(tabStyle.fontFamily).to.equal(buttonStyle.fontFamily);
+    expect(tabStyle.fontWeight).to.equal(buttonStyle.fontWeight);
+  });
+});
+
 // --- Upstream child model (`<lr-tab>` / `<lr-tab-panel>`) --------------------------------------
 // This is what makes `wa-tab-group`/`sl-tab-group` markup a mechanical rename: before it existed,
 // that markup rendered nothing at all.

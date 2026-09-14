@@ -99,7 +99,13 @@ function deniedIcon(): SVGTemplateResult {
  * `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its own
  * async work (e.g. a network call) is in flight: `pending` is set to the action being persisted, showing
  * `loading` on that button and `disabled` on the other, until the host finalizes by setting `.decision`
- * or bounces back by clearing `.pending` to `null`.
+ * or bounces back by clearing `.pending` to `null`. A listener that instead resolves the decision
+ * itself synchronously (setting `.decision` or `.pending` directly before returning from the
+ * `preventDefault()`ed handler) wins outright: `decide()` only falls back to its own `pending`
+ * bookkeeping when the listener left both untouched.
+ *
+ * The host-writable `disabled` independently blocks both Deny and Approve and makes `decide()` a
+ * no-op, without discarding any in-flight `decision`/`pending` state.
  *
  * @customElement lr-confirm-bar
  * @slot - Supplementary body content between the heading and the actions (e.g. a `lr-diff-view` of
@@ -199,6 +205,12 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
    *  on failure, so the user can retry), or set `decision` to finalize. */
   @property({ reflect: true }) pending: ApprovalAction | null = null;
 
+  /** Disables both Deny and Approve and makes `decide()` a no-op, without discarding any
+   *  in-flight `decision`/`pending` state. Distinct from `pending`: `pending` marks one specific
+   *  action as awaiting the host while the other stays interactive, while `disabled` blocks both
+   *  regardless of `pending`. Reflects as an attribute. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
   /** Token-mapped emphasis for destructive proposals. */
   @property({ reflect: true }) variant: ConfirmBarVariant = 'neutral';
 
@@ -259,9 +271,17 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   };
 
   private decide(next: 'approved' | 'denied'): void {
-    if (this.decision != null || this.pending != null) return;
+    if (this.disabled || this.decision != null || this.pending != null) return;
     const eventName = next === 'approved' ? 'lr-approve' : 'lr-deny';
     const detail = next === 'approved' ? { args: this.args } : undefined;
+    // The guard above proves both are null right up to this point -- but `emit()` below dispatches
+    // synchronously, so a listener can still write either one from inside it (e.g. it calls
+    // preventDefault() and resolves the decision itself out of band, or bounces `pending` back to
+    // null immediately). Snapshot them so the built-in "awaiting the host" pending state below is
+    // applied only when the listener left both untouched; otherwise it would silently clobber
+    // whatever the listener just did.
+    const pendingBeforeDispatch = this.pending;
+    const decisionBeforeDispatch = this.decision;
     const event = this.emit(eventName, detail, { cancelable: true });
     if (event.defaultPrevented) {
       // Same handoff as the synchronous path below, and for the same reason: `?loading` on the
@@ -271,7 +291,12 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
       // <body> for the whole duration of the host's async work. Ordered before the `pending` write
       // so the button is still focusable when focus leaves it.
       this.statusEl?.focus();
-      this.pending = approvalAction(next);
+      if (
+        this.pending === pendingBeforeDispatch &&
+        this.decision === decisionBeforeDispatch
+      ) {
+        this.pending = approvalAction(next);
+      }
       return;
     }
     // Synchronous, before the property set below triggers the re-render that removes the
@@ -351,7 +376,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                   appearance="outlined"
                   type="button"
                   ?loading=${this.pending === 'deny'}
-                  ?disabled=${this.pending === 'approve'}
+                  ?disabled=${this.disabled || this.pending === 'approve'}
                   exportparts="base:deny-button-base, button:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
                   @click=${() => this.decide('denied')}
                 >${this.localize('deny')}</lr-button>
@@ -360,7 +385,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                   variant=${this.variant === 'danger' ? 'danger' : 'brand'}
                   type="button"
                   ?loading=${this.pending === 'approve'}
-                  ?disabled=${this.pending === 'deny'}
+                  ?disabled=${this.disabled || this.pending === 'deny'}
                   exportparts="base:approve-button-base, button:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
                   @click=${() => this.decide('approved')}
                 >${this.localize('approve')}</lr-button>

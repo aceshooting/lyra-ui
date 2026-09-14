@@ -13,6 +13,15 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  /* The Deny/Approve controls are composed <lr-button>s (see render()): passing disabled down to
+     them already yields opacity: var(--lr-opacity-disabled) + cursor: not-allowed on their own
+     shadow root (button.styles.ts's [part~='base']:disabled rule) -- restyling
+     [part='deny-button']/[part='approve-button'] here would compound that, per the comment further
+     below. The host only needs the cursor, for feedback while hovering the bar outside the
+     buttons themselves. */
+  :host([disabled]) {
+    cursor: not-allowed;
+  }
   [part='base'] {
     display: flex;
     flex-direction: column;
