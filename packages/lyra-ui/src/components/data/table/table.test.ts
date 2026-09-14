@@ -2522,6 +2522,188 @@ it("pins a sticky: 'end' column's header and cell to the inline-end edge instead
   expect(getComputedStyle(stickyCell).insetInlineEnd).to.equal('0px');
 });
 
+it('keeps a sticky header/cell at the plain surface background when no row state applies (unstyled regression)', async () => {
+  const stickyColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', sticky: 'start', cell: (r) => r.name },
+    { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+  ];
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = stickyColumns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  // rows[1] ('b') is the second rendered row, so it never receives the internal stripe marker
+  // (entryIndex % 2 === 0 only), and selection/hover are untouched -- a genuinely plain row.
+  const plainRow = el.shadowRoot!.querySelectorAll('[part="row"]')[1] as HTMLElement;
+  expect(plainRow.hasAttribute('data-stripe')).to.be.false;
+  const stickyCell = plainRow.querySelector('[part="cell"][data-sticky]') as HTMLElement;
+  const stickyHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-sticky]') as HTMLElement;
+  // The non-sticky header cell still declares the unconditional plain background this library
+  // shipped before the fix, so it is a stable, independent reference for "unchanged".
+  const plainHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1] as HTMLElement;
+  const surfaceBg = getComputedStyle(plainHeader).backgroundColor;
+
+  expect(getComputedStyle(stickyHeader).backgroundColor).to.equal(surfaceBg);
+  expect(getComputedStyle(stickyCell).backgroundColor).to.equal(surfaceBg);
+});
+
+it("gives a sticky cell in a striped row the row's stripe background instead of the flat surface color", async () => {
+  const stickyColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', sticky: 'start', cell: (r) => r.name },
+    { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+  ];
+  const el = (await fixture(
+    html`<lr-table style="--lr-table-row-stripe-bg: rgb(9, 9, 9);"></lr-table>`,
+  )) as LyraTable<Row>;
+  el.columns = stickyColumns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  // rows[0] ('a') is the first rendered row, which carries the internal stripe marker.
+  const stripedRow = el.shadowRoot!.querySelectorAll('[part="row"]')[0] as HTMLElement;
+  expect(stripedRow.hasAttribute('data-stripe')).to.be.true;
+  const stickyCell = stripedRow.querySelector('[part="cell"][data-sticky]') as HTMLElement;
+
+  expect(getComputedStyle(stripedRow).backgroundColor).to.equal('rgb(9, 9, 9)');
+  expect(getComputedStyle(stickyCell).backgroundColor).to.equal('rgb(9, 9, 9)');
+});
+
+it("gives a sticky cell in a selected row the row's selected background instead of the flat surface color", async () => {
+  const stickyColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', sticky: 'start', cell: (r) => r.name },
+    { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+  ];
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = stickyColumns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  el.selectionMode = 'single';
+  // Selects the un-striped row ('b') to isolate the selected-state effect from the stripe one.
+  el.selectedRowKeys = new Set(['b']);
+  await el.updateComplete;
+
+  const selectedRow = el.shadowRoot!.querySelector('[part="row"][aria-selected="true"]') as HTMLElement;
+  const stickyCell = selectedRow.querySelector('[part="cell"][data-sticky]') as HTMLElement;
+  const plainHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1] as HTMLElement;
+  const surfaceBg = getComputedStyle(plainHeader).backgroundColor;
+  const rowBg = getComputedStyle(selectedRow).backgroundColor;
+
+  expect(rowBg).to.not.equal(surfaceBg);
+  expect(getComputedStyle(stickyCell).backgroundColor).to.equal(rowBg);
+});
+
+it("gives a sticky cell in a hovered row the row's hover background instead of the flat surface color", async () => {
+  const stickyColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', sticky: 'start', cell: (r) => r.name },
+    { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+  ];
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = stickyColumns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  const plainRow = el.shadowRoot!.querySelectorAll('[part="row"]')[1] as HTMLElement;
+  const stickyCell = plainRow.querySelector('[part="cell"][data-sticky]') as HTMLElement;
+  const before = getComputedStyle(stickyCell).backgroundColor;
+  const rect = stickyCell.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+
+  try {
+    await sendMouse({ type: 'move', position });
+    await waitUntil(
+      () => getComputedStyle(stickyCell).backgroundColor !== before,
+      'hovered sticky cell never picked up the row hover background',
+    );
+    expect(getComputedStyle(stickyCell).backgroundColor).to.equal(getComputedStyle(plainRow).backgroundColor);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('honors an override of --lr-table-cell-padding on header/body/row-total cells, defaulting to the historical --lr-space-s (unset-regression)', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowTotal = (r) => r.score;
+  el.filterable = true;
+  await el.updateComplete;
+
+  const header = el.shadowRoot!.querySelector('[part="header-cell"]') as HTMLElement;
+  const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+  const rowTotalCell = el.shadowRoot!.querySelector('[part="row-total-cell"]') as HTMLElement;
+  // [part='filter-label'] still declares the literal var(--lr-space-s) this library shipped
+  // before the hook -- a stable, independent reference for the default value.
+  const filterLabel = el.shadowRoot!.querySelector('[part="filter-label"]') as HTMLElement;
+  const defaultPadding = getComputedStyle(filterLabel).paddingTop;
+
+  for (const target of [header, cell, rowTotalCell]) {
+    expect(getComputedStyle(target).paddingTop).to.equal(defaultPadding);
+    expect(getComputedStyle(target).paddingLeft).to.equal(defaultPadding);
+  }
+
+  el.style.setProperty('--lr-table-cell-padding', '20px');
+  await el.updateComplete;
+
+  for (const target of [header, cell, rowTotalCell]) {
+    expect(getComputedStyle(target).paddingTop).to.equal('20px');
+    expect(getComputedStyle(target).paddingLeft).to.equal('20px');
+  }
+  // Unaffected: a part reading a different token never picks up this override.
+  expect(getComputedStyle(filterLabel).paddingTop).to.equal(defaultPadding);
+});
+
+it('honors an override of --lr-table-cell-padding-compact on group-cell/footer-cell independently of --lr-table-cell-padding, preserving the tighter block/inline shorthand by default (unset-regression)', async () => {
+  const columnsWithFooter: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name, footer: () => 'Total' },
+    { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+  ];
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columnsWithFooter;
+  el.rows = rows;
+  el.groupBy = (r) => (r.score > 2 ? 'Passing' : 'Needs review');
+  await el.updateComplete;
+
+  const groupCell = el.shadowRoot!.querySelector('[part="group-cell"]') as HTMLElement;
+  const footerCell = el.shadowRoot!.querySelector('[part="footer-cell"]') as HTMLElement;
+  const bodyCell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+
+  // Default (unset): still the historical two-value shorthand -- tighter block spacing than
+  // inline, and identical between the two parts that share the hook.
+  expect(getComputedStyle(groupCell).paddingTop).to.equal(getComputedStyle(footerCell).paddingTop);
+  expect(getComputedStyle(groupCell).paddingLeft).to.equal(getComputedStyle(footerCell).paddingLeft);
+  expect(getComputedStyle(groupCell).paddingTop).to.not.equal(getComputedStyle(groupCell).paddingLeft);
+
+  el.style.setProperty('--lr-table-cell-padding-compact', '3px 7px');
+  await el.updateComplete;
+
+  for (const target of [groupCell, footerCell]) {
+    expect(getComputedStyle(target).paddingTop).to.equal('3px');
+    expect(getComputedStyle(target).paddingLeft).to.equal('7px');
+  }
+  // Unaffected: the ordinary body cell reads --lr-table-cell-padding, a separate hook.
+  expect(getComputedStyle(bodyCell).paddingTop).to.not.equal('3px');
+});
+
+it('honors an override of --lr-table-font-size on the table, defaulting to the inherited font size (unset-regression)', async () => {
+  const el = (await fixture(html`<lr-table style="font-size: 24px;"></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+  expect(getComputedStyle(table).fontSize).to.equal('24px');
+
+  el.style.setProperty('--lr-table-font-size', '13px');
+  await el.updateComplete;
+
+  expect(getComputedStyle(table).fontSize).to.equal('13px');
+  // Unaffected: only the table's own font-size changed, not the host's.
+  expect(getComputedStyle(el).fontSize).to.equal('24px');
+});
+
 it('does not emit lr-row-click and does not swallow the click when a button inside a cell() is clicked', async () => {
   const actionColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },

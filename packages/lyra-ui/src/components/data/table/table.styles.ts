@@ -109,6 +109,10 @@ export const styles = css`
     inline-size: 100%;
     border-collapse: collapse;
     font: inherit;
+    /* Longhand after the shorthand above so it overrides only the size, keeping family/weight/etc.
+       inherited. Default 'inherit' matches the pre-existing behavior exactly -- this only gives a
+       consumer a hook to resize the table's type without touching its ancestor's own font-size. */
+    font-size: var(--lr-table-font-size, inherit);
   }
   /* Resolved in table.class.ts as a floor: 'fixed' when the layout property asks, when a column
      carries a declared or resized width, or during a resize gesture. Kept off
@@ -122,7 +126,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     text-align: start;
     font-weight: var(--lr-font-weight-semibold);
-    padding: var(--lr-space-s);
+    padding: var(--lr-table-cell-padding, var(--lr-space-s));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     cursor: default;
     white-space: nowrap;
@@ -245,31 +249,46 @@ export const styles = css`
       transition: none !important;
     }
   }
+  /* Each row-state rule below also writes the row's effective fill to a private custom property,
+     not just the visible background declaration -- [part='header-cell'][data-sticky] and
+     [part='cell'][data-sticky] read it back to paint a sticky column with the same striped/
+     selected/hovered/active fill as the rest of its row, instead of a flat opaque surface that
+     hides the state. Custom properties inherit from [part='row'] down into its own <td>
+     descendants, so no JS wiring is required; a header cell never sits inside [part='row'], so it
+     is unaffected and keeps its existing plain-surface default. */
   [part='row'][data-stripe] {
     background: var(--lr-table-row-stripe-bg, transparent);
+    /* Deliberately a different fallback than the background above: an unstriped row's own fill
+       stays transparent by default, but its sticky cell must stay opaque (--lr-color-surface) to
+       keep hiding content scrolled underneath -- so this reads the same public token with an
+       opaque fallback instead of transparent. */
+    --_lr-table-row-bg: var(--lr-table-row-stripe-bg, var(--lr-color-surface));
   }
   /* Inline var() fallback, not a :host declaration, which is re-declared per instance and shadows
      any ancestor value. Needed because Shadow Parts forbids an attribute selector after ::part():
      ::part(row)[aria-selected] is invalid, so recoloring the selected row would otherwise mean
      hijacking --lr-color-brand-quiet library-wide. */
   [part='row'][aria-selected='true'] {
-    background: var(--lr-table-row-selected-bg, var(--lr-color-brand-quiet));
+    --_lr-table-row-bg: var(--lr-table-row-selected-bg, var(--lr-color-brand-quiet));
+    background: var(--_lr-table-row-bg);
   }
   /* MUST stay after the selected-row rule above -- both are (0,2,0), so source order alone decides,
      and the selected row is the likeliest next hover. A distinct color-mix step rather than the
      plain brand-quiet fallback used elsewhere, because the selected row's resting fill already
      resolves to that token. */
   [part='row']:hover {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    --_lr-table-row-bg: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(--_lr-table-row-bg);
   }
   /* MUST stay after the selected-row rule above -- both are (0,2,0), so source order alone decides,
      and the selected row is the one a user presses to DEselect. */
   [part='row']:active {
-    background: color-mix(
+    --_lr-table-row-bg: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
+    background: var(--_lr-table-row-bg);
   }
   @media (forced-colors: active) {
     :where([part~='row'][aria-selected='true']) {
@@ -282,7 +301,10 @@ export const styles = css`
     }
   }
   [part='group-cell'] {
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    /* A second, tighter hook than --lr-table-cell-padding -- group and footer cells share this
+       shorthand's two-value (block/inline) shape today, and a single flattened hook would either
+       lose that distinction or force every ordinary cell to adopt the tighter block spacing. */
+    padding: var(--lr-table-cell-padding-compact, var(--lr-space-xs) var(--lr-space-s));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text-quiet);
@@ -294,7 +316,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='cell'] {
-    padding: var(--lr-space-s);
+    padding: var(--lr-table-cell-padding, var(--lr-space-s));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     color: var(--lr-table-cell-color, inherit);
   }
@@ -354,7 +376,7 @@ export const styles = css`
     text-align: end;
   }
   [part='row-total-cell'] {
-    padding: var(--lr-space-s);
+    padding: var(--lr-table-cell-padding, var(--lr-space-s));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     font-weight: var(--lr-font-weight-semibold);
     text-align: end;
@@ -426,7 +448,11 @@ export const styles = css`
   }
   /* columns[].sticky pins a column's header/cells to the inline-start edge during horizontal scroll
      -- the [part='header-cell'] inset-block-start pattern above, on the other axis. The box-shadow
-     is the seam over content scrolled underneath. */
+     is the seam over content scrolled underneath. The background reads --_lr-table-row-bg, written
+     by the [part='row'] stripe/selected/hover/active rules above, so a sticky body cell shows the
+     same fill as the rest of its row instead of painting a flat surface over the state; a sticky
+     header cell never sits inside [part='row'], so the property is never set there and it always
+     falls back to the plain surface color, unchanged from before. */
   [part='header-cell'][data-sticky],
   [part='cell'][data-sticky] {
     position: sticky;
@@ -435,7 +461,7 @@ export const styles = css`
        to 0 for the first sticky column, and before the first measurement pass. */
     inset-inline-start: var(--lr-table-sticky-offset, 0);
     z-index: var(--lr-layer-content);
-    background: var(--lr-color-surface);
+    background: var(--_lr-table-row-bg, var(--lr-color-surface));
     box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border);
   }
   [part='header-cell'][data-sticky='end'],
@@ -463,7 +489,8 @@ export const styles = css`
     background: var(--lr-color-surface);
   }
   [part='footer-cell'] {
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    /* Same tighter hook as [part='group-cell'] -- see the comment there. */
+    padding: var(--lr-table-cell-padding-compact, var(--lr-space-xs) var(--lr-space-s));
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
