@@ -1383,3 +1383,100 @@ describe('lr-chip name stability inside a hidden container', () => {
     expect(names).to.deep.equal(['Remove Bare Chip', 'Remove Wrapped Chip']);
   });
 });
+
+describe('chip label-source resolution hardening', () => {
+  it("climbs through a shadow-root boundary when resolving a slotted label's ancestor chain", async () => {
+    const outerHost = document.createElement('div');
+    document.body.append(outerHost);
+    try {
+      const outerRoot = outerHost.attachShadow({ mode: 'open' });
+      const wrapper = document.createElement('chip-label-forward-wrapper') as ChipLabelForwardWrapper;
+      outerRoot.append(wrapper);
+      const label = document.createElement('span');
+      label.textContent = 'Deep label';
+      wrapper.append(label);
+      const chip = wrapper.shadowRoot!.querySelector('lr-chip') as LyraChip;
+      await chip.updateComplete;
+      const remove = chip.shadowRoot!.querySelector<HTMLElement>('[part="remove-button"]')!;
+      expect(remove.getAttribute('aria-label')).to.equal('Remove Deep label');
+    } finally {
+      outerHost.remove();
+    }
+  });
+
+  it('mounts a removable chip without a MutationObserver, leaving action naming intact but unobserved', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+    try {
+      // @ts-expect-error deliberately removing the global for this assertion
+      delete window.MutationObserver;
+      const el = (await fixture(html`<lr-chip removable>Research</lr-chip>`)) as LyraChip;
+      const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+      expect(btn.getAttribute('aria-label')).to.equal('Remove Research');
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    }
+  });
+
+  it('filters a slot-attributed light-DOM child out of the pre-render label sample, keeping bare text', () => {
+    const el = document.createElement('lr-chip') as LyraChip;
+    const icon = document.createElement('span');
+    icon.setAttribute('slot', 'start');
+    icon.textContent = '●';
+    el.append(icon, 'Research');
+    document.body.append(el);
+    try {
+      const text = (el as unknown as { computeLabelText(preferLightDom?: boolean): string }).computeLabelText(true);
+      expect(text).to.equal('Research');
+    } finally {
+      el.remove();
+    }
+  });
+});
+
+describe('chip control-guard hardening', () => {
+  it('no-ops the internal remove/toggle click handlers when called directly while disabled', async () => {
+    const el = (await fixture(html`<lr-chip removable toggleable disabled value="v1">Tag</lr-chip>`)) as LyraChip;
+    let removals = 0;
+    let toggles = 0;
+    el.addEventListener('lr-remove', () => removals++);
+    el.addEventListener('lr-chip-select', () => toggles++);
+    (el as unknown as { onRemoveClick(): void }).onRemoveClick();
+    (el as unknown as { onToggleClick(): void }).onToggleClick();
+    expect(removals).to.equal(0);
+    expect(toggles).to.equal(0);
+    expect(el.selected).to.be.false;
+  });
+
+  it('falls back to the native HTMLElement.click() for a passive chip with no active control', async () => {
+    const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
+    const native = HTMLElement.prototype.click;
+    let calls = 0;
+    HTMLElement.prototype.click = function (this: HTMLElement): void {
+      if (this === el) calls += 1;
+      native.call(this);
+    };
+    try {
+      el.click();
+      expect(calls, 'super.click() must still run for a passive chip').to.equal(1);
+    } finally {
+      HTMLElement.prototype.click = native;
+    }
+  });
+
+  it('ignores a stale start/end slotchange delivered after the chip has disconnected', async () => {
+    const el = (await fixture(html`<lr-chip><span slot="start">●</span>Tag<span slot="end">■</span></lr-chip>`)) as LyraChip;
+    await el.updateComplete;
+    const start = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+    expect(start.hidden).to.be.false;
+    expect(end.hidden).to.be.false;
+
+    el.querySelector('[slot="start"]')!.remove();
+    el.querySelector('[slot="end"]')!.remove();
+    el.remove();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    expect(start.hidden, 'a stale start slotchange after disconnect must not flip hasStartSlot').to.be.false;
+    expect(end.hidden, 'a stale end slotchange after disconnect must not flip hasEndSlot').to.be.false;
+  });
+});

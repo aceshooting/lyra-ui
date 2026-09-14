@@ -1155,3 +1155,46 @@ describe('--lr-card-shadow / --lr-card-interactive-hover-shadow', () => {
     }
   });
 });
+
+describe('lr-card focus-repair and observer hardening', () => {
+  it('does not steal focus back onto the new owner when something else already holds focus inside the shadow root at repair time', async () => {
+    const el = (await fixture(html`<lr-card actionable>body</lr-card>`)) as LyraCard;
+    (el.shadowRoot!.querySelector('[part="activation-button"]') as HTMLElement).focus();
+    expect(el.ownerDocument.activeElement === el, 'sanity: focus starts inside the card shadow tree').to.equal(true);
+
+    const decoy = document.createElement('button');
+    Object.defineProperty(el.shadowRoot!, 'activeElement', { configurable: true, get: () => decoy });
+    try {
+      el.actionable = false;
+      await el.updateComplete;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(
+        el.ownerDocument.activeElement === el,
+        'the repair must not re-target the new owner while the decoy fakes ownership of internal focus',
+      ).to.equal(false);
+    } finally {
+      Reflect.deleteProperty(el.shadowRoot!, 'activeElement');
+      decoy.remove();
+    }
+  });
+
+  it('does not arm a content observer for a manually invoked connectedCallback on a detached element', () => {
+    const el = document.createElement('lr-card') as LyraCard;
+    const access = el as unknown as { connectedCallback(): void };
+    expect(() => access.connectedCallback()).not.to.throw();
+    expect((el as unknown as { contentObserver?: MutationObserver }).contentObserver).to.equal(undefined);
+  });
+
+  it('mounts without a MutationObserver, leaving the initial accessible content sample intact', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+    try {
+      // @ts-expect-error deliberately removing the global for this assertion
+      delete window.MutationObserver;
+      const el = (await fixture(html`<lr-card actionable>Report content</lr-card>`)) as LyraCard;
+      const activation = el.shadowRoot!.querySelector('[part="activation-button"]') as HTMLElement;
+      expect(activation.getAttribute('aria-label')).to.equal('Report content');
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    }
+  });
+});

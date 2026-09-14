@@ -514,3 +514,42 @@ describe('lr-poll-status', () => {
     expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(0, 51, 102)');
   });
 });
+
+describe('poll-status timer and adoption hardening', () => {
+  it('re-arms the ticker when adoptedCallback runs while still connected (manual invocation)', async () => {
+    const el = (await fixture(html`<lr-poll-status next-in-ms="10000"></lr-poll-status>`)) as LyraPollStatus;
+    await el.updateComplete;
+    expect((el as unknown as { tickTimer?: number }).tickTimer).to.not.equal(undefined);
+    (el as unknown as { adoptedCallback(): void }).adoptedCallback();
+    expect(
+      (el as unknown as { tickTimer?: number }).tickTimer,
+      're-arming after a still-connected adoptedCallback schedules a fresh timer',
+    ).to.not.equal(undefined);
+  });
+
+  it('restart() clears pending countdown state when next-in-ms is unset instead of restarting a phantom cycle', async () => {
+    const el = (await fixture(html`<lr-poll-status next-in-ms="10000"></lr-poll-status>`)) as LyraPollStatus;
+    await el.updateComplete;
+    el.nextInMs = undefined;
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-poll-due', () => (fired = true));
+    el.restart();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('');
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(fired, 'restart() with no configured delay must not arm a ticker').to.be.false;
+  });
+
+  it('re-schedules the next tick instead of finishing immediately when more than one display second remains', async () => {
+    const el = (await fixture(html`<lr-poll-status next-in-ms="1500"></lr-poll-status>`)) as LyraPollStatus;
+    const countdown = el.shadowRoot!.querySelector('[part="countdown"]') as HTMLElement;
+    const due = oneEvent(el, 'lr-poll-due');
+    await waitUntil(
+      () => countdown.textContent === '0:01',
+      'the countdown must tick down to the last second before reaching due',
+      { timeout: 2000 },
+    );
+    await due;
+  });
+});

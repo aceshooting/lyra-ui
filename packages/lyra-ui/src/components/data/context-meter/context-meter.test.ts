@@ -619,3 +619,43 @@ describe('track and seam cssprops', () => {
     expect(getComputedStyle(seam).borderInlineStartColor).to.equal('rgb(4, 5, 6)');
   });
 });
+
+describe('projectContextMeterSegments hardening', () => {
+  it('rejects an array-like plain object without Array.isArray, even though its shape matches', async () => {
+    const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
+    const arrayLike = { length: 2, 0: { label: 'a', value: 1 }, 1: { label: 'b', value: 2 } };
+    (el as unknown as { segments: unknown }).segments = arrayLike;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="segment"]').length).to.equal(0);
+  });
+
+  it('recovers to an empty projection when segments is a revoked Proxy that throws on Array.isArray', async () => {
+    const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
+    const { proxy, revoke } = Proxy.revocable([], {});
+    revoke();
+    (el as unknown as { segments: unknown }).segments = proxy;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="segment"]').length).to.equal(0);
+  });
+
+  it('skips non-object, null, and nested-array segment entries while keeping later valid ones', async () => {
+    const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
+    el.segments = [
+      null as unknown as ContextMeterSegment,
+      42 as unknown as ContextMeterSegment,
+      [1, 2, 3] as unknown as ContextMeterSegment,
+      { label: 'Kept', value: 10 },
+    ];
+    await el.updateComplete;
+    const items = [...el.shadowRoot!.querySelectorAll('[part="segment-item"]')].map((item) => item.textContent?.trim());
+    expect(items).to.deep.equal(['Kept: 10']);
+  });
+});
+
+it("paints a ring segment's custom color property, not just the bar variant", async () => {
+  const el = (await fixture(html`<lr-context-meter shape="ring" total="100"></lr-context-meter>`)) as LyraContextMeter;
+  el.segments = [{ label: 'Custom', value: 50, color: 'rgb(9, 8, 7)' }];
+  await el.updateComplete;
+  const circle = el.shadowRoot!.querySelector('circle[part="segment"]') as SVGElement;
+  expect(circle.style.getPropertyValue('--lr-context-meter-segment-color')).to.equal('rgb(9, 8, 7)');
+});

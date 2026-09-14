@@ -2095,3 +2095,150 @@ it('lets ::part(row) stretch the switch across its container, which a shrink-to-
   const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="row"]')!;
   expect(row.getBoundingClientRect().width, 'the row fills the 300px container').to.be.closeTo(300, 1);
 });
+
+describe('reactive-accessor hardening', () => {
+  it('short-circuits re-entrant defaultChecked reflection instead of re-running the attribute toggle twice', async () => {
+    const el = (await fixture(html`<lr-switch></lr-switch>`)) as LyraSwitch;
+    let toggleCalls = 0;
+    const original = el.toggleAttribute.bind(el);
+    const replacement: typeof el.toggleAttribute = (name, force) => {
+      if (name === 'checked') toggleCalls += 1;
+      return original(name, force);
+    };
+    (el as unknown as { toggleAttribute: typeof el.toggleAttribute }).toggleAttribute = replacement;
+    try {
+      el.defaultChecked = true;
+      await el.updateComplete;
+      expect(toggleCalls, 'the reentrant attributeChangedCallback must not re-run the reflection body').to.equal(1);
+      expect(el.hasAttribute('checked')).to.be.true;
+      expect(el.defaultChecked).to.be.true;
+    } finally {
+      delete (el as unknown as Record<string, unknown>)['toggleAttribute'];
+    }
+  });
+
+  it('restores the unset default when name is written as null (unset-regression)', async () => {
+    const el = (await fixture(html`<lr-switch name="first"></lr-switch>`)) as LyraSwitch;
+    el.name = null;
+    await el.updateComplete;
+    expect(el.name).to.equal('');
+    expect(el.hasAttribute('name')).to.be.false;
+  });
+
+  it('restores the "on" default and removes the attribute when value is written as null (unset-regression)', async () => {
+    const el = (await fixture(html`<lr-switch value="custom"></lr-switch>`)) as LyraSwitch;
+    expect(el.hasAttribute('value')).to.be.true;
+    el.value = null;
+    await el.updateComplete;
+    expect(el.value).to.equal('on');
+    expect(el.hasAttribute('value')).to.be.false;
+
+    // Writing null again while the attribute is already absent must not throw or misbehave.
+    el.value = null;
+    await el.updateComplete;
+    expect(el.hasAttribute('value')).to.be.false;
+  });
+
+  it('mounts without a MutationObserver, leaving label detection intact but unobserved', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+    try {
+      // @ts-expect-error deliberately removing the global for this assertion
+      delete window.MutationObserver;
+      const el = (await fixture(html`<lr-switch>Enable notifications</lr-switch>`)) as LyraSwitch;
+      const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+      expect(label.hidden).to.be.false;
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    }
+  });
+
+  it('walks through an intermediate light-DOM wrapper to arm the mutation observer on a nested forwarding slot', async () => {
+    const NativeMutationObserver = window.MutationObserver;
+    let assigned!: Text;
+    let observedAssignedText = false;
+    class TrackingMutationObserver extends NativeMutationObserver {
+      override observe(target: Node, options?: MutationObserverInit): void {
+        if (target === assigned && options?.characterData) observedAssignedText = true;
+        super.observe(target, options);
+      }
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+    Object.defineProperty(window, 'MutationObserver', { configurable: true, value: TrackingMutationObserver });
+    try {
+      const wrapper = (await fixture(html`<div></div>`)) as HTMLDivElement;
+      assigned = wrapper.ownerDocument.createTextNode('Nested forwarded label');
+      wrapper.append(assigned);
+      const root = wrapper.attachShadow({ mode: 'open' });
+      root.innerHTML = `
+        <lr-switch>
+          <div class="label-wrapper"><slot></slot></div>
+        </lr-switch>
+      `;
+      const el = root.querySelector('lr-switch') as LyraSwitch;
+      await el.updateComplete;
+      expect(
+        observedAssignedText,
+        "the observer must reach through the wrapper div to the forwarding slot's assigned text",
+      ).to.be.true;
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    }
+  });
+
+  it("samples a forwarding slot's own fallback content before first paint when nothing is assigned to it", () => {
+    const wrapper = document.createElement('div');
+    document.body.append(wrapper);
+    try {
+      const root = wrapper.attachShadow({ mode: 'open' });
+      root.innerHTML = `<lr-switch><slot>Fallback switch label</slot></lr-switch>`;
+      const el = root.querySelector('lr-switch') as unknown as { hasLabelSlot: boolean };
+      expect(el.hasLabelSlot, 'the fallback slot content stands in for label text before hydration/first paint').to.be.true;
+    } finally {
+      wrapper.remove();
+    }
+  });
+
+  it('ignores a slotchange bubbling from a forwarding slot outside the default label section', async () => {
+    const NativeMutationObserver = window.MutationObserver;
+    let disconnects = 0;
+    class TrackingMutationObserver extends NativeMutationObserver {
+      override disconnect(): void {
+        disconnects += 1;
+        super.disconnect();
+      }
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+    Object.defineProperty(window, 'MutationObserver', { configurable: true, value: TrackingMutationObserver });
+    try {
+      const wrapper = (await fixture(html`<div></div>`)) as HTMLDivElement;
+      const assigned = wrapper.ownerDocument.createTextNode('Hint text');
+      wrapper.append(assigned);
+      const root = wrapper.attachShadow({ mode: 'open' });
+      root.innerHTML = `<lr-switch><span slot="hint"><slot></slot></span></lr-switch>`;
+      const el = root.querySelector('lr-switch') as LyraSwitch;
+      await el.updateComplete;
+      disconnects = 0;
+      assigned.data = 'Updated hint text';
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await el.updateComplete;
+      expect(
+        disconnects,
+        'a slotchange from a non-default (hint) forwarding slot must not rebind label observer targets',
+      ).to.equal(0);
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    }
+  });
+
+  it('tolerates a null hint/helpText value without throwing during render (defensive ?? guard)', async () => {
+    const el = (await fixture(html`<lr-switch></lr-switch>`)) as LyraSwitch;
+    const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
+    (el as unknown as { hint: string | null }).hint = null;
+    await el.updateComplete;
+    expect(hint.hasAttribute('hidden')).to.be.true;
+
+    (el as unknown as { helpText: string | null }).helpText = null;
+    await el.updateComplete;
+    expect(hint.hasAttribute('hidden')).to.be.true;
+  });
+});

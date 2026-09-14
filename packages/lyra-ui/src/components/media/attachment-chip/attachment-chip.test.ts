@@ -1204,3 +1204,73 @@ it('is accessible in a populated error state with a retry button', async () => {
   `)) as LyraAttachmentChip;
   await expect(el).to.be.accessible();
 });
+
+describe('attachment-chip defensive edges', () => {
+  it('treats a File-like object with a non-finite or negative size as unknown rather than showing a bogus value', async () => {
+    // previewable=false with a non-image mime type keeps willUpdate() from ever calling
+    // URL.createObjectURL() on this deliberately non-Blob fake -- effectiveSize's own finite/
+    // non-negative guard is what's under test here, not object-URL creation.
+    const el = (await fixture(
+      html`<lr-attachment-chip .previewable=${false}></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const infiniteSizeFile = {
+      name: 'weird.bin',
+      type: 'application/octet-stream',
+      size: Number.POSITIVE_INFINITY,
+      lastModified: 0,
+    } as unknown as File;
+    el.file = infiniteSizeFile;
+    await el.updateComplete;
+    let size = el.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
+    expect(size.hasAttribute('hidden')).to.be.true;
+
+    const negativeSizeFile = {
+      name: 'weird2.bin',
+      type: 'application/octet-stream',
+      size: -5,
+      lastModified: 0,
+    } as unknown as File;
+    el.file = negativeSizeFile;
+    await el.updateComplete;
+    size = el.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
+    expect(size.hasAttribute('hidden')).to.be.true;
+  });
+
+  it('reuses the same object URL across re-renders when file stays the same reference', async () => {
+    const file = makeFile('photo.png', 'image/png');
+    const el = (await fixture(html`<lr-attachment-chip></lr-attachment-chip>`)) as LyraAttachmentChip;
+    el.file = file;
+    await el.updateComplete;
+    const firstSrc = (el.shadowRoot!.querySelector('[part="thumbnail"] img') as HTMLImageElement).src;
+
+    el.compact = true;
+    await el.updateComplete;
+    const secondSrc = (el.shadowRoot!.querySelector('[part="thumbnail"] img') as HTMLImageElement).src;
+
+    expect(secondSrc).to.equal(firstSrc);
+  });
+
+  it('does not reacquire the announcement sink on a redundant connectedCallback for the same document', () => {
+    const el = document.createElement('lr-attachment-chip') as LyraAttachmentChip;
+    document.body.append(el);
+    try {
+      const sinkBefore = (el as unknown as { sink?: { element: Element } }).sink;
+      expect(sinkBefore).to.not.equal(undefined);
+      (el as unknown as { connectedCallback(): void }).connectedCallback();
+      const sinkAfter = (el as unknown as { sink?: { element: Element } }).sink;
+      expect(sinkAfter === sinkBefore, 'a same-document redundant connect must not replace the existing sink').to.equal(
+        true,
+      );
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('does nothing when preview is requested with no resolvable preview source (defensive guard)', async () => {
+    const el = (await fixture(html`<lr-attachment-chip name="report.pdf"></lr-attachment-chip>`)) as LyraAttachmentChip;
+    let previews = 0;
+    el.addEventListener('lr-preview-request', () => previews++);
+    (el as unknown as { onPreviewClick(): void }).onPreviewClick();
+    expect(previews).to.equal(0);
+  });
+});
