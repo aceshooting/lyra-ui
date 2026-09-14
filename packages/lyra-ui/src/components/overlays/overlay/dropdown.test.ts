@@ -833,6 +833,41 @@ it('maps hoist and sync into positioning and exposes an immediate reposition met
   expect(() => el.reposition()).not.to.throw();
 });
 
+it('positions a hoisted popup directly under its trigger under a backdrop-filter ancestor', async () => {
+  // Regression test for the shared positioner (src/internal/positioner.ts): in WebKit,
+  // `backdrop-filter` establishes a containing block for a `position: fixed` descendant, and
+  // Floating UI's own containing-block detection missed it there, so a hoisted popup landed far
+  // outside the viewport. lr-select's own listbox is the reported repro; this proves the fix at
+  // the shared positioner also covers a non-select hoisted overlay.
+  const panel = await fixture<HTMLElement>(html`
+    <div
+      style="position: absolute; inset-block-start: 24px; inset-inline-end: 40px;
+        inline-size: 260px; block-size: 200px; backdrop-filter: blur(8px);"
+    >
+      <lr-dropdown hoist>
+        <button slot="trigger">Actions</button>
+        <lr-dropdown-item>Rename</lr-dropdown-item>
+      </lr-dropdown>
+    </div>
+  `);
+  const el = panel.querySelector('lr-dropdown') as LyraDropdown;
+  el.show();
+  await el.updateComplete;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  await waitUntil(() => popup.style.left !== '', 'the hoisted popup is positioned');
+
+  const triggerRect = trigger(el).getBoundingClientRect();
+  const popupRect = popup.getBoundingClientRect();
+  expect(
+    popupRect.left,
+    'a backdrop-filter ancestor must not shift the hoisted popup away from its trigger',
+  ).to.be.closeTo(triggerRect.left, 2);
+  expect(popupRect.left, 'the popup must stay inside the viewport').to.be.at.least(-1);
+  expect(popupRect.right, 'the popup must stay inside the viewport').to.be.at.most(
+    window.innerWidth + 1,
+  );
+});
+
 it('uses absolute positioning by default and treats containingElement as inside light dismiss', async () => {
   const containing = document.createElement('div');
   const inside = document.createElement('button');

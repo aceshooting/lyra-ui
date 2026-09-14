@@ -1134,3 +1134,78 @@ describe('shared overflow boundary', () => {
     stop();
   });
 });
+
+describe('fixed-position containing blocks', () => {
+  // Mirrors the filed repro: an absolutely positioned panel near the top-end of the page,
+  // filtered, containing an anchor/popup pair like an `lr-select hoist`'s trigger and listbox.
+  // In WebKit, `backdrop-filter` (and `filter`) establish a containing block for a
+  // `position: fixed` descendant -- a fact Floating UI's own containing-block detection misses
+  // there (it explicitly excludes both properties under `!isWebKit()`). Chromium and Firefox
+  // already detect the same ancestor correctly, so this fixture is expected to pass on those two
+  // engines even before `positioner.ts`'s fix, and only fail on WebKit.
+  async function filteredAncestorFixture(
+    filterProperty: 'backdrop-filter' | 'filter',
+  ): Promise<{ anchor: HTMLElement; popup: HTMLElement }> {
+    const panel = await fixture<HTMLElement>(html`
+      <div
+        style="position: absolute; inset-block-start: 24px; inset-inline-end: 40px;
+          inline-size: 260px; block-size: 200px; ${filterProperty}: blur(8px);"
+      >
+        <button
+          id="fixed-cb-anchor"
+          style="position: absolute; inset-block-start: 40px; inset-inline-start: 20px;
+            inline-size: 120px; block-size: 32px;"
+        >
+          Trigger
+        </button>
+        <div id="fixed-cb-popup" style="inline-size: 160px; block-size: 80px;">Listbox</div>
+      </div>
+    `);
+    return {
+      anchor: panel.querySelector('#fixed-cb-anchor') as HTMLElement,
+      popup: panel.querySelector('#fixed-cb-popup') as HTMLElement,
+    };
+  }
+
+  it('positions a fixed-strategy popup directly under its anchor under a backdrop-filter ancestor', async () => {
+    const { anchor, popup } = await filteredAncestorFixture('backdrop-filter');
+    const stop = place(anchor, popup, { placement: 'bottom-start', strategy: 'fixed' });
+    await waitFor(
+      () => popup.style.left,
+      (left) => left !== '',
+    );
+
+    const anchorRect = anchor.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+
+    expect(
+      popupRect.left,
+      'a backdrop-filter ancestor must not shift the popup away from its anchor',
+    ).to.be.closeTo(anchorRect.left, 1.5);
+    expect(popupRect.left, 'the popup must stay inside the viewport').to.be.at.least(-1);
+    expect(popupRect.right, 'the popup must stay inside the viewport').to.be.at.most(
+      window.innerWidth + 1,
+    );
+
+    stop();
+  });
+
+  it('positions a fixed-strategy popup directly under its anchor under a filter ancestor', async () => {
+    const { anchor, popup } = await filteredAncestorFixture('filter');
+    const stop = place(anchor, popup, { placement: 'bottom-start', strategy: 'fixed' });
+    await waitFor(
+      () => popup.style.left,
+      (left) => left !== '',
+    );
+
+    const anchorRect = anchor.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+
+    expect(
+      popupRect.left,
+      'a filter ancestor must not shift the popup away from its anchor',
+    ).to.be.closeTo(anchorRect.left, 1.5);
+
+    stop();
+  });
+});
