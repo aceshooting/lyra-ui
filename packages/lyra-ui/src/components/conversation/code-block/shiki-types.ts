@@ -150,8 +150,21 @@ function equalFrozenGrammars(left: unknown, right: unknown): boolean {
 }
 
 /** A registration's own registered `name` (if any) plus every name Shiki resolves to it without
- *  help -- its `name` and its declared `aliases`. Tolerant of a malformed/reflection-hostile
- *  grammar: a construction failure here degrades to "not a known name," never throws. */
+ *  help -- its `name` and its declared `aliases`.
+ *
+ *  Tolerant of a *malformed* grammar by itself: a null, primitive, or wrong-shaped registration,
+ *  and a non-string `name`/`aliases`, all degrade to "not a known name" rather than failing. It is
+ *  NOT tolerant of a *reflection-hostile* one: the property reads below are plain, so a registration
+ *  whose `name` is a throwing accessor throws out of this function, and the caller's own try/catch
+ *  is what absorbs it (returning whatever aliases were derived before the throw). Do not restate
+ *  the stronger "never throws" claim here -- it was written that way once and was wrong.
+ *
+ *  Note the separate, larger limitation this cannot fix: Shiki's own `createHighlighterCore()`
+ *  reads the same properties while registering `langs`, outside any of this module's guards, so a
+ *  single throwing accessor anywhere in the `languages` map fails the whole load and drops every
+ *  valid sibling grammar with it -- degrading to unhighlighted code rather than to partial
+ *  highlighting. Isolating that would mean pre-probing every property Shiki might touch, which is
+ *  unbounded; it is recorded rather than guessed at, and left until a consumer actually hits it. */
 function shikiGrammarOwnNames(input: ShikiLanguageInput): {
   primaryName: string | undefined;
   known: Set<string>;
