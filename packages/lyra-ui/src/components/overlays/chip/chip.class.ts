@@ -304,6 +304,11 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
    *  `undefined` if never set) in `lr-remove`'s detail. */
   @property() value?: string;
 
+  /** Wraps a long label onto multiple lines instead of ellipsis-truncating it to one, matching
+   *  `<lr-suggestion-chips>`'s identical opt-in. `false` (the default) reproduces today's exact
+   *  single-line, ellipsis-truncated `[part="label"]`. */
+  @property({ type: Boolean, reflect: true }) wrap = false;
+
   // A `[part]` always contains a literal `<slot>` child regardless of
   // assigned content, so `:empty` never matches — real emptiness is tracked
   // in JS instead, the same fix `<lr-stat>`'s `hasIcon`/

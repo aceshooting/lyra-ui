@@ -301,6 +301,80 @@ it("themes checked track, thumb, hover, and pressed paint through component hook
   }
 });
 
+it("renders no track border by default, unchecked or checked", async () => {
+  const unchecked = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+  const checked = (await fixture(html`<lr-switch checked>Label</lr-switch>`)) as LyraSwitch;
+  for (const el of [unchecked, checked]) {
+    const track = el.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+    expect(getComputedStyle(track).borderStyle).to.equal("none");
+    expect(getComputedStyle(track).borderTopWidth).to.equal("0px");
+  }
+});
+
+it("themes the track border through --lr-switch-track-border", async () => {
+  const el = (await fixture(html`
+    <lr-switch style="--lr-switch-track-border: 2px solid rgb(1, 2, 3)">Label</lr-switch>
+  `)) as LyraSwitch;
+  const track = el.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  expect(getComputedStyle(track).borderStyle).to.equal("solid");
+  expect(getComputedStyle(track).borderTopColor).to.equal("rgb(1, 2, 3)");
+});
+
+it("defaults the checked thumb fill to --lr-switch-thumb-fill, unchanged from today", async () => {
+  const el = (await fixture(html`
+    <lr-switch checked style="--lr-switch-thumb-fill: rgb(4, 5, 6)">Label</lr-switch>
+  `)) as LyraSwitch;
+  const thumb = el.shadowRoot!.querySelector<HTMLElement>('[part="thumb"]')!;
+  expect(getComputedStyle(thumb).backgroundColor).to.equal("rgb(4, 5, 6)");
+});
+
+it("themes only the checked thumb fill through --lr-switch-checked-thumb-fill, leaving unchecked alone", async () => {
+  const el = (await fixture(html`
+    <lr-switch
+      style="--lr-switch-thumb-fill: rgb(4, 5, 6); --lr-switch-checked-thumb-fill: rgb(7, 8, 9)"
+      >Label</lr-switch
+    >
+  `)) as LyraSwitch;
+  const thumb = el.shadowRoot!.querySelector<HTMLElement>('[part="thumb"]')!;
+  expect(getComputedStyle(thumb).backgroundColor).to.equal("rgb(4, 5, 6)");
+  el.checked = true;
+  await el.updateComplete;
+  expect(getComputedStyle(thumb).backgroundColor).to.equal("rgb(7, 8, 9)");
+});
+
+it("defaults the label color to --lr-color-text, unchecked or checked", async () => {
+  const unchecked = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+  const checked = (await fixture(html`<lr-switch checked>Label</lr-switch>`)) as LyraSwitch;
+  const expected = getComputedStyle(
+    unchecked.shadowRoot!.querySelector('[part="label"]') as HTMLElement
+  ).color;
+  expect(
+    getComputedStyle(checked.shadowRoot!.querySelector('[part="label"]') as HTMLElement).color
+  ).to.equal(expected);
+});
+
+it("themes the label color through --lr-switch-label-color, unchecked and checked alike when --lr-switch-checked-label-color is unset", async () => {
+  const el = (await fixture(html`
+    <lr-switch checked style="--lr-switch-label-color: rgb(1, 2, 3)">Label</lr-switch>
+  `)) as LyraSwitch;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+  expect(getComputedStyle(label).color).to.equal("rgb(1, 2, 3)");
+});
+
+it("themes only the checked label color through --lr-switch-checked-label-color, leaving unchecked alone", async () => {
+  const el = (await fixture(html`
+    <lr-switch
+      style="--lr-switch-label-color: rgb(1, 2, 3); --lr-switch-checked-label-color: rgb(4, 5, 6)"
+      >Label</lr-switch
+    >
+  `)) as LyraSwitch;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+  expect(getComputedStyle(label).color).to.equal("rgb(1, 2, 3)");
+  el.checked = true;
+  await el.updateComplete;
+  expect(getComputedStyle(label).color).to.equal("rgb(4, 5, 6)");
+});
+
 it("forwards host click() to the internal control, toggling checked", async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   expect(el.checked).to.be.false;

@@ -1615,3 +1615,44 @@ it("keeps an INACTIVE row's own press feedback distinct from the active row's", 
   const heldPlain = await heldBackground(plainRow);
   expect(heldActive).to.not.equal(heldPlain);
 });
+
+describe("align", () => {
+  const alignItemsOf = (el: LyraConversationItem, part: string): string =>
+    getComputedStyle(
+      el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement
+    ).alignItems;
+
+  it("defaults [part=base] and [part=select-button] to flex-start, unchanged from today", async () => {
+    const el = await fixtureItem(
+      html`<lr-conversation-item
+        label="Session"
+        excerpt="Last message"
+      ></lr-conversation-item>`
+    );
+    expect(alignItemsOf(el, "base")).to.equal("flex-start");
+    expect(alignItemsOf(el, "select-button")).to.equal("flex-start");
+  });
+
+  it("lets a consumer opt into center alignment via --lr-conversation-item-align", async () => {
+    const el = await fixtureItem(
+      html`<lr-conversation-item
+        label="Session"
+        style="--lr-conversation-item-align: center"
+      ></lr-conversation-item>`
+    );
+    expect(alignItemsOf(el, "base")).to.equal("center");
+    expect(alignItemsOf(el, "select-button")).to.equal("center");
+  });
+
+  it("reverts to flex-start when --lr-conversation-item-align is unset again", async () => {
+    const el = await fixtureItem(
+      html`<lr-conversation-item
+        label="Session"
+        style="--lr-conversation-item-align: center"
+      ></lr-conversation-item>`
+    );
+    el.style.removeProperty("--lr-conversation-item-align");
+    await el.updateComplete;
+    expect(alignItemsOf(el, "base")).to.equal("flex-start");
+  });
+});

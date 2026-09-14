@@ -89,6 +89,10 @@ export const styles = css`
     );
     border-radius: var(--lr-radius-pill);
     background: var(--lr-switch-track-fill, var(--_lr-switch-track-fill));
+    /* 'none' reproduces today's exact chrome: no border property was declared here at all, and an
+       undeclared border already computes to style 'none'/width '0px', so this fallback is
+       byte-identical when unset. */
+    border: var(--lr-switch-track-border, none);
     transition: background-color var(--lr-transition-fast);
   }
   [part~="track"][part~="checked"] {
@@ -142,6 +146,13 @@ export const styles = css`
     transition: inset-inline-start var(--lr-transition-fast);
   }
   [part~="track"][part~="checked"] [part="thumb"] {
+    /* Falls back through the same chain the unchecked thumb reads (--lr-switch-thumb-fill, then
+       --lr-color-surface), so an unset consumer renders byte-identical to today, where the thumb
+       never varies by checked state at all. */
+    background: var(
+      --lr-switch-checked-thumb-fill,
+      var(--lr-switch-thumb-fill, var(--lr-color-surface))
+    );
     inset-inline-start: calc(
       var(
           --width,
@@ -174,7 +185,16 @@ export const styles = css`
      hasLabelSlot is false. */
   [part="label"] {
     font-size: var(--lr-font-size-md-sm);
-    color: var(--lr-color-text);
+    color: var(--lr-switch-label-color, var(--lr-color-text));
+  }
+  /* :state(checked), not [part~='checked']/[checked] -- the host 'checked' ATTRIBUTE reflects
+     defaultChecked (the form-reset value, WA/native-input convention), not the live toggle. The
+     live value is this custom state (see the class doc's '@cssstate checked'), same source
+     [part~='track'][part~='checked'] above reads via the track's own dynamic part list. Falls back
+     to --lr-switch-label-color (then --lr-color-text), so an unset consumer renders byte-identical
+     to today, where the label never varies by checked state at all. */
+  :host(:state(checked)) [part="label"] {
+    color: var(--lr-switch-checked-label-color, var(--lr-switch-label-color, var(--lr-color-text)));
   }
 
   [part~="hint"] {

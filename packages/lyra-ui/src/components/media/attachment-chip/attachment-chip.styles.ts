@@ -19,12 +19,21 @@ export const styles = css`
     --_lr-attachment-chip-compact-font-size: var(--lr-font-size-xs);
     --_lr-attachment-chip-compact-gap: var(--lr-size-0-25rem);
     --_lr-attachment-chip-spinner-duration: var(--lr-transition-ambient);
+    /* Both padding privates restate today's previously-hardcoded values verbatim, so an unset
+       consumer renders byte-identical -- the compact one alongside the other compact-mode
+       privates above, the resting one for parity with it (below). */
+    --_lr-attachment-chip-compact-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    --_lr-attachment-chip-padding: var(--lr-space-xs) var(--lr-space-s);
+    /* Reduced, symmetric (equal block/inline) padding for the lone-thumbnail case below --
+       the compact text row's inline component (--lr-space-xs) is sized for a label/size line
+       that thumbnail-only removes, so it collapses to just the compact row's own block padding. */
+    --_lr-attachment-chip-compact-thumbnail-only-padding: var(--lr-size-0-125rem);
   }
 
   :host([compact]) [part='base'] {
     border: none;
     border-radius: var(--lr-radius-pill);
-    padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    padding: var(--lr-attachment-chip-compact-padding, var(--_lr-attachment-chip-compact-padding));
     font-size: var(--lr-attachment-chip-compact-font-size, var(--_lr-attachment-chip-compact-font-size));
     gap: var(--lr-attachment-chip-compact-gap, var(--_lr-attachment-chip-compact-gap));
   }
@@ -41,6 +50,12 @@ export const styles = css`
   }
   [part='meta'][hidden] {
     display: none;
+  }
+  /* Keyed off [part='meta'][hidden] via :has(), not just [compact][thumbnail-only]: thumbnail-only
+     only actually hides [part='meta'] for an image-mime attachment (see the class doc), and a
+     non-image chip still renders the text row and needs the ordinary compact padding around it. */
+  :host([compact][thumbnail-only]) [part='base']:has([part='meta'][hidden]) {
+    padding: var(--lr-attachment-chip-compact-thumbnail-only-padding, var(--_lr-attachment-chip-compact-thumbnail-only-padding));
   }
 
   :host([status='uploading']) {
@@ -67,7 +82,7 @@ export const styles = css`
     gap: var(--lr-space-s);
     max-inline-size: 100%;
     box-sizing: border-box;
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    padding: var(--lr-attachment-chip-padding, var(--_lr-attachment-chip-padding));
     border: var(--lr-border-width-thin) solid var(--lr-attachment-chip-border, var(--_lr-attachment-chip-border));
     border-radius: var(--lr-radius);
     background: var(--lr-attachment-chip-bg, var(--_lr-attachment-chip-bg));

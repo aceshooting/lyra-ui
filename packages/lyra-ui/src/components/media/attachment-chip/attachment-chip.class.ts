@@ -160,6 +160,15 @@ export interface LyraAttachmentChipEventMap {
  * `[part="base"]` while `compact`.
  * @cssprop [--lr-attachment-chip-compact-gap=var(--lr-size-0-25rem)] - Gap between the chip's parts
  * while `compact`.
+ * @cssprop [--lr-attachment-chip-padding=var(--lr-space-xs) var(--lr-space-s)] - Padding of
+ * `[part="base"]` while `compact` is unset.
+ * @cssprop [--lr-attachment-chip-compact-padding=var(--lr-size-0-125rem) var(--lr-space-xs)] -
+ * Padding of `[part="base"]` while `compact`.
+ * @cssprop [--lr-attachment-chip-compact-thumbnail-only-padding=var(--lr-size-0-125rem)] - Padding
+ * of `[part="base"]` while `compact` and `thumbnail-only` together actually hide `[part="meta"]`
+ * (an image-mime attachment only — see `thumbnailOnly`). Reduced from
+ * `--lr-attachment-chip-compact-padding` since the lone thumbnail no longer needs inline padding
+ * sized for a text row.
  * @status stable
  * @since 4.0.0
  */

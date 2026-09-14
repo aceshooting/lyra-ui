@@ -65,6 +65,8 @@ interface TrackedChipFocus {
  * @csspart base - The flex-wrap container (holds both the slot and the overflow indicator).
  *   Carries `role="group"` and the accessible name when one is supplied -- see `accessibleLabel`.
  * @csspart overflow-indicator - The "+N" / "Show less" toggle button. Only rendered while `max-visible` is actively causing an overflow.
+ * @cssprop [--lr-chip-group-gap=var(--lr-space-xs)] - Gap between `[part="base"]`'s wrapped
+ *   children, chips and the overflow indicator alike.
  * @cssprop [--lr-chip-group-overflow-expanded-color=var(--lr-color-text)] - Text color of
  *   `[part="overflow-indicator"]` while expanded (`aria-expanded="true"`).
  *   `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS, so this is the only way to

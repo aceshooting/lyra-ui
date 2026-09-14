@@ -121,6 +121,27 @@ it('keeps long removable chips contained through collapsed and expanded overflow
   expect(base.scrollWidth, 'the expanded group must stay inside its 320px allocation').to.be.at.most(base.clientWidth);
 });
 
+describe('themeable gap', () => {
+  it('defaults [part=base] gap to --lr-space-xs, unchanged from today', async () => {
+    const el = (await fixture(fiveChips())) as LyraChipGroup;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const probe = document.createElement('span');
+    probe.style.setProperty('gap', 'var(--lr-space-xs)');
+    el.append(probe);
+    const expected = getComputedStyle(probe).getPropertyValue('gap');
+    probe.remove();
+    expect(getComputedStyle(base).gap).to.equal(expected);
+  });
+
+  it('honors --lr-chip-group-gap when set', async () => {
+    const el = (await fixture(fiveChips())) as LyraChipGroup;
+    el.style.setProperty('--lr-chip-group-gap', '11px');
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).gap).to.equal('11px');
+  });
+});
+
 it('defaults max-visible to unset, showing every child and no overflow indicator', async () => {
   const el = (await fixture(fiveChips())) as LyraChipGroup;
   expect(el.maxVisible).to.be.undefined;

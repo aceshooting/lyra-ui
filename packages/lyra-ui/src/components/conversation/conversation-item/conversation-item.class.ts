@@ -203,6 +203,11 @@ export interface LyraConversationItemEventMap {
  *   `[part="base"]` padding while `compact`.
  * @cssprop [--lr-conversation-item-compact-gap=var(--lr-space-2xs)] - Gap between `[part="base"]`'s
  *   columns while `compact`.
+ * @cssprop [--lr-conversation-item-align=flex-start] - Cross-axis alignment of `[part="base"]` and
+ *   `[part="select-button"]`. `flex-start` (the default) suits the common multi-line row (a title
+ *   plus an `excerpt`); `center` reads better for a reliably single-line row with a taller trailing
+ *   action (e.g. `actions`), but is not the default because it would misalign every existing
+ *   multi-line row's title against its own baseline.
  * @status stable
  * @since 4.0.0
  */

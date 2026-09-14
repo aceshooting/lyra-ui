@@ -8,7 +8,11 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-xs);
+    /* Falls back straight to the design token, not a private intermediate -- this file declares
+       no other :host-level privates, so there is nothing else for a private custom property to
+       stay consistent with (see --lr-chip-group-overflow-expanded-color below for the same
+       shape). Unset, this renders byte-identical to the previously-hardcoded value. */
+    gap: var(--lr-chip-group-gap, var(--lr-space-xs));
   }
   /* Local pill styling rather than a real <lr-chip> in the shadow DOM: keeps the group
      self-contained instead of depending on chip.ts's internal shape, the way this family's

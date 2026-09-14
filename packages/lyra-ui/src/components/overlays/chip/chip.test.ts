@@ -157,6 +157,37 @@ describe('pill', () => {
   });
 });
 
+// -- wrap ---------------------------------------------------------------------
+
+describe('wrap', () => {
+  const label = (el: LyraChip): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+
+  it('defaults to false, single-line ellipsis-truncated exactly like before', async () => {
+    const el = (await fixture(html`<lr-chip>A very long chip label that does not fit</lr-chip>`)) as LyraChip;
+    expect(el.wrap).to.be.false;
+    expect(el.hasAttribute('wrap')).to.be.false;
+    const style = getComputedStyle(label(el));
+    expect(style.whiteSpace).to.equal('nowrap');
+    expect(style.textOverflow).to.equal('ellipsis');
+  });
+
+  it('wraps the label onto multiple lines when set', async () => {
+    const el = (await fixture(html`<lr-chip wrap>A very long chip label that does not fit</lr-chip>`)) as LyraChip;
+    expect(el.hasAttribute('wrap')).to.be.true;
+    const style = getComputedStyle(label(el));
+    expect(style.whiteSpace).to.equal('normal');
+  });
+
+  it('toggles back to single-line ellipsis truncation when wrap is unset again', async () => {
+    const el = (await fixture(html`<lr-chip wrap>Tag</lr-chip>`)) as LyraChip;
+    el.wrap = false;
+    await el.updateComplete;
+    expect(el.hasAttribute('wrap')).to.be.false;
+    expect(getComputedStyle(label(el)).whiteSpace).to.equal('nowrap');
+  });
+});
+
 it('keeps size="m" pixel-equivalent to the original chip and scales compact tiers', async () => {
   const render = async (size?: string): Promise<LyraChip> =>
     (await fixture(html`

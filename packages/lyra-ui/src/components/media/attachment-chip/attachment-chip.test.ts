@@ -1002,6 +1002,82 @@ describe('thumbnailOnly', () => {
   });
 });
 
+describe('themeable padding', () => {
+  it('defaults [part=base] padding to today\'s hardcoded values when compact is unset', async () => {
+    const el = (await fixture(html`<lr-attachment-chip name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // --lr-space-xs (0.25rem = 4px) block, --lr-space-s (0.5rem = 8px) inline -- byte-identical
+    // to the previously-hardcoded `var(--lr-space-xs) var(--lr-space-s)`.
+    expect(getComputedStyle(base).paddingBlockStart).to.equal('4px');
+    expect(getComputedStyle(base).paddingInlineStart).to.equal('8px');
+  });
+
+  it('honors --lr-attachment-chip-padding when compact is unset', async () => {
+    const el = (await fixture(
+      html`<lr-attachment-chip name="a.png" style="--lr-attachment-chip-padding: 3px 5px"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).paddingBlockStart).to.equal('3px');
+    expect(getComputedStyle(base).paddingInlineStart).to.equal('5px');
+  });
+
+  it('defaults compact [part=base] padding to today\'s hardcoded values', async () => {
+    const el = (await fixture(html`<lr-attachment-chip compact name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // --lr-size-0-125rem (2px) block, --lr-space-xs (4px) inline -- byte-identical to the
+    // previously-hardcoded `var(--lr-size-0-125rem) var(--lr-space-xs)`.
+    expect(getComputedStyle(base).paddingBlockStart).to.equal('2px');
+    expect(getComputedStyle(base).paddingInlineStart).to.equal('4px');
+  });
+
+  it('honors --lr-attachment-chip-compact-padding while compact', async () => {
+    const el = (await fixture(
+      html`<lr-attachment-chip compact name="a.png" style="--lr-attachment-chip-compact-padding: 1px 6px"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).paddingBlockStart).to.equal('1px');
+    expect(getComputedStyle(base).paddingInlineStart).to.equal('6px');
+  });
+
+  it('reduces [part=base] padding, symmetrically, when compact+thumbnailOnly actually hide [part=meta]', async () => {
+    const el = (await fixture(
+      html`<lr-attachment-chip compact thumbnail-only name="a.png" mime-type="image/png"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // --lr-size-0-125rem (2px) on every side, less than the ordinary compact row's 4px inline
+    // component, which was sized for a text row this lone-thumbnail chip no longer renders.
+    expect(getComputedStyle(base).paddingBlockStart).to.equal('2px');
+    expect(getComputedStyle(base).paddingInlineStart).to.equal('2px');
+  });
+
+  it('honors --lr-attachment-chip-compact-thumbnail-only-padding', async () => {
+    const el = (await fixture(html`
+      <lr-attachment-chip
+        compact
+        thumbnail-only
+        name="a.png"
+        mime-type="image/png"
+        style="--lr-attachment-chip-compact-thumbnail-only-padding: 7px"
+      ></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).paddingBlockStart).to.equal('7px');
+    expect(getComputedStyle(base).paddingInlineStart).to.equal('7px');
+  });
+
+  it('leaves the ordinary compact padding in place for a non-image compact+thumbnailOnly chip', async () => {
+    // thumbnailOnly has no effect for a non-image chip (per its own doc), so [part=meta] stays
+    // visible and the reduced thumbnail-only padding must not apply -- proving the :has() gate
+    // tracks the actually-rendered state, not just the two reflected attributes.
+    const el = (await fixture(
+      html`<lr-attachment-chip compact thumbnail-only name="a.pdf" mime-type="application/pdf"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).paddingBlockStart).to.equal('2px');
+    expect(getComputedStyle(base).paddingInlineStart).to.equal('4px');
+  });
+});
+
 describe('file-size unit localization', () => {
   it('localizes file-size units via this.localize(), not hardcoded English abbreviations', async () => {
     const el = (await fixture(

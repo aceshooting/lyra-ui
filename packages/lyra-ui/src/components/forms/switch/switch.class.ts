@@ -133,12 +133,21 @@ export interface LyraSwitchEventMap {
  * @cssprop [--lr-switch-checked-track-fill=var(--lr-color-brand)] - Track fill while checked.
  * @cssprop [--lr-switch-track-hover-fill=color-mix(...)] - Track fill while hovered.
  * @cssprop [--lr-switch-track-active-fill=color-mix(...)] - Track fill while pressed.
- * @cssprop [--lr-switch-thumb-fill=var(--lr-color-surface)] - Thumb fill in either checked state.
+ * @cssprop --lr-switch-track-border - Border of `[part='track']`. Undeclared by default (no
+ *   border renders at all), matching today's chrome.
+ * @cssprop [--lr-switch-thumb-fill=var(--lr-color-surface)] - Thumb fill while unchecked, and the
+ *   checked-state fallback when `--lr-switch-checked-thumb-fill` is unset.
+ * @cssprop [--lr-switch-checked-thumb-fill=var(--lr-switch-thumb-fill)] - Thumb fill while
+ *   checked, independently themeable from the unchecked fill.
  * @cssprop [--width=var(--lr-switch-track-inline-size)] - WA/Shoelace alias for the track's inline
  * size.
  * @cssprop [--height=var(--lr-switch-track-block-size)] - WA/Shoelace alias for the track's block
  * size.
  * @cssprop [--thumb-size=calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2))] - WA/Shoelace thumb diameter alias.
+ * @cssprop [--lr-switch-label-color=var(--lr-color-text)] - Text color of `[part='label']`, and
+ *   the checked-state fallback when `--lr-switch-checked-label-color` is unset.
+ * @cssprop [--lr-switch-checked-label-color=var(--lr-switch-label-color)] - Text color of
+ *   `[part='label']` while checked, independently themeable from the unchecked color.
  * @status stable
  * @since 4.0.0
  */

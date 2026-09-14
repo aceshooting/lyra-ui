@@ -14,7 +14,13 @@ export const styles = css`
   [part='base'] {
     position: relative;
     display: flex;
-    align-items: flex-start;
+    /* Undeclared on :host -- a consumer opts a whole list into e.g. 'center' at an ancestor
+       without this component ever picking a new default. flex-start (today's only behavior)
+       reads right for the common multi-line row (title + excerpt): centering that against a
+       single-line trailing action would misalign the title's own baseline. A row that is
+       reliably single-line (no excerpt, no wrapping title) is the case 'center' is for -- kept in
+       sync with [part='select-button'] below, which lays out the same row's content. */
+    align-items: var(--lr-conversation-item-align, flex-start);
     gap: var(--lr-space-xs);
     padding: var(--lr-space-s) var(--lr-space-m);
     border-radius: var(--lr-radius);
@@ -90,7 +96,7 @@ export const styles = css`
 
   [part='select-button'] {
     display: flex;
-    align-items: flex-start;
+    align-items: var(--lr-conversation-item-align, flex-start);
     gap: var(--lr-space-s);
     flex: 1 1 auto;
     min-inline-size: 0;
