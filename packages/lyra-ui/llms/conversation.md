@@ -172,10 +172,18 @@ carrying `data-display="inline"|"block"`)
 
 **Themeable custom properties:** `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
-`--lr-theme-font-family-mono` override reaches it), `--lr-code-block-tab-size` (default `2` — tab width inside a
-rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/-m/-l`,
-`--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`, `--lr-color-text-quiet`,
-`--lr-radius`.
+`--lr-theme-font-family-mono` override reaches it), `--lr-markdown-code-bg` (default
+`var(--lr-color-brand-quiet)` — background shared by every inline `code` span and the fenced
+`code-block` surface, so a consumer can retheme either or both together without repainting every
+other surface that reads the shared brand-quiet token), `--lr-markdown-code-padding` (default
+`var(--lr-size-0-125rem) var(--lr-size-0-3125rem)` — inline `code` span padding),
+`--lr-markdown-code-radius` (default `calc(var(--lr-radius) * 0.5)` — inline `code` span border
+radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr-space-m)` — the
+fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (default `var(--lr-radius)`
+— the fenced `code-block` surface's border radius), `--lr-code-block-tab-size` (default `2` — tab
+width inside a rendered fenced or indented `code-block`), plus shared tokens
+`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`,
+`--lr-color-text-quiet`, `--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
 `loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half
@@ -327,15 +335,21 @@ as the full class; the core route exports its own `Marked` alias.
 anchor-jump message), `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`,
 `link`, `table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
 
-**Themeable custom properties:** `--lr-code-block-tab-size` (default `2` — tab width inside a
-rendered fenced or indented `code-block`), with exactly the mechanics described under
-`<lr-markdown>` above: the same property name and default that `<lr-code-block>`/`<lr-code-editor>`
-read, declared as a `var()` fallback at the point of use rather than on `:host` so a page- or
-container-level value reaches it, and carried here in its own right because this element is a
-**sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown code blocks wrap
-(`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width can render
-differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by rendered
-code and defaults to `var(--lr-font-mono)`.
+**Themeable custom properties:** identical to `<lr-markdown>`'s own code-surface tokens —
+`--lr-markdown-code-bg` (default `var(--lr-color-brand-quiet)`, shared by inline `code` and the
+fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-radius` (inline
+`code` span padding/radius, defaulting to `var(--lr-size-0-125rem) var(--lr-size-0-3125rem)`/
+`calc(var(--lr-radius) * 0.5)`), and `--lr-markdown-code-block-padding`/
+`--lr-markdown-code-block-radius` (the fenced `code-block` surface's padding/radius, defaulting to
+`var(--lr-space-s) var(--lr-space-m)`/`var(--lr-radius)`) — plus `--lr-code-block-tab-size` (default
+`2` — tab width inside a rendered fenced or indented `code-block`), with exactly the mechanics
+described under `<lr-markdown>` above: the same property name and default that
+`<lr-code-block>`/`<lr-code-editor>` read, declared as a `var()` fallback at the point of use rather
+than on `:host` so a page- or container-level value reaches it, and carried here in its own right
+because this element is a **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown
+code blocks wrap (`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width
+can render differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by
+rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
@@ -558,12 +572,22 @@ sit inline at the tail end of streamed text still being appended to).
 Removing `label` restores the localized thinking name while preserving an explicit host
 `aria-label`. Later label assignments remain reactive.
 
+`label-placement="after"` additionally renders `label` (or its localized "Thinking…" fallback)
+visibly next to the animated shape, in a new `part="label"` element, mirroring `<lr-spinner>`'s own
+`labelPlacement` vocabulary. The default, `"none"`, is unchanged from this component's
+screen-reader-only rendering before this property existed: a single `.sr-only` text node, no
+visible twin.
+
 **Properties:**
 
 - `shape: TypingIndicatorShape = 'dots'` (`'dots' | 'pulse' | 'cursor'`, reflected)
 - `label: string = ''` — caller-supplied accessible name. Empty or whitespace-only values use the
   localized “Thinking…” fallback; an explicit host `aria-label`, including `aria-label=""`, wins.
   The status is not re-announced on every animation frame, only on mount and on later label changes
+- `labelPlacement: TypingIndicatorLabelPlacement = 'none'` (`'none' | 'after'`, attribute
+  `label-placement`, reflected) — where the accessible label renders. `'none'` (default) keeps
+  `label` screen-reader-only, exactly as this component rendered before this property
+  existed. `'after'` also renders it visibly next to the animated shape.
 - `size: TypingIndicatorSize = 'm'` (reflected) — visual size on the library-wide ladder;
   `TypingIndicatorSize` is an alias of the shared `LyraSize`, so it accepts `2xs`/`xs`/`s`/`m`/`l`/
   `xl` plus the `small`/`medium`/`large` spellings of `s`/`m`/`l`. A presence cue has three usefully
@@ -578,7 +602,8 @@ Removing `label` restores the localized thinking name while preserving an explic
 
 **CSS parts:** `base` (the decorative, `aria-hidden`, wrapper around the animated shape), `dot`
 (each of the three dots in the `dots` variant), `pulse` (the single pulsing dot in the `pulse`
-variant), `cursor` (the blinking bar in the `cursor` variant)
+variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible label, rendered
+only while `label-placement="after"`)
 
 **Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
 `0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default
@@ -598,6 +623,10 @@ off it — untouched.
 
 ```html
 <lr-typing-indicator label="Assistant is responding…"></lr-typing-indicator>
+<lr-typing-indicator
+  label-placement="after"
+  label="Assistant is responding…"
+></lr-typing-indicator>
 <lr-typing-indicator shape="pulse" size="s"></lr-typing-indicator>
 <lr-typing-indicator shape="cursor"></lr-typing-indicator>
 <lr-typing-indicator
@@ -1030,6 +1059,14 @@ retune every row at once from an ancestor. `[part='content']`'s gap collapses to
 `compact` with no hatch of its own — there is no smaller step left to retune to. `:host([compact])
 [part='base']` is ordered _before_ `:host([active]) [part='base']` (equal specificity), so a row that
 is both compact and active keeps the active background and the promoted excerpt/timestamp contrast.
+
+`--lr-conversation-item-align` (default `flex-start`) controls the cross-axis `align-items` of both
+`[part='base']` and `[part='select-button']`. `flex-start` — today's only behavior — suits the
+common multi-line row (a title plus an `excerpt`): centering that layout against a single-line
+trailing action would misalign the title's own baseline. Set it to `center` for a row that is
+reliably single-line (no excerpt, no wrapping title) alongside a taller trailing action (e.g. an
+`actions` control), where centered alignment reads better. It is not the default because switching
+it would misalign every existing multi-line row.
 
 Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-color-text/-text-quiet/-brand/-brand-quiet/-surface`,
@@ -1620,6 +1657,10 @@ highlighted markup.
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
   `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
   the type-only granular import emits no registration side effect.
+  The map key need not be the grammar module's own registered name or one of its declared
+  aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
+  `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
+  second near-identical grammar) still highlights under that key.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
@@ -2501,9 +2542,11 @@ are skipped rather than becoming false boundaries.
 **Exported types:** `LyraChatThread { id: string; title: string; excerpt?: string; timestamp?: Date |
 string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pin' | 'archive' |
 'delete'`; `ThreadListGrouping = 'date' | 'custom' | 'none'`; `ThreadBucketKey = 'pinned' |
-'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`; and
+'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`;
 `ThreadGroupContext { id: string; threads: readonly LyraChatThread[]; bucket?: ThreadBucketKey;
-date?: Date }`. `LyraThreadList` and `LyraThreadListEventMap` are exported alongside them. The class
+date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; collapsed: boolean }` (the shared
+payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair). `LyraThreadList` and
+`LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
 Data-mode thread ids must be nonempty, nonblank, and unique, and every row must have a string
@@ -2518,7 +2561,11 @@ collection; changing an assigned record or mutating the assigned array does not 
 **Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
 (attribute `active-conversation-id`) — data mode:
 marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
-false` (reflected) — shows the built-in search field. `filter?: (thread, query) => boolean`
+false` (reflected) — shows the built-in search field, including a `part="clear-button"` icon button
+that appears next to it once it has a value (never when empty), clears it on click, fires the same
+`lr-filter-change`/`lr-query-change` event typing already fires, and returns focus to the field. Its
+accessible name is the localized `clear` message (the same key `<lr-input>`'s own clear button
+uses). `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
@@ -2530,9 +2577,12 @@ plain-text accessible/visible label; `renderGroupAdornment?: (context) => Templa
 separate rich content beside the toggle without nesting it inside the button. `groupOrder?: string[] | ((a: string, b:
 string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an
 array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
-controlled collapsed state for both date and custom groups. A collapsed group's header remains in
-the virtual list while its conversation rows are removed from the virtual-list item/measurement
-set; `lr-group-toggle` requests the matching state change. Group headers and threads use separate
+collapsed state for both date and custom groups, **self-managed by default**: activating the
+built-in group toggle updates this array directly. A collapsed group's header remains in the
+virtual list while its conversation rows are removed from the virtual-list item/measurement set.
+Prevent the default of the cancelable `lr-group-toggle-request` event (see **Events** below) to
+veto that write and keep this property fully controlled instead — the only behavior it had before
+self-management existed. Group headers and threads use separate
 internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
@@ -2591,14 +2641,23 @@ With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
 re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
 instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
-`lr-group-toggle` (`detail: { groupId, collapsed }` —
-controlled intent; native group buttons provide Enter/Space activation and explicit
-`aria-expanded="true"|"false"`). `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
+`lr-group-toggle-request` (`detail: { groupId, collapsed }`, cancelable) — proposed before a
+custom/date group's collapse state changes; calling `preventDefault()` skips the built-in
+`collapsedGroupIds` write and suppresses the following `lr-group-toggle`, leaving the group's
+collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, collapsed }`) — the
+change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
+`collapsedGroupIds`; native group buttons provide Enter/Space activation and explicit
+`aria-expanded="true"|"false"` regardless. A consumer that already listens for `lr-group-toggle`
+and reassigns `collapsedGroupIds` itself keeps working unchanged: this component's own write, when
+it happens, always precedes that listener in the same synchronous dispatch, so the host's own
+assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
 which are neither.
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
-type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list
+type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
+mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
+`viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
 `group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current

@@ -938,7 +938,10 @@ renders at the start of the action row, before Deny/Edit/Approve.
   also still `disabled` while an in-progress edit is invalid JSON, independent of `pending`).
   Escape and an enabled backdrop dismissal are suppressed while `pending` is set. Finalize by calling
   `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
-  state; `pending` also resets to `null` every time the dialog re-opens.
+  state; `pending` also resets to `null` every time the dialog re-opens. If that same listener
+  resolves the decision itself synchronously (calling `close('approve'|'deny')` or setting
+  `.pending` directly before returning), that wins outright: the component's own built-in `pending`
+  bookkeeping only applies when the listener left both `.pending` and `.open` untouched.
 
 **Methods:** `show(): void` opens the dialog; `hide(reason: ToolApprovalDialogCloseReason = 'api'):
 void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,
@@ -2713,6 +2716,11 @@ can ignore it; one actually executing the tool needs it. This is a cancelable ve
 `preventDefault()` preserves the pending approval dialog and its current inline argument edits
 instead of closing/resetting them, sets `pendingApproval`, and requires the host to call
 `finalizePendingApproval()` after persistence succeeds or `revertPendingApproval()` after it fails.
+A host may instead resolve the decision synchronously by reassigning `entries` (with the entry's
+`approved` field set) from within that same listener, without ever calling
+`finalizePendingApproval()`: the entry's live state is re-checked immediately after dispatch, so
+`pendingApproval` — and the shared dialog's pending presentation — is never set or left set for
+an entry that no longer needs a decision.
 
 ```ts
 timeline.addEventListener("lr-tool-approval-decide", async (event) => {

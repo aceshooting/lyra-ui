@@ -208,7 +208,12 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
-**Themeable custom properties:** `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
+**Themeable custom properties:** `--lr-stat-padding` (default `var(--lr-space-m)`) and
+`--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
+rendering path — the default card, `compact` (own defaults `var(--lr-space-s)` /
+`var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal
+`.linked-content` wrapper used when `href` is set, so one override reaches a linked and an
+unlinked stat identically. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
 and `--lr-stat-trend-good-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%,
 transparent)`) — text/background of `[part="trend"]` when its polarity (per `goodDirection`) is
 "good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
@@ -3230,10 +3235,16 @@ color hook as `segment`) and `legend-label`
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the
 two can never disagree. `--lr-context-meter-legend-swatch-size` (default `var(--lr-size-0-625rem)`)
-sizes a legend chip on both axes. Otherwise the component consumes shared tokens
+sizes a legend chip on both axes. The `bar`-shape track is independently retunable:
+`--lr-context-meter-track-size` (default `var(--lr-size-0-5rem)`) is its block size (and so the
+block size of its filled segments), `--lr-context-meter-track-radius` (default
+`calc(var(--lr-radius) * 0.5)`) its corner radius, `--lr-context-meter-track-bg` (default
+`color-mix(in srgb, var(--lr-color-border) 30%, transparent)`) the background of its unfilled
+remainder, and `--lr-context-meter-segment-seam-color` (default `var(--lr-color-surface)`) the
+hairline seam painted between adjacent segments. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
-`--lr-color-surface` (the bar variant's inter-segment seam), `--lr-color-brand`,
-`--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`, `--lr-transition-base`.
+`--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,
+`--lr-transition-base`.
 
 **Optional peer deps:** none.
 

@@ -758,7 +758,11 @@ including after its previous deadline fired. With `nextInMs` unset it simply cle
 **Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
 background of `indicator` while `data-due` is set. Component-scoped indirection over the shared
 `--lr-color-success` token, so a consumer can retheme just this due-state indicator without
-repainting every other component that reuses the same shared success token. Plus shared tokens —
+repainting every other component that reuses the same shared success token. `--lr-poll-status-pause-hover-bg`/`--lr-poll-status-pause-hover-color` (defaults
+`var(--lr-color-brand-quiet)`/`var(--lr-color-brand)`) and
+`--lr-poll-status-pause-active-bg`/`--lr-poll-status-pause-active-color` (defaults the former
+brand-quiet active `color-mix()`/`var(--lr-color-brand)`) retheme the built-in `pause-button`'s
+hover/pressed paint independently of those same shared brand tokens. Plus shared tokens —
 `--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.
@@ -1028,6 +1032,8 @@ First-party invention (no Web Awesome equivalent).
   all-removals diff of `oldText`.
 - `copyable: boolean = false` — shows a copy-to-clipboard button for the full unified-diff text.
   `false` (the default) renders no button.
+- `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
+  view scrolls internally past this height instead of growing the page. Invalid values are ignored.
 - `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders today's
   single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
   the same diff alignment. Unsupported attributes and untyped property writes normalize to
@@ -1075,7 +1081,9 @@ marker), `copy-button` (the copy affordance, only
 rendered while `copyable`), `limit` (the localized over-`maxLines` fallback), `side` (one column in
 `layout="split"`, `data-side="old"|"new"`).
 
-**Themeable custom properties:** `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
+**Themeable custom properties:** `--lr-diff-view-max-height` (default `none` — an independently
+settable scroll cap on `[part="base"]`; the `maxHeight` property writes the same custom property
+inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
 shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.

@@ -12,11 +12,16 @@ import { styles } from './control-group.styles.js';
  * full height), this centers children of differing intrinsic heights and does not
  * assume any particular child type.
  *
- * `container-type: inline-size` (needed for the `@container` breakpoint below) is opt-in via
- * `responsive`, not automatic: unconditionally applying it made the group collapse to 0 inline
- * size whenever it sat as an ordinary flex-basis:auto child of a shrink-to-fit flex row -- exactly
- * this component's own toolbar-row use case. Set `responsive` when this group's own size instead
- * comes from a percentage width, grid track, or block-level parent.
+ * The group fills a host that has been given a definite inline size, unconditionally. A percentage
+ * inline size resolves as `auto` against a shrink-to-fit containing block, so that is a no-op for
+ * the ordinary toolbar-in-a-flex-row case and only takes effect once an ancestor sizes the host --
+ * the same unconditional-chain pattern `<lr-file-input>` uses.
+ *
+ * `container-type: inline-size` stays opt-in via `responsive`, because unconditionally applying it
+ * made the group collapse to 0 inline size whenever it sat as an ordinary `flex-basis: auto` child
+ * of a shrink-to-fit flex row -- exactly this component's own toolbar-row use case. Setting it makes
+ * the host a size-query container that the consumer's own `@container` rules can target from their
+ * slotted content; the component itself declares no breakpoint of its own.
  *
  * @customElement lr-control-group
  * @slot - Form controls, buttons, or any other action content.
@@ -32,15 +37,17 @@ export class LyraControlGroup extends LyraElement {
    *  `aria-label`; a present host attribute wins, including an explicitly empty value. */
   @property() label = '';
 
-  /** Opts into the group's own `@container` narrow-allocation breakpoint (see the class doc) by
-   *  making the host a CSS size-query container. Left unset (the default), the host uses
-   *  `container-type: normal` instead: `container-type: inline-size` forces this element's own
-   *  auto/content-based inline size to be computed as if it had no content, which silently
-   *  collapses it to 0 width whenever it sits as an ordinary (`flex-basis: auto`) child of a
-   *  shrink-to-fit flex row — exactly this component's own stated primary use case (a toolbar
-   *  row of mixed controls). Set `responsive` only when the group's own size instead comes from
-   *  somewhere else (a percentage width, a grid track, a block-level parent), where that failure
-   *  mode does not apply and the narrow-allocation breakpoint is wanted. */
+  /** Makes the host a CSS size-query container, so a consumer's own `@container` rules can react to
+   *  this group's allocated width from their slotted content. The component declares no breakpoint
+   *  of its own, and its fill behaviour does not depend on this.
+   *
+   *  Left unset (the default), the host uses `container-type: normal`, because
+   *  `container-type: inline-size` forces this element's own auto/content-based inline size to be
+   *  computed as if it had no content, which silently collapses it to 0 width whenever it sits as
+   *  an ordinary (`flex-basis: auto`) child of a shrink-to-fit flex row — exactly this component's
+   *  own stated primary use case (a toolbar row of mixed controls). Set `responsive` only when the
+   *  group's own size instead comes from somewhere else (a percentage width, a grid track, a
+   *  block-level parent), where that failure mode does not apply. */
   @property({ type: Boolean, reflect: true }) responsive = false;
 
   override render(): TemplateResult {

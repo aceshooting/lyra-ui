@@ -204,7 +204,8 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
 - `open: boolean = false` (reflected) — whether the `'floating'` collapse state's drawer is shown.
   While `collapseState` is `'floating'` and `open` is `false` (the default), the collapsing panel
   renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
-  card this state rendered before `open` existed. Setting `open = true` reveals it as a
+  card this state rendered before `open` existed — not just visually hidden; this holds even
+  against an author `display` rule targeting the panel directly. Setting `open = true` reveals it as a
   focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a backdrop click set
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
@@ -250,10 +251,24 @@ when `storage-key` is used).
 the `'floating'` drawer's `[part='backdrop']` scrim; scoped to `[part='base']`, not the viewport.
 `--lr-multi-split-divider-target-size` (default
 `max(var(--lr-icon-button-size), var(--lr-size-3px))`) — the real flex track/gutter reserved for the
-divider along the resize axis. The 3px visual rule is painted in its center; no pseudo-element
+divider along the resize axis. The visual rule is painted in its center; no pseudo-element
 extends into either adjacent panel, so slotted controls retain pointer ownership up to their edge.
 Set it on an ancestor to retune a split subtree or directly on one component; either public value
 remains authoritative.
+`--lr-multi-split-divider-thickness` (default `var(--lr-size-3px)`) sets the painted hairline's own
+width, independent of `--lr-multi-split-divider-target-size` above — retuning one never changes the
+other, so the WCAG 2.5.8 pointer target can never be shrunk by a thinner or thicker visual line.
+`--lr-multi-split-divider-color` (default `var(--lr-color-border)`),
+`--lr-multi-split-divider-hover-color` (default `var(--lr-color-brand)`), and
+`--lr-multi-split-divider-active-color` (default
+`color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+theme the divider hairline's resting/hover/pressed color; the active color is only reachable while a
+resize gesture is pressed (pointer capture holds `:active` for the whole gesture).
+`--lr-multi-split-floating-panel-inline-size` overrides the `'floating'` collapse state's overlay
+card `inline-size`, which otherwise mirrors its own live `sizes[i]` percent (i.e. what it renders
+at in the `'wide'` state, so un-floating never jumps). Unset, the rendered geometry is unchanged;
+set (e.g. on an ancestor), it wins over that percent at ordinary specificity, with no `!important`
+needed against the inline style the component rewrites on every render.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.
@@ -1386,11 +1401,15 @@ toolbars that combine segmented controls, selects, buttons, and other interactiv
 
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`; a host
   `aria-label`, when present, wins including an explicitly empty value.
-- `responsive: boolean = false` (reflected) — opts into a `@container` narrow-allocation breakpoint
-  (switches to a full-width allocation below `20rem`) by making the host a CSS size-query
-  container. Left unset, the host is `container-type: normal`, since `container-type: inline-size`
-  unconditionally would collapse the group to 0 inline size whenever it sits as an ordinary
-  (`flex-basis: auto`) child of a shrink-to-fit flex row — this component's own primary use case.
+- `responsive: boolean = false` (reflected) — makes the host a CSS size-query container
+  (`container-type: inline-size`) so a future `@container` rule can react to this group's own
+  allocated width. Left unset, the host is `container-type: normal`, since `container-type:
+  inline-size` unconditionally would collapse the group to 0 inline size whenever it sits as an
+  ordinary (`flex-basis: auto`) child of a shrink-to-fit flex row — this component's own primary
+  use case. `[part="base"]` itself now fills the host's inline size unconditionally (not gated by
+  `responsive`): a percentage inline-size against an indefinite/shrink-to-fit containing block
+  resolves as `auto`, so this is a no-op unless the host is given a definite inline size, directly
+  or via an ancestor.
 
 **Events:** none.
 
@@ -1414,10 +1433,12 @@ between grouped controls; shared spacing and layout tokens apply as well.
 - This is a layout and semantics primitive; it does not coordinate child values or emit a group
   change event.
 - Children wrap according to the group's own allocated inline size, not the viewport width.
-- The `@container` narrow-allocation breakpoint only applies when `responsive` is set. Setting
-  `responsive` while this group also sits as a shrink-to-fit flex child re-introduces the 0-width
-  collapse this default is designed to avoid — only opt in when the group's own size comes from
-  somewhere else (a percentage width, a grid track, a block-level parent).
+- `[part="base"]` fills the host's inline size unconditionally, but the host itself never gets a
+  size from `responsive`/`container-type` alone — give the host a definite inline size directly
+  (a percentage width, a grid track, a block-level parent) for the fill to have any visible effect.
+- Setting `responsive` while this group also sits as a shrink-to-fit flex child re-introduces the
+  0-width collapse the unset default is designed to avoid — only opt in when the group's own size
+  comes from somewhere else.
 
 ---
 
@@ -2573,8 +2594,12 @@ expanding the popup.
 
 **Themeable custom properties:** `--lr-menu-item-gap`, `--lr-menu-item-radius`,
 `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
-`--lr-menu-item-danger-active-bg`, and `--submenu-offset`, plus shared size/focus/color/spacing
-tokens.
+`--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
+`--lr-menu-item-checked-color` (default `inherit`), `--lr-menu-item-checked-font-weight` (default
+`inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
+apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked/selected-state
+hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
+a checked row paints identically to an unchecked one.
 
 ### Nested submenus
 
@@ -3256,7 +3281,14 @@ evenly. Each `size` tier changes both private defaults from the shared ladder; a
 ancestor or the element remains authoritative. Note that the spacing knob
 deliberately reads the ladder's _inline_-padding value: a stacked panel wants generous block rhythm,
 whereas the ladder's own block padding exists to fit text inside a fixed control height and would
-collapse the summary row. `--spacing` aliases the Details rhythm, while `--show-duration` and
+collapse the summary row. The summary's and the panel content's padding can also be tuned
+independently of each other and of `--lr-details-spacing`: `--lr-details-summary-padding-block` and
+`--lr-details-summary-padding-inline` control the summary alone, and
+`--lr-details-content-padding-block-end` and `--lr-details-content-padding-inline` control the
+panel content alone. All four default to the same `--lr-details-spacing` resolution described
+above, mirroring how `--lr-details-gap`/`--lr-details-radius` (below) are already independent of
+the spacing knob. `--spacing` aliases the Details rhythm and remains the highest-precedence
+override, ahead of these four as well. `--show-duration` and
 `--hide-duration` (both default `var(--lr-duration-base)`) tune its icon transitions. Motion stops
 under `prefers-reduced-motion`, so the `lr-after-*` events still settle promptly in that branch.
 `--lr-details-gap` (default `var(--lr-space-s)`) independently controls the summary content/icon

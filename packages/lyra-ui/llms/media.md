@@ -1443,7 +1443,10 @@ coalesce into one update.
 - `thumbnailOnly: boolean = false` (reflected, attribute `thumbnail-only`) — when both this and
   `compact` are set, hides `[part='meta']` (the filename/size text) entirely for an image-mime
   attachment, leaving only the thumbnail. Has no effect for a non-image chip, or when `compact` is
-  unset. `false` (the default) reproduces the chip's exact existing output.
+  unset. `false` (the default) reproduces the chip's exact existing output. While it actually hides
+  `[part='meta']`, `[part='base']` also switches to a reduced, symmetric padding sized for a lone
+  thumbnail instead of the compact text row's padding — see
+  `--lr-attachment-chip-compact-thumbnail-only-padding` below.
 - `removeLabel?: string` (attribute `remove-label`) — verb used in the remove button's accessible
   name; omitting it reads back `undefined` and routes through the complete localized
   `removeWithContext` template
@@ -1515,7 +1518,17 @@ or direct public value remains authoritative; `--lr-attachment-chip-compact-thum
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
 size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-duration` (default
 `var(--lr-transition-ambient)`) controls the indeterminate rotation's duration and easing and stops
-under reduced motion; plus shared tokens `--lr-space-xs`, `--lr-space-s`,
+under reduced motion.
+`--lr-attachment-chip-padding` (default `var(--lr-space-xs) var(--lr-space-s)`) and
+`--lr-attachment-chip-compact-padding` (default `var(--lr-size-0-125rem) var(--lr-space-xs)`) make
+`[part='base']`'s padding themeable in the resting and `compact` states respectively — both were
+previously hardcoded. `--lr-attachment-chip-compact-thumbnail-only-padding` (default
+`var(--lr-size-0-125rem)`, applied symmetrically to every side) governs `[part='base']`'s padding
+specifically while `compact` and `thumbnail-only` together actually hide `[part='meta']` for an
+image-mime attachment — reduced from the compact padding above, since the lone thumbnail no longer
+needs inline padding sized for a text row that isn't rendering. It has no effect for a non-image
+chip, where `[part='meta']` stays visible and the ordinary compact padding still applies.
+Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
 `--lr-radius`, `--lr-color-text`, `--lr-color-danger`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-transition-base`, `--lr-focus-ring-width`,
 `--lr-focus-ring-color`, `--lr-focus-ring-offset`.

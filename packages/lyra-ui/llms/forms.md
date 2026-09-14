@@ -334,7 +334,11 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
 - `sourceTruncated: boolean` (read-only) — whether the response reported or contained more rows
   than the bounded retained snapshot; the overflow row includes that hidden count
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
-  `multiple` mode
+  `multiple` mode. Assigning `undefined`/`null` clears the selection; every string, including `''`,
+  is instead a candidate value resolved against the current local options/async rows — an
+  `<lr-option value="">` (or a matching async row) is legitimate and round-trips like any other
+  value. A value matching no current option/row still commits rather than being dropped or treated
+  as a clear — see "Unknown committed values" below
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `selectedRows` (read: `ComboboxSourceRow[]`; write: `readonly ComboboxSourceRow[]`) — structured
   rows for the current selection, including any opaque `data` payload supplied by an async source.
@@ -344,6 +348,15 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   no longer contains them
 - `selectionStart`, `selectionEnd`, and `selectionDirection` — selection getters/setters forwarded
   to the internal input
+
+**Unknown committed values.** A committed value matching no current option/row (a stale value from
+a removed option, or a programmatic assignment with a typo) still commits — the raw string stays
+fully reachable through `value`/`selectedRows` — but renders a dashed/italic
+`[part='unknown-value']` badge next to the closed single-select input, or on the relevant
+`multiple`-mode tag, instead of an unexplained bare label, mirroring `<lr-model-select>`'s synthetic
+"not in catalog" stale-value row — see `--lr-combobox-unknown-value-border-style`/`-color` below.
+The badge is suppressed while an async `source` fetch is still in flight, and never shown for an
+`allowCustomValue` commit, which is a sanctioned unmatched value, not a stale one.
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
@@ -471,7 +484,9 @@ attribute when provided), plus two adornment slots:
 `start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
 `tag-label`, `tag__content`, `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
-`clear-button`, `expand-icon`, `listbox`,
+`clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
+input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
+`expand-icon`, `listbox`,
 `group-label` (the heading of an option group — rows sharing a `group` — named as on `lr-select` and
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
@@ -509,6 +524,10 @@ and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`)
 four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
 Like the active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer
 can retheme the selected row without hijacking `--lr-color-brand` library-wide.
+
+`--lr-combobox-unknown-value-border-style` (default `dashed`) and
+`--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
+`[part='unknown-value']` badge described above under "Unknown committed values".
 
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
@@ -784,12 +803,23 @@ unknown`, exported under that name from the component's own module, renders one
 - `value: string | string[]` — a getter/setter: a plain `string` in single mode (empty when nothing
   is selected), a `string[]` in `multiple` mode
 - `defaultValue: string | string[]` (attribute `default-value` accepts the single string form) —
-  reset selection; changing it updates the live value only while the control is pristine
+  reset selection; changing it updates the live value only while the control is pristine. Assigning
+  `undefined`/`null` to either clears the selection; every string, including `''`, is a candidate
+  value resolved against the current `<lr-option>`s instead — an `<lr-option value="">` is a
+  legitimate row and round-trips like any other value. A value matching no current option still
+  commits — see "Unknown committed values" below
 - `selectedOptions: LyraOption[]` — a writable, fresh snapshot of the live selected occurrences.
   Assigning live child options commits their exact occurrences through the same event-silent path
   as `value`; foreign/detached options are ignored, and single mode keeps only the first. Mutating
   an array returned by the getter never mutates the control
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
+
+**Unknown committed values.** A committed value matching no current `<lr-option>` (a stale value
+from a removed option, or a programmatic assignment with a typo) still commits — the raw string
+stays fully reachable through `value`/`selectedOptions` — but renders a dashed/italic
+`[part='unknown-value']` badge next to the trigger label, or on the relevant `multiple`-mode tag,
+instead of an unexplained bare label, mirroring `<lr-model-select>`'s synthetic "not in catalog"
+stale-value row — see `--lr-select-unknown-value-border-style`/`-color` below.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once
@@ -843,13 +873,18 @@ text are part of the focused control's accessible description.
 `tag__remove-button`/`tag__remove-button__base`, and `tag-overflow` (the "+N" chip standing in for the selections past
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
-is encoded in the part name instead), `clear-button` (the `with-clear` button, present only while
+is encoded in the part name instead), `unknown-value` (the dashed/italic badge shown next to the
+trigger label, or on a `multiple`-mode tag, when the committed value matches no current
+`<lr-option>`), `clear-button` (the `with-clear` button, present only while
 there is a selection to clear), `listbox` (the managed nonmodal popup, layered by
 `--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback),
 `group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
 the previous one's — its stable ID labels a `role="group"` wrapper that semantically owns the
 following option rows; options with an empty `group` get no heading or group wrapper),
-`option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
+`option`, `option-dot` (the leading status dot, when a row's `dotColor` is set),
+`option-start`/`option-end` (an option row's leading/trailing adornment, cloned from the source
+`<lr-option>`'s `start`/`prefix`/`end`/`suffix` slot — inert and `aria-hidden`, exactly like
+`lr-combobox`'s identical parts), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
@@ -911,6 +946,10 @@ active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a
 retheme the selected row without hijacking `--lr-color-brand` library-wide. Note the shadow-parts
 spec forbids an attribute selector after `::part()` — `::part(option)[aria-selected='true']` is
 invalid CSS and never matches — which is exactly why these tokens exist.
+
+`--lr-select-unknown-value-border-style` (default `dashed`) and
+`--lr-select-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
+`[part='unknown-value']` badge described above under "Unknown committed values".
 
 **Optional peer deps:** none.
 
@@ -3767,8 +3806,21 @@ WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same 
 fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independently retints its
 checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
 retint the pointer states (their defaults remain mixes from the current resting fill).
-`--lr-switch-thumb-fill` (default `--lr-color-surface`) controls the thumb in either state. None of
-these hooks touches the label text beside the track. Plus shared tokens
+`--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
+renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
+look) without affecting any other switch.
+`--lr-switch-thumb-fill` (default `--lr-color-surface`) controls the thumb while unchecked, and is
+also the checked-state fallback. `--lr-switch-checked-thumb-fill` (default
+`var(--lr-switch-thumb-fill)`) independently retints the thumb only while checked, leaving the
+unchecked thumb untouched.
+`--lr-switch-label-color` (default `var(--lr-color-text)`) controls `[part='label']`'s text color,
+and is also the checked-state fallback. `--lr-switch-checked-label-color` (default
+`var(--lr-switch-label-color)`) independently retints the label only while checked. Both label hooks
+read the switch's **live** checked state (the same `:state(checked)` custom state the class doc's
+`@cssstate checked` documents), not the `checked` *attribute* — which instead reflects
+`defaultChecked`, the form-reset value — so the checked-state hook tracks user interaction correctly
+even though the attribute does not.
+Plus shared tokens
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 

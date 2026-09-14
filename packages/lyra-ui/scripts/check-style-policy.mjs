@@ -81,6 +81,7 @@ const classCssPropertyDeclarationExemptions = new Set([
   'retrieval/graph/graph.class.ts:--lr-link-color',
   'retrieval/graph/graph.class.ts:--lr-node-fill',
   'retrieval/source-picker/source-picker.class.ts:--lr-source-picker-depth',
+  'utility/diff-view/diff-view.class.ts:--lr-diff-view-max-height',
   'utility/icon/icon.class.ts:--lr-icon-rotate',
   'utility/json-viewer/json-viewer.class.ts:--lr-json-viewer-max-height',
   'viewers/archive-viewer/archive-viewer.class.ts:--lr-archive-viewer-max-height',
