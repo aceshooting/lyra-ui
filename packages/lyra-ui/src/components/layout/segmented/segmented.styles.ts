@@ -36,7 +36,11 @@ export const styles = css`
     );
     block-size: var(--lr-segmented-track-height, auto);
     box-sizing: border-box;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Undeclared background is byte-identical to today's absent one (initial value, transparent);
+       set --lr-segmented-track-bg to tint the track without a ::part(base) rule. */
+    background: var(--lr-segmented-track-bg, transparent);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-segmented-track-border-color, var(--lr-color-border));
     border-radius: var(--lr-segmented-track-radius, var(--lr-radius));
     padding: var(--lr-segmented-track-padding, var(--lr-size-0-125rem));
     gap: var(--lr-segmented-track-gap, var(--lr-size-0-125rem));
@@ -170,6 +174,10 @@ export const styles = css`
       :not([aria-disabled="true"]):not([aria-checked="true"])
     ) {
     color: var(--lr-segmented-hover-color, var(--lr-color-text));
+    /* Both unset fall back to the segment's own resting values (transparent, no shadow), so
+       exposing these two hooks changes nothing about today's hover paint. */
+    background: var(--lr-segmented-hover-bg, transparent);
+    box-shadow: var(--lr-segmented-hover-shadow, none);
   }
   /* Hover lifts only the label colour here, so pressed adds a surface to be a visible step past
      it: the segment's transparent fill mixed toward --lr-color-mix-partner at

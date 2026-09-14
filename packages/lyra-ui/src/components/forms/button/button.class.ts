@@ -167,6 +167,15 @@ export interface LyraButtonEventMap {
  * Background while a non-disabled button is pressed — the same mix at the stronger
  * `--lr-color-mix-active` share, so the pressed state reads as more than the hover.
  * `appearance="link"` moves its text colour by these two shares instead of taking a background.
+ * @cssprop --lr-button-hover-color - Text color of a non-disabled button while hovered.
+ * **Undeclared by default**, so it falls back to whatever colour the active `appearance` already
+ * paints at rest — every appearance's current hover text colour is unchanged until this is set.
+ * `appearance="link"` ignores it: its own hover rule sets a higher-specificity colour mix instead.
+ * @cssprop --lr-button-hover-border - Border color of a non-disabled button while hovered.
+ * **Undeclared by default**, so it falls back to whatever border colour the active `appearance`
+ * already paints at rest — every appearance's current hover border is unchanged until this is set.
+ * `appearance="link"` renders with no border (`border: 0`) at every state, so this has no visible
+ * effect there.
  * @cssprop [--lr-button-active-scale=0.9875] - `transform: scale()` factor applied while a
  * non-disabled button is pressed.
  * @cssprop [--lr-button-spinner-duration=var(--lr-transition-ambient)] - Timing of the `loading` spinner.
@@ -239,7 +248,8 @@ export interface LyraButtonEventMap {
  * tier without a per-tier rule.
  * @cssprop --lr-button-shadow - Box shadow of the internal button. **Undeclared by default**, so
  * `box-shadow` falls back to `none` — byte-identical to before this property existed. Set it (e.g.
- * an elevated/floating action button) without a `::part(base)` rule.
+ * an elevated/floating action button) without a `::part(base)` rule. `appearance="link"` always
+ * renders with no shadow regardless of this token — a zero-chrome inline link has no box to elevate.
  * @cssstate disabled - The button is disabled directly, by a fieldset, or by `loading`.
  * @cssstate icon-button - The default slot contains one icon-like element and no text.
  * @cssstate link - A safe `href` currently renders the native anchor mode.

@@ -35,6 +35,9 @@ export const styles = css`
        card exposes an overflow, block-size or scroll hook, so the scroll owner is a consumer
        decision via the public body part -- see card.class.ts's class doc. */
     overflow: hidden;
+    /* Undeclared by default (byte-identical to today's absent box-shadow); set it for a raised card
+       without a ::part(base) rule -- mirrors --lr-button-shadow's default-none pattern. */
+    box-shadow: var(--lr-card-shadow, none);
   }
   .linked-shell {
     position: relative;
@@ -90,6 +93,10 @@ export const styles = css`
   [part="base"][data-actionable="true"]:hover,
   .linked-shell:hover > [part="base"][data-actionable="true"] {
     border-color: var(--lr-card-interactive-hover-border-color, var(--lr-color-brand));
+    /* Unset, this falls back to the SAME --lr-card-shadow the base rule above already paints, so
+       hovering an actionable card with no shadow theming stays byte-identical; set it to lift an
+       actionable/linked card a step further on hover without a ::part(base) rule. */
+    box-shadow: var(--lr-card-interactive-hover-shadow, var(--lr-card-shadow, none));
   }
   /* Pressed keeps the hover border and tints the whole tile, a step past hover rather than
      another colour of the same step. A background-IMAGE layer, not a background colour: the

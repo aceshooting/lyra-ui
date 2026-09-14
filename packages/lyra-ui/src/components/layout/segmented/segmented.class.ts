@@ -128,6 +128,12 @@ function snapshotSegmentedItems(
  * @cssprop [--lr-segmented-hover-color=var(--lr-color-text)] - Text color of a hovered segment that
  *   is neither checked nor disabled. Independent of the selected-state props above — recoloring the
  *   checked pill leaves this untouched.
+ * @cssprop [--lr-segmented-hover-bg=transparent] - Background of a hovered segment that is neither
+ *   checked nor disabled. Undeclared by default, so it falls back to the segment's own resting
+ *   transparent background — byte-identical to before this property existed.
+ * @cssprop [--lr-segmented-hover-shadow=none] - Box shadow of a hovered segment that is neither
+ *   checked nor disabled. Undeclared by default, matching the segment's own resting absence of a
+ *   shadow.
  * @cssprop [--lr-segmented-active-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Background of a pressed segment that is neither checked nor disabled.
  * @cssprop [--lr-segmented-active-color=var(--lr-segmented-hover-color, var(--lr-color-text))] -
@@ -141,6 +147,10 @@ function snapshotSegmentedItems(
  * @cssprop [--lr-segmented-track-gap=var(--lr-size-0-125rem)] - Gap between segments.
  * @cssprop [--lr-segmented-track-radius=var(--lr-radius)] - Track corner radius.
  * @cssprop [--lr-segmented-track-padding=var(--lr-size-0-125rem)] - Track inset padding.
+ * @cssprop [--lr-segmented-track-bg=transparent] - Background of the `base` track. Undeclared by
+ *   default, matching its own current absence of a background.
+ * @cssprop [--lr-segmented-track-border-color=var(--lr-color-border)] - Border color of the `base`
+ *   track, which previously read that token as a literal with no override hook.
  * @status stable
  * @since 4.0.0
  */

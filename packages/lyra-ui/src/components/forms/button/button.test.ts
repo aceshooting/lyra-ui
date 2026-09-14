@@ -1199,6 +1199,21 @@ describe("lr-button", () => {
       ) as HTMLElement;
       expect(getComputedStyle(base).boxShadow).to.equal("none");
     });
+
+    it('keeps appearance="link" chromeless even while --lr-button-shadow is set', async () => {
+      const el = (await fixture(
+        html`<lr-button appearance="link">Save</lr-button>`
+      )) as LyraButton;
+      el.style.setProperty(
+        "--lr-button-shadow",
+        "0 4px 8px rgba(0, 0, 0, 0.3)"
+      );
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector(
+        '[part~="base"]'
+      ) as HTMLElement;
+      expect(getComputedStyle(base).boxShadow).to.equal("none");
+    });
   });
 
   describe("anchor mode (href/target/download)", () => {
@@ -2449,6 +2464,145 @@ describe("lr-button hover and press feedback", () => {
       // A filter applies to the whole subtree, so the old brightness lift dimmed the label with
       // the box. A background mix leaves everything but the background alone.
       expect(hovered.filter).to.equal("none");
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
+describe("--lr-button-hover-color / --lr-button-hover-border", () => {
+  const appearances = [
+    "filled",
+    "accent",
+    "outlined",
+    "filled-outlined",
+    "plain",
+    "quiet",
+  ] as const;
+
+  for (const appearance of appearances) {
+    it(`keeps appearance="${appearance}"'s resting text/border colour on hover when unset (regression)`, async () => {
+      const el = (await fixture(
+        html`<lr-button
+          appearance=${appearance}
+          style="--lr-transition-fast: 0s"
+          >Save</lr-button
+        >`
+      )) as LyraButton;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      const restingColor = getComputedStyle(base).color;
+      const restingBorderColor = getComputedStyle(base).borderColor;
+      try {
+        await hoverUntilMatched(
+          base,
+          `${appearance} button never received the pointer hover state`
+        );
+        expect(getComputedStyle(base).color, `${appearance} hover color`).to.equal(
+          restingColor
+        );
+        expect(
+          getComputedStyle(base).borderColor,
+          `${appearance} hover border color`
+        ).to.equal(restingBorderColor);
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
+
+  it('keeps the Shoelace-compatible outline boolean\'s resting text/border colour on hover when unset (regression)', async () => {
+    const el = (await fixture(
+      html`<lr-button outline style="--lr-transition-fast: 0s">Save</lr-button>`
+    )) as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const restingColor = getComputedStyle(base).color;
+    const restingBorderColor = getComputedStyle(base).borderColor;
+    try {
+      await hoverUntilMatched(base, "outline button never received the pointer hover state");
+      expect(getComputedStyle(base).color).to.equal(restingColor);
+      expect(getComputedStyle(base).borderColor).to.equal(restingBorderColor);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("overrides hover text and border colour through the new hooks", async () => {
+    const el = (await fixture(
+      html`<lr-button
+        appearance="quiet"
+        style="--lr-transition-fast: 0s; --lr-button-hover-color: rgb(1, 2, 3); --lr-button-hover-border: rgb(4, 5, 6);"
+        >Save</lr-button
+      >`
+    )) as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    try {
+      await hoverUntilMatched(base, "quiet button never received the pointer hover state");
+      await waitUntil(
+        () => getComputedStyle(base).color === "rgb(1, 2, 3)",
+        "hover color override never rendered"
+      );
+      expect(getComputedStyle(base).color).to.equal("rgb(1, 2, 3)");
+      expect(getComputedStyle(base).borderColor).to.equal("rgb(4, 5, 6)");
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("inherits the hover hooks from an ancestor", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        style="--lr-transition-fast: 0s; --lr-button-hover-color: rgb(7, 8, 9); --lr-button-hover-border: rgb(10, 11, 12);"
+      >
+        <lr-button appearance="outlined">Save</lr-button>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-button") as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    try {
+      await hoverUntilMatched(base, "outlined button never received the pointer hover state");
+      await waitUntil(
+        () => getComputedStyle(base).color === "rgb(7, 8, 9)",
+        "inherited hover color override never rendered"
+      );
+      expect(getComputedStyle(base).borderColor).to.equal("rgb(10, 11, 12)");
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('leaves appearance="link"\'s hover colour driven by its own colour-mix, ignoring --lr-button-hover-color', async () => {
+    const el = (await fixture(
+      html`<lr-button
+        appearance="link"
+        style="--lr-transition-fast: 0s"
+        >Save</lr-button
+      >`
+    )) as LyraButton;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const restingColor = getComputedStyle(base).color;
+    try {
+      await hoverUntilMatched(base, "link button never received the pointer hover state");
+      await waitUntil(
+        () => getComputedStyle(base).color !== restingColor,
+        "link hover colour-mix never rendered"
+      );
+      const withoutOverride = getComputedStyle(base).color;
+      await resetMouse();
+
+      el.style.setProperty("--lr-button-hover-color", "rgb(13, 14, 15)");
+      await el.updateComplete;
+      await hoverUntilMatched(base, "link button never received the pointer hover state (2)");
+      await waitUntil(
+        () => getComputedStyle(base).color !== restingColor,
+        "link hover colour-mix never rendered (2)"
+      );
+      expect(getComputedStyle(base).color).to.equal(withoutOverride);
+      expect(getComputedStyle(base).color).to.not.equal("rgb(13, 14, 15)");
     } finally {
       await resetMouse();
     }

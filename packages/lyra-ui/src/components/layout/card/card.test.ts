@@ -1040,3 +1040,67 @@ describe("a slotted [hidden] media child", () => {
     expect(button.getAttribute('aria-label')).to.equal('Ouvrir');
   });
 });
+
+describe('--lr-card-shadow / --lr-card-interactive-hover-shadow', () => {
+  it('renders no box-shadow when --lr-card-shadow is unset (regression)', async () => {
+    const el = (await fixture(html`<lr-card>Body</lr-card>`)) as LyraCard;
+    expect(getComputedStyle(base(el)).boxShadow).to.equal('none');
+  });
+
+  it('applies a box-shadow through --lr-card-shadow', async () => {
+    const el = (await fixture(
+      html`<lr-card style="--lr-card-shadow: 0 4px 8px rgba(0, 0, 0, 0.3)">Body</lr-card>`
+    )) as LyraCard;
+    const probe = document.createElement('span');
+    probe.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+    document.body.appendChild(probe);
+    const expected = getComputedStyle(probe).boxShadow;
+    document.body.removeChild(probe);
+    expect(getComputedStyle(base(el)).boxShadow).to.equal(expected);
+  });
+
+  it('keeps the resting shadow on hover when --lr-card-interactive-hover-shadow is unset (regression)', async () => {
+    const el = (await fixture(
+      html`<lr-card
+        actionable
+        style="--lr-transition-fast: 0ms; --lr-card-shadow: 0 4px 8px rgba(0, 0, 0, 0.3)"
+        >Body</lr-card
+      >`
+    )) as LyraCard;
+    const target = base(el);
+    const resting = getComputedStyle(target).boxShadow;
+    try {
+      await hoverUntilMatched(target, 'the actionable card never reported :hover');
+      expect(getComputedStyle(target).boxShadow).to.equal(resting);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('overrides the hover shadow independently of the resting one', async () => {
+    const el = (await fixture(
+      html`<lr-card
+        actionable
+        style="--lr-transition-fast: 0ms; --lr-card-shadow: none; --lr-card-interactive-hover-shadow: 0 8px 16px rgba(0, 0, 0, 0.4)"
+        >Body</lr-card
+      >`
+    )) as LyraCard;
+    const target = base(el);
+    expect(getComputedStyle(target).boxShadow).to.equal('none');
+    const probe = document.createElement('span');
+    probe.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.4)';
+    document.body.appendChild(probe);
+    const expected = getComputedStyle(probe).boxShadow;
+    document.body.removeChild(probe);
+    try {
+      await hoverUntilMatched(target, 'the actionable card never reported :hover');
+      await waitUntil(
+        () => getComputedStyle(target).boxShadow === expected,
+        'hover shadow override never rendered',
+      );
+      expect(getComputedStyle(target).boxShadow).to.equal(expected);
+    } finally {
+      await resetMouse();
+    }
+  });
+});

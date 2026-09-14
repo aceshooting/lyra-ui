@@ -48,6 +48,14 @@ export const styles = css`
     --_lr-button-quiet-text: var(--lr-color-text-quiet);
     --_lr-button-accent-fill: var(--lr-color-fill-loud);
     --_lr-button-accent-on-fill: var(--lr-color-on-loud);
+    /* What colour/border-colour THIS appearance is actually painting at rest, mirrored into a
+       private var exactly the way --_lr-button-hover-base tracks the resting fill below. The
+       shared hover rule reads these as its --lr-button-hover-color/-border fallback, so exposing
+       those two hooks changes nothing when they are unset -- hovering still shows the same
+       colour/border every appearance already paints. This bare default covers "filled" (which
+       overrides neither) and a host whose appearance attribute was removed by hand. */
+    --_lr-button-resolved-color: var(--lr-button-on-fill, var(--_lr-button-on-fill));
+    --_lr-button-resolved-border: var(--lr-button-border, var(--_lr-button-border));
     /* Hover/press is a colour MIX, not the pre-8.0.0 filter: brightness(): a filter multiplies
        every channel, so it moved dark and light fills only by luck, no-op'd on pure white or black,
        and dimmed the label and icons with the box. Mixing toward --lr-color-mix-partner (which
@@ -79,11 +87,51 @@ export const styles = css`
       --lr-button-accent-fill,
       var(--_lr-button-accent-fill)
     );
+    --_lr-button-resolved-color: var(
+      --lr-button-accent-on-fill,
+      var(--_lr-button-accent-on-fill)
+    );
+    --_lr-button-resolved-border: var(
+      --lr-button-accent-fill,
+      var(--_lr-button-accent-fill)
+    );
   }
   /* Shoelace's boolean outline surface is an additive alias. It never rewrites appearance, so
      removing it restores the exact Lyra treatment the author selected. */
   :host([outline]) {
     --_lr-button-hover-base: var(--lr-color-surface);
+  }
+  /* "outlined" and boolean "outline" paint identically, so they share one resolved-colour/border
+     override; both must stay ordered exactly where their own [part~='base'] chrome rules fall
+     below (after "accent", before "filled-outlined") so a host that improbably matches more than
+     one of these attributes at once resolves the same tie the chrome rules themselves resolve. */
+  :host([appearance="outlined"]),
+  :host([outline]) {
+    --_lr-button-resolved-color: var(--lr-button-accent, var(--_lr-button-accent));
+    --_lr-button-resolved-border: var(
+      --lr-button-outlined-border,
+      var(--_lr-button-outlined-border)
+    );
+  }
+  :host([appearance="filled-outlined"]) {
+    --_lr-button-resolved-border: var(
+      --lr-button-outlined-border,
+      var(--_lr-button-outlined-border)
+    );
+  }
+  :host([appearance="plain"]) {
+    --_lr-button-resolved-color: var(--lr-button-accent, var(--_lr-button-accent));
+    --_lr-button-resolved-border: transparent;
+  }
+  :host([appearance="quiet"]) {
+    --_lr-button-resolved-color: var(
+      --lr-button-quiet-text,
+      var(--_lr-button-quiet-text)
+    );
+    --_lr-button-resolved-border: var(
+      --lr-button-quiet-border,
+      var(--_lr-button-quiet-border)
+    );
   }
   /* The one place a variant still needs naming. The four chromatic variants use their loud fill as
      the chrome-less foreground -- brand text on the surface IS the brand colour. Neutral's loud
@@ -218,6 +266,13 @@ export const styles = css`
       --lr-button-hover-background,
       var(--_lr-button-hover-background)
     );
+    /* Unset, these fall back to --_lr-button-resolved-color/-border -- the SAME colour/border-colour
+       the active appearance already paints at rest (see the :host block above) -- so exposing the
+       two hooks changes no appearance's current hover paint. appearance="link" sets its own hover
+       color at higher specificity (its color-mix formula), so this never touches it; its border is
+       already zeroed by `border: 0`, so a resolved border-colour here stays invisible there too. */
+    color: var(--lr-button-hover-color, var(--_lr-button-resolved-color));
+    border-color: var(--lr-button-hover-border, var(--_lr-button-resolved-border));
   }
   [part~="base"]:not(:disabled, [aria-disabled="true"]):active {
     background: var(
@@ -339,6 +394,10 @@ export const styles = css`
     font: inherit;
     text-decoration: underline;
     text-underline-offset: var(--lr-size-0-15rem);
+    /* --lr-button-shadow paints on [part~='base'] regardless of appearance, so a shadow set for an
+       elevated button elsewhere on the page would otherwise still render behind this zero-chrome
+       inline link. A true inline link never has a box to elevate. */
+    box-shadow: none;
   }
   /* The one appearance whose pointer feedback is NOT a fill: a link has zero chrome and zero
      padding, so the shared hover/press background would paint a tight rectangle around bare inline

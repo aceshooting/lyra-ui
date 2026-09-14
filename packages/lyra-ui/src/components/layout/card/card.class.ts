@@ -122,6 +122,13 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @cssprop [--lr-card-interactive-active-border-color=var(--lr-color-brand)] - Interactive pressed border.
  * @cssprop --lr-card-interactive-active-overlay - Interactive pressed overlay; defaults to the
  *   former transparent active mix.
+ * @cssprop --lr-card-shadow - Box shadow of the card surface. **Undeclared by default**, so
+ *   `box-shadow` falls back to `none` -- byte-identical to before this property existed. Set it
+ *   (e.g. a raised card in a flat layout) without a `::part(base)` rule.
+ * @cssprop [--lr-card-interactive-hover-shadow=var(--lr-card-shadow, none)] - Box shadow of an
+ *   `actionable`/linked card's base while hovered. Falls back to `--lr-card-shadow` itself, so a
+ *   card given only a resting shadow keeps that exact shadow on hover; set this independently to
+ *   lift an actionable card a further step on hover.
  * @status stable
  * @since 4.0.0
  */

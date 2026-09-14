@@ -1232,6 +1232,109 @@ describe("active-state cssprops", () => {
   });
 });
 
+describe("--lr-segmented-hover-bg / --lr-segmented-hover-shadow", () => {
+  function centerOf(target: HTMLElement): [number, number] {
+    target.scrollIntoView();
+    const rect = target.getBoundingClientRect();
+    return [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+  }
+
+  it("keeps the resting transparent background and absent shadow on hover when unset (regression)", async () => {
+    const el = (await fixture(
+      html`<lr-segmented style="--lr-transition-fast: 0ms" .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    const unchecked = segmentButtons(el)[0]!;
+    const expectedHoverColor = resolvedInShadow(el, "color: var(--lr-color-text)", "color");
+    try {
+      await resetMouse();
+      await sendMouse({ type: "move", position: centerOf(unchecked) });
+      // color IS already known to change on hover (--lr-segmented-hover-color's existing default);
+      // waiting for it confirms the pointer hover actually registered before asserting that
+      // background/box-shadow, which this change adds hooks for, stayed exactly as they rested.
+      await waitUntil(
+        () => getComputedStyle(unchecked).color === expectedHoverColor,
+        "segment never reported :hover"
+      );
+      expect(getComputedStyle(unchecked).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(unchecked).boxShadow).to.equal("none");
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("overrides the hover background and shadow through the new hooks", async () => {
+    const el = (await fixture(
+      html`<lr-segmented
+        style="
+          --lr-transition-fast: 0ms;
+          --lr-segmented-hover-bg: rgb(1, 2, 3);
+          --lr-segmented-hover-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        "
+        .items=${items()}
+      ></lr-segmented>`
+    )) as LyraSegmented;
+    const unchecked = segmentButtons(el)[0]!;
+    const probe = document.createElement("span");
+    probe.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.5)";
+    document.body.appendChild(probe);
+    const expectedShadow = getComputedStyle(probe).boxShadow;
+    document.body.removeChild(probe);
+    try {
+      await resetMouse();
+      await sendMouse({ type: "move", position: centerOf(unchecked) });
+      await waitUntil(
+        () => getComputedStyle(unchecked).backgroundColor === "rgb(1, 2, 3)",
+        "segmented hover-bg override never rendered"
+      );
+      expect(getComputedStyle(unchecked).backgroundColor).to.equal("rgb(1, 2, 3)");
+      expect(getComputedStyle(unchecked).boxShadow).to.equal(expectedShadow);
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
+describe("--lr-segmented-track-bg / --lr-segmented-track-border-color", () => {
+  it("renders no background and the shared border token on the track when unset (regression)", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+    expect(getComputedStyle(base).borderColor).to.equal(
+      resolvedInShadow(el, "border-color: var(--lr-color-border)", "border-color")
+    );
+  });
+
+  it("themes the track background and border color through the new hooks", async () => {
+    const el = (await fixture(
+      html`<lr-segmented
+        style="--lr-segmented-track-bg: rgb(4, 5, 6); --lr-segmented-track-border-color: rgb(7, 8, 9)"
+        .items=${items()}
+      ></lr-segmented>`
+    )) as LyraSegmented;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal("rgb(4, 5, 6)");
+    expect(getComputedStyle(base).borderColor).to.equal("rgb(7, 8, 9)");
+  });
+
+  it("inherits the track hooks from an ancestor", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-segmented-track-bg: rgb(10, 11, 12); --lr-segmented-track-border-color: rgb(13, 14, 15)">
+        <lr-segmented .items=${items()}></lr-segmented>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-segmented") as LyraSegmented;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal("rgb(10, 11, 12)");
+    expect(getComputedStyle(base).borderColor).to.equal("rgb(13, 14, 15)");
+  });
+});
+
 describe("track height", () => {
   const sizes = ["2xs", "xs", "s", "m", "l", "xl"] as const;
 
