@@ -73,6 +73,12 @@ export const styles = css`
     font-size: var(--lr-locale-picker-font-size, var(--_lr-locale-picker-font-size-default));
     text-align: start;
     cursor: pointer;
+    /* Hover/active below only ever repaint background, so background-color is all this needs;
+       without it this trigger's fill snaps while lr-button/lr-copy-button/lr-icon-button ease. No
+       local reduced-motion override needed -- tokens.styles.ts's shared reduced-motion block
+       already flattens --lr-transition-fast to 0.001ms and applies a blanket
+       transition-duration: 0.001ms across the whole shadow tree under prefers-reduced-motion. */
+    transition: background-color var(--lr-transition-fast);
   }
   [part='trigger']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -185,6 +191,12 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
+    /* Hover/active/data-active below only ever repaint background, so background-color is all
+       this needs; without it this option's fill snaps while lr-button/lr-copy-button/
+       lr-icon-button ease. No local reduced-motion override needed -- tokens.styles.ts's shared
+       reduced-motion block already flattens --lr-transition-fast to 0.001ms and applies a blanket
+       transition-duration: 0.001ms across the whole shadow tree under prefers-reduced-motion. */
+    transition: background-color var(--lr-transition-fast);
   }
   [part='option']:hover {
     background: var(

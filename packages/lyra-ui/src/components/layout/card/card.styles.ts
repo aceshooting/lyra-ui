@@ -12,6 +12,10 @@ export const styles = css`
     min-inline-size: 0;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
+    /* Single source for the Shoelace-compatible radius hook -- every rule below reads THIS
+       instead of repeating var(--border-radius, var(--lr-radius)) inline, so there is exactly one
+       fallback chain to change instead of several textually-identical copies that can drift. */
+    --_lr-card-radius: var(--border-radius, var(--lr-radius));
   }
   [part="base"] {
     position: relative;
@@ -19,7 +23,7 @@ export const styles = css`
     flex-direction: column;
     border: var(--border-width, var(--lr-border-width-thin)) solid
       var(--border-color, var(--lr-color-border));
-    border-radius: var(--border-radius, var(--lr-radius));
+    border-radius: var(--_lr-card-radius);
     background: var(--lr-color-surface);
     /* Fills the host's allocated block-size (a stretch-aligned grid row) so a short card's border
        and background reach the row's full height instead of shrink-wrapping. Matches lyra-stat,
@@ -45,10 +49,28 @@ export const styles = css`
     max-inline-size: 100%;
     block-size: 100%;
   }
+  /* [part="base"] here is the empty, absolutely-positioned stretched link -- .linked-content
+     below is its visible twin, holding the actual header/media/body/footer content on top of it
+     (z-index: layer-content > layer-base), so this element's own background/border/box-shadow are
+     what a consumer actually SEES; .linked-content's independent border-radius, right below, has
+     to render pixel-identical to this one, or the content clip and the visible chrome disagree at
+     the corner. An outer ::part(base) style rule normally wins over a shadow-tree declaration
+     regardless of specificity or origin (this class deliberately leans on that for the ::part(body)
+     overflow hook, see the class doc) -- but a ::part() selector can only ever match THIS element;
+     .linked-content is a plain sibling, not a part, and nothing in CSS lets one element's
+     border-radius track another, unrelated element's per-instance override. So instead of letting
+     that gap reopen a mismatch, this declaration is pinned to the shared --_lr-card-radius token
+     with !important: a shadow-tree !important declaration is the one case that still outranks an
+     outer ::part() rule of normal importance, which keeps this element and .linked-content
+     permanently in lock-step (neither can drift from the token, so they can never disagree) rather
+     than leaving only this one independently reshapable. The supported way to resize a linked
+     card's corners stays the --border-radius hook documented on the class, which both elements
+     read identically either way. */
   .linked-shell > [part="base"] {
     position: absolute;
     inset: 0;
     z-index: var(--lr-layer-base);
+    border-radius: var(--_lr-card-radius) !important;
   }
   .linked-content {
     position: relative;
@@ -62,9 +84,10 @@ export const styles = css`
     color: inherit;
     text-decoration: none;
     /* Same corner clip and consequence as the base rule above -- the href variant's visible twin,
-       so overflow must stay identical. */
+       so overflow must stay identical. Reads the identical --_lr-card-radius token that the
+       !important-pinned rule above uses, so the two can never disagree. */
     overflow: hidden;
-    border-radius: var(--border-radius, var(--lr-radius));
+    border-radius: var(--_lr-card-radius);
     pointer-events: none;
   }
   .linked-content slot,

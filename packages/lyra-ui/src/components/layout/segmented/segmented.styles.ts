@@ -149,6 +149,14 @@ export const styles = css`
       var(--_lr-segmented-segment-padding)
     );
     cursor: pointer;
+    /* Hover/active below repaint background and color (checked repaints those plus font-weight
+       and box-shadow, which are declarative state changes, not pointer-driven transient paint, so
+       they stay unanimated like lr-button's own selected/pressed states); without this, this
+       segment's paint snaps while lr-button/lr-copy-button/lr-icon-button ease. Reduced motion
+       needs no local override: tokens.styles.ts's shared reduced-motion block already flattens
+       --lr-transition-fast to 0.001ms and applies a blanket transition-duration: 0.001ms to the
+       whole shadow tree under prefers-reduced-motion. */
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   :host([size="2xs"]) [part="segment"],
   :host([size="xs"]) [part="segment"] {

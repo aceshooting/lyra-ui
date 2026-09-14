@@ -1491,3 +1491,30 @@ it("play-on-visible: passes a custom Element `root` through, and re-observes (di
     rootEl.remove();
   }
 });
+
+describe("ambient color/font inheritance (display: contents host)", () => {
+  it("lets slotted content inherit the ambient color and font instead of the library default text color", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="color: rgb(9, 8, 7); font-family: cursive;">
+        <lr-animation name="fade-in">
+          <span id="target">content</span>
+        </lr-animation>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-animation")!;
+    await el.updateComplete;
+    const target = wrapper.querySelector<HTMLElement>("#target")!;
+    expect(getComputedStyle(target).color).to.equal("rgb(9, 8, 7)");
+    expect(getComputedStyle(target).fontFamily).to.equal("cursive");
+  });
+
+  it("still resolves to a real color/font when no ambient value is set (unset-regression)", async () => {
+    const el = (await fixture(html`
+      <lr-animation name="fade-in"><span id="target">content</span></lr-animation>
+    `)) as LyraAnimation;
+    await el.updateComplete;
+    const target = el.querySelector<HTMLElement>("#target")!;
+    expect(getComputedStyle(target).color).to.not.equal("");
+    expect(getComputedStyle(target).fontFamily).to.not.equal("");
+  });
+});

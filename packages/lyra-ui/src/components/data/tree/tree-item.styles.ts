@@ -7,6 +7,13 @@ export const styles = css`
   }
   [part~='item'] {
     border-radius: var(--lr-radius);
+    /* Hover/active below (plus the selected variants further down) only ever repaint background,
+       so background-color is all this needs; without it this item's fill snaps while
+       lr-button/lr-copy-button/lr-icon-button ease. No local reduced-motion override needed --
+       tokens.styles.ts's shared reduced-motion block already flattens --lr-transition-fast to
+       0.001ms and applies a blanket transition-duration: 0.001ms across the whole shadow tree
+       under prefers-reduced-motion. */
+    transition: background-color var(--lr-transition-fast);
   }
   :host(:focus-visible) [part='row'] {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -92,6 +99,12 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     flex: 0 0 auto;
+    /* Hover/active/data-pressed below only ever repaint background, so background-color is all
+       this needs; without it this toggle's fill snaps while lr-button/lr-copy-button/
+       lr-icon-button ease. No local reduced-motion override needed -- tokens.styles.ts's shared
+       reduced-motion block already flattens --lr-transition-fast to 0.001ms and applies a blanket
+       transition-duration: 0.001ms across the whole shadow tree under prefers-reduced-motion. */
+    transition: background-color var(--lr-transition-fast);
   }
   :where([part='toggle']):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));

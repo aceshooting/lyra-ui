@@ -1297,6 +1297,31 @@ describe("--lr-segmented-hover-bg / --lr-segmented-hover-shadow", () => {
   });
 });
 
+describe("segment hover/active paint transition", () => {
+  it("declares a non-zero transition on background-color and color so the paint eases like lr-button", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    const segment = segmentButtons(el)[0]!;
+    const computed = getComputedStyle(segment);
+    expect(computed.transitionDuration).to.not.equal("0s");
+    expect(computed.transitionProperty).to.include("background-color");
+    expect(computed.transitionProperty).to.include("color");
+  });
+
+  it("leaves the resting background and color unchanged (unset-regression)", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    const segment = segmentButtons(el)[0]!;
+    const computed = getComputedStyle(segment);
+    expect(computed.backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+    expect(computed.color).to.equal(
+      resolvedInShadow(el, "color: var(--lr-color-text-quiet)", "color")
+    );
+  });
+});
+
 describe("--lr-segmented-track-bg / --lr-segmented-track-border-color", () => {
   it("renders no background and the shared border token on the track when unset (regression)", async () => {
     const el = (await fixture(

@@ -921,6 +921,57 @@ describe("lr-card", () => {
   });
 });
 
+describe("linked card border-radius stays in sync with its visible content clip", () => {
+  it("keeps a non-linked card's [part=base] following a direct ::part(base) override (unset-regression: only the linked-mode overlay is pinned)", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div class="plain-radius-probe">
+        <style>
+          .plain-radius-probe lr-card::part(base) {
+            border-radius: 22px;
+          }
+        </style>
+        <lr-card>plain body</lr-card>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraCard>("lr-card")!;
+    await el.updateComplete;
+    expect(getComputedStyle(base(el)).borderRadius).to.equal("22px");
+  });
+
+  it("keeps a linked card's invisible overlay and visible content clip radius identical through the --border-radius hook", async () => {
+    const el = (await fixture(
+      html`<lr-card href="/x" style="--border-radius: 17px">body</lr-card>`
+    )) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector<HTMLElement>('a[part="base"]')!;
+    const content = el.shadowRoot!.querySelector<HTMLElement>(".linked-content")!;
+    expect(getComputedStyle(anchor).borderRadius).to.equal("17px");
+    expect(getComputedStyle(content).borderRadius).to.equal("17px");
+  });
+
+  it("never lets a direct ::part(base) override reshape only the invisible overlay (defect: used to mismatch the visible content clip)", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div class="linked-radius-probe">
+        <style>
+          .linked-radius-probe lr-card::part(base) {
+            border-radius: 31px;
+          }
+        </style>
+        <lr-card href="/x">body</lr-card>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraCard>("lr-card")!;
+    await el.updateComplete;
+    const anchor = el.shadowRoot!.querySelector<HTMLElement>('a[part="base"]')!;
+    const content = el.shadowRoot!.querySelector<HTMLElement>(".linked-content")!;
+    const anchorRadius = getComputedStyle(anchor).borderRadius;
+    // The overlay's own radius never drifts from the visible clip's -- a ::part(base) rule alone
+    // can no longer reshape one without the other, so there is no radius it can set that produces
+    // mismatched corners.
+    expect(anchorRadius).to.not.equal("31px");
+    expect(getComputedStyle(content).borderRadius).to.equal(anchorRadius);
+  });
+});
+
 it("restores the declared appearance and orientation defaults when attributes are removed", async () => {
   const el = (await fixture(
     html`<lr-card appearance="accent" orientation="horizontal"></lr-card>`

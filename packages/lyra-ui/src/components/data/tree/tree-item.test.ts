@@ -957,6 +957,28 @@ it('gives the expand/collapse toggle pressed feedback distinct from hover', asyn
   }
 });
 
+it('declares a non-zero transition on the item and toggle backgrounds so hover/active paint eases like lr-button', async () => {
+  const branch = { ...item, children: [{ id: '1.1', label: 'Child' }] };
+  const el = (await fixture(html`<lr-tree-item .item=${branch}></lr-tree-item>`)) as LyraTreeItem;
+  await el.updateComplete;
+  const itemPart = el.shadowRoot!.querySelector<HTMLElement>('[part~="item"]')!;
+  const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+  expect(getComputedStyle(itemPart).transitionDuration).to.not.equal('0s');
+  expect(getComputedStyle(itemPart).transitionProperty).to.include('background-color');
+  expect(getComputedStyle(toggle).transitionDuration).to.not.equal('0s');
+  expect(getComputedStyle(toggle).transitionProperty).to.include('background-color');
+});
+
+it('leaves the resting item and toggle backgrounds unchanged (unset-regression)', async () => {
+  const branch = { ...item, children: [{ id: '1.1', label: 'Child' }] };
+  const el = (await fixture(html`<lr-tree-item .item=${branch}></lr-tree-item>`)) as LyraTreeItem;
+  await el.updateComplete;
+  const itemPart = el.shadowRoot!.querySelector<HTMLElement>('[part~="item"]')!;
+  const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+  expect(getComputedStyle(itemPart).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(getComputedStyle(toggle).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+});
+
 it('themes checked and indeterminate checkbox paint independently from the shared brand', async () => {
   const wrapper = await fixture(html`
     <div

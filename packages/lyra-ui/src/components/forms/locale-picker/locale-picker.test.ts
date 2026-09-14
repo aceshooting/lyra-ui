@@ -1825,3 +1825,49 @@ describe('explicitly empty host aria-label', () => {
     expect(trigger(omitted).getAttribute('aria-label')).to.equal('Language');
   });
 });
+
+/** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
+ *  `--lr-*` design tokens actually live (declared on `:host`, so a light-DOM probe would see none
+ *  of them). */
+function resolvedInShadow(el: LyraLocalePicker, declaration: string, property: string): string {
+  const probe = document.createElement('span');
+  probe.setAttribute('style', declaration);
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return value;
+}
+
+describe('trigger/option hover-active paint transition', () => {
+  it('declares a non-zero transition on background-color so the paint eases like lr-button', async () => {
+    const el = await fixture<LyraLocalePicker>(
+      html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
+    );
+    el.open = true;
+    await el.updateComplete;
+    const triggerButton = trigger(el);
+    const option = requiredItem(rows(el), 0, 'option');
+    expect(getComputedStyle(triggerButton).transitionDuration).to.not.equal('0s');
+    expect(getComputedStyle(triggerButton).transitionProperty).to.include('background-color');
+    expect(getComputedStyle(option).transitionDuration).to.not.equal('0s');
+    expect(getComputedStyle(option).transitionProperty).to.include('background-color');
+  });
+
+  it('leaves the resting trigger and option backgrounds unchanged (unset-regression)', async () => {
+    const el = await fixture<LyraLocalePicker>(
+      html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
+    );
+    el.open = true;
+    await el.updateComplete;
+    const triggerButton = trigger(el);
+    // Picks an option that is neither the current selection nor keyboard-active, so it is
+    // genuinely at rest.
+    const restingOption = [...rows(el)].find(
+      (row) => row.getAttribute('aria-selected') !== 'true' && !row.hasAttribute('data-active'),
+    )!;
+    expect(getComputedStyle(triggerButton).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background-color: var(--lr-color-surface)', 'background-color'),
+    );
+    expect(getComputedStyle(restingOption).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+});
