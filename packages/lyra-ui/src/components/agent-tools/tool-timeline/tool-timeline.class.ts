@@ -382,7 +382,11 @@ interface RedactionCacheEntry extends RedactedEntry {
  * its own rather than staying open over stale data. If a host cancels `lr-tool-approval-decide` to
  * persist it asynchronously, `pendingApproval` identifies the held action. After success, update
  * the controlled entries and call `finalizePendingApproval()`; after failure, call
- * `revertPendingApproval()` to restore the same open dialog and its draft for retry. A chip
+ * `revertPendingApproval()` to restore the same open dialog and its draft for retry. A host that
+ * instead resolves the decision synchronously by reassigning `entries` from within the same
+ * `preventDefault()`ed listener wins outright: the entry's live state is re-checked immediately
+ * after dispatch, so the shared dialog's `pending` flag is never parked on an entry the host already
+ * finalized. A chip
  * belonging to an entry that isn't pending approval emits the timeline-owned, correlated
  * `lr-tool-activate`; raw child selection and disclosure lifecycle events are contained.
  *
@@ -623,10 +627,28 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     this.emit('lr-tool-activate', entryCorrelation(entry));
   }
 
+  /** Re-derives, directly from the live `entries` prop, whether the entry identified by `key` still
+   *  needs a decision. Used right after dispatching `lr-tool-approval-decide`, whose listener runs
+   *  synchronously inside `emit()` -- a host resolving the decision by reassigning `entries` (rather
+   *  than calling `finalizePendingApproval()`/`revertPendingApproval()`) has already done so by the
+   *  time control returns, and `this.projectedEntriesCache` is not rebuilt until the next `willUpdate`
+   *  pass, so it cannot be trusted here either. */
+  private entryStillNeedsApproval(key: string): boolean {
+    const entries = Array.isArray(this.entries) ? this.entries : [];
+    for (const sourceEntry of entries) {
+      const projected = projectToolTimelineEntry(sourceEntry);
+      if (projected !== undefined && entryIdentity(projected) === key) {
+        return projected.needsApproval === true && projected.approved === undefined;
+      }
+    }
+    return false;
+  }
+
   private onDialogApprove = (event: CustomEvent<{ args: unknown }>): void => {
     event.stopPropagation();
     const entry = this.reviewingEntry;
     if (entry === undefined) return;
+    const key = entryIdentity(entry);
     const wrapperEvent = this.emit(
       'lr-tool-approval-decide',
       {
@@ -636,11 +658,15 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
       },
       { cancelable: true },
     );
-    if (wrapperEvent.defaultPrevented) {
+    // Never set/keep a pending flag for an entry the host already finalized (e.g. synchronously,
+    // by reassigning `entries` from inside the listener above) -- otherwise the shared dialog would
+    // be left showing a stale pending spinner over an already-resolved entry.
+    if (wrapperEvent.defaultPrevented && this.entryStillNeedsApproval(key)) {
       this.approvalPending = 'approve';
       event.preventDefault();
       return;
     }
+    this.approvalPending = null;
     this.reviewingEntryKey = undefined;
   };
 
@@ -648,16 +674,18 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     event.stopPropagation();
     const entry = this.reviewingEntry;
     if (entry === undefined) return;
+    const key = entryIdentity(entry);
     const wrapperEvent = this.emit(
       'lr-tool-approval-decide',
       { ...entryCorrelation(entry), approved: false },
       { cancelable: true },
     );
-    if (wrapperEvent.defaultPrevented) {
+    if (wrapperEvent.defaultPrevented && this.entryStillNeedsApproval(key)) {
       this.approvalPending = 'deny';
       event.preventDefault();
       return;
     }
+    this.approvalPending = null;
     this.reviewingEntryKey = undefined;
   };
 

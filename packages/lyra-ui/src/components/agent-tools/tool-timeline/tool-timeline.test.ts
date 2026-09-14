@@ -143,6 +143,62 @@ it('lets a host finalize a vetoed denial through the timeline boundary', async (
   expect(approvalDialog.open).to.be.false;
 });
 
+it('a host that approves synchronously through entries (instead of finalizePendingApproval()) wins: the nested dialog stops showing pending', async () => {
+  const entry = makeEntry({ needsApproval: true, approved: undefined });
+  const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  chipIn(entriesEl(el)[0]).dispatchEvent(
+    new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  const approvalDialog = dialog(el);
+  expect(approvalDialog.open).to.be.true;
+
+  // A listener that calls preventDefault() and then resolves the decision itself synchronously, by
+  // reassigning the public `entries` data rather than calling finalizePendingApproval(), must win --
+  // the built-in "awaiting the host" pending bookkeeping must never land on an already-resolved entry.
+  el.addEventListener(
+    'lr-tool-approval-decide',
+    (event) => {
+      event.preventDefault();
+      el.entries = [{ ...entry, approved: true }];
+    },
+    { once: true },
+  );
+  approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await el.updateComplete;
+  await approvalDialog.updateComplete;
+
+  expect(el.pendingApproval).to.equal(null);
+  expect(approvalDialog.open).to.be.false;
+  expect(approvalDialog.pending).to.equal(null);
+});
+
+it('a host that denies synchronously through entries (instead of finalizePendingApproval()) wins: the nested dialog stops showing pending', async () => {
+  const entry = makeEntry({ needsApproval: true, approved: undefined });
+  const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  chipIn(entriesEl(el)[0]).dispatchEvent(
+    new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  const approvalDialog = dialog(el);
+
+  el.addEventListener(
+    'lr-tool-approval-decide',
+    (event) => {
+      event.preventDefault();
+      el.entries = [{ ...entry, approved: false }];
+    },
+    { once: true },
+  );
+  approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!.click();
+  await el.updateComplete;
+  await approvalDialog.updateComplete;
+
+  expect(el.pendingApproval).to.equal(null);
+  expect(approvalDialog.open).to.be.false;
+  expect(approvalDialog.pending).to.equal(null);
+});
+
 it('uses prototype-safe redaction clones', async () => {
   const args = JSON.parse('{"safe":"yes","__proto__":{"secret":"value"}}') as Record<string, unknown>;
   const entry = makeEntry({ args, redactedFields: ['args.safe'] });

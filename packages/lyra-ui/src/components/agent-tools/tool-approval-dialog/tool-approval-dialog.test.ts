@@ -1349,6 +1349,44 @@ describe('async pending decisions', () => {
     expect(approveButton(el).loading).to.be.true;
     await expect(el).to.be.accessible();
   });
+
+  it('a listener that vetoes and sets its own out-of-band pending value synchronously wins over the built-in fallback', async () => {
+    // Regression: onApprove/onDeny used to dispatch lr-approve/lr-deny synchronously, then
+    // unconditionally overwrite `pending` with their own built-in value -- clobbering whatever a
+    // synchronous listener had just set. Unlike lr-confirm-bar, nothing else in this component
+    // reconciled it. `pending` is guaranteed `null` immediately before dispatch (the guard at the
+    // top of onApprove/onDeny returns early otherwise), so a listener setting it to anything other
+    // than `'approve'` here proves the built-in fallback below was skipped rather than having
+    // harmlessly re-applied the same value.
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-approve', (e) => {
+      e.preventDefault();
+      el.pending = 'deny';
+    });
+    approveButton(el).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal('deny');
+    expect(el.open).to.be.true;
+  });
+
+  it('a listener that vetoes and finalizes the decision itself synchronously (via close()) wins over the built-in fallback', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    let closeReason: string | undefined;
+    el.addEventListener('lr-close', (e) => (closeReason = (e as CustomEvent<string>).detail));
+    el.addEventListener('lr-deny', (e) => {
+      e.preventDefault();
+      el.close('deny');
+    });
+    denyButton(el).click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(el.pending).to.equal(null);
+    expect(closeReason).to.equal('deny');
+  });
 });
 
 it('is accessible while closed', async () => {

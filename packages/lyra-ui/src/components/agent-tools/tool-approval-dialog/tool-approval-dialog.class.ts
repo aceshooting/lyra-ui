@@ -118,7 +118,11 @@ export interface LyraToolApprovalDialogEventMap {
  * own async work (e.g. a network call) is in flight: `pending` is set to `'approve'`/`'deny'`,
  * showing `loading` on that button and `disabled` on the other (and, for Approve, alongside the
  * existing invalid-JSON `disabled` gate), until the host finalizes by calling
- * `close('approve'|'deny')` or bounces back by clearing `.pending` to `null`. While `pending` is
+ * `close('approve'|'deny')` or bounces back by clearing `.pending` to `null`. A listener that
+ * instead resolves the decision itself synchronously (calling `close('approve'|'deny')` or setting
+ * `.pending` directly before returning from the `preventDefault()`ed handler) wins outright:
+ * `onApprove`/`onDeny` only fall back to their own `pending` bookkeeping when the listener left both
+ * `pending` and `open` untouched. While `pending` is
  * set, Escape and an enabled backdrop dismissal are suppressed -- a decision in flight should not
  * be abandonable out from under the host mid-request -- and `pending` itself resets to `null` every
  * time the dialog transitions from closed to open, mirroring `editing`'s own reset-on-reopen
@@ -464,9 +468,19 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         return;
       }
     }
+    // The guard above proves `pending` is null right up to this point -- but `emit()` below
+    // dispatches synchronously, so a listener can still write `pending` or `open` from inside it
+    // (e.g. it calls preventDefault() and resolves the decision itself out of band by calling
+    // close('approve') directly, or bounces `pending` back to null immediately). Snapshot them so
+    // the built-in "awaiting the host" pending state below is applied only when the listener left
+    // both untouched; otherwise it would silently clobber whatever the listener just did.
+    const pendingBeforeDispatch = this.pending;
+    const openBeforeDispatch = this.open;
     const event = this.emit('lr-approve', { args: currentArgs }, { cancelable: true });
     if (event.defaultPrevented) {
-      this.pending = 'approve';
+      if (this.pending === pendingBeforeDispatch && this.open === openBeforeDispatch) {
+        this.pending = 'approve';
+      }
       return;
     }
     this.close('approve');
@@ -474,9 +488,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   private onDeny = (): void => {
     if (this.pending != null) return;
+    const pendingBeforeDispatch = this.pending;
+    const openBeforeDispatch = this.open;
     const event = this.emit('lr-deny', null, { cancelable: true });
     if (event.defaultPrevented) {
-      this.pending = 'deny';
+      if (this.pending === pendingBeforeDispatch && this.open === openBeforeDispatch) {
+        this.pending = 'deny';
+      }
       return;
     }
     this.close('deny');
