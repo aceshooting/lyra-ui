@@ -149,6 +149,16 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   under `src --include=*.test.ts` for files building a selection this way — guard each with `if
   (selection.rangeCount === 0) this.skip()` (see `archive-viewer.test.ts`) before adding any of
   them to `test:platform`'s file list, or the Firefox/WebKit CI job reddens immediately.
+- **`Blob.text()` silently strips a leading UTF-8 BOM, so it cannot verify one is present.** It
+  decodes through the WHATWG Encoding Standard's UTF-8 decoder, whose default `ignoreBOM: false`
+  removes a genuine `U+FEFF` at the start of the stream. A test asserting on `await blob.text()`
+  therefore reads identical output whether the BOM was written or not — it cannot tell a working
+  implementation from a broken one, and will happily go green against code that never wrote the mark.
+  Decode with `new TextDecoder('utf-8', { ignoreBOM: true })` over `await blob.arrayBuffer()`, and
+  cross-check the raw byte length (a 3-byte BOM plus the payload). This is only a test-observation
+  trap, never a product bug — Excel, the consumer that needs the BOM, reads raw bytes and never goes
+  through this decoder — which is exactly what makes it dangerous: the shipped behaviour is correct
+  while the test proving it is vacuous. Found while adding `<lr-export-button>`'s `bom` option.
 - **WebKit implements `enterkeyhint`/`inputmode` as HTML attributes but leaves the matching IDL
   properties (`el.enterKeyHint`, `el.inputMode`) undefined.** A test that reads the JS property to
   confirm forwarding passes on Chromium/Firefox and silently proves nothing on WebKit — assert the
