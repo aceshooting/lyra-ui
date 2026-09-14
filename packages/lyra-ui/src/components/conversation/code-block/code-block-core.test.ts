@@ -1848,7 +1848,7 @@ describe("fill chain (block-size)", () => {
     const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
     const expected = wrapper.getBoundingClientRect().height;
 
-    expect(el.shadowRoot!.querySelector('[part="header"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="header"]') === null, 'no header should render').to.be.true;
     expect(el.getBoundingClientRect().height, "host").to.be.closeTo(
       expected,
       1

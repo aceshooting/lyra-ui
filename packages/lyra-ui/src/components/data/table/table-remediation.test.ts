@@ -504,8 +504,14 @@ describe('error state', () => {
     await element.updateComplete;
 
     expect(element.shadowRoot!.querySelector('[part="loading"] lr-spinner')).to.exist;
-    expect(element.shadowRoot!.querySelector('[part="error-row"]')).to.not.exist;
-    expect(element.shadowRoot!.querySelector('lr-empty[part="error"]')).to.not.exist;
+    expect(
+      element.shadowRoot!.querySelector('[part="error-row"]') === null,
+      'error-row should not render while loading takes precedence'
+    ).to.be.true;
+    expect(
+      element.shadowRoot!.querySelector('lr-empty[part="error"]') === null,
+      'the error empty-state should not render while loading takes precedence'
+    ).to.be.true;
   });
 
   it('lets `error` take precedence over the no-rows empty branch', async () => {
@@ -519,7 +525,10 @@ describe('error state', () => {
     await element.updateComplete;
 
     expect(element.shadowRoot!.querySelector('[part="error-row"]')).to.exist;
-    expect(element.shadowRoot!.querySelector('lr-empty[part="empty"]')).to.not.exist;
+    expect(
+      element.shadowRoot!.querySelector('lr-empty[part="empty"]') === null,
+      'the no-rows empty branch should not render while error takes precedence'
+    ).to.be.true;
   });
 
   it('spans the error row colspan across the expand-toggle and row-total structural columns too', async () => {

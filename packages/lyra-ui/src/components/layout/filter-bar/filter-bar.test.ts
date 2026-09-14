@@ -2880,9 +2880,9 @@ describe('field wrapper part and design tokens', () => {
       );
 
       expect(
-        el.shadowRoot!.querySelector('.filter-field'),
+        el.shadowRoot!.querySelector('.filter-field') === null,
         'the former private class name is gone'
-      ).to.equal(null);
+      ).to.be.true;
       const fields = el.shadowRoot!.querySelectorAll('[part="field"]');
       expect(fields.length, 'one field wrapper per filter').to.equal(basicFilters.length);
 
@@ -2971,12 +2971,12 @@ describe("'text'/'combobox' control passthrough (clearable/size/icon/inputType)"
       expect(input.hasAttribute('clearable')).to.equal(false);
       expect(input.size).to.equal('m');
       expect(input.type).to.equal('text');
-      expect(input.querySelector('[slot="start"]'), 'no icon adornment').to.equal(null);
+      expect(input.querySelector('[slot="start"]') === null, 'no icon adornment').to.be.true;
 
       const combo = control(el, 'tags') as HTMLElement & { clearable: boolean; size: string };
       expect(combo.hasAttribute('clearable')).to.equal(false);
       expect(combo.size).to.equal('m');
-      expect(combo.querySelector('[slot="start"]'), 'no icon adornment').to.equal(null);
+      expect(combo.querySelector('[slot="start"]') === null, 'no icon adornment').to.be.true;
     }
   );
 

@@ -725,7 +725,10 @@ describe('current-indicator part', () => {
     const el = (await fixture(
       html`<lr-app-rail-item href="/home">Home</lr-app-rail-item>`
     )) as LyraAppRailItem;
-    expect(el.shadowRoot!.querySelector('[part="current-indicator"]')).to.equal(null);
+    expect(
+      el.shadowRoot!.querySelector('[part="current-indicator"]') === null,
+      'current-indicator should not render when the item is not current'
+    ).to.be.true;
   });
 
   it('renders only while aria-current="page" (the `current` property)', async () => {
@@ -736,7 +739,10 @@ describe('current-indicator part', () => {
 
     el.current = false;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="current-indicator"]')).to.equal(null);
+    expect(
+      el.shadowRoot!.querySelector('[part="current-indicator"]') === null,
+      'current-indicator should not render once current is cleared'
+    ).to.be.true;
   });
 
   it('renders for the deprecated `active` alias too', async () => {
