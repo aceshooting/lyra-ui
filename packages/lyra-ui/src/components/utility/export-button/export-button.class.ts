@@ -194,6 +194,13 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   }
 
   @property() filename = 'export';
+  /** Prepends a UTF-8 byte-order mark (U+FEFF) to the built-in CSV download only. Excel on
+   *  Windows ignores a downloaded file's MIME charset and decodes a BOM-less CSV with the
+   *  system ANSI code page, so accented, Arabic, CJK, and typographic characters render as
+   *  mojibake; the BOM makes Excel detect UTF-8 and decode correctly. Google Sheets,
+   *  LibreOffice, and Numbers already sniff UTF-8 correctly with or without it. Never applies to
+   *  the built-in JSON download -- RFC 8259 forbids a BOM there. */
+  @property({ type: Boolean, reflect: true }) bom = false;
   private _formats: readonly LyraExportFormatOption[] = Object.freeze(['csv']);
 
   /** Format choices keyed by unique, nonempty `formatId`; the first duplicate wins. An empty or
@@ -633,7 +640,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     try {
       if (format === 'csv') {
         downloadBlob(
-          buildCsv(this.rows, this.effectiveColumns()),
+          buildCsv(this.rows, this.effectiveColumns(), { bom: this.bom }),
           `${this.filename}.csv`,
           'text/csv;charset=utf-8;',
           this.ownerDocument,

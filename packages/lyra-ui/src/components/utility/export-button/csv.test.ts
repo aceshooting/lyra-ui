@@ -1,6 +1,10 @@
 import { expect } from '@open-wc/testing';
 import { escapeCsvField, buildCsv, downloadBlob } from './csv.js';
 
+/** Spelled via `fromCharCode` rather than a source literal so no invisible character sits in
+ *  this file. */
+const UTF8_BOM = String.fromCharCode(0xfeff);
+
 it('rejects a download request whose owner document has no browsing context', () => {
   const ownerless = document.implementation.createHTMLDocument('ownerless');
   expect(() => downloadBlob('content', 'report.txt', 'text/plain', ownerless)).to.throw(
@@ -74,4 +78,36 @@ it('builds a header + data CSV joined by CRLF', () => {
     ],
   );
   expect(csv).to.equal('ID,Name\r\na,Alpha');
+});
+
+it('omits the UTF-8 byte-order mark by default', () => {
+  const csv = buildCsv(
+    [{ id: 'a', name: 'Alpha' }],
+    [
+      { key: 'id', label: 'ID' },
+      { key: 'name', label: 'Name' },
+    ],
+  );
+  expect(csv.charCodeAt(0)).to.not.equal(0xfeff);
+  expect(csv.startsWith(UTF8_BOM)).to.be.false;
+});
+
+it('prepends a UTF-8 byte-order mark before the header row when bom is requested', () => {
+  const csv = buildCsv(
+    [{ id: 'a', name: 'Alpha' }],
+    [
+      { key: 'id', label: 'ID' },
+      { key: 'name', label: 'Name' },
+    ],
+    { bom: true },
+  );
+  expect(csv.charCodeAt(0)).to.equal(0xfeff);
+  expect(csv).to.equal(`${UTF8_BOM}ID,Name\r\na,Alpha`);
+  // The BOM sits before the header row, not appended after it.
+  expect(csv.indexOf('ID,Name')).to.equal(1);
+});
+
+it('does not add a byte-order mark when bom is explicitly false', () => {
+  const csv = buildCsv([{ id: 'a' }], [{ key: 'id', label: 'ID' }], { bom: false });
+  expect(csv).to.equal('ID\r\na');
 });

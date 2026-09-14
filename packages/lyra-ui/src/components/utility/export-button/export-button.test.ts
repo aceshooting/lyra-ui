@@ -17,6 +17,18 @@ const columns = [
   { key: 'name', label: 'Name' },
 ];
 
+/** Spelled via `fromCharCode` rather than a source literal so no invisible character sits in
+ *  this file. */
+const UTF8_BOM = String.fromCharCode(0xfeff);
+
+/** `Blob.text()` decodes via the WHATWG Encoding Standard's UTF-8 decoder, which -- with its
+ *  default `ignoreBOM: false` -- silently *strips* a leading BOM instead of reporting it, so it
+ *  cannot tell "no BOM was written" apart from "a BOM was written and then swallowed on read".
+ *  Decoding with `ignoreBOM: true` instead surfaces the raw downloaded bytes faithfully. */
+function decodeKeepingBom(bytes: ArrayBuffer): string {
+  return new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes);
+}
+
 async function waitForOpenMenu(el: LyraExportButton): Promise<HTMLElement> {
   const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
   await waitUntil(
@@ -723,6 +735,112 @@ it('derives CSV columns from the rows own keys when `columns` is left at its def
   expect(capturedBlob).to.exist;
   const text = await capturedBlob!.text();
   expect(text).to.equal('id,name\r\na,Alpha\r\nb,Beta');
+});
+
+it('reflects bom as a boolean attribute, defaulting to false, matching disabled/loading', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  expect(el.bom).to.equal(false);
+  expect(el.hasAttribute('bom')).to.be.false;
+
+  el.bom = true;
+  await el.updateComplete;
+  expect(el.hasAttribute('bom')).to.be.true;
+
+  el.bom = false;
+  await el.updateComplete;
+  expect(el.hasAttribute('bom')).to.be.false;
+});
+
+it('omits the UTF-8 byte-order mark from the built-in CSV download by default (bom unset)', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.rows = rows;
+  el.columns = columns;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+
+  const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+  let capturedBlob: Blob | undefined;
+  URL.createObjectURL = (blob: Blob) => {
+    capturedBlob = blob;
+    return originalCreateObjectURL(blob);
+  };
+  const completeEvent = oneEvent(el, 'lr-export-complete');
+  try {
+    trigger.click();
+    await completeEvent;
+  } finally {
+    URL.createObjectURL = originalCreateObjectURL;
+  }
+
+  expect(capturedBlob).to.exist;
+  const text = decodeKeepingBom(await capturedBlob!.arrayBuffer());
+  expect(text.charCodeAt(0)).to.not.equal(0xfeff);
+  expect(text).to.equal('ID,Name\r\na,Alpha');
+});
+
+it('prepends a UTF-8 byte-order mark to the built-in CSV download, before the header row, when bom is set', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.rows = rows;
+  el.columns = columns;
+  el.bom = true;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+
+  const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+  let capturedBlob: Blob | undefined;
+  URL.createObjectURL = (blob: Blob) => {
+    capturedBlob = blob;
+    return originalCreateObjectURL(blob);
+  };
+  const completeEvent = oneEvent(el, 'lr-export-complete');
+  try {
+    trigger.click();
+    await completeEvent;
+  } finally {
+    URL.createObjectURL = originalCreateObjectURL;
+  }
+
+  expect(capturedBlob).to.exist;
+  const text = decodeKeepingBom(await capturedBlob!.arrayBuffer());
+  expect(text.charCodeAt(0)).to.equal(0xfeff);
+  expect(text).to.equal(`${UTF8_BOM}ID,Name\r\na,Alpha`);
+  // The BOM sits before the header row, not appended after it.
+  expect(text.indexOf('ID,Name')).to.equal(1);
+});
+
+it('never prepends a byte-order mark to the built-in JSON download, even when bom is set (RFC 8259)', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.rows = rows;
+  el.columns = columns;
+  el.formats = ['csv', 'json'];
+  el.bom = true;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  const jsonButton = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')].find(
+    (button) => button.textContent?.trim() === 'JSON',
+  )!;
+
+  const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+  let capturedBlob: Blob | undefined;
+  URL.createObjectURL = (blob: Blob) => {
+    capturedBlob = blob;
+    return originalCreateObjectURL(blob);
+  };
+  const completeEvent = oneEvent(el, 'lr-export-complete');
+  try {
+    jsonButton.click();
+    await completeEvent;
+  } finally {
+    URL.createObjectURL = originalCreateObjectURL;
+  }
+
+  expect(capturedBlob).to.exist;
+  const text = decodeKeepingBom(await capturedBlob!.arrayBuffer());
+  expect(text.charCodeAt(0)).to.not.equal(0xfeff);
+  expect(text.startsWith(UTF8_BOM)).to.be.false;
+  expect(JSON.parse(text)).to.deep.equal([{ id: 'a', name: 'Alpha' }]);
 });
 
 it('blocks export via an already-open menu item once disabled is set, even without a re-render', async () => {
