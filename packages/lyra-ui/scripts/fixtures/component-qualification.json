@@ -5390,35 +5390,35 @@
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1628,
+              "line": 1709,
               "test": "is accessible as a pill button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1739,
+              "line": 1820,
               "test": "is accessible as a caret-bearing dropdown trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1782,
+              "line": 1863,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2250,
+              "line": 2331,
               "test": "is accessible in its new default appearance, and as a pill textarea-adjacent control",
               "target": "inline fixture",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2250,
+              "line": 2331,
               "test": "is accessible in its new default appearance, and as a pill textarea-adjacent control",
               "target": "inline fixture",
               "state": "populated"
@@ -5443,7 +5443,7 @@
           "evidence": [
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1722,
+              "line": 1803,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -5460,7 +5460,7 @@
           "evidence": [
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2787,
+              "line": 2868,
               "kind": "320px allocation test signal"
             }
           ]
