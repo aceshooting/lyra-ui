@@ -2,6 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './table.js';
 import type { LyraTable, TableColumn } from './table.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 type Row = { id: string; name: string };
 const rows: Row[] = [{ id: 'ä', name: 'ä' }, { id: 'z', name: 'z' }];
@@ -376,5 +377,267 @@ describe('storage-key persistence of priorityColumnsVisible', () => {
     } finally {
       localStorage.removeItem(`lr-table:${key}`);
     }
+  });
+});
+
+interface FailedLoadRow {
+  id: string;
+  name: string;
+}
+
+const failedLoadColumns: TableColumn<FailedLoadRow>[] = [{ key: 'name', label: 'Name', cell: (row) => row.name }];
+const failedLoadRowKey = (row: FailedLoadRow) => row.id;
+
+function manyFailedLoadRows(count: number): FailedLoadRow[] {
+  return Array.from({ length: count }, (_, index) => ({ id: String(index), name: `Row ${index}` }));
+}
+
+function assertiveSinkTexts(doc: Document = document): string[] {
+  const sink = doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
+
+// `error` mirrors the built-in empty state's shape (see AGENTS.md's i18n testing convention and
+// the `empty` slot's own coverage in table.test.ts) but must keep the surrounding <thead>, filter,
+// and pagination chrome mounted rather than replacing them -- that is the whole point of the
+// feature request this covers.
+describe('error state', () => {
+  it('renders the error row in the body while keeping header, filter, and pagination chrome mounted', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      filterable
+      page-size="2"
+      error
+      .rows=${manyFailedLoadRows(10)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    expect(element.shadowRoot!.querySelector('[part="base"]')).to.exist;
+    expect(element.shadowRoot!.querySelector('thead')).to.exist;
+    expect(element.shadowRoot!.querySelector('[part="filter"]')).to.exist;
+    expect(element.shadowRoot!.querySelector('lr-pagination')).to.exist;
+
+    const errorRows = element.shadowRoot!.querySelectorAll('[part="error-row"]');
+    expect(errorRows.length).to.equal(1);
+    expect(element.shadowRoot!.querySelectorAll('tbody tr[data-row-key]').length).to.equal(0);
+    const cell = errorRows[0]!.querySelector('[part="error-cell"]')!;
+    expect(cell.getAttribute('colspan')).to.equal('1');
+    expect(cell.querySelector('lr-empty[part="error"]')).to.exist;
+    expect(cell.querySelector('[part="retry-button"]')).to.exist;
+  });
+
+  it('keeps the surrounding chrome mounted even in the non-filterable/no-rows shape that otherwise fully replaces it', async () => {
+    // Without `error`, this exact shape (non-filterable, zero rows) is the one branch that returns
+    // the built-in `<lr-empty>` as the shadow root's own root, with no [part="base"]/<thead> at
+    // all -- precisely the "lose the header, pagination and filter context" complaint this feature
+    // fixes.
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${[]}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    expect(element.shadowRoot!.querySelector('[part="base"]')).to.exist;
+    expect(element.shadowRoot!.querySelector('thead')).to.exist;
+    expect(element.shadowRoot!.querySelector('[part="error-row"]')).to.exist;
+  });
+
+  it('lets the error slot override the built-in failed-load content', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ><div slot="error">Custom failure UI</div></lr-table>`);
+    await element.updateComplete;
+
+    const slot = element.shadowRoot!.querySelector('slot[name="error"]') as HTMLSlotElement;
+    expect(slot != null, 'expected an `error` slot while `error` is set').to.equal(true);
+    expect(slot.assignedElements().map((node) => node.textContent)).to.deep.equal(['Custom failure UI']);
+    // Slotted content replaces the fallback: the built-in <lr-empty> generates no boxes.
+    const builtIn = element.shadowRoot!.querySelector('[part~="error"]') as HTMLElement;
+    expect(builtIn.getClientRects().length).to.equal(0);
+  });
+
+  it('emits a cancelable lr-retry and only clears `error` when the default action runs', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    const retryButton = element.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!;
+
+    let received: CustomEvent | undefined;
+    const vetoListener = (event: Event): void => {
+      received = event as CustomEvent;
+      event.preventDefault();
+    };
+    element.addEventListener('lr-retry', vetoListener);
+    retryButton.click();
+    expect(received?.cancelable).to.equal(true);
+    expect(received?.defaultPrevented).to.equal(true);
+    expect(element.error, 'a vetoed retry must not clear error').to.equal(true);
+    element.removeEventListener('lr-retry', vetoListener);
+
+    retryButton.click();
+    expect(element.error, 'the default action clears error').to.equal(false);
+  });
+
+  it('lets `loading` take precedence over `error`', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      loading
+      error
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    expect(element.shadowRoot!.querySelector('[part="loading"] lr-spinner')).to.exist;
+    expect(element.shadowRoot!.querySelector('[part="error-row"]')).to.not.exist;
+    expect(element.shadowRoot!.querySelector('lr-empty[part="error"]')).to.not.exist;
+  });
+
+  it('lets `error` take precedence over the no-rows empty branch', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${[]}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    expect(element.shadowRoot!.querySelector('[part="error-row"]')).to.exist;
+    expect(element.shadowRoot!.querySelector('lr-empty[part="empty"]')).to.not.exist;
+  });
+
+  it('spans the error row colspan across the expand-toggle and row-total structural columns too', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+      .expandedContent=${() => html`Details`}
+      .rowTotal=${() => 1}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    const cell = element.shadowRoot!.querySelector('[part="error-cell"]')!;
+    expect(cell.getAttribute('colspan')).to.equal('3');
+  });
+
+  it("forwards the error lr-empty's inner parts through error-prefixed exportparts", async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    const exported = element.shadowRoot!.querySelector('[part~="error"]')!.getAttribute('exportparts') ?? '';
+    expect(exported).to.contain('base:error-base');
+    expect(exported).to.contain('icon:error-icon');
+    expect(exported).to.contain('heading:error-heading');
+    expect(exported).to.contain('description:error-description');
+    expect(exported).to.contain('actions:error-actions');
+  });
+
+  it('lets `errorHeading`/`errorDescription` override the built-in copy verbatim', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      error-heading="Network unavailable"
+      error-description="Check your connection and retry."
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    const empty = element.shadowRoot!.querySelector('lr-empty[part="error"]')!;
+    expect(empty.getAttribute('heading')).to.equal('Network unavailable');
+    expect(empty.getAttribute('description')).to.equal('Check your connection and retry.');
+  });
+
+  // Depends on the GENERATED DEFAULT-STRING SLICE in table.class.ts importing `tableLoadFailed`
+  // and `retry` -- until that regeneration lands, these two assertions read the raw key names
+  // instead of the English text (see resolveLyraString()'s `key` terminal fallback).
+  it('renders the built-in English fallback heading and retry label with no locale registered', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    const empty = element.shadowRoot!.querySelector('lr-empty[part="error"]')!;
+    expect(empty.getAttribute('heading')).to.equal('Could not load data');
+    const retryButton = element.shadowRoot!.querySelector('[part="retry-button"]')!;
+    expect(retryButton.textContent!.trim()).to.equal('Retry');
+  });
+
+  it('reaches the DOM through a `.strings` override for the failed-load heading and retry label', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .strings=${{ tableLoadFailed: 'Échec du chargement', retry: 'Réessayer' }}
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    const empty = element.shadowRoot!.querySelector('lr-empty[part="error"]')!;
+    expect(empty.getAttribute('heading')).to.equal('Échec du chargement');
+    const retryButton = element.shadowRoot!.querySelector('[part="retry-button"]')!;
+    expect(retryButton.textContent!.trim()).to.equal('Réessayer');
+  });
+
+  // Same dependency as the English-fallback test above: silent until the slice import includes
+  // `tableLoadFailed`.
+  it('announces a post-mount error transition on the assertive sink, staying silent on first mount', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    expect(assertiveSinkTexts(), 'declarative error state must stay silent on first mount').to.deep.equal([]);
+
+    element.error = false;
+    await element.updateComplete;
+    element.error = true;
+    await element.updateComplete;
+    expect(assertiveSinkTexts()).to.deep.equal(['Could not load data']);
+  });
+
+  it('is accessible in the error state', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    await expect(element).to.be.accessible();
   });
 });

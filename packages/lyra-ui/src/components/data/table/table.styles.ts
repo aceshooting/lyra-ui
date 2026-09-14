@@ -527,4 +527,38 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Structural full-width row, deliberately not [part='row'] -- like [part='group-row']/
+     [part='expanded-row'], it is not a data row and must not pick up hover/selected/stripe
+     background or the roving-tabindex focus ring those rules carry. */
+  [part='error-row'] [part='error-cell'] {
+    padding: var(--lr-space-s);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    background: var(--lr-color-surface);
+  }
+  [part='retry-button'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--lr-space-2xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    background: none;
+    color: var(--lr-color-brand);
+    font: inherit;
+    cursor: pointer;
+  }
+  [part='retry-button']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  [part='retry-button']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part='retry-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
 `;

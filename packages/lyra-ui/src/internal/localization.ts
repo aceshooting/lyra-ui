@@ -55,6 +55,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   tableFilterLabel: 'Filter rows',
   tableFilterPlaceholder: 'Filter rows',
   tableLoading: 'Loading rows',
+  tableLoadFailed: 'Could not load data',
   tableEditCell: 'Edit {column}',
   carousel: 'carousel',
   carouselLabel: 'Carousel',

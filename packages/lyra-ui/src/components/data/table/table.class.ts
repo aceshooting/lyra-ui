@@ -460,6 +460,7 @@ export interface LyraTableEventMap<T = unknown> {
   'lr-row-click': CustomEvent<Readonly<{ row: T }>>;
   'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; rowKey: string | number }>>;
   'lr-load-more': CustomEvent<null>;
+  'lr-retry': CustomEvent<null>;
   'lr-selection-change': CustomEvent<Readonly<{ rowKeys: readonly (string | number)[] }>>;
   'lr-filter-change': CustomEvent<Readonly<{ text: string }>>;
   'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
@@ -617,6 +618,16 @@ export interface LyraTableEventMap<T = unknown> {
  * configuration problem (`noColumnsHeading`), not "this query returned nothing", and a single slot
  * covering all three would collapse that distinction.
  *
+ * A separate `error` state reports a failed load without discarding grid context: while `error` is
+ * set, `<tbody>`'s single row becomes a failed-load `<lr-empty>` (the same `error`-prefixed exported
+ * parts as the empty state, plus a built-in `[part='retry-button']`), behind its own `error` slot —
+ * but `<thead>`, the filter field, and pagination all stay mounted around it, unlike either
+ * data-empty branch above, which replace them too. Precedence when more than one state could apply
+ * at once: `loading` beats `error` beats every empty branch, so a `loading` table never flashes a
+ * stale `error`, and an `error` table never falls through to "no rows"/"no columns" copy
+ * underneath it. The retry button's `lr-retry` is cancelable: the built-in action clears `error`,
+ * and `preventDefault()` leaves it set for a consumer that owns its own retry timing.
+ *
  * `layout` sets a floor on the `<table>`'s `table-layout`: `'fixed'` forces it even with no column
  * widths, while the default `'auto'` still resolves to `fixed` whenever a column declares a `width`
  * or a drag-resize is in flight (column resizing does not work under `table-layout: auto`).
@@ -630,6 +641,9 @@ export interface LyraTableEventMap<T = unknown> {
  *   server mode leaves them controlled while reporting the accepted proposal.
  * @event lr-row-click - A row was activated. `detail: { row }`.
  * @event lr-load-more - The "load more" control was activated.
+ * @event lr-retry - The built-in `[part='retry-button']` was activated, only rendered while
+ *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
+ *   set instead.
  * @event lr-priority-columns-visibility-change - `priorityColumnsVisible` was toggled by
  *   `[part='reveal-columns-button']`. Frozen readonly `detail: { visible: boolean }`.
  * @event lr-row-expand-toggle - The row-expand chevron was activated.
@@ -711,10 +725,23 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart empty-heading - Exported from the built-in `<lr-empty>`'s `heading` part.
  * @csspart empty-description - Exported from the built-in `<lr-empty>`'s `description` part.
  * @csspart empty-actions - Exported from the built-in `<lr-empty>`'s `actions` part.
+ * @csspart error - The built-in `<lr-empty>` host rendered in the row body while `error` is set.
+ *   Unlike `[part='empty']`'s no-rows branches, its surrounding `<thead>`, filter, and pagination
+ *   stay mounted rather than being replaced along with it.
+ * @csspart error-base - Exported from the built-in error `<lr-empty>`'s own `base` part.
+ * @csspart error-icon - Exported from the built-in error `<lr-empty>`'s `icon` part.
+ * @csspart error-heading - Exported from the built-in error `<lr-empty>`'s `heading` part.
+ * @csspart error-description - Exported from the built-in error `<lr-empty>`'s `description` part.
+ * @csspart error-actions - Exported from the built-in error `<lr-empty>`'s `actions` part; wraps
+ *   `retry-button`.
+ * @csspart retry-button - The built-in retry control rendered into the error state's `actions`.
  * @slot empty - Replaces the built-in empty state on the two *data*-empty branches (no rows at
  *   all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']`
  *   `<lr-empty>` renders as this slot's fallback content. The no-columns branch renders its own
  *   `noColumnsHeading` state and is not slot-replaceable.
+ * @slot error - Replaces the built-in failed-load state, including its retry button, while `error`
+ *   is set. Left unfilled, the built-in `[part='error']` `<lr-empty>` renders as this slot's
+ *   fallback content.
  * @cssprop [--lr-table-resize-min-width=var(--lr-size-3rem)] - Default minimum width for a
  *   resizable column without an explicit pixel `minWidth`. Inherits from theme ancestors.
  * @cssprop [--lr-table-resize-handle-opacity=0.12] - Hover/focus opacity of the resize handle.
@@ -1075,6 +1102,22 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   /** Optional copy overrides. Omission localizes the matching message key; supplied strings,
    * including the built-in English text or an empty string, render verbatim. */
   @property({ attribute: 'more-label' }) moreLabel?: string;
+  /** Non-`false` replaces `<tbody>`'s row content with a built-in failed-load state, while the
+   *  surrounding `<thead>`, filter field, and pagination stay mounted — unlike either data-empty
+   *  branch below, which this state overrides and which replace that chrome too. Precedence when
+   *  more than one applies at once: `loading` beats `error` beats every empty branch, so a
+   *  `loading` table never shows a stale `error`, and an `error` table never falls through to
+   *  "no rows"/"no columns" copy underneath it. Reflected so `[error]` is selectable from
+   *  page-level CSS the same way `[loading]` already is. */
+  @property({ type: Boolean, reflect: true }) error = false;
+  /** Optional failed-load heading override. Omission localizes `tableLoadFailed`; a supplied
+   *  string, including the built-in English text or an empty string, renders verbatim. Has no
+   *  effect once the `error` slot is filled. */
+  @property({ attribute: 'error-heading' }) errorHeading?: string;
+  /** Optional failed-load description. Empty by default (no description line); a supplied string,
+   *  including the built-in English value, renders verbatim — never localized, the same contract
+   *  as `emptyDescription`. Has no effect once the `error` slot is filled. */
+  @property({ attribute: 'error-description' }) errorDescription = '';
   @property({ attribute: 'empty-heading' }) emptyHeading?: string;
   @property({ attribute: 'empty-description' }) emptyDescription = '';
   /** Overrides the built-in `[part='empty']` state's `compact` rendering. Leave `undefined` (the
@@ -1125,7 +1168,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  `persistReady`. */
   private persistReady = false;
   private announcementSink?: AnnouncementSink;
-  private loadingAnnouncementsReady = false;
+  private errorAnnouncementSink?: AnnouncementSink;
+  private firstUpdateAnnouncementsReady = false;
 
   /** Roving-tabindex position among header cells; `null` until a header is
    *  clicked/navigated to, at which point `focusedColKey()` falls back to
@@ -1521,6 +1565,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private releaseAnnouncementSink(): void {
     this.announcementSink?.release();
     this.announcementSink = undefined;
+    this.errorAnnouncementSink?.release();
+    this.errorAnnouncementSink = undefined;
   }
 
   private syncAnnouncementSink(): void {
@@ -1531,6 +1577,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
     this.releaseAnnouncementSink();
     this.announcementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    // Assertive, not the shared polite sink above: an error transition is more urgent than the
+    // routine loading/empty-state copy the polite sink otherwise carries, matching the
+    // `errorAnnouncementSink` convention already used across the library (e.g. `<lr-retrieval-
+    // results>`, `<lr-image-viewer>`) rather than inventing a table-specific mechanism.
+    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
     });
@@ -2227,10 +2281,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  reflects the rendered columns. */
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.loadingAnnouncementsReady && changed.has('loading') && this.loading) {
+    if (this.firstUpdateAnnouncementsReady && changed.has('loading') && this.loading) {
       this.announcementSink?.announce(this.loadingText());
     }
-    this.loadingAnnouncementsReady = true;
+    // Guarded the same way as the loading announcement above -- `error` defaulting to `false`
+    // means a bare `changed.has('error')` would otherwise be true (and announce) on whatever the
+    // very first update happens to be, not just a real post-mount transition.
+    if (this.firstUpdateAnnouncementsReady && changed.has('error') && this.error) {
+      this.errorAnnouncementSink?.announce(this.localizedOverride('tableLoadFailed', this.errorHeading));
+    }
+    this.firstUpdateAnnouncementsReady = true;
     // Persist `priorityColumnsVisible` whenever it changes, but never on the initial update -- willUpdate()
     // restored it on that pass, so writing it back would be redundant, and with no `storage-key` set
     // `writePersistedState(undefined, ...)` is a silent no-op regardless.
@@ -2737,6 +2797,42 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     );
   }
 
+  /** `[part='retry-button']` activation. Optimistically clears `error` so the row body falls back
+   *  to whatever it would otherwise show (existing rows, or an empty state) -- exactly like
+   *  `resizeColumnTo()`'s own "propose, then react to the veto" shape for `lr-column-resize`, but
+   *  checked before committing since there is no drag-in-progress state to leave dangling. A
+   *  listener that wants to keep the error banner up until it has confirmed a fresh load actually
+   *  started (or failed again immediately) calls `preventDefault()`, which leaves `error` set. */
+  private onRetryClick = (): void => {
+    if (this.emit('lr-retry', null, { cancelable: true }).defaultPrevented) return;
+    this.error = false;
+  };
+
+  /** The single full-width row rendered in `<tbody>` while `error` is true. Mirrors the `empty`
+   *  slot/`<lr-empty>` shape (same exported-part naming scheme, `error`-prefixed) so the two states
+   *  stay visually and structurally consistent, plus the built-in retry affordance -- but unlike
+   *  either data-empty branch in `render()`, the caller keeps `<thead>`, the filter field, and
+   *  pagination mounted around this row instead of replacing them too. */
+  private renderErrorRow(colspan: number): TemplateResult {
+    return html`<tr part="error-row" role="row">
+      <td part="error-cell" role="gridcell" colspan=${colspan}>
+        <slot name="error"
+          ><lr-empty
+            part="error"
+            exportparts="base:error-base, icon:error-icon, heading:error-heading, description:error-description, actions:error-actions"
+            ?compact=${this.emptyCompact ?? true}
+            heading=${this.localizedOverride('tableLoadFailed', this.errorHeading)}
+            description=${this.errorDescription}
+          >
+            <button type="button" slot="actions" part="retry-button" @click=${this.onRetryClick}>
+              ${this.localize('retry')}
+            </button>
+          </lr-empty
+        ></slot>
+      </td>
+    </tr>`;
+  }
+
   override render(): TemplateResult {
     // A skeleton needs a schema to sketch. Until columns arrive, both loading appearances use the
     // spinner rather than misreporting the unresolved schema as a configuration error.
@@ -2778,7 +2874,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const matchingEntries = this.sortedEntries();
     // A cold load is exactly the case where `rows` is still empty, so skeleton mode must not take
     // either empty-state branch -- "no data" is a *result*, and the load has not produced one yet.
-    if (!skeletonLoading && this.canonicalRowEntries().length === 0 && !this.filterable) {
+    // `error` also skips this whole-component replacement: unlike the empty state it reports, it
+    // must keep `<thead>`, the filter field, and pagination mounted, which this branch (and the
+    // no-columns one above) deliberately drop.
+    if (!skeletonLoading && !this.error && this.canonicalRowEntries().length === 0 && !this.filterable) {
       return html`<slot name="empty"
         ><lr-empty
           part="empty"
@@ -2826,7 +2925,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const filterLabel = this.localizedOverride('tableFilterLabel', this.filterLabel);
     const filterPlaceholder = this.localizedOverride('tableFilterPlaceholder', this.filterPlaceholder);
     const tableContent =
-      renderedEntries.length === 0 && !skeletonLoading
+      renderedEntries.length === 0 && !skeletonLoading && !this.error
         ? html`<slot name="empty"
             ><lr-empty
               part="empty"
@@ -2900,6 +2999,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             <tbody>
               ${skeletonLoading
                 ? this.renderSkeletonRows(hasExpand, hasRowTotal)
+                : this.error
+                ? this.renderErrorRow(spanningColspan)
                 : repeat(
                     renderedEntries,
                     (entry) => entry.key,

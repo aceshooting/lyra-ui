@@ -28,7 +28,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A bounded sort/select-aware grid. Column inspection stops after the first 10,000 source positions; columns, rows, selected keys, and expanded keys are detached at assignment and capped at 10,000 retained entries. Malformed and whitespace-only controlled keys are omitted while valid off-page keys remain available for server pagination. Key reads expose immutable ReadonlySet facades, and consumers reassign collections after changes. Unique nonempty column and row keys are first-wins before render, counts, focus, actions, and events. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted. Built-in filter/loading/empty/more/column-toggle copy localizes only while its optional override is omitted; supplied strings, including empty strings, render verbatim.',
+          'A bounded sort/select-aware grid. Column inspection stops after the first 10,000 source positions; columns, rows, selected keys, and expanded keys are detached at assignment and capped at 10,000 retained entries. Malformed and whitespace-only controlled keys are omitted while valid off-page keys remain available for server pagination. Key reads expose immutable ReadonlySet facades, and consumers reassign collections after changes. Unique nonempty column and row keys are first-wins before render, counts, focus, actions, and events. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted. Built-in filter/loading/empty/error/more/column-toggle copy localizes only while its optional override is omitted; supplied strings, including empty strings, render verbatim. `error` reports a failed load without discarding grid context — the header, filter, and pagination chrome stay mounted, unlike the no-rows empty states; `loading` beats `error` beats every empty branch.',
       },
     },
   },
@@ -100,6 +100,26 @@ export const EmptyStateAddressability: Story = {
       </div>
     </lr-table>
   `,
+};
+
+export const ErrorState: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`error` replaces `<tbody>`’s row content with a built-in failed-load state while keeping the header, filter, and pagination chrome mounted around it — unlike the no-rows empty states, which replace that chrome too. `loading` beats `error` beats every empty branch. The built-in retry button emits a cancelable `lr-retry`; the default action clears `error`, and `preventDefault()` leaves it set for a consumer that owns its own retry timing.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-table
+      caption="Scores"
+      error
+      error-description="Check your connection and try again."
+      .columns=${columns}
+      .rows=${rows}
+      @lr-retry=${(event: CustomEvent) => console.log('retry requested', event)}
+    ></lr-table>`,
 };
 
 const titledColumns: TableColumn<DemoRow>[] = [
