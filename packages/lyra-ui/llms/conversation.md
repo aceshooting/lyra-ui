@@ -1698,6 +1698,11 @@ dark-theme rendering paths), plus shared tokens `--lr-color-border`, `--lr-radiu
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`.
 
+`base` is a flex column and `body` grows to fill whatever block space a definite-height host
+gives it, still capped by `--lr-code-block-max-height` and still independently scrollable. An
+unsized host is unaffected — this is a fill capability, not a change to the default
+content-sized rendering.
+
 `--lr-code-block-tab-size` carries the same default as `--lr-code-editor-tab-size`, so the editable
 and read-only code surfaces agree on what a literal tab looks like. It is declared as a `var()`
 fallback **at the point of use, not on `:host`** — a `:host` rule is re-stamped on every instance and
@@ -1866,7 +1871,8 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 tokens. The last three are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
-fallback separately.
+fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
+definite-height host gives it too, identically to `<lr-code-block>` above.
 
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`,
 `shiki/wasm`, and `shiki/themes/github-{light,dark}.mjs` subpaths — never `shiki`'s main entry point,

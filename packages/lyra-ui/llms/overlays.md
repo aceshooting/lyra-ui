@@ -600,7 +600,12 @@ explicitly flipped under `:dir(rtl)` since `translateX` is physical. Override to
 the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
 `--lr-dialog-backdrop-filter`, `--lr-dialog-width`, `--lr-dialog-max-width`, `--lr-dialog-spacing`,
 `--lr-dialog-spacing-block`, `--lr-dialog-panel-duration` and `--lr-dialog-backdrop-duration` —
-since `LyraDrawer` extends `LyraDialog`. The drawer's own size/width/height tokens take precedence
+since `LyraDrawer` extends `LyraDialog`. `--lr-dialog-height` is deliberately **not** among the
+inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
+`block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
+for `top`/`bottom`), which always wins the cascade over `<lr-dialog>`'s `--lr-dialog-height`-driven
+rule regardless of value, so the property has no effect on `<lr-drawer>`. The drawer's own
+size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.
 
@@ -797,7 +802,13 @@ the panel's max-inline-size cap, applied as
 `min(var(--lr-dialog-max-width, var(--lr-dialog-width, var(--lr-size-32rem))), 100%)`; when
 `--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls back to
 the requested width itself — not the 32rem default — so an assertive width isn't silently clipped;
-the viewport is still a hard limit either way), `--lr-dialog-spacing` (default `var(--lr-space-l)` —
+the viewport is still a hard limit either way), `--lr-dialog-height` (default `auto` — the panel
+shrink-wraps to content on the block axis, same as before this property existed; always capped at
+`100%`, i.e. the viewport, like every other panel dimension). With it set, `[part="body"]`'s own
+`flex: 1 1 auto` is what actually gives slotted content a definite, fillable block size:
+`[part="header"]` and `[part="footer"]` keep their natural size and only `[part="body"]` grows or
+shrinks into the remaining space, matching `--lr-dialog-width`'s pairing with `--lr-dialog-max-width`
+on the other axis. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
 the padding inside `[part="body"]` and the _inline_ padding of the header and footer rows),
 `--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the _block_ padding of the header and
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default

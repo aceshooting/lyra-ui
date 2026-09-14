@@ -1823,7 +1823,13 @@ against the new tint as well.
 An append-only streaming log of granular agent actions ("Searching the web…", "Read the
 application entry point"), collapsing to a localized "Completed N steps" summary once the run is over. Entries
 never change state once added — a step whose status mutates in place belongs to `<lr-task-list>`
-instead. Implements the shared follow (stick-to-bottom) contract. At/above `virtualizeAt`
+instead. Implements the shared follow (stick-to-bottom) contract. Focus is repaired rather than
+silently dropped when the control holding it disappears: collapsing (`expanded` becoming `false`)
+moves focus already inside the body to `[part="header"]` before the body is hidden, and removing
+the specific `entries` row that held focus does the same once that render (and, while virtualized,
+the internal `<lr-virtual-list>`'s own follow-up render) has settled. Focus that is elsewhere is
+left alone — appending a live entry never steals focus from an unrelated, still-present control.
+At/above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
 
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
@@ -1846,7 +1852,17 @@ plain and virtualized rendering paths while `label` remains the visible header t
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
 identically whether or not the feed is currently virtualized; replaces the plain text **inside**
 the persistent `[part="entry-text"]` wrapper rather than removing that part, and `virtualizeAt: number = 199` (attribute
-`virtualize-at`).
+`virtualize-at`). `compact: boolean = false` (reflected) — tighter header and entry-row padding for
+dense transcript contexts, the same density-only convention `<lr-confirm-bar>`'s and
+`<lr-thinking-panel>`'s own `compact` establish: the outer border and surface stay, so pair it
+with `frame="plain"` to remove card chrome. Retune it through
+`--lr-activity-feed-compact-header-padding`, `--lr-activity-feed-compact-header-gap`, and
+`--lr-activity-feed-compact-entry-padding`. `frame: LyraFrame = 'card'` (reflected) — `'card' |
+'plain'`, imported from the library's shared container-frame vocabulary and behaving exactly as
+it does on `lr-confirm-bar`/`lr-thinking-panel`/`lr-agent-run`/etc.: `'plain'` removes the outer
+border, background, and corner radius so a feed nested inside existing message chrome doesn't
+double it. The header/body divider and entry-row padding are unaffected by `frame` — only the
+outer card goes.
 
 **Events:** `lr-toggle` (`detail: { expanded }`, the header was activated) and
 `lr-follow-change` (`detail: { following }`, `follow` released or re-engaged).
@@ -1863,6 +1879,13 @@ part is reachable in both rendering paths, virtualized or not.
 tall the expanded body grows before it scrolls internally; and
 `--lr-activity-feed-live-status-color` (default `var(--lr-color-brand)`) — background color of
 `status-dot` while `mode="live"`, independently retunable without changing other brand surfaces.
+The `compact` density is retunable through three properties: `--lr-activity-feed-compact-header-padding`
+(default `var(--lr-space-2xs) var(--lr-space-s)`) and `--lr-activity-feed-compact-header-gap`
+(default `var(--lr-space-2xs)`) both scoped to `[part="header"]` while `compact`, and
+`--lr-activity-feed-compact-entry-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`)
+scoped to `[part="entry"]` while `compact`. All three are inline `var()` fallbacks at their point
+of use, so any can be set on the element or on an ancestor, same as `lr-confirm-bar`'s and
+`lr-thinking-panel`'s own compact tokens.
 
 **Known gotchas:**
 
@@ -1871,6 +1894,12 @@ tall the expanded body grows before it scrolls internally; and
   `lr-activity-feed::part(variant-dot)[data-variant='success']` never matches. Target
   `lr-activity-feed::part(variant-dot-success)` instead. `data-variant` remains on both the entry
   and the dot for DOM queries.
+- `compact`/`frame` render byte-identically to the pre-existing default when unset — neither
+  property changes anything about the plain-card presentation.
+- Focus repair after an `entries` change is asynchronous while virtualized (it waits on the
+  internal `<lr-virtual-list>`'s own follow-up render before deciding whether the previously
+  focused row actually disappeared), but synchronous when collapsing (`expanded` going `false`)
+  — the header renders regardless of `expanded`, so there's nothing to wait for there.
 
 ## `lr-commit-card`
 
@@ -2001,7 +2030,11 @@ An inline, non-modal approve/deny block for one proposed action — the in-flow 
 focus. Same `lr-approve`/`lr-deny` event shapes as the dialog, and the same
 `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so the two always
 translate in lockstep. Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop
-semantics, and it never steals focus when it appears in the transcript. DOM and tab order put Deny
+semantics, and it never steals focus when it appears in the transcript. "Never steals focus" and
+"no Escape semantics" describe the bar's behavior when `autofocus` and `escape-denies` are both
+left unset (the default). A host that swaps a focused control out for this bar can opt into either
+or both instead of hand-rolling them, as `<lr-memory-panel>` still does internally
+(`focusPendingConfirmation`/`onConfirmKeyDown`). DOM and tab order put Deny
 before Approve. On activation, focus moves synchronously to `[part="status"]` (an always-rendered,
 `tabindex="-1"` element) before the Deny/Approve buttons unmount.
 
@@ -2036,7 +2069,19 @@ to finalize, or clear `.pending` back to `null` to bounce back to the undecided 
 `disabled: boolean = false` (reflected) — disables both Deny and Approve and makes activating either
 a no-op, without discarding any in-flight `decision`/`pending` state. Distinct from `pending`:
 `pending` marks one specific action as awaiting the host while the other stays interactive;
-`disabled` blocks both regardless of `pending`.
+`disabled` blocks both regardless of `pending`. `autofocus: boolean = false` (reflected) — opt-in
+focus-on-mount: moves focus into the bar after its own first render, once this element and (when
+present) the Deny `<lr-button>` have both completed it. Named after the native global attribute it
+stands in for, since the platform's own `autofocus` algorithm only fires for an element already in
+the document when it finishes parsing, never for one a host swaps in afterward — this bar's primary
+use. Focuses the Deny control when it's present and actually focusable (not `disabled`, not
+hidden), else the always-present `[part="status"]`. `escapeDenies: boolean = false` (attribute
+`escape-denies`, reflected) — maps Escape on `[part="base"]` to the same outcome as clicking Deny.
+A no-op while `disabled`, already decided, or `pending`, exactly like clicking Deny itself, and
+never stops propagation when it was a no-op, so an unrelated enclosing dialog's own Escape handling
+still sees the event. Scoped to this element's own `[part="base"]` rather than `document`: this bar
+is inline and non-modal, not a member of the shared `activateOverlay()` Escape/stacking contract
+real overlays use.
 
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
@@ -2097,6 +2142,11 @@ repainting everything else that reads them.
   the built-in loading/disabled presentation.
 - `disabled` blocks both Deny and Approve and makes activating either a no-op — see `disabled`
   above. It is independent of, and composes with, `pending`.
+- `autofocus`/`escape-denies` are both opt-in and default to `false`; neither changes any
+  existing bar's behavior unless a host sets it. `escape-denies` is intentionally *not* routed
+  through the shared overlay Escape manager (`src/internal/overlay-manager.ts`) — this component
+  is explicitly non-modal (see the class doc), so binding Escape on its own `[part="base"]` is
+  the correct scope, not a shortcut around the shared contract.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>

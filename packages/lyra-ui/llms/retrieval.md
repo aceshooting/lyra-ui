@@ -118,7 +118,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded from
   `d3-force`'s own simulation input and from click/keyboard interaction.
 - `width: number = 800`
-- `height: number = 600`
+- `height: number = 600` — also sizes the rendered host itself (see
+  `--lr-canvas-reserved-height`'s entry below) whenever neither that nor an explicit outer
+  `block-size` overrides it
 - `chargeStrength: number = -300` (attribute `charge-strength` — live-reactive, see gotchas)
 - `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
@@ -140,6 +142,13 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   drawn edge label is hidden (toggled via a `data-edge-labels-hidden` attribute on the zoomed `<g>`,
   not a Lit re-render, so it tracks pan/zoom smoothly). Ignored entirely when `showEdgeLabels` is
   `false`
+- `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — node-label visibility.
+  `'always'` draws every node's label unconditionally; `'zoom'` hides them below the same
+  canvas-declutter zoom threshold used before this property existed (toggled via a
+  `data-node-labels-hidden` attribute on the zoomed `<g>` for `renderer="svg"`, mirroring
+  `showEdgeLabels`/`edgeLabelMinZoom`'s own mechanism — not a Lit re-render); `'none'` never renders
+  them. Left unset (the default), each renderer keeps its own exact pre-existing behavior —
+  `'always'` for `renderer="svg"`, `'zoom'` for `renderer="canvas"` — so this is purely additive
 - `layout: 'force' | 'layered' = 'force'` — `'force'` runs the `d3-force` simulation described
   throughout this section, unchanged. `'layered'` swaps in a deterministic Sugiyama-lite layered
   layout instead (longest-path layering, barycenter crossing reduction, cycle-safe — back edges are
@@ -182,7 +191,8 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 **Slots:** none.
 
 **CSS parts:** `base`, `svg`, `node`, `link`, `arrowhead` (the marker path shared by directed links),
-`label`, `link-label` (a drawn edge label, only rendered when `showEdgeLabels` is set),
+`label` (`renderer="svg"` only; not rendered at all when `nodeLabels` is `'none'`), `link-label` (a
+drawn edge label, only rendered when `showEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusNodeId`'s node), `hull` (a community hull), `community-label`,
 `live-region`, `data-list`, `empty`, `error` (neutral visible message shown instead of the graph when
@@ -195,7 +205,10 @@ the offscreen keyboard-roving items)
 
 **Themeable custom properties:** `--lr-canvas-reserved-height` (default
 `var(--lr-size-24rem)`) sets the host block size and is shared with the optional pre-upgrade
-reservation stylesheet; an explicit outer `block-size` still wins. `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
+reservation stylesheet. Below it in the fallback chain, the normalized `height` property sizes the
+host too (through a private, not-directly-settable custom property) — setting
+`--lr-canvas-reserved-height` always overrides `height`, and an explicit outer `block-size` still
+wins over both. `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
 falls back to `--lr-color-brand`) and `--lr-link-color` (set inline per-link from
 `LyraGraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).
@@ -1777,7 +1790,12 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
 (presentation)
 
 - `renderer: 'svg' | 'canvas' = 'svg'` — forwarded to `lr-graph.renderer`
-- `width: number = 800`, `height: number = 600`
+- `width: number = 800`, `height: number = 600` — `height` also sizes the composed graph's own
+  rendered box (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback
+  chain `lr-graph.height` uses on its own host
+- `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — forwarded to
+  `lr-graph.nodeLabels`. Unset (the default) leaves the composed `lr-graph` to apply its own
+  per-renderer default — see that property's own entry in this file's `lr-graph` section
 - `highlight: 'selection' | 'hover' | 'none' = 'selection'` — what drives the dimming forwarded to
   `lr-graph`'s `dimmedNodeIds`/`dimmedLinkIds`, on top of the always-active search-match dimming:
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
@@ -1816,8 +1834,12 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
-nested `lr-neighbor-list` and a pin toggle). Receives no data; an overriding consumer reads the
-selected entity from `selectedNodeId`/`nodes` itself.
+nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
+Receives no data; an overriding consumer reads the selected entity from `selectedNodeId`/`nodes`
+itself. `detail-body` — additive content appended inside the default `lr-entity-card`'s body,
+alongside its `lr-neighbor-list`; no effect while `details` is overridden. `detail-actions` —
+additive content appended into the default `lr-entity-card`'s `actions` slot, beside its built-in
+pin toggle; no effect while `details` is overridden.
 
 **CSS parts:** `base` (`role="group"` unless a non-empty host label owns the component), `toolbar`,
 `search` (the search `lr-input`), `legend` (the
@@ -1828,7 +1850,10 @@ while `path` is non-empty), `detail-popover`, `detail-card`.
 
 **Themeable custom properties:** `--lr-canvas-reserved-height` (default
 `var(--lr-size-24rem)`) sets the explorer's host block size and matches its pre-upgrade
-reservation. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-node-fill`,
+reservation. The composed graph's own `[part="graph"]` box additionally falls back to the
+explorer's `height` property (through a private custom property) beneath this same reservation
+name, so setting `--lr-canvas-reserved-height` anywhere above the explorer overrides `height` for
+the composed graph too. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-node-fill`,
 `--lr-link-color`, `--lr-graph-cat-1` through `-8`, `--lr-graph-edge-label-halo`,
 `--lr-graph-focus-halo-color`, `--lr-graph-selected-color`, `--lr-graph-dimmed-opacity`, and
 `--lr-graph-hull-fill`/`-opacity` — documented in this file's `lr-graph` section's own
@@ -1841,7 +1866,14 @@ reservation. Retheme the composed graph through `lr-graph`'s own custom properti
 - The host defaults to `--lr-canvas-reserved-height` (`24rem`). An explicit height on the host
   bounds the whole explorer: `[part="base"]` fills it and
   `[part="graph"]` takes whatever the toolbar, search results, pinned row and path strip leave over,
-  rather than the graph sizing itself from its own intrinsic aspect ratio.
+  rather than the graph sizing itself from its own intrinsic aspect ratio. Within that allocation,
+  the composed graph's own `height` property still contributes its configured block size (subject
+  to `--lr-canvas-reserved-height` winning, and to flex-shrink if the host itself has no room to
+  grow) — it is not purely cosmetic even though the host's own footprint is governed separately.
+- A node's displayed name (search results, pinned chips, the details popover's accessible name)
+  resolves `LyraGraphNode.label || LyraGraphNode.accessibleLabel || LyraGraphNode.id` — a node with
+  only a spoken `accessibleLabel` (no visible `label`) still shows that text instead of falling
+  straight through to its raw id.
 - `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-_local_ drawing
   coordinates, never viewport pixels. For `renderer="svg"` this component resolves the real viewport
   rect from `event.composedPath()`'s `[part="node"]` element; for `renderer="canvas"` (no per-node
