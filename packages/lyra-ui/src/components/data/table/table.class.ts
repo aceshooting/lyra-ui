@@ -2815,23 +2815,29 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  stay visually and structurally consistent, plus the built-in retry affordance -- but unlike
    *  either data-empty branch in `render()`, the caller keeps `<thead>`, the filter field, and
    *  pagination mounted around this row instead of replacing them too. */
+  /** The failed-load content itself, shared by the in-grid error row and the standalone no-columns
+   *  error branch in `render()` so the two cannot drift in copy, parts, or slot name. `compactDefault`
+   *  differs between them: the row sits inside an existing grid and defaults to compact, while the
+   *  standalone branch owns the whole component box and matches the other full-area empty states. */
+  private renderErrorContent(compactDefault: boolean): TemplateResult {
+    return html`<slot name="error"
+      ><lr-empty
+        part="error"
+        exportparts="base:error-base, icon:error-icon, heading:error-heading, description:error-description, actions:error-actions"
+        ?compact=${this.emptyCompact ?? compactDefault}
+        heading=${this.localizedOverride('tableLoadFailed', this.errorHeading)}
+        description=${this.errorDescription}
+      >
+        <button type="button" slot="actions" part="retry-button" @click=${this.onRetryClick}>
+          ${this.localize('retry')}
+        </button>
+      </lr-empty
+    ></slot>`;
+  }
+
   private renderErrorRow(colspan: number): TemplateResult {
     return html`<tr part="error-row" role="row">
-      <td part="error-cell" role="gridcell" colspan=${colspan}>
-        <slot name="error"
-          ><lr-empty
-            part="error"
-            exportparts="base:error-base, icon:error-icon, heading:error-heading, description:error-description, actions:error-actions"
-            ?compact=${this.emptyCompact ?? true}
-            heading=${this.localizedOverride('tableLoadFailed', this.errorHeading)}
-            description=${this.errorDescription}
-          >
-            <button type="button" slot="actions" part="retry-button" @click=${this.onRetryClick}>
-              ${this.localize('retry')}
-            </button>
-          </lr-empty
-        ></slot>
-      </td>
+      <td part="error-cell" role="gridcell" colspan=${colspan}>${this.renderErrorContent(true)}</td>
     </tr>`;
   }
 
@@ -2847,6 +2853,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           </lr-spinner>
         </div>
       </div>`;
+    }
+    if (this.error && this.columns.length === 0) {
+      // `error` beats every empty branch, including this one -- and the ordering only ever matters
+      // here, in the commonest real failure: the load that would have supplied the columns is the
+      // one that rejected, so `columns` is still empty. Falling through would report a network
+      // failure as a *configuration* problem and, worse, hide the retry control that recovers from
+      // it. Rendered standalone rather than as the in-grid error row because there is no schema to
+      // keep mounted around it, mirroring how `loading` degrades to a bare spinner in this same
+      // no-columns case.
+      return this.renderErrorContent(false);
     }
     if (this.columns.length === 0) {
       // Deliberately not wrapped in the `empty` slot: this branch reports a *configuration*

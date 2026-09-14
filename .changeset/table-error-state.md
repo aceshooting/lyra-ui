@@ -18,7 +18,13 @@ the whole element out on error and lose the header, pagination, and filter conte
   `error`, and `preventDefault()` leaves it set for a consumer that owns its own retry timing.
 - Precedence when more than one state could apply at once: `loading` beats `error` beats every
   empty branch, so a `loading` table never flashes a stale `error`, and an `error` table never
-  falls through to "no rows"/"no columns" copy underneath it.
+  falls through to "no rows"/"no columns" copy underneath it. That last case is the common one
+  rather than an edge case: when the load that would have supplied `columns` is what failed,
+  `columns` is still empty, and reporting that as a configuration problem would both blame the
+  consumer for a network error and hide the retry control. With no schema to keep mounted, the
+  failed-load content renders on its own there — the same way `loading` degrades to a bare spinner
+  when `columns` is empty — and still honours the `error` slot, the `error-*` parts, and the retry
+  button.
 - A post-mount `error` transition is announced on the shared assertive light-DOM sink (distinct
   from the existing polite sink `loading`/empty-state copy already uses), guarded the same way the
   existing loading announcement guards its own first update.

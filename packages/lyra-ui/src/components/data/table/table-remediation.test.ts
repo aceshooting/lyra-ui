@@ -447,6 +447,28 @@ describe('error state', () => {
     expect(element.shadowRoot!.querySelector('[part="error-row"]')).to.exist;
   });
 
+  it('shows the failed-load state, not the no-columns configuration message, when the load that would have supplied the columns is what failed', async () => {
+    // The real shape of a cold load failure: the fetch that would have supplied both columns and
+    // rows rejected, so `columns` is still empty. Reporting that as a *configuration* problem
+    // blames the consumer for a network error and, worse, hides the retry affordance -- the one
+    // control that recovers from it. `error` is documented to beat every empty branch including
+    // "no columns", and that ordering only matters in exactly this case.
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      .rows=${[]}
+      .columns=${[]}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    const noColumns = element.shadowRoot!.querySelector('lr-empty[part="empty"]');
+    expect(noColumns == null, 'the no-columns configuration message must not win over `error`').to.equal(true);
+    const failed = element.shadowRoot!.querySelector('lr-empty[part="error"]');
+    expect(failed != null, 'expected the built-in failed-load state').to.equal(true);
+    expect(failed!.querySelector('[part="retry-button"]') != null, 'expected the retry affordance').to.equal(true);
+  });
+
   it('lets the error slot override the built-in failed-load content', async () => {
     const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
       caption="Rows"
