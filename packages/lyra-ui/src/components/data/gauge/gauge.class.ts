@@ -5,6 +5,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
+import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.class.js';
 import { styles } from './gauge.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -14,6 +15,19 @@ import { LYRA_DEFAULT_gaugeLabel, LYRA_DEFAULT_gaugeValueLabel } from '../../../
 
 /** The rendered geometry of a gauge. */
 export type GaugeShape = 'radial' | 'ring' | 'linear';
+
+/**
+ * One value-to-variant mapping entry for {@linkcode LyraGauge.thresholds}. The LAST entry (after
+ * sorting by `at`) whose `at` is `<=` the current `value` wins, which is deliberately the one rule
+ * that serves both a higher-is-worse domain (CPU load: `[{at:0,variant:'success'},
+ * {at:70,variant:'warning'},{at:90,variant:'danger'}]`) and a higher-is-better one (battery charge:
+ * `[{at:0,variant:'danger'},{at:20,variant:'warning'},{at:50,variant:'success'}]`) -- only the
+ * authored `at`/`variant` pairs differ between the two, never the resolution rule itself.
+ */
+export interface LyraGaugeThreshold {
+  readonly at: number;
+  readonly variant: LyraProgressVariant;
+}
 
 // Radial gauge sweeps 270° (like a speedometer), leaving a 90° gap at the bottom.
 const SWEEP_DEG = 270;
@@ -70,6 +84,8 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * The host defaults to `role="meter"` (or `img` when no finite range can be announced), while an
  * author-supplied role remains authoritative. Visually abbreviated SVG captions retain their full
  * caller-owned text in a nested `<title>` tooltip.
+ * `variant` picks the fill's semantic palette directly; `thresholds` instead derives it from the
+ * current `value`, falling back to `variant` while empty or while `value` matches no entry.
  *
  * @customElement lr-gauge
  * @csspart base - The root `<svg>`.
@@ -77,7 +93,9 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * @csspart fill - The animated fill arc/line.
  * @csspart value - The value text.
  * @csspart label - The label text.
- * @cssprop [--lr-gauge-fill=var(--lr-color-brand)] - Fill stroke for radial, ring, and linear gauges.
+ * @cssprop [--lr-gauge-fill=var(--lr-color-brand)] - Fill stroke for radial, ring, and linear
+ * gauges. The token default follows the effective variant -- `variant`, or the matching
+ * `thresholds` entry -- rather than always `brand`.
  * @status stable
  * @since 4.0.0
  */
@@ -108,6 +126,17 @@ export class LyraGauge extends LyraElement {
   /** Displayed/announced value text, e.g. `'72°F'` for a raw `value` of `72`.
    * An empty string is treated the same as unset and falls back to the numeric `value`. */
   @property({ attribute: 'value-text' }) valueText?: string;
+  /** Semantic palette for the fill, read from the library's shared semantic-tone vocabulary
+   *  (the same one `<lr-progress-bar>` uses). This is the fallback color: whenever `thresholds`
+   *  is non-empty and `value` matches at least one entry, the matching entry's variant wins
+   *  instead. */
+  @property({ reflect: true }) variant: LyraProgressVariant = 'brand';
+  /** Value-to-variant color mapping. The LAST entry (after sorting by `at`, regardless of
+   *  authored order) whose `at` is `<=` the current `value` wins; an entry whose `at` is not a
+   *  finite number never matches. Leaving this at its default empty array, or leaving `value`
+   *  below every entry's `at`, renders with `variant` instead. See {@linkcode LyraGaugeThreshold}
+   *  for the higher-is-worse/higher-is-better example pair this single rule supports. */
+  @property({ attribute: false }) thresholds: readonly LyraGaugeThreshold[] = [];
 
   // `label` supplies the default meter name, but an author-provided host
   // `aria-label` must win. Track the value last applied by the component so
@@ -143,6 +172,30 @@ export class LyraGauge extends LyraElement {
     return finiteRatio(this.value, lo, hi);
   }
 
+  // The rule that serves both the higher-is-worse and higher-is-better examples in
+  // `LyraGaugeThreshold`'s own doc comment: sort ascending by `at` (never trusting authored
+  // order), then keep the LAST entry whose `at` is `<=` value -- inclusive, so a value exactly on
+  // a boundary takes that boundary's variant. An entry whose `at` is not finite (NaN/Infinity) is
+  // excluded up front, like this getter already excludes a non-finite `value` -- it can otherwise
+  // never legitimately compare below/above a real value, so letting it in would either silently
+  // never match (harmless) or, worse, collapse to a fallback that spuriously matches everything.
+  // Every surviving `at` still routes through `finiteNumber` before use in the sort/comparison,
+  // matching the rest of this file's own numeric-guard convention.
+  private get effectiveVariant(): LyraProgressVariant {
+    if (Number.isFinite(this.value) && this.thresholds.length > 0) {
+      const eligible = this.thresholds.filter((threshold) => Number.isFinite(threshold.at));
+      const sorted = [...eligible].sort(
+        (a, b) => finiteNumber(a.at, 0) - finiteNumber(b.at, 0),
+      );
+      let matched: LyraProgressVariant | undefined;
+      for (const threshold of sorted) {
+        if (finiteNumber(threshold.at, 0) <= this.value) matched = threshold.variant;
+      }
+      if (matched) return matched;
+    }
+    return this.variant;
+  }
+
   /** The text rendered/announced for the current value: `valueText` when set,
    * else the numeric `value`, blanked (like the ARIA attributes and fill) when
    * `value` is non-finite (NaN/undefined/Infinity/-Infinity). */
@@ -170,6 +223,10 @@ export class LyraGauge extends LyraElement {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // A separate host attribute from the reflected `variant` property/attribute -- rendering
+    // reads this one, so a `thresholds` match recolors the fill without rewriting the `variant`
+    // property or attribute the author (or a reflection-observing test) set.
+    this.setAttribute('data-effective-variant', this.effectiveVariant);
     // Normalize a reversed min > max domain the same way `ratio` does, so the
     // announced aria-value* trio always agrees with the visual fill instead
     // of aria-valuenow pinning to one bound regardless of `value` (and

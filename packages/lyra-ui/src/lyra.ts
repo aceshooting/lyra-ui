@@ -396,7 +396,7 @@ export type {
   SortingState,
 } from './components/data/data-grid/data-grid.class.js';
 export { LyraGauge } from './components/data/gauge/gauge.class.js';
-export type { GaugeShape } from './components/data/gauge/gauge.class.js';
+export type { GaugeShape, LyraGaugeThreshold } from './components/data/gauge/gauge.class.js';
 export { LyraFunnel } from './components/data/funnel/funnel.class.js';
 export type { LyraFunnelStage } from './components/data/funnel/funnel.class.js';
 export { LyraExportButton } from './components/utility/export-button/export-button.class.js';

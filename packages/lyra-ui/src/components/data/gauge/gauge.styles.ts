@@ -10,6 +10,24 @@ export const styles = css`
     inline-size: var(--lr-size-12em);
     block-size: var(--lr-size-1-5em);
   }
+  /* Palette slot for the effective variant -- variant itself, or the matching thresholds entry.
+     A separate custom property from --lr-gauge-fill, which stays the highest-priority public
+     override and is left completely alone by these rules. */
+  :host([data-effective-variant='neutral']) {
+    --lr-gauge-variant-fill: var(--lr-color-neutral);
+  }
+  :host([data-effective-variant='brand']) {
+    --lr-gauge-variant-fill: var(--lr-color-brand);
+  }
+  :host([data-effective-variant='success']) {
+    --lr-gauge-variant-fill: var(--lr-color-success);
+  }
+  :host([data-effective-variant='warning']) {
+    --lr-gauge-variant-fill: var(--lr-color-warning);
+  }
+  :host([data-effective-variant='danger']) {
+    --lr-gauge-variant-fill: var(--lr-color-danger);
+  }
   svg {
     display: block;
     inline-size: 100%;
@@ -22,7 +40,7 @@ export const styles = css`
   }
   [part='fill'] {
     fill: none;
-    stroke: var(--lr-gauge-fill, var(--lr-color-brand));
+    stroke: var(--lr-gauge-fill, var(--lr-gauge-variant-fill, var(--lr-color-brand)));
     stroke-linecap: round;
     transition: stroke-dashoffset var(--lr-transition-base);
   }

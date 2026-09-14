@@ -1,8 +1,24 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './gauge.js';
-import type { LyraGauge } from './gauge.js';
+import type { LyraGauge, LyraGaugeThreshold } from './gauge.js';
+import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { styles } from './gauge.styles.js';
+
+async function fillStroke(el: LyraGauge): Promise<string> {
+  await el.updateComplete;
+  return getComputedStyle(el.shadowRoot!.querySelector('[part="fill"]') as SVGElement).stroke;
+}
+
+/** The resolved color for a given semantic tone, read through the already-established
+ *  `--lr-gauge-fill` cssprop override (proven elsewhere in this file) rather than through
+ *  `variant`/`thresholds` themselves -- so a broken threshold/variant resolution cannot coincide
+ *  with this reference by both sides defaulting to the same unwired color. */
+async function toneStroke(variant: LyraProgressVariant): Promise<string> {
+  const reference = (await fixture(html`<lr-gauge></lr-gauge>`)) as LyraGauge;
+  reference.style.setProperty('--lr-gauge-fill', `var(--lr-color-${variant})`);
+  return fillStroke(reference);
+}
 
 it('uses shape/valueText as the sole geometry and formatted-value vocabulary', async () => {
   type LegacyGaugeMember = Extract<'type' | 'valueLabel', keyof LyraGauge>;
@@ -356,7 +372,9 @@ it('renders a full-circle ring with circumference-based progress when shape is r
 });
 
 it('exposes a per-instance gauge fill token for radial, ring, and linear variants', () => {
-  expect(styles.cssText).to.include('stroke: var(--lr-gauge-fill, var(--lr-color-brand))');
+  expect(styles.cssText).to.include(
+    'stroke: var(--lr-gauge-fill, var(--lr-gauge-variant-fill, var(--lr-color-brand)))',
+  );
 });
 
 describe('--lr-gauge-fill reaches the rendered [part="fill"] stroke', () => {
@@ -379,6 +397,113 @@ describe('--lr-gauge-fill reaches the rendered [part="fill"] stroke', () => {
     el.style.setProperty('--lr-gauge-fill', 'var(--lr-color-brand)');
     await el.updateComplete;
     expect(getComputedStyle(fill).stroke).to.equal(unset);
+  });
+});
+
+describe('thresholds', () => {
+  it('defaults to an empty array and the brand variant, leaving committed behavior unchanged', async () => {
+    const el = (await fixture(html`<lr-gauge value="30" min="0" max="100"></lr-gauge>`)) as LyraGauge;
+    expect(el.thresholds.length).to.equal(0);
+    expect(el.variant).to.equal('brand');
+    const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGElement;
+    const unset = getComputedStyle(fill).stroke;
+    el.style.setProperty('--lr-gauge-fill', 'var(--lr-color-brand)');
+    await el.updateComplete;
+    expect(getComputedStyle(fill).stroke).to.equal(unset);
+  });
+
+  it('supports a higher-is-worse mapping (CPU: success at low load, warning then danger as load rises)', async () => {
+    const el = (await fixture(html`<lr-gauge value="10" max="100"></lr-gauge>`)) as LyraGauge;
+    el.thresholds = [
+      { at: 0, variant: 'success' },
+      { at: 70, variant: 'warning' },
+      { at: 90, variant: 'danger' },
+    ];
+    await el.updateComplete;
+    expect(await fillStroke(el)).to.equal(await toneStroke('success'));
+
+    el.value = 75;
+    expect(await fillStroke(el)).to.equal(await toneStroke('warning'));
+
+    el.value = 95;
+    expect(await fillStroke(el)).to.equal(await toneStroke('danger'));
+  });
+
+  it('supports a higher-is-better mapping (battery: danger at low charge, warning then success as charge rises)', async () => {
+    const el = (await fixture(html`<lr-gauge value="10" max="100"></lr-gauge>`)) as LyraGauge;
+    el.thresholds = [
+      { at: 0, variant: 'danger' },
+      { at: 20, variant: 'warning' },
+      { at: 50, variant: 'success' },
+    ];
+    await el.updateComplete;
+    expect(await fillStroke(el)).to.equal(await toneStroke('danger'));
+
+    el.value = 30;
+    expect(await fillStroke(el)).to.equal(await toneStroke('warning'));
+
+    el.value = 60;
+    expect(await fillStroke(el)).to.equal(await toneStroke('success'));
+  });
+
+  it('falls back to variant when thresholds is empty', async () => {
+    const el = (await fixture(html`<lr-gauge value="50" max="100"></lr-gauge>`)) as LyraGauge;
+    el.variant = 'danger';
+    el.thresholds = [];
+    await el.updateComplete;
+    expect(await fillStroke(el)).to.equal(await toneStroke('danger'));
+  });
+
+  it('falls back to variant when value is below every threshold entry', async () => {
+    const el = (await fixture(html`<lr-gauge value="10" max="100"></lr-gauge>`)) as LyraGauge;
+    el.variant = 'warning';
+    el.thresholds = [{ at: 50, variant: 'danger' }];
+    await el.updateComplete;
+    expect(await fillStroke(el)).to.equal(await toneStroke('warning'));
+  });
+
+  it('sorts thresholds by at regardless of authored order', async () => {
+    const el = (await fixture(html`<lr-gauge value="75" max="100"></lr-gauge>`)) as LyraGauge;
+    const outOfOrder: LyraGaugeThreshold[] = [
+      { at: 90, variant: 'danger' },
+      { at: 0, variant: 'success' },
+      { at: 70, variant: 'warning' },
+    ];
+    el.thresholds = outOfOrder;
+    await el.updateComplete;
+    expect(await fillStroke(el)).to.equal(await toneStroke('warning'));
+  });
+
+  it('ignores a threshold entry with a non-finite at instead of matching or throwing', async () => {
+    const el = (await fixture(html`<lr-gauge value="50" max="100"></lr-gauge>`)) as LyraGauge;
+    el.thresholds = [
+      { at: 0, variant: 'success' },
+      { at: Number.NaN, variant: 'danger' },
+    ];
+    await el.updateComplete;
+    expect(await fillStroke(el)).to.equal(await toneStroke('success'));
+  });
+
+  it('matches an entry whose at exactly equals the current value (inclusive <=)', async () => {
+    const el = (await fixture(html`<lr-gauge value="70" max="100"></lr-gauge>`)) as LyraGauge;
+    el.thresholds = [
+      { at: 0, variant: 'success' },
+      { at: 70, variant: 'warning' },
+    ];
+    await el.updateComplete;
+    expect(await fillStroke(el)).to.equal(await toneStroke('warning'));
+  });
+
+  it('does not mutate the variant property or its reflected attribute when a threshold overrides the rendered color', async () => {
+    const el = (await fixture(html`<lr-gauge value="95" max="100"></lr-gauge>`)) as LyraGauge;
+    el.thresholds = [
+      { at: 0, variant: 'success' },
+      { at: 90, variant: 'danger' },
+    ];
+    await el.updateComplete;
+    expect(el.variant).to.equal('brand');
+    expect(el.getAttribute('variant')).to.equal('brand');
+    expect(await fillStroke(el)).to.equal(await toneStroke('danger'));
   });
 });
 
