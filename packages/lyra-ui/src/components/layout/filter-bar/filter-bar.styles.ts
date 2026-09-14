@@ -24,7 +24,10 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  [part='field'] {
+  /* [part~=], not [part=]: the field wrapper's part attribute is now a token list ("field
+     field-<filterId>"), matching how the exported ::part(field) selector itself matches -- one
+     token in the list, not the whole attribute value. */
+  [part~='field'] {
     flex: 1 1 var(--lr-filter-bar-field-basis, var(--lr-size-12rem));
     min-inline-size: 0;
     max-inline-size: 100%;

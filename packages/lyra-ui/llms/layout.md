@@ -3715,9 +3715,10 @@ unless the bar is disabled.
 action) rendered inside `controls`, next to the reset button. Hidden and claiming no layout
 space while nothing is slotted.
 
-**CSS parts:** `base`, `controls`, `field`, `end`, `filter-control`, `filter-control-label`,
-`filter-control-field`, `filter-control-input`, `filter-control-start`, `filter-control-end`,
-`filter-control-listbox`, `filter-control-option`, `filter-control-clear-button`,
+**CSS parts:** `base`, `controls`, `field`, `field-<filterId>`, `end`, `filter-control`,
+`filter-control-label`, `filter-control-field`, `filter-control-input`, `filter-control-start`,
+`filter-control-end`, `filter-control-listbox`, `filter-control-option`, `filter-control-tags`,
+`filter-control-tag`, `filter-control-tag-label`, `filter-control-clear-button`,
 `filter-control-expand-button`, `filter-control-expand-icon`, `filter-control-popup`,
 `filter-control-error`, `filter-control-hint`, `active-filters`, `chips`, `chip`, `reset-button`,
 `status`.
@@ -3725,16 +3726,27 @@ space while nothing is slotted.
 The `filter-control-*` parts are semantic aliases forwarded from each built-in control's shadow
 surface. `filter-control-field` consistently reaches the select trigger, combobox container, or
 text/date input wrapper; `filter-control-input` reaches the corresponding display or editable input.
-Listbox/option aliases apply to select and combobox filters, while expand-button/popup apply to date
-filters. This lets a consumer theme the composed tier from `lr-filter-bar::part(...)` without
-depending on the built-in control type selected by a filter definition. Custom renderers retain
-ownership of their own part forwarding.
+Listbox/option aliases apply to select and combobox filters, `filter-control-tags`/
+`filter-control-tag`/`filter-control-tag-label` apply to a `multiple` combobox filter's selected-tag
+chips (`filter-control-tag-label` is capped by that control's own `--tag-max-size`), and
+expand-button/popup apply to date filters. This lets a consumer theme the composed tier from
+`lr-filter-bar::part(...)` without depending on the built-in control type selected by a filter
+definition. Custom renderers retain ownership of their own part forwarding.
 
 `field` wraps one filter's composed control and its validation spacer inside `controls`; its
 flex-basis is themeable via `--lr-filter-bar-field-basis` (default `var(--lr-size-12rem)`).
 `--lr-filter-bar-gap` (default `var(--lr-space-s)`) themes the gap between filter fields, the
 `end` slot, the reset button, and the loading status in the `controls` row. Both are byte-identical
 to the previous hardcoded values when unset.
+
+Each field wrapper also carries a second, per-filter part token, `field-<filterId>` (for example
+`part="field field-status"`), so a single field can be targeted directly --
+`lr-filter-bar::part(field-status) { flex: 2 1 20rem; }` -- setting any layout property, not just a
+width, while `::part(field)` rules continue to match every field unchanged. The `field-<filterId>`
+token is present only when `filterId` reads as a plain CSS ident (ASCII letters/digits/`-`/`_`,
+starting with a letter); an id that doesn't (for example one containing whitespace) renders `field`
+alone, exactly as before this part existed, rather than risking a `part` attribute whose
+space-separated token list fabricates an unrelated second token.
 
 A `'select'`/`'combobox'` filter's required `options` entries are
 `LyraFilterBarOption { value, label, icon? }`.

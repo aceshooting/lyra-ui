@@ -470,6 +470,9 @@ const COMBOBOX_EXPORT_PARTS = [
   'end: filter-control-end',
   'listbox: filter-control-listbox',
   'option: filter-control-option',
+  'tags: filter-control-tags',
+  'tag: filter-control-tag',
+  'tag-label: filter-control-tag-label',
   'clear-button: filter-control-clear-button',
   'expand-icon: filter-control-expand-icon',
   'error: filter-control-error',
@@ -500,6 +503,27 @@ const DATE_INPUT_EXPORT_PARTS = [
   'error: filter-control-error',
   'hint: filter-control-hint',
 ].join(', ');
+
+/** A `part` attribute is a space-separated token list, exactly like `class` -- so a `filterId`
+ * containing whitespace could otherwise fabricate an unrelated extra token when concatenated into
+ * one (`"x active-filters"` would silently split into `field-x` and a bare `active-filters` token
+ * that collides with this component's own real `active-filters` chip-row part). Requiring the
+ * whole id to already read as a plain CSS ident -- ASCII letters, digits, `-`, `_`, starting with
+ * a letter -- rules out embedded whitespace and every other character that would need escaping to
+ * appear in a `::part()` argument, without attempting to escape one in: `DOMTokenList` tokenizes
+ * on raw ASCII whitespace, which a backslash escape cannot suppress. An id that fails this check
+ * gets no per-filter handle at all; `fieldPartNames()` falls back to the bare `'field'` token,
+ * identical to this component's behavior before the per-filter handle existed. */
+const SAFE_FILTER_ID_PART = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
+
+/** The `field` wrapper's `part` attribute for one filter: the shared `field` token plus, for a
+ * `filterId` that is safe to embed (see `SAFE_FILTER_ID_PART`), a collision-resistant
+ * `field-<filterId>` token letting a consumer target exactly that field --
+ * `lr-filter-bar::part(field-status) { flex: 2 1 20rem; }` -- while `::part(field)` continues to
+ * match every field. */
+function fieldPartNames(filterId: string): string {
+  return SAFE_FILTER_ID_PART.test(filterId) ? `field field-${filterId}` : 'field';
+}
 
 /** A built-in filter's value counts as active (shown as a chip, counted toward
  * `hasActiveFilters`, satisfying `required`) once it is neither absent, `false`, `''`, nor `[]`. */
@@ -621,7 +645,15 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * @csspart controls - The row holding every filter control, the `end` slot, the reset button, and
  *   the loading status.
  * @csspart field - The wrapper around one filter's composed control and its validation spacer;
- *   its flex-basis is `--lr-filter-bar-field-basis`.
+ *   its flex-basis is `--lr-filter-bar-field-basis`. Also carries a second, per-filter token,
+ *   `field-<filterId>` (for example `part="field field-status"`), so a consumer can target one
+ *   field's own wrapper -- `lr-filter-bar::part(field-status) { flex: 2 1 20rem; }` -- and set any
+ *   layout property, not just width, without affecting `::part(field)` rules that still match
+ *   every field. The `field-<filterId>` token is omitted (the wrapper renders `part="field"`
+ *   alone) when `filterId` is not a plain CSS ident (ASCII letters/digits/`-`/`_`, starting with a
+ *   letter) -- `part` is a space-separated token list like `class`, so an id containing whitespace
+ *   would otherwise silently fabricate an unrelated second token (including, in the worst case,
+ *   one colliding with a real part name like `active-filters`).
  * @csspart end - Wrapper around the `end` slot; hidden while nothing is slotted.
  * @csspart filter-control - One filter's composed built-in control, or the wrapper around a
  *   custom renderer's control.
@@ -633,6 +665,10 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * @csspart filter-control-end - A built-in control's end adornment wrapper.
  * @csspart filter-control-listbox - A select or combobox options popover.
  * @csspart filter-control-option - A select or combobox option row.
+ * @csspart filter-control-tags - A combobox's multi-select tag container.
+ * @csspart filter-control-tag - A combobox's individual selected tag.
+ * @csspart filter-control-tag-label - A combobox tag's wrapping/ellipsis-safe label; capped by
+ *   that control's own `--tag-max-size`.
  * @csspart filter-control-clear-button - A built-in control's clear action, when rendered.
  * @csspart filter-control-expand-button - A date input's calendar-popup action.
  * @csspart filter-control-expand-icon - A select, combobox, or date-input expansion icon.
@@ -1448,7 +1484,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     return html`
       <div part="base" role="group" aria-label=${accessibleLabel}>
         <div part="controls">
-          ${this._filters.map((def) => html`<div part="field">
+          ${this._filters.map((def) => html`<div part=${fieldPartNames(def.filterId)}>
             ${this.renderControl(def)}
             <span
               class="validation-spacer"

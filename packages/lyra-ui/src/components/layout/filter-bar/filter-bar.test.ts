@@ -214,6 +214,179 @@ it("forwards common field and input parts from every built-in composed control",
   }
 });
 
+describe('combobox tag/tag-label/tags part forwarding', () => {
+  it('forwards tag/tag-label/tags through filter-control-* aliases, reaching the rendered chip', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'tags',
+        label: 'Tags',
+        type: 'combobox',
+        multiple: true,
+        options: [
+          { value: 'urgent', label: 'Urgent' },
+          { value: 'billing', label: 'Billing' },
+        ],
+      },
+    ];
+    const wrapper = (await fixture(html`
+      <div>
+        <style>
+          lr-filter-bar::part(filter-control-tag) {
+            --tag-max-size: 300px;
+          }
+          lr-filter-bar::part(filter-control-tag-label) {
+            letter-spacing: 3px;
+          }
+          lr-filter-bar::part(filter-control-tags) {
+            background-color: rgb(11, 22, 33);
+          }
+        </style>
+        <lr-filter-bar .filters=${filters} .value=${{ tags: ['urgent'] }}></lr-filter-bar>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+
+    const combobox = control(el, 'tags') as HTMLElement & { updateComplete: Promise<unknown> };
+    await combobox.updateComplete;
+
+    const tag = combobox.shadowRoot!.querySelector<HTMLElement>('[part~="tag"]');
+    expect(tag !== null, 'the selected-value chip renders').to.be.true;
+    // max-inline-size stays `min(100%, <length>)` at computed-value time (the percentage operand
+    // can't resolve without a containing block yet) -- assert the threaded length, not a fully
+    // resolved pixel value.
+    expect(
+      getComputedStyle(tag!).maxInlineSize,
+      'tag alias reaches the rendered chip'
+    ).to.include('300px');
+
+    const tagLabel = combobox.shadowRoot!.querySelector<HTMLElement>('[part="tag-label"]');
+    expect(tagLabel !== null, 'the chip label renders').to.be.true;
+    expect(
+      getComputedStyle(tagLabel!).letterSpacing,
+      'tag-label alias reaches the rendered chip label'
+    ).to.equal('3px');
+
+    const tags = combobox.shadowRoot!.querySelector<HTMLElement>('[part="tags"]');
+    expect(tags !== null, 'the tag container renders').to.be.true;
+    expect(
+      getComputedStyle(tags!).backgroundColor,
+      'tags alias reaches the tag container'
+    ).to.equal('rgb(11, 22, 33)');
+  });
+});
+
+describe('per-filter field part handle', () => {
+  it('renders "field field-<filterId>" for every CSS-ident-safe filterId', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+    );
+    const fields = [...el.shadowRoot!.querySelectorAll('[part~="field"]')];
+    expect(fields.map((field) => field.getAttribute('part'))).to.deep.equal([
+      'field field-status',
+      'field field-tags',
+      'field field-created',
+      'field field-range',
+    ]);
+  });
+
+  it('scopes a consumer rule to exactly one field through ::part(field-<id>), leaving siblings unchanged', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <style>
+          lr-filter-bar::part(field-status) {
+            flex: 2 1 20rem;
+          }
+        </style>
+        <lr-filter-bar .filters=${basicFilters}></lr-filter-bar>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+
+    const fields = [...el.shadowRoot!.querySelectorAll('[part~="field"]')] as HTMLElement[];
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+    const statusStyle = getComputedStyle(fields[0]!);
+    expect(statusStyle.flexGrow, 'the targeted field grows').to.equal('2');
+    expect(statusStyle.flexBasis, 'the targeted field gets the rule\'s own basis').to.equal(
+      `${rootFontSize * 20}px`
+    );
+
+    const siblingStyle = getComputedStyle(fields[1]!);
+    expect(siblingStyle.flexGrow, 'an untargeted sibling field is unaffected').to.equal('1');
+    expect(siblingStyle.flexBasis, 'an untargeted sibling field keeps the default basis').to.equal(
+      `${rootFontSize * 12}px`
+    );
+  });
+
+  it('leaves the blanket ::part(field) selector matching every field (multi-token part list)', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <style>
+          lr-filter-bar::part(field) {
+            background-color: rgb(10, 20, 30);
+          }
+        </style>
+        <lr-filter-bar .filters=${basicFilters}></lr-filter-bar>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+
+    const fields = [...el.shadowRoot!.querySelectorAll('[part~="field"]')] as HTMLElement[];
+    expect(fields.length).to.equal(basicFilters.length);
+    for (const field of fields) {
+      expect(getComputedStyle(field).backgroundColor).to.equal('rgb(10, 20, 30)');
+    }
+  });
+
+  it('drops the per-filter handle for a filterId containing whitespace, so a hostile id cannot inject a second part token', async () => {
+    // The real `active-filters` part name belongs to the active-filter chip row -- a filterId
+    // that embeds a space could otherwise fabricate that exact token on this unrelated field div
+    // ("x active-filters" naively becomes the tokens "field-x" and "active-filters"), letting a
+    // page-wide `::part(active-filters)` rule bleed onto it. Compare against a benign sibling
+    // field rather than a hardcoded default value, since a UA's own default for an unset property
+    // is not guaranteed to be a fixed cross-engine constant.
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'x active-filters', label: 'Hostile', type: 'text' },
+      { filterId: 'safe', label: 'Safe', type: 'text' },
+    ];
+    const wrapper = (await fixture(html`
+      <div>
+        <style>
+          lr-filter-bar::part(active-filters) {
+            background-color: rgb(9, 9, 9);
+          }
+        </style>
+        <lr-filter-bar .filters=${filters}></lr-filter-bar>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+
+    const fields = [...el.shadowRoot!.querySelectorAll('[part~="field"]')] as HTMLElement[];
+    expect(fields.length).to.equal(2);
+    expect(fields[0]!.getAttribute('part'), 'no fabricated second token').to.equal('field');
+    expect(
+      getComputedStyle(fields[0]!).backgroundColor,
+      'the fabricated active-filters token never matched -- same as an untargeted sibling'
+    ).to.equal(getComputedStyle(fields[1]!).backgroundColor);
+    expect(getComputedStyle(fields[0]!).backgroundColor).to.not.equal('rgb(9, 9, 9)');
+  });
+
+  it('drops the per-filter handle for a filterId starting with a digit or a hyphen-digit (not a bare CSS ident)', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: '1status', label: 'Numeric', type: 'text' },
+    ];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    );
+    const field = el.shadowRoot!.querySelector('[part~="field"]') as HTMLElement;
+    expect(field.getAttribute('part')).to.equal('field');
+  });
+});
+
 describe("custom filters", () => {
   it("renders an existing control with controlled value, disabled, required, and error state", async () => {
     let renderedFilterId = "";
@@ -2883,7 +3056,12 @@ describe('field wrapper part and design tokens', () => {
         el.shadowRoot!.querySelector('.filter-field') === null,
         'the former private class name is gone'
       ).to.be.true;
-      const fields = el.shadowRoot!.querySelectorAll('[part="field"]');
+      // `[part~=]`, not `[part=]`: the field wrapper's part attribute is now a token list
+      // ("field field-<filterId>", see the 'per-filter field part handle' describe block below),
+      // so an exact-string match would find nothing. `[part~=]` mirrors how `::part(field)`
+      // itself matches -- against one token in the list, not the whole attribute value -- which is
+      // exactly the byte-identical-behavior contract this regression test exists to prove.
+      const fields = el.shadowRoot!.querySelectorAll('[part~="field"]');
       expect(fields.length, 'one field wrapper per filter').to.equal(basicFilters.length);
 
       const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -2902,7 +3080,7 @@ describe('field wrapper part and design tokens', () => {
         .filters=${basicFilters}
       ></lr-filter-bar>
     `);
-    const field = el.shadowRoot!.querySelector('[part="field"]') as HTMLElement;
+    const field = el.shadowRoot!.querySelector('[part~="field"]') as HTMLElement;
     expect(getComputedStyle(field).flexBasis).to.equal('40px');
   });
 
