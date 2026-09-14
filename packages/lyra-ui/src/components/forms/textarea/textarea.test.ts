@@ -1950,12 +1950,17 @@ it("leaves an ordinary auto-height host content-sized, so the fill chain is a no
 });
 
 it('keeps resize="auto" growing and capping correctly inside a definite-height host', async () => {
+  // The cap has to clear the single-row initial height by a wide margin, or "grows past initial"
+  // and "gets clamped to the cap" collapse into the same number and the first assertion can never
+  // discriminate a real regression from a too-low cap (a single-row field with this token's default
+  // padding/font/border renders at ~3rem on its own -- 3rem was tried first and always measured
+  // identical before and after typing, passing or failing for the wrong reason either way).
   const wrapper = await fixture<HTMLDivElement>(html`
     <div style="block-size: 400px; inline-size: 320px">
       <lr-textarea
         resize="auto"
         rows="1"
-        style="--lr-textarea-max-block-size: 3rem"
+        style="--lr-textarea-max-block-size: 8rem"
       ></lr-textarea>
     </div>
   `);
