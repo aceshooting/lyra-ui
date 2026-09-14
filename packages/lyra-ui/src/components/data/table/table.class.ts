@@ -23,7 +23,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -815,6 +815,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     popover: LYRA_DEFAULT_popover,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
+    retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
@@ -822,6 +823,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     tableEditCell: LYRA_DEFAULT_tableEditCell,
     tableFilterLabel: LYRA_DEFAULT_tableFilterLabel,
     tableFilterPlaceholder: LYRA_DEFAULT_tableFilterPlaceholder,
+    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     tableLoading: LYRA_DEFAULT_tableLoading,
   };
   // GENERATED DEFAULT-STRING SLICE: END

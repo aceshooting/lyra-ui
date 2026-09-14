@@ -1138,6 +1138,7 @@ export const LYRA_DEFAULT_switchRequired: LyraMessage = 'Please turn this on.';
 export const LYRA_DEFAULT_tableEditCell: LyraMessage = 'Edit {column}';
 export const LYRA_DEFAULT_tableFilterLabel: LyraMessage = 'Filter rows';
 export const LYRA_DEFAULT_tableFilterPlaceholder: LyraMessage = 'Filter rows';
+export const LYRA_DEFAULT_tableLoadFailed: LyraMessage = 'Could not load data';
 export const LYRA_DEFAULT_tableLoading: LyraMessage = 'Loading rows';
 export const LYRA_DEFAULT_taskListCompletedOfTotal: LyraMessage = '{completed} of {total} completed';
 export const LYRA_DEFAULT_taskListLabel: LyraMessage = 'Tasks';
