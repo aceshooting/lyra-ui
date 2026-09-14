@@ -47,14 +47,6 @@ const page = (rail: ReturnType<typeof html>) => html`
   </div>
 `;
 
-function openExternalRail(event: Event): void {
-  const trigger = event.currentTarget as HTMLElement;
-  const rail = trigger.parentElement!.querySelector(
-    "lr-app-rail"
-  ) as LyraAppRail;
-  rail.open = true;
-}
-
 function capRailResizeRequest(event: Event): void {
   if ((event as CustomEvent<{ widthPx: number }>).detail.widthPx > 320)
     event.preventDefault();
@@ -122,19 +114,30 @@ export const ForcedMobile: Story = {
     `),
 };
 
+function wireExternalTrigger(event: Event): void {
+  const trigger = event.currentTarget as HTMLElement;
+  const rail = trigger.parentElement!.querySelector(
+    "lr-app-rail"
+  ) as LyraAppRail;
+  rail.trigger = trigger;
+  rail.open = true;
+}
+
 export const ExternalMobileControl: Story = {
   name: "External mobile control (hide-toggle)",
   parameters: {
     docs: {
       description: {
         story:
-          'Set `hide-toggle` when application-owned mobile navigation already has its own trigger. This native control opens the rail through its public `open` property while the built-in `[part="toggle"]` stays hidden.',
+          'Set `hide-toggle` when application-owned mobile navigation already has its own trigger, and assign that trigger to the rail\'s `trigger` property (or reference its id via `for`) so closing the overlay -- by any path, not just this button -- returns focus to it. The built-in `[part="toggle"]` stays hidden while closed, but survives `hide-toggle` once the overlay opens: reparented inside the trapped panel, it becomes the only in-panel dismiss control.',
       },
     },
   },
   render: () => html`
     <div>
-      <button type="button" @click=${openExternalRail}>Open navigation</button>
+      <button type="button" @click=${wireExternalTrigger}>
+        Open navigation
+      </button>
       ${page(html`
         <lr-app-rail
           hide-toggle
@@ -186,6 +189,42 @@ export const NarrowRtlLongContent: Story = {
           أرشيف-المستندات-ذات-الأسماء-الطويلة-جداً
         </lr-app-rail-item>
         <span slot="footer">حساب-مستخدم-طويل-جداً-غير-قابل-للفصل</span>
+      </lr-app-rail>
+    </div>
+  `,
+};
+
+export const MobilePanelBelowAppBar: Story = {
+  name: "Mobile panel below a fixed app bar",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "--lr-app-rail-panel-inset-block-start leaves room above the drawer/scrim for a fixed app bar instead of the panel starting flush with the frame's top edge, and pairs naturally with --lr-app-rail-panel-radius to round the now-visible top corners.",
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="position: relative; block-size: var(--lr-size-22rem); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: 0.5rem; overflow: hidden;"
+    >
+      <div
+        style="position: absolute; inset-block-start: 0; inset-inline: 0; block-size: 2.5rem; display: flex; align-items: center; padding-inline: 1rem; background: var(--lr-color-brand); color: var(--lr-color-on-brand); font-weight: 600; z-index: 1;"
+      >
+        Acme
+      </div>
+      <lr-app-rail
+        label="Primary"
+        open
+        mobile-breakpoint="9999px"
+        style="
+          block-size: 100%;
+          --lr-app-rail-panel-inset-block-start: 2.5rem;
+          --lr-app-rail-panel-radius: var(--lr-radius);
+        "
+      >
+        ${navItems}
+        <span slot="footer" style="padding:0.5rem;">Jordan Lee</span>
       </lr-app-rail>
     </div>
   `,

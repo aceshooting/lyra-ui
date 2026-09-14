@@ -39,6 +39,25 @@ export const styles = css`
     position: relative;
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 2);
   }
+  /* Reparented into [part="panel"] (see app-rail.class.ts's placeToggle()) for exactly as long as
+     the mobile overlay is open, so the shared focus trap -- scoped to the panel alone -- can reach
+     it. A dedicated reserved row ahead of the header slot, never absolutely overlaid on top of it,
+     so a wide/slotted header stays fully visible instead of being obscured by the close control. */
+  [part="panel"] > [part="toggle"] {
+    align-self: flex-end;
+    flex: 0 0 auto;
+    margin-block-start: var(--lr-space-s);
+    margin-inline-end: var(--lr-space-s);
+  }
+  /* hide-toggle only suppresses the OUTSIDE trigger (redundant once a consumer wires an external
+     trigger via the trigger/for properties) -- once reparented inside the trapped panel it is the
+     ONLY in-panel dismiss control, so it has to survive hide-toggle instead of leaving the open
+     panel with no in-panel close affordance at all. This selector out-specifies the hiding rule
+     above by one compound (adding [part="panel"] >), so it always wins while both conditions
+     hold. */
+  :host([hide-toggle][mode="mobile"]) [part="panel"] > [part="toggle"] {
+    display: inline-flex;
+  }
   [part="toggle"]:hover {
     background: var(--lr-app-rail-toggle-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-app-rail-toggle-hover-color, var(--lr-color-brand));
@@ -63,7 +82,9 @@ export const styles = css`
 
   [part="backdrop"] {
     position: fixed;
-    inset: 0;
+    inset-block-start: var(--lr-app-rail-panel-inset-block-start, 0);
+    inset-block-end: 0;
+    inset-inline: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
     background: var(
       --lr-app-rail-overlay-color,
@@ -83,7 +104,7 @@ export const styles = css`
     inline-size: var(--lr-app-rail-width, var(--_lr-app-rail-width));
     block-size: 100%;
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
-    background: var(--lr-color-surface);
+    background: var(--lr-app-rail-background, var(--lr-color-surface));
     padding-block-end: var(--lr-safe-area-bottom);
     overflow-y: auto;
     /* Pin the cross axis: with only overflow-y set, overflow-x computes from visible to auto and
@@ -143,7 +164,10 @@ export const styles = css`
 
   [part="panel"] {
     position: fixed;
-    inset-block: 0;
+    /* 0 (the default) reproduces the prior flush-with-the-viewport-top edge; a nonzero override
+       leaves room for a fixed app bar/status area above the drawer, matching [part="backdrop"]. */
+    inset-block-start: var(--lr-app-rail-panel-inset-block-start, 0);
+    inset-block-end: 0;
     inset-inline-start: 0;
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 1);
     display: flex;
@@ -152,17 +176,30 @@ export const styles = css`
       var(--lr-app-rail-mobile-width, var(--_lr-app-rail-mobile-width)),
       85vw
     );
+    /* 0 (the default) reproduces the flush-edged drawer described below; pairs naturally with a
+       nonzero --lr-app-rail-panel-inset-block-start, which exposes the panel's top corners. */
+    border-radius: var(--lr-app-rail-panel-radius, 0);
     /* [part="panel"] is this element's mobile OVERLAY promotion (see the [part="base"] note) -- a
        modal drawer over a scrim, hence the modal-panel surface. Docked in the page's flow,
        [part="base"] keeps --lr-color-surface: resting chrome, not an overlay. */
-    background: var(--lr-color-surface-overlay);
+    background: var(--lr-app-rail-panel-background, var(--lr-color-surface-overlay));
     padding-block-end: var(--lr-safe-area-bottom);
     /* Modal layer, lower step: an edge-anchored drawer flush with three viewport edges, matching
        lr-drawer rather than a free-floating centered dialog. */
     box-shadow: var(--lr-shadow-l);
-    overflow-y: auto;
-    /* Pin the cross axis (see [part="base"]): overflow-y alone forces overflow-x to auto. */
-    overflow-x: clip;
+    /* Both axes are tokenized together, unlike [part="base"]/[part="nav"]'s plain overflow-x:clip:
+       a position: fixed descendant (a popup opened by a slotted/nav-item control, e.g. a slotted
+       <lr-select>/<lr-menu>) is clipped by EITHER axis being anything other than visible,
+       regardless of that descendant's own containing block -- clipping is a paint-level
+       restriction on this box's whole rendered subtree, not a positioning-scheme opt-out. Per the
+       CSS overflow spec, a lone visible axis paired with a non-visible one is itself computed as
+       auto (still clipping) -- the same "spurious horizontal scrollbar" resolution rule
+       [part="base"]'s own overflow-x:clip comment above describes for a single axis, just
+       bidirectional here. An affected consumer therefore has to set BOTH tokens to visible
+       together to actually stop the clipping, trading away the anti-scrollbar guarantee on the
+       axis matching wide slotted content. */
+    overflow-block: var(--lr-app-rail-panel-overflow-block, auto);
+    overflow-inline: var(--lr-app-rail-panel-overflow-inline, clip);
     transform: translateX(-100%);
     transition: transform var(--lr-transition-base);
   }
@@ -181,14 +218,14 @@ export const styles = css`
   }
 
   [part="header"] {
-    padding: var(--lr-space-m);
+    padding: var(--lr-app-rail-header-padding, var(--lr-space-m));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part="header"][hidden] {
     display: none;
   }
   [part="footer"] {
-    padding: var(--lr-space-m);
+    padding: var(--lr-app-rail-footer-padding, var(--lr-space-m));
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part="footer"][hidden] {

@@ -1,7 +1,7 @@
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { activateOverlay, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
@@ -170,8 +170,18 @@ export interface LyraAppRailEventMap {
  * @csspart nav - The wrapper around the default (nav items) slot.
  * @csspart footer - The wrapper around the `footer` slot.
  * @csspart toggle - The mobile hamburger/close toggle button. Hidden via
- *   CSS outside `'mobile'` mode, or entirely via `hideToggle`; it inherits the rail's typography
- *   and its glyph scales at 1em.
+ *   CSS outside `'mobile'` mode, or -- while it is not also serving as the panel's only in-panel
+ *   dismiss control (see below) -- entirely via `hideToggle`; it inherits the rail's typography
+ *   and its glyph scales at 1em. Reparented to be the first child of `[part="panel"]` for exactly
+ *   as long as the mobile overlay is open, so the shared focus trap (scoped to the panel alone)
+ *   can reach it and Tab cycles through it like `<lr-dialog>`'s in-panel close button; moved back
+ *   to its resting position, a sibling ahead of `[part="panel"]`, once closed. Reparenting reuses
+ *   the same element throughout (never destroyed/recreated), so a reference captured before
+ *   opening remains valid after closing. Rendered as its own reserved row ahead of the `header`
+ *   slot while inside the panel, never absolutely overlaid on top of it, so a wide/slotted header
+ *   is never obscured. `hideToggle` only suppresses it in its OUTSIDE/closed position (the "open"
+ *   trigger, redundant once a consumer wires an external `trigger`/`for`); it stays visible once
+ *   reparented inside the open panel, since it is then the only in-panel dismiss control.
  * @csspart backdrop - The mobile overlay's scrim. Only rendered while open.
  * @csspart panel - The mobile overlay's floating panel — see the class doc
  *   for why it's the same element as `base`, never both at once.
@@ -191,6 +201,32 @@ export interface LyraAppRailEventMap {
  *   capped at `85vw`.
  * @cssprop [--lr-app-rail-overlay-color=var(--lr-color-overlay)] - The mobile overlay scrim's
  *   background.
+ * @cssprop [--lr-app-rail-panel-inset-block-start=0] - Block-start (top) inset shared by
+ *   `[part="panel"]` and `[part="backdrop"]` -- raise it to leave room for a fixed app bar/status
+ *   area above the drawer instead of the panel/scrim starting flush with the viewport top.
+ * @cssprop [--lr-app-rail-panel-radius=0] - Corner radius of `[part="panel"]`. `0` (the default)
+ *   reproduces today's flush-edged drawer; pairs naturally with a nonzero
+ *   `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top corners.
+ * @cssprop [--lr-app-rail-panel-overflow-block=auto] - `[part="panel"]`'s logical
+ *   `overflow-block`, paired with `--lr-app-rail-panel-overflow-inline` below.
+ * @cssprop [--lr-app-rail-panel-overflow-inline=clip] - `[part="panel"]`'s logical
+ *   `overflow-inline`. `clip` (the default) prevents a spurious horizontal scrollbar from wide
+ *   slotted header/footer content, but also clips a `position: fixed` popup opened by a
+ *   slotted/nav-item control (e.g. a slotted `<lr-select>`/`<lr-menu>`) whenever that popup's
+ *   rendered box extends past the panel's own inline bounds -- a `position: fixed` box is clipped
+ *   by an ancestor's non-`visible` overflow regardless of its own containing block. Setting only
+ *   this one to `visible` is not enough to escape that: per the CSS overflow spec, a lone
+ *   `visible` axis paired with a non-`visible` other axis computes as `auto` instead, which still
+ *   clips -- set `--lr-app-rail-panel-overflow-block` to `visible` too to actually stop the
+ *   clipping, accepting that wide header/footer content can then scroll/bleed both ways instead.
+ * @cssprop [--lr-app-rail-background=var(--lr-color-surface)] - `[part="base"]`'s background
+ *   (the docked, non-overlay presentation).
+ * @cssprop [--lr-app-rail-panel-background=var(--lr-color-surface-overlay)] - `[part="panel"]`'s
+ *   background (the mobile overlay presentation) -- kept separate from
+ *   `--lr-app-rail-background`/`--lr-app-rail-overlay-color` (the backdrop scrim) since the panel
+ *   is deliberately themed as a modal surface, not the docked rail chrome.
+ * @cssprop [--lr-app-rail-header-padding=var(--lr-space-m)] - `[part="header"]`'s padding.
+ * @cssprop [--lr-app-rail-footer-padding=var(--lr-space-m)] - `[part="footer"]`'s padding.
  * @cssprop [--lr-app-rail-toggle-hover-bg=var(--lr-color-brand-quiet)] - Toggle hover background.
  * @cssprop [--lr-app-rail-toggle-hover-color=var(--lr-color-brand)] - Toggle hover foreground.
  * @cssprop --lr-app-rail-toggle-active-bg - Toggle pressed background; defaults to the former
@@ -306,12 +342,36 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
   private _forceMode?: LyraAppRailPreferredMode | 'auto';
 
-  /** Suppresses the built-in mobile `[part='toggle']` hamburger/close button entirely -- for a
-   *  consumer that already owns an external mobile-menu toggle wired to this rail's own `open`
-   *  property. `false` (the default) reproduces today's exact output; note `open` still has no
-   *  built-in external trigger of its own once this is set, since `lr-toggle` only fires from the
-   *  toggle button being removed. */
+  /** Suppresses the built-in mobile `[part='toggle']` hamburger/OPEN button -- for a consumer that
+   *  already owns an external mobile-menu trigger wired to this rail's own `open` property (see
+   *  `trigger`/`for`). `false` (the default) reproduces today's exact output; note `open` still
+   *  has no built-in external trigger of its own once this is set, since `lr-toggle` only fires
+   *  from the toggle button being removed. This does NOT remove the button once the overlay is
+   *  open: at that point it has been reparented inside the trapped `[part="panel"]` (see the
+   *  `toggle` csspart doc) as the panel's only in-panel dismiss control, and hiding it there too
+   *  would leave the open panel with no in-panel way to close it at all -- only Escape/backdrop. */
   @property({ type: Boolean, reflect: true, attribute: 'hide-toggle' }) hideToggle = false;
+
+  /** Direct reference to an external element that opens this rail's mobile overlay -- e.g. a
+   *  hamburger button living in application chrome rather than this component's own built-in
+   *  `[part="toggle"]` (typically paired with `hideToggle`). When set (or resolved through
+   *  `for`), closing the overlay by ANY path -- Escape, backdrop click, a nav-item click, or the
+   *  built-in toggle itself -- returns focus to it, the same guarantee the built-in toggle's own
+   *  click already gets. An external trigger needs this explicit association instead of relying
+   *  on whatever last held focus: a consumer's own JS-driven `open = true` (rather than a real
+   *  click) never focuses anything, and even a real click does not reliably focus its target in
+   *  every browser. Resolved once when the overlay opens; reassign after that point to change the
+   *  return target for the overlay's remaining lifetime. Read alongside `for`; this direct
+   *  reference wins when both resolve to different elements. Unset (the default, `null`)
+   *  reproduces today's exact behavior: only the built-in toggle's own click supplies a return
+   *  target, for that interaction alone. */
+  @property({ attribute: false }) trigger: HTMLElement | null = null;
+
+  /** Id of an external element that opens this rail's mobile overlay, the label/`htmlFor`-style
+   *  alternative to assigning `trigger` directly -- mirrors `<lr-page-rail>`'s `for`. Resolved
+   *  against this element's own root (shadow root or document) when the overlay opens. Ignored
+   *  once `trigger` is itself set. */
+  @property() for = '';
 
   /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
    *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
@@ -420,6 +480,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private readonly navId = nextId('app-rail-nav');
 
   @query('[part="base"], [part="panel"]') private baseEl?: HTMLElement;
+  @query('[part="toggle"]') private toggleEl?: HTMLButtonElement;
   private resizePointerId?: number;
   private resizeOwnerWindow?: Window;
   private resizeStartX = 0;
@@ -624,6 +685,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       const next = this._mode === 'mobile' && this.open;
       if (next !== this.overlayActive) {
         this.overlayActive = next;
+        // Before activate/deactivate -- see placeToggle()'s own doc for why this ordering is load
+        // bearing on close (it must land before this same pass's render marks the toggle's old
+        // panel parent inert).
+        this.placeToggle(next);
         if (next) {
           this.justOpened = true;
           this.activateMobileOverlay();
@@ -662,6 +727,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.emit('lr-mode-change', { mode });
     }
     this.syncSlottedItems();
+    // Idempotent catch-up: the proactive willUpdate() call above no-ops before this component's
+    // very first render (its @query refs aren't resolvable yet), which matters for a rail that
+    // mounts directly into an already-open mobile overlay (an initial `open` attribute plus an
+    // already-matching mobile breakpoint) -- this is what actually reparents the toggle in that
+    // case.
+    this.placeToggle(this.overlayActive);
     if (this.recoverInlineFocusAfterResponsiveClose) {
       this.recoverInlineFocusAfterResponsiveClose = false;
       const active = deepActiveElement(this.ownerDocument);
@@ -737,22 +808,78 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.endResizerGesture();
   }
 
+  /** Resolves the settable external open trigger -- a direct `trigger` reference, or the element
+   *  `for` idrefs, in that order. `null` when neither is set or `for` doesn't resolve to a real
+   *  element, in which case `activateMobileOverlay()`'s own fallback (whatever held focus when
+   *  the overlay opened -- e.g. the built-in toggle after its own click) continues to apply
+   *  exactly as before either property existed. */
+  private resolveExternalTrigger(): HTMLElement | null {
+    if (this.trigger) return this.trigger;
+    if (!this.for) return null;
+    const root = this.getRootNode() as Document | ShadowRoot;
+    const found = root.getElementById?.(this.for);
+    return found instanceof HTMLElement ? found : null;
+  }
+
   private activateMobileOverlay(): void {
+    const explicitTrigger = this.explicitTrigger;
+    this.explicitTrigger = undefined;
+    // A plain `undefined` (both `explicitTrigger` and the external `trigger`/`for` association
+    // unset) is passed through as-is, not wrapped in a resolver -- `activateOverlayStack()` reads
+    // an `undefined` `restoreFocusTo` as "capture whatever holds focus right now" (see
+    // internal/overlay-stack.ts), the fallback this component relied on before either property
+    // existed. Resolving eagerly, once, here (rather than via a live resolver invoked at close
+    // time) matches `trigger`'s own doc: the association is fixed for the overlay's lifetime once
+    // it opens.
+    const restoreFocusTo = explicitTrigger ?? this.resolveExternalTrigger() ?? undefined;
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
       onEscape: () => this.setOpen(false),
       onBackdrop: () => this.setOpen(false),
-      restoreFocusTo: this.explicitTrigger,
+      restoreFocusTo,
+      // Mirrors <lr-dialog>'s own preferredInitialFocus: the toggle now lives inside the panel
+      // (see placeToggle()) as its first, and so first-focusable, child -- without this, opening
+      // would move focus to the close control instead of the rail's actual nav content. Falls
+      // through to the panel itself, never the toggle, when nothing else is focusable, matching
+      // this component's behavior from before the toggle was ever reparented.
+      preferredInitialFocus: () => {
+        const panel = this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null;
+        if (!panel) return null;
+        const toggle = this.toggleEl ?? null;
+        const stops = collectFocusableElements(panel).filter((stop) => stop !== toggle);
+        return stops[0] ?? panel;
+      },
       lockScroll: true,
       suspendWhenUnrendered: true,
     });
-    this.explicitTrigger = undefined;
   }
 
   private deactivateMobileOverlay(restoreFocus = true): void {
     this.overlayHandle?.deactivate({ restoreFocus });
     this.overlayHandle = undefined;
+  }
+
+  /** Reparents the (never destroyed/recreated) toggle button between its two valid DOM positions:
+   *  the first child of `[part="panel"]` while the mobile overlay is open, so the shared focus
+   *  trap and `aria-modal` subtree (both scoped to the panel alone) actually reach it, or a
+   *  sibling immediately ahead of `[part="base"]`/`[part="panel"]` -- its resting position --
+   *  otherwise. Called BEFORE `activateMobileOverlay()`/`deactivateMobileOverlay()` from
+   *  `willUpdate()` so the move (in either direction) always lands before that same pass's render
+   *  applies `[part="panel"]`'s `inert` attribute: moving the focused toggle out first, ahead of
+   *  `inert` landing on its old parent, is what lets `deactivateMobileOverlay()`'s focus-return
+   *  land and stick instead of the browser force-blurring it a moment later for having become a
+   *  descendant of a newly-inert ancestor. Also called from `updated()` as an idempotent
+   *  post-render catch-up, since this component's own `@query` refs are not yet resolvable before
+   *  the very first render -- needed for a rail that mounts directly into an already-open mobile
+   *  overlay. A plain `insertBefore` on a node already in the requested position is a no-op, so
+   *  repeated calls cost nothing. */
+  private placeToggle(insidePanel: boolean): void {
+    const toggle = this.toggleEl;
+    const panel = this.baseEl;
+    if (!toggle || !panel) return;
+    if (insidePanel) panel.insertBefore(toggle, panel.firstChild);
+    else panel.parentElement?.insertBefore(toggle, panel);
   }
 
   private setupMediaQueries(): void {

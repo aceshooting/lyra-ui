@@ -234,6 +234,23 @@ function fireMobileChange(el: LyraAppRail, matches: boolean): void {
   });
 }
 
+// Resolves what `declaration` computes to *inside this element's shadow root*, where the
+// --lr-* design tokens the component's own hooks fall back to are declared -- used to assert an
+// unset hook's rendered output byte-for-byte against the token it falls back to, mirroring
+// lr-conversation-item's identical `resolvedInShadow` helper.
+function resolvedInShadow(
+  el: LyraAppRail,
+  declaration: string,
+  property: string
+): string {
+  const probe = document.createElement("span");
+  probe.setAttribute("style", declaration);
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return value;
+}
+
 // -- computeAppRailMode (pure) -----------------------------------------
 
 it("computeAppRailMode resolves full when neither breakpoint matches", () => {
@@ -906,6 +923,82 @@ it("keeps the close toggle above the open mobile panel", async () => {
   expect(toggleZ).to.be.greaterThan(panelZ);
 });
 
+it("reparents the toggle inside [part=panel] while open, and back to a sibling once closed", async () => {
+  const el = (await fixture(
+    html`<lr-app-rail><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  const panel = el.shadowRoot!.querySelector(
+    '[part="base"], [part="panel"]'
+  ) as HTMLElement;
+  expect(
+    toggle.parentElement === panel,
+    "closed: the toggle stays a sibling ahead of the panel, not its child"
+  ).to.equal(false);
+
+  el.open = true;
+  await el.updateComplete;
+  expect(
+    toggle.parentElement === panel,
+    "open: the toggle becomes the panel's own first child"
+  ).to.equal(true);
+  expect(
+    panel.firstElementChild === toggle,
+    "the toggle is the FIRST child, ahead of header/nav/footer"
+  ).to.equal(true);
+
+  el.open = false;
+  await el.updateComplete;
+  expect(
+    toggle.parentElement === panel,
+    "closed again: the toggle moves back out of the panel"
+  ).to.equal(false);
+});
+
+it("reparents the same toggle node into an already-open panel on first mount", async () => {
+  // A real matchMedia mobile match (rather than fireMobileChange's post-mount fabricated
+  // callback) so the very first render already settles into mobile+open together -- exercising
+  // placeToggle()'s updated() catch-up call, since its own willUpdate() call runs before this
+  // component's very first render, when its @query refs aren't resolvable yet.
+  window.matchMedia = ((query: string) =>
+    ({
+      matches: true,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    } as unknown as MediaQueryList)) as typeof window.matchMedia;
+  const el = (await fixture(
+    html`<lr-app-rail open><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  await el.updateComplete;
+  expect(el.mode).to.equal("mobile");
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(toggle.parentElement === panel).to.equal(true);
+});
+
+it("reserves its own row ahead of the header slot instead of overlapping it", async () => {
+  const el = (await fixture(html`
+    <lr-app-rail open>
+      <span slot="header" style="display:block;">Brand</span>
+      <button>a</button>
+    </lr-app-rail>
+  `)) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+  const toggleRect = toggle.getBoundingClientRect();
+  const headerRect = header.getBoundingClientRect();
+  expect(
+    toggleRect.bottom <= headerRect.top + 0.5,
+    "the toggle occupies its own row above the header row, not an overlay on top of it"
+  ).to.equal(true);
+});
+
 it("toggling emits lr-toggle with the new open state", async () => {
   const el = (await fixture(
     html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
@@ -1134,7 +1227,10 @@ it("focuses the panel itself as a fallback when there is nothing focusable", asy
   expect(active!.getAttribute("part")).to.equal("panel");
 });
 
-it("traps Tab focus across header, nav, and footer slots, wrapping last->first and first->last", async () => {
+it("traps Tab focus across the toggle, header, nav, and footer, wrapping last->first and first->last", async () => {
+  // The toggle is reparented inside [part="panel"] as its first child while open (see
+  // placeToggle()), so it is now the true first stop in the shared focus trap's Tab cycle --
+  // ahead of the header slot -- and Tab from the last stop must cycle to IT, not to header-btn.
   const el = (await fixture(
     html`<lr-app-rail open>
       <span slot="header"><button>header-btn</button></span>
@@ -1145,7 +1241,7 @@ it("traps Tab focus across header, nav, and footer slots, wrapping last->first a
   fireMobileChange(el, true);
   await el.updateComplete;
   await el.updateComplete;
-  const first = el.querySelector('[slot="header"] button') as HTMLButtonElement;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   const last = el.querySelector('[slot="footer"] button') as HTMLButtonElement;
 
   last.focus();
@@ -1156,7 +1252,10 @@ it("traps Tab focus across header, nav, and footer slots, wrapping last->first a
   });
   document.dispatchEvent(tabForward);
   expect(tabForward.defaultPrevented).to.be.true;
-  expect(document.activeElement === first).to.equal(true);
+  expect(
+    el.shadowRoot!.activeElement === toggle,
+    "Tab from the last stop cycles to the in-panel close control, not header-btn"
+  ).to.equal(true);
 
   const tabBackward = new KeyboardEvent("keydown", {
     key: "Tab",
@@ -1209,6 +1308,89 @@ it("returns focus to whatever triggered it (via Escape) even when opened by sett
   expect(el.open).to.be.false;
   expect(document.activeElement === outsideTrigger).to.equal(true);
   outsideTrigger.remove();
+});
+
+// -- external trigger association (`trigger`/`for`) -------------------------
+
+it("returns focus to a direct `trigger` reference on close, opened without any click", async () => {
+  const el = (await fixture(
+    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  const external = document.createElement("button");
+  document.body.appendChild(external);
+  el.trigger = external;
+
+  el.open = true;
+  await el.updateComplete;
+  el.open = false;
+  await el.updateComplete;
+
+  expect(document.activeElement === external).to.equal(true);
+  external.remove();
+});
+
+it("resolves an external trigger by id via `for`, the label/htmlFor-style alternative to `trigger`", async () => {
+  const external = document.createElement("button");
+  external.id = "open-rail";
+  document.body.appendChild(external);
+  const el = (await fixture(
+    html`<lr-app-rail hide-toggle for="open-rail"><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+
+  el.open = true;
+  await el.updateComplete;
+  el.open = false;
+  await el.updateComplete;
+
+  expect(document.activeElement === external).to.equal(true);
+  external.remove();
+});
+
+it("prefers a direct `trigger` over `for` when both resolve to different elements", async () => {
+  const forTarget = document.createElement("button");
+  forTarget.id = "open-rail-2";
+  document.body.appendChild(forTarget);
+  const direct = document.createElement("button");
+  document.body.appendChild(direct);
+  const el = (await fixture(
+    html`<lr-app-rail hide-toggle for="open-rail-2"><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  el.trigger = direct;
+
+  el.open = true;
+  await el.updateComplete;
+  el.open = false;
+  await el.updateComplete;
+
+  expect(document.activeElement === direct).to.equal(true);
+  forTarget.remove();
+  direct.remove();
+});
+
+it("prefers the built-in toggle's own click over a configured `trigger` when it was the click that opened it", async () => {
+  const el = (await fixture(
+    html`<lr-app-rail><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  const external = document.createElement("button");
+  document.body.appendChild(external);
+  el.trigger = external;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+
+  toggle.click();
+  await el.updateComplete;
+  toggle.click();
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement === toggle).to.equal(true);
+  external.remove();
 });
 
 // -- scroll lock --------------------------------------------------------
@@ -2184,6 +2366,33 @@ describe("hideToggle", () => {
     ) as HTMLElement;
     expect(getComputedStyle(toggle).display).to.not.equal("none");
   });
+
+  it("survives hide-toggle once reparented inside the open panel, as the only in-panel dismiss control", async () => {
+    const el = (await fixture(
+      html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+    )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector(
+      '[part="toggle"]'
+    ) as HTMLButtonElement;
+    expect(
+      getComputedStyle(toggle).display,
+      "closed: hide-toggle still hides the outside open trigger"
+    ).to.equal("none");
+
+    el.open = true;
+    await el.updateComplete;
+    expect(
+      getComputedStyle(toggle).display,
+      "open: the reparented toggle is the only in-panel close control, so it must stay visible"
+    ).to.not.equal("none");
+
+    // It remains a genuine, working close control -- not just visually present.
+    toggle.click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
 });
 
 describe("aria-label forwarding", () => {
@@ -2566,5 +2775,152 @@ describe("layout: resizer anchor, overflow, and mobile containing block", () => 
     expect(nav.scrollWidth).to.be.at.most(nav.clientWidth);
     expect(footer.scrollWidth).to.be.at.most(footer.clientWidth);
     expect(getComputedStyle(panel).direction).to.equal("rtl");
+  });
+});
+
+describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
+  async function openMobile(extra = ""): Promise<LyraAppRail> {
+    const el = (await fixture(
+      html`<lr-app-rail open style=${extra}><button>a</button></lr-app-rail>`
+    )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    await el.updateComplete;
+    return el;
+  }
+
+  it("renders --lr-app-rail-panel-inset-block-start byte-identical to 0 when unset", async () => {
+    const el = await openMobile();
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const backdrop = el.shadowRoot!.querySelector(
+      '[part="backdrop"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(panel).top).to.equal("0px");
+    expect(getComputedStyle(backdrop).top).to.equal("0px");
+  });
+
+  it("offsets both the panel and backdrop from a set --lr-app-rail-panel-inset-block-start", async () => {
+    const el = await openMobile(
+      "--lr-app-rail-panel-inset-block-start: 48px;"
+    );
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const backdrop = el.shadowRoot!.querySelector(
+      '[part="backdrop"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(panel).top).to.equal("48px");
+    expect(getComputedStyle(backdrop).top).to.equal("48px");
+    expect(Math.round(panel.getBoundingClientRect().top)).to.equal(48);
+  });
+
+  it("renders --lr-app-rail-panel-radius byte-identical to 0 when unset", async () => {
+    const el = await openMobile();
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).borderTopLeftRadius).to.equal("0px");
+    expect(getComputedStyle(panel).borderTopRightRadius).to.equal("0px");
+  });
+
+  it("rounds the panel's corners from a set --lr-app-rail-panel-radius", async () => {
+    const el = await openMobile("--lr-app-rail-panel-radius: 12px;");
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).borderTopLeftRadius).to.equal("12px");
+  });
+
+  it("renders --lr-app-rail-panel-overflow-inline/-block byte-identical to clip/auto when unset", async () => {
+    const el = await openMobile();
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    // Chromium normalizes overflow-x:clip to 'hidden' when the cross axis is a scroll container
+    // (see the sibling [part="base"] test above) -- either value pins the axis.
+    expect(["clip", "hidden"]).to.include(getComputedStyle(panel).overflowX);
+    expect(getComputedStyle(panel).overflowY).to.equal("auto");
+  });
+
+  it("setting only --lr-app-rail-panel-overflow-inline to visible still clips (the CSS overflow spec computes a lone visible axis as auto when its paired axis isn't)", async () => {
+    const el = await openMobile("--lr-app-rail-panel-overflow-inline: visible;");
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).overflowX).to.equal("auto");
+  });
+
+  it("lets both --lr-app-rail-panel-overflow-inline and -block together opt a slotted fixed popup out of panel clipping", async () => {
+    const el = await openMobile(
+      "--lr-app-rail-panel-overflow-inline: visible; --lr-app-rail-panel-overflow-block: visible;"
+    );
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).overflowX).to.equal("visible");
+    expect(getComputedStyle(panel).overflowY).to.equal("visible");
+  });
+
+  it("renders --lr-app-rail-background/--lr-app-rail-panel-background byte-identical to their prior tokens when unset", async () => {
+    const el = (await fixture(
+      html`<lr-app-rail><button>a</button></lr-app-rail>`
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal(
+      resolvedInShadow(el, "background: var(--lr-color-surface)", "background-color")
+    );
+
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).backgroundColor).to.equal(
+      resolvedInShadow(
+        el,
+        "background: var(--lr-color-surface-overlay)",
+        "background-color"
+      )
+    );
+  });
+
+  it("recolors the base and panel surfaces independently via --lr-app-rail-background/--lr-app-rail-panel-background", async () => {
+    const el = (await fixture(
+      html`<lr-app-rail
+        open
+        style="--lr-app-rail-background: rgb(10, 20, 30); --lr-app-rail-panel-background: rgb(40, 50, 60);"
+        ><button>a</button></lr-app-rail
+      >`
+    )) as LyraAppRail;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal("rgb(10, 20, 30)");
+
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).backgroundColor).to.equal("rgb(40, 50, 60)");
+  });
+
+  it("renders --lr-app-rail-header-padding/--lr-app-rail-footer-padding byte-identical to --lr-space-m when unset", async () => {
+    const el = (await fixture(html`
+      <lr-app-rail>
+        <span slot="header">Brand</span>
+        <button>a</button>
+        <span slot="footer">Account</span>
+      </lr-app-rail>
+    `)) as LyraAppRail;
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+    const expected = resolvedInShadow(el, "padding: var(--lr-space-m)", "padding");
+    expect(getComputedStyle(header).padding).to.equal(expected);
+    expect(getComputedStyle(footer).padding).to.equal(expected);
+  });
+
+  it("retunes header/footer padding independently via --lr-app-rail-header-padding/--lr-app-rail-footer-padding", async () => {
+    const el = (await fixture(html`
+      <lr-app-rail
+        style="--lr-app-rail-header-padding: 4px; --lr-app-rail-footer-padding: 20px;"
+      >
+        <span slot="header">Brand</span>
+        <button>a</button>
+        <span slot="footer">Account</span>
+      </lr-app-rail>
+    `)) as LyraAppRail;
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+    expect(getComputedStyle(header).padding).to.equal("4px");
+    expect(getComputedStyle(footer).padding).to.equal("20px");
   });
 });

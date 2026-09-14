@@ -706,3 +706,176 @@ describe('active (deprecated alias for current)', () => {
     );
   });
 });
+
+describe('current-indicator part', () => {
+  function resolvedInShadow(
+    el: LyraAppRailItem,
+    declaration: string,
+    property: string
+  ): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('is absent when the item is not current', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item href="/home">Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    expect(el.shadowRoot!.querySelector('[part="current-indicator"]')).to.equal(null);
+  });
+
+  it('renders only while aria-current="page" (the `current` property)', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item href="/home" current>Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    expect(el.shadowRoot!.querySelector('[part="current-indicator"]')).to.exist;
+
+    el.current = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="current-indicator"]')).to.equal(null);
+  });
+
+  it('renders for the deprecated `active` alias too', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item href="/home" active>Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    expect(el.shadowRoot!.querySelector('[part="current-indicator"]')).to.exist;
+  });
+
+  it('renders in both the link and button paths', async () => {
+    const link = (await fixture(
+      html`<lr-app-rail-item href="/home" current>Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    expect(link.shadowRoot!.querySelector('[part="base"]')!.tagName).to.equal('A');
+    expect(link.shadowRoot!.querySelector('[part="current-indicator"]')).to.exist;
+
+    const button = (await fixture(
+      html`<lr-app-rail-item current>Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    expect(button.shadowRoot!.querySelector('[part="base"]')!.tagName).to.equal('BUTTON');
+    expect(button.shadowRoot!.querySelector('[part="current-indicator"]')).to.exist;
+  });
+
+  it('renders its color/width/inset-inline tokens byte-identical to the mirrored lr-conversation-item defaults when unset', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item href="/home" current>Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const indicator = el.shadowRoot!.querySelector(
+      '[part="current-indicator"]'
+    ) as HTMLElement;
+    const rendered = getComputedStyle(indicator);
+    expect(rendered.backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand)', 'background-color')
+    );
+    expect(rendered.width).to.equal(
+      resolvedInShadow(el, 'width: var(--lr-size-2px)', 'width')
+    );
+    expect(rendered.insetInlineStart).to.equal('0px');
+  });
+
+  it('recolors, resizes, and repositions the indicator from an ancestor', async () => {
+    const wrapper = (await fixture(html`
+      <div style="
+        --lr-app-rail-item-current-indicator-color: rgb(1, 2, 3);
+        --lr-app-rail-item-current-indicator-width: 6px;
+        --lr-app-rail-item-current-indicator-inset-inline: auto 0;
+      ">
+        <lr-app-rail-item href="/home" current>Home</lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const indicator = el.shadowRoot!.querySelector(
+      '[part="current-indicator"]'
+    ) as HTMLElement;
+    const rendered = getComputedStyle(indicator);
+    expect(rendered.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(rendered.width).to.equal('6px');
+    expect(rendered.insetInlineEnd).to.equal('0px');
+  });
+
+  it('is accessible while current with the indicator rendered', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item href="/home" aria-label="Home" current>Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
+  function resolvedInShadow(
+    el: LyraAppRailItem,
+    declaration: string,
+    property: string
+  ): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('renders min-block-size/padding/gap/icon-size byte-identical to their prior hard-wired values when unset', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item href="/home"
+        ><span slot="icon" aria-hidden="true">*</span>Home</lr-app-rail-item
+      >`
+    )) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(getComputedStyle(base).minBlockSize).to.equal(
+      resolvedInShadow(el, 'min-block-size: var(--lr-icon-button-size)', 'min-block-size')
+    );
+    expect(getComputedStyle(base).padding).to.equal(
+      resolvedInShadow(el, 'padding: var(--lr-space-s)', 'padding')
+    );
+    expect(getComputedStyle(base).gap).to.equal(
+      resolvedInShadow(el, 'gap: var(--lr-space-s)', 'gap')
+    );
+    expect(getComputedStyle(icon).inlineSize).to.equal(
+      resolvedInShadow(el, 'inline-size: var(--lr-icon-button-size)', 'inline-size')
+    );
+  });
+
+  it('grows the row height, padding, gap, and icon column from ancestor overrides', async () => {
+    const wrapper = (await fixture(html`
+      <div style="
+        --lr-app-rail-item-min-block-size: 64px;
+        --lr-app-rail-item-padding: 20px;
+        --lr-app-rail-item-gap: 24px;
+        --lr-app-rail-item-icon-size: 40px;
+      ">
+        <lr-app-rail-item href="/home"
+          ><span slot="icon" aria-hidden="true">*</span>Home</lr-app-rail-item
+        >
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(getComputedStyle(base).minBlockSize).to.equal('64px');
+    expect(getComputedStyle(base).padding).to.equal('20px');
+    expect(getComputedStyle(base).gap).to.equal('24px');
+    expect(getComputedStyle(icon).inlineSize).to.equal('40px');
+  });
+
+  it('never shrinks the row below the WCAG 2.5.8 --lr-icon-button-size hit-area floor', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-app-rail-item-min-block-size: 4px;">
+        <lr-app-rail-item href="/home">Home</lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const floor = parseFloat(
+      resolvedInShadow(el, 'min-block-size: var(--lr-icon-button-size)', 'min-block-size')
+    );
+    const actual = parseFloat(getComputedStyle(base).minBlockSize);
+    expect(actual).to.be.at.least(floor);
+    expect(actual).to.not.equal(4);
+  });
+});

@@ -34,6 +34,9 @@ import { styles } from './app-rail-item.styles.js';
  * @csspart base - The link or button receiving focus and activation.
  * @csspart icon - The icon wrapper.
  * @csspart label - The label wrapper; visually clipped in icon-only mode.
+ * @csspart current-indicator - A decorative inline indicator rendered only while the item is
+ *   `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s shipped
+ *   `active-indicator` part.
  * @csspart tooltip - The hover/focus label flyout, only rendered while `tooltip` is set, the item
  *   is `icon-only`, and it is hovered or focused.
  * @cssprop [--lr-app-rail-item-current-bg=var(--lr-color-brand-quiet)] - Background of the
@@ -42,11 +45,25 @@ import { styles } from './app-rail-item.styles.js';
  *   only the current item without hijacking the library-wide `--lr-color-brand-quiet` token.
  * @cssprop [--lr-app-rail-item-current-color=var(--lr-color-brand)] - Text/icon color of the
  *   `current`/`aria-current="page"` item.
+ * @cssprop [--lr-app-rail-item-current-indicator-color=var(--lr-color-brand)] - Color of the
+ *   decorative `[part="current-indicator"]` while current.
+ * @cssprop [--lr-app-rail-item-current-indicator-width=var(--lr-size-2px)] - Inline size of
+ *   `[part="current-indicator"]` while current.
+ * @cssprop [--lr-app-rail-item-current-indicator-inset-inline=0 auto] - Logical inline-start and
+ *   inline-end insets for `[part="current-indicator"]`; set `auto 0` to place it at inline-end.
  * @cssprop [--lr-app-rail-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background.
  * @cssprop [--lr-app-rail-item-hover-color=var(--lr-color-brand)] - Hover text/icon color.
  * @cssprop --lr-app-rail-item-active-bg - Pressed background; defaults to the former brand-quiet
  *   active mix.
  * @cssprop [--lr-app-rail-item-active-color=var(--lr-color-brand)] - Pressed text/icon color.
+ * @cssprop [--lr-app-rail-item-min-block-size=var(--lr-icon-button-size)] - `[part="base"]`'s row
+ *   height. Floor-clamped to `--lr-icon-button-size` regardless of the override, preserving the
+ *   WCAG 2.5.8 hit-area minimum.
+ * @cssprop [--lr-app-rail-item-padding=var(--lr-space-s)] - `[part="base"]`'s padding.
+ * @cssprop [--lr-app-rail-item-gap=var(--lr-space-s)] - Gap between `[part="icon"]` and
+ *   `[part="label"]`.
+ * @cssprop [--lr-app-rail-item-icon-size=var(--lr-icon-button-size)] - `[part="icon"]`'s inline
+ *   size. Not floor-clamped -- the icon is decorative, not itself a pointer target.
  * @status stable
  * @since 4.0.0
  */
@@ -245,6 +262,7 @@ export class LyraAppRailItem extends LyraElement {
     const label = hostAriaLabel(this);
     const href = safeLinkHref(this.href);
     const content = html`
+      ${this.isCurrent ? html`<span part="current-indicator" aria-hidden="true"></span>` : nothing}
       ${renderInertPresentation(html`<slot name="icon"></slot>`, { part: 'icon' })}
       <span part="label"><slot></slot></span>
     `;

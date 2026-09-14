@@ -6,13 +6,21 @@ export const styles = css`
     inline-size: 100%;
   }
   [part="base"] {
+    /* Anchors the absolutely-positioned [part="current-indicator"] below. */
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: var(--lr-space-s);
+    gap: var(--lr-app-rail-item-gap, var(--lr-space-s));
     inline-size: 100%;
-    min-block-size: var(--lr-icon-button-size);
-    padding: var(--lr-space-s);
+    /* max() floors the row's own hit target at the shared WCAG 2.5.8 minimum regardless of the
+       override -- a consumer can grow the row but never shrink it below the accessible floor.
+       Unset, max(icon-button-size, icon-button-size) resolves to exactly today's value. */
+    min-block-size: max(
+      var(--lr-icon-button-size),
+      var(--lr-app-rail-item-min-block-size, var(--lr-icon-button-size))
+    );
+    padding: var(--lr-app-rail-item-padding, var(--lr-space-s));
     border: 0;
     border-radius: var(--lr-radius);
     background: transparent;
@@ -59,6 +67,20 @@ export const styles = css`
     color: var(--lr-app-rail-item-current-color, var(--lr-color-brand));
     font-weight: var(--lr-font-weight-semibold);
   }
+  /* Mirrors lr-conversation-item's shipped [part="active-indicator"] (same inset-inline/width/
+     color token shape); rendered only while aria-current="page" (see the class doc), so it is
+     absent whenever this rule would otherwise be inert. */
+  [part="current-indicator"] {
+    position: absolute;
+    inset-block: 0;
+    inset-inline: var(--lr-app-rail-item-current-indicator-inset-inline, 0 auto);
+    inline-size: var(--lr-app-rail-item-current-indicator-width, var(--lr-size-2px));
+    box-sizing: border-box;
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-app-rail-item-current-indicator-color, var(--lr-color-brand));
+    pointer-events: none;
+    z-index: var(--lr-layer-content);
+  }
   [part="icon"] {
     display: inline-flex;
     flex: 0 0 auto;
@@ -66,9 +88,11 @@ export const styles = css`
     justify-content: center;
     /* Deliberately floors only the inline axis: [part='base']'s own min-block-size above already
        guarantees the row's tappable height, so flooring the block axis too would add nothing for
-       target size while forcing every row to --lr-icon-button-size + 2x --lr-space-s. */
-    inline-size: var(--lr-icon-button-size);
-    min-inline-size: var(--lr-icon-button-size);
+       target size while forcing every row to --lr-icon-button-size + 2x --lr-space-s. Unlike the
+       row's own min-block-size hook, this one is not floor-clamped: the icon is decorative
+       content, not itself a pointer target, so shrinking it never shrinks the row's own hit area. */
+    inline-size: var(--lr-app-rail-item-icon-size, var(--lr-icon-button-size));
+    min-inline-size: var(--lr-app-rail-item-icon-size, var(--lr-icon-button-size));
   }
   [part="label"] {
     min-inline-size: 0;
