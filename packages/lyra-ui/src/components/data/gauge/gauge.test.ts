@@ -371,11 +371,12 @@ it('renders a full-circle ring with circumference-based progress when shape is r
   expect(fill.getAttribute('transform')).to.equal('rotate(-90 50 50)');
 });
 
-it('exposes a per-instance gauge fill token for radial, ring, and linear variants', () => {
-  expect(styles.cssText).to.include(
-    'stroke: var(--lr-gauge-fill, var(--lr-gauge-variant-fill, var(--lr-color-brand)))',
-  );
-});
+// A test asserting `styles.cssText` contains that declaration verbatim used to sit here. It was
+// removed rather than updated for the private-token rename: matching stylesheet TEXT proves only
+// that a string appears in a source file, never that the rule reaches the element or that the
+// fallback chain resolves -- silently-inert CSS is invisible to exactly that kind of assertion.
+// The describe block below already proves the public end of the chain by rendered result across
+// all three shapes, and the variant/threshold tests cover the middle link the same way.
 
 describe('--lr-gauge-fill reaches the rendered [part="fill"] stroke', () => {
   for (const shape of ['radial', 'ring', 'linear'] as const) {
