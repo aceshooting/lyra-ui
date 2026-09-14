@@ -60441,7 +60441,7 @@
           "upstream": "webawesome",
           "tag": "wa-comparison",
           "tier": "free",
-          "classification": "unsupported"
+          "classification": "exact"
         }
       ],
       "surface": {
