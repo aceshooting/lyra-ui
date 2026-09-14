@@ -11,6 +11,30 @@ export const styles = css`
     background: var(--lr-color-surface);
     overflow: hidden;
   }
+  /* Density escape for transcript rows. Inline var() fallbacks let a containing transcript retune
+     them without redeclaring the rules; an unset feed keeps the regular dimensions. Matches
+     lr-thinking-panel's identical compact treatment of its own header/body pair. */
+  :host([compact]) [part="header"] {
+    padding: var(
+      --lr-activity-feed-compact-header-padding,
+      var(--lr-space-2xs) var(--lr-space-s)
+    );
+    gap: var(--lr-activity-feed-compact-header-gap, var(--lr-space-2xs));
+  }
+  :host([compact]) [part="entry"],
+  :host([compact]) lr-virtual-list::part(entry) {
+    padding: var(
+      --lr-activity-feed-compact-entry-padding,
+      var(--lr-space-2xs) var(--lr-space-s)
+    );
+  }
+  /* Removes only the outer card. The header/body divider stays: it explains the expanded
+     disclosure structure even when a surrounding message supplies the frame. */
+  :host([frame="plain"]) [part="base"] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
   [part="header"] {
     display: flex;
     align-items: center;

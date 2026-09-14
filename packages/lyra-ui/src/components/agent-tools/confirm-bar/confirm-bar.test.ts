@@ -462,6 +462,160 @@ describe('compact and frame', () => {
   });
 });
 
+describe('focus-on-mount and escape-denies', () => {
+  it('defaults autofocus and escape-denies to false and reflects them as attributes when set', async () => {
+    const plain = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    expect(plain.autofocus).to.be.false;
+    expect(plain.escapeDenies).to.be.false;
+    expect(plain.hasAttribute('autofocus')).to.be.false;
+    expect(plain.hasAttribute('escape-denies')).to.be.false;
+
+    const el = (await fixture(
+      html`<lr-confirm-bar autofocus escape-denies></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    expect(el.autofocus).to.be.true;
+    expect(el.escapeDenies).to.be.true;
+    expect(el.hasAttribute('autofocus')).to.be.true;
+    expect(el.hasAttribute('escape-denies')).to.be.true;
+  });
+
+  it('does not move focus anywhere when autofocus is unset', async () => {
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    try {
+      outside.focus();
+      await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
+      expect(document.activeElement === outside).to.be.true;
+    } finally {
+      outside.remove();
+    }
+  });
+
+  it('autofocus moves focus to the Deny control after the bar\'s own first render', async () => {
+    const el = (await fixture(
+      html`<lr-confirm-bar autofocus tool-name="run_shell"></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await deny.updateComplete;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === deny).to.be.true;
+  });
+
+  it('autofocus falls back to [part="status"] when Deny is unavailable (disabled)', async () => {
+    const el = (await fixture(
+      html`<lr-confirm-bar autofocus disabled tool-name="run_shell"></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await deny.updateComplete;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
+  });
+
+  it('autofocus falls back to [part="status"] when already decided (no Deny control rendered)', async () => {
+    const el = (await fixture(
+      html`<lr-confirm-bar autofocus decision="approved" tool-name="run_shell"></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="deny-button"]') == null).to.be.true;
+    expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
+  });
+
+  it('escape-denies maps Escape on [part="base"] to the same outcome as clicking Deny', async () => {
+    const el = (await fixture(
+      html`<lr-confirm-bar escape-denies tool-name="run_shell"></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const denyPromise = oneEvent(el, 'lr-deny');
+    base.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+    );
+    await denyPromise;
+    await el.updateComplete;
+    expect(el.decision).to.equal('denied');
+  });
+
+  it('never denies on Escape when escape-denies is unset', async () => {
+    const el = (await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    let denyFired = false;
+    el.addEventListener('lr-deny', () => {
+      denyFired = true;
+    });
+    base.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(denyFired).to.be.false;
+    expect(el.decision).to.equal(null);
+  });
+
+  it('ignores keys other than Escape even when escape-denies is set', async () => {
+    const el = (await fixture(
+      html`<lr-confirm-bar escape-denies tool-name="run_shell"></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    let denyFired = false;
+    el.addEventListener('lr-deny', () => {
+      denyFired = true;
+    });
+    base.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(denyFired).to.be.false;
+  });
+
+  it('never denies on Escape while disabled, and never swallows an ineffectual Escape', async () => {
+    // `parentNode` is an open-wc fixture option -- the fixture wrapper appends it under
+    // `document.body` itself and the global afterEach fixtureCleanup removes it, so this test
+    // must not append/remove it manually (that would double-remove the node).
+    const wrapper = document.createElement('div');
+    const el = (await fixture(
+      html`<lr-confirm-bar escape-denies disabled tool-name="run_shell"></lr-confirm-bar>`,
+      { parentNode: wrapper },
+    )) as LyraConfirmBar;
+    let denyFired = false;
+    el.addEventListener('lr-deny', () => {
+      denyFired = true;
+    });
+    let bubbledToWrapper = false;
+    wrapper.addEventListener('keydown', () => {
+      bubbledToWrapper = true;
+    });
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+    );
+    expect(denyFired).to.be.false;
+    expect(el.decision).to.equal(null);
+    // decide() was a no-op (disabled), so onBaseKeyDown must not have stopped propagation --
+    // otherwise an enclosing dialog listening for its own Escape would never see this event.
+    expect(bubbledToWrapper).to.be.true;
+  });
+
+  it('never denies on Escape once already decided, and never swallows that ineffectual Escape', async () => {
+    const wrapper = document.createElement('div');
+    const el = (await fixture(
+      html`<lr-confirm-bar escape-denies decision="approved" tool-name="run_shell"></lr-confirm-bar>`,
+      { parentNode: wrapper },
+    )) as LyraConfirmBar;
+    let bubbledToWrapper = false;
+    wrapper.addEventListener('keydown', () => {
+      bubbledToWrapper = true;
+    });
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+    );
+    expect(el.decision).to.equal('approved');
+    expect(bubbledToWrapper).to.be.true;
+  });
+});
+
 describe('localization', () => {
   it('localizes the heading, generic tool-name fallback, args label, and Deny/Approve labels via this.localize(), reusing lr-tool-approval-dialog\'s own keys', async () => {
     const el = (await fixture(

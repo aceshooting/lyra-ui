@@ -1311,3 +1311,238 @@ describe('virtualized re-render stability', () => {
     expect(list.keyFunction).to.equal(keyFunctionBefore);
   });
 });
+
+describe('focus repair', () => {
+  /** The shadow tree the entry rows actually live in: this component's own below
+   *  `virtualize-at`, the internal `<lr-virtual-list>`'s above it. */
+  function entryRoot(el: LyraActivityFeed): ShadowRoot {
+    const list = el.shadowRoot!.querySelector('lr-virtual-list');
+    return list ? list.shadowRoot! : el.shadowRoot!;
+  }
+
+  async function settle(el: LyraActivityFeed): Promise<void> {
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as
+      | (HTMLElement & { updateComplete: Promise<unknown> })
+      | null;
+    if (list) await list.updateComplete;
+    await twoFrames();
+  }
+
+  const buttonPerEntry = (entry: ActivityEntry) => html`<button type="button">${entry.text}</button>`;
+
+  it('moves focus to the header when expanded becomes false while focus was inside the body', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed expanded .entries=${makeEntries(2)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    body.focus();
+    expect(el.shadowRoot!.activeElement === body).to.be.true;
+
+    el.expanded = false;
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    expect(el.shadowRoot!.activeElement === header).to.be.true;
+  });
+
+  it('leaves focus alone when expanded becomes false while focus is outside the feed', async () => {
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    try {
+      const el = (await fixture(
+        html`<lr-activity-feed expanded .entries=${makeEntries(2)}></lr-activity-feed>`,
+      )) as LyraActivityFeed;
+      outside.focus();
+      expect(document.activeElement === outside).to.be.true;
+      el.expanded = false;
+      await el.updateComplete;
+      expect(document.activeElement === outside).to.be.true;
+    } finally {
+      outside.remove();
+    }
+  });
+
+  it('moves focus to the header when the entry holding focus is removed', async () => {
+    const entries = makeEntries(3);
+    const el = (await fixture(html`<lr-activity-feed
+      expanded
+      .entries=${entries}
+      .renderText=${buttonPerEntry}
+    ></lr-activity-feed>`)) as LyraActivityFeed;
+    const rows = [...el.shadowRoot!.querySelectorAll('[part="entry"]')] as HTMLElement[];
+    const target = rows[1]!.querySelector('button') as HTMLButtonElement;
+    target.focus();
+    expect(el.shadowRoot!.activeElement === target).to.be.true;
+
+    el.entries = entries.filter((entry) => entry.id !== 'e1');
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    expect(el.shadowRoot!.activeElement === header).to.be.true;
+  });
+
+  it('moves focus to the header when the focused entry is removed while virtualized', async () => {
+    const entries = makeEntries(3);
+    const el = (await fixture(html`<lr-activity-feed
+      expanded
+      virtualize-at="0"
+      .entries=${entries}
+      .renderText=${buttonPerEntry}
+    ></lr-activity-feed>`)) as LyraActivityFeed;
+    await settle(el);
+    const rows = [...entryRoot(el).querySelectorAll('[part="entry"]')] as HTMLElement[];
+    expect(rows.length).to.equal(3);
+    const target = rows[1]!.querySelector('button') as HTMLButtonElement;
+    target.focus();
+    expect(entryRoot(el).activeElement === target).to.be.true;
+
+    el.entries = entries.filter((entry) => entry.id !== 'e1');
+    await settle(el);
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    expect(el.shadowRoot!.activeElement === header).to.be.true;
+  });
+
+  it('does not move focus away from an unaffected focused entry when a new entry is appended', async () => {
+    const entries = makeEntries(2);
+    const el = (await fixture(
+      html`<lr-activity-feed expanded .entries=${entries}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    body.focus();
+    expect(el.shadowRoot!.activeElement === body).to.be.true;
+
+    el.entries = [...entries, { id: 'e2', text: 'Entry 2' }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === body).to.be.true;
+  });
+
+  it('a stale generation cannot steal focus once a disconnect/reconnect races the pending settle', async () => {
+    const entries = makeEntries(3);
+    const el = (await fixture(html`<lr-activity-feed
+      expanded
+      virtualize-at="0"
+      .entries=${entries}
+      .renderText=${buttonPerEntry}
+    ></lr-activity-feed>`)) as LyraActivityFeed;
+    await settle(el);
+    const rows = [...entryRoot(el).querySelectorAll('[part="entry"]')] as HTMLElement[];
+    const target = rows[1]!.querySelector('button') as HTMLButtonElement;
+    target.focus();
+    expect(entryRoot(el).activeElement === target).to.be.true;
+
+    const parent = el.parentNode as HTMLElement;
+    el.entries = entries.filter((entry) => entry.id !== 'e1');
+    // By the time this resolves, willUpdate() has captured the repair and updated() has scheduled
+    // its settle against the internal <lr-virtual-list>'s still-pending own update -- with the
+    // *current* ownerRealmGeneration baked into that scheduled callback's closure.
+    await el.updateComplete;
+
+    // A disconnect/reconnect races that still-pending settle. resetOwnerRealmWork() bumps
+    // ownerRealmGeneration on disconnect, so the closure's captured value is now stale.
+    el.remove();
+    parent.append(el);
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    outside.focus();
+
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await list.updateComplete;
+    await twoFrames();
+    expect(document.activeElement === outside).to.be.true;
+    outside.remove();
+  });
+});
+
+describe('compact and frame', () => {
+  const part = (el: LyraActivityFeed, name: string) =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('defaults compact to false and reflects it as an attribute when set', async () => {
+    const plain = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
+    expect(plain.compact).to.be.false;
+    expect(plain.hasAttribute('compact')).to.be.false;
+
+    const el = (await fixture(html`<lr-activity-feed compact></lr-activity-feed>`)) as LyraActivityFeed;
+    expect(el.compact).to.be.true;
+    expect(el.hasAttribute('compact')).to.be.true;
+  });
+
+  it('defaults frame to "card" and reflects it, in the shared container-frame vocabulary', async () => {
+    const el = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
+    expect(el.frame).to.equal('card');
+    expect(el.getAttribute('frame')).to.equal('card');
+
+    el.frame = 'plain';
+    await el.updateComplete;
+    expect(el.getAttribute('frame')).to.equal('plain');
+  });
+
+  it('compact tightens header and entry padding while keeping the card chrome', async () => {
+    const regular = (await fixture(
+      html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    const el = (await fixture(
+      html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+
+    const compactBase = getComputedStyle(part(el, 'base'));
+    const regularBase = getComputedStyle(part(regular, 'base'));
+    expect(compactBase.borderTopWidth).to.equal(regularBase.borderTopWidth);
+    expect(compactBase.borderTopWidth).to.not.equal('0px');
+    expect(compactBase.backgroundColor).to.equal(regularBase.backgroundColor);
+    expect(compactBase.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+
+    const compactHeader = getComputedStyle(part(el, 'header'));
+    const regularHeader = getComputedStyle(part(regular, 'header'));
+    expect(compactHeader.padding).to.not.equal(regularHeader.padding);
+    expect(parseFloat(compactHeader.paddingTop)).to.be.lessThan(parseFloat(regularHeader.paddingTop));
+
+    // Entry rows are already vertically tight (`--lr-space-2xs`) in the regular presentation --
+    // compact only has horizontal padding left to tighten (`--lr-space-m` down to `--lr-space-s`).
+    const compactEntry = getComputedStyle(part(el, 'entry'));
+    const regularEntry = getComputedStyle(part(regular, 'entry'));
+    expect(compactEntry.paddingTop).to.equal(regularEntry.paddingTop);
+    expect(parseFloat(compactEntry.paddingInlineStart)).to.be.lessThan(
+      parseFloat(regularEntry.paddingInlineStart),
+    );
+  });
+
+  it('frame="plain" removes the border, radius and background', async () => {
+    const el = (await fixture(html`<lr-activity-feed frame="plain"></lr-activity-feed>`)) as LyraActivityFeed;
+    const baseStyle = getComputedStyle(part(el, 'base'));
+    expect(baseStyle.borderTopWidth).to.equal('0px');
+    expect(baseStyle.borderTopLeftRadius).to.equal('0px');
+    expect(baseStyle.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('retunes compact density through its dedicated cssprops', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    el.style.setProperty('--lr-activity-feed-compact-header-padding', '1px 2px');
+    el.style.setProperty('--lr-activity-feed-compact-header-gap', '3px');
+    el.style.setProperty('--lr-activity-feed-compact-entry-padding', '4px 5px');
+    const header = getComputedStyle(part(el, 'header'));
+    expect(header.padding).to.equal('1px 2px');
+    expect(header.gap).to.equal('3px');
+    const entry = getComputedStyle(part(el, 'entry'));
+    expect(entry.padding).to.equal('4px 5px');
+  });
+
+  it('leaves the default presentation byte-identical when compact and frame are unset', async () => {
+    const el = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
+    const baseStyle = getComputedStyle(part(el, 'base'));
+    expect(baseStyle.borderTopWidth).to.not.equal('0px');
+    expect(baseStyle.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(el.hasAttribute('compact')).to.be.false;
+    expect(el.getAttribute('frame')).to.equal('card');
+  });
+
+  it('is accessible in the compact and chrome-less presentations', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed compact frame="plain" expanded .entries=${makeEntries(2)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    await expect(el).to.be.accessible();
+  });
+});

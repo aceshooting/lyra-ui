@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import { hasRealContent, hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import '../../layout/details/details.class.js';
 import '../../utility/json-viewer/json-viewer.class.js';
@@ -72,11 +73,18 @@ function deniedIcon(): SVGTemplateResult {
  * (an always-rendered, `tabindex="-1"` element) *before* the Deny/Approve buttons unmount, so focus
  * never has a gap where it would otherwise fall back to `<body>`.
  *
- * "Never steals focus" and "no Escape semantics" describe what *this element* does on its own. A
- * host that swaps a focused control out for this bar is expected to move focus into it and to bind
- * Escape to its own cancel path (`<lr-memory-panel>` does both), since otherwise focus would fall
- * to `<body>` when the control it replaced unmounts. That stays a host decision: nothing here traps
- * focus, locks scrolling, or handles Escape.
+ * "Never steals focus" and "no Escape semantics" describe the bar's behavior when `autofocus` and
+ * `escape-denies` are both left unset (the default). A host that swaps a focused control out for
+ * this bar -- the case those two properties exist for -- can opt into either or both instead of
+ * hand-rolling them: `autofocus` moves focus into the bar after its own first render (the Deny
+ * control when it's present and enabled, matching the safe-action-first DOM order above, else the
+ * always-present `[part="status"]`), and `escape-denies` maps Escape on `[part="base"]` to the same
+ * outcome as clicking Deny. `<lr-memory-panel>` predates both and still implements this focus/Escape
+ * handoff itself (`focusPendingConfirmation`/`onConfirmKeyDown`) rather than depending on them.
+ * `escape-denies` is scoped to this element's own `[part="base"]`, never `document`: this bar is
+ * inline and non-modal, not a member of the shared `activateOverlay()` Escape/stacking contract
+ * (`src/internal/overlay-manager.ts`) that real overlays use, so it must not swallow Escape intended
+ * for an unrelated enclosing dialog or popover. Neither property traps focus or locks scrolling.
  *
  * No argument editing (escalate to `<lr-tool-approval-dialog>`'s `editable` when edit-before-approve
  * matters); no blocking/modality guarantee (a user can scroll past); no decision persistence or
@@ -264,6 +272,22 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
    *  affordance. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
+  /** Opt-in focus-on-mount: moves focus into the bar after its own first render, once this
+   *  element and (when present) the Deny `<lr-button>` have both completed it. Named after the
+   *  native global attribute it stands in for -- the platform's own `autofocus` algorithm only
+   *  fires for an element already in the document when it finishes parsing, never for one a host
+   *  swaps in afterward (this bar's primary use, per the class doc), so this implements the same
+   *  intent explicitly instead. Defaults to `false`: nothing here steals focus from a host that
+   *  doesn't ask for it. */
+  @property({ type: Boolean, reflect: true }) override autofocus = false;
+
+  /** Opt-in: maps Escape on `[part="base"]` to the same outcome as clicking Deny. See the class
+   *  doc for why this is scoped to this element's own base rather than `document`. A no-op while
+   *  `disabled`, already decided, or `pending`, exactly like clicking Deny itself. Defaults to
+   *  `false` -- an unlabelled Escape denying a proposal is a real behavior change a host must
+   *  choose explicitly. */
+  @property({ type: Boolean, reflect: true, attribute: 'escape-denies' }) escapeDenies = false;
+
   @query('[part="status"]') private statusEl?: HTMLElement;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
@@ -293,10 +317,52 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     }
   }
 
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    if (this.autofocus) this.focusInitial();
+  }
+
   private onBodySlotChange = (e: Event): void => {
     this.hasBodySlot = hasRealContent(
       (e.target as HTMLSlotElement).assignedNodes({ flatten: true }),
     );
+  };
+
+  /**
+   * `autofocus`'s implementation: the Deny control when it's present and actually focusable, else
+   * `[part="status"]` -- the same fallback `decide()` itself already leans on when Deny is
+   * unavailable. Awaits this element's own first update (already true by the time `firstUpdated()`
+   * calls this, but `updateComplete` also resolves once any update it scheduled settles) and, when
+   * a Deny `<lr-button>` exists, its own first update too: whenever a host mounts this bar in place
+   * of a control it just removed (the motivating case in the class doc), that button is brand new
+   * and has not necessarily rendered its own focusable internals yet.
+   */
+  private focusInitial(): void {
+    void this.updateComplete.then(async () => {
+      if (!this.isConnected) return;
+      const deny = this.renderRoot.querySelector<HTMLElement & { updateComplete?: Promise<unknown> }>(
+        '[part="deny-button"]',
+      );
+      await deny?.updateComplete;
+      if (!this.isConnected) return;
+      const target = deny && isComposedFocusAvailable(deny) ? deny : this.statusEl;
+      target?.focus();
+    });
+  }
+
+  /** `escape-denies`'s implementation, bound to `[part="base"]` -- see the class doc for why this
+   *  is not routed through `activateOverlay()`. Stops propagation only when Escape actually denied
+   *  something (mirroring `<lr-memory-panel>`'s own `onConfirmKeyDown`): `decide()` is a no-op
+   *  while `disabled`, already decided, or `pending`, and swallowing Escape in that case would
+   *  refuse to close an unrelated enclosing dialog for no reason. */
+  private onBaseKeyDown = (event: KeyboardEvent): void => {
+    if (!this.escapeDenies || event.key !== 'Escape') return;
+    const decisionBefore = this.decision;
+    const pendingBefore = this.pending;
+    this.decide('denied');
+    if (this.decision !== decisionBefore || this.pending !== pendingBefore) {
+      event.stopPropagation();
+    }
   };
 
   private decide(next: 'approved' | 'denied'): void {
@@ -375,6 +441,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
         role="group"
         aria-label=${hostLabel ?? nothing}
         aria-labelledby=${hostLabel === null ? this.headingId : nothing}
+        @keydown=${this.onBaseKeyDown}
       >
         <div part="heading" id=${this.headingId}>${this.renderHeading()}</div>
         <div part="body" ?hidden=${!this.hasBodySlot}><slot @slotchange=${this.onBodySlotChange}></slot></div>

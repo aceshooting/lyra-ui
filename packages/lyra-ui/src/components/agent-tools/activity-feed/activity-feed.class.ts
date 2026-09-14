@@ -3,13 +3,18 @@ import { property, query } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraVariant } from '../../../internal/variants.js';
+import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   acquireResolvedAriaRelationship,
   type ResolvedAriaRelationshipLease,
 } from '../../../internal/aria-controls.js';
+import {
+  applyComposedFocusRepair,
+  captureComposedFocusRepair,
+  type ComposedFocusRepairSnapshot,
+} from '../../../internal/focus-navigation.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -114,6 +119,18 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * default text inside the stable `entry-text` styling wrapper, identically whether or not the feed
  * is currently virtualized.
  *
+ * `compact` tightens the header and entry-row padding for dense transcript rows. `frame="plain"`
+ * removes the outside card chrome when a containing message or panel already supplies it; the
+ * header/body divider remains, so the disclosure keeps its internal structure -- the same two-knob
+ * convention `<lr-thinking-panel>` and `<lr-confirm-bar>` already establish.
+ *
+ * Focus is repaired, not merely dropped, when the currently focused control disappears from under
+ * it: collapsing (`expanded` becoming `false`) moves focus already inside the body to
+ * `[part="header"]` before the body is hidden, and an `entries` update that removes the specific
+ * row holding focus does the same once that update (and, while virtualized, the internal
+ * `<lr-virtual-list>`'s own follow-up render) has settled. Neither case fires when focus is
+ * elsewhere -- appending a live entry never steals focus from an unrelated, still-present control.
+ *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
@@ -150,6 +167,12 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   before it scrolls internally (non-virtualized mode); also sizes the internal virtual-list.
  * @cssprop [--lr-activity-feed-live-status-color=var(--lr-color-brand)] - Background color of
  *   `status-dot` while `mode="live"`.
+ * @cssprop [--lr-activity-feed-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
+ *   `[part="header"]` padding while `compact`.
+ * @cssprop [--lr-activity-feed-compact-header-gap=var(--lr-space-2xs)] - Gap between the header
+ *   toggle, status dot, label, and summary while `compact`.
+ * @cssprop [--lr-activity-feed-compact-entry-padding=var(--lr-space-2xs) var(--lr-space-s)] -
+ *   `[part="entry"]` padding while `compact`.
  * @status stable
  * @since 4.0.0
  */
@@ -216,6 +239,17 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
    *  `activityFeedLabel` fallback, while this remains the visible header text. */
   @property() label?: string;
 
+  /** Tighter header and entry-row padding for dense transcript contexts. Defaults to `false`,
+   *  preserving the regular-density treatment. This changes density only; the outer border and
+   *  surface remain, so use `frame="plain"` to remove card chrome. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled outer container. `'plain'` removes that outer border, background,
+   *  and corner radius so a feed nested inside existing message chrome does not double it. Plain
+   *  preserves the header/body divider and whichever regular or compact padding applies. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
+
   /** Trailing `<time datetime>` per entry, default `hour:minute` in `effectiveLocale`. */
   @property({ type: Boolean, attribute: 'show-timestamps' }) showTimestamps = false;
 
@@ -258,6 +292,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private externalLabelledByLease?: ResolvedAriaRelationshipLease;
   private externalDescribedByLease?: ResolvedAriaRelationshipLease;
   private relationshipSyncRequest = 0;
+  /** Captured in `willUpdate()` before an `entries` change re-renders, settled in `updated()`
+   *  once it's clear whether the specific row that held focus actually disappeared. */
+  private pendingEntryFocusRepair?: { node: Element; repair: ComposedFocusRepairSnapshot };
+  private entryFocusRepairRequest = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -327,6 +365,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     this.ownerRealmGeneration += 1;
     this.virtualAnchorRequest += 1;
     this.relationshipSyncRequest += 1;
+    this.entryFocusRepairRequest += 1;
+    this.pendingEntryFocusRepair = undefined;
     this.cancelScrollFrame();
     this.cancelVirtualAnchorReleaseFrame();
     this.anchoringVirtualTail = false;
@@ -339,6 +379,12 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
       // stays part of the SAME update pass rather than scheduling a second one -- identical
       // willUpdate/updated split rationale to lr-generation-metrics's elapsedMs computation.
       this.follow = true;
+    }
+    if (changed.has('expanded') && changed.get('expanded') === true && !this.expanded) {
+      this.repairFocusOnCollapse();
+    }
+    if (changed.has('entries')) {
+      this.captureEntryFocusRepair();
     }
   }
 
@@ -370,6 +416,62 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     ) {
       this.scrollToLatest();
     }
+
+    if (changed.has('entries') && this.pendingEntryFocusRepair) {
+      this.settleEntryFocusRepair();
+    }
+  }
+
+  /** Moves focus already inside the body to `[part="header"]` before the body becomes hidden --
+   *  synchronous capture-then-apply in `willUpdate()`, the same shape `<lr-callout>`'s own
+   *  collapse handling uses. The header renders regardless of `expanded`, so its focusability
+   *  never depends on the render this `willUpdate()` is about to commit, and no async settle (or
+   *  generation guard) is needed. A no-op when focus is elsewhere. */
+  private repairFocusOnCollapse(): void {
+    const header = this.renderRoot.querySelector<HTMLElement>('[part="header"]');
+    const repair = captureComposedFocusRepair(this, header);
+    if (repair) applyComposedFocusRepair(repair);
+  }
+
+  /**
+   * Captures a possible focus repair before an `entries` change re-renders. Unlike collapsing,
+   * whether repair is actually needed depends on whether the *specific* row that held focus
+   * survives the render -- appending a new live entry must never steal focus from an unrelated,
+   * still-present control. `settleEntryFocusRepair()` (`updated()`) resolves that once the render
+   * (and, while virtualized, the internal `<lr-virtual-list>`'s own follow-up render) has
+   * committed, by checking whether the originally focused node is still connected.
+   */
+  private captureEntryFocusRepair(): void {
+    const header = this.renderRoot.querySelector<HTMLElement>('[part="header"]');
+    const repair = captureComposedFocusRepair(this, header);
+    this.pendingEntryFocusRepair = repair ? { node: repair.activeElement, repair } : undefined;
+  }
+
+  /** Settles a capture from `captureEntryFocusRepair()`. Guarded by `entryFocusRepairRequest` (a
+   *  newer capture supersedes an older, still-pending one) and `ownerRealmGeneration` (a
+   *  disconnect/adopt in between invalidates it) so a stale check can never steal focus that has
+   *  since legitimately moved elsewhere. */
+  private settleEntryFocusRepair(): void {
+    const pending = this.pendingEntryFocusRepair;
+    this.pendingEntryFocusRepair = undefined;
+    if (!pending) return;
+    const request = ++this.entryFocusRepairRequest;
+    const generation = this.ownerRealmGeneration;
+    const settle = (): void => {
+      if (
+        request !== this.entryFocusRepairRequest ||
+        generation !== this.ownerRealmGeneration ||
+        !this.isConnected
+      ) {
+        return;
+      }
+      // Still connected: the render kept (or reordered) this row, so its focus is still valid.
+      if (pending.node.isConnected) return;
+      applyComposedFocusRepair(pending.repair);
+    };
+    const list = this.virtualListEl;
+    if (list) void list.updateComplete.then(settle);
+    else settle();
   }
 
   private scrollToLatest(): void {
