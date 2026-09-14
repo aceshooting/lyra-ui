@@ -165,6 +165,12 @@ it('a host that approves synchronously through entries (instead of finalizePendi
     { once: true },
   );
   approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  // Synchronous, before any awaited update lets willUpdate()'s separate stale-review reconciliation
+  // (which also clears reviewingEntryKey/approvalPending once entries no longer names this entry as
+  // pending) run and mask a defect in onDialogApprove's own immediate recheck. onDialogApprove must
+  // itself notice -- inside the same synchronous emit() call -- that the host already resolved this
+  // entry via `entries`, rather than relying on that later pass to clean up after it.
+  expect(el.pendingApproval, 'synchronously, before the reconciling update pass').to.equal(null);
   await el.updateComplete;
   await approvalDialog.updateComplete;
 
@@ -191,6 +197,8 @@ it('a host that denies synchronously through entries (instead of finalizePending
     { once: true },
   );
   approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!.click();
+  // Synchronous, for the same reason as the approve case above.
+  expect(el.pendingApproval, 'synchronously, before the reconciling update pass').to.equal(null);
   await el.updateComplete;
   await approvalDialog.updateComplete;
 
@@ -529,6 +537,67 @@ it('emits lr-tool-approval-decide with approved:false (no args) on deny', async 
   dialog(el).shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
   const event = (await listener) as CustomEvent<ToolTimelineApprovalDetail>;
   expect(event.detail).to.deep.equal({ invocationId: 'call-deny', approved: false });
+});
+
+it('lr-tool-approval-decide reports cancelable:true, and only a prevented listener keeps the dialog open', async () => {
+  const approveEntries: ToolTimelineEntry[] = [makeEntry({ id: 'call-approve', needsApproval: true })];
+  const approveEl = (await fixture(
+    html`<lr-tool-timeline .entries=${approveEntries}></lr-tool-timeline>`,
+  )) as LyraToolTimeline;
+  chipIn(entriesEl(approveEl)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
+  await approveEl.updateComplete;
+  const approvePromise = oneEvent(approveEl, 'lr-tool-approval-decide');
+  dialog(approveEl).shadowRoot!.querySelector<HTMLButtonElement>('[part="approve-button"]')!.click();
+  const approveEvent = await approvePromise;
+  expect(approveEvent.cancelable, 'lr-tool-approval-decide must be cancelable').to.equal(true);
+  expect(approveEvent.defaultPrevented, 'not prevented here').to.equal(false);
+  await approveEl.updateComplete;
+  expect(dialog(approveEl).open, 'not-prevented path closes the dialog').to.be.false;
+  expect(approveEl.pendingApproval).to.equal(null);
+
+  const preventedApproveEntries: ToolTimelineEntry[] = [makeEntry({ id: 'call-approve', needsApproval: true })];
+  const preventedApproveEl = (await fixture(
+    html`<lr-tool-timeline .entries=${preventedApproveEntries}></lr-tool-timeline>`,
+  )) as LyraToolTimeline;
+  chipIn(entriesEl(preventedApproveEl)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
+  await preventedApproveEl.updateComplete;
+  const preventedApprovePromise = oneEvent(preventedApproveEl, 'lr-tool-approval-decide');
+  preventedApproveEl.addEventListener('lr-tool-approval-decide', (e) => e.preventDefault(), { once: true });
+  dialog(preventedApproveEl).shadowRoot!.querySelector<HTMLButtonElement>('[part="approve-button"]')!.click();
+  const preventedApproveEvent = await preventedApprovePromise;
+  expect(preventedApproveEvent.cancelable, 'lr-tool-approval-decide must be cancelable').to.equal(true);
+  expect(preventedApproveEvent.defaultPrevented, 'prevented here').to.equal(true);
+  await preventedApproveEl.updateComplete;
+  expect(dialog(preventedApproveEl).open, 'prevented path keeps the dialog open').to.be.true;
+  expect(preventedApproveEl.pendingApproval).to.equal('approve');
+
+  const denyEntries: ToolTimelineEntry[] = [makeEntry({ id: 'call-deny', needsApproval: true })];
+  const denyEl = (await fixture(html`<lr-tool-timeline .entries=${denyEntries}></lr-tool-timeline>`)) as LyraToolTimeline;
+  chipIn(entriesEl(denyEl)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
+  await denyEl.updateComplete;
+  const denyPromise = oneEvent(denyEl, 'lr-tool-approval-decide');
+  dialog(denyEl).shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
+  const denyEvent = await denyPromise;
+  expect(denyEvent.cancelable, 'lr-tool-approval-decide must be cancelable').to.equal(true);
+  expect(denyEvent.defaultPrevented).to.equal(false);
+  await denyEl.updateComplete;
+  expect(dialog(denyEl).open).to.be.false;
+
+  const preventedDenyEntries: ToolTimelineEntry[] = [makeEntry({ id: 'call-deny', needsApproval: true })];
+  const preventedDenyEl = (await fixture(
+    html`<lr-tool-timeline .entries=${preventedDenyEntries}></lr-tool-timeline>`,
+  )) as LyraToolTimeline;
+  chipIn(entriesEl(preventedDenyEl)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
+  await preventedDenyEl.updateComplete;
+  const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-tool-approval-decide');
+  preventedDenyEl.addEventListener('lr-tool-approval-decide', (e) => e.preventDefault(), { once: true });
+  dialog(preventedDenyEl).shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
+  const preventedDenyEvent = await preventedDenyPromise;
+  expect(preventedDenyEvent.cancelable, 'lr-tool-approval-decide must be cancelable').to.equal(true);
+  expect(preventedDenyEvent.defaultPrevented).to.equal(true);
+  await preventedDenyEl.updateComplete;
+  expect(dialog(preventedDenyEl).open).to.be.true;
+  expect(preventedDenyEl.pendingApproval).to.equal('deny');
 });
 
 it('dismissing the dialog via escape/backdrop closes it without emitting a decision', async () => {

@@ -684,6 +684,57 @@ describe('approve/deny', () => {
     expect(closeEvent.detail).to.equal('deny');
     expect(el.open).to.be.false;
   });
+
+  it('lr-approve/lr-deny report cancelable:true, and only a prevented listener stops the default close', async () => {
+    const approveEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const approvePromise = oneEvent(approveEl, 'lr-approve');
+    approveButton(approveEl).click();
+    const approveEvent = await approvePromise;
+    expect(approveEvent.cancelable, 'lr-approve must be cancelable').to.equal(true);
+    expect(approveEvent.defaultPrevented, 'not prevented here').to.equal(false);
+    await approveEl.updateComplete;
+    expect(approveEl.open, 'not-prevented path closes normally').to.be.false;
+    expect(approveEl.pending).to.equal(null);
+
+    const preventedApproveEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const preventedApprovePromise = oneEvent(preventedApproveEl, 'lr-approve');
+    preventedApproveEl.addEventListener('lr-approve', (e) => e.preventDefault(), { once: true });
+    approveButton(preventedApproveEl).click();
+    const preventedApproveEvent = await preventedApprovePromise;
+    expect(preventedApproveEvent.cancelable, 'lr-approve must be cancelable').to.equal(true);
+    expect(preventedApproveEvent.defaultPrevented, 'prevented here').to.equal(true);
+    await preventedApproveEl.updateComplete;
+    expect(preventedApproveEl.open, 'prevented path never closes').to.be.true;
+    expect(preventedApproveEl.pending).to.equal('approve');
+
+    const denyEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const denyPromise = oneEvent(denyEl, 'lr-deny');
+    denyButton(denyEl).click();
+    const denyEvent = await denyPromise;
+    expect(denyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(denyEvent.defaultPrevented).to.equal(false);
+    await denyEl.updateComplete;
+    expect(denyEl.open).to.be.false;
+
+    const preventedDenyEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-deny');
+    preventedDenyEl.addEventListener('lr-deny', (e) => e.preventDefault(), { once: true });
+    denyButton(preventedDenyEl).click();
+    const preventedDenyEvent = await preventedDenyPromise;
+    expect(preventedDenyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(preventedDenyEvent.defaultPrevented).to.equal(true);
+    await preventedDenyEl.updateComplete;
+    expect(preventedDenyEl.open).to.be.true;
+    expect(preventedDenyEl.pending).to.equal('deny');
+  });
 });
 
 describe('dismissal', () => {

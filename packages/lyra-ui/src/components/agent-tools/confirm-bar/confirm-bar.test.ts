@@ -538,8 +538,41 @@ describe('focus-on-mount and escape-denies', () => {
     expect(el.decision).to.equal('denied');
   });
 
-  it('never denies on Escape when escape-denies is unset', async () => {
-    const el = (await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
+  it('a successful escape-denies deny swallows the Escape, mirroring lr-memory-panel\'s onConfirmKeyDown', async () => {
+    // decide() actually changing state here (undecided -> denied) is the "Escape actually denied
+    // something" branch documented on onBaseKeyDown -- stopPropagation() there is deliberate so one
+    // Escape press does not also dismiss an unrelated enclosing dialog/popover on the same keypress,
+    // exactly like lr-memory-panel's own onConfirmKeyDown (`stop propagation only when the cancel
+    // actually closed something`). The *ineffectual* Escape cases (disabled, already decided --
+    // covered above) are the ones that must keep propagating.
+    const wrapper = document.createElement('div');
+    const el = (await fixture(
+      html`<lr-confirm-bar escape-denies tool-name="run_shell"></lr-confirm-bar>`,
+      { parentNode: wrapper },
+    )) as LyraConfirmBar;
+    let bubbledToWrapper = false;
+    wrapper.addEventListener('keydown', () => {
+      bubbledToWrapper = true;
+    });
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const denyPromise = oneEvent(el, 'lr-deny');
+    base.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+    );
+    await denyPromise;
+    expect(el.decision, 'sanity: deny actually succeeded').to.equal('denied');
+    expect(bubbledToWrapper, 'a successful deny must swallow its own Escape').to.equal(false);
+  });
+
+  it('never denies on Escape when escape-denies is unset, and never swallows it either', async () => {
+    const wrapper = document.createElement('div');
+    const el = (await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`, {
+      parentNode: wrapper,
+    })) as LyraConfirmBar;
+    let bubbledToWrapper = false;
+    wrapper.addEventListener('keydown', () => {
+      bubbledToWrapper = true;
+    });
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     let denyFired = false;
     el.addEventListener('lr-deny', () => {
@@ -551,6 +584,7 @@ describe('focus-on-mount and escape-denies', () => {
     await el.updateComplete;
     expect(denyFired).to.be.false;
     expect(el.decision).to.equal(null);
+    expect(bubbledToWrapper, 'escape-denies unset: Escape is a complete no-op, never swallowed').to.equal(true);
   });
 
   it('ignores keys other than Escape even when escape-denies is set', async () => {
@@ -770,6 +804,49 @@ describe('async pending decisions', () => {
     await denyEl.updateComplete;
     expect(denyEl.decision).to.equal(null);
     expect(denyEl.pending).to.equal('deny');
+  });
+
+  it('lr-approve/lr-deny report cancelable:true, and only a prevented listener stops the default finalization', async () => {
+    const approveEl = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
+    const approvePromise = oneEvent(approveEl, 'lr-approve');
+    (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+    const approveEvent = await approvePromise;
+    expect(approveEvent.cancelable, 'lr-approve must be cancelable').to.equal(true);
+    expect(approveEvent.defaultPrevented, 'not prevented here').to.equal(false);
+    await approveEl.updateComplete;
+    expect(approveEl.decision, 'not-prevented path finalizes normally').to.equal('approved');
+    expect(approveEl.pending).to.equal(null);
+
+    const preventedEl = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
+    const preventedPromise = oneEvent(preventedEl, 'lr-approve');
+    preventedEl.addEventListener('lr-approve', (e) => e.preventDefault(), { once: true });
+    (preventedEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+    const preventedEvent = await preventedPromise;
+    expect(preventedEvent.cancelable, 'lr-approve must be cancelable').to.equal(true);
+    expect(preventedEvent.defaultPrevented, 'prevented here').to.equal(true);
+    await preventedEl.updateComplete;
+    expect(preventedEl.decision, 'prevented path never finalizes').to.equal(null);
+    expect(preventedEl.pending).to.equal('approve');
+
+    const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    const denyPromise = oneEvent(denyEl, 'lr-deny');
+    (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
+    const denyEvent = await denyPromise;
+    expect(denyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(denyEvent.defaultPrevented).to.equal(false);
+    await denyEl.updateComplete;
+    expect(denyEl.decision).to.equal('denied');
+
+    const preventedDenyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-deny');
+    preventedDenyEl.addEventListener('lr-deny', (e) => e.preventDefault(), { once: true });
+    (preventedDenyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
+    const preventedDenyEvent = await preventedDenyPromise;
+    expect(preventedDenyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(preventedDenyEvent.defaultPrevented).to.equal(true);
+    await preventedDenyEl.updateComplete;
+    expect(preventedDenyEl.decision).to.equal(null);
+    expect(preventedDenyEl.pending).to.equal('deny');
   });
 
   it('shows loading on the pending button and disables the other one', async () => {
