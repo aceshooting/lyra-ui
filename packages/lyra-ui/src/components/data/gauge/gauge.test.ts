@@ -3,7 +3,6 @@ import './gauge.js';
 import type { LyraGauge, LyraGaugeThreshold } from './gauge.js';
 import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import { styles } from './gauge.styles.js';
 
 async function fillStroke(el: LyraGauge): Promise<string> {
   await el.updateComplete;
@@ -652,3 +651,129 @@ for (const shape of ['radial', 'linear', 'ring'] as const) {
     assertTitle(`Updated ${text}: Value`);
   });
 }
+
+describe('size ladder', () => {
+  // The geometry each tier renders, hardcoded in px (root font-size is 16px) rather than re-derived
+  // from the tokens the stylesheet reads, so a token edit cannot make this test agree with itself.
+  // The whole gauge box is expressed in em, so one host font size settles the frame and both SVG
+  // captions at once: 8em square for radial/ring, 12em by 1.5em for linear.
+  const tiers = [
+    { size: '2xs', fontSize: 10 },
+    { size: 'xs', fontSize: 12 },
+    { size: 's', fontSize: 13 },
+    { size: 'm', fontSize: 16 },
+    { size: 'l', fontSize: 18 },
+    { size: 'xl', fontSize: 20 },
+  ] as const;
+
+  it('scales the frame and its captions together at every tier of the shared ladder', async () => {
+    for (const tier of tiers) {
+      const el = (await fixture(
+        html`<lr-gauge size=${tier.size} value="50" max="100" label="CPU"></lr-gauge>`,
+      )) as LyraGauge;
+      const rect = el.getBoundingClientRect();
+
+      expect(getComputedStyle(el).fontSize, `size=${tier.size} font-size`).to.equal(
+        `${tier.fontSize}px`,
+      );
+      expect(rect.width, `size=${tier.size} inline size`).to.be.closeTo(tier.fontSize * 8, 0.5);
+      expect(rect.height, `size=${tier.size} block size`).to.be.closeTo(tier.fontSize * 8, 0.5);
+      expect(el.size, `size=${tier.size} readback`).to.equal(tier.size);
+    }
+  });
+
+  it('accepts the Web Awesome and Shoelace long-form tier spellings without normalizing them away', async () => {
+    const aliases = [
+      { alias: 'small', fontSize: 13 },
+      { alias: 'medium', fontSize: 16 },
+      { alias: 'large', fontSize: 18 },
+    ] as const;
+
+    for (const { alias, fontSize } of aliases) {
+      const el = (await fixture(
+        html`<lr-gauge size=${alias} value="50" max="100" label="CPU"></lr-gauge>`,
+      )) as LyraGauge;
+
+      expect(getComputedStyle(el).fontSize, `size=${alias} font-size`).to.equal(`${fontSize}px`);
+      expect(el.getBoundingClientRect().width, `size=${alias} inline size`).to.be.closeTo(
+        fontSize * 8,
+        0.5,
+      );
+      // The CSS matches both spellings in one selector list, so the authored word survives.
+      expect(el.size, `size=${alias} readback`).to.equal(alias);
+      expect(el.getAttribute('size'), `size=${alias} attribute`).to.equal(alias);
+    }
+  });
+
+  it('renders its pre-ladder geometry untouched while size is unset, even inside a smaller text context', async () => {
+    const wrapper = (await fixture(html`
+      <div style="font-size: 10px"><lr-gauge label="CPU" value="50" max="100"></lr-gauge></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-gauge') as LyraGauge;
+    await el.updateComplete;
+
+    expect('size' in el, 'the opt-in property exists').to.equal(true);
+    expect(el.size, 'unset readback').to.equal(undefined);
+    expect(el.hasAttribute('size'), 'no attribute is invented').to.equal(false);
+    // The ladder is explicit-only: with no tier the gauge still inherits the ambient text size and
+    // draws the same 8em frame it drew before the ladder reached this component.
+    expect(getComputedStyle(el).fontSize, 'inherited font-size').to.equal('10px');
+    expect(el.getBoundingClientRect().width, 'inherited inline size').to.be.closeTo(80, 0.5);
+  });
+
+  it('treats an unsupported tier as no size at all rather than snapping to one', async () => {
+    const wrapper = (await fixture(html`
+      <div style="font-size: 10px">
+        <lr-gauge size="huge" label="CPU" value="50" max="100"></lr-gauge>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-gauge') as LyraGauge;
+    await el.updateComplete;
+
+    expect(el.size, 'unsupported readback').to.equal(undefined);
+    expect(el.hasAttribute('size'), 'the stale attribute is removed').to.equal(false);
+    expect(getComputedStyle(el).fontSize, 'inherited font-size').to.equal('10px');
+  });
+
+  it('tiers a linear gauge without disturbing its RTL orientation', async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl">
+        <lr-gauge shape="linear" size="s" value="40" max="100" label="Disk"></lr-gauge>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-gauge') as LyraGauge;
+    await el.updateComplete;
+    const rect = el.getBoundingClientRect();
+    const fill = el.shadowRoot!.querySelector('[part="fill"]')!;
+
+    expect(getComputedStyle(el).fontSize, 'tier font-size').to.equal('13px');
+    expect(rect.width, 'linear inline size').to.be.closeTo(13 * 12, 0.5);
+    expect(rect.height, 'linear block size').to.be.closeTo(13 * 1.5, 0.5);
+    // Direction still owns which physical end the fill starts from; the tier only scales the box.
+    expect(fill.getAttribute('x1'), 'RTL fill start').to.equal('100');
+  });
+
+  it('keeps its tier across a disconnect and reconnect', async () => {
+    const el = (await fixture(
+      html`<lr-gauge size="s" value="50" max="100" label="CPU"></lr-gauge>`,
+    )) as LyraGauge;
+    const parent = el.parentNode!;
+
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+
+    expect(el.size, 'readback after reconnect').to.equal('s');
+    expect(el.getAttribute('size'), 'attribute after reconnect').to.equal('s');
+    expect(getComputedStyle(el).fontSize, 'font-size after reconnect').to.equal('13px');
+  });
+
+  it('is accessible at a tier with a populated label and formatted value', async () => {
+    const el = (await fixture(html`
+      <lr-gauge size="l" value="72" max="100" label="CPU" value-text="72%"></lr-gauge>
+    `)) as LyraGauge;
+
+    expect(el.size, 'tier applied').to.equal('l');
+    await expect(el).to.be.accessible();
+  });
+});
