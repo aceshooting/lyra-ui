@@ -2366,6 +2366,125 @@ describe("storage-key persistence", () => {
     expect(el.preferredMode).to.equal("icon-only");
     expect(el.mode).to.equal("icon-only");
   });
+
+  // Regression: willUpdate()'s persisted-mode restoration used to write `_mode` directly, bypassing
+  // setEffectiveMode() entirely -- so a consumer syncing app chrome to the rail's mode never learned
+  // a persisted preference had been restored on mount. `fixture()` isn't used here: it can resolve
+  // after the element's own first update (and thus the event) has already fired, so the listener is
+  // attached before the element is ever connected.
+  it("fires exactly one lr-mode-change carrying a persisted preferred-mode restored on mount", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(
+      `lr-app-rail:${key}`,
+      JSON.stringify({ preferredMode: "icon-only" })
+    );
+
+    const el = document.createElement("lr-app-rail") as LyraAppRail;
+    el.setAttribute("storage-key", key);
+    el.setAttribute("persist", "preferred-mode");
+    el.innerHTML = '<a href="/a">A</a>';
+    const events: LyraAppRailModeChangeDetail[] = [];
+    el.addEventListener("lr-mode-change", (e) => {
+      events.push((e as CustomEvent<LyraAppRailModeChangeDetail>).detail);
+    });
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      expect(el.mode).to.equal("icon-only");
+      expect(el.getAttribute("mode")).to.equal("icon-only");
+      expect(events).to.deep.equal([{ mode: "icon-only" }]);
+    } finally {
+      el.remove();
+    }
+  });
+
+  // Regression: connectedCallback() -> setupMediaQueries() -> applyComputedMode() ->
+  // setEffectiveMode() used to run synchronously, before this same mount's willUpdate() had a
+  // chance to restore a persisted `preferredMode` -- so a listener could observe a real
+  // lr-mode-change carrying the pre-restore breakpoint mode, immediately followed by a second,
+  // correct one once the restore landed. Pre-matches only the icon-only breakpoint (not the
+  // mobile one), so the pre-restore mode ('icon-only', computed with no preferredMode yet loaded)
+  // genuinely differs from the persisted, higher-priority preferredMode restored on mount
+  // ('full'). `fixture()` isn't used here: it can resolve after the element's own first update
+  // (and thus the event) has already fired, so the listener is attached before the element is
+  // ever connected.
+  it("emits exactly one lr-mode-change carrying the restored mode, never the pre-restore breakpoint mode", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(
+      `lr-app-rail:${key}`,
+      JSON.stringify({ preferredMode: "full" })
+    );
+    const savedMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) =>
+      ({
+        matches: query.includes("960px"),
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      } as unknown as MediaQueryList)) as typeof window.matchMedia;
+
+    const el = document.createElement("lr-app-rail") as LyraAppRail;
+    el.setAttribute("storage-key", key);
+    el.setAttribute("persist", "preferred-mode");
+    el.innerHTML = '<a href="/a">A</a>';
+    const events: LyraAppRailModeChangeDetail[] = [];
+    el.addEventListener("lr-mode-change", (e) => {
+      events.push((e as CustomEvent<LyraAppRailModeChangeDetail>).detail);
+    });
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      expect(el.mode).to.equal("full");
+      expect(el.getAttribute("mode")).to.equal("full");
+      expect(events).to.deep.equal([{ mode: "full" }]);
+    } finally {
+      el.remove();
+      window.matchMedia = savedMatchMedia;
+    }
+  });
+
+  it("fires no lr-mode-change on a mount with no persisted preferred mode", async () => {
+    const key = uniqueKey(); // nothing ever written under this key
+
+    const el = document.createElement("lr-app-rail") as LyraAppRail;
+    el.setAttribute("storage-key", key);
+    el.setAttribute("persist", "preferred-mode");
+    el.innerHTML = '<a href="/a">A</a>';
+    let count = 0;
+    el.addEventListener("lr-mode-change", () => count++);
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      expect(el.mode).to.equal("full");
+      expect(count).to.equal(0);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it("fires no lr-mode-change when the restored preferred mode equals the default mode", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(
+      `lr-app-rail:${key}`,
+      JSON.stringify({ preferredMode: "full" })
+    );
+
+    const el = document.createElement("lr-app-rail") as LyraAppRail;
+    el.setAttribute("storage-key", key);
+    el.setAttribute("persist", "preferred-mode");
+    el.innerHTML = '<a href="/a">A</a>';
+    let count = 0;
+    el.addEventListener("lr-mode-change", () => count++);
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      expect(el.mode).to.equal("full");
+      expect(el.preferredMode).to.equal("full");
+      expect(count).to.equal(0);
+    } finally {
+      el.remove();
+    }
+  });
 });
 
 describe("layout: resizer anchor, overflow, and mobile containing block", () => {

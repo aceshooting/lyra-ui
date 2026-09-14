@@ -62,6 +62,7 @@ const DEFAULT_RESIZE_MIN_WIDTH_PX = 48; // used when --lr-table-resize-min-width
 const UNBOUNDED_RESIZE_ARIA_MAX = Number.MAX_SAFE_INTEGER;
 const MISSING_CELL_RENDERER_WARNING = 'lyra-table-missing-cell-renderer';
 const MISSING_ACCESSIBLE_NAME_WARNING = 'lyra-table-missing-accessible-name';
+const INERT_PRIORITY_COLUMN_LABEL_WARNING = 'lyra-table-inert-priority-column-label';
 
 function frozenArray<Value>(values: Iterable<Value>): readonly Value[] {
   const snapshot: Value[] = [];
@@ -246,6 +247,15 @@ export interface TableColumn<T> {
    *  drag-end/keypress-committed emission is cancelable (see the event's own doc). */
   resizable?: boolean;
   sortable?: boolean;
+  /** This column's own initial sort direction the first time header activation makes it the active
+   *  `sortKey` -- consulted before the element-level `defaultSortDir`, which remains the fallback
+   *  when this is omitted. Lets a mixed text/numeric table give one column (e.g. a "last updated"
+   *  column that should read newest-first) the opposite initial direction from every other column,
+   *  without flipping the element-level default for all of them. Like `defaultSortDir`, this only
+   *  decides the direction chosen the first time this column becomes active, or the first time
+   *  *after* a different column was active — re-activating a column that is already `sortKey` still
+   *  only toggles between `'asc'` and `'desc'`. */
+  defaultSortDir?: TableSortDirection;
   /** Backs client-mode sorting (`sortMode: 'client'`, the default) for this column. Returns the
    *  comparable value for `row` — a finite number sorts numerically, a string sorts through a
    *  locale-aware `Intl.Collator` (`numeric: true`, so `item2` precedes `item10`), and
@@ -463,7 +473,12 @@ export interface LyraTableEventMap<T = unknown> {
  * mode writes `sortKey`/`sortDir` and reorders the rendered rows before emitting `lr-sort`; server
  * mode leaves those properties controlled and emits the same committed transaction so the caller
  * can fetch and supply the corresponding row order. Single/multiple selection is self-managed in
- * one `selectedRowKeys` store; expansion remains controlled through `expandedRowKeys`.
+ * one `selectedRowKeys` store; expansion remains controlled through `expandedRowKeys`. The
+ * direction chosen the first time a column becomes the active `sortKey` comes from that column's
+ * own `columns[].defaultSortDir` when set, falling back to the element-level `defaultSortDir`
+ * (`'asc'` by default) otherwise -- letting one column in an otherwise-ascending table (e.g. a
+ * "last updated" column) start descending. Re-activating the column that is already `sortKey`
+ * still only toggles between `'asc'` and `'desc'`.
  *
  * Header/row activation is delegated: one `click` and one `keydown`
  * listener on `<table>` resolve the target via `closest('[data-col-key]'
@@ -511,7 +526,11 @@ export interface LyraTableEventMap<T = unknown> {
  * preference, and readable back — directly or via the `lr-priority-columns-visibility-change`
  * event — to persist the current one. `columns[].sticky` pins a column's
  * header/cells to the inline-start (`'start'`) or inline-end (`'end'`)
- * edge while the table scrolls horizontally.
+ * edge while the table scrolls horizontally. `revealColumnsLabel`/`hideColumnsLabel` only ever
+ * reach the DOM on `[part='reveal-columns-button']`, which itself only renders while at least one
+ * column declares `priority` -- setting either label with no `priority` column is always inert, and
+ * logs a one-time, production-silent, page-bounded development `console.warn` for it (the same
+ * dev-diagnostic shape as an unnamed grid's own warning).
  *
  * `expandedContent` (a table-level `(row: T) => unknown`, not a per-column
  * hook, since the resulting panel spans every column via `colspan`) makes
@@ -581,6 +600,13 @@ export interface LyraTableEventMap<T = unknown> {
  * leading one: `rowTotal(row)` renders per-row, `grandTotal(rows)` renders at its intersection with
  * the footer row (only when a column also defines `footer`) — both share `footer`'s own
  * "consumer computes/renders" contract rather than assuming addition.
+ *
+ * The public readonly `viewRows` (`rows` after filtering and client-mode sorting, ignoring
+ * pagination) and `pageRows` (`viewRows` sliced to the page currently rendered in `<tbody>`) getters
+ * expose the same rows `footer(rows)`/`grandTotal(rows)`/the heat-tint domain already see, so a
+ * consumer that needs "what the grid currently shows" -- e.g. to export it -- reads one of these
+ * instead of re-implementing filtering, sorting, and pagination itself. Both return a fresh, frozen
+ * array on every read; mutating the result cannot reach the table's own internal state.
  *
  * The built-in empty state is addressable rather than fixed: every `<lr-empty>` the table renders
  * carries `part="empty"` and re-exports its own inner parts as `empty-heading`/`empty-description`/
@@ -706,6 +732,14 @@ export interface LyraTableEventMap<T = unknown> {
  *   default.
  * @cssprop [--lr-table-cell-link-hover-color=var(--lr-table-cell-link-color,var(--lr-color-brand))] -
  *   Colour of that anchor on hover and `:focus-visible`, which also thicken its underline.
+ * @cssprop [--lr-table-cell-padding=var(--lr-space-s)] - Padding of a header cell, a body cell, and
+ *   the row-total cell.
+ * @cssprop [--lr-table-cell-padding-compact=var(--lr-space-xs) var(--lr-space-s)] - Padding of a
+ *   group-header cell and a footer cell, which default to a tighter block/inline shorthand than
+ *   `--lr-table-cell-padding` rather than sharing it outright.
+ * @cssprop [--lr-table-font-size=inherit] - Font size of the `<table>` element and, through normal
+ *   inheritance, every cell inside it. The rest of the font shorthand (family, weight, etc.) keeps
+ *   inheriting from the host regardless of this override.
  * @cssprop [--lr-table-max-height=none] - Cap on the scroll container's block size, past which the
  *   table body scrolls.
  * @cssprop [--lr-table-heat-tint-lo=var(--lr-color-brand-quiet)] - Low endpoint of the heat-tint
@@ -715,12 +749,15 @@ export interface LyraTableEventMap<T = unknown> {
  * @cssprop [--lr-table-heat-t] - This cell's position on the heat-tint ramp, as a percentage
  *   string. Set inline by the component on each `[data-heat]` cell; not consumer-settable.
  * @cssprop [--lr-table-row-selected-bg=var(--lr-color-brand-quiet)] - Background of a row whose
- *   `aria-selected` is `true`. Shadow Parts forbids an attribute selector after `::part()`, so
- *   `::part(row)[aria-selected]` is invalid CSS and the selected row could otherwise only be
- *   restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
- * @cssprop [--lr-table-row-stripe-bg=transparent] - Background of alternating body rows. The
- *   token is read only on rows carrying the internal stripe marker, so it can be set on the table
- *   or an ancestor without affecting group, expanded, hover, or selected rows.
+ *   `aria-selected` is `true`, including that row's own `sticky` column cell -- a sticky cell
+ *   otherwise paints its own opaque surface and would hide the selected fill. Shadow Parts forbids
+ *   an attribute selector after `::part()`, so `::part(row)[aria-selected]` is invalid CSS and the
+ *   selected row could otherwise only be restyled by hijacking the library-wide
+ *   `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-table-row-stripe-bg=transparent] - Background of alternating body rows, including
+ *   each row's own `sticky` column cell. The token is read only on rows carrying the internal
+ *   stripe marker, so it can be set on the table or an ancestor without affecting group, expanded,
+ *   hover, or selected rows.
  * @cssprop [--lr-table-header-sorted-bg=var(--lr-color-surface)] - Background of the currently-sorted column's
  *   header cell (`[aria-sort]` other than `none`). Same rationale as `--lr-table-row-selected-bg`:
  *   `::part(header-cell)[aria-sort]` is invalid CSS, so this token is the supported way to recolor
@@ -872,10 +909,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  until a header is actually activated. */
   @property({ reflect: true, attribute: 'sort-mode' }) sortMode: TableSortMode = 'client';
   /** The direction applied whenever header activation switches sorting to a *different* column —
-   *  including the first column ever sorted. Re-activating the column that is already `sortKey`
-   *  toggles between `'asc'` and `'desc'` instead, so this never overrides a direction the user
-   *  just chose for the column they are still on. Defaults to `'asc'`; set `'desc'` for a
-   *  most-recent-first or highest-first table. */
+   *  including the first column ever sorted — for any column that does not declare its own
+   *  `columns[].defaultSortDir` (that column-level value wins first when set). Re-activating the
+   *  column that is already `sortKey` toggles between `'asc'` and `'desc'` instead, so this never
+   *  overrides a direction the user just chose for the column they are still on. Defaults to
+   *  `'asc'`; set `'desc'` for a most-recent-first or highest-first table. */
   @property({ attribute: 'default-sort-dir' }) defaultSortDir: TableSortDirection = 'asc';
   /** Accessible name for the `role="grid"` — a typed alternative to setting `aria-label` on the
    *  host. When set it becomes the grid's `aria-label`; a host `aria-label` is used as a fallback
@@ -1069,7 +1107,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   priorityColumnsVisible = false;
 
   /** Persists `priorityColumnsVisible` to `localStorage` across reloads when set. Namespaced as
-   *  `lr-table:${storageKey}` -- mirrors `lr-app-rail`'s identical `storage-key` pattern. */
+   *  `lr-table:${storageKey}`. Restoration never overwrites an explicitly-declared `true`
+   *  (`priority-columns-visible` present, or a `.priorityColumnsVisible=${true}` binding) on the
+   *  same mount -- conceptually the same "explicit beats persisted" guarantee as `lr-app-rail`'s
+   *  per-field `loadPersisted()` check, just keyed on this property's own current value rather than
+   *  `willUpdate()`'s `changed` map, since this field's `false` default (unlike `lr-app-rail`'s
+   *  undefaulted `railWidthPx`/`preferredMode`) already reads as "changed" on every mount. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
 
   private get storageFullKey(): string | undefined {
@@ -1863,6 +1906,23 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return entries.slice(start, start + this.normalizedPageSize);
   }
 
+  /** `rows` after filtering and (client-mode) sorting, ignoring pagination -- the same set
+   *  `columns[].footer(rows)`/`grandTotal(rows)` and the heat-tint domain already compute over.
+   *  Lets a consumer that needs "what the grid currently shows" (e.g. exporting the visible rows)
+   *  read this instead of re-implementing filtering/sorting itself. Reads `sortedEntries()`'s
+   *  existing memoized cache, so an unrelated update (a roving-tabindex move, an inline-editor
+   *  open, ...) costs nothing extra here. Always a fresh, frozen array: mutating what this returns
+   *  cannot reach or corrupt the table's own internal state. */
+  get viewRows(): readonly T[] {
+    return Object.freeze(this.sortedEntries().map((entry) => entry.row));
+  }
+
+  /** `viewRows` sliced to the page currently rendered in `<tbody>` -- exactly the rows on screen
+   *  right now. Same defensive-copy guarantee as `viewRows`. */
+  get pageRows(): readonly T[] {
+    return Object.freeze(this.renderedEntries().map((entry) => entry.row));
+  }
+
   private onFilterInput = (event: Event): void => {
     event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
@@ -2012,12 +2072,25 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
     // lr-app-rail's loadPersisted() call in its own willUpdate(). The `persistReady` gate in
     // updated() keeps this restored value from being written straight back.
+    // Never overwrites `priorityColumnsVisible` when the consumer already bound it to an explicit
+    // `true` before this point (an attribute present at parse time, or a `.priorityColumnsVisible=
+    // ${true}` binding) -- a controlled declaration stays authoritative over stale `localStorage`
+    // state instead of being silently clobbered by it. This checks the property's own current value
+    // rather than `changed.has('priorityColumnsVisible')`: unlike `lr-app-rail`'s `railWidthPx`/
+    // `preferredMode` (which have no declared default and so start truly absent from `changed`),
+    // this property's own `= false` class-field default already runs through its reactive setter at
+    // construction, before any consumer input -- Lit records that as an initial "change" with no way
+    // to later tell it apart from a genuine explicit assignment (`willUpdate()`'s `changed` map keeps
+    // only the *first* recorded value), so `changed.has(...)` is unconditionally true here and cannot
+    // discriminate. Reading the current value instead works because nothing else assigns
+    // `priorityColumnsVisible` before this point: `false` unambiguously means "still the default",
+    // `true` unambiguously means a consumer already set it.
     if (!this.hasUpdated) {
       const parsed = readPersistedState(
         this.storageFullKey,
         (v): v is { priorityColumnsVisible?: unknown } => typeof v === 'object' && v !== null
       );
-      if (parsed && typeof parsed.priorityColumnsVisible === 'boolean') {
+      if (parsed && typeof parsed.priorityColumnsVisible === 'boolean' && !this.priorityColumnsVisible) {
         this.priorityColumnsVisible = parsed.priorityColumnsVisible;
       }
     }
@@ -2165,6 +2238,22 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       writePersistedState(this.storageFullKey, { priorityColumnsVisible: this.priorityColumnsVisible });
     }
     this.persistReady = true;
+    // `revealColumnsLabel`/`hideColumnsLabel` only ever reach the DOM on
+    // `[part='reveal-columns-button']`, which itself only renders while at least one column
+    // declares `priority` (see `recomputeHiddenPriorityColumns()`). Setting either label with no
+    // `priority` column is therefore always inert -- a real authoring mistake that otherwise
+    // renders silently, exactly the shape the missing-accessible-name diagnostic above addresses.
+    if (
+      (changed.has('columns') || changed.has('revealColumnsLabel') || changed.has('hideColumnsLabel')) &&
+      (this.revealColumnsLabel !== undefined || this.hideColumnsLabel !== undefined) &&
+      !this.columns.some((col) => col.priority)
+    ) {
+      devWarnOnce(
+        INERT_PRIORITY_COLUMN_LABEL_WARNING,
+        '<lr-table>: `revealColumnsLabel`/`hideColumnsLabel` have no effect unless at least one ' +
+          'column declares `priority`.'
+      );
+    }
     if (changed.has('columns') || changed.has('rows') || changed.has('rowKey')) this.applyStickyOffsets();
     this.syncResizeHandleValues();
     // Re-observe [part='base'] whenever this update's render() produced a
@@ -2230,7 +2319,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     this.activeColKey = key;
     const col = this.columnsByKey.get(key);
     if (!col?.sortable) return;
-    const sortDir = this.sortKey === key ? (this.sortDir === 'asc' ? 'desc' : 'asc') : this.defaultSortDir;
+    const sortDir =
+      this.sortKey === key ? (this.sortDir === 'asc' ? 'desc' : 'asc') : (col.defaultSortDir ?? this.defaultSortDir);
     const request = Object.freeze({ phase: 'request', sortKey: col.key, sortDir } as const);
     if (this.emit('lr-sort-request', request, { cancelable: true }).defaultPrevented) return;
     if (this.sortMode === 'client') {

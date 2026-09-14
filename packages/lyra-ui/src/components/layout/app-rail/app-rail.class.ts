@@ -139,9 +139,16 @@ export interface LyraAppRailEventMap {
  *   anywhere inside this slot closes it.
  * @slot header - Logo/brand content, shown above the nav items in every mode.
  * @slot footer - A trailing user/settings trigger, shown below the nav items.
- * @event lr-mode-change - The effective mode changed, whether from a
- *   breakpoint crossing or an explicit `forceMode` assignment. Not fired for a
- *   redundant reassignment to the mode already in effect.
+ * @event lr-mode-change - The effective mode changed. A LIVE breakpoint crossing (after mount) or
+ *   an explicit `forceMode` assignment fires immediately, synchronously with the change. The mode
+ *   this component settles on for its very FIRST mount -- whether that is simply the initial
+ *   breakpoint match, or a persisted `preferred-mode` restored from storage (`storage-key` +
+ *   `persist="preferred-mode"`) overriding it -- instead fires once, from that same mount's first
+ *   `updated()`, so a listener always observes the single, settled mode once the initial render
+ *   and attribute reflection have both already landed, never an intermediate pre-restore value the
+ *   restore was always going to overwrite. Not fired for a redundant reassignment to the mode
+ *   already in effect, nor when the first mount's settled mode never left the constructor default
+ *   (the ordinary default-mode mount stays silent).
  *   `detail: LyraAppRailModeChangeDetail`.
  * @event lr-toggle - The mobile overlay is opening or closing — via the
  *   built-in toggle button, Escape, a backdrop click, a nav-item click while
@@ -375,6 +382,23 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // `updated()` runs, which always differs from a real `LyraAppRailMode` and so always reflects
   // the constructor-default `_mode` on that first pass.
   private _lastReflectedMode?: LyraAppRailMode;
+  // Queues a single deferred `lr-mode-change` announcement for the very first mount, from either
+  // source able to move `_mode` away from its constructor default before the first render:
+  // `setupMediaQueries()`'s breakpoint-derived computation, called synchronously from
+  // `connectedCallback()` (see its own `{ silent: true }` call for why), and/or a persisted
+  // `preferredMode` willUpdate()'s first-update branch restores from storage. Both write here
+  // instead of emitting immediately because `connectedCallback()` always runs -- and so always
+  // computes its breakpoint-derived mode -- before that same mount's `willUpdate()` has had a
+  // chance to load a persisted `preferredMode` override. Emitting the breakpoint-derived mode
+  // synchronously from `connectedCallback()` would let a listener observe it as a real
+  // `lr-mode-change`, then a second, correct one once the restore lands moments later -- an event
+  // announcing a mode the restore was always going to immediately overwrite. Queuing instead lets
+  // `willUpdate()` overwrite this field with the correct final mode before anything is ever
+  // emitted, and `updated()` flushes exactly one event, once the first render (and its attribute
+  // reflection) have both already landed. `undefined` means "no change to announce" -- true on an
+  // ordinary mount where the settled mode never left the constructor default, and once the queued
+  // event has been emitted.
+  private pendingInitialModeAnnouncement?: LyraAppRailMode;
   // Whether matchMedia changes are currently ignored because a consumer
   // pinned a specific mode via `forceMode` -- see the `mode` getter doc.
   private forced = false;
@@ -564,13 +588,29 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
       const restoredPreferredMode = this.loadPersisted(changed);
       if (restoredPreferredMode && !this.forced) {
-        // Fold the restored preference into the first render without emitting a user-facing mode
-        // change event during mount or scheduling a second update from inside willUpdate().
-        this._mode = computeAppRailMode(
+        // Fold the restored preference into the first render directly (bypassing
+        // setEffectiveMode()) rather than emitting lr-mode-change from inside willUpdate(): the
+        // event fires synchronously, before this same update's render/attribute-reflection has
+        // run, so a listener would observe a "mode changed to X" notification while `[mode]` and
+        // the rendered [part="base"/"panel"] still show the pre-restore default. The restoration
+        // is still observable -- a consumer syncing app chrome to the rail's mode does need to
+        // learn about it -- so a single settled event is queued here and emitted from updated(),
+        // once the first render (and its attribute reflection) has actually landed. This
+        // overwrites -- with the correct final mode -- any announcement `connectedCallback()`'s own
+        // pre-restore breakpoint computation already queued (see `pendingInitialModeAnnouncement`'s
+        // doc), so a listener never observes that discarded pre-restore value. No event is queued
+        // at all when the restored mode happens to equal whatever `_mode` already settled to
+        // (whether that is the constructor default or the pre-restore breakpoint match): nothing
+        // observable changed either way.
+        const restored = computeAppRailMode(
           this.iconOnlyMatches,
           this.mobileMatches,
           this.preferredMode,
         );
+        if (restored !== this._mode) {
+          this._mode = restored;
+          this.pendingInitialModeAnnouncement = restored;
+        }
       }
     }
     if (this.hasUpdated && (changed.has('iconOnlyBreakpoint') || changed.has('mobileBreakpoint'))) {
@@ -609,6 +649,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (this._lastReflectedMode !== this._mode) {
       this._lastReflectedMode = this._mode;
       this.setAttribute('mode', this._mode);
+    }
+    // Flushes whatever `pendingInitialModeAnnouncement` queued for this mount -- the
+    // breakpoint-derived mode `connectedCallback()` computed silently, a persisted `preferredMode`
+    // that overwrote it in willUpdate() above, or nothing at all -- now that this update's render
+    // and attribute reflection have both landed, so the announced mode is settled and matches what
+    // a listener can already observe in the DOM. Cleared unconditionally so it can only ever fire
+    // once, on the very first update.
+    if (this.pendingInitialModeAnnouncement !== undefined) {
+      const mode = this.pendingInitialModeAnnouncement;
+      this.pendingInitialModeAnnouncement = undefined;
+      this.emit('lr-mode-change', { mode });
     }
     this.syncSlottedItems();
     if (this.recoverInlineFocusAfterResponsiveClose) {
@@ -738,7 +789,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     mobileQuery.addEventListener('change', mobileListener);
     this.iconOnlyMatches = iconOnlyQuery.matches;
     this.mobileMatches = mobileQuery.matches;
-    if (!this.forced) this.applyComputedMode();
+    if (this.forced) return;
+    // The very first call here runs synchronously from connectedCallback(), before this same
+    // mount's willUpdate() has had a chance to restore a persisted `preferredMode` (see
+    // `pendingInitialModeAnnouncement`'s doc) -- compute the mode silently and let that first
+    // update cycle reconcile and announce whatever the settled result turns out to be. A
+    // reconnect and a live breakpoint-attribute change both always run with `hasUpdated` already
+    // true, so they keep today's immediate, synchronous announcement unchanged.
+    this.applyComputedMode(this.hasUpdated ? undefined : { silent: true });
   }
 
   private teardownMediaQueries(): void {
@@ -768,11 +826,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (!this.forced) this.applyComputedMode();
   };
 
-  private applyComputedMode(): void {
-    this.setEffectiveMode(computeAppRailMode(this.iconOnlyMatches, this.mobileMatches, this.preferredMode));
+  private applyComputedMode(options?: { silent?: boolean }): void {
+    this.setEffectiveMode(
+      computeAppRailMode(this.iconOnlyMatches, this.mobileMatches, this.preferredMode),
+      options,
+    );
   }
 
-  private setEffectiveMode(next: LyraAppRailMode): void {
+  private setEffectiveMode(next: LyraAppRailMode, options?: { silent?: boolean }): void {
     if (this._mode === next) return;
     const old = this._mode;
     if (old === 'mobile' && next !== 'mobile' && this.open) {
@@ -780,7 +841,15 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
     this._mode = next;
     this.requestUpdate('mode', old);
-    this.emit('lr-mode-change', { mode: next });
+    // `silent` is set only by setupMediaQueries()'s very first, pre-render call (see
+    // `pendingInitialModeAnnouncement`'s doc) -- queue instead of emitting immediately so a
+    // same-mount persisted-`preferredMode` restore in willUpdate() gets the chance to overwrite
+    // this with the correct final mode before a listener ever observes either value.
+    if (options?.silent) {
+      this.pendingInitialModeAnnouncement = next;
+    } else {
+      this.emit('lr-mode-change', { mode: next });
+    }
     // 'open' is only meaningful in 'mobile' mode -- leaving it while open
     // closes the overlay as a side effect (through setOpen, so it still
     // emits lr-toggle and releases the scroll lock/focus trap normally)

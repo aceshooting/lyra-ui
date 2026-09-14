@@ -504,9 +504,16 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
-  under `lr-widget:${storageKey}` and restores it on the next mount (mirrors `lr-app-rail`'s/
-  `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
-  storage is never touched — listen for `lr-collapse-change` and persist the state yourself.
+  under `lr-widget:${storageKey}` and restores it on the next mount, without overwriting a `collapsed`/
+  `.collapsed=${…}` binding already explicitly assigned on that same mount (any assignment sets a
+  single-shot flag, checked once before the restore runs). This is not byte-identical to
+  `lr-app-rail`'s or `lr-table`'s guard: `lr-app-rail`'s undefaulted `railWidthPx`/`preferredMode`
+  fields key their guard off `willUpdate()`'s own per-field `changed.has(...)`, checked fresh on
+  every update; `lr-table`'s `priorityColumnsVisible` instead checks its own current value, since
+  its `false` default would otherwise always read as "changed"; this component's flag is a single
+  boolean set by any assignment (including the restore's own write) and never reset. Without a
+  `storageKey` there is no persistence and storage is never touched — listen for
+  `lr-collapse-change` and persist the state yourself.
 
 **Events:** `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
 built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
@@ -1310,6 +1317,10 @@ this tab is projected into lives in `<lr-tab-group>`'s shadow root, so it inheri
 `--lr-tab-group-selected-color`, `--lr-tab-group-indicator-color` and `--lr-tab-group-hover-color`
 from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself does nothing: this
 element is _inside_ that button in the flattened tree, and inheritance only runs the other way.
+`<lr-tab>`'s own host is `color: inherit; font: inherit;` for exactly this reason — it makes the
+projected element (and therefore its visible label) pick up the real tab button's own computed
+color and font, so `--lr-tab-group-selected-color`/`--lr-tab-group-hover-color` reach the rendered
+tab text rather than being shadowed by the library's own default text color.
 
 Before group hydration, an unassigned tab places itself in the public `nav` slot. The group then
 writes its internal per-tab `slot` attribute itself. A labeled tab with no `panel` gets a stable
@@ -1594,7 +1605,10 @@ when a label is a single character and the track ends up taller than its nominal
 thumb lifted a hair off its own track) style the checked segment's pill;
 `--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
-bleeds onto hover. These five existing state hooks are inline `var()` fallbacks at the
+bleeds onto hover. `--lr-segmented-hover-bg` (default `transparent`) and `--lr-segmented-hover-shadow`
+(default `none`) style that same hovered segment's background and box shadow; both are undeclared by
+default, so they fall back to the segment's own resting values and change nothing about today's
+hover paint until set. These seven state hooks are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so each can be set on the element _or on any
 ancestor_; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
@@ -1646,6 +1660,10 @@ resolves.
 - `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
 - `--lr-segmented-track-padding` — Track inset padding. Default: `var(--lr-size-0-125rem)`.
+- `--lr-segmented-track-bg` — Background of the `base` track. Undeclared by default (transparent),
+  matching its own current absence of a background.
+- `--lr-segmented-track-border-color` — Border color of the `base` track, which previously read
+  `--lr-color-border` as a literal with no override hook. Default: `var(--lr-color-border)`.
 
 ---
 
@@ -1980,7 +1998,9 @@ persist its committed `widthPx` yourself. Listen for the preceding cancelable
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
 automatically regardless — it's only consulted while `forceMode` is `'auto'` or unset; an explicit
-`forceMode` value takes full priority.
+`forceMode` value takes full priority. A `preferredMode` restored from `localStorage` on mount is
+observable the same way a live change is: it fires `lr-mode-change` too (see **Events** below),
+letting a consumer that syncs app chrome to the rail's mode pick up the restored value on load.
 
 **Properties:**
 
@@ -2049,8 +2069,12 @@ Also settable as a plain `aria-label` attribute (not a reactive property): overr
 role, matching `<lr-date-input>`'s `accessibleLabel`.
 
 **Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
-effective mode changed, whether from a breakpoint crossing or a `forceMode` assignment — not
-fired for a redundant reassignment to the mode already in effect), `lr-toggle`
+effective mode changed, whether from a breakpoint crossing, a `forceMode` assignment, or a
+persisted `preferred-mode` restored on mount (`storage-key` + `persist="preferred-mode"`) — the
+restored-on-mount case fires once, from the first `updated()` after that mount's render and
+attribute reflection have both landed, rather than synchronously during the mount itself; it is
+not fired for a redundant reassignment to the mode already in effect, nor when no preferred mode
+was persisted), `lr-toggle`
 (`detail: LyraAppRailToggleDetail` = `{ open: boolean }`; the mobile overlay is opening or closing — via
 the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a
 breakpoint/forced mode change leaving `'mobile'` while open — not fired when a consumer sets `open`
@@ -2854,6 +2878,11 @@ Appearance and interaction paint can be rethemed independently through `--lr-car
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
 former brand and active-mix values when unset.
+`--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
+byte-identical to before this property existed — mirroring `--lr-button-shadow`'s pattern; set it
+for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an
+`actionable`/linked card's shadow while hovered, falling back to `--lr-card-shadow` itself so a
+card given only a resting shadow keeps that exact shadow on hover.
 
 **Optional peer deps:** none.
 

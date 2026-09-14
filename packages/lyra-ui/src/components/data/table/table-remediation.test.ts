@@ -86,3 +86,295 @@ describe('table live derived rows and responsive bands', () => {
     }
   }
 });
+
+interface ScoreRow {
+  id: string;
+  name: string;
+  score: number;
+}
+
+const scoreRows: ScoreRow[] = [
+  { id: 'a', name: 'Alpha', score: 30 },
+  { id: 'b', name: 'Beta', score: 10 },
+  { id: 'c', name: 'Gamma', score: 20 },
+];
+
+const scoreColumns: TableColumn<ScoreRow>[] = [
+  { key: 'name', label: 'Name', sortable: true, sortValue: (row) => row.name, cell: (row) => row.name },
+  {
+    key: 'score',
+    label: 'Score',
+    sortable: true,
+    align: 'end',
+    sortValue: (row) => row.score,
+    cell: (row) => row.score,
+  },
+];
+
+describe('viewRows / pageRows', () => {
+  it('reflect filtering and sorting while ignoring pagination, and pageRows reflects only the current page', async () => {
+    const element = await fixture<LyraTable<ScoreRow>>(html`<lr-table
+      caption="Scores"
+      .rows=${scoreRows}
+      .columns=${scoreColumns}
+      .rowKey=${(row: ScoreRow) => row.id}
+      sort-key="score"
+      sort-dir="asc"
+      page-size="1"
+    ></lr-table>`);
+    await element.updateComplete;
+    // Sorted ascending by score (10, 20, 30) regardless of pageSize=1.
+    expect(element.viewRows.map((row) => row.id)).to.deep.equal(['b', 'c', 'a']);
+    expect(element.pageRows.map((row) => row.id)).to.deep.equal(['b']);
+
+    element.page = 2;
+    await element.updateComplete;
+    expect(element.pageRows.map((row) => row.id)).to.deep.equal(['c']);
+    // Pagination never affects viewRows.
+    expect(element.viewRows.map((row) => row.id)).to.deep.equal(['b', 'c', 'a']);
+
+    element.filterText = 'Gamma';
+    await element.updateComplete;
+    expect(element.viewRows.map((row) => row.id)).to.deep.equal(['c']);
+    expect(element.pageRows.map((row) => row.id)).to.deep.equal(['c']);
+  });
+
+  it('return frozen defensive copies that cannot corrupt internal state', async () => {
+    const element = await fixture<LyraTable<ScoreRow>>(html`<lr-table
+      caption="Scores"
+      .rows=${scoreRows}
+      .columns=${scoreColumns}
+      .rowKey=${(row: ScoreRow) => row.id}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    const view = element.viewRows;
+    expect(Object.isFrozen(view)).to.equal(true);
+    expect(() => {
+      (view as ScoreRow[])[0] = scoreRows[1]!;
+    }).to.throw();
+    expect(() => {
+      (view as unknown as ScoreRow[]).push(scoreRows[0]!);
+    }).to.throw();
+
+    const page = element.pageRows;
+    expect(Object.isFrozen(page)).to.equal(true);
+    expect(() => {
+      (page as ScoreRow[])[0] = scoreRows[1]!;
+    }).to.throw();
+
+    // The failed mutation attempts above must not have reached the table's own state -- a fresh
+    // read still reports the untouched, unsorted (no sortKey set) input order.
+    expect(element.viewRows.map((row) => row.id)).to.deep.equal(['a', 'b', 'c']);
+    expect(element.pageRows.map((row) => row.id)).to.deep.equal(['a', 'b', 'c']);
+    expect(element.rows).to.deep.equal(scoreRows);
+  });
+});
+
+interface MixedSortRow {
+  id: string;
+  label: string;
+  updated: number;
+}
+
+const mixedSortRows: MixedSortRow[] = [
+  { id: 'a', label: 'Bravo', updated: 2 },
+  { id: 'b', label: 'Alpha', updated: 1 },
+];
+
+const mixedSortColumns: TableColumn<MixedSortRow>[] = [
+  { key: 'label', label: 'Label', sortable: true, sortValue: (row) => row.label, cell: (row) => row.label },
+  {
+    key: 'updated',
+    label: 'Updated',
+    sortable: true,
+    // Opts this one numeric column into a descending first activation while every other column
+    // (and the element-level default below) stays ascending.
+    defaultSortDir: 'desc',
+    sortValue: (row) => row.updated,
+    cell: (row) => row.updated,
+  },
+];
+
+describe('columns[].defaultSortDir', () => {
+  it('wins over the element-level defaultSortDir the first time the column becomes active', async () => {
+    const element = await fixture<LyraTable<MixedSortRow>>(html`<lr-table
+      caption="Mixed"
+      .rows=${mixedSortRows}
+      .columns=${mixedSortColumns}
+      .rowKey=${(row: MixedSortRow) => row.id}
+      default-sort-dir="asc"
+    ></lr-table>`);
+    await element.updateComplete;
+    const header = element.shadowRoot!.querySelector<HTMLElement>('th[data-col-key="updated"]')!;
+    header.click();
+    await element.updateComplete;
+    expect(element.sortKey).to.equal('updated');
+    expect(element.sortDir).to.equal('desc');
+  });
+
+  it('falls back to the element-level defaultSortDir for a column that omits its own', async () => {
+    const element = await fixture<LyraTable<MixedSortRow>>(html`<lr-table
+      caption="Mixed"
+      .rows=${mixedSortRows}
+      .columns=${mixedSortColumns}
+      .rowKey=${(row: MixedSortRow) => row.id}
+      default-sort-dir="desc"
+    ></lr-table>`);
+    await element.updateComplete;
+    const header = element.shadowRoot!.querySelector<HTMLElement>('th[data-col-key="label"]')!;
+    header.click();
+    await element.updateComplete;
+    expect(element.sortKey).to.equal('label');
+    expect(element.sortDir).to.equal('desc');
+  });
+
+  it('leaves repeat-activation toggle behavior on the same column unchanged', async () => {
+    const element = await fixture<LyraTable<MixedSortRow>>(html`<lr-table
+      caption="Mixed"
+      .rows=${mixedSortRows}
+      .columns=${mixedSortColumns}
+      .rowKey=${(row: MixedSortRow) => row.id}
+      default-sort-dir="asc"
+    ></lr-table>`);
+    await element.updateComplete;
+    const header = element.shadowRoot!.querySelector<HTMLElement>('th[data-col-key="updated"]')!;
+    header.click();
+    await element.updateComplete;
+    expect(element.sortDir).to.equal('desc'); // column-level default on first activation
+    header.click();
+    await element.updateComplete;
+    expect(element.sortDir).to.equal('asc'); // plain toggle, ignoring defaultSortDir entirely
+    header.click();
+    await element.updateComplete;
+    expect(element.sortDir).to.equal('desc'); // toggles back
+  });
+});
+
+const plainInertLabelColumns: TableColumn<Row>[] = [{ key: 'name', label: 'Name', cell: (row) => row.name }];
+const priorityInertLabelColumns: TableColumn<Row>[] = [
+  { key: 'name', label: 'Name', cell: (row) => row.name },
+  { key: 'id', label: 'Id', priority: 'low', cell: (row) => row.id },
+];
+
+describe('inert revealColumnsLabel/hideColumnsLabel dev warning', () => {
+  let originalWarn: typeof console.warn;
+  let originalIssuedWarnings: Set<string> | undefined;
+  let warnings: unknown[][];
+  beforeEach(() => {
+    originalWarn = console.warn;
+    warnings = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    originalIssuedWarnings = runtime.litIssuedWarnings;
+    runtime.litIssuedWarnings = new Set();
+  });
+  afterEach(() => {
+    console.warn = originalWarn;
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
+  });
+
+  it('warns once when the labels are set but no column declares priority', async () => {
+    const element = await fixture<LyraTable<Row>>(html`<lr-table
+      caption="Names"
+      reveal-columns-label="Show columns"
+      hide-columns-label="Hide columns"
+      .rows=${rows}
+      .columns=${plainInertLabelColumns}
+      .rowKey=${rowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    expect(warnings.length).to.equal(1);
+    expect(String(warnings[0]![0])).to.include('revealColumnsLabel');
+    expect(String(warnings[0]![0])).to.include('priority');
+
+    // A later, unrelated render must not repeat the page-bounded warning.
+    element.rows = [...rows];
+    await element.updateComplete;
+    expect(warnings.length).to.equal(1);
+  });
+
+  it('does not warn when a priority column exists', async () => {
+    const element = await fixture<LyraTable<Row>>(html`<lr-table
+      caption="Names"
+      reveal-columns-label="Show columns"
+      hide-columns-label="Hide columns"
+      .rows=${rows}
+      .columns=${priorityInertLabelColumns}
+      .rowKey=${rowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    expect(warnings.length).to.equal(0);
+  });
+
+  it('does not warn when neither label is set, even with no priority column', async () => {
+    const element = await fixture<LyraTable<Row>>(html`<lr-table
+      caption="Names"
+      .rows=${rows}
+      .columns=${plainInertLabelColumns}
+      .rowKey=${rowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    expect(warnings.length).to.equal(0);
+  });
+});
+
+// Regression: willUpdate()'s persisted priorityColumnsVisible restore used to run with no guard at
+// all, so a storage-key mount silently clobbered an explicit priority-columns-visible/
+// .priorityColumnsVisible=${true} declaration with stale localStorage state.
+describe('storage-key persistence of priorityColumnsVisible', () => {
+  it('keeps an explicitly declared priority-columns-visible over a conflicting persisted value', async () => {
+    const key = 'table-priority-columns-explicit-attr';
+    localStorage.setItem(`lr-table:${key}`, JSON.stringify({ priorityColumnsVisible: false }));
+    try {
+      const element = await fixture<LyraTable<Row>>(html`<lr-table
+        caption="Names"
+        storage-key=${key}
+        priority-columns-visible
+        .rows=${rows}
+        .columns=${columns}
+        .rowKey=${rowKey}
+      ></lr-table>`);
+      expect(element.priorityColumnsVisible).to.equal(true);
+    } finally {
+      localStorage.removeItem(`lr-table:${key}`);
+    }
+  });
+
+  it('keeps an explicit .priorityColumnsVisible property binding over a conflicting persisted value', async () => {
+    const key = 'table-priority-columns-explicit-prop';
+    localStorage.setItem(`lr-table:${key}`, JSON.stringify({ priorityColumnsVisible: false }));
+    try {
+      const element = await fixture<LyraTable<Row>>(html`<lr-table
+        caption="Names"
+        storage-key=${key}
+        .priorityColumnsVisible=${true}
+        .rows=${rows}
+        .columns=${columns}
+        .rowKey=${rowKey}
+      ></lr-table>`);
+      expect(element.priorityColumnsVisible).to.equal(true);
+    } finally {
+      localStorage.removeItem(`lr-table:${key}`);
+    }
+  });
+
+  it('restores a persisted priority-columns-visible when the consumer declares nothing', async () => {
+    const key = 'table-priority-columns-restore';
+    localStorage.setItem(`lr-table:${key}`, JSON.stringify({ priorityColumnsVisible: true }));
+    try {
+      const element = await fixture<LyraTable<Row>>(html`<lr-table
+        caption="Names"
+        storage-key=${key}
+        .rows=${rows}
+        .columns=${columns}
+        .rowKey=${rowKey}
+      ></lr-table>`);
+      expect(element.priorityColumnsVisible).to.equal(true);
+    } finally {
+      localStorage.removeItem(`lr-table:${key}`);
+    }
+  });
+});

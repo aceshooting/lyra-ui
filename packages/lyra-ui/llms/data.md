@@ -584,7 +584,8 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
   bounded to the first 10,000 source positions; blank keys and later duplicates are omitted first-wins
   before header, cell, sort, focus, and event paths; reassign to update) — `{ key, label,
 headerCell?, width?, minWidth?, maxWidth?,
-resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
+resizable?, sortable?, sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start'|'end',
+priority?: 'medium'|'low',
 sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
 cell: (row) => unknown }` —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
@@ -595,13 +596,23 @@ cell: (row) => unknown }` —
   stringified `cell()` output instead — meaningful only when `cell()` returns a string or number, so
   define `sortValue` whenever `cell()` returns a template or element. Ignored under
   `sortMode="server"` and on a column that is not `sortable`;
+  `defaultSortDir` sets this column's own initial sort direction the first time header activation
+  makes it the active `sortKey`, taking precedence over the element-level `defaultSortDir` (see
+  below), which remains the fallback when this is omitted — useful for giving one column in an
+  otherwise-ascending table (e.g. a "last updated" column) the opposite starting direction.
+  Re-activating a column that is already `sortKey` still only toggles between `'asc'` and `'desc'`,
+  exactly as the element-level `defaultSortDir` already does;
   `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
   breakpoints are fixed in `table.styles.ts`, not themeable tokens), reversible via
   `[part='reveal-columns-button']`; `sticky` pins that column's header/cells to the logical start or
   end edge while the table scrolls horizontally — multiple sticky columns stack
   in logical order (each measures every earlier sticky column's rendered width via
-  `--lr-table-sticky-offset`) instead of overlapping at the same edge; `footer` renders a
+  `--lr-table-sticky-offset`) instead of overlapping at the same edge. A sticky body cell's
+  background always matches its own row's effective fill — striped, selected, hovered, or pressed —
+  rather than painting a flat opaque surface over that state; a sticky header cell is unaffected
+  (headers are never striped/selected) and keeps its plain surface fill, see
+  `--lr-table-row-selected-bg`/`--lr-table-row-stripe-bg` below; `footer` renders a
   sticky-bottom footer cell for that column, computed from every currently-rendered row (post-sort,
   pre-pagination) — e.g. a column total — omit it for a column with no footer value, and a
   `[part='foot']` (`<tfoot>`) only renders at all when at least one column defines `footer`;
@@ -693,9 +704,19 @@ cell: (row) => unknown }` —
   holds the globally-smallest rows rather than a re-sorted slice
 - `defaultSortDir: 'asc'|'desc' = 'asc'` (attribute `default-sort-dir`) — the direction applied
   whenever header activation switches sorting to a **different** column, including the first column
-  ever sorted. Re-activating the column that is already `sortKey` toggles between `'asc'` and
-  `'desc'` instead, so `defaultSortDir` never overrides a direction the user just chose for the
-  column they are still on. Set `'desc'` for a most-recent-first or highest-first table
+  ever sorted, for any column that does not declare its own `columns[].defaultSortDir` (that
+  column-level value wins first when set — see `columns` above). Re-activating the column that is
+  already `sortKey` toggles between `'asc'` and `'desc'` instead, so `defaultSortDir` never
+  overrides a direction the user just chose for the column they are still on. Set `'desc'` for a
+  most-recent-first or highest-first table
+- `viewRows: readonly T[]` (readonly; computed, no attribute) — `rows` after filtering and
+  (client-mode) sorting, ignoring pagination — the same set `columns[].footer(rows)`/
+  `grandTotal(rows)`/the heat-tint domain already compute over. Read this instead of
+  re-implementing filtering/sorting in a consumer that needs "what the grid currently shows" (e.g.
+  to export it). A fresh, frozen array on every read: mutating the result cannot reach or corrupt
+  the table's own internal state
+- `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
+  currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
 - `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
@@ -800,8 +821,14 @@ cell: (row) => unknown }` —
   Priority-hidden columns hide their header, body, and footer cells together at the existing
   container breakpoints in either direction; revealing columns restores all three bands.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
-  `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount. Unset
-  (the default) touches storage not at all. Mirrors `lr-app-rail`'s identical `storage-key` pattern
+  `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount, without
+  overwriting an explicitly declared `true` (`priority-columns-visible` present, or a
+  `.priorityColumnsVisible=${true}` binding) on that same mount. Unset (the default) touches storage
+  not at all. This is the same "explicit beats persisted" guarantee `lr-app-rail` gives each of its
+  several `persist`-selected fields, but not byte-identical: `lr-app-rail`'s undefaulted
+  `railWidthPx`/`preferredMode` fields let it key the guard off `willUpdate()`'s `changed` map,
+  while this property's own `false` default already reads as "changed" on every mount, so this
+  guard instead checks the property's own current value
 - `heatTintScale?: { min?: number; max?: number }` (attribute: false) — overrides the auto-derived
   heat-tint domain (min/max of every `heatValue` result across every currently-rendered row —
   post-sort, pre-pagination, the same rows `footer(rows)` already sees). Unset (the default) computes
@@ -897,7 +924,13 @@ one — and that `empty` disappears entirely once the `empty` slot is filled.
 `--lr-table-cell-link-hover-color` — an anchor returned from a column's `cell(row)` renders inside
 the component's shadow root, where page CSS cannot reach it and `::part()` cannot select past the
 first compound selector to reach it either, so without these it computes to the UA default link
-blue; set `revert` for the UA default. `--lr-table-max-height` (default `none`; controls the scrollable
+blue; set `revert` for the UA default. `--lr-table-cell-padding` (default `var(--lr-space-s)`) sets
+the padding of a header cell, a body cell, and the row-total cell; `--lr-table-cell-padding-compact`
+(default `var(--lr-space-xs) var(--lr-space-s)`) is the same hook for the group-header cell and the
+footer cell, which default to a tighter block/inline shorthand rather than sharing the first token
+outright — two hooks instead of one preserve that distinction. `--lr-table-font-size` (default
+`inherit`) sets the `<table>` element's font size; the rest of the font shorthand (family,
+weight, etc.) keeps inheriting from the host regardless of this override. `--lr-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-brand-quiet)`) and
 `--lr-table-heat-tint-hi` (default `var(--lr-color-brand)`) — the `color-mix()` ramp endpoints
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
@@ -910,15 +943,19 @@ opacity), `--lr-table-resize-handle-active-bg` (defaulting to the hover backgrou
 retune the rendered interaction states. These heat-tint/resize hooks are not redeclared on the component host: set them on
 `lr-table` or on a theme ancestor, and a table-level value wins through the normal cascade.
 `--lr-table-row-selected-bg` (default `var(--lr-color-brand-quiet)`) — the background of a row whose
-`aria-selected` is `true`. Like every state-scoped custom property in this library it is an inline
+`aria-selected` is `true`, including that row's own `sticky` column cell. Like every state-scoped
+custom property in this library it is an inline
 `var()` fallback at its point of use and is **not** declared on `:host`, so it can be set on the
 element _or on any ancestor_ and still reach the rule that reads it. It exists because Shadow Parts
 forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
 so the only prior lever for restyling the selected row was overriding the library-wide
 `--lr-color-brand-quiet` token, which repaints everything else reading it.
-`--lr-table-row-stripe-bg` (default `transparent`) — the background of alternating body rows. The
+`--lr-table-row-stripe-bg` (default `transparent`) — the background of alternating body rows,
+including each row's own `sticky` column cell. The
 component marks the alternating rows itself, so this works without an invalid `::part(row)` attribute
-or structural-pseudo-class selector and does not affect group, expanded, hover, or selected rows.
+or structural-pseudo-class selector and does not affect group, expanded, hover, or selected rows. A
+row's hover and pressed fills reach its `sticky` column cell the same way, through an internal
+custom property rather than a themeable token, since neither state has a public hook today.
 `--lr-table-header-sorted-bg` (default `var(--lr-color-surface)`) and `--lr-table-header-sorted-color` (default
 `inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`). The opaque surface default prevents body rows from
 showing through the sticky header while it scrolls.
@@ -1001,6 +1038,11 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
 - A grid with **none** of `accessibleLabel`, host `aria-label`, or `caption` logs a one-time
   `console.warn` on first render in development builds only — an unnamed grid is an accessibility
   defect that otherwise renders silently. Production and unknown/unbundled runtimes do not log it.
+- `revealColumnsLabel`/`hideColumnsLabel` only ever reach the DOM on
+  `[part='reveal-columns-button']`, which itself only renders while at least one column declares
+  `priority`. Setting either label with no `priority` column is therefore always inert — it logs
+  the same shape of one-time, development-only, production-silent `console.warn` as the missing
+  accessible-name check above, rather than failing silently.
 - Full roving-tabindex grid keyboard pattern (one `tabindex="0"` stop among header cells, one among
   body rows) — Left/Right/Home/End move within the header row, Up/Down/Home/End move within the
   body, Down from the header enters the body's roving stop and Up from the body's first row returns
