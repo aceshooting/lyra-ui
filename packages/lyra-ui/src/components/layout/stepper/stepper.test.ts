@@ -9,7 +9,11 @@ import {
 import "./stepper.js";
 import type { LyraStepper } from "./stepper.js";
 import { styles } from "./stepper.styles.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const steps = () => [
@@ -1683,19 +1687,11 @@ describe("state-styling cssprops", () => {
     const current = stepEl(el, "current");
     const error = stepEl(el, "error");
 
-    hovered.scrollIntoView();
-    const rect = hovered.getBoundingClientRect();
     try {
-      await resetMouse();
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
-      expect(getComputedStyle(hovered).backgroundColor).to.equal(
-        "rgb(1, 2, 3)"
+      await hoverUntilMatched(hovered, "completed step never reported :hover");
+      await waitUntil(
+        () => getComputedStyle(hovered).backgroundColor === "rgb(1, 2, 3)",
+        "hovered background color never eased to the configured colour"
       );
       expect(getComputedStyle(hovered).color).to.equal("rgb(4, 5, 6)");
 
@@ -1720,23 +1716,16 @@ describe("state-styling cssprops", () => {
     const el = await themed("");
     const interactive = stepEl(el, "completed");
 
-    interactive.scrollIntoView();
-    const rect = interactive.getBoundingClientRect();
     try {
-      await resetMouse();
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
-      expect(getComputedStyle(interactive).backgroundColor).to.equal(
-        resolvedInShadow(
-          el,
-          "background: var(--lr-color-brand-quiet)",
-          "background-color"
-        )
+      const restingHoverBg = resolvedInShadow(
+        el,
+        "background: var(--lr-color-brand-quiet)",
+        "background-color"
+      );
+      await hoverUntilMatched(interactive, "completed step never reported :hover");
+      await waitUntil(
+        () => getComputedStyle(interactive).backgroundColor === restingHoverBg,
+        "interactive background color never eased to the default hover colour"
       );
       expect(getComputedStyle(interactive).color).to.equal(
         resolvedInShadow(el, "color: var(--lr-color-text)", "color")

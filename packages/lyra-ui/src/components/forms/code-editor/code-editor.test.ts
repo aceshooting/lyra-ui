@@ -3,6 +3,7 @@ import './code-editor.js';
 import type { LyraCodeEditor } from './code-editor.js';
 import { styles } from './code-editor.styles.js';
 import {
+  hoverUntilMatched,
   resetMouse,
   sendMouse,
   sendWheel,
@@ -15,21 +16,20 @@ it('lets a consumer retint hover and invalid editor borders independently', asyn
     ></lr-code-editor>
   `)) as LyraCodeEditor;
   const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
-  const rect = editor.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
-    expect(getComputedStyle(editor).borderTopColor).to.equal('rgb(1, 2, 3)');
+    await hoverUntilMatched(editor, 'editor frame never reported :hover');
+    await waitUntil(
+      () => getComputedStyle(editor).borderTopColor === 'rgb(1, 2, 3)',
+      'editor hover border never eased to the configured colour',
+    );
   } finally {
     await resetMouse();
   }
   el.setAttribute('data-invalid', '');
-  expect(getComputedStyle(editor).borderTopColor).to.equal('rgb(4, 5, 6)');
+  await waitUntil(
+    () => getComputedStyle(editor).borderTopColor === 'rgb(4, 5, 6)',
+    'editor invalid border never eased to the configured colour',
+  );
 });
 
 it('falls back from an invalid runtime resize value without injecting declarations', async () => {

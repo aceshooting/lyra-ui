@@ -8,7 +8,12 @@ import {
   monthTitle,
   resolveFirstDayOfWeek,
 } from "./calendar-core.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+  settlePointer,
+} from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
@@ -36,16 +41,12 @@ it("lets a consumer retint the previous/next hover background via the scoped --l
   await el.updateComplete;
   const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLElement;
   const before = getComputedStyle(next).backgroundColor;
-  const rect = next.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
-    expect(getComputedStyle(next).backgroundColor).to.equal("rgb(1, 2, 3)");
+    await hoverUntilMatched(next, "next button never reported :hover");
+    await waitUntil(
+      () => getComputedStyle(next).backgroundColor === "rgb(1, 2, 3)",
+      "next button background never eased to the configured colour"
+    );
     expect(getComputedStyle(next).backgroundColor).to.not.equal(before);
   } finally {
     await resetMouse();
@@ -68,16 +69,12 @@ it("lets a consumer retint day and selection-view states independently", async (
   const day = el.shadowRoot!.querySelector(
     '[part~="day"]:not([part~="day-selected"]):not([part~="day-outside"])'
   ) as HTMLElement;
-  const rect = day.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
-    expect(getComputedStyle(day).backgroundColor).to.equal("rgb(1, 2, 3)");
+    await hoverUntilMatched(day, "day cell never reported :hover");
+    await waitUntil(
+      () => getComputedStyle(day).backgroundColor === "rgb(1, 2, 3)",
+      "day cell background never eased to the configured colour"
+    );
   } finally {
     await resetMouse();
   }
@@ -2128,6 +2125,34 @@ it("chains updated() to super.updated() so a mixin layered under LyraElement wou
 // Pressed feedback, driven through the real pointer -- a `:hover` rule alone leaves a repeated
 // action like month paging with nothing to show that the click landed until the grid redraws.
 // Colour STRINGS are compared, never elements: a DOM node as chai's actual/expected hangs the file.
+//
+// Hover/active backgrounds now ease over --lr-transition-fast instead of snapping, so a bare
+// post-move/post-down synchronous read can sample a mid-interpolation frame (or, worse, a frame
+// taken before the browser has even started the transition, which is indistinguishable from "no
+// change" -- see the resting-colour equality failures this replaced). Resolve each state's exact
+// resolved colour from the same custom-property expression the stylesheet uses, then poll for it.
+function resolvedBackground(el: LyraDatePicker, declaration: string): string {
+  const probe = document.createElement("span");
+  probe.setAttribute("style", declaration);
+  el.shadowRoot!.append(probe);
+  const value = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return value;
+}
+
+const HOVER_ACTIVE_DECLARATIONS = {
+  '[part~="day"]': {
+    hover: "background: var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet))",
+    active:
+      "background: var(--lr-date-picker-day-active-bg, color-mix(in oklab, var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)))",
+  },
+  '[part="next"]': {
+    hover: "background: var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet))",
+    active:
+      "background: var(--lr-date-picker-nav-active-bg, color-mix(in oklab, var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)))",
+  },
+} as const;
+
 for (const [label, selector] of [
   ["a day cell", '[part~="day"]'],
   ["the next-month button", '[part="next"]'],
@@ -2138,26 +2163,30 @@ for (const [label, selector] of [
     )) as LyraDatePicker;
     await el.updateComplete;
     const target = el.shadowRoot!.querySelector(selector) as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    const centre: [number, number] = [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
     const rest = getComputedStyle(target).backgroundColor;
+    const declarations = HOVER_ACTIVE_DECLARATIONS[selector];
+    const hoverExpected = resolvedBackground(el, declarations.hover);
+    const activeExpected = resolvedBackground(el, declarations.active);
     try {
-      await sendMouse({ type: "move", position: centre });
-      const hovered = getComputedStyle(target).backgroundColor;
-      await sendMouse({ type: "down" });
-      const pressed = getComputedStyle(target).backgroundColor;
-      await sendMouse({ type: "up" });
+      await hoverUntilMatched(target, `${label} never reported :hover`);
+      await waitUntil(
+        () => getComputedStyle(target).backgroundColor === hoverExpected,
+        `${label} hover background never eased to the expected colour`
+      );
       expect(
-        hovered,
+        getComputedStyle(target).backgroundColor,
         "hover must move the fill off its resting colour"
       ).to.not.equal(rest);
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(target).backgroundColor === activeExpected,
+        `${label} pressed background never eased to the expected colour`
+      );
       expect(
-        pressed,
+        getComputedStyle(target).backgroundColor,
         "pressed must be visibly stronger than hover, not identical to it"
-      ).to.not.equal(hovered);
+      ).to.not.equal(hoverExpected);
+      await sendMouse({ type: "up" });
     } finally {
       await resetMouse();
     }
@@ -2920,7 +2949,11 @@ describe("date-picker coverage gaps", () => {
     expect(months.shadowRoot!.activeElement === day).to.equal(true);
 
     const years = (await fixture(html`
-      <lr-date-picker view="years" value="2026-06-15"></lr-date-picker>
+      <lr-date-picker
+        view="years"
+        value="2026-06-15"
+        style="--lr-transition-fast: 0s"
+      ></lr-date-picker>
     `)) as LyraDatePicker;
     await years.updateComplete;
     viewItems(years)[activeViewItemIndex(years)]!.focus();
@@ -2929,6 +2962,12 @@ describe("date-picker coverage gaps", () => {
     expect(space.defaultPrevented).to.equal(true);
     expect(years.view).to.equal("months");
     expect(focusedViewItemIndex(years)).to.equal(activeViewItemIndex(years));
+    // The destination view's roving-target/selected items repaint through the same eased
+    // background-color transition as hover/press; even zeroed, a transition still renders one
+    // interpolated (partial-contrast) frame in the same tick, which is exactly what a synchronous
+    // axe color-contrast check right after updateComplete can catch. Settle two frames first so
+    // the accessibility snapshot reads the real, final theme colours.
+    await settlePointer();
     await expect(years).shadowDom.to.be.accessible();
   });
 

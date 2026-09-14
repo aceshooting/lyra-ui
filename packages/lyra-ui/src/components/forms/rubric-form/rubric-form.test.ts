@@ -2,7 +2,11 @@ import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { render } from "lit";
 import "./rubric-form.js";
 import type { LyraRubricForm, RubricKey } from "./rubric-form.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from "../../../../test/wtr-mouse.js";
 import { VALIDITY_ANCHOR } from "../../../internal/anchored-validity.js";
 
 it("contains long field and action content at 320px in LTR and RTL", async () => {
@@ -1563,6 +1567,34 @@ describe("lr-rubric-form", () => {
   // while dragging the button's own label along with its background. Reading the painted
   // background back at each stage is the only assertion that can tell those apart. Colour STRINGS
   // are compared, never elements — a DOM node as chai's actual/expected hangs the whole file.
+  // Hover/active backgrounds now ease over --lr-transition-fast instead of snapping, so a bare
+  // post-move/post-down synchronous read can sample a frame before the browser even starts the
+  // transition -- indistinguishable from "no change" (see the resting-colour equality failure this
+  // replaced). Resolve each state's exact colour from the same custom-property expression the
+  // stylesheet uses, then poll for it.
+  function resolvedBackground(el: LyraRubricForm, declaration: string): string {
+    const probe = document.createElement("span");
+    probe.setAttribute("style", declaration);
+    el.shadowRoot!.append(probe);
+    const value = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return value;
+  }
+
+  const HOVER_ACTIVE_DECLARATIONS = {
+    submit: {
+      hover:
+        "background: var(--lr-rubric-form-submit-hover-bg, color-mix(in oklab, var(--lr-rubric-form-submit-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)))",
+      active:
+        "background: var(--lr-rubric-form-submit-active-bg, color-mix(in oklab, var(--lr-rubric-form-submit-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)))",
+    },
+    skip: {
+      hover: "background: var(--lr-rubric-form-skip-hover-bg, var(--lr-color-brand-quiet))",
+      active:
+        "background: var(--lr-rubric-form-skip-active-bg, color-mix(in oklab, var(--lr-rubric-form-skip-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)))",
+    },
+  } as const;
+
   for (const part of ["submit", "skip"] as const) {
     it(`moves ${part}'s painted background on hover, and further again while pressed`, async () => {
       const el = (await fixture(
@@ -1576,27 +1608,31 @@ describe("lr-rubric-form", () => {
       const button = el.shadowRoot!.querySelector(
         `[part="${part}"]`
       ) as HTMLButtonElement;
-      const rect = button.getBoundingClientRect();
-      const centre: [number, number] = [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ];
       const rest = getComputedStyle(button).backgroundColor;
+      const declarations = HOVER_ACTIVE_DECLARATIONS[part];
+      const hoverExpected = resolvedBackground(el, declarations.hover);
+      const activeExpected = resolvedBackground(el, declarations.active);
       try {
-        await sendMouse({ type: "move", position: centre });
-        const hovered = getComputedStyle(button).backgroundColor;
-        await sendMouse({ type: "down" });
-        const pressed = getComputedStyle(button).backgroundColor;
-        await sendMouse({ type: "up" });
+        await hoverUntilMatched(button, `${part} button never reported :hover`);
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor === hoverExpected,
+          `${part} hover background never eased to the expected colour`
+        );
         expect(
-          hovered,
+          getComputedStyle(button).backgroundColor,
           "hover must move the fill off its resting colour"
         ).to.not.equal(rest);
+        await sendMouse({ type: "down" });
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor === activeExpected,
+          `${part} pressed background never eased to the expected colour`
+        );
         expect(
-          pressed,
+          getComputedStyle(button).backgroundColor,
           "pressed must be visibly stronger than hover, not identical to it"
-        ).to.not.equal(hovered);
-        expect(pressed).to.not.equal(rest);
+        ).to.not.equal(hoverExpected);
+        expect(getComputedStyle(button).backgroundColor).to.not.equal(rest);
+        await sendMouse({ type: "up" });
       } finally {
         await resetMouse();
       }
@@ -1632,16 +1668,9 @@ describe("lr-rubric-form", () => {
       [submit, "rgb(10, 11, 12)", "rgb(13, 14, 15)"],
       [skip, "rgb(16, 17, 18)", "rgb(19, 20, 21)"],
     ] as const) {
-      const rect = button.getBoundingClientRect();
       try {
-        await sendMouse({
-          type: "move",
-          position: [
-            Math.round(rect.left + rect.width / 2),
-            Math.round(rect.top + rect.height / 2),
-          ],
-        });
-        expect(getComputedStyle(button).backgroundColor).to.equal(hover);
+        await hoverUntilMatched(button, "themed button never reported :hover");
+        await waitUntil(() => getComputedStyle(button).backgroundColor === hover, 'button background color never reached hover');
         await sendMouse({ type: "down" });
         await waitUntil(() => getComputedStyle(button).backgroundColor === active, 'button background color never reached active');
       } finally {

@@ -1,7 +1,7 @@
 import { elementUpdated, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './split-panel.js';
 import { SNAP_NONE, type LyraSplitPanel, type LyraSplitPanelSnapFunction } from './split-panel.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function divider(element: LyraSplitPanel): HTMLElement {
   return element.shadowRoot!.querySelector('[part~="divider"]') as HTMLElement;
@@ -833,19 +833,22 @@ it('visibly changes the divider on hover and press', async () => {
     ></lr-split-panel>
   `)) as LyraSplitPanel;
   const handle = divider(element);
-  const rect = handle.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   const resting = getComputedStyle(handle).backgroundColor;
+  // Resolve the un-overridden fallback tokens the hover/active rules resolve to, so the poll below
+  // can wait for the exact settled colour instead of racing the now-eased repaint.
+  const probe = document.createElement('span');
+  element.shadowRoot!.append(probe);
+  probe.style.color = 'var(--lr-color-brand)';
+  const brand = getComputedStyle(probe).color;
+  probe.style.color = 'var(--lr-color-border-strong)';
+  const borderStrong = getComputedStyle(probe).color;
+  probe.remove();
   try {
-    await sendMouse({ type: 'move', position });
-    const hovered = getComputedStyle(handle).backgroundColor;
-    expect(hovered).to.not.equal(resting);
+    await hoverUntilMatched(handle, 'divider never reported :hover');
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === brand, 'divider background never eased to the hover colour');
+    expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
     await sendMouse({ type: 'down' });
-    const pressed = getComputedStyle(handle).backgroundColor;
-    expect(pressed).to.not.equal(hovered);
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === borderStrong, 'divider background never eased to the pressed colour');
     await sendMouse({ type: 'up' });
   } finally {
     await resetMouse();
@@ -860,15 +863,10 @@ it('lets --lr-split-panel-divider-hover-color/-active-color retint the divider i
     ></lr-split-panel>
   `)) as LyraSplitPanel;
   const handle = divider(element);
-  const rect = handle.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   const resting = getComputedStyle(handle).backgroundColor;
   try {
-    await sendMouse({ type: 'move', position });
-    expect(getComputedStyle(handle).backgroundColor).to.equal('rgb(70, 80, 90)');
+    await hoverUntilMatched(handle, 'divider never reported :hover');
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(70, 80, 90)', 'handle background color never reached rgb(70, 80, 90)');
     expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
     await sendMouse({ type: 'down' });
     await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(100, 110, 120)', 'handle background color never reached rgb(100, 110, 120)');

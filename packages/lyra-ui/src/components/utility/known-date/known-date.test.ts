@@ -1480,6 +1480,9 @@ describe('invalid-border cssprop indirection', () => {
   it('recolors the invalid-field border from --lr-known-date-invalid-border-color on an ancestor, not a bare shared token', async () => {
     const el = (await fixture(html`<lr-known-date required></lr-known-date>`)) as LyraKnownDate;
     el.style.setProperty('--lr-known-date-invalid-border-color', 'rgb(10, 20, 30)');
+    // The invalid-field border now eases over --lr-transition-fast instead of snapping; zero it so
+    // this token/override assertion reads the settled colour, not a mid-interpolation sample.
+    el.style.setProperty('--lr-transition-fast', '0s');
     const day = el.shadowRoot!.querySelector('input[data-field="day"]') as HTMLInputElement;
     day.focus();
     day.dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
@@ -1491,6 +1494,9 @@ describe('invalid-border cssprop indirection', () => {
 
   it('renders byte-identically to the pre-cssprop-indirection output when the prop is unset', async () => {
     const el = (await fixture(html`<lr-known-date required></lr-known-date>`)) as LyraKnownDate;
+    // The invalid-field border now eases over --lr-transition-fast instead of snapping; zero it so
+    // this token/override assertion reads the settled colour, not a mid-interpolation sample.
+    el.style.setProperty('--lr-transition-fast', '0s');
     const day = el.shadowRoot!.querySelector('input[data-field="day"]') as HTMLInputElement;
     day.focus();
     day.dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));

@@ -964,10 +964,13 @@ it('renders the selected fill on an adjacent-month day, not the outside-month fi
   const cell = el.shadowRoot!.querySelector<HTMLElement>(`[data-date="${outsideDate}"]`)!;
   expect(cell.getAttribute('data-outside'), 'sanity: still an adjacent-month cell').to.equal('true');
   expect(cell.getAttribute('data-selected'), 'sanity: and now the selected one').to.equal('true');
-  expect(
-    getComputedStyle(cell).backgroundColor,
+  // The day's background now eases over --lr-transition-fast instead of snapping, so a bare
+  // synchronous read right after updateComplete can still show the pre-selection outside-fill --
+  // poll for the settled selected colour instead.
+  await waitUntil(
+    () => getComputedStyle(cell).backgroundColor === 'rgb(1, 2, 3)',
     'a selected adjacent-month day must paint as selected',
-  ).to.equal('rgb(1, 2, 3)');
+  );
 });
 
 // Regression: [part='day'][data-today='true'] used to be declared AFTER [part='day']:focus-visible.

@@ -5,7 +5,11 @@ import "../button/button.js";
 import type { LyraTokenInput } from "./token-input.js";
 import { styles } from "./token-input.styles.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from "../../../../test/wtr-mouse.js";
 
 const RULE = "Bash(git status:*)";
 
@@ -2254,21 +2258,18 @@ describe("editable tokens", () => {
       ></lr-token-input>
     `)) as LyraTokenInput;
     const label = tokenLabel(el, 0);
-    const rect = label.getBoundingClientRect();
     try {
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
-      expect(getComputedStyle(label).backgroundColor).to.equal("rgb(1, 2, 3)");
+      await hoverUntilMatched(label, "token label never reported :hover");
+      await waitUntil(
+        () => getComputedStyle(label).backgroundColor === "rgb(1, 2, 3)",
+        "enabled hover background never eased to the configured colour"
+      );
 
       el.disabled = true;
       await el.updateComplete;
-      expect(getComputedStyle(label).backgroundColor).to.equal(
-        "rgba(0, 0, 0, 0)"
+      await waitUntil(
+        () => getComputedStyle(label).backgroundColor === "rgba(0, 0, 0, 0)",
+        "disabled token background never eased back to transparent"
       );
     } finally {
       await resetMouse();

@@ -1310,7 +1310,12 @@ describe('emoji interaction-state cssprops', () => {
    *  `connectEmojiPicker`'s pre-connect `loadGroups` override so the default auto-loader never runs. */
   async function themedPicker(style: string): Promise<LyraEmojiPicker> {
     const wrapper = document.createElement('div');
-    wrapper.setAttribute('style', style);
+    // Interaction-state backgrounds now ease over --lr-transition-fast instead of snapping;
+    // zero it so these token/override assertions read the settled colour, not a mid-interpolation
+    // sample. (Callers still poll with waitUntil for the exact value where the resting colour is
+    // transparent -- a zero-duration transition still renders one interpolated frame in the same
+    // tick, so the very next synchronous read can land on a partial alpha.)
+    wrapper.setAttribute('style', `--lr-transition-fast: 0s; ${style}`);
     const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
     (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () =>
       Promise.resolve(null);
@@ -1360,7 +1365,10 @@ describe('emoji interaction-state cssprops', () => {
     const el = await themedPicker('--lr-emoji-picker-keyboard-active-bg: rgb(0, 51, 102);');
     const active = await activateAnEmoji(el);
     expect((active) != null).to.equal(true);
-    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
+    await waitUntil(
+      () => getComputedStyle(active).backgroundColor === 'rgb(0, 51, 102)',
+      'keyboard-active background never eased to the themed colour',
+    );
   });
 
   it('recolors committed selection independently from keyboard-active', async () => {
@@ -1373,8 +1381,14 @@ describe('emoji interaction-state cssprops', () => {
     first.click();
     await el.updateComplete;
     const active = await activateAnEmoji(el);
-    expect(getComputedStyle(first).backgroundColor).to.equal('rgb(102, 0, 51)');
-    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
+    await waitUntil(
+      () => getComputedStyle(first).backgroundColor === 'rgb(102, 0, 51)',
+      'committed-selection background never eased to the themed colour',
+    );
+    await waitUntil(
+      () => getComputedStyle(active).backgroundColor === 'rgb(0, 51, 102)',
+      'keyboard-active background never eased to the themed colour',
+    );
     expect(first.getAttribute('aria-selected')).to.equal('true');
     expect(active.getAttribute('aria-selected')).to.equal('false');
   });
@@ -1382,14 +1396,19 @@ describe('emoji interaction-state cssprops', () => {
   it('retains the legacy active background as the hover/keyboard fallback', async () => {
     const el = await themedPicker('--lr-emoji-picker-active-bg: rgb(0, 51, 102);');
     const active = await activateAnEmoji(el);
-    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
+    await waitUntil(
+      () => getComputedStyle(active).backgroundColor === 'rgb(0, 51, 102)',
+      'legacy active background never eased to the themed colour',
+    );
   });
 
   it('renders byte-identically to the pre-cssprop output when the prop is unset', async () => {
     const el = await themedPicker('');
     const active = await activateAnEmoji(el);
-    expect(getComputedStyle(active).backgroundColor).to.equal(
-      resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+    const expected = resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color');
+    await waitUntil(
+      () => getComputedStyle(active).backgroundColor === expected,
+      'active background never eased to the pre-cssprop default',
     );
     // A non-active, non-hovered emoji keeps its transparent resting background.
     const inactive = el.shadowRoot!.querySelector('[part="emoji"]:not([data-active])') as HTMLElement;
