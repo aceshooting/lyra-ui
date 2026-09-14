@@ -6,6 +6,11 @@ export const styles = css`
        through, and a host still needs a retheme hook. Same as lr-widget's
        --lr-widget-overlay-color. */
     --_lr-dialog-overlay-color: var(--lr-color-overlay);
+    /* The panel-width size ladder's private default. The unconditional value here IS the 'm' tier
+       (32rem, unchanged from before the size property existed); the tiered rules below only
+       override it for every other step. See the size property's own doc comment in
+       dialog.class.ts. */
+    --_lr-dialog-max-width: var(--lr-size-32rem);
     display: none;
     position: fixed;
     inset: 0;
@@ -41,6 +46,26 @@ export const styles = css`
     display: flex;
     pointer-events: none;
   }
+  /* The panel-width size ladder. Both spellings of every non-'m' tier are matched, matching
+     internal/sizes.styles.ts's own convention; 'm'/'medium' need no rule of their own since the
+     unconditional --_lr-dialog-max-width above already IS that tier. */
+  :host([size='2xs']) {
+    --_lr-dialog-max-width: var(--lr-size-20rem);
+  }
+  :host([size='xs']) {
+    --_lr-dialog-max-width: var(--lr-size-24rem);
+  }
+  :host([size='s']),
+  :host([size='small']) {
+    --_lr-dialog-max-width: var(--lr-size-28rem);
+  }
+  :host([size='l']),
+  :host([size='large']) {
+    --_lr-dialog-max-width: var(--lr-size-38rem);
+  }
+  :host([size='xl']) {
+    --_lr-dialog-max-width: var(--lr-size-48rem);
+  }
   [part~="base"] {
     display: contents;
   }
@@ -63,12 +88,13 @@ export const styles = css`
     inline-size: var(--width, var(--lr-dialog-width, auto));
     /* --lr-dialog-max-width resizes the panel per instance without overriding the rule -- same
        convention as lr-media-card's --lr-media-card-max-height. With --lr-dialog-width set and this
-       one left at its default, the cap falls back to the requested width, not the 32rem default, so
-       an assertive width is not silently clipped; the viewport (100%) is still a hard limit. */
+       one left at its default, the cap falls back to the requested width, not the size-tiered
+       default, so an assertive width is not silently clipped; the viewport (100%) is still a hard
+       limit. --_lr-dialog-max-width is the size ladder's private tier value, defined above. */
     max-inline-size: min(
       var(
         --lr-dialog-max-width,
-        var(--width, var(--lr-dialog-width, var(--lr-size-32rem)))
+        var(--width, var(--lr-dialog-width, var(--_lr-dialog-max-width)))
       ),
       100%
     );

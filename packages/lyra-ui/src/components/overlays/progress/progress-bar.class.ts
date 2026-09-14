@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraVariant } from '../../../internal/variants.js';
+import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import {
   formatProgressPercent,
@@ -36,7 +36,10 @@ export type LyraProgressVariant = LyraVariant;
  * @csspart track - The track.
  * @csspart indicator - The filled progress indicator.
  * @csspart label - The label row.
- * @cssprop [--lr-progress-track-height=var(--lr-progress-height,var(--lr-size-1rem))] - Block size of the progress track.
+ * @cssprop [--lr-progress-track-height=var(--lr-progress-height,var(--_lr-progress-track-height))] - Block
+ * size of the progress track. The innermost fallback steps with `size` across the shared six-step
+ * ladder (`0.25rem` at `2xs` up to `1.5rem` at `xl`, `1rem` unchanged at the `m` default); an
+ * inherited or direct value here still wins outright over every tier.
  * @cssprop [--lr-progress-track-color=var(--lr-color-brand-quiet)] - Track color.
  * @cssprop [--lr-progress-indicator-color=var(--lr-progress-indicator-variant-color)] - Indicator
  * color, overriding the variant palette below.
@@ -73,6 +76,13 @@ export class LyraProgressBar extends LyraElement {
    *  indicator via the variant's loud fill from the shared semantic grid. */
   @property({ reflect: true }) variant: LyraProgressVariant = 'brand';
   @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
+  /** Visual thickness of the track/indicator, on the library's shared six-step size ladder. `'m'`
+   *  (the default) is this component's pre-existing behaviour, unchanged: an unset bar still
+   *  renders at `--lr-progress-track-height`'s literal `1rem` default. Every other tier scales that
+   *  same height, from a slender `0.25rem` at `2xs` up to a bold `1.5rem` at `xl`; an explicit
+   *  `--lr-progress-track-height` (or the upstream `--track-height`/`--height` aliases) still wins
+   *  over any tier. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Mapped accessible-label property. */
   @property() label = '';
   /** Explicit accessible name, on the library-wide `accessibleLabel`/`accessible-label` convention

@@ -793,6 +793,54 @@ it('defaults --lr-dialog-max-width\'s effect to 32rem, overridable via the CSS c
   expect(getComputedStyle(panel).maxInlineSize).to.equal(`min(${60 * remPx}px, 100%)`);
 });
 
+it('renders the panel max-inline-size byte-identically to before the size property existed when size is left unset (regression)', async () => {
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  expect(el.size, 'size defaults to the pre-existing m tier without markup authoring it').to.equal('m');
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  expect(getComputedStyle(panel).maxInlineSize).to.equal(`min(${32 * remPx}px, 100%)`);
+});
+
+describe('panel width size ladder', () => {
+  const maxInlineSizeFor = async (size?: string): Promise<string> => {
+    const el = (await fixture(
+      size == null
+        ? html`<lr-dialog label="Untitled" open>body</lr-dialog>`
+        : html`<lr-dialog label="Untitled" open size=${size}>body</lr-dialog>`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    return getComputedStyle(panel).maxInlineSize;
+  };
+
+  it('defaults size to m and reflects every assignment onto the host attribute', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled"></lr-dialog>`)) as LyraDialog;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    el.size = 'xl';
+    await el.updateComplete;
+    expect(el.getAttribute('size')).to.equal('xl');
+  });
+
+  it('steps the panel max-inline-size across the shared six-step ladder, in both spellings, with the unset default on m', async () => {
+    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const expectFor = async (size: string | undefined, rem: number): Promise<void> => {
+      expect(await maxInlineSizeFor(size), `size=${String(size)}`).to.equal(`min(${rem * remPx}px, 100%)`);
+    };
+    await expectFor(undefined, 32);
+    await expectFor('2xs', 20);
+    await expectFor('xs', 24);
+    await expectFor('s', 28);
+    await expectFor('small', 28);
+    await expectFor('m', 32);
+    await expectFor('medium', 32);
+    await expectFor('l', 38);
+    await expectFor('large', 38);
+    await expectFor('xl', 48);
+  });
+});
+
 it('hides the footer wrapper when nothing is slotted into it, shows it once slotted', async () => {
   const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;

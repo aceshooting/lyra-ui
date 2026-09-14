@@ -673,6 +673,53 @@ it('applies --lr-progress-height to the track', async () => {
   expect(getComputedStyle(track).blockSize).to.equal('10px');
 });
 
+it('keeps the track at the pre-existing 1rem height when size is left unset (regression: size tier addition)', async () => {
+  const el = (await fixture(html`<lr-progress-bar></lr-progress-bar>`)) as LyraProgressBar;
+  expect(el.size, 'size defaults to the pre-existing m tier without markup authoring it').to.equal('m');
+  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  expect(getComputedStyle(track).blockSize).to.equal(`${remPx}px`);
+});
+
+describe('track size ladder', () => {
+  const trackBlockSize = async (size?: string): Promise<number> => {
+    const el = (await fixture(
+      size == null
+        ? html`<lr-progress-bar></lr-progress-bar>`
+        : html`<lr-progress-bar size=${size}></lr-progress-bar>`,
+    )) as LyraProgressBar;
+    await el.updateComplete;
+    const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+    return Number.parseFloat(getComputedStyle(track).blockSize);
+  };
+
+  it('defaults size to m and reflects every assignment onto the host attribute', async () => {
+    const el = (await fixture(html`<lr-progress-bar></lr-progress-bar>`)) as LyraProgressBar;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    el.size = 'xl';
+    await el.updateComplete;
+    expect(el.getAttribute('size')).to.equal('xl');
+  });
+
+  it('steps the track thickness across the shared six-step ladder, in both spellings, with the unset default on m', async () => {
+    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const expectFor = async (size: string | undefined, rem: number): Promise<void> => {
+      expect(await trackBlockSize(size), `size=${String(size)}`).to.be.closeTo(rem * remPx, 0.5);
+    };
+    await expectFor(undefined, 1);
+    await expectFor('2xs', 0.25);
+    await expectFor('xs', 0.375);
+    await expectFor('s', 0.625);
+    await expectFor('small', 0.625);
+    await expectFor('m', 1);
+    await expectFor('medium', 1);
+    await expectFor('l', 1.25);
+    await expectFor('large', 1.25);
+    await expectFor('xl', 1.5);
+  });
+});
+
 it('omits aria-valuenow for indeterminate progress', async () => {
   const el = (await fixture(html`<lr-progress-bar indeterminate></lr-progress-bar>`)) as LyraProgressBar;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;

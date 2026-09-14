@@ -10,11 +10,36 @@ export const styles = css`
        explicit --lr-progress-indicator-color or the upstream --indicator-color alias still wins
        outright. The standalone brand default is what this indicator rendered before variants. */
     --_lr-progress-indicator-variant-color: var(--lr-color-brand);
+    /* The track-thickness size ladder's private default. The unconditional value here IS the 'm'
+       tier (1rem, unchanged from before the size property existed); the tiered rules below only
+       override it for every other step. See the size property's own doc comment in
+       progress-bar.class.ts. */
+    --_lr-progress-track-height: var(--lr-size-1rem);
   }
   /* [variant] is always present ('variant' reflects its 'brand' default on first render), but the
      bare :host default above still guards a not-yet-updated element. */
   :host([variant]) {
     --_lr-progress-indicator-variant-color: var(--lr-color-fill-loud);
+  }
+  /* The track-thickness size ladder. Both spellings of every non-'m' tier are matched, matching
+     internal/sizes.styles.ts's own convention; 'm'/'medium' need no rule of their own since the
+     unconditional --_lr-progress-track-height above already IS that tier. */
+  :host([size='2xs']) {
+    --_lr-progress-track-height: var(--lr-size-0-25rem);
+  }
+  :host([size='xs']) {
+    --_lr-progress-track-height: var(--lr-size-0-375rem);
+  }
+  :host([size='s']),
+  :host([size='small']) {
+    --_lr-progress-track-height: var(--lr-size-0-625rem);
+  }
+  :host([size='l']),
+  :host([size='large']) {
+    --_lr-progress-track-height: var(--lr-size-1-25rem);
+  }
+  :host([size='xl']) {
+    --_lr-progress-track-height: var(--lr-size-1-5rem);
   }
   [part~="base"] {
     display: block;
@@ -26,7 +51,7 @@ export const styles = css`
       --lr-progress-track-height,
       var(
         --lr-progress-height,
-        var(--track-height, var(--height, var(--lr-size-1rem)))
+        var(--track-height, var(--height, var(--_lr-progress-track-height)))
       )
     );
     border-radius: var(--lr-radius-pill);

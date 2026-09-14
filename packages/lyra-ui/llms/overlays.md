@@ -662,6 +662,11 @@ read, and neither is deprecated.
   names are current upstream spellings, both are read, and neither is deprecated or removable
 - `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
+- `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
+  'large'`. Panel-width tier, on the shared six-step ladder: `20rem` (`2xs`), `24rem` (`xs`), `28rem`
+  (`s`/`small`), `32rem` (`m`/`medium`, unchanged from before this property existed), `38rem`
+  (`l`/`large`), `48rem` (`xl`) — each value feeds `--lr-dialog-max-width`'s private default. An
+  explicit `--lr-dialog-width`/`--lr-dialog-max-width` still wins over every tier.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click closing
   the dialog; Escape and explicit `close()`/`hide()` calls remain available. **Changed in 8.0.0:**
   this was previously spelled `no-light-dismiss`, an opt-_out_ whose default left backdrop dismissal
@@ -797,11 +802,13 @@ turn fall back to the retained Lyra tokens: `--lr-dialog-overlay-color` (default
 the backdrop scrim color), `--lr-dialog-backdrop-filter` (default `none` — a `backdrop-filter` on
 the scrim, e.g. `blur(3px)`, for a frosted-glass treatment over the page behind it),
 `--lr-dialog-width` (default `auto` — the panel shrink-wraps to content; set it for an assertive
-width instead), `--lr-dialog-max-width` (default `var(--lr-dialog-width, var(--lr-size-32rem))` —
-the panel's max-inline-size cap, applied as
-`min(var(--lr-dialog-max-width, var(--lr-dialog-width, var(--lr-size-32rem))), 100%)`; when
+width instead), `--lr-dialog-max-width` (default `var(--lr-dialog-width, var(--_lr-dialog-max-width))`
+— the panel's max-inline-size cap, applied as
+`min(var(--lr-dialog-max-width, var(--lr-dialog-width, var(--_lr-dialog-max-width))), 100%)`, where
+the private `--_lr-dialog-max-width` is the `size` property's own tier value (`32rem` at the `m`
+default, unchanged); when
 `--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls back to
-the requested width itself — not the 32rem default — so an assertive width isn't silently clipped;
+the requested width itself — not the tier default — so an assertive width isn't silently clipped;
 the viewport is still a hard limit either way), `--lr-dialog-height` (default `auto` — the panel
 shrink-wraps to content on the block axis, same as before this property existed; always capped at
 `100%`, i.e. the viewport, like every other panel dimension). With it set, `[part="body"]`'s own
@@ -1981,7 +1988,14 @@ formatted percentage.
 `label` (mapped accessible-name property), plus `accessibleLabel` (`accessible-label`) — the
 retained Lyra compatibility spelling for this component. It is not a library-wide attribute:
 spinner, rating, and tooltip expose their explicit host name through `aria-label`. Host
-`aria-label` has highest precedence here too.
+`aria-label` has highest precedence here too. Also
+`size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
+'large'`. Track/indicator thickness tier, on the shared six-step ladder: `0.25rem` (`2xs`),
+`0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`, unchanged from before this
+property existed), `1.25rem` (`l`/`large`), `1.5rem` (`xl`) — each value feeds
+`--lr-progress-track-height`'s private default. An explicit `--lr-progress-track-height` (or the
+upstream `--track-height`/`--height` aliases) still wins over every tier.
+
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
 determinate. Slotted label content is always visible and names the progressbar unless an explicit
 label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.
@@ -1994,7 +2008,9 @@ presence-based, so an explicitly empty value remains empty rather than invoking 
 **CSS parts:** `base` and `progress-bar` are aliases on the same progressbar; `track`, `indicator`,
 `label`.
 **Themeable custom properties:** `--lr-progress-track-height` (default
-`var(--lr-progress-height, var(--lr-size-1rem))`; `--lr-progress-height` is the legacy fallback),
+`var(--lr-progress-height, var(--_lr-progress-track-height))`; `--lr-progress-height` is the legacy
+fallback, and the private `--_lr-progress-track-height` is the `size` property's own tier value,
+`1rem` at the `m` default, unchanged),
 `--lr-progress-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-indicator-color` (default `var(--lr-progress-indicator-variant-color)`), and
 `--lr-progress-label-color` (default `var(--lr-color-text)`). Upstream aliases are `--height` and

@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import {
   activateOverlay,
@@ -191,7 +192,8 @@ export interface LyraDialogEventMap {
  * @csspart overlay - Shoelace alias on the backdrop.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open); also carries `dialog`.
  *   Shrink-wraps to its
- *   content by default, capped at `--lr-dialog-max-width` (default `32rem`); set
+ *   content by default, capped at `--lr-dialog-max-width` (default `32rem` at the `size="m"` tier —
+ *   see the `size` property); set
  *   `--lr-dialog-width` for an assertive width instead of only a cap. `--lr-dialog-height` is the
  *   same idea on the block axis: left unset the panel stays content-sized (capped at the
  *   viewport), and set it gives `body` a definite size to fill and scroll within while `header`/
@@ -224,9 +226,12 @@ export interface LyraDialogEventMap {
  * @cssprop [--hide-duration] - Mapped closing animation duration.
  * @cssprop [--lr-dialog-width=auto] - Assertive inline size for the panel. Left at `auto` the panel
  *   shrink-wraps to its content.
- * @cssprop [--lr-dialog-max-width=var(--lr-dialog-width, var(--lr-size-32rem))] - Cap on the
+ * @cssprop [--lr-dialog-max-width=var(--lr-dialog-width, var(--_lr-dialog-max-width))] - Cap on the
  *   panel's inline size. Falls back to `--lr-dialog-width` when that is set, so an assertive width
- *   is not clipped by the 32rem default; the viewport (`100%`) is always a hard limit on top.
+ *   is not clipped by the tier default; the viewport (`100%`) is always a hard limit on top. The
+ *   innermost fallback steps with `size` across the shared six-step ladder (`20rem` at `2xs` up to
+ *   `48rem` at `xl`, `32rem` unchanged at the `m` default) -- an inherited or direct value here
+ *   still wins outright over every tier.
  * @cssprop [--lr-dialog-height=auto] - Assertive block size for the panel, mirroring
  *   `--lr-dialog-width` on the other axis. Left at `auto` the panel shrink-wraps to its content,
  *   unchanged from before this property existed; always capped at `100%` (the viewport) like
@@ -312,6 +317,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   /** SSR hint that keeps the footer wrapper rendered before slot assignment is observable. */
   @property({ type: Boolean, attribute: 'with-footer', reflect: true }) withFooter = false;
+
+  /** Visual width tier for the panel, on the library's shared six-step size ladder. `'m'` (the
+   *  default) is this component's pre-existing behaviour, unchanged: an unset panel still caps at
+   *  `--lr-dialog-max-width`'s literal `32rem` default. Every other tier scales that same cap, from
+   *  a compact `20rem` at `2xs` up to a roomy `48rem` at `xl`; an explicit `--lr-dialog-width` or
+   *  `--lr-dialog-max-width` override still wins over any tier. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Explicit accessible-only panel name. Unlike `label`, it never renders visible text. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
