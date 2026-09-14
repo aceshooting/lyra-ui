@@ -1184,7 +1184,7 @@ describe("selected/hover cssprops", () => {
   });
 });
 
-describe('lr-tab host color inheritance (BUG fr_KzqYEzRfpJxnZLS2wJMcDw)', () => {
+describe('lr-tab host color inheritance from the themed tab button', () => {
   // Regression: <lr-tab>'s own stylesheet used to declare display: contents with no color/font, so
   // it inherited LyraElement's base color: var(--lr-color-text) (tokens.styles.ts) instead of the
   // real [part="tab"] button's computed color -- silently blocking

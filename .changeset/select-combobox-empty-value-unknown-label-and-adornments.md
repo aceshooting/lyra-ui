@@ -4,7 +4,7 @@
 
 Three fixes to `<lr-select>` and `<lr-combobox>`'s controlled-value contract and popup rendering.
 
-- **fr_bdEBpfRnxOyltgEOif44sA -- an empty-valued `<lr-option>` is now a stable controlled
+- **An empty-valued `<lr-option>` is now a stable controlled
   selection.** Both pickers' `value`/`defaultValue` setters used to test the incoming value with a
   bare truthiness check (`next ? [next] : []`), so assigning `''` was indistinguishable from
   clearing the selection -- even when an option declared `value=""`. The contract is now explicit:
@@ -20,7 +20,7 @@ Three fixes to `<lr-select>` and `<lr-combobox>`'s controlled-value contract and
   restore/default to" sentinel (`formStateRestoreCallback`, `formResetCallback`,
   `refreshOptionDefaults`, `applySelectedRowValues`, `onOptionChange`'s deselect branch) now pass an
   explicit `[]`/`undefined` instead, so they keep meaning "clear" under the corrected contract.
-- **fr_j78P1f--O__WYl1AIDwRvA -- a committed value matching no option no longer leaks its raw
+- **A committed value matching no option no longer leaks its raw
   string with no explanation.** Both components' `labelFor()`-style resolution already fell back to
   the raw value for a stale or programmatically mistyped value; that raw value is still fully
   reachable through `value`/`selectedOptions`/`selectedRows` and JSDoc's fallback description is
@@ -33,7 +33,7 @@ Three fixes to `<lr-select>` and `<lr-combobox>`'s controlled-value contract and
   `<lr-combobox>` additionally suppresses the badge while an async `source` fetch is still in
   flight (not yet resolved is not the same as genuinely unknown) and never flags an
   `allowCustomValue` commit, which is a sanctioned unmatched value, not a stale one.
-- **fr_JdccfkynRjnbGPuSsmLLtQ -- `<lr-select>` now renders `<lr-option>`'s `start`/`end`
+- **`<lr-select>` now renders `<lr-option>`'s `start`/`end`
   adornments in its listbox rows**, mirroring `<lr-combobox>`'s existing `option-start`/`option-end`
   parts and clone-based rendering (`cloneNode(true)`, never `createElementNS`, so a custom-element
   adornment still upgrades). Previously `<lr-select>`'s rows read only `dotColor`/`label`/`sub` and
@@ -41,5 +41,5 @@ Three fixes to `<lr-select>` and `<lr-combobox>`'s controlled-value contract and
   adornment renders no extra wrapper, and the new parts mirror correctly under `dir="rtl"` like
   every other flex-row adornment pair in the library.
 
-Deferred: fr_f26OnwTQYTBgrkrM60FoJw (a `data` payload channel on `<lr-option>`) needs an API design
+Deferred: a `data` payload channel on `<lr-option>` needs an API design
 decision and is not part of this change.

@@ -5,21 +5,21 @@
 Three additions to `<lr-filter-bar>`, every new token byte-identical to today's rendering when
 unset.
 
-- **fr_UC6L4lLO5-4T51m8_aNd7A -- the per-filter field wrapper is now a themeable public part.**
+- **The per-filter field wrapper is now a themeable public part.**
   The row-stacking wrapper around each filter's composed control was a bare, untokenized
   `.filter-field { flex: 1 1 var(--lr-size-12rem); }`, with zero `@cssprop` entries anywhere on
   the component. It is now `part="field"`, with its flex-basis themeable via
   `--lr-filter-bar-field-basis` (still `var(--lr-size-12rem)` by default). The `controls` row's
   own previously-hardcoded gap is likewise now `--lr-filter-bar-gap` (still `var(--lr-space-s)` by
   default).
-- **fr_ovW3ymAjsgHhf3RV7mnCkA -- a new `end` slot holds host-supplied trailing actions next to the
+- **A new `end` slot holds host-supplied trailing actions next to the
   reset button.** `<lr-filter-bar>` had zero host-level slots, so a consumer wanting a "Save
   search" or "Export" action beside the built-in reset had nowhere to put it short of wrapping the
   whole component. `end` renders inside the new `end` part (itself inside `[part="controls"]`,
   next to `reset-button`) and stays `hidden` -- claiming no layout space -- while nothing is
   slotted, matching the adornment-slot vocabulary (`start`/`end`) and the `header-actions`-style
   precedent set by `<lr-details>`/`<lr-card>`/`<lr-dialog>`.
-- **fr_CQ3_HBRD0S_U-GTtrx3yLg -- `'text'`/`'combobox'` filter definitions now forward
+- **`'text'`/`'combobox'` filter definitions now forward
   `clearable`/`size`/`icon` (plus, `'text'`-only, `inputType`) to their composed
   `<lr-input>`/`<lr-combobox>`.** `renderControl()`'s `'text'`/`'combobox'` branches hardcoded
   `type="text"` and never set `clearable`/`size`/a `start`-slot adornment, even though

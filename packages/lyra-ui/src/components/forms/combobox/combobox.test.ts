@@ -7445,10 +7445,10 @@ describe('visible-options cap', () => {
   });
 });
 
-// fr_bdEBpfRnxOyltgEOif44sA: an empty-valued <lr-option> must be a stable controlled selection.
+// An empty-valued <lr-option> must be a stable controlled selection.
 // Contract: assigning `undefined`/`null` to `value` clears the selection; every string, INCLUDING
 // `''`, is a candidate value resolved against the current local options/async rows instead.
-describe('empty-valued option as a stable controlled selection (fr_bdEBpfRnxOyltgEOif44sA)', () => {
+describe('empty-valued option as a stable controlled selection', () => {
   const withEmptyOption = () => html`
     <lr-combobox>
       <lr-option value="">None</lr-option>
@@ -7550,12 +7550,12 @@ describe('empty-valued option as a stable controlled selection (fr_bdEBpfRnxOylt
   });
 });
 
-// fr_j78P1f--O__WYl1AIDwRvA: a committed value matching no option/row must not leak its raw string
+// A committed value matching no option/row must not leak its raw string
 // to the trigger with no explanation. Mirrors lr-model-select's dashed/italic "not in catalog"
 // treatment (see model-select.class.ts's effectiveEntries), adapted to this component's closed
 // single-select input and multiple-mode tags. The raw value stays fully reachable through `value`
 // -- only the presentation changes.
-describe('unknown committed value presentation (fr_j78P1f--O__WYl1AIDwRvA)', () => {
+describe('unknown committed value presentation', () => {
   it('flags the closed single-select input as unknown when the committed value matches no option', async () => {
     const el = (await fixture(html`
       <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox>

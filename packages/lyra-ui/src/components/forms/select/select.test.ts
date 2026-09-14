@@ -5340,7 +5340,7 @@ describe("lr-select mapped Select parity surface", () => {
     const display = el.shadowRoot!.querySelector(
       '[part="display-input"]'
     ) as HTMLElement;
-    // fr_j78P1f--O__WYl1AIDwRvA: the raw value stays reachable in the visible text, but the trigger
+    // The raw value stays reachable in the visible text, but the trigger
     // now also flags it as unknown (a trailing "not in catalog" badge) rather than rendering it as
     // an ordinary, unexplained label -- see the dedicated describe block below for the full contract.
     expect(display.textContent).to.contain("ghost");
@@ -5643,10 +5643,10 @@ it("contains the internal lr-option-change notification instead of leaking it pa
   ).to.deep.equal(["Fruit"]);
 });
 
-// fr_bdEBpfRnxOyltgEOif44sA: an empty-valued <lr-option> must be a stable controlled selection.
+// An empty-valued <lr-option> must be a stable controlled selection.
 // Contract: assigning `undefined`/`null` to `value`/`defaultValue` clears the selection; every
 // string, INCLUDING `''`, is a candidate value resolved against the current options instead.
-describe('empty-valued option as a stable controlled selection (fr_bdEBpfRnxOyltgEOif44sA)', () => {
+describe('empty-valued option as a stable controlled selection', () => {
   const withEmptyOption = () => html`
     <lr-select>
       <lr-option value="">None</lr-option>
@@ -5751,12 +5751,12 @@ describe('empty-valued option as a stable controlled selection (fr_bdEBpfRnxOylt
   });
 });
 
-// fr_j78P1f--O__WYl1AIDwRvA: a committed value matching no option must not leak its raw string to
+// A committed value matching no option must not leak its raw string to
 // the trigger with no explanation. Mirrors lr-model-select's dashed/italic "not in catalog"
 // treatment (see model-select.class.ts's effectiveEntries), adapted to this component's own
 // trigger label and multiple-mode tags. The raw value itself stays fully reachable through
 // `value`/`selectedOptions` -- only the presentation changes.
-describe('unknown committed value presentation (fr_j78P1f--O__WYl1AIDwRvA)', () => {
+describe('unknown committed value presentation', () => {
   it('flags the trigger label as unknown when the committed value matches no option', async () => {
     const el = (await fixture(html`
       <lr-select value="ghost">
@@ -5808,12 +5808,12 @@ describe('unknown committed value presentation (fr_j78P1f--O__WYl1AIDwRvA)', () 
   });
 });
 
-// fr_JdccfkynRjnbGPuSsmLLtQ: lr-option documents start/end (and the prefix/suffix aliases)
+// lr-option documents start/end (and the prefix/suffix aliases)
 // adornment slots and matching CSS parts, but lr-select's listbox is built from its own
 // [part='option'] rows rather than by exposing the option elements, so none of them rendered at
 // all -- mirrors lr-combobox's identical popup-adornment contract (cloneSlot/adornmentsFor,
 // renderInertPresentation).
-describe('lr-option start/end adornments in the select listbox (fr_JdccfkynRjnbGPuSsmLLtQ)', () => {
+describe('lr-option start/end adornments in the select listbox', () => {
   async function openWith(markup: unknown): Promise<LyraSelect> {
     const el = (await fixture(markup as never)) as LyraSelect;
     el.open = true;
