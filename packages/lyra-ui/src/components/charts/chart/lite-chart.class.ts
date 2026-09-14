@@ -2223,7 +2223,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     );
     // A `max-labels` decimation keeps roughly n / visibleLabelIndexes.size slots of horizontal
     // space per surviving label, not the one slot every one of the n samples would get if none
-    // were dropped -- size the clip to what a survivor actually owns. Labels are
+    // were dropped -- size the clip to what a survivor actually owns. Non-boundary labels are
     // text-anchor="middle", so a survivor has half that stride clear on each side; nothing can
     // collide. Stays 1 (byte-identical to the pre-decimation clip) when max-labels is unset.
     const decimationStride = visibleLabelIndexes ? n / visibleLabelIndexes.size : 1;
@@ -2245,11 +2245,34 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           ? (barOrigins.get(i) ?? plotX + i * slot) + slot / 2
           : plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
       const displayLabel = this.displayCategoryLabel(fullLabel, categoryLabelWidth);
+      // The first and last surviving ticks sit AT the plot's own boundary (`plotX` /
+      // `plotX + plotW`), not one stride short of it like every other survivor -- they have no
+      // neighbor on their outer side, so a centered label there overhangs past the svg's own
+      // `overflow: hidden` edge by half its own width (the max-labels decimation above only
+      // reasons about label-to-label collision, never the plot's own edge). Anchor those two
+      // ticks toward the interior instead, the same way the value axis already anchors its own
+      // ticks toward the plot rather than centering them.
+      //
+      // SVG `text-anchor` is direction-relative: under an inherited `direction: rtl`
+      // (`this.effectiveDirection`), "start" and "end" swap which visual edge they anchor to (an
+      // `end` anchor grows rightward from its point instead of leftward). Category order never
+      // mirrors under rtl (`x` above is the same formula either way), but `plotX` itself swaps
+      // between the small `PAD_RIGHT` pad and the wide `axisGutter` reserve, so rtl moves the
+      // small-clearance boundary from the last tick onto the first one -- the anchor keyword for
+      // each boundary index has to swap with direction too, or the fix just relocates the clip.
+      const textAnchor =
+        n <= 1
+          ? 'middle'
+          : i === 0
+            ? (rtl ? 'end' : 'start')
+            : i === n - 1
+              ? (rtl ? 'start' : 'end')
+              : 'middle';
       return svg`<text
         part="axis-label"
         x=${x}
         y=${plotY + plotH + CATEGORY_LABEL_OFFSET}
-        text-anchor="middle"
+        text-anchor=${textAnchor}
         aria-label=${displayLabel === fullLabel ? nothing : fullLabel}
       >${displayLabel}</text>`;
     });

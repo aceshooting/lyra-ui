@@ -153,6 +153,21 @@ function politeTexts(doc: Document = document): string[] {
   return sink ? Array.from(sink.children).map((child) => child.textContent ?? '') : [];
 }
 
+// Category-axis ticks and value-axis ticks share `part="axis-label"` -- only the value axis sets
+// `dominant-baseline`, so that attribute (not `text-anchor`, which a boundary category tick can
+// now also carry) is what actually distinguishes the two rows.
+function categoryAxisLabels(el: LyraLiteChart): SVGTextElement[] {
+  return [...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"]')].filter(
+    (label) => !label.hasAttribute('dominant-baseline'),
+  );
+}
+
+function valueAxisLabels(el: LyraLiteChart): SVGTextElement[] {
+  return [
+    ...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][dominant-baseline]'),
+  ];
+}
+
 const BAR_LABELS = ['Mon', 'Tue', 'Wed'];
 const BAR_DATASETS = [
   { label: 'A', data: [1, 2, 3] },
@@ -936,7 +951,7 @@ it('withholds fit-mode geometry until its first ResizeObserver measurement', asy
     expect(svg?.getAttribute('viewBox')).to.equal('0 0 320 280');
     expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(2);
     expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]').length).to.be.greaterThan(0);
-    expect(el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]').length).to.equal(2);
+    expect(categoryAxisLabels(el).length).to.equal(2);
   } finally {
     (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
   }
@@ -1244,7 +1259,7 @@ it('keeps bars and their axis labels aligned in layout="scroll" (no drift betwee
     .datasets=${[{ label: 's', data: [1, 2, 3, 4, 5] }]}
   ></lr-lite-chart>`);
   const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
-  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')] as SVGTextElement[];
+  const axisLabels = [...categoryAxisLabels(el)] as SVGTextElement[];
   const firstBarCenter = Number(bars[0]!.getAttribute('x')) + Number(bars[0]!.getAttribute('width')) / 2;
   const firstLabelX = Number(axisLabels.find((l) => l.textContent === 'x')!.getAttribute('x'));
   expect(Math.abs(firstBarCenter - firstLabelX)).to.be.lessThan(1);
@@ -1274,7 +1289,7 @@ it('maxLabels decimates which axis-label text elements render, always keeping th
     .labels=${labels}
     .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
   ></lr-lite-chart>`);
-  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
+  const axisLabels = [...categoryAxisLabels(el)].map(
     (n) => n.textContent,
   );
   expect(axisLabels.length).to.be.lessThan(labels.length);
@@ -1291,7 +1306,7 @@ it('maxLabels distributes labels evenly without bunching the final sampled label
     .labels=${labels}
     .datasets=${[{ label: 's', data: labels.map((_, i) => i) }]}
   ></lr-lite-chart>`);
-  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
+  const axisLabels = [...categoryAxisLabels(el)].map(
     (node) => node.textContent,
   );
   expect(axisLabels).to.deep.equal(['L0', 'L3', 'L6', 'L10', 'L13', 'L16', 'L19', 'L23', 'L26', 'L29']);
@@ -1309,7 +1324,7 @@ it('applies maxLabels to the retained record sample instead of losing requested 
     ]}
   ></lr-lite-chart>`);
   const axisLabels = [
-    ...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]'),
+    ...categoryAxisLabels(el),
   ].map((node) => node.textContent);
 
   expect(axisLabels).to.have.length(10);
@@ -1327,12 +1342,8 @@ it('keeps decimated date labels clear of each other and the y-axis ticks at narr
     .labels=${labels}
     .datasets=${[{ label: 'Filed', data: labels.map((_, i) => i % 5) }]}
   ></lr-lite-chart>`);
-  const xLabels = [
-    ...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][text-anchor="middle"]'),
-  ];
-  const yLabels = [
-    ...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][text-anchor="end"]'),
-  ];
+  const xLabels = categoryAxisLabels(el);
+  const yLabels = valueAxisLabels(el);
   const overlaps = (left: DOMRect, right: DOMRect) =>
     left.left < right.right &&
     left.right > right.left &&
@@ -1363,7 +1374,7 @@ it('widens the clip for a label max-labels keeps, instead of clipping it as if a
     .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
   ></lr-lite-chart>`);
   const axisLabels = [
-    ...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][text-anchor="middle"]'),
+    ...categoryAxisLabels(el),
   ];
   expect(axisLabels.length).to.equal(4);
   for (const label of axisLabels) {
@@ -1382,7 +1393,7 @@ it('renders every label when maxLabels is unset, even for a long category list (
     .labels=${labels}
     .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
   ></lr-lite-chart>`);
-  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')];
+  const axisLabels = [...categoryAxisLabels(el)];
   expect(axisLabels.length).to.equal(20);
 });
 
@@ -1402,7 +1413,7 @@ it('maxLabels="auto" derives a deterministic category-label density from the res
   await el.updateComplete;
 
   const renderedLabelCount = () =>
-    el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]').length;
+    categoryAxisLabels(el).length;
   const wideCount = renderedLabelCount();
 
   chart.plotWidth = 220;
@@ -1432,7 +1443,7 @@ it('keeps an explicit numeric maxLabels authoritative over automatic density', a
   await el.updateComplete;
 
   expect(
-    el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]').length,
+    categoryAxisLabels(el).length,
   ).to.equal(7);
 });
 
@@ -1444,7 +1455,7 @@ it('renders every label (no cap) when maxLabels is non-finite, instead of crashi
     .labels=${labels}
     .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
   ></lr-lite-chart>`);
-  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')];
+  const axisLabels = [...categoryAxisLabels(el)];
   expect(axisLabels.length).to.equal(20);
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
 });
@@ -1458,7 +1469,7 @@ it('does not crash and still keeps the first/last label for a negative maxLabels
   ></lr-lite-chart>`);
   el.maxLabels = -5;
   await el.updateComplete;
-  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
+  const axisLabels = [...categoryAxisLabels(el)].map(
     (n) => n.textContent,
   );
   expect(axisLabels).to.include('L0');
@@ -1490,7 +1501,7 @@ it('keeps the single label of a one-category chart when maxLabels caps it below 
     .labels=${['solo']}
     .datasets=${[{ label: 's', data: [1] }]}
   ></lr-lite-chart>`);
-  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
+  const axisLabels = [...categoryAxisLabels(el)].map(
     (n) => n.textContent,
   );
   expect(axisLabels).to.deep.equal(['solo']);
@@ -1532,7 +1543,7 @@ it('leaves bar/label x-position at the internal per-category formula when barX i
   (el as unknown as { plotHeight: number }).plotHeight = 150;
   await el.updateComplete;
   const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
-  const firstLabel = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].find(
+  const firstLabel = [...categoryAxisLabels(el)].find(
     (n) => n.textContent === 'x',
   ) as SVGTextElement;
   const firstBarCenter = Number(bars[0]!.getAttribute('x')) + Number(bars[0]!.getAttribute('width')) / 2;
@@ -1556,7 +1567,7 @@ it('resolves a stateful barX callback once per rendered category and falls back 
   await el.updateComplete;
 
   const bars = [...el.shadowRoot!.querySelectorAll<SVGRectElement>('[part="bar"]')];
-  const labels = [...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][text-anchor="middle"]')];
+  const labels = [...categoryAxisLabels(el)];
   expect(calls).to.equal(2);
   expect([...bars, ...labels]
     .flatMap((node) => ['x', 'y', 'width', 'height'].map((name) => node.getAttribute(name)))
@@ -1714,11 +1725,7 @@ it('valueAxisGutter="auto" fits long locale-formatted currency ticks without cli
 
   const gridLine = el.shadowRoot!.querySelector('[part="grid-line"]')!;
   const gutter = Number(gridLine.getAttribute('x1'));
-  const ticks = [
-    ...el.shadowRoot!.querySelectorAll<SVGTextElement>(
-      '[part="axis-label"][text-anchor="end"]',
-    ),
-  ];
+  const ticks = valueAxisLabels(el);
   expect(gutter).to.be.greaterThan(36);
   expect(ticks.some((tick) => tick.textContent?.includes('€'))).to.be.true;
   for (const tick of ticks) {
@@ -1744,11 +1751,7 @@ it('uses the unified formatter ahead of tickFormat for both automatic gutter siz
   const gutter = Number(
     el.shadowRoot!.querySelector('[part="grid-line"]')!.getAttribute('x1'),
   );
-  const ticks = [
-    ...el.shadowRoot!.querySelectorAll<SVGTextElement>(
-      '[part="axis-label"][text-anchor="end"]',
-    ),
-  ];
+  const ticks = valueAxisLabels(el);
   expect(gutter).to.equal(36);
   expect(ticks.map((tick) => tick.textContent)).to.deep.equal(
     ticks.map(() => 'fmt'),
@@ -1838,7 +1841,7 @@ it('restores the legacy axis defaults when the automatic sizing attributes are r
   await el.updateComplete;
 
   const renderedCategoryLabels = () =>
-    el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]');
+    categoryAxisLabels(el);
   const resolvedGutter = () =>
     Number(el.shadowRoot!.querySelector('[part="grid-line"]')!.getAttribute('x1'));
   expect(renderedCategoryLabels().length).to.be.lessThan(labels.length);
@@ -2037,8 +2040,8 @@ it('withoutValueAxis suppresses gridlines and y-axis tick labels but leaves x-ax
     .datasets=${BAR_DATASETS}
   ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]').length).to.equal(0);
-  expect(el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="end"]').length).to.equal(0);
-  expect(el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]').length).to.equal(
+  expect(valueAxisLabels(el).length).to.equal(0);
+  expect(categoryAxisLabels(el).length).to.equal(
     BAR_LABELS.length,
   );
 });
@@ -2050,7 +2053,7 @@ it('renders gridlines and y-axis tick labels by default (withoutValueAxis unset,
     .datasets=${BAR_DATASETS}
   ></lr-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]').length).to.be.greaterThan(0);
-  expect(el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="end"]').length).to.be.greaterThan(0);
+  expect(valueAxisLabels(el).length).to.be.greaterThan(0);
 });
 
 // --- minBarHeight -----------------------------------------------------------------
@@ -3587,11 +3590,7 @@ describe('lite-chart semantics and geometry', () => {
     await el.updateComplete;
 
     const svg = el.shadowRoot!.querySelector('svg')!;
-    const axisLabels = [
-      ...el.shadowRoot!.querySelectorAll<SVGTextElement>(
-        '[part="axis-label"][text-anchor="middle"]',
-      ),
-    ];
+    const axisLabels = categoryAxisLabels(el);
     expect(axisLabels[0]!.textContent).to.not.equal(labels[0]);
     expect(axisLabels[0]!.textContent).to.contain('…');
     expect(axisLabels[0]!.getAttribute('aria-label')).to.equal(labels[0]);
@@ -3606,6 +3605,153 @@ describe('lite-chart semantics and geometry', () => {
     for (let index = 1; index < labelRects.length; index++) {
       expect(labelRects[index - 1]!.right).to.be.at.most(labelRects[index]!.left + 0.5);
     }
+  });
+
+  it('anchors the last category-axis tick toward the plot interior so a long trailing label is not clipped (LTR)', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        style="inline-size: 300px"
+        .labels=${['S1', 'Sep 7', 'September 2026']}
+        .datasets=${[{ label: 'Visits', data: [10, 20, 30] }]}
+      ></lr-lite-chart>
+    `);
+    (el as any).plotWidth = 300;
+    (el as any).plotHeight = 200;
+    await el.updateComplete;
+
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    const labels = categoryAxisLabels(el);
+    expect(labels.length).to.equal(3);
+    const svgRect = svg.getBoundingClientRect();
+
+    const first = labels[0]!;
+    expect(first.textContent).to.equal('S1');
+    expect(first.getAttribute('text-anchor')).to.equal('start');
+    const firstRect = first.getBoundingClientRect();
+    expect(firstRect.left).to.be.at.least(svgRect.left - 0.5);
+
+    const last = labels[2]!;
+    expect(last.textContent).to.equal('September 2026');
+    expect(last.getAttribute('text-anchor')).to.equal('end');
+    const lastRect = last.getBoundingClientRect();
+    expect(lastRect.left).to.be.at.least(svgRect.left - 0.5);
+    expect(lastRect.right).to.be.at.most(svgRect.right + 0.5);
+  });
+
+  it('anchors the first category-axis tick toward the plot interior so a long leading label is not clipped (LTR)', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        style="inline-size: 300px"
+        .labels=${['September 2026', 'Sep 7', 'S3']}
+        .datasets=${[{ label: 'Visits', data: [10, 20, 30] }]}
+      ></lr-lite-chart>
+    `);
+    (el as any).plotWidth = 300;
+    (el as any).plotHeight = 200;
+    await el.updateComplete;
+
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    const labels = categoryAxisLabels(el);
+    const svgRect = svg.getBoundingClientRect();
+
+    const first = labels[0]!;
+    expect(first.textContent).to.equal('September 2026');
+    expect(first.getAttribute('text-anchor')).to.equal('start');
+    const firstRect = first.getBoundingClientRect();
+    expect(firstRect.left).to.be.at.least(svgRect.left - 0.5);
+    expect(firstRect.right).to.be.at.most(svgRect.right + 0.5);
+  });
+
+  it('swaps the vulnerable boundary to the first tick under dir="rtl" and still keeps its label on-surface', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        dir="rtl"
+        type="line"
+        style="inline-size: 300px"
+        .labels=${['September 2026', 'Sep 7', 'S3']}
+        .datasets=${[{ label: 'Visits', data: [10, 20, 30] }]}
+      ></lr-lite-chart>
+    `);
+    (el as any).plotWidth = 300;
+    (el as any).plotHeight = 200;
+    await el.updateComplete;
+
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    const labels = categoryAxisLabels(el);
+    const svgRect = svg.getBoundingClientRect();
+
+    const first = labels[0]!;
+    expect(first.textContent).to.equal('September 2026');
+    // SVG text-anchor is direction-relative: under an inherited `direction: rtl`, "end" is the
+    // keyword that visually anchors to the LEFT and grows rightward -- the orientation the
+    // leftmost (first) tick needs here, since `plotX` swaps to the small `PAD_RIGHT` pad under
+    // rtl instead of the wide `axisGutter` reserve it gets in ltr.
+    expect(first.getAttribute('text-anchor')).to.equal('end');
+    const firstRect = first.getBoundingClientRect();
+    expect(firstRect.left).to.be.at.least(svgRect.left - 0.5);
+    expect(firstRect.right).to.be.at.most(svgRect.right + 0.5);
+
+    const last = labels[2]!;
+    expect(last.textContent).to.equal('S3');
+    expect(last.getAttribute('text-anchor')).to.equal('start');
+  });
+
+  it('keeps the last tick anchored inward under dir="rtl" too, even when its own label is long', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        dir="rtl"
+        type="line"
+        style="inline-size: 300px"
+        .labels=${['S1', 'Sep 7', 'September 2026']}
+        .datasets=${[{ label: 'Visits', data: [10, 20, 30] }]}
+      ></lr-lite-chart>
+    `);
+    (el as any).plotWidth = 300;
+    (el as any).plotHeight = 200;
+    await el.updateComplete;
+
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    const labels = categoryAxisLabels(el);
+    const svgRect = svg.getBoundingClientRect();
+
+    const last = labels[2]!;
+    expect(last.textContent).to.equal('September 2026');
+    expect(last.getAttribute('text-anchor')).to.equal('start');
+    const lastRect = last.getBoundingClientRect();
+    expect(lastRect.left).to.be.at.least(svgRect.left - 0.5);
+    expect(lastRect.right).to.be.at.most(svgRect.right + 0.5);
+  });
+
+  it('keeps interior category-axis ticks centered while only the two boundary ticks anchor inward', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        style="inline-size: 300px"
+        .labels=${['A', 'B', 'C', 'D', 'E']}
+        .datasets=${[{ label: 'Visits', data: [1, 2, 3, 4, 5] }]}
+      ></lr-lite-chart>
+    `);
+    (el as any).plotWidth = 300;
+    (el as any).plotHeight = 200;
+    await el.updateComplete;
+
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    const labels = categoryAxisLabels(el);
+    expect(labels.length).to.equal(5);
+    expect(labels[0]!.getAttribute('text-anchor')).to.equal('start');
+    expect(labels[4]!.getAttribute('text-anchor')).to.equal('end');
+    for (const index of [1, 2, 3]) {
+      expect(labels[index]!.getAttribute('text-anchor')).to.equal('middle');
+    }
+
+    const svgRect = svg.getBoundingClientRect();
+    const middle = labels[2]!;
+    const expectedCenterX = svgRect.left + Number(middle.getAttribute('x'));
+    const middleRect = middle.getBoundingClientRect();
+    const actualCenterX = (middleRect.left + middleRect.right) / 2;
+    expect(Math.abs(actualCenterX - expectedCenterX)).to.be.at.most(1);
   });
 });
 

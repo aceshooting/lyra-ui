@@ -732,8 +732,14 @@ ellipsis. If even the ellipsis cannot fit, the title remains accessible without 
 Fitting refreshes after rendering, allocation changes, inherited or host font changes, font loading,
 and reconnection. Server rendering retains the original title until browser layout is available.
 
-The axis gutter/title and y-axis labels mirror to logical start under RTL. Built-in mark summaries
-are complete localized templates and format values with `effectiveLocale`.
+The axis gutter/title and y-axis labels mirror to logical start under RTL. The first and last
+rendered category-axis tick labels anchor toward the plot's interior (`text-anchor="start"`/`"end"`)
+instead of centering, so a long boundary label (e.g. a wide date string) never overhangs past the
+plot's own clipped edge; every other tick still centers. Because SVG's `start`/`end` anchors already
+mirror with the inherited `direction: rtl`, and the plot's own boundary swaps sides with it too, this
+anchoring keeps working correctly under RTL without inverting which rendered category gets which
+keyword. Built-in mark summaries are complete localized templates and format values with
+`effectiveLocale`.
 
 **Performance:** `render()` recomputes the grid/marks on every update rather than memoizing against a
 content signature — `datasets`/`labels` can hold callbacks (`tickFormat`, `barX`) or arbitrary,
