@@ -872,14 +872,34 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  descendant of a newly-inert ancestor. Also called from `updated()` as an idempotent
    *  post-render catch-up, since this component's own `@query` refs are not yet resolvable before
    *  the very first render -- needed for a rail that mounts directly into an already-open mobile
-   *  overlay. A plain `insertBefore` on a node already in the requested position is a no-op, so
-   *  repeated calls cost nothing. */
+   *  overlay. Each branch checks the toggle's current position and skips the DOM write entirely
+   *  when it is already where it belongs -- NOT merely as an optimization: `Node.insertBefore()`
+   *  unconditionally removes the node from its current parent before re-inserting it, even when
+   *  the requested position is exactly where the node already is, and removing the currently
+   *  *focused* element -- even for a single synchronous remove-then-reinsert with no yield to the
+   *  browser -- silently drops focus. `updated()`'s post-render catch-up call runs immediately
+   *  after `deactivateMobileOverlay()`'s own focus-return inside the same `willUpdate()`/render
+   *  pass, so an unconditional `insertBefore()` there would re-blur the toggle right after focus
+   *  had just been restored to it. Observed for real: before this guard, "returns focus to the
+   *  toggle button after closing" failed only once `placeToggle()`'s close-direction move itself
+   *  started working (see the `parentNode`/`parentElement` note above) -- while that move was
+   *  silently a no-op, this redundant call was too, which is why the loss went unnoticed. */
   private placeToggle(insidePanel: boolean): void {
     const toggle = this.toggleEl;
     const panel = this.baseEl;
     if (!toggle || !panel) return;
-    if (insidePanel) panel.insertBefore(toggle, panel.firstChild);
-    else panel.parentElement?.insertBefore(toggle, panel);
+    if (insidePanel) {
+      if (panel.firstChild !== toggle) panel.insertBefore(toggle, panel.firstChild);
+      return;
+    }
+    // `parentNode`, not `parentElement`: [part="base"]/[part="panel"] is a direct child of this
+    // component's shadow root in the render template below, and `Node.parentElement` returns
+    // `null` (not the root) whenever a node's parent isn't itself an Element -- a ShadowRoot is a
+    // DocumentFragment, not an Element, so `panel.parentElement` was always `null` here and the
+    // `?.` silently skipped this insertBefore on every close, leaving the toggle stranded inside
+    // the panel. `parentNode` resolves to the ShadowRoot itself, which implements `insertBefore`
+    // the same as any other `Node`.
+    if (toggle.nextSibling !== panel) panel.parentNode?.insertBefore(toggle, panel);
   }
 
   private setupMediaQueries(): void {
