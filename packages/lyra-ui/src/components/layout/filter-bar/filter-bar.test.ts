@@ -3135,4 +3135,46 @@ describe("'combobox' debounce", () => {
     expect(el.value).to.deep.equal({});
     expect(inputs, 'only the reset itself emitted').to.equal(1);
   });
+
+  it('cancels a pending combobox debounce when its chip is removed, so the stale pick never overwrites the removal', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCombobox} .value=${{ tags: ['urgent'] }}></lr-filter-bar>`
+    );
+    const combo = comboControl(el);
+    combo.value = ['urgent', 'billing'];
+    combo.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    // Still the pre-debounce committed value -- the pick above is only pending.
+    expect(el.value).to.deep.equal({ tags: ['urgent'] });
+
+    let inputs = 0;
+    el.addEventListener('lr-input', () => (inputs += 1));
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(Object.hasOwn(el.value, 'tags'), 'the chip removal itself must clear tags').to.equal(false);
+    expect(inputs, 'only the chip removal itself emitted so far').to.equal(1);
+
+    await aTimeout(120); // well past the 60ms debounce window
+    expect(inputs, 'a leaked debounce timer must not re-emit lr-input after the chip removal').to.equal(1);
+    expect(Object.hasOwn(el.value, 'tags'), 'the stale pending pick must not resurrect tags').to.equal(false);
+  });
+
+  it('cancels a pending combobox debounce on disconnect, so a detached bar never emits after teardown', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCombobox}></lr-filter-bar>`
+    );
+    const combo = comboControl(el);
+    let fired = false;
+    el.addEventListener('lr-input', () => (fired = true));
+    combo.value = ['urgent'];
+    combo.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({});
+
+    el.remove();
+    await aTimeout(120); // well past the 60ms debounce window
+    expect(fired, 'a leaked debounce timer must not emit lr-input after disconnect').to.be.false;
+    expect(el.value).to.deep.equal({});
+  });
 });

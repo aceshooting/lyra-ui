@@ -649,4 +649,29 @@ describe('error state', () => {
     await element.updateComplete;
     await expect(element).to.be.accessible();
   });
+
+  it('lets `error` take precedence over the filterable no-rows empty branch too', async () => {
+    // Distinct from the non-filterable "no-rows empty branch" test above: `filterable` routes
+    // through render()'s later `tableContent` ternary (inside the full grid shell) rather than the
+    // earlier whole-component-replacing empty branch, so it exercises a separate `!this.error`
+    // guard than the one already covered.
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      filterable
+      error
+      .rows=${[]}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    expect(element.shadowRoot!.querySelector('[part="base"]')).to.exist;
+    expect(element.shadowRoot!.querySelector('thead')).to.exist;
+    expect(element.shadowRoot!.querySelector('[part="filter"]')).to.exist;
+    expect(element.shadowRoot!.querySelector('[part="error-row"]')).to.exist;
+    expect(
+      element.shadowRoot!.querySelector('lr-empty[part="empty"]') === null,
+      'the filterable no-rows empty branch should not render while error takes precedence'
+    ).to.be.true;
+  });
 });

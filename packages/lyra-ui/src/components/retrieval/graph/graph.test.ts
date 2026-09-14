@@ -2231,6 +2231,16 @@ describe('nodeLabels', () => {
       el.nodes = nodes;
       el.links = links;
       await el.updateComplete;
+      await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+        timeout: NODE_COUNT_TIMEOUT,
+      });
+      // Stop the simulation before observing canvasScene: onTick() unconditionally nulls it on
+      // every tick (markCanvasDirty()), while the coalesced redraw only fires once per real frame --
+      // under a heavily loaded/unthrottled run the live ~300-tick settle can keep canvasScene falsy
+      // for the whole animation, so polling for it without first stopping the ticking is a race this
+      // assertion can lose even with a long timeout. Matches every other canvasScene-observing test
+      // in this file (see "coverage: canvas renderer internals"'s identical comment).
+      (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
       await waitUntil(
         () =>
           (el as unknown as { canvasScene?: { nodes: unknown[] } }).canvasScene

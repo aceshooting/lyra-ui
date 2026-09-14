@@ -89,4 +89,28 @@ describe('loadShikiHighlighterCore language aliasing', () => {
     const html = core!.codeToHtml('alpha', { lang: 'legacy-alias', themes: SHIKI_THEMES });
     expect(html).to.match(/<span style="[^"]*">alpha<\/span>/);
   });
+
+  it('tolerates a null entry and a non-string-name entry in the languages map without dropping a later valid sibling grammar', async function () {
+    this.timeout(20_000);
+    const grammar = testGrammar();
+    // The two malformed entries are deliberately keyed *before* the valid one in iteration order:
+    // buildShikiLangAlias()'s own derivation loop walks Object.keys(languages) in order, so this
+    // arrangement actually exercises its per-entry tolerance for the malformed shapes ahead of the
+    // sibling that needs aliasing, rather than accidentally passing because the valid entry was
+    // already processed first.
+    const languages: Record<string, ShikiLanguageInput> = {
+      'null-entry': null as unknown as ShikiLanguageInput,
+      'bad-name-entry': { name: 42, scopeName: 'source.bad-name' } as unknown as ShikiLanguageRegistration,
+      // 'tsx' is deliberately unrelated to the grammar's own `name`, same as this describe block's
+      // first test above, so it only highlights if langAlias derivation actually ran for it.
+      tsx: grammar,
+    };
+    const core = await loadShikiHighlighterCore(languages);
+    expect(core, 'a malformed sibling entry must not fail the entire highlighter build').to.not.equal(null);
+    cores.add(core!);
+
+    const html = core!.codeToHtml('alpha', { lang: 'tsx', themes: SHIKI_THEMES });
+    expect(html).to.contain('alpha');
+    expect(html).to.match(/<span style="[^"]*">alpha<\/span>/);
+  });
 });
