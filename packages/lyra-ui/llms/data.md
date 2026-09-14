@@ -2035,7 +2035,10 @@ from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height
 against new content or a resize; `detail` is the same object `matrixGeometry` returns; never fired
 in calendar mode)
 
-**Slots:** none.
+**Slots:** `legend` — custom content rendered inside the built-in `[part="legend"]` row, after the
+gradient/`legendStops` swatches, the trailing `valueLabel` caption, and any labeled `annotations`
+entries. Presentation-only, like `legendStops`: slotted content is never consulted by the color
+ramp, the bucket math, the tooltip, or the generated accessible name.
 
 **CSS parts:** `base`, `canvas`, `grid` (the scrollport wrapping the canvas while `stickyLabels`
 freezes an axis — absent entirely otherwise), `row-labels`/`col-labels` (the frozen label bands,
@@ -2157,8 +2160,14 @@ is now literal.
 - `maxCellSize`/`minCellSize` are no-ops without `fit-to-width` — an explicit `cellSize` is an exact
   request and is never clamped. And the canvas is sized _from the clamped_ cell size, so a capped
   grid deliberately leaves the host's remaining width unfilled: the canvas simply ends early rather
-  than stretching to fill. Position it with ordinary CSS on the host if you want it centered or
-  end-aligned.
+  than stretching to fill. `fit-to-width` derives that cell size from the host's own measured
+  `clientWidth`, so do **not** make the host itself shrink-to-fit (`display: inline-block`,
+  `inline-size: fit-content`, floating it, ...) to chase the capped canvas — that makes the host's
+  width a function of its own rendered content while the content's width is derived from the host's
+  width, a circular sizing dependency the browser cannot resolve stably. Keep the host at its normal
+  block-level, fully-sized width and position the canvas within it instead:
+  `::part(canvas) { margin-inline: auto }` centers it, `::part(canvas) { margin-inline-start: auto }`
+  end-aligns it.
 - the host is `role="group"` (not `role="img"`) with a dimensions+range summary `aria-label`
   (calendar mode: a day-count + range summary instead). In default canvas mode,
   `[part="canvas"]` is itself a named `role="application"`, focusable, keyboard-operable,

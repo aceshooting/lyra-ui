@@ -3191,6 +3191,34 @@ nothing, and an interrupted transition drops its stale after-event. The `animati
 state is present only between an accepted state change and that settled boundary, and is cleared
 when the element disconnects.
 
+> **A nested `lr-details`' events are not scoped to it — filter by target.** Every Details event
+> goes through the shared `emit()` helper with `bubbles: true, composed: true` hardcoded, with no
+> exception for this component. A `<lr-details>` nested inside another `<lr-details>` (as ordinary
+> slotted content, e.g. inside `header-actions` or the default panel) has its own
+> `lr-show`/`lr-hide`/`lr-toggle`/`lr-after-show`/`lr-after-hide` bubble straight through the outer
+> panel, so a listener bound directly on the outer `<lr-details>` also receives the inner one's
+> events — an inner disclosure opening or closing looks identical to the outer one doing the same,
+> the same failure mode `lr-dialog`'s `lr-close` carries and documents in its own section. Guard on
+> the target:
+>
+> ```html
+> <lr-details id="outer" summary="Outer">
+>   Some outer content.
+>   <lr-details id="inner" summary="Inner">Inner content.</lr-details>
+> </lr-details>
+> <script type="module">
+>   const outer = document.querySelector('#outer');
+>   outer.addEventListener('lr-toggle', (event) => {
+>     if (event.target !== outer) return; // the inner details toggled, not this one
+>     // ...
+>   });
+> </script>
+> ```
+>
+> This is deliberate, not a bug to fix: non-bubbling Details events would be a breaking change, and
+> `event.target`/`event.currentTarget` already give every listener exactly what it needs to tell the
+> two apart.
+
 **Keyboard:** each direct enabled accordion item contributes one heading button. Exactly one is in
 the tab order; ArrowDown/ArrowUp move cyclically, horizontal arrows provide the same next/previous
 movement and swap under RTL, and Home/End jump to the first/last enabled item. Disabled items are

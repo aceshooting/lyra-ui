@@ -1739,7 +1739,15 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
 - `nodes: LyraGraphNode[] = []`, `links: LyraGraphLink[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,
   `communities: LyraGraphCommunity[] = []` (all attribute: false) — exactly `lr-graph`'s own types,
   projected through `lr-graph`'s shared nonblank, first-wins identity policy before derived lookups
-  and forwarding; see the `lr-graph` section above for each shape
+  and forwarding: `LyraGraphNode { id: string; label?: string; accessibleLabel?: string;
+  description?: string; radius?: number; color?: string; type?: string; expandable?: boolean;
+  communityId?: string }`, `LyraGraphLink { id?: string; source: string; target: string; width?:
+  number; label?: string; accessibleLabel?: string; description?: string; directed?: boolean;
+  color?: string; dash?: number[] }` (source/target are node ids), `LyraNodeTypeStyle { id: string;
+  label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' }`, and
+  `LyraGraphCommunity { id: string; label?: string; memberIds: string[]; color?: string }` — the full
+  field-by-field semantics (color/shape resolution precedence, dangling-link handling, hull
+  membership, etc.) are in this file's `lr-graph` section's own **Properties** list
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
@@ -1820,7 +1828,11 @@ while `path` is non-empty), `detail-popover`, `detail-card`.
 
 **Themeable custom properties:** `--lr-canvas-reserved-height` (default
 `var(--lr-size-24rem)`) sets the explorer's host block size and matches its pre-upgrade
-reservation. Retheme the composed graph through `lr-graph`'s own tokens (see above).
+reservation. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-node-fill`,
+`--lr-link-color`, `--lr-graph-cat-1` through `-8`, `--lr-graph-edge-label-halo`,
+`--lr-graph-focus-halo-color`, `--lr-graph-selected-color`, `--lr-graph-dimmed-opacity`, and
+`--lr-graph-hull-fill`/`-opacity` — documented in this file's `lr-graph` section's own
+**Themeable custom properties** list.
 
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.
 

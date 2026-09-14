@@ -703,8 +703,21 @@ chrome remains visible. The fallback order appears below.
   `<lr-tool-approval-dialog>`, whose own docs describe an identical detail shape, so one listener
   covers all of them. A listener calling `preventDefault()` vetoes the close. Also fired (with
   reason `'unmount'`, non-cancelable there) when the dialog is removed from the DOM while still
-  open. **But the name is not dialog-scoped** — see the target-filtering note above; nine
-  components emit `lr-close`, and several are routinely nested inside a dialog.
+  open. **But the name is not dialog-scoped.** Nine components in this library emit `lr-close`,
+  several of them commonly nested *inside* a dialog: `<lr-callout>`, `<lr-tab>`/`<lr-tab-group>`,
+  `<lr-command-palette>`, `<lr-document-viewer>`, `<lr-responsive-panel>`, and the three tool
+  dialogs (`<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, `<lr-tool-approval-dialog>`).
+  Library events bubble and are composed, so a listener bound directly on
+  `<lr-dialog>` also receives a descendant's close — a closable callout or tab inside a dialog would
+  otherwise dismiss the whole dialog. Guard on the target, the way `<lr-document-viewer>` already
+  does internally:
+
+  ```js
+  dialog.addEventListener('lr-close', (event) => {
+    if (event.target !== event.currentTarget) return; // a descendant's close, not this dialog's
+    // ...
+  });
+  ```
 
 The two `lr-after-*` events are never cancelable.
 

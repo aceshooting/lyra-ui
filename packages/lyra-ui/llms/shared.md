@@ -668,10 +668,14 @@ defaults to; the meanings are fixed here.
   back whatever you assigned.
 
 Every tier resolves through one set of `--lr-form-control-*` knobs — `height`, `font-size`,
-`padding-inline`, `padding-block`, `gap`, `radius` — each chaining to a matching
-`--lr-theme-form-control-*` input. So a button, an input, a select and a combobox at the same tier
-line up in a toolbar row, and an application can compact the whole control scale from one place
-without touching a component.
+`padding-inline`, `padding-block`, `gap`, `radius`. Only `height` and `radius` chain to a matching
+`--lr-theme-form-control-*` input (`--lr-theme-form-control-height-2xs`…`-xl` and
+`--lr-theme-form-control-radius`); `font-size`, `padding-inline`, `padding-block` and `gap` read the
+shared `--lr-font-size-*`/`--lr-space-*` scale directly and have no per-control theme input of their
+own. So a button, an input, a select and a combobox at the same tier line up in a toolbar row, and
+an application can retune the whole control scale's height and corner radius from one place without
+touching a component; retuning font size or padding means changing the shared type/space tokens
+instead.
 
 These are exported TypeScript **type aliases**, never `enum`s: an `enum` is nominal, so
 `el.variant = 'brand'` would stop type-checking, and it emits a runtime object that costs bytes in a
@@ -1297,8 +1301,13 @@ lr-chart:not(:defined) {
 }
 ```
 
-Two things worth knowing:
+Three things worth knowing:
 
+- It is a **light-DOM stylesheet**: load it the same way as the token sheet — a `<link>`/`@import`
+  reaching the document (or whatever light-DOM tree your `lr-*` markup actually lives in). It is
+  inert if adopted into a component's own shadow root (`shadowRoot.adoptedStyleSheets = [...]`):
+  none of its `lr-chart`/`lr-select`/etc. selectors can match anything there, because a component's
+  shadow root never contains the application's own `<lr-*>` usages — only the light DOM does.
 - A per-instance override needs the matching custom property to be set as well, not only the
   attribute, or the pre-upgrade frame and the upgraded frame will disagree. `<lr-chart height="500px">`
   should carry `style="--lr-chart-height: 500px"` too if it sits above the fold.
