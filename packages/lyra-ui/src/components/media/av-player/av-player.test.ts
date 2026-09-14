@@ -2581,6 +2581,14 @@ describe('active-state cssprop escape hatches', () => {
     return value;
   }
   const cueRoot = (el: LyraAvPlayer): ShadowRoot => el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
+  // Every cue-current end value used below is fully opaque (a literal rgb() override, or the
+  // opaque --lr-color-brand-quiet fallback), so mid-transition frames are the only ones that ever
+  // report a fractional alpha -- polling for full opacity is a generic "the transition settled"
+  // signal that works regardless of which color it settles on.
+  function isFullyOpaqueColor(color: string): boolean {
+    const match = /^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/.exec(color);
+    return match === null || Number(match[1]) === 1;
+  }
 
   async function withMarker(style = ''): Promise<{ el: LyraAvPlayer; marker: HTMLElement }> {
     const wrapper = (await fixture(html`<div style=${style}>
@@ -2615,6 +2623,16 @@ describe('active-state cssprop escape hatches', () => {
     await el.updateComplete;
     expect(cueRoot(el).querySelector('[part~="cue"][aria-current="true"]'), 'a cue is current').to.exist;
     expect(cueRoot(el).querySelector('[part~="cue"][data-active-match]'), 'a cue is the active match').to.exist;
+    // The cue-current part list is added well after the initial paint (this timeupdate), so its
+    // background-color change is a real transition from the base ::part(cue) `transparent` --
+    // poll until the interpolation reaches its fully-opaque end value rather than reading
+    // synchronously (which would sample a starting or mid-interpolation, partially transparent
+    // value) or merely checking it moved off transparent (still mid-interpolation).
+    const current = cueRoot(el).querySelector('[part~="cue-current"]') as HTMLElement;
+    await waitUntil(
+      () => isFullyOpaqueColor(getComputedStyle(current).backgroundColor),
+      'the current cue background-color transition never settled',
+    );
     return el;
   }
 

@@ -1399,9 +1399,15 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
         expect(getComputedStyle(mark).backgroundColor).to.not.equal(ambient);
         expect(getComputedStyle(mark).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 
-        // Still fully retunable through the documented cssprop.
+        // Still fully retunable through the documented cssprop. `mark` is already rendered and
+        // painted, so this is a live change to a transition-eligible property (background-color
+        // eases over --lr-transition-fast) -- poll for the retinted value instead of reading
+        // synchronously.
         el.style.setProperty('--lr-docx-viewer-highlight-neutral-background', 'rgb(9, 8, 7)');
-        expect(getComputedStyle(mark).backgroundColor).to.equal('rgb(9, 8, 7)');
+        await waitUntil(
+          () => getComputedStyle(mark).backgroundColor === 'rgb(9, 8, 7)',
+          'the neutral highlight never retinted to rgb(9, 8, 7)',
+        );
       } finally {
         restore();
       }

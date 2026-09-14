@@ -869,19 +869,35 @@ it("lets a consumer retint the drag accept/reject highlight independently via --
   `)) as LyraFileInput;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
+  // [part~="base"] eases border-color/background-color over --lr-transition-fast, and each
+  // dragEnterWith below is a real post-mount state change (no drag -> accept, then accept ->
+  // reject), so a synchronous read right after updateComplete can sample a starting or
+  // mid-interpolation color instead of the settled one. Poll for the exact expected end color.
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
   await el.updateComplete;
   expect(base.getAttribute("data-drag-state")).to.equal("accept");
-  expect(getComputedStyle(base).borderTopColor).to.equal("rgb(10, 20, 30)");
-  expect(getComputedStyle(base).backgroundColor).to.equal("rgb(11, 21, 31)");
+  await waitUntil(
+    () => getComputedStyle(base).borderTopColor === "rgb(10, 20, 30)",
+    "the accept border color never settled"
+  );
+  await waitUntil(
+    () => getComputedStyle(base).backgroundColor === "rgb(11, 21, 31)",
+    "the accept background color never settled"
+  );
 
   el.allowedMimeTypes = ["application/pdf"];
   await el.updateComplete;
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
   await el.updateComplete;
   expect(base.getAttribute("data-drag-state")).to.equal("reject");
-  expect(getComputedStyle(base).borderTopColor).to.equal("rgb(40, 50, 60)");
-  expect(getComputedStyle(base).backgroundColor).to.equal("rgb(41, 51, 61)");
+  await waitUntil(
+    () => getComputedStyle(base).borderTopColor === "rgb(40, 50, 60)",
+    "the reject border color never settled"
+  );
+  await waitUntil(
+    () => getComputedStyle(base).backgroundColor === "rgb(41, 51, 61)",
+    "the reject background color never settled"
+  );
 });
 
 it("renders byte-identical drag accept/reject colors to the pre-hatch shared tokens when the component-scoped cssprops are unset", async () => {

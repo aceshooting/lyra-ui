@@ -5,7 +5,7 @@ import { __setEmailDepsForTesting } from "./email-loader.js";
 import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js";
 import { getDefaultDocumentRendererRegistry } from "../document-viewer/registry.js";
 import type { LyraHighlight } from "../document-viewer/anchors.js";
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 const SAMPLE_EML = [
   "From: Ada Lovelace <ada@example.test>",
@@ -1826,22 +1826,12 @@ describe("styling", () => {
       const toggle = el.shadowRoot!.querySelector(
         '[part="quote-toggle"]',
       ) as HTMLElement;
-      const resting = getComputedStyle(toggle).backgroundColor;
-      const box = toggle.getBoundingClientRect();
-      await resetMouse();
-      await sendMouse({
-        type: 'move',
-        position: [
-          Math.round(box.left + box.width / 2),
-          Math.round(box.top + box.height / 2),
-        ],
-      });
+      await hoverUntilMatched(toggle, 'the quote toggle never registered :hover');
+      // background-color eases over --lr-transition-fast, so "differs from resting" alone would
+      // match a mid-interpolation frame -- poll for the exact settled hover value instead.
       await waitUntil(
-        () => getComputedStyle(toggle).backgroundColor !== resting,
+        () => getComputedStyle(toggle).backgroundColor === 'rgb(1, 2, 3)',
         'the quote toggle never entered its rendered hover state',
-      );
-      expect(getComputedStyle(toggle).backgroundColor).to.equal(
-        'rgb(1, 2, 3)',
       );
     } finally {
       await resetMouse();

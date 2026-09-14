@@ -16,7 +16,7 @@ import {
 import type { LyraPageRail } from "../page-rail/page-rail.js";
 import type { LyraPdfViewer } from "./pdf-viewer.js";
 import { TEXT_QUOTE_LIMITS } from "../../../internal/text-quote.js";
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 function response(ok = true): Response {
   return {
@@ -4484,22 +4484,12 @@ describe("styling", () => {
       const button = el.shadowRoot!.querySelector(
         '[part="next-button"]',
       ) as HTMLButtonElement;
-      const resting = getComputedStyle(button).backgroundColor;
-      const box = button.getBoundingClientRect();
-      await resetMouse();
-      await sendMouse({
-        type: 'move',
-        position: [
-          Math.round(box.left + box.width / 2),
-          Math.round(box.top + box.height / 2),
-        ],
-      });
+      await hoverUntilMatched(button, 'the PDF toolbar button never registered :hover');
+      // background-color eases over --lr-transition-fast, so "differs from resting" alone would
+      // match a mid-interpolation frame -- poll for the exact settled hover value instead.
       await waitUntil(
-        () => getComputedStyle(button).backgroundColor !== resting,
+        () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
         'the PDF toolbar button never entered its rendered hover state',
-      );
-      expect(getComputedStyle(button).backgroundColor).to.equal(
-        'rgb(1, 2, 3)',
       );
     } finally {
       await resetMouse();

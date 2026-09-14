@@ -2659,11 +2659,17 @@ it('lets inherited CSS properties theme popup-close-button hover and active stat
     );
     await sendMouse({ type: 'up' });
 
+    // The button is still hovered here, so this is a live value change on an already-rendered,
+    // transition-eligible property (background-color/color both ease over --lr-transition-fast) --
+    // poll for the retinted value rather than reading synchronously.
     wrapper.style.setProperty('--lr-map-popup-close-button-hover-bg', 'rgb(1, 2, 3)');
     wrapper.style.setProperty('--lr-map-popup-close-button-hover-color', 'rgb(4, 5, 6)');
     wrapper.style.setProperty('--lr-map-popup-close-button-active-bg', 'rgb(7, 8, 9)');
     wrapper.style.setProperty('--lr-map-popup-close-button-active-color', 'rgb(10, 11, 12)');
-    expect(getComputedStyle(close).backgroundColor).to.equal('rgb(1, 2, 3)');
+    await waitUntil(
+      () => getComputedStyle(close).backgroundColor === 'rgb(1, 2, 3)',
+      'close background color never retinted to rgb(1, 2, 3)',
+    );
     expect(getComputedStyle(close).color).to.equal('rgb(4, 5, 6)');
 
     await sendMouse({ type: 'down' });

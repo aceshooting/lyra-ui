@@ -13,7 +13,7 @@ import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js
 import { MINIMAL_EPUB_BASE64 } from "./fixtures/minimal-epub-fixture.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { VIEWER_SEARCH_QUERY_LIMIT, VIEWER_SEARCH_WORK_LIMIT } from "../viewer-search-limits.js";
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import {
   TEXT_QUOTE_LIMITS,
   TEXT_SELECTION_RECT_LIMIT,
@@ -3068,22 +3068,12 @@ describe("styling", () => {
         '[part="next-button"]',
       ]) {
         const button = el.shadowRoot!.querySelector(selector) as HTMLElement;
-        const resting = getComputedStyle(button).backgroundColor;
-        const box = button.getBoundingClientRect();
-        await resetMouse();
-        await sendMouse({
-          type: 'move',
-          position: [
-            Math.round(box.left + box.width / 2),
-            Math.round(box.top + box.height / 2),
-          ],
-        });
+        await hoverUntilMatched(button, `${selector} never registered :hover`);
+        // background-color eases over --lr-transition-fast, so "differs from resting" alone would
+        // match a mid-interpolation frame -- poll for the exact settled hover value instead.
         await waitUntil(
-          () => getComputedStyle(button).backgroundColor !== resting,
-          `${selector} never entered its rendered hover state`,
-        );
-        expect(getComputedStyle(button).backgroundColor).to.equal(
-          'rgb(1, 2, 3)',
+          () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
+          `${selector} never reached its rendered hover state`,
         );
       }
     } finally {
