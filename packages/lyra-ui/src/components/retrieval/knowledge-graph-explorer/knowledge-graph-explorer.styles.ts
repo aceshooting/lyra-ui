@@ -97,16 +97,18 @@ export const styles = css`
     overflow-y: auto;
     overflow-x: clip;
   }
-  /* The one flexible row: it takes what the toolbar, search results, pinned row and path strip
-     leave. flex-basis stays auto so the graph contributes its configured block size when room is
-     distributed; min-block-size: 0 drops the content-based minimum that would stop it shrinking.
+  /* The row's own explicit block-size below is the reservation contract itself (host/graph
+     height, or an author --lr-canvas-reserved-height) -- flex-grow: 0 keeps it AT that size
+     instead of stretching into whatever the toolbar, search results, pinned row and path strip
+     leave over; flex-shrink: 1 + min-block-size: 0 still let it shrink below that reservation
+     when the host is too short to fit it (a dead-content-height item can't do that on its own).
      block-size mirrors graph.styles.ts's own host rule: --_lr-graph-requested-height (set from the
      normalized height property, see willUpdate()) is the private fallback beneath the
      author-facing --lr-canvas-reserved-height, so an explicit outer reservation still wins. */
   [part='graph'] {
     display: block;
     inline-size: 100%;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-block-size: 0;
     block-size: var(
       --lr-canvas-reserved-height,
