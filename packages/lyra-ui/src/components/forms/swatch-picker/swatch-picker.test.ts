@@ -767,6 +767,25 @@ describe("lr-swatch-picker", () => {
     expect(getComputedStyle(fill).inlineSize).to.equal("13px");
   });
 
+  it("wraps swatches onto a new row by default", async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .items=${options()}></lr-swatch-picker>`
+    )) as LyraSwatchPicker;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).flexWrap).to.equal("wrap");
+  });
+
+  it("confines swatches to a single row via --lr-swatch-picker-wrap, e.g. inside a fixed-width popover", async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker
+        style="--lr-swatch-picker-wrap: nowrap"
+        .items=${options()}
+      ></lr-swatch-picker>`
+    )) as LyraSwatchPicker;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).flexWrap).to.equal("nowrap");
+  });
+
   it("draws the selected ring through the --lr-swatch-picker-selected-color token", () => {
     const css = normalizedStyles();
     // The ring lives on [part='swatch-fill'], a descendant of the checked [part='swatch'] -- split

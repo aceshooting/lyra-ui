@@ -99,6 +99,9 @@ export interface LyraSwatchPickerEventMap {
  *   `--lr-theme-swatch-picker-fill-size` on an ancestor to give every tier a shared default, or set
  *   this component hook on an ancestor/direct host to override every tier.
  * @cssprop [--lr-swatch-picker-gap=var(--lr-space-xs)] - Gap between swatches.
+ * @cssprop [--lr-swatch-picker-wrap=wrap] - `flex-wrap` on the swatch row. Reproduces today's
+ *   hardcoded wrapping row by default; set `nowrap` to confine every swatch to a single row (e.g.
+ *   inside a fixed-width popover panel whose height must not shift from a second row).
  * @status stable
  * @since 4.0.0
  */

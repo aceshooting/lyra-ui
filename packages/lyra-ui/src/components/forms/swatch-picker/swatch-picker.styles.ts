@@ -30,6 +30,10 @@ export const styles = css`
       var(--lr-size-1-5rem)
     );
     --_lr-swatch-picker-gap: var(--lr-space-xs);
+    /* Matches today's hardcoded flex-wrap byte-identically; a consumer confines the row (e.g. a
+       fixed-width popover panel whose height must not shift) by setting a real value such as
+       nowrap. A public custom property, not an attribute, so it inherits through wrappers. */
+    --_lr-swatch-picker-wrap: wrap;
   }
   /* A swatch is a square tap target in a wrapping grid, not a form-control row, so it has its own
      ladder: it agrees with --lr-form-control-height from m up, but the shared 2xs/xs steps
@@ -84,7 +88,7 @@ export const styles = css`
   }
   [part="base"] {
     display: inline-flex;
-    flex-wrap: wrap;
+    flex-wrap: var(--lr-swatch-picker-wrap, var(--_lr-swatch-picker-wrap));
     min-inline-size: 0;
     gap: var(--lr-swatch-picker-gap, var(--_lr-swatch-picker-gap));
   }
