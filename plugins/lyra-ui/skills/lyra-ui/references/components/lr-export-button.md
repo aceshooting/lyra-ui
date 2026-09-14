@@ -30,6 +30,13 @@ immediately) or multi-format (click opens a small menu).
   of CSV degrading to a header-less/blank file while only JSON had a fallback — so an unconfigured
   export still produces a proper header + data file in either format
 - `filename: string = 'export'`
+- `bom: boolean = false` (reflected) — prepends a UTF-8 byte-order mark (U+FEFF) to the built-in
+  CSV download only. Excel on Windows ignores a downloaded file's MIME charset and decodes a
+  BOM-less CSV with the system ANSI code page, so accented, Arabic, CJK, and typographic characters
+  render as mojibake; the BOM makes Excel detect UTF-8 and decode correctly. Google Sheets,
+  LibreOffice, and Numbers already sniff UTF-8 correctly with or without it, so leaving this `false`
+  changes nothing for them. Never applies to the built-in JSON download — RFC 8259 forbids a BOM
+  there
 - `formats: readonly LyraExportFormatOption[] = ['csv']` (attribute: false; shallow frozen
   snapshot), where
   `LyraExportFormatOption` is the built-in `LyraExportFormat = 'csv' | 'json'` or a
@@ -122,7 +129,7 @@ escapeCsvField, buildCsv, downloadBlob } from
 
 ```ts
 escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading whitespace and ASCII/fullwidth =,+,-,@ formula prefixes with an apostrophe
-buildCsv(rows: readonly Readonly<Record<string, unknown>>[], columns: readonly LyraCsvColumn[]): string  // CRLF-joined, header row included
+buildCsv(rows: readonly Readonly<Record<string, unknown>>[], columns: readonly LyraCsvColumn[], options?: LyraBuildCsvOptions): string  // CRLF-joined, header row included; options.bom prepends a UTF-8 byte-order mark
 downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Document): void // triggers a browser download in the supplied document realm
 ```
 
@@ -146,6 +153,12 @@ downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Do
   Finite JavaScript numbers remain numeric CSV cells (including negative and decimal values);
   caller-supplied strings such as `"-12"` still take the formula-safe text path. `NaN` and
   infinities are non-numeric values and are escaped as text.
+- `bom` addresses an Excel-on-Windows-specific defect: Excel ignores a downloaded file's MIME
+  charset and falls back to decoding a BOM-less CSV with the system ANSI code page, garbling
+  accented, Arabic, CJK, and typographic characters. Setting `bom` prepends U+FEFF ahead of the
+  CSV header row so Excel detects UTF-8. It changes nothing for Google Sheets, LibreOffice, or
+  Numbers, which already sniff UTF-8 correctly either way, and it never reaches the JSON download
+  under any setting — RFC 8259 forbids a BOM in JSON.
 - `open` is valid only when `formats` contains more than one choice. An invalid open request is
   normalized closed without a false `lr-show`/`lr-hide` pair; shrinking an open menu to one format,
   or becoming `disabled`/`loading`, closes it and repairs focus. JSON projection safely preserves

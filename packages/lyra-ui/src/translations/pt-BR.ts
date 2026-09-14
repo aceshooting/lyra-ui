@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Filtrar linhas',
   tableFilterPlaceholder: 'Filtrar linhas',
   tableLoading: 'Carregando linhas',
+  tableLoadFailed: 'Não foi possível carregar os dados',
   tableEditCell: 'Editar {column}',
   carousel: 'carrossel',
   carouselLabel: 'Carrossel',

@@ -34,6 +34,17 @@ explicitly empty labels remain empty and later labels render normally.
 - `valueText?: string` (attribute `value-text` — overrides both the visible text and the host's
   `aria-valuetext`; an empty string is treated the same as unset and falls back to the numeric
   `value` while removing `aria-valuetext`)
+- `variant: LyraProgressVariant = 'brand'` (reflected) — the same shared semantic-tone vocabulary
+  `<lr-progress-bar>` uses (`'neutral'|'brand'|'success'|'warning'|'danger'`). The fallback color
+  whenever `thresholds` is empty or matches nothing.
+- `thresholds: readonly LyraGaugeThreshold[] = []` (attribute: false) — `LyraGaugeThreshold {
+  readonly at: number; readonly variant: LyraProgressVariant }`. Value-to-variant color mapping:
+  the LAST entry, after sorting by `at` regardless of authored order, whose `at` is `<=` the
+  current `value` wins; an entry whose `at` is not a finite number never matches. The same rule
+  serves a higher-is-worse domain like CPU load (`[{at: 0, variant: 'success'}, {at: 70, variant:
+  'warning'}, {at: 90, variant: 'danger'}]`) and a higher-is-better one like battery charge
+  (`[{at: 0, variant: 'danger'}, {at: 20, variant: 'warning'}, {at: 50, variant: 'success'}]`) —
+  only the authored pairs differ.
 
 **Events:** none.
 
@@ -41,8 +52,9 @@ explicitly empty labels remain empty and later labels render normally.
 
 **CSS parts:** `base` (the `<svg>`), `track`, `fill`, `value`, `label`
 
-**Themeable custom properties:** `--lr-gauge-fill` (fill stroke, falling back to the shared
-`--lr-color-brand` token).
+**Themeable custom properties:** `--lr-gauge-fill` (fill stroke; overrides `variant`/`thresholds`
+entirely and falls back to the effective variant's shared semantic token —
+`--lr-color-brand` by default).
 
 **Optional peer deps:** none.
 
@@ -55,6 +67,23 @@ explicitly empty labels remain empty and later labels render normally.
   style="--lr-gauge-fill: var(--lr-color-success)"
 ></lr-gauge>
 <lr-gauge shape="linear" value="0.4" max="1" value-text="72°F"></lr-gauge>
+<!-- automatic threshold coloring: same rule, opposite direction -->
+<lr-gauge id="cpu" value="82" label="CPU"></lr-gauge>
+<script>
+  cpu.thresholds = [
+    { at: 0, variant: 'success' },
+    { at: 70, variant: 'warning' },
+    { at: 90, variant: 'danger' },
+  ];
+</script>
+<lr-gauge id="battery" value="15" label="Battery"></lr-gauge>
+<script>
+  battery.thresholds = [
+    { at: 0, variant: 'danger' },
+    { at: 20, variant: 'warning' },
+    { at: 50, variant: 'success' },
+  ];
+</script>
 ```
 
 **9.0 migration:** rename geometry `type`/`GaugeType` to `shape`/`GaugeShape`, and formatted-value
@@ -73,8 +102,11 @@ explicitly empty labels remain empty and later labels render normally.
   changing the visible SVG text), so a screen reader announces your formatted string instead of the
   raw `aria-valuenow` number; the SVG `<text part="value">`/`<text part="label">` elements are
   `aria-hidden="true"` so they're no longer separately exposed inside the same `role="meter"` host.
-- no automatic color-threshold/variant logic is built in. Set `--lr-gauge-fill` per instance (or
-  reactively from application state) when the value should select a success/warning/danger color.
+- `thresholds` recolors the fill from `value` alone — no reactive application-state wiring needed
+  for the common success/warning/danger case. It never rewrites the `variant` property or its
+  reflected attribute; the resolved color is tracked separately so a component reading back
+  `variant` always sees the value it set. `--lr-gauge-fill` still overrides both `variant` and
+  `thresholds` unconditionally, for a color outside the shared semantic-tone vocabulary.
 - no documented component-specific sizing custom property; host size is fixed em values
   (`8em` radial/ring, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
   element instead.

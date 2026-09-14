@@ -3532,6 +3532,13 @@ picker.value = "ruby";
 **Additional API surface:**
 
 - `--lr-swatch-picker-gap` — Gap between swatches. Default: `var(--lr-space-xs)`.
+- `--lr-swatch-picker-wrap` — `flex-wrap` on the swatch row. Default: `wrap`, reproducing the
+  previously hardcoded wrapping row exactly. Set `nowrap` to confine every swatch to a single
+  row — the case this exists for is a picker inside a fixed-width popover, where a second row
+  changes the panel's height and moves the popover under its trigger. A custom property rather
+  than an attribute, so it inherits through wrappers like the gap and hit-size hooks beside it;
+  tuning the gap and hit size small enough to avoid wrapping is a guess that breaks at the next
+  swatch added.
 
 ---
 

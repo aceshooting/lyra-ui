@@ -18,7 +18,9 @@
 
 A plain closed-list dropdown — a direct `<lr-*>` counterpart to `<wa-select>`/`<wa-option>`.
 **Form-associated** (hand-rolled internals, not the shared `FormAssociated` mixin — same reasoning
-as `lr-combobox`, see the shared-foundation notes above). The trigger is a `<button>`, not a text
+as `lr-combobox`: `multiple` re-shapes the committed `value` into a `string[]`, which the shared
+mixin — built for a single string value — can't model, so both controls attach their own
+`ElementInternals` and drive `setValidity()` directly instead). The trigger is a `<button>`, not a text
 input: click/Enter/Space/ArrowDown opens it, and there's no typing-to-filter. Options are
 `<lr-option value>` children — the same element `<lr-combobox>` uses — reconciled the same way
 combobox does. The popup reuses `internal/positioner.ts` for placement and participates in Lyra's

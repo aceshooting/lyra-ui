@@ -54,6 +54,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'סנן שורות',
   tableFilterPlaceholder: 'סנן שורות',
   tableLoading: 'טוען שורות',
+  tableLoadFailed: 'לא ניתן לטעון את הנתונים',
   tableEditCell: 'ערוך את {column}',
   carousel: 'קרוסלה',
   carouselLabel: 'קרוסלה',

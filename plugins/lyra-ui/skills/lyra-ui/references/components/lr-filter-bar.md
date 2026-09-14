@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 21 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -70,20 +70,44 @@ revealing errors; `reportValidity(): boolean` returns the same state and reveals
 required-field error; `reset(): void` restores each definition's `defaultValue` (or unsets it),
 unless the bar is disabled.
 
-**Events:** `lr-input`, `lr-reset`, `lr-validity-change`. **CSS parts:** `base`, `controls`,
-`filter-control`, `filter-control-label`, `filter-control-field`, `filter-control-input`,
-`filter-control-start`, `filter-control-end`, `filter-control-listbox`, `filter-control-option`,
-`filter-control-clear-button`, `filter-control-expand-button`, `filter-control-expand-icon`,
-`filter-control-popup`, `filter-control-error`, `filter-control-hint`, `active-filters`, `chips`,
-`chip`, `reset-button`, `status`.
+**Events:** `lr-input`, `lr-reset`, `lr-validity-change`.
+
+**Slots:** `end` — extra host-supplied controls (for example, a "Save search" or "Export"
+action) rendered inside `controls`, next to the reset button. Hidden and claiming no layout
+space while nothing is slotted.
+
+**CSS parts:** `base`, `controls`, `field`, `field-<filterId>`, `end`, `filter-control`,
+`filter-control-label`, `filter-control-field`, `filter-control-input`, `filter-control-start`,
+`filter-control-end`, `filter-control-listbox`, `filter-control-option`, `filter-control-tags`,
+`filter-control-tag`, `filter-control-tag-label`, `filter-control-clear-button`,
+`filter-control-expand-button`, `filter-control-expand-icon`, `filter-control-popup`,
+`filter-control-error`, `filter-control-hint`, `active-filters`, `chips`, `chip`, `reset-button`,
+`status`.
 
 The `filter-control-*` parts are semantic aliases forwarded from each built-in control's shadow
 surface. `filter-control-field` consistently reaches the select trigger, combobox container, or
 text/date input wrapper; `filter-control-input` reaches the corresponding display or editable input.
-Listbox/option aliases apply to select and combobox filters, while expand-button/popup apply to date
-filters. This lets a consumer theme the composed tier from `lr-filter-bar::part(...)` without
-depending on the built-in control type selected by a filter definition. Custom renderers retain
-ownership of their own part forwarding.
+Listbox/option aliases apply to select and combobox filters, `filter-control-tags`/
+`filter-control-tag`/`filter-control-tag-label` apply to a `multiple` combobox filter's selected-tag
+chips (`filter-control-tag-label` is capped by that control's own `--tag-max-size`), and
+expand-button/popup apply to date filters. This lets a consumer theme the composed tier from
+`lr-filter-bar::part(...)` without depending on the built-in control type selected by a filter
+definition. Custom renderers retain ownership of their own part forwarding.
+
+`field` wraps one filter's composed control and its validation spacer inside `controls`; its
+flex-basis is themeable via `--lr-filter-bar-field-basis` (default `var(--lr-size-12rem)`).
+`--lr-filter-bar-gap` (default `var(--lr-space-s)`) themes the gap between filter fields, the
+`end` slot, the reset button, and the loading status in the `controls` row. Both are byte-identical
+to the previous hardcoded values when unset.
+
+Each field wrapper also carries a second, per-filter part token, `field-<filterId>` (for example
+`part="field field-status"`), so a single field can be targeted directly --
+`lr-filter-bar::part(field-status) { flex: 2 1 20rem; }` -- setting any layout property, not just a
+width, while `::part(field)` rules continue to match every field unchanged. The `field-<filterId>`
+token is present only when `filterId` reads as a plain CSS ident (ASCII letters/digits/`-`/`_`,
+starting with a letter); an id that doesn't (for example one containing whitespace) renders `field`
+alone, exactly as before this part existed, rather than risking a `part` attribute whose
+space-separated token list fabricates an unrelated second token.
 
 A `'select'`/`'combobox'` filter's required `options` entries are
 `LyraFilterBarOption { value, label, icon? }`.
@@ -109,6 +133,23 @@ same-named counterparts (with `combobox`'s `multiple` opting into a multi-value 
 to `<lr-input>` for an open-ended free-text query rather than a closed choice set. A `'text'`
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
 text the user typed, not a truncated or normalized form.
+
+A `'text'` or `'combobox'` filter definition additionally accepts optional `clearable: boolean`,
+`size: LyraSize`, and `icon: unknown` fields, forwarded verbatim to the composed
+`<lr-input>`/`<lr-combobox>`'s own same-named properties (`icon` into that control's `start`
+slot, exactly like a choice option's own `icon`). `'text'` also accepts `inputType: LyraInputType`
+(forwarded to the composed `<lr-input>`'s own `type`, e.g. `'search'`/`'email'`/`'tel'`/`'url'`).
+Every one of these is optional and defaults to that composed control's own default, so an
+existing filter definition renders unchanged.
+
+`'combobox'` also accepts the same `debounce?: number` (ms) `'text'` already had: it coalesces a
+burst of rapid selection changes (picks, a multi-select toggle, an
+`allowCustomValue`/`allowCreate` commit, or the clear action) into one delayed commit. Unlike
+`'text'`'s uncontrolled-with-sync field, the composed `<lr-combobox>`'s `.value=` binding stays
+fully controlled: while a commit is pending it renders that pending selection rather than the
+last-committed `value`, so the control's own display never reverts mid-delay. A pending debounce
+is flushed by the control's own blur and cancelled by `reset()`, a chip removal, and
+disconnection — identical to `'text'`.
 
 ### Date-range quick ranges
 

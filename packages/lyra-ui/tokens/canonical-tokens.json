@@ -3372,7 +3372,6 @@
         "src/components/overlays/badge/badge.styles.ts",
         "src/components/overlays/drawer/drawer.class.ts",
         "src/components/overlays/drawer/drawer.styles.ts",
-        "src/components/overlays/progress/progress-bar.class.ts",
         "src/components/overlays/progress/progress.styles.ts",
         "src/components/retrieval/source-picker/source-picker.styles.ts"
       ]
@@ -3794,7 +3793,6 @@
       "evidence": [
         "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.styles.ts",
         "src/components/forms/rubric-form/rubric-form.styles.ts",
-        "src/components/overlays/dialog/dialog.class.ts",
         "src/components/overlays/dialog/dialog.styles.ts"
       ]
     },

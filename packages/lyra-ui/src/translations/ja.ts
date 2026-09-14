@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: '行を絞り込む',
   tableFilterPlaceholder: '行を絞り込む',
   tableLoading: '行を読み込み中',
+  tableLoadFailed: 'データを読み込めませんでした',
   tableEditCell: '{column} を編集',
   carousel: 'カルーセル',
   carouselLabel: 'カルーセル',

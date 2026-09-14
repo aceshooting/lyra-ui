@@ -423,10 +423,12 @@ never,
 
 export type LyraActivityFeedReactProps = LyraReactElementProps<
   LyraActivityFeed,
+  | 'compact'
   | 'entries'
   | 'expanded'
   | 'follow'
   | 'formatTimestamp'
+  | 'frame'
   | 'label'
   | 'locale'
   | 'mode'
@@ -438,6 +440,9 @@ export type LyraActivityFeedReactProps = LyraReactElementProps<
   LyraActivityFeedEventMap,
   | 'lr-follow-change'
   | 'lr-toggle',
+  | '--lr-activity-feed-compact-entry-padding'
+  | '--lr-activity-feed-compact-header-gap'
+  | '--lr-activity-feed-compact-header-padding'
   | '--lr-activity-feed-live-status-color'
   | '--lr-activity-feed-max-height',
   {
@@ -681,6 +686,7 @@ export type LyraAnimationReactProps = LyraReactElementProps<
 
 export type LyraAppRailReactProps = LyraReactElementProps<
   LyraAppRail,
+  | 'for'
   | 'forceMode'
   | 'hideToggle'
   | 'iconOnlyBreakpoint'
@@ -695,16 +701,25 @@ export type LyraAppRailReactProps = LyraReactElementProps<
   | 'railWidthPx'
   | 'resizable'
   | 'storageKey'
-  | 'strings',
+  | 'strings'
+  | 'trigger',
   {},
   LyraAppRailEventMap,
   | 'lr-mode-change'
   | 'lr-rail-resize'
   | 'lr-rail-resize-request'
   | 'lr-toggle',
+  | '--lr-app-rail-background'
+  | '--lr-app-rail-footer-padding'
+  | '--lr-app-rail-header-padding'
   | '--lr-app-rail-icon-width'
   | '--lr-app-rail-mobile-width'
   | '--lr-app-rail-overlay-color'
+  | '--lr-app-rail-panel-background'
+  | '--lr-app-rail-panel-inset-block-start'
+  | '--lr-app-rail-panel-overflow-block'
+  | '--lr-app-rail-panel-overflow-inline'
+  | '--lr-app-rail-panel-radius'
   | '--lr-app-rail-resizer-active-bg'
   | '--lr-app-rail-resizer-hover-bg'
   | '--lr-app-rail-toggle-active-bg'
@@ -743,8 +758,15 @@ never,
   | '--lr-app-rail-item-active-color'
   | '--lr-app-rail-item-current-bg'
   | '--lr-app-rail-item-current-color'
+  | '--lr-app-rail-item-current-indicator-color'
+  | '--lr-app-rail-item-current-indicator-inset-inline'
+  | '--lr-app-rail-item-current-indicator-width'
+  | '--lr-app-rail-item-gap'
   | '--lr-app-rail-item-hover-bg'
-  | '--lr-app-rail-item-hover-color',
+  | '--lr-app-rail-item-hover-color'
+  | '--lr-app-rail-item-icon-size'
+  | '--lr-app-rail-item-min-block-size'
+  | '--lr-app-rail-item-padding',
   {
     'icon-only'?: LyraAttributeValue<boolean>;
   }
@@ -2644,9 +2666,11 @@ never,
 export type LyraConfirmBarReactProps = LyraReactElementProps<
   LyraConfirmBar,
   | 'args'
+  | 'autofocus'
   | 'compact'
   | 'decision'
   | 'disabled'
+  | 'escapeDenies'
   | 'frame'
   | 'heading'
   | 'locale'
@@ -2663,6 +2687,7 @@ export type LyraConfirmBarReactProps = LyraReactElementProps<
   | '--lr-confirm-bar-compact-padding'
   | '--lr-confirm-bar-denied-color',
   {
+    'escape-denies'?: LyraConfirmBar['escapeDenies'];
     'tool-name'?: LyraConfirmBar['toolName'];
   }
 >;
@@ -3292,6 +3317,7 @@ export type LyraDialogReactProps = LyraReactElementProps<
   | 'modal'
   | 'noHeader'
   | 'open'
+  | 'size'
   | 'strings'
   | 'withFooter'
   | 'withoutHeader',
@@ -3311,6 +3337,7 @@ export type LyraDialogReactProps = LyraReactElementProps<
   | '--hide-duration'
   | '--lr-dialog-backdrop-duration'
   | '--lr-dialog-backdrop-filter'
+  | '--lr-dialog-height'
   | '--lr-dialog-max-width'
   | '--lr-dialog-overlay-color'
   | '--lr-dialog-panel-duration'
@@ -3691,6 +3718,7 @@ export type LyraDrawerReactProps = LyraReactElementProps<
   | 'noHeader'
   | 'open'
   | 'placement'
+  | 'size'
   | 'strings'
   | 'withFooter'
   | 'withoutHeader',
@@ -3710,6 +3738,7 @@ export type LyraDrawerReactProps = LyraReactElementProps<
   | '--hide-duration'
   | '--lr-dialog-backdrop-duration'
   | '--lr-dialog-backdrop-filter'
+  | '--lr-dialog-height'
   | '--lr-dialog-max-width'
   | '--lr-dialog-overlay-color'
   | '--lr-dialog-panel-duration'
@@ -4184,6 +4213,7 @@ never,
 export type LyraExportButtonReactProps = LyraReactElementProps<
   LyraExportButton,
   | 'accessibleLabel'
+  | 'bom'
   | 'columns'
   | 'disabled'
   | 'filename'
@@ -4333,7 +4363,8 @@ export type LyraFilterBarReactProps = LyraReactElementProps<
   | 'lr-input'
   | 'lr-reset'
   | 'lr-validity-change',
-never,
+  | '--lr-filter-bar-field-basis'
+  | '--lr-filter-bar-gap',
   {}
 >;
 
@@ -4627,8 +4658,10 @@ export type LyraGaugeReactProps = LyraReactElementProps<
   | 'min'
   | 'shape'
   | 'strings'
+  | 'thresholds'
   | 'value'
-  | 'valueText',
+  | 'valueText'
+  | 'variant',
   {},
   {},
 never,
@@ -4718,6 +4751,7 @@ export type LyraGraphReactProps = LyraReactElementProps<
   | 'locale'
   | 'maxZoom'
   | 'minZoom'
+  | 'nodeLabels'
   | 'nodes'
   | 'nodeTypes'
   | 'renderer'
@@ -4765,6 +4799,7 @@ export type LyraGraphReactProps = LyraReactElementProps<
     'link-distance'?: LyraGraph['linkDistance'];
     'max-zoom'?: LyraGraph['maxZoom'];
     'min-zoom'?: LyraGraph['minZoom'];
+    'node-labels'?: LyraGraph['nodeLabels'];
     'selection-mode'?: LyraGraph['selectionMode'];
     'show-edge-labels'?: LyraGraph['showEdgeLabels'];
   }
@@ -5600,6 +5635,7 @@ export type LyraKnowledgeGraphExplorerReactProps = LyraReactElementProps<
   | 'label'
   | 'links'
   | 'locale'
+  | 'nodeLabels'
   | 'nodes'
   | 'nodeTypes'
   | 'path'
@@ -5623,6 +5659,7 @@ export type LyraKnowledgeGraphExplorerReactProps = LyraReactElementProps<
   | 'lr-selection-change',
   | '--lr-canvas-reserved-height',
   {
+    'node-labels'?: LyraKnowledgeGraphExplorer['nodeLabels'];
     'search-query'?: LyraKnowledgeGraphExplorer['searchQuery'];
     'selected-node-id'?: LyraKnowledgeGraphExplorer['selectedNodeId'];
   }
@@ -7625,6 +7662,7 @@ export type LyraProgressBarReactProps = LyraReactElementProps<
   | 'locale'
   | 'max'
   | 'showValue'
+  | 'size'
   | 'strings'
   | 'value'
   | 'variant',
@@ -9467,7 +9505,8 @@ export type LyraSwatchPickerReactProps = LyraReactElementProps<
   | '--lr-swatch-picker-hit-size'
   | '--lr-swatch-picker-selected-blur'
   | '--lr-swatch-picker-selected-color'
-  | '--lr-swatch-picker-shine-duration',
+  | '--lr-swatch-picker-shine-duration'
+  | '--lr-swatch-picker-wrap',
   {
     'aria-label'?: LyraSwatchPicker['accessibleLabel'];
   }
@@ -9603,6 +9642,9 @@ export type LyraTableReactProps = LyraReactElementProps<
   | 'emptyCompact'
   | 'emptyDescription'
   | 'emptyHeading'
+  | 'error'
+  | 'errorDescription'
+  | 'errorHeading'
   | 'expandedContent'
   | 'expandedRowKeys'
   | 'filter'
@@ -9655,6 +9697,7 @@ export type LyraTableReactProps = LyraReactElementProps<
   | 'lr-load-more'
   | 'lr-page-change'
   | 'lr-priority-columns-visibility-change'
+  | 'lr-retry'
   | 'lr-row-click'
   | 'lr-row-expand-toggle'
   | 'lr-selection-change'
@@ -9688,6 +9731,8 @@ export type LyraTableReactProps = LyraReactElementProps<
     'empty-compact'?: LyraTable['emptyCompact'];
     'empty-description'?: LyraTable['emptyDescription'];
     'empty-heading'?: LyraTable['emptyHeading'];
+    'error-description'?: LyraTable['errorDescription'];
+    'error-heading'?: LyraTable['errorHeading'];
     'filter-label'?: LyraTable['filterLabel'];
     'filter-placeholder'?: LyraTable['filterPlaceholder'];
     'filter-text'?: LyraTable['filterText'];

@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'تصفية الصفوف',
   tableFilterPlaceholder: 'تصفية الصفوف',
   tableLoading: 'جارٍ تحميل الصفوف',
+  tableLoadFailed: 'تعذّر تحميل البيانات',
   tableEditCell: 'تعديل {column}',
   carousel: 'شريط دوّار',
   carouselLabel: 'شريط دوّار',

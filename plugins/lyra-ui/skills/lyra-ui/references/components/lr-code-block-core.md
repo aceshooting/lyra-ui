@@ -108,7 +108,8 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 tokens. The last three are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
-fallback separately.
+fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
+definite-height host gives it too, identically to `<lr-code-block>` above.
 
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`,
 `shiki/wasm`, and `shiki/themes/github-{light,dark}.mjs` subpaths — never `shiki`'s main entry point,

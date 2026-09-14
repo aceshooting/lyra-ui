@@ -55,6 +55,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'فیلتر ردیف‌ها',
   tableFilterPlaceholder: 'فیلتر ردیف‌ها',
   tableLoading: 'در حال بارگیری ردیف‌ها',
+  tableLoadFailed: 'بارگیری داده‌ها ممکن نشد',
   tableEditCell: 'ویرایش {column}',
   carousel: 'چرخ‌وفلک',
   carouselLabel: 'چرخ‌وفلک',

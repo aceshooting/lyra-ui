@@ -4283,6 +4283,10 @@ These named interfaces and helper signatures are available to typed integrations
     readonly type: 'combobox';
     readonly options: readonly LyraFilterBarOption[];
     readonly multiple?: boolean;
+    readonly debounce?: number;
+    readonly clearable?: boolean;
+    readonly size?: LyraSize;
+    readonly icon?: unknown;
     // Inherited from LyraFilterBarDefinitionBase.
     readonly filterId: string;
     readonly label: string;
@@ -4386,6 +4390,10 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraFilterBarTextDefinition extends LyraFilterBarDefinitionBase {
     readonly type: 'text';
     readonly debounce?: number;
+    readonly inputType?: LyraInputType;
+    readonly clearable?: boolean;
+    readonly size?: LyraSize;
+    readonly icon?: unknown;
     // Inherited from LyraFilterBarDefinitionBase.
     readonly filterId: string;
     readonly label: string;

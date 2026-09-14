@@ -21,7 +21,11 @@ An inline, non-modal approve/deny block for one proposed action — the in-flow 
 focus. Same `lr-approve`/`lr-deny` event shapes as the dialog, and the same
 `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so the two always
 translate in lockstep. Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop
-semantics, and it never steals focus when it appears in the transcript. DOM and tab order put Deny
+semantics, and it never steals focus when it appears in the transcript. "Never steals focus" and
+"no Escape semantics" describe the bar's behavior when `autofocus` and `escape-denies` are both
+left unset (the default). A host that swaps a focused control out for this bar can opt into either
+or both instead of hand-rolling them, as `<lr-memory-panel>` still does internally
+(`focusPendingConfirmation`/`onConfirmKeyDown`). DOM and tab order put Deny
 before Approve. On activation, focus moves synchronously to `[part="status"]` (an always-rendered,
 `tabindex="-1"` element) before the Deny/Approve buttons unmount.
 
@@ -56,7 +60,19 @@ to finalize, or clear `.pending` back to `null` to bounce back to the undecided 
 `disabled: boolean = false` (reflected) — disables both Deny and Approve and makes activating either
 a no-op, without discarding any in-flight `decision`/`pending` state. Distinct from `pending`:
 `pending` marks one specific action as awaiting the host while the other stays interactive;
-`disabled` blocks both regardless of `pending`.
+`disabled` blocks both regardless of `pending`. `autofocus: boolean = false` (reflected) — opt-in
+focus-on-mount: moves focus into the bar after its own first render, once this element and (when
+present) the Deny `<lr-button>` have both completed it. Named after the native global attribute it
+stands in for, since the platform's own `autofocus` algorithm only fires for an element already in
+the document when it finishes parsing, never for one a host swaps in afterward — this bar's primary
+use. Focuses the Deny control when it's present and actually focusable (not `disabled`, not
+hidden), else the always-present `[part="status"]`. `escapeDenies: boolean = false` (attribute
+`escape-denies`, reflected) — maps Escape on `[part="base"]` to the same outcome as clicking Deny.
+A no-op while `disabled`, already decided, or `pending`, exactly like clicking Deny itself, and
+never stops propagation when it was a no-op, so an unrelated enclosing dialog's own Escape handling
+still sees the event. Scoped to this element's own `[part="base"]` rather than `document`: this bar
+is inline and non-modal, not a member of the shared `activateOverlay()` Escape/stacking contract
+real overlays use.
 
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
@@ -117,6 +133,11 @@ repainting everything else that reads them.
   the built-in loading/disabled presentation.
 - `disabled` blocks both Deny and Approve and makes activating either a no-op — see `disabled`
   above. It is independent of, and composes with, `pending`.
+- `autofocus`/`escape-denies` are both opt-in and default to `false`; neither changes any
+  existing bar's behavior unless a host sets it. `escape-denies` is intentionally *not* routed
+  through the shared overlay Escape manager (`src/internal/overlay-manager.ts`) — this component
+  is explicitly non-modal (see the class doc), so binding Escape on its own `[part="base"]` is
+  the correct scope, not a shortcut around the shared contract.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>

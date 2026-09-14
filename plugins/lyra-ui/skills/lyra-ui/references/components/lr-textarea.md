@@ -225,6 +225,13 @@ With no label text the part is hidden and no glyph is painted.
   native textarea is hovered, independent of its resting border and every other brand-colored
   component state.
 
+`<lr-textarea>` now fills a definite-height host: place it inside a container with a resolved
+block size (a flex/grid item stretched to a track, or an ancestor with an explicit height) and
+the field's `form-control` → `textarea-wrapper` → the native `<textarea>` chain fills it instead
+of staying at its `rows`-derived intrinsic height. This has no effect and needs no opt-in for the
+ordinary case (an unsized host) — `resize="auto"`'s own growth and its
+`--lr-textarea-max-block-size` cap are unaffected either way.
+
 **Additional API surface:**
 
 - `click()` — Activates the internal textarea.

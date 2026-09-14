@@ -935,7 +935,11 @@ one — and that `empty` disappears entirely once the `empty` slot is filled. `e
 branches, its surrounding `<thead>`, filter, and pagination stay mounted rather than being replaced
 along with it. It re-exports that element's own inner parts as `error-base`, `error-icon`,
 `error-heading`, `error-description`, and `error-actions` (which wraps `retry-button`, the built-in
-retry control).
+retry control). `error-row` — the single full-width `<tr>` replacing the row content while `error`
+is set; `error-cell` — the `<td>` inside it, spanning every column, that holds the failed-load
+content. Both exist only in the in-grid branch: when `columns` is empty there is no grid to keep
+mounted, so the failed-load content renders standalone and neither part is present (`error` and its
+re-exported inner parts still are).
 
 - `scrollMode: 'self' | 'page' | 'auto' = 'self'` (attribute `scroll-mode`, reflected) — which element
   scrolls when the table overflows. `'self'` makes `[part="base"]` the scroll container, which is
@@ -4425,6 +4429,7 @@ These named interfaces and helper signatures are available to typed integrations
     resizable?: boolean;
     sortable?: boolean;
     sortValue?: (row: T) => string | number | null | undefined;
+    defaultSortDir?: TableSortDirection;
     align?: TableEdgeAlign;
     priority?: 'medium' | 'low';
     sticky?: TableEdgeAlign;

@@ -64,7 +64,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded from
   `d3-force`'s own simulation input and from click/keyboard interaction.
 - `width: number = 800`
-- `height: number = 600`
+- `height: number = 600` — also sizes the rendered host itself (see
+  `--lr-canvas-reserved-height`'s entry below) whenever neither that nor an explicit outer
+  `block-size` overrides it
 - `chargeStrength: number = -300` (attribute `charge-strength` — live-reactive, see gotchas)
 - `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
@@ -86,6 +88,13 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   drawn edge label is hidden (toggled via a `data-edge-labels-hidden` attribute on the zoomed `<g>`,
   not a Lit re-render, so it tracks pan/zoom smoothly). Ignored entirely when `showEdgeLabels` is
   `false`
+- `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — node-label visibility.
+  `'always'` draws every node's label unconditionally; `'zoom'` hides them below the same
+  canvas-declutter zoom threshold used before this property existed (toggled via a
+  `data-node-labels-hidden` attribute on the zoomed `<g>` for `renderer="svg"`, mirroring
+  `showEdgeLabels`/`edgeLabelMinZoom`'s own mechanism — not a Lit re-render); `'none'` never renders
+  them. Left unset (the default), each renderer keeps its own exact pre-existing behavior —
+  `'always'` for `renderer="svg"`, `'zoom'` for `renderer="canvas"` — so this is purely additive
 - `layout: 'force' | 'layered' = 'force'` — `'force'` runs the `d3-force` simulation described
   throughout this section, unchanged. `'layered'` swaps in a deterministic Sugiyama-lite layered
   layout instead (longest-path layering, barycenter crossing reduction, cycle-safe — back edges are
@@ -128,7 +137,8 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 **Slots:** none.
 
 **CSS parts:** `base`, `svg`, `node`, `link`, `arrowhead` (the marker path shared by directed links),
-`label`, `link-label` (a drawn edge label, only rendered when `showEdgeLabels` is set),
+`label` (`renderer="svg"` only; not rendered at all when `nodeLabels` is `'none'`), `link-label` (a
+drawn edge label, only rendered when `showEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusNodeId`'s node), `hull` (a community hull), `community-label`,
 `live-region`, `data-list`, `empty`, `error` (neutral visible message shown instead of the graph when
@@ -141,7 +151,10 @@ the offscreen keyboard-roving items)
 
 **Themeable custom properties:** `--lr-canvas-reserved-height` (default
 `var(--lr-size-24rem)`) sets the host block size and is shared with the optional pre-upgrade
-reservation stylesheet; an explicit outer `block-size` still wins. `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
+reservation stylesheet. Below it in the fallback chain, the normalized `height` property sizes the
+host too (through a private, not-directly-settable custom property) — setting
+`--lr-canvas-reserved-height` always overrides `height`, and an explicit outer `block-size` still
+wins over both. `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
 falls back to `--lr-color-brand`) and `--lr-link-color` (set inline per-link from
 `LyraGraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).

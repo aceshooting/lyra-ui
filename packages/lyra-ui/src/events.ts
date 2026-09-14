@@ -2582,16 +2582,17 @@ export type LyraRestoreEvent =
 export type LyraRetrievalSelectEvent = LyraAgentWorkspaceEventMap['lr-retrieval-select'];
 
 /**
- * `lr-retry` — dispatched by 4 components: `<lr-attachment-chip>`, `<lr-ingestion-queue>`,
- * `<lr-message-parts>`, `<lr-rag-answer>`.
+ * `lr-retry` — dispatched by 5 components: `<lr-attachment-chip>`, `<lr-ingestion-queue>`,
+ * `<lr-message-parts>`, `<lr-rag-answer>`, `<lr-table>`.
  *
- * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 4 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAttachmentChipEventMap['lr-retry']`.
  */
 export type LyraRetryEvent =
   | LyraAttachmentChipEventMap['lr-retry']
   | LyraIngestionQueueEventMap['lr-retry']
-  | LyraRagAnswerEventMap['lr-retry'];
+  | LyraRagAnswerEventMap['lr-retry']
+  | LyraTableEventMap['lr-retry'];
 
 /**
  * `lr-reveal-change` — dispatched by `<lr-env-list>`.

@@ -52,6 +52,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: '筛选行',
   tableFilterPlaceholder: '筛选行',
   tableLoading: '正在加载行',
+  tableLoadFailed: '无法加载数据',
   tableEditCell: '编辑{column}',
   carousel: '轮播',
   carouselLabel: '轮播',

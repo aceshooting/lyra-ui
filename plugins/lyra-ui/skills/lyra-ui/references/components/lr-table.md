@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 36 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 45 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -54,7 +54,8 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 headerCell?, width?, minWidth?, maxWidth?,
 resizable?, sortable?, sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start'|'end',
 priority?: 'medium'|'low',
-sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
+sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editType?: 'text'|'number'|'select',
+editOptions?: { value: string; label: string }[], footer?, cellStyle?, heatValue?,
 cell: (row) => unknown }` —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
   client-mode sorting for that column: a finite number sorts numerically, a string sorts through an
@@ -95,7 +96,10 @@ cell: (row) => unknown }` —
   `editTrigger: 'double-click'` opens a native editor on that cell's double-click (one cell at a
   time), while `'always'` renders a persistent editor in every body cell from first paint, for a
   settings/rate-style column meant to be typed straight into — while `editValue` supplies the editor
-  value and `editType` selects `text` or `number`
+  value and `editType` selects `'text'`, `'number'`, or `'select'` (a native `<select>` populated
+  from `editOptions: { value: string; label: string }[]`, one `<option>` per entry in order; a
+  `'select'` column with no `editOptions` renders an empty, valueless `<select>` instead of
+  throwing)
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
   the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
   timestamp behind a relative one;
@@ -121,10 +125,13 @@ cell: (row) => unknown }` —
     existing row-expand toggle, and stays _outside_ the header/row roving-tabindex model. Tab walks
     down the column; arrow keys still navigate the grid from a row's own roving stop, and act as
     ordinary caret movement once focus is inside a field. Non-editable columns are unaffected.
-  - **Value binding.** A persistent editor binds its `value` as a **content attribute**, not as the
-    `.value` property, so native dirty-value-flag semantics apply. Trade-off: once the user has
-    typed into a cell, an out-of-band `rows` update to that same cell will **not** visibly replace
-    their draft. An editor the user has not touched still picks up a new `rows` value normally.
+  - **Value binding.** A persistent `'text'`/`'number'` editor binds its `value` as a **content
+    attribute**, not as the `.value` property, so native dirty-value-flag semantics apply.
+    Trade-off: once the user has typed into a cell, an out-of-band `rows` update to that same cell
+    will **not** visibly replace their draft. An editor the user has not touched still picks up a
+    new `rows` value normally. A persistent `'select'` editor has no equivalent protection —
+    `<select>`/`<option>` carry no native dirty-value flag, so an out-of-band `rows` update to that
+    cell re-applies the selection even after the user has picked a different, uncommitted option.
     `lr-cell-edit` remains the only mutation channel — the table never mutates `row`.
   - **Keys.** Enter commits (emits `lr-cell-edit`) and _keeps focus_ in the field, since there is no
     closed state to fall back to. `change` (blur after a modification) commits in both modes.
@@ -210,7 +217,7 @@ cell: (row) => unknown }` —
   an explicit verbatim override
 - `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
   (attribute `autocorrect`) — forwarded to the filter input and, for a `'text'` (the default)
-  `editType`, the inline cell editor; no effect on a `'number'` cell editor. `spellcheck="false"`
+  `editType`, the inline cell editor; no effect on a `'number'` or `'select'` cell editor. `spellcheck="false"`
   is parsed as `false` via a string-aware converter (Lit's default presence-based boolean
   converter would otherwise treat any attribute value, including the literal string `"false"`, as
   `true`).
@@ -267,6 +274,17 @@ cell: (row) => unknown }` —
   `lr-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
 - `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
+- `error: boolean = false` (attribute `error`, reflected) — replaces `<tbody>`'s row content with
+  a built-in failed-load state while keeping the surrounding `<thead>`, filter field, and
+  pagination mounted — unlike either data-empty branch below, which this state overrides and which
+  replace that chrome too. Precedence when more than one state could apply at once: `loading` beats
+  `error` beats every empty branch, so a `loading` table never shows a stale `error`, and an
+  `error` table never falls through to "no rows"/"no columns" copy underneath it.
+- `errorHeading?: string` (attribute `error-heading`) — omission renders localized
+  `tableLoadFailed` (`'Could not load data'` in the built-in English catalog); a supplied string,
+  including `''`, renders verbatim. Has no effect once the `error` slot is filled.
+- `errorDescription: string = ''` (attribute `error-description`) — never localized, the same
+  contract as `emptyDescription`. Has no effect once the `error` slot is filled.
 - `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `noColumnsHeading?: string` (attribute `no-columns-heading`) — omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
@@ -338,14 +356,19 @@ The internal filter input's composed native `input`/`change` events are containe
 `lr-filter-change` crosses the host boundary. Cell-editor `input`/`change` events are likewise
 contained while an accepted edit publishes `lr-cell-edit`. Internal filter/cell-editor native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events (the native ones
-are neither).
+are neither). `lr-retry` — the built-in `[part='retry-button']` was activated, only rendered while
+`error` is set. **Cancelable**: the default action clears `error`; calling `preventDefault()` leaves
+it set, for a consumer that owns its own retry timing (e.g. it wants to keep the banner up until a
+fresh load has actually started, or failed again immediately).
 
 **Slots:** `empty` — replaces the built-in empty state on the two _data_-empty branches (no rows at
 all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
 renders as this slot's fallback content. The no-columns branch is deliberately **not**
 slot-replaceable: it reports a configuration problem (`noColumnsHeading`), not "this query returned
 nothing", and one slot covering all three would collapse that distinction. Everything else comes
-from `columns`/`rows`.
+from `columns`/`rows`. `error` — replaces the built-in failed-load state, including its retry
+button, while `error` is set. Left unfilled, the built-in `[part='error']` `<lr-empty>` renders as
+this slot's fallback content.
 
 **CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon`
 (each sort indicator), `sort-icon-active` (the active chevron, rotated per `sortDir`),
@@ -370,7 +393,16 @@ host in all three empty states, and it re-exports that element's own inner parts
 `empty-icon`, `empty-heading`, `empty-description` and `empty-actions`. Note that the no-columns and
 no-rows states return the empty element as the shadow root's own root, with no `[part='base']`
 wrapper around it — `::part(base)` does not apply in those two states, only in the filtered-to-zero
-one — and that `empty` disappears entirely once the `empty` slot is filled.
+one — and that `empty` disappears entirely once the `empty` slot is filled. `error` — the built-in
+`<lr-empty>` host rendered in the row body while `error` is set. Unlike `[part='empty']`'s no-rows
+branches, its surrounding `<thead>`, filter, and pagination stay mounted rather than being replaced
+along with it. It re-exports that element's own inner parts as `error-base`, `error-icon`,
+`error-heading`, `error-description`, and `error-actions` (which wraps `retry-button`, the built-in
+retry control). `error-row` — the single full-width `<tr>` replacing the row content while `error`
+is set; `error-cell` — the `<td>` inside it, spanning every column, that holds the failed-load
+content. Both exist only in the in-grid branch: when `columns` is empty there is no grid to keep
+mounted, so the failed-load content renders standalone and neither part is present (`error` and its
+re-exported inner parts still are).
 
 - `scrollMode: 'self' | 'page' | 'auto' = 'self'` (attribute `scroll-mode`, reflected) — which element
   scrolls when the table overflows. `'self'` makes `[part="base"]` the scroll container, which is
@@ -549,14 +581,23 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   as the cell's accessible _name_, replacing the cell's content rather than supplementing it (the
   same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
   shows, never for information that exists nowhere else.
-- `editTrigger: 'always'` deliberately does not re-assert a cell's source value once the user has typed
-  into it. That is the native dirty-value-flag behavior the attribute binding buys, and it is the
-  point: a background `rows` refresh cannot silently overwrite an in-progress edit. If you need the
+- `editTrigger: 'always'` deliberately does not re-assert a `'text'`/`'number'` cell's source value
+  once the user has typed into it. That is the native dirty-value-flag behavior the attribute
+  binding buys, and it is the point: a background `rows` refresh cannot silently overwrite an
+  in-progress edit. If you need the
   opposite — an authoritative external value that always wins — do not use `'always'`; re-key the
   row (`rowKey`) so the editor is recreated rather than updated, or use `editTrigger: 'double-click'` and let
   the short-lived double-click editor's property binding re-assert. Also note the two things
   `'always'` intentionally does _not_ do: it never sets the roving `tabindex` (its editors are
   ordinary tab stops, so Tab order in that column interleaves with the grid's two roving stops,
   the same way the row-expand toggle's already does), and it never cancels Escape.
+- `editType: 'select'` renders a native `<select>`, populated from `columns[].editOptions`
+  (`{ value: string; label: string }[]`, one `<option>` per entry in order); a `'select'` column
+  with no `editOptions` renders an empty, valueless `<select>` rather than throwing. Unlike the
+  `'text'`/`'number'` editors, `<select>`/`<option>` carry no native dirty-value flag, so the
+  protection described above for a persistent `'always'` editor does not extend to a `'select'`
+  one — a background `rows` refresh re-applies the selection to a persistent select editor even
+  after the user has picked a different, uncommitted option. The double-click flavor is unaffected
+  by this distinction either way, since it is always short-lived.
 
 ---

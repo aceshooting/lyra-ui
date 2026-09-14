@@ -23,7 +23,14 @@ formatted percentage.
 `label` (mapped accessible-name property), plus `accessibleLabel` (`accessible-label`) — the
 retained Lyra compatibility spelling for this component. It is not a library-wide attribute:
 spinner, rating, and tooltip expose their explicit host name through `aria-label`. Host
-`aria-label` has highest precedence here too.
+`aria-label` has highest precedence here too. Also
+`size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
+'large'`. Track/indicator thickness tier, on the shared six-step ladder: `0.25rem` (`2xs`),
+`0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`, unchanged from before this
+property existed), `1.25rem` (`l`/`large`), `1.5rem` (`xl`) — each value feeds
+`--lr-progress-track-height`'s private default. An explicit `--lr-progress-track-height` (or the
+upstream `--track-height`/`--height` aliases) still wins over every tier.
+
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
 determinate. Slotted label content is always visible and names the progressbar unless an explicit
 label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.
@@ -36,7 +43,9 @@ presence-based, so an explicitly empty value remains empty rather than invoking 
 **CSS parts:** `base` and `progress-bar` are aliases on the same progressbar; `track`, `indicator`,
 `label`.
 **Themeable custom properties:** `--lr-progress-track-height` (default
-`var(--lr-progress-height, var(--lr-size-1rem))`; `--lr-progress-height` is the legacy fallback),
+`var(--lr-progress-height, var(--_lr-progress-track-height))`; `--lr-progress-height` is the legacy
+fallback, and the private `--_lr-progress-track-height` is the `size` property's own tier value,
+`1rem` at the `m` default, unchanged),
 `--lr-progress-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-indicator-color` (default `var(--lr-progress-indicator-variant-color)`), and
 `--lr-progress-label-color` (default `var(--lr-color-text)`). Upstream aliases are `--height` and

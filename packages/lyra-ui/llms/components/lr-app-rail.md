@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -79,10 +79,28 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   `'auto'` or unset (see above); an explicit `forceMode` value takes full priority.
   Unset (the default, `null`) reproduces the original breakpoint-only behavior exactly.
 - `hideToggle: boolean = false` (reflected, attribute `hide-toggle`) — suppresses the built-in mobile
-  `[part='toggle']` hamburger/close button entirely, for a consumer that already owns an external
-  mobile-menu toggle wired to this rail's own `open` property. `false` (the default) reproduces the
-  exact existing output; note `open` still has no built-in external trigger of its own once this is
-  set, since `lr-toggle` only fires from the toggle button being activated.
+  `[part='toggle']` hamburger/OPEN button, for a consumer that already owns an external mobile-menu
+  trigger wired to this rail's own `open` property (pair it with `trigger`/`for` below so focus
+  still returns to that external trigger on close). `false` (the default) reproduces the exact
+  existing output. This does not remove the button once the overlay is open: at that point it has
+  been reparented inside the trapped `[part="panel"]` (see the CSS parts entry below) as the
+  panel's only in-panel dismiss control, and hiding it there too would leave the open panel with no
+  in-panel way to close it at all besides Escape/backdrop.
+- `trigger: HTMLElement | null = null` (attribute: false) — direct reference to an external element
+  that opens this rail's mobile overlay (e.g. an application-chrome hamburger button used together
+  with `hideToggle`). When set (or resolved through `for`), closing the overlay by any path —
+  Escape, backdrop click, a nav-item click, or the built-in toggle itself — returns focus to it, the
+  same guarantee the built-in toggle's own click already gets. Needed because a consumer's own
+  JS-driven `open = true` never focuses anything, and even a real click does not reliably focus its
+  target in every browser. Resolved once when the overlay opens; reassigning afterward changes the
+  return target for the remainder of that overlay's open lifetime. Read alongside `for`; this direct
+  reference wins when both resolve to different elements. Unset (the default, `null`) reproduces the
+  exact existing behavior: only the built-in toggle's own click supplies a return target, for that
+  interaction alone.
+- `for: string = ''` — id of an external element that opens this rail's mobile overlay, the
+  label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
+  `for`). Resolved against this element's own root (shadow root or document) when the overlay opens.
+  Ignored once `trigger` is itself set.
 - `resizable: boolean = false` (reflected) — opts a continuously draggable width in for the `'full'`
   state, exposing a `[part='resizer']` handle clamped to `[minRailWidthPx, maxRailWidthPx]`. `false`
   (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
@@ -141,7 +159,14 @@ open), `header` (logo/brand content, shown above the nav items in every mode), `
 user/settings trigger, shown below the nav items).
 
 **CSS parts:** `base`, `header`, `nav`, `footer`, `toggle` (hidden via CSS outside `'mobile'` mode, or
-entirely via `hideToggle`), `backdrop`, `panel` (`base`/`panel` are mutually exclusive on the same
+-- while it is not also serving as the panel's only in-panel dismiss control -- via `hideToggle`;
+reparented to be the first child of `[part="panel"]` for exactly as long as the mobile overlay is
+open, so the shared focus trap, scoped to the panel alone, can reach it and Tab cycles through it
+like `<lr-dialog>`'s in-panel close button, then moved back to its resting position, a sibling
+immediately ahead of `[part="panel"]`, once closed; the same button element is reused throughout,
+never destroyed/recreated, so a reference captured before opening remains valid after closing, and
+it renders as its own reserved row ahead of the `header` slot rather than an absolute overlay on
+top of it, so a wide/slotted header is never obscured), `backdrop`, `panel` (`base`/`panel` are mutually exclusive on the same
 underlying element — see above), `resizer` (the `resizable` opt-in's drag handle, only rendered while
 `resizable` and `mode` is `'full'`; its hit target is `--lr-icon-button-size`-wide), `resizer-track`
 (the slim 3px visible drag line centered inside that hit target, tinted `--lr-color-brand` on hover).
@@ -150,7 +175,26 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `'full'` mode), `--lr-app-rail-icon-width` (default `4rem` — the inline rail width in `'icon-only'`
 mode), `--lr-app-rail-mobile-width` (default `18rem`, capped at `85vw` — the mobile overlay panel
 width), `--lr-app-rail-overlay-color` (default `var(--lr-color-overlay)` — the mobile backdrop scrim
-color; component-specific since no shared token exists), plus shared tokens (`--lr-color-border`,
+color; component-specific since no shared token exists), `--lr-app-rail-panel-inset-block-start`
+(default `0`, applied to both `[part="panel"]` and `[part="backdrop"]` — raise it to leave room for
+a fixed app bar/status area above the drawer instead of the panel/scrim starting flush with the
+viewport top), `--lr-app-rail-panel-radius` (default `0` — corner radius of `[part="panel"]`; pairs
+naturally with a nonzero `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top
+corners), `--lr-app-rail-panel-overflow-block` (default `auto`) and
+`--lr-app-rail-panel-overflow-inline` (default `clip`) — `[part="panel"]`'s logical overflow axes;
+either non-`visible` value clips a `position: fixed` popup opened by a slotted/nav-item control
+(e.g. a slotted `<lr-select>`/`<lr-menu>`) whenever its rendered box extends past the panel,
+regardless of that popup's own containing block. Per the CSS overflow spec, a lone `visible` axis
+paired with a non-`visible` other axis computes as `auto` instead (still clipping) — set **both**
+tokens to `visible` together to actually stop the clipping, accepting that wide header/footer
+content can then scroll/bleed both ways. `--lr-app-rail-background` (default
+`var(--lr-color-surface)` — `[part="base"]`'s background, the docked non-overlay presentation) and
+`--lr-app-rail-panel-background` (default `var(--lr-color-surface-overlay)` — `[part="panel"]`'s
+background, the mobile overlay presentation; kept separate from `--lr-app-rail-background`/
+`--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
+docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
+`var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently. Plus shared
+tokens (`--lr-color-border`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
 `--lr-focus-ring-*`, `--lr-transition-base`). `resizable`'s width is driven entirely by
@@ -246,6 +290,16 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
 - reassigning `icon-only-breakpoint`/`mobile-breakpoint`/`preferredMode` does not itself un-force a
   previously-forced `mode` — same caveat as above, `preferredMode` is only consulted while `mode`
   isn't force-pinned.
+- the built-in toggle physically moves in the DOM: it is a sibling immediately ahead of
+  `[part="base"]`/`[part="panel"]` while closed (or outside mobile mode), and the first child of
+  `[part="panel"]` while the mobile overlay is open. This is a real reparent via `insertBefore`
+  (not a template-conditional recreate), so an event listener or a captured element reference
+  stays valid across the transition — a MutationObserver watching a specific fixed container would
+  still need to account for the move.
+- opening the mobile overlay moves initial focus to the first focusable nav item (or the panel
+  itself when nothing in the slotted content is focusable), never to the toggle — even now that
+  the toggle lives inside the panel as its structurally-first child. Tab still reaches it as part
+  of the trap's normal cycle.
 
 ### `lr-app-rail-item`
 
@@ -290,7 +344,9 @@ external focus move is always preserved, and this repair dispatches no activatio
 assistive technology and inert across its flattened subtree; the default slot or host `aria-label`
 names the native control, which remains the sole action).
 
-**CSS parts:** `base`, `icon`, `label`, `tooltip` (the hover/focus label flyout, only rendered while
+**CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
+only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
+shipped `active-indicator` part), `tooltip` (the hover/focus label flyout, only rendered while
 `tooltip` is set, the item is `icon-only`, and it is hovered or focused).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
@@ -303,10 +359,21 @@ including on `<lr-app-rail>` or a wrapper above it, to tint every item's current
 `::part()`), so before these hooks the only lever was overriding the library-wide
 `--lr-color-brand-quiet`/`--lr-color-brand` tokens, which repainted every other element reading
 them. Unset, each falls back to the token its rule used before.
+`--lr-app-rail-item-current-indicator-color` (default `var(--lr-color-brand)`),
+`--lr-app-rail-item-current-indicator-width` (default `var(--lr-size-2px)`), and
+`--lr-app-rail-item-current-indicator-inset-inline` (default `0 auto`; set `auto 0` to place the
+indicator at the inline-end edge instead) theme `[part="current-indicator"]`.
 Ordinary interaction states are independently inheritable through
 `--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-hover-color`,
 `--lr-app-rail-item-active-bg`, and `--lr-app-rail-item-active-color`, again retaining the former
 brand/active-mix values as fallbacks.
+`--lr-app-rail-item-min-block-size` (default `var(--lr-icon-button-size)`, floor-clamped to that
+same token regardless of the override so the row's own hit target can never shrink below the WCAG
+2.5.8 minimum), `--lr-app-rail-item-padding` (default `var(--lr-space-s)`),
+`--lr-app-rail-item-gap` (default `var(--lr-space-s)`, the gap between `[part="icon"]` and
+`[part="label"]`), and `--lr-app-rail-item-icon-size` (default `var(--lr-icon-button-size)`, not
+floor-clamped since the icon is decorative, not itself a pointer target) retune the row's
+geometry.
 
 **Optional peer deps:** none.
 
