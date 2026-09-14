@@ -1120,3 +1120,190 @@ it('retints the close button hover fill through a scoped --lr-alert-close-hover-
     await resetMouse();
   }
 });
+
+describe('size ladder', () => {
+  // Hardcoded in px (root font-size is 16px) rather than re-derived from the tokens the stylesheet
+  // reads, so a token edit cannot make this test agree with itself. Padding is the ladder's INLINE
+  // gutter on every side and the gap is constant across tiers, both taking <lr-callout>'s values so
+  // a tiered alert and a tiered callout of the same size line up in one column. Their UNTIERED
+  // states deliberately differ -- see the pre-ladder test below.
+  const tiers = [
+    { size: '2xs', padding: '2px', fontSize: '10px' },
+    { size: 'xs', padding: '4px', fontSize: '12px' },
+    { size: 's', padding: '8px', fontSize: '13px' },
+    { size: 'm', padding: '12px', fontSize: '16px' },
+    { size: 'l', padding: '16px', fontSize: '18px' },
+    { size: 'xl', padding: '16px', fontSize: '20px' },
+  ] as const;
+
+  const base = (el: LyraAlert): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  it('scales the panel padding and text together at every tier of the shared ladder', async () => {
+    for (const tier of tiers) {
+      const el = (await fixture(
+        html`<lr-alert open size=${tier.size}>Saved</lr-alert>`,
+      )) as LyraAlert;
+      const cs = getComputedStyle(base(el));
+
+      expect(cs.paddingTop, `size=${tier.size} block padding`).to.equal(tier.padding);
+      expect(cs.paddingLeft, `size=${tier.size} inline padding`).to.equal(tier.padding);
+      expect(cs.fontSize, `size=${tier.size} font-size`).to.equal(tier.fontSize);
+      expect(cs.rowGap, `size=${tier.size} gap stays constant`).to.equal('8px');
+      expect(el.size, `size=${tier.size} readback`).to.equal(tier.size);
+    }
+  });
+
+  it('accepts the Web Awesome and Shoelace long-form tier spellings without normalizing them away', async () => {
+    const aliases = [
+      { alias: 'small', padding: '8px', fontSize: '13px' },
+      { alias: 'medium', padding: '12px', fontSize: '16px' },
+      { alias: 'large', padding: '16px', fontSize: '18px' },
+    ] as const;
+
+    for (const { alias, padding, fontSize } of aliases) {
+      const el = (await fixture(html`<lr-alert open size=${alias}>Saved</lr-alert>`)) as LyraAlert;
+      const cs = getComputedStyle(base(el));
+
+      expect(cs.paddingLeft, `size=${alias} inline padding`).to.equal(padding);
+      expect(cs.fontSize, `size=${alias} font-size`).to.equal(fontSize);
+      // The CSS matches both spellings in one selector list, so the authored word survives.
+      expect(el.size, `size=${alias} readback`).to.equal(alias);
+      expect(el.getAttribute('size'), `size=${alias} attribute`).to.equal(alias);
+    }
+  });
+
+  it('renders its pre-ladder panel untouched while size is unset, even inside a smaller text context', async () => {
+    const wrapper = (await fixture(html`
+      <div style="font-size: 10px"><lr-alert open>Saved</lr-alert></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-alert') as LyraAlert;
+    await el.updateComplete;
+    const cs = getComputedStyle(base(el));
+
+    expect('size' in el, 'the opt-in property exists').to.equal(true);
+    expect(el.size, 'unset readback').to.equal(undefined);
+    expect(el.hasAttribute('size'), 'no attribute is invented').to.equal(false);
+    // The ladder is explicit-only: with no tier the panel keeps the padding it always had and the
+    // text size it inherits, so migrated Shoelace markup renders unchanged.
+    expect(cs.paddingTop, 'pre-ladder block padding').to.equal('12px');
+    expect(cs.paddingLeft, 'pre-ladder inline padding').to.equal('12px');
+    expect(cs.fontSize, 'inherited font-size').to.equal('10px');
+  });
+
+  it('treats an unsupported tier as no size at all rather than snapping to one', async () => {
+    const wrapper = (await fixture(html`
+      <div style="font-size: 10px"><lr-alert open size="huge">Saved</lr-alert></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-alert') as LyraAlert;
+    await el.updateComplete;
+    const cs = getComputedStyle(base(el));
+
+    expect(el.size, 'unsupported readback').to.equal(undefined);
+    expect(el.hasAttribute('size'), 'the stale attribute is removed').to.equal(false);
+    expect(cs.paddingLeft, 'pre-ladder inline padding').to.equal('12px');
+    expect(cs.fontSize, 'inherited font-size').to.equal('10px');
+
+    el.size = 'nonsense' as never;
+    await el.updateComplete;
+    expect(el.size, 'unsupported property write').to.equal(undefined);
+    expect(el.hasAttribute('size'), 'no attribute after an unsupported write').to.equal(false);
+  });
+
+  it('keeps a tiered panel symmetrical under RTL', async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl"><lr-alert open closable size="s">Saved</lr-alert></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-alert') as LyraAlert;
+    await el.updateComplete;
+    const cs = getComputedStyle(base(el));
+
+    expect(cs.fontSize, 'tier font-size').to.equal('13px');
+    // The tier sets one logical padding for all four sides, so mirroring cannot bias one edge.
+    expect(cs.paddingLeft, 'inline-start padding').to.equal('8px');
+    expect(cs.paddingRight, 'inline-end padding').to.equal('8px');
+    expect(getComputedStyle(base(el)).direction, 'inherited direction').to.equal('rtl');
+  });
+
+  it('keeps the close control inside the clipped panel at the tiers whose gutter is tighter than its pull-out', async () => {
+    // [part='base'] clips its overflow, and the close control is pulled outward so its glyph reads
+    // level with the panel edge. At 2xs and xs the ladder gutter (2px, 4px) is at or below that
+    // pull, so an unclamped pull puts part of a 2.5rem tappable target outside the panel, where it
+    // is cut off rather than merely tight. Rect edges are compared as numbers, never as nodes.
+    for (const size of ['2xs', 'xs', 's', 'm'] as const) {
+      const el = (await fixture(
+        html`<lr-alert open closable size=${size}>Saved</lr-alert>`,
+      )) as LyraAlert;
+      await el.updateComplete;
+      const closeButton = el.shadowRoot!.querySelector<HTMLButtonElement>(
+        '[part~="close-button"]',
+      );
+      expect(closeButton?.localName, `size=${size} close control renders`).to.equal('button');
+
+      const panel = base(el).getBoundingClientRect();
+      const close = closeButton!.getBoundingClientRect();
+
+      expect(close.top >= panel.top, `size=${size} close control block-start stays inside`).to.equal(
+        true,
+      );
+      expect(
+        close.bottom <= panel.bottom,
+        `size=${size} close control block-end stays inside`,
+      ).to.equal(true);
+      expect(
+        close.right <= panel.right,
+        `size=${size} close control inline-end stays inside`,
+      ).to.equal(true);
+      // The hit area itself is a WCAG 2.5.8 floor, not a density knob, so it does not shrink with
+      // the tier, staying at 2.5rem against a 16px root.
+      expect(close.height >= 40, `size=${size} tappable height holds the floor`).to.equal(true);
+      expect(close.width >= 40, `size=${size} tappable width holds the floor`).to.equal(true);
+    }
+  });
+
+  it('keeps the close control inside the clipped panel at the tightest tier under RTL', async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl"><lr-alert open closable size="2xs">Saved</lr-alert></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-alert') as LyraAlert;
+    await el.updateComplete;
+    const closeButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]');
+    expect(closeButton?.localName, 'close control renders').to.equal('button');
+    const panel = base(el).getBoundingClientRect();
+    const close = closeButton!.getBoundingClientRect();
+
+    // margin-inline-end mirrors, so the clamped pull has to hold on the left edge here.
+    expect(close.left >= panel.left, 'close control inline-end stays inside under RTL').to.equal(
+      true,
+    );
+    expect(close.top >= panel.top, 'close control block-start stays inside under RTL').to.equal(
+      true,
+    );
+  });
+
+  it('keeps its tier and its open state across a disconnect and reconnect', async () => {
+    const el = (await fixture(html`<lr-alert open size="s">Saved</lr-alert>`)) as LyraAlert;
+    const parent = el.parentNode!;
+
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+
+    expect(el.size, 'readback after reconnect').to.equal('s');
+    expect(el.getAttribute('size'), 'attribute after reconnect').to.equal('s');
+    expect(el.open, 'open survives the reconnect').to.equal(true);
+    expect(getComputedStyle(base(el)).paddingLeft, 'padding after reconnect').to.equal('8px');
+  });
+
+  it('is accessible while open, closable and tiered', async () => {
+    const el = (await fixture(html`
+      <lr-alert open closable size="l" variant="warning">
+        <span slot="icon" aria-hidden="true">!</span>
+        Review the pending changes.
+      </lr-alert>
+    `)) as LyraAlert;
+
+    expect(el.size, 'tier applied').to.equal('l');
+    await expect(el).to.be.accessible();
+  });
+});

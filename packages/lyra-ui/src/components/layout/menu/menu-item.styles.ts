@@ -33,8 +33,15 @@ export const styles = css`
     gap: var(--lr-menu-item-gap, var(--lr-space-xs));
     /* max() rather than the bare ladder value: the ladder's bottom two tiers resolve to 20px/24px
        and a menu row is a pointer target, so it floors at the WCAG 2.2 SC 2.5.8 minimum. Above the
-       floor the row tracks the heights every other control in a toolbar row uses. */
-    min-block-size: max(var(--lr-form-control-height), var(--lr-size-24px));
+       floor the row tracks the heights every other control in a toolbar row uses. The hook is the
+       outer arm, so a denser or roomier menu is one declaration on the menu rather than a
+       ::part(base) rule per item -- and unset it is byte-identical to the ladder expression that
+       was here before. A value below the 24px floor is the consumer's own call, exactly as it is
+       when they override the ladder itself. */
+    min-block-size: var(
+      --lr-menu-item-min-height,
+      max(var(--lr-form-control-height), var(--lr-size-24px))
+    );
     padding-block: var(--lr-form-control-padding-block);
     padding-inline: var(--lr-form-control-padding-inline);
     border-radius: var(--lr-menu-item-radius, var(--lr-form-control-radius));
@@ -63,15 +70,22 @@ export const styles = css`
     color: var(--lr-menu-item-checked-color, inherit);
     font-weight: var(--lr-menu-item-checked-font-weight, inherit);
   }
+  /* The row's own hover fill, an inline var() fallback like every other row-chrome hook here, so
+     unset it is the quiet brand fill this row has always painted. Menus are the one surface an
+     application most often wants a different resting-to-hover step on, and the alternative was a
+     ::part(base):hover rule in the consumer's stylesheet -- which the pressed mix below could not
+     then follow. */
   [part='base']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet));
   }
   /* The hover fill mixed further toward --lr-color-mix-partner (the text colour), so a pressed row
-     is always a visible step past the row the pointer merely rests on. */
+     is always a visible step past the row the pointer merely rests on. It mixes from the SAME hook
+     the hover rule reads, so a retuned hover fill keeps its pressed step instead of snapping back
+     to the brand default under the pointer. */
   [part='base']:active {
     background: color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
@@ -118,6 +132,11 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
+    /* Unset this inherits the row's own colour, exactly as the leading glyph did before the hook
+       existed -- including the danger variant's red and the disabled row's dimmed text. Set, it
+       de-emphasises or accents the glyph without touching the label beside it, which a
+       ::part(icon) rule could only do by re-stating the row's every state. */
+    color: var(--lr-menu-item-icon-color, inherit);
     line-height: var(--lr-line-height-none);
   }
   /* [hidden] rather than :empty -- the part always contains a literal <slot> child, so :empty never

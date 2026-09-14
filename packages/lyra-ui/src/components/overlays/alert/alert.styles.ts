@@ -5,6 +5,10 @@ export const styles = css`
     display: none;
     min-inline-size: 0;
     max-inline-size: 100%;
+    /* The panel gutter lives here, not on the base, because the close control's pull-out below has
+       to stay inside it. An explicit tier re-points this; with no tier it keeps the pre-ladder
+       value the panel always had. Same indirection lr-callout uses for its own gutter. */
+    --_lr-alert-padding: var(--lr-space-m);
   }
 
   :host([open]),
@@ -38,7 +42,7 @@ export const styles = css`
     min-inline-size: 0;
     box-sizing: border-box;
     overflow: hidden;
-    padding: var(--lr-space-m);
+    padding: var(--_lr-alert-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-normal);
     border-radius: var(--lr-radius);
     background: var(--lr-color-fill-quiet);
@@ -58,6 +62,36 @@ export const styles = css`
      alert's own half of the contract true, matching the [part='icon'][hidden] guard below. */
   [part='base'][hidden] {
     display: none;
+  }
+
+  /* Size tiers, from the explicit-only ladder in
+     internal/contextual-vocabulary.styles.ts, which re-points the generic form-control slots per
+     tier and matches both spellings of each tier in one selector list -- so small, medium and
+     large arrive without any JS normalisation.
+     Only a host that carries a size attribute reads them. With none, the panel keeps the gutter
+     above and the text size it inherits, which is exactly what it rendered before the ladder
+     reached this component; an unrecognised tier leaves the slots unset, so the gutter falls back
+     to that same value and the font-size declaration is invalid at computed-value time and
+     inherits.
+     Three deliberate departures from a form control, each matching lr-callout's tier values so a
+     tiered alert and a tiered callout of the same size line up in one column. The ladder INLINE
+     gutter is used on every side: the block gutter is a single-row control's, and it collapses to
+     zero at the two smallest tiers, which would leave an alert's text touching its own border. The
+     gap separates three adjacent boxes rather than setting the panel's density, so it stays
+     constant across tiers. And the leading icon keeps its own glyph size, bounded by the shared
+     tappable-target token, so the status affordance does not shrink out of legibility in a dense
+     toolbar.
+     The UNSET states are NOT interchangeable, and deliberately so. With no tier this panel keeps
+     the fixed gutter above and inherits the ambient text size, which is exactly what it rendered
+     before the ladder reached it; an untiered lr-callout instead reads the ambient form-control
+     slots and falls back to the shared m padding and m font size. Pinning a default tier here
+     would resize every alert that shipped before this property existed. */
+  :host(:where([size])) {
+    --_lr-alert-padding: var(--lr-form-control-padding-inline, var(--lr-space-m));
+  }
+
+  :host(:where([size])) [part='base'] {
+    font-size: var(--lr-form-control-font-size);
   }
 
   :host([data-alert-showing]) [part='base'],
@@ -99,8 +133,18 @@ export const styles = css`
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
-    margin-block: calc(-1 * var(--lr-space-xs));
-    margin-inline-end: calc(-1 * var(--lr-space-xs));
+    /* The pull-out is optical alignment: it absorbs this button's own padding so the glyph reads
+       level with the panel edge instead of inset twice. It is clamped to the panel gutter because
+       the base clips its overflow, and a pull deeper than the gutter pushes the tappable target
+       through the border, where it is cut off rather than merely tight. Only the ladder's two
+       smallest tiers are narrower than the pull (2px and 4px gutters against a 4px pull); every
+       other tier, and the untiered panel, keep the full pull unchanged.
+       The hit-area floor above holds the shared tappable-target token at every tier, because it is
+       a WCAG 2.5.8 minimum rather than a density knob -- a dense alert shrinks its gutter and its
+       text and keeps its hit area. */
+    --_lr-alert-close-pull: min(var(--lr-space-xs), var(--_lr-alert-padding));
+    margin-block: calc(-1 * var(--_lr-alert-close-pull));
+    margin-inline-end: calc(-1 * var(--_lr-alert-close-pull));
     padding: var(--lr-space-xs);
     border: 0;
     border-radius: var(--lr-radius-pill);

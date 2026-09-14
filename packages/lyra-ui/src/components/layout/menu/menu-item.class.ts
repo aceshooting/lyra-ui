@@ -201,6 +201,14 @@ export interface LyraMenuItemEventMap {
  * checked`) row.
  * @cssprop [--lr-menu-item-checked-color=inherit] - Foreground of a checked row.
  * @cssprop [--lr-menu-item-checked-font-weight=inherit] - Font weight of a checked row.
+ * @cssprop [--lr-menu-item-hover-bg=var(--lr-color-brand-quiet)] - Background of an enabled row
+ * under the pointer. The pressed state mixes from this same value, so a retuned hover fill keeps
+ * its pressed step instead of snapping back to the brand default.
+ * @cssprop [--lr-menu-item-icon-color=inherit] - Foreground of the leading icon wrapper. Unset it
+ * inherits the row's colour, including the danger variant's.
+ * @cssprop [--lr-menu-item-min-height=max(var(--lr-form-control-height),var(--lr-size-24px))] -
+ * Minimum block size of the visual row. Unset it is the shared form-control ladder floored at the
+ * WCAG 2.2 SC 2.5.8 minimum, exactly as before this hook existed.
  * @method click - Activates the visual row, including checkbox and submenu behavior; no-op while
  * disabled or loading.
  * @method select - Activates a selectable item; no-op while disabled/loading and opens submenu parents.

@@ -12,6 +12,7 @@ import '../../forms/button/button.class.js';
 import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_deny, LYRA_DEFAULT_edit, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
@@ -198,18 +199,18 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   // `open`/`pending` are accessor-backed rather than plain fields so `onApprove`/`onDeny` can tell
   // "a synchronous listener wrote here" apart from "nothing wrote here" -- see
-  // `dispatchWriteTouched` below. Comparing before/after *values* cannot make that distinction:
+  // `dispatchWriteGuard` below. Comparing before/after *values* cannot make that distinction:
   // both guards only reach their check once `pending` is already `null`, so a listener that writes
   // `pending = null` right back (bouncing out to an out-of-band resolution) is value-identical to a
   // listener that touched nothing at all.
   private _open = false;
   private _pending: ToolApprovalDialogPending = null;
 
-  /** Set on every write to `open`/`pending`, from any source. `onApprove`/`onDeny` clear it
+  /** Marked on every write to `open`/`pending`, from any source. `onApprove`/`onDeny` open it
    *  immediately before dispatching `lr-approve`/`lr-deny` and read it back afterward: since the
-   *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have set
-   *  it in between. */
-  private dispatchWriteTouched = false;
+   *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have
+   *  marked it in between. */
+  private readonly dispatchWriteGuard = new VetoWriteGuard();
 
   /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
   @property({ type: Boolean, reflect: true })
@@ -217,7 +218,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   set open(value: boolean) {
     const previous = this._open;
     this._open = value;
-    this.dispatchWriteTouched = true;
+    markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('open', previous);
   }
 
@@ -255,7 +256,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   set pending(value: ToolApprovalDialogPending) {
     const previous = this._pending;
     this._pending = value;
-    this.dispatchWriteTouched = true;
+    markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('pending', previous);
   }
 
@@ -503,15 +504,15 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     // close('approve') directly, or bounces `pending` back to null immediately). A before/after
     // *value* comparison can't detect that last case -- both are already null/true respectively, so
     // a listener writing `pending = null` reads identically to a listener that touched nothing.
-    // `dispatchWriteTouched` tracks the write itself, not its value: cleared here, then set by the
-    // `open`/`pending` setters if a listener assigns either one during the synchronous `emit()`
-    // below. Only when it's still false did the listener leave both alone, and the built-in
+    // `dispatchWriteGuard` tracks the write itself, not its value: opened here, then marked by
+    // the `open`/`pending` setters if a listener assigns either one during the synchronous `emit()`
+    // below. Only when it stays untouched did the listener leave both alone, and the built-in
     // "awaiting the host" pending state applies; otherwise it would silently clobber whatever the
     // listener just did.
-    this.dispatchWriteTouched = false;
+    this.dispatchWriteGuard.open();
     const event = this.emit('lr-approve', { args: currentArgs }, { cancelable: true });
     if (event.defaultPrevented) {
-      if (!this.dispatchWriteTouched) {
+      if (!this.dispatchWriteGuard.touched) {
         this.pending = 'approve';
       }
       return;
@@ -521,10 +522,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   private onDeny = (): void => {
     if (this.pending != null) return;
-    this.dispatchWriteTouched = false;
+    this.dispatchWriteGuard.open();
     const event = this.emit('lr-deny', null, { cancelable: true });
     if (event.defaultPrevented) {
-      if (!this.dispatchWriteTouched) {
+      if (!this.dispatchWriteGuard.touched) {
         this.pending = 'deny';
       }
       return;

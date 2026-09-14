@@ -152,6 +152,10 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * private default follows `appearance` in the same way as `--lr-textarea-fill`.
  * @cssprop [--lr-textarea-hover-border-color=var(--lr-color-brand)] - Field border color while the
  * native textarea is hovered.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` while this control is focused. One name for every field-shaped control in the
+ * library, so a halo is configured once rather than per component. Additive: the focus outline and
+ * border cue are the accessibility answer to focus and are never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.

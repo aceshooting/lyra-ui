@@ -249,6 +249,13 @@ export interface LyraVoicePickerEventMap {
  *   themeable independently of error text and invalid borders.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  *   required marker.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * on the listbox.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
+ * the listbox.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, read by
+ * the listbox only as the middle arm of `--lr-voice-picker-radius`, which still wins when set.
+ * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
  * @status stable
  * @since 4.0.0
  */

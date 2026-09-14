@@ -1,4 +1,8 @@
 import { css } from 'lit';
+import {
+  overlaySurface,
+  overlaySurfaceFill,
+} from '../../../internal/overlay-surface.styles.js';
 
 /* Popover and tooltip share the arrow rules verbatim; only the size custom property differs, so
    each sheet declares its own copy against its own token name. */
@@ -26,11 +30,13 @@ export const styles = css`
     max-inline-size: min(var(--max-width, var(--lr-overlay-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, var(--lr-size-20rem)));
     max-block-size: var(--lr-positioner-available-block-size, var(--lr-size-20rem));
     overflow: auto;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    /* Anchored overlay: a positioner-placed popup floating over page content, not a modal layer. */
-    box-shadow: var(--lr-shadow-m);
+    /* The shared overlay-surface family (internal/overlay-surface.styles.ts), not the page-surface
+       tokens this rule used to read directly: a popup is a floating surface, and an application has
+       to be able to retint every popup without repainting every card and input behind them. */
+    ${overlaySurface}
+    /* Anchored overlay: a positioner-placed popup floating over page content, not a modal layer.
+       Its own elevation tier, so a theme can raise anchored popups without touching dialogs. */
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
   }
   [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
   [part~='popup'] { opacity: 1; transform: translateY(0); }
@@ -49,8 +55,10 @@ export const styles = css`
     inline-size: calc(2 * var(--arrow-size, var(--lr-overlay-arrow-size, var(--lr-size-0-375rem))));
     block-size: calc(2 * var(--arrow-size, var(--lr-overlay-arrow-size, var(--lr-size-0-375rem))));
     rotate: 45deg;
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Fill and edge only, never the radius arm: the arrow is a rotated square whose corners are
+       already cut by the clip-path below, and rounding them would pull the tip away from the
+       anchor. */
+    ${overlaySurfaceFill}
     /* Only the two outward-facing edges of the rotated square read as the popup's border; the
        other two sit under the panel. */
     clip-path: polygon(100% 0, 100% 100%, 0 100%);

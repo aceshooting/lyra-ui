@@ -334,6 +334,19 @@ export interface LyraSelectEventMap {
  *   trigger (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never
  *   declared by the component itself, it can be set from an ancestor or an outer-tree rule as well
  *   as inline on the element.
+ * @cssprop [--lr-select-trigger-fill=var(--lr-color-surface)] - Resting trigger background. Read by
+ * every appearance, each falling back to its own default (`--lr-color-surface-raised` for
+ * `filled`/`filled-outlined`, `transparent` for `plain`, `--lr-color-brand` for `accent`), so one
+ * value retints the trigger whichever treatment it is wearing.
+ * @cssprop [--lr-select-trigger-border-color=var(--lr-color-border)] - Resting trigger border
+ * color, `transparent` by default on the `filled`/`plain`/`accent` treatments.
+ * @cssprop [--lr-select-trigger-hover-border-color=var(--lr-select-trigger-border-color)] - Trigger
+ * border color while the pointer is over it. Unset, the border stays exactly where the resting
+ * state left it.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` while this control is focused. One name for every field-shaped control in the
+ * library, so a halo is configured once rather than per component. Additive: the focus outline and
+ * border cue are the accessibility answer to focus and are never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  * other quoted string (`' (required)'`, a localized word) to replace it.
@@ -341,6 +354,14 @@ export interface LyraSelectEventMap {
  * themeable independently of error text and invalid borders.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * required marker.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * on the listbox. The listbox is a floating surface, so it retints with every other popup rather
+ * than with the trigger it drops from.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
+ * the listbox.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
+ * listbox.
+ * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored listbox.
  * @status stable
  * @since 4.0.0
  */

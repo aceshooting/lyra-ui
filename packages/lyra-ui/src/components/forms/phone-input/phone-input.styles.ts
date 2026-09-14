@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -20,6 +23,10 @@ export const styles = css`
        lr-input/lr-select/lr-combobox/lr-date-input, it is a consumer-facing exact-height escape
        hatch read only through the var() fallback on [part='input-wrapper'] below, and any value
        here would make that fallback arm unreachable. */
+    /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
+       declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
+       reaches this row. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host([pill]) {
     --_lr-phone-input-radius-default: var(--lr-radius-pill);
@@ -85,9 +92,12 @@ export const styles = css`
     min-block-size: var(--lr-phone-input-control-height, var(--lr-phone-input-control-min-height, var(--_lr-phone-input-control-min-height-default)));
     block-size: var(--lr-phone-input-control-height, auto);
     font-size: var(--lr-phone-input-font-size, var(--_lr-phone-input-font-size-default));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Resting edge and fill as inline var() fallbacks, never :host declarations, so an ancestor or
+       :root value still wins -- the same quartet lr-input/lr-textarea already publish. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-phone-input-border-color, var(--lr-color-border));
     border-radius: var(--lr-phone-input-radius, var(--_lr-phone-input-radius-default));
-    background: var(--lr-color-surface);
+    background: var(--lr-phone-input-fill, var(--lr-color-surface));
     color: var(--lr-color-text);
   }
 
@@ -95,6 +105,7 @@ export const styles = css`
     border-color: var(--lr-phone-input-focus-border-color, var(--lr-color-brand));
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+    ${formControlFocusHalo}
   }
 
   :host([data-invalid]) [part='input-wrapper'] {

@@ -124,6 +124,13 @@ const HIDE_DELAY_MS = 200;
  * `status` to the matching `-quiet` tone (`success`/`warning`/`danger`); a public value wins.
  * @cssprop [--lr-citation-badge-border=transparent] - Resting border color of `base`; no `status`
  * changes it, so it stays transparent unless a host overrides it.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * on the anchored source-preview popover.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
+ * the anchored source-preview popover.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
+ * anchored source-preview popover.
+ * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
  * @status stable
  * @since 4.0.0
  */

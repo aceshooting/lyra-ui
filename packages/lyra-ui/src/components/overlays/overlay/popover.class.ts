@@ -149,6 +149,16 @@ export interface LyraPopoverEventMap {
  * @cssprop [--arrow-size=var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))] - Half-width of the
  * arrow square.
  * @cssprop --lr-overlay-arrow-size - Retained Lyra fallback for `--arrow-size`.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ *   read by the popup and by its arrow. One declaration on any ancestor retints every overlay in
+ *   that subtree without touching the page, card and control surfaces behind them.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
+ *   the popup and on the arrow's two outward-facing edges.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius. The
+ *   arrow is deliberately excluded: its corners are already cut by its clip path.
+ * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of an anchored,
+ *   positioner-placed overlay. A separate tier from `--lr-overlay-shadow-modal`, so raising popups
+ *   never raises dialogs.
  * @cssprop [--show-duration=var(--lr-duration-fast)] - Opening transition duration.
  * @cssprop [--hide-duration=var(--lr-duration-fast)] - Closing transition duration.
  * @cssstate open - Present while the popover is open.

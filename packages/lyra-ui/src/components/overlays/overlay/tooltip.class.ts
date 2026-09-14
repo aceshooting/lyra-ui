@@ -184,6 +184,14 @@ export interface LyraTooltipEventMap {
  * @cssprop --lr-tooltip-arrow-size - Retained Lyra fallback for `--arrow-size`.
  * @cssprop [--show-delay=150ms] - Interaction show delay when `show-delay` is not explicit.
  * @cssprop [--hide-delay=0ms] - Interaction hide delay when `hide-delay` is not explicit.
+ * @cssprop --lr-overlay-surface - Shared floating-surface fill. Advertised here because this tag's
+ *   rules live in the stylesheet module `lr-popover` also composes; a tooltip bubble is a
+ *   high-contrast label, not a panel, so it paints from `--lr-tooltip-background` and is
+ *   deliberately outside the overlay-surface family.
+ * @cssprop --lr-overlay-border - Shared floating-surface edge colour. Same deliberate exclusion as
+ *   `--lr-overlay-surface` above: the bubble draws no border.
+ * @cssprop --lr-overlay-radius - Shared floating-surface corner radius. Same deliberate exclusion:
+ *   the bubble keeps the tighter `--lr-radius-xs` a label-sized box reads best with.
  * @status stable
  * @since 4.0.0
  */

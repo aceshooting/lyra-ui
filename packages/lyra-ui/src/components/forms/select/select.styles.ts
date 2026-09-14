@@ -1,5 +1,9 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -19,6 +23,11 @@ export const styles = css`
     --_lr-select-radius: var(--lr-form-control-radius);
     --_lr-select-tag-padding: var(--lr-space-2xs) var(--lr-space-xs);
     --_lr-select-tag-font-size: var(--lr-font-size-sm);
+    /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
+       undeclared -- only this private copy of it is declared -- so a value set on :root or any
+       ancestor still reaches this trigger, while the halo itself is painted in one place for every
+       field-shaped control in the library. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
     /* --lr-select-trigger-height is deliberately undeclared: it is read only through the two var()
        fallbacks on [part='trigger'] below, so any declared value (even auto) dead-arms them -- how
        --lr-select-trigger-min-height became dead code. The per-tier floor then falls out of the
@@ -56,8 +65,8 @@ export const styles = css`
     --_lr-select-radius: var(--lr-radius-pill);
   }
   :host([filled]) [part="trigger"] {
-    background: var(--lr-color-surface-raised);
-    border-color: transparent;
+    background: var(--lr-select-trigger-fill, var(--lr-color-surface-raised));
+    border-color: var(--lr-select-trigger-border-color, transparent);
   }
 
   /* Positioning context for [part='clear-button'], a sibling not a child: the trigger is a
@@ -90,9 +99,14 @@ export const styles = css`
       --lr-select-trigger-padding,
       var(--_lr-select-trigger-padding)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Resting fill and edge, each an inline var() fallback rather than a :host declaration, so an
+       ancestor or :root value still wins -- and restated in every appearance rule below, because
+       those rules out-rank this one and a hook wired only here would be dead for five of the six
+       treatments. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-select-trigger-border-color, var(--lr-color-border));
     border-radius: var(--lr-select-radius, var(--_lr-select-radius));
-    background: var(--lr-color-surface);
+    background: var(--lr-select-trigger-fill, var(--lr-color-surface));
     color: inherit;
     font: inherit;
     font-size: var(--lr-select-font-size, var(--_lr-select-font-size));
@@ -103,10 +117,23 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
+     accessibility answer to KEYBOARD focus and stays exactly as it was, while a halo a consumer
+     deliberately configured should read on a pointer focus too. Unset it resolves to none, so this
+     rule paints nothing by default. */
+  [part="trigger"]:focus {
+    ${formControlFocusHalo}
+  }
   /* :where() keeps this at (0,1,0), as in lr-model-select/lr-attachment-trigger, so a consumer's
      ::part(trigger):hover ((0,1,1)) still wins without !important. */
   :where([part="trigger"]):hover:where(:not(:disabled)) {
     background: var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet));
+    /* Falls back to this control's own resting edge, so an unset hook leaves a hovered trigger
+       painted exactly as it always was -- hover has never moved this border. */
+    border-color: var(
+      --lr-select-trigger-hover-border-color,
+      var(--lr-select-trigger-border-color, var(--lr-color-border))
+    );
   }
   /* Pressed: the hover's quiet brand tint carried further toward --lr-color-mix-partner (which
      follows the text colour), so the press reads deeper. Same :where() zeroing as the hover, so
@@ -125,19 +152,19 @@ export const styles = css`
      changes: same box, border width and radius; only fill, border color and (for accent) text color
      move. */
   :host([appearance="filled"]) [part="trigger"] {
-    background: var(--lr-color-surface-raised);
-    border-color: transparent;
+    background: var(--lr-select-trigger-fill, var(--lr-color-surface-raised));
+    border-color: var(--lr-select-trigger-border-color, transparent);
   }
   :host([appearance="filled-outlined"]) [part="trigger"] {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-select-trigger-fill, var(--lr-color-surface-raised));
   }
   :host([appearance="plain"]) [part="trigger"] {
-    background: transparent;
-    border-color: transparent;
+    background: var(--lr-select-trigger-fill, transparent);
+    border-color: var(--lr-select-trigger-border-color, transparent);
   }
   :host([appearance="accent"]) [part="trigger"] {
-    background: var(--lr-color-brand);
-    border-color: transparent;
+    background: var(--lr-select-trigger-fill, var(--lr-color-brand));
+    border-color: var(--lr-select-trigger-border-color, transparent);
     color: var(--lr-color-on-brand);
   }
   /* The quiet-text tokens below are far too low-contrast on the loud brand fill, so placeholder,
@@ -166,6 +193,21 @@ export const styles = css`
   :host([appearance="plain"])
     :where([part="trigger"]):hover:where(:not(:disabled)) {
     background: var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet));
+    border-color: var(
+      --lr-select-trigger-hover-border-color,
+      var(--lr-select-trigger-border-color, transparent)
+    );
+  }
+  /* filled-outlined repeats, AFTER the group above, for one reason: it is the only treatment in
+     that list whose resting edge is the shared border token rather than transparent, so its unset
+     fallback has to be that token. Same specificity, later in source, so it wins for that one
+     appearance and the group keeps the other three. */
+  :host([appearance="filled-outlined"])
+    :where([part="trigger"]):hover:where(:not(:disabled)) {
+    border-color: var(
+      --lr-select-trigger-hover-border-color,
+      var(--lr-select-trigger-border-color, var(--lr-color-border))
+    );
   }
   :host([appearance="filled"])
     :where([part="trigger"]):active:where(:not(:disabled)),
@@ -197,6 +239,10 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-hover)
       )
     );
+    border-color: var(
+      --lr-select-trigger-hover-border-color,
+      var(--lr-select-trigger-border-color, transparent)
+    );
   }
   :host([appearance="accent"])
     :where([part="trigger"]):active:where(:not(:disabled)) {
@@ -211,6 +257,7 @@ export const styles = css`
   }
   :host([open]) [part="trigger"] {
     border-color: var(--lr-select-open-border-color, var(--lr-color-brand));
+    ${formControlFocusHalo}
   }
   :host(:disabled) [part="trigger"] {
     /* Shared library-wide disabled-state token -- see lr-combobox. */
@@ -427,11 +474,11 @@ export const styles = css`
       var(--lr-size-28rem)
     );
     padding: var(--lr-space-xs);
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    /* The shared overlay-surface family (internal/overlay-surface.styles.ts): the listbox is a
+       floating surface and retints with every other popup, not with the trigger it drops from. */
+    ${overlaySurface}
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
-    box-shadow: var(--lr-shadow-m);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     /* Closed state: invisible and slightly raised. visibility rather than display:none so
        opacity/transform can transition; the part is already position:fixed, so hit-testing and a11y
        exposure stay off. */

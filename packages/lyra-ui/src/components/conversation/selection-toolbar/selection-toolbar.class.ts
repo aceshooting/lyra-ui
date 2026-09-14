@@ -116,6 +116,13 @@ interface ActionTabIndexLease {
  *   between the selection and toolbar, and between the toolbar and viewport during collision
  *   avoidance. Unitless pixel values and `px`, `rem`, and `em` values are resolved live; invalid values
  *   fall back to the default and negative values clamp to `0`.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * on the toolbar.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
+ * the toolbar.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on
+ * the toolbar.
+ * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
  * @status stable
  * @since 7.0.0
  */

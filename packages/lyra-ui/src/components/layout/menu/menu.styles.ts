@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -11,9 +12,9 @@ export const styles = css`
       var(--lr-size-20rem),
       100%
     );
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    /* The shared overlay-surface family (internal/overlay-surface.styles.ts): a standalone menu is
+       a floating surface, and it now retints with every other popup instead of with the page. */
+    ${overlaySurface}
   }
   /* A dropdown supplies the visible surface; a submenu supplies the private surface below. */
   :host([data-contained]),
@@ -40,10 +41,10 @@ export const styles = css`
       var(--lr-size-20rem),
       var(--lr-positioner-available-block-size, var(--lr-size-20rem))
     );
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow-m);
+    ${overlaySurface}
+    /* Anchored overlay: a positioner-placed submenu floating over page content, on the same
+       elevation tier as every other anchored popup. */
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));

@@ -105,6 +105,18 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * ancestor theme wrapper override the built-in fallback. A value set directly on the icon button
  * still wins through normal custom-property inheritance.
  *
+ * **No `size` attribute, deliberately.** This control is the one component in the library that
+ * does NOT key off the shared six-step size ladder, and the reason is that its dimension is an
+ * accessibility floor rather than a density dial. `--lr-icon-button-size` states the minimum
+ * tappable target the whole library sizes its icon controls against, and `check:hit-area` blocks a
+ * release that drops below it. The ladder's own small tiers sit at or under WCAG 2.5.8's 24px
+ * minimum — `2xs` resolves to 20px and `xs` to 24px — so wiring the target to the ladder would let
+ * `size="2xs"` ship an untappable control, and would do it silently because the ladder is the
+ * mechanism every neighbouring control uses correctly. A smaller icon button therefore stays an
+ * explicit, single-purpose decision: override `--lr-icon-button-size`, which reads as the
+ * accessibility trade-off it is. Scaling the glyph inside that floor is a separate concern and
+ * already has its own inherited input, `--lr-icon-size`.
+ *
  * @customElement lr-icon-button
  * @event focus - Native focus relayed once from the internal button.
  * @event blur - Native blur relayed once from the internal button.

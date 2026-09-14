@@ -46,6 +46,13 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
  * @csspart spinner__base - Shoelace-compatible spinner alias.
  * @csspart submenu-icon - Submenu chevron wrapper.
  * @csspart submenu - Submenu panel/wrapper.
+ * @cssprop --lr-overlay-surface - Shared floating-surface fill. Advertised here because this tag
+ *   shares a stylesheet directory with `lr-menu`, whose surface reads it; a dropdown item is a row
+ *   inside that surface and paints no surface of its own, so setting it here changes nothing.
+ * @cssprop --lr-overlay-border - Shared floating-surface edge colour, with the same deliberate
+ *   exclusion as `--lr-overlay-surface` above.
+ * @cssprop --lr-overlay-radius - Shared floating-surface corner radius, with the same deliberate
+ *   exclusion. The row's own corners come from `--lr-menu-item-radius`.
  * @method openSubmenu - Opens the submenu and resolves after its open state settles.
  * @method closeSubmenu - Closes the submenu and resolves after its closed state settles.
  * @status stable

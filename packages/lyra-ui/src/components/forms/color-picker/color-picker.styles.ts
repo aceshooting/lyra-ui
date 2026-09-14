@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { overlaySurfaceFill } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -262,14 +263,16 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-color-picker-gap, var(--_lr-color-picker-gap));
     padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Fill and edge from the shared overlay-surface family
+       (internal/overlay-surface.styles.ts). The radius arm stays this component's own hook, with
+       the family only as its middle fallback, so a component-scoped override still wins. */
+    ${overlaySurfaceFill}
     border-radius: var(
       --lr-color-picker-radius,
-      var(--_lr-color-picker-radius)
+      var(--lr-overlay-radius, var(--_lr-color-picker-radius))
     );
-    background: var(--lr-color-surface);
     /* Anchored overlay: a positioner-placed picker panel floating over page content. */
-    box-shadow: var(--lr-shadow-m);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     max-inline-size: var(--lr-positioner-available-inline-size, none);
   }
   [part~="panel"][hidden] {

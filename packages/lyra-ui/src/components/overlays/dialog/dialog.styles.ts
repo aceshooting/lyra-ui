@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -106,16 +107,18 @@ export const styles = css`
        shrinks to the remaining space. */
     block-size: var(--lr-dialog-height, auto);
     max-block-size: 100%;
-    /* The modal-panel surface, NOT the page surface: in dark mode --lr-color-surface is the same
-       near-black as the page behind the scrim, so a dialog painted with it reads as a scrim with
-       floating text and no panel. In light mode it still resolves to the page surface. */
-    background: var(--lr-color-surface-overlay);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    /* The shared overlay-surface family (internal/overlay-surface.styles.ts). Its fill default is
+       still the modal-panel surface this rule read directly before, NOT the page surface: in dark
+       mode --lr-color-surface is the same near-black as the page behind the scrim, so a dialog
+       painted with it reads as a scrim with floating text and no panel. In light mode it still
+       resolves to the page surface. Anchored popups now share that default, so one family retints
+       every floating surface. */
+    ${overlaySurface}
     /* Top step of the elevation scale: a centered dialog floats free on all four edges over a
-       scrim. lr-drawer, which extends this rule, steps back down to --lr-shadow-l because three of
-       its edges are flush with the viewport. */
-    box-shadow: var(--lr-shadow-xl);
+       scrim. A tier of its own rather than the anchored one, so raising popups never raises
+       dialogs. lr-drawer, which extends this rule, steps back down to --lr-shadow-l because three
+       of its edges are flush with the viewport. */
+    box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-xl));
     overflow: auto;
   }
   [part="header"] {
@@ -133,7 +136,11 @@ export const styles = css`
           var(--lr-dialog-spacing, var(--lr-space-l))
       )
     );
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* The panel's own edge, so a retinted overlay border reaches the rules that draw the panel's
+       internal boundaries too -- a header rule in the base border colour against a retinted panel
+       edge is the asymmetry this family exists to remove. */
+    border-block-end: var(--lr-border-width-thin) solid
+      var(--lr-overlay-border, var(--lr-color-border));
   }
   [part~="heading"] {
     flex: 1 1 auto;
@@ -172,7 +179,9 @@ export const styles = css`
     border: none;
     background: transparent;
     color: var(--lr-color-text-quiet);
-    border-radius: var(--lr-radius);
+    /* Follows the panel's corner radius: a squared-off overlay theme that left this control rounded
+       would read as a stray pill in the corner of a square panel. */
+    border-radius: var(--lr-overlay-radius, var(--lr-radius));
     font: inherit;
     cursor: pointer;
     /* Hover/active below repaint both background and color, so both channels need to ease;
@@ -244,7 +253,10 @@ export const styles = css`
           var(--lr-dialog-spacing, var(--lr-space-l))
       )
     );
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* The exact mirror of the header rule above, and repointed with it: two panel-edge rules that
+       disagree about which border token they read is a visible defect the moment either is set. */
+    border-block-start: var(--lr-border-width-thin) solid
+      var(--lr-overlay-border, var(--lr-color-border));
     overflow-wrap: anywhere;
   }
   /* Footer content is consumer-owned light DOM, which the wrapper's responsive rules do not select

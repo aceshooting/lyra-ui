@@ -492,6 +492,19 @@ export interface LyraComboboxEventMap {
  * @cssprop [--tag-max-size=var(--lr-size-5rem)] - Maximum inline size of a built-in selected tag.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Listbox enter-transition duration.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Listbox exit-transition duration.
+ * @cssprop [--lr-combobox-fill=var(--lr-color-surface)] - Resting background of the trigger row.
+ * The `filled`/`filled-outlined` treatments default it to `--lr-color-surface-raised`; a value set
+ * here wins over every treatment.
+ * @cssprop [--lr-combobox-border-color=var(--lr-color-border)] - Resting border color of the
+ * trigger row, `transparent` by default on the `filled` treatment.
+ * @cssprop [--lr-combobox-open-border-color=var(--lr-color-brand)] - Border color of the trigger
+ * row while it holds focus — the state the listbox opens in. Bound to `:focus-within` rather than to
+ * `open`, so it paints on a focused row whose listbox is closed too; the name is symmetric with
+ * `lr-select`'s `--lr-select-open-border-color`, which is gated on `open` itself.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` while this control is focused. One name for every field-shaped control in the
+ * library, so a halo is configured once rather than per component. Additive: the focus outline and
+ * border cue are the accessibility answer to focus and are never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  * other quoted string (`' (required)'`, a localized word) to replace it.
@@ -499,6 +512,15 @@ export interface LyraComboboxEventMap {
  * themeable independently of error text and invalid borders.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * required marker.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * on the listbox popup. This is the public arm the popup never had: retinting it no longer means
+ * retinting the page surface every card and input reads.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
+ * the listbox popup.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
+ * listbox popup.
+ * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored listbox
+ * popup.
  * @cssstate blank - Matches while no value is selected.
  * @cssstate disabled - Matches while disabled directly or by an ancestor fieldset.
  * @cssstate required - Matches while `required` is set, so a consumer can mark the field without

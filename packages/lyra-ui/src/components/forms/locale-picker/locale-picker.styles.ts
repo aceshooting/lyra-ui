@@ -1,5 +1,9 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
+import { overlaySurfaceFill } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -13,6 +17,10 @@ export const styles = css`
     --_lr-locale-picker-expand-size-default: var(--lr-size-1-75rem);
     --_lr-locale-picker-gap-default: var(--lr-space-xs);
     --_lr-locale-picker-radius-default: var(--lr-form-control-radius);
+    /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
+       declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
+       reaches this trigger. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
     /* --lr-locale-picker-trigger-height is intentionally NOT declared here (as in lr-select): a
        consumer escape hatch read only through the var() fallback on [part='trigger'] below, and
        declaring it would deaden that fallback arm. */
@@ -65,24 +73,36 @@ export const styles = css`
     box-sizing: border-box;
     block-size: var(--lr-locale-picker-trigger-height, auto);
     padding: var(--lr-locale-picker-trigger-padding, var(--_lr-locale-picker-trigger-padding-default));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Resting fill and edge as inline var() fallbacks, never :host declarations, so an ancestor or
+       :root value still wins -- the same quartet lr-input/lr-textarea already publish. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-locale-picker-trigger-border-color, var(--lr-color-border));
     border-radius: var(--lr-locale-picker-radius, var(--_lr-locale-picker-radius-default));
-    background: var(--lr-color-surface);
+    background: var(--lr-locale-picker-trigger-fill, var(--lr-color-surface));
     color: inherit;
     font: inherit;
     font-size: var(--lr-locale-picker-font-size, var(--_lr-locale-picker-font-size-default));
     text-align: start;
     cursor: pointer;
-    /* Hover/active below only ever repaint background, so background-color is all this needs;
-       without it this trigger's fill snaps while lr-button/lr-copy-button/lr-icon-button ease. No
-       local reduced-motion override needed -- tokens.styles.ts's shared reduced-motion block
-       already flattens --lr-transition-fast to 0.001ms and applies a blanket
-       transition-duration: 0.001ms across the whole shadow tree under prefers-reduced-motion. */
-    transition: background-color var(--lr-transition-fast);
+    /* Hover/active below repaint the fill, and hover now also moves the edge whenever
+       --lr-locale-picker-trigger-hover-border-color is set, so both channels ease; without this the
+       trigger snaps while lr-button/lr-copy-button/lr-icon-button ease. No local reduced-motion
+       override needed -- tokens.styles.ts's shared reduced-motion block already flattens
+       --lr-transition-fast to 0.001ms and applies a blanket transition-duration: 0.001ms across the
+       whole shadow tree under prefers-reduced-motion. */
+    transition:
+      background-color var(--lr-transition-fast),
+      border-color var(--lr-transition-fast);
   }
   [part='trigger']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
+     accessibility answer to KEYBOARD focus and is untouched, while a halo a consumer deliberately
+     configured should read on a pointer focus too. Unset it resolves to none. */
+  [part='trigger']:focus {
+    ${formControlFocusHalo}
   }
   [part='trigger']:where(.flag-only) {
     --_lr-locale-picker-compact-size: max(var(--lr-size-24px), var(--lr-locale-picker-trigger-height, var(--lr-locale-picker-trigger-min-height, var(--_lr-locale-picker-trigger-min-height-default))));
@@ -97,6 +117,12 @@ export const styles = css`
      wins on source order while the trigger is held. Matches lr-select and lr-model-select. */
   :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet));
+    /* Falls back to this trigger's own resting edge, so an unset hook leaves the hovered border
+       exactly where it has always been -- hover has never moved it. */
+    border-color: var(
+      --lr-locale-picker-trigger-hover-border-color,
+      var(--lr-locale-picker-trigger-border-color, var(--lr-color-border))
+    );
   }
   /* The hover tint one shared step further toward the text colour, in the identical
      :where()/:not(:disabled) wrapping, so it ties with the hover rule above -- source order hands
@@ -110,6 +136,7 @@ export const styles = css`
   }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-locale-picker-open-border-color, var(--lr-color-brand));
+    ${formControlFocusHalo}
   }
   :host(:disabled) [part='trigger'] {
     opacity: var(--lr-opacity-disabled);
@@ -153,11 +180,17 @@ export const styles = css`
     min-inline-size: var(--lr-size-12rem);
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
     padding: var(--lr-space-xs);
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-locale-picker-radius, var(--_lr-locale-picker-radius-default));
+    /* Fill and edge from the shared overlay-surface family
+       (internal/overlay-surface.styles.ts). The radius arm stays this component's own hook, with
+       the family only as its middle fallback: a component-scoped override still wins over the
+       shared name, which is the alias-not-rename rule applied to Lyra's own prior spelling. */
+    ${overlaySurfaceFill}
+    border-radius: var(
+      --lr-locale-picker-radius,
+      var(--lr-overlay-radius, var(--_lr-locale-picker-radius-default))
+    );
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
-    box-shadow: var(--lr-shadow-m);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));

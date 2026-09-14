@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -27,6 +30,10 @@ export const styles = css`
        appearance attribute has not reflected yet still paints the correct border-only box. */
     --_lr-input-fill-default: transparent;
     --_lr-input-border-color-default: var(--lr-color-border);
+    /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
+       declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
+       reaches this field. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host([appearance='filled-outlined']) {
     --_lr-input-fill-default: var(--lr-color-surface);
@@ -85,6 +92,7 @@ export const styles = css`
   }
   [part~='input-wrapper']:focus-within {
     border-color: var(--lr-input-focus-border-color, var(--lr-color-brand));
+    ${formControlFocusHalo}
   }
   /* :host(:disabled), not :host([disabled]) -- lr-input is form-associated (FormAssociated mixin),
      so the UA matches :disabled from its own disabled attribute *or* an ancestor <fieldset

@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -16,6 +19,10 @@ export const styles = css`
        has no outline, [part='input'] sets outline: none). No [part] rule out-ranks another. */
     --_lr-date-input-fill: var(--lr-color-surface);
     --_lr-date-input-border-color: var(--lr-color-border);
+    /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
+       declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
+       reaches this row. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
     /* Six values from the one shared form-control ladder (internal/sizes.styles.ts), so
        --lr-theme-form-control-height-* retunes this control and every sibling field together. The
        ladder matches both spellings of every tier, so size="small" resolves with no per-component
@@ -77,16 +84,21 @@ export const styles = css`
        to fit its content and the calendar toggle's full touch target. */
     block-size: var(--lr-date-input-control-height, auto);
     padding-inline: var(--lr-date-input-padding-inline, var(--_lr-date-input-padding-inline));
+    /* The public arm the private pair above never had -- the radius beside them has always had
+       one. A consumer value wins; with nothing set the per-appearance private default resolves
+       exactly as before. Inline fallbacks, never :host declarations, so an ancestor value is never
+       shadowed. */
     border: var(--lr-border-width-thin) solid
-      var(--_lr-date-input-border-color);
+      var(--lr-date-input-border-color, var(--_lr-date-input-border-color));
     border-radius: var(--lr-date-input-radius, var(--_lr-date-input-radius));
-    background: var(--_lr-date-input-fill);
+    background: var(--lr-date-input-fill, var(--_lr-date-input-fill));
   }
   [part="input-wrapper"]:focus-within {
     border-color: var(
       --lr-date-input-focus-border-color,
       var(--lr-color-brand)
     );
+    ${formControlFocusHalo}
   }
   :host(:disabled) [part="input-wrapper"] {
     opacity: var(--lr-opacity-disabled);

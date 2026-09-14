@@ -13,8 +13,17 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import { literalSetConverter } from '../../../internal/converters.js';
-import type { LyraVariant } from '../../../internal/variants.js';
+import {
+  literalSetConverter,
+  optionalLiteralSetConverter,
+} from '../../../internal/converters.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+  type LyraVariant,
+} from '../../../internal/variants.js';
+import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { getToastRegion } from '../toast/toast-region.js';
 import {
@@ -41,17 +50,12 @@ const ALERT_VARIANT = literalSetConverter<AlertVariant>(
   ['neutral', 'primary', 'success', 'warning', 'danger'],
   'primary',
 );
-const ALERT_COUNTDOWN_VALUES = new Set<Exclude<AlertCountdown, undefined>>(['rtl', 'ltr']);
-
-const normalizeAlertCountdown = (value: unknown): AlertCountdown =>
-  typeof value === 'string' && ALERT_COUNTDOWN_VALUES.has(value as Exclude<AlertCountdown, undefined>)
-    ? value as Exclude<AlertCountdown, undefined>
-    : undefined;
-
-const alertCountdownConverter = {
-  fromAttribute: normalizeAlertCountdown,
-  toAttribute: (value: AlertCountdown): string | null => normalizeAlertCountdown(value) ?? null,
-};
+// Same opt-in shape as `size` below -- an unsupported value is absent, not a fallback member -- so
+// both read from the one shared helper instead of a second hand-rolled copy in this file.
+const ALERT_COUNTDOWN = optionalLiteralSetConverter<Exclude<AlertCountdown, undefined>>([
+  'rtl',
+  'ltr',
+]);
 
 export interface LyraAlertEventMap {
   'lr-show': CustomEvent<null>;
@@ -130,7 +134,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, variants, styles];
+  static override styles = [LyraElement.styles, variants, contextualSizes, styles];
 
   /** Light-DOM semantic role for the projected message. Reflected so server renderers can
    * serialize the default before browser connection; an authored role continues to win. */
@@ -198,20 +202,42 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   /** Enables the localized close action. */
   @property({ type: Boolean, reflect: true }) closable = false;
 
+  private _size?: LyraSize;
+
+  /** Density tier on the library's one size ladder, in either spelling — `2xs`/`xs`/`s`/`m`/`l`/
+   *  `xl`, or Web Awesome's and Shoelace's `small`/`medium`/`large`. A Lyra addition on top of the
+   *  pinned Shoelace surface, and opt-in for that reason: with no size the panel keeps the exact
+   *  padding and inherited text size it shipped with, so migrated markup renders unchanged. A tier
+   *  scales the panel's padding and text together and takes `<lr-callout>`'s tier values for both,
+   *  keeping the same constant gap, so a tiered alert and a tiered callout of the same size line
+   *  up in one column. Their UNSET states are NOT interchangeable, deliberately: with no tier this
+   *  panel keeps a fixed gutter and inherits the ambient text size — its exact pre-ladder
+   *  rendering — while an untiered `<lr-callout>` reads the ambient form-control slots and falls
+   *  back to `--lr-space-m` / `--lr-font-size-m`. Pinning a default tier here would resize every
+   *  alert that shipped before the ladder reached this component. Unsupported values normalize to
+   *  the omitted state and remove the attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
+
   /** Physical direction in which the optional visual countdown empties. Unsupported values
    *  normalize to the omitted default. */
   private _countdown: AlertCountdown;
 
-  @property({ reflect: true, converter: alertCountdownConverter })
+  @property({ reflect: true, converter: ALERT_COUNTDOWN })
   get countdown(): AlertCountdown {
     return this._countdown;
   }
   set countdown(next: AlertCountdown) {
-    const normalized = normalizeAlertCountdown(next);
-    if (this.hasAttribute('countdown') && this.getAttribute('countdown') !== normalized) {
-      if (normalized === undefined) this.removeAttribute('countdown');
-      else this.setAttribute('countdown', normalized);
-    }
+    const normalized = ALERT_COUNTDOWN.normalizeReflected(this, 'countdown', next);
     const old = this._countdown;
     if (old === normalized) return;
     this._countdown = normalized;

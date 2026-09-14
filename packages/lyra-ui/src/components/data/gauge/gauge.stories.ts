@@ -60,3 +60,15 @@ export const LabelRemoval: Story = {
     </div>
   `,
 };
+
+export const SizeTiers: Story = {
+  name: 'Size tiers',
+  render: () => html`
+    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`<lr-gauge size=${size} value="72" max="100" label=${size}></lr-gauge>`,
+      )}
+      <lr-gauge size="large" value="72" max="100" label="large"></lr-gauge>
+    </div>
+  `,
+};

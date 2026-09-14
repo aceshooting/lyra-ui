@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -23,11 +24,11 @@ export const styles = css`
     box-sizing: border-box;
     gap: var(--lr-space-2xs);
     padding: var(--lr-space-2xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    /* The shared overlay-surface family (internal/overlay-surface.styles.ts): a floating surface
+       retints with every other popup, not with the page behind it. */
+    ${overlaySurface}
     /* Anchored overlay: a floating toolbar pinned to the current selection, not a modal layer. */
-    box-shadow: var(--lr-shadow-m);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     transform: translate(
       -50%,
       calc(-100% - var(--lr-selection-toolbar-placement-gap, var(--_lr-selection-toolbar-placement-gap-default)))

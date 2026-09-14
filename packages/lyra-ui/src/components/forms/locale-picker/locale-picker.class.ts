@@ -225,6 +225,16 @@ export interface LyraLocalePickerEventMap {
  *   Selected option font weight.
  * @cssprop [--lr-locale-picker-option-active-bg=var(--lr-color-brand-quiet)] - Background of a
  *   hovered or keyboard-active option row.
+ * @cssprop [--lr-locale-picker-trigger-fill=var(--lr-color-surface)] - Resting trigger background.
+ * @cssprop [--lr-locale-picker-trigger-border-color=var(--lr-color-border)] - Resting trigger
+ * border color.
+ * @cssprop [--lr-locale-picker-trigger-hover-border-color=var(--lr-locale-picker-trigger-border-color)] -
+ * Trigger border color while the pointer is over it. Unset, the border stays exactly where the
+ * resting state left it.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` while this control is focused. One name for every field-shaped control in the
+ * library, so a halo is configured once rather than per component. Additive: the focus outline and
+ * border cue are the accessibility answer to focus and are never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.
@@ -232,6 +242,13 @@ export interface LyraLocalePickerEventMap {
  * retunable without touching any other danger-coloured surface.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * marker.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * on the listbox.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
+ * the listbox.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, read by
+ * the listbox only as the middle arm of `--lr-locale-picker-radius`, which still wins when set.
+ * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored listbox.
  * @cssstate required - Matches while `required` is set.
  * @cssstate optional - Matches while `required` is not set (the complement of `required`).
  * @cssstate valid - Matches while the control satisfies its constraints.

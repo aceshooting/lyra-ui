@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -73,11 +74,11 @@ export const styles = css`
     max-block-size: var(--lr-positioner-available-block-size, 100vh);
     overflow: auto;
     padding: var(--lr-space-xs);
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    /* The shared overlay-surface family (internal/overlay-surface.styles.ts): a floating surface
+       retints with every other popup, not with the page behind it. */
+    ${overlaySurface}
     /* Anchored overlay: a positioner-placed menu floating over page content, not a modal layer. */
-    box-shadow: var(--lr-shadow-m);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     opacity: 0;
     transform: translateY(var(--lr-size-neg-4px));
     transition:

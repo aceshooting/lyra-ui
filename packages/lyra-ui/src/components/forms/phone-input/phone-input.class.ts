@@ -410,6 +410,13 @@ function normalizeCountryCatalog(source: unknown): readonly LyraPhoneCountry[] {
  *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
  *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule
  *   as well as inline on the element.
+ * @cssprop [--lr-phone-input-fill=var(--lr-color-surface)] - Resting background of the input row.
+ * @cssprop [--lr-phone-input-border-color=var(--lr-color-border)] - Resting border color of the
+ * input row. The invalid and focused states keep their own hooks and still win over it.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` while this control is focused. One name for every field-shaped control in the
+ * library, so a halo is configured once rather than per component. Additive: the focus outline and
+ * border cue are the accessibility answer to focus and are never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  *   label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  *   localized word) to replace it. Caller-supplied content, so it is never localized here.

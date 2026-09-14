@@ -10,6 +10,18 @@ export const styles = css`
     inline-size: var(--lr-size-12em);
     block-size: var(--lr-size-1-5em);
   }
+  /* Size tiers, from the explicit-only ladder in
+     internal/contextual-vocabulary.styles.ts. Every box above is expressed in em, and the SVG
+     scales its own viewBox, so pinning the host font size is the whole tier: the frame, the stroke
+     geometry and both captions resize together from one declaration.
+     Only a host that carries a size attribute reads it. With none, no font-size is declared at all
+     and the gauge keeps inheriting the ambient text size exactly as it did before the ladder
+     reached this component. An unrecognised tier leaves the ladder slot unset, which makes this
+     declaration invalid at computed-value time; font-size inherits, so the gauge falls back to
+     that same pre-ladder rendering instead of snapping to a tier nobody asked for. */
+  :host(:where([size])) {
+    font-size: var(--lr-form-control-font-size);
+  }
   /* Palette slot for the effective variant -- variant itself, or the matching thresholds entry.
      A separate custom property from --lr-gauge-fill, which stays the highest-priority public
      override and is left completely alone by these rules. */

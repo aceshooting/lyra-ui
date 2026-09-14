@@ -263,6 +263,17 @@ export interface LyraFileInputEventMap {
  * `[part~="base"][data-drag-state="reject"]`.
  * @cssprop [--lr-file-input-reject-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
  * Background of `[part~="base"][data-drag-state="reject"]`.
+ * @cssprop [--lr-file-input-dropzone-fill=var(--lr-color-surface)] - Resting dropzone background,
+ * the state it spends most of its life in. The drag accept/reject tints have had their own hooks
+ * since 12.0.0; this one completes the set.
+ * @cssprop [--lr-file-input-dropzone-border-color=var(--lr-color-border)] - Resting dropzone border
+ * color. The dashed border style is unchanged.
+ * @cssprop [--lr-file-input-dropzone-hover-border-color=var(--lr-color-brand)] - Dropzone border
+ * color while the pointer is over it, whether over the button or over the content stacked on it.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` while this control is focused. One name for every field-shaped control in the
+ * library, so a halo is configured once rather than per component. Additive: the focus outline and
+ * border cue are the accessibility answer to focus and are never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  * other quoted string (`' (required)'`, a localized word) to replace it.

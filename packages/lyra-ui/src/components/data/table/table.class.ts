@@ -21,6 +21,7 @@ import {
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
@@ -682,7 +683,9 @@ export interface LyraTableEventMap<T = unknown> {
  *   movement as non-cancelable live feedback, then once more, **cancelable**, for the final
  *   width committed at drag-end; a keyboard step (Home/End/Arrow) is already a single discrete
  *   action and fires that one cancelable commit directly. `preventDefault()` on a cancelable
- *   emission reverts the column to its pre-gesture width.
+ *   emission reverts the column to its pre-gesture width -- unless the listener resolved the
+ *   resize itself during that same synchronous dispatch, in which case the width it applied stands
+ *   instead of being rolled back over.
  * @event focus - Re-dispatched from the internal filter/cell-editor native inputs' own `focus` —
  *   bubbling and composed (unlike the native event, which is neither).
  * @event blur - Re-dispatched from the internal filter/cell-editor native inputs' own `blur`, for
@@ -1225,7 +1228,30 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    * DOM node. `targetKey` is resolved from the new collection before render; `updated()` only has
    * to put focus on the already-correct `tabindex="0"` owner. */
   private rovingFocusSnapshot: TableRovingFocusSnapshot | null = null;
-  @state() private resizedColumnWidths = new Map<string, number>();
+  private _resizedColumnWidths = new Map<string, number>();
+
+  /** Opened immediately before each cancelable `lr-column-resize` commit and read immediately
+   *  after it. Both commit paths apply the new width optimistically and roll it back when the
+   *  event is vetoed -- a write that lands *after* the synchronous dispatch, so without this it
+   *  also overwrites a width a listener resolved for itself from inside that dispatch (it refuses
+   *  the proposed step and drives the component's own resize affordance instead). Tracking that a
+   *  write happened, rather than comparing before/after widths, is what keeps "the listener chose
+   *  this width" distinguishable from "nothing touched it". */
+  private readonly resizeWriteGuard = new VetoWriteGuard();
+
+  /** Accessor-backed purely so every write marks `resizeWriteGuard`; the map itself is replaced,
+   *  never mutated in place, exactly as before. */
+  @state()
+  private get resizedColumnWidths(): Map<string, number> {
+    return this._resizedColumnWidths;
+  }
+
+  private set resizedColumnWidths(value: Map<string, number>) {
+    const previous = this._resizedColumnWidths;
+    this._resizedColumnWidths = value;
+    markVetoGuardWrite(this.resizeWriteGuard);
+    this.requestUpdate('resizedColumnWidths', previous);
+  }
 
   private resizeState?: TableResizeState;
   /** Window that owns the active resize gesture's global pointer listeners. */
@@ -1318,12 +1344,24 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // Unlike a pointer drag's per-pixel `onResizePointerMove` stream, every keyboard step here is
     // already a single, final, deliberately-committed width change -- exactly the kind of
     // "committed width" this event is scoped to be vetoable for.
+    this.resizeWriteGuard.open();
     const event = this.emit('lr-column-resize', Object.freeze({ columnKey: column.key, width }), { cancelable: true });
-    if (!event.defaultPrevented) return;
-    const reverted = new Map(this.resizedColumnWidths);
-    if (previousWidth === undefined) reverted.delete(column.key);
-    else reverted.set(column.key, previousWidth);
-    this.resizedColumnWidths = reverted;
+    // A vetoing listener may also have resolved the resize itself from inside that synchronous
+    // dispatch -- re-entering one of the resize affordances is the only public route to a
+    // committed width, and the guard is what tells that write apart from our own. Rolling back on
+    // top of it would restore the stale pre-emit width over the one the listener just chose, so a
+    // veto only un-does a width nothing else replaced.
+    if (event.defaultPrevented && !this.resizeWriteGuard.touched) {
+      const reverted = new Map(this.resizedColumnWidths);
+      if (previousWidth === undefined) reverted.delete(column.key);
+      else reverted.set(column.key, previousWidth);
+      this.resizedColumnWidths = reverted;
+    }
+    // Re-assert the write for any *enclosing* guard window: this call always writes a width by the
+    // time it reaches here, and the `open()` above cleared whatever its caller had recorded. Without
+    // this, a listener resolving an outer commit by re-entering here would leave that outer read
+    // seeing an untouched guard and clobber the very width it just applied.
+    markVetoGuardWrite(this.resizeWriteGuard);
   }
 
   private renderedColumnWidth(column: TableColumn<T>): string | undefined {
@@ -1464,12 +1502,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // frame by frame.
     const committedWidth = this.resizedColumnWidths.get(state.key);
     if (committedWidth === undefined || committedWidth === state.previousWidth) return;
+    this.resizeWriteGuard.open();
     const commitEvent = this.emit(
       'lr-column-resize',
       Object.freeze({ columnKey: state.key, width: committedWidth }),
       { cancelable: true }
     );
-    if (!commitEvent.defaultPrevented) return;
+    // Same rollback contract as the keyboard commit above, and the same exception: a listener that
+    // vetoes the drag's committed width and applies its own instead keeps it.
+    if (!commitEvent.defaultPrevented || this.resizeWriteGuard.touched) return;
     const reverted = new Map(this.resizedColumnWidths);
     if (state.previousWidth === undefined) reverted.delete(state.key);
     else reverted.set(state.key, state.previousWidth);

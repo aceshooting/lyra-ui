@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -9,6 +12,10 @@ export const styles = css`
     --_lr-time-input-border-color-default: var(--lr-color-border);
     --_lr-time-input-fill-default: transparent;
     --_lr-time-input-color-default: var(--lr-color-text);
+    /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
+       declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
+       reaches this row while the halo itself is painted in one place for every field. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
 
   [part~='form-control-label'] {
@@ -62,6 +69,9 @@ export const styles = css`
   :host([open]) [part~='time-input'],
   [part~='time-input']:focus-within {
     border-color: var(--lr-time-input-focus-border-color, var(--lr-color-brand));
+    /* Additive: the brand border above is the accessibility answer to focus and stays exactly as it
+       was. Unset, the halo resolves to none, so this paints nothing by default. */
+    ${formControlFocusHalo}
   }
   :host(:disabled) [part~='time-input'] {
     opacity: var(--lr-opacity-disabled);
@@ -219,10 +229,21 @@ export const styles = css`
     box-sizing: border-box;
     max-block-size: var(--lr-positioner-available-block-size);
     padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface-raised);
-    box-shadow: var(--lr-shadow-m);
+    /* Anchored overlay: a positioner-placed picker panel floating over page content, not a modal
+       layer. It reads the shared overlay-surface family (internal/overlay-surface.styles.ts), so
+       one ancestor declaration retints this panel along with every other popup. Its UNSET fill
+       deliberately stays --lr-color-surface-raised instead of the family default
+       --lr-color-surface-overlay: the panel is a dense grid of time cells dropped from a field,
+       and the raised tone is what separates it from the field's own fill, while
+       --lr-color-surface-overlay resolves to the plain page surface in light mode and would erase
+       that separation. The dark-mode defect the family exists to fix does not reach here either --
+       the raised tone is already distinct from the dark page surface, so this panel never read as
+       a hole. Edge, radius and elevation take the family's own defaults unchanged. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-overlay-border, var(--lr-color-border));
+    border-radius: var(--lr-overlay-radius, var(--lr-radius));
+    background: var(--lr-overlay-surface, var(--lr-color-surface-raised));
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     color: var(--lr-color-text);
     opacity: 1;
     transform: translateY(0);

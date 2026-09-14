@@ -3,6 +3,12 @@ import type { PropertyValues } from 'lit';
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.class.js';
@@ -109,7 +115,7 @@ export class LyraGauge extends LyraElement {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, contextualSizes, styles];
 
   static override get observedAttributes(): string[] {
     return [...new Set([...super.observedAttributes, 'role'])];
@@ -120,6 +126,25 @@ export class LyraGauge extends LyraElement {
   @property({ type: Number }) max = 100;
   /** Visual geometry. Named `shape` because this Lyra-original component is not a native input. */
   @property({ reflect: true }) shape: GaugeShape = 'radial';
+  private _size?: LyraSize;
+
+  /** Density tier on the library's one size ladder, in either spelling — `2xs`/`xs`/`s`/`m`/`l`/
+   *  `xl`, or Web Awesome's and Shoelace's `small`/`medium`/`large`. Opt-in: with no size the
+   *  gauge keeps the ambient text size it inherits and the em-based frame it has always drawn, so
+   *  existing markup renders unchanged. A tier scales the frame, stroke geometry and both captions
+   *  together, because the whole box is expressed in em and the tier sets the host font size.
+   *  Unsupported values normalize to the omitted state and remove the attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
   /** Optional visible label. Attribute removal omits the SVG label and restores the localized
    * gauge name unless an author supplied aria-label; the property retains null readback. */
   @property() label = '';

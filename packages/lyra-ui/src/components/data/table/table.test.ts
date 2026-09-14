@@ -1112,6 +1112,92 @@ it('reverts to a previously-committed width (not the originally-declared one) wh
   expect(handle.getAttribute('aria-valuenow')).to.equal('130');
 });
 
+it('keeps the width a vetoing listener applied itself during a keyboard resize commit', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      maxWidth: '200px',
+      resizable: true,
+      cell: (row) => row.name,
+    },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  const press = (key: string): void => {
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  };
+  // An unvetoed first step, so the vetoed one below has a committed 130px to roll back *to*.
+  // Without it the rollback would just delete the entry and the declared 120px would mask the bug.
+  press('ArrowRight');
+  await el.updateComplete;
+  expect(handle.getAttribute('aria-valuenow')).to.equal('130');
+
+  // The listener refuses the proposed step and resolves the resize its own way from inside the
+  // same synchronous dispatch -- through the component's own keyboard affordance, the only public
+  // route to a committed width. `resolving` stops that re-entrant commit being vetoed in turn.
+  let resolving = false;
+  el.addEventListener('lr-column-resize', (event) => {
+    if (resolving) return;
+    resolving = true;
+    (event as CustomEvent).preventDefault();
+    press('Home');
+  });
+  press('ArrowRight');
+  await el.updateComplete;
+
+  // The listener's own 80px stands: the veto must not roll back on top of a width written during
+  // its own dispatch, which would restore the stale pre-emit 130px.
+  expect(handle.getAttribute('aria-valuenow')).to.equal('80');
+});
+
+it('keeps the width a vetoing listener applied itself during a drag-end resize commit', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      minWidth: '80px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
+    columns[1]!,
+  ];
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  const col = (): HTMLElement => el.shadowRoot!.querySelector('col') as HTMLElement;
+
+  let resolving = false;
+  el.addEventListener('lr-column-resize', (event) => {
+    const custom = event as CustomEvent<{ columnKey: string; width: number }>;
+    if (!custom.cancelable || resolving) return;
+    resolving = true;
+    custom.preventDefault();
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  });
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 11, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 11, clientX: 160 }));
+  await el.updateComplete;
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 11, clientX: 160 }));
+  await el.updateComplete;
+
+  // The listener's own minimum-width resolution stands, rather than the pre-drag width the
+  // vetoed commit would otherwise restore over it.
+  expect(col().style.inlineSize).to.equal('80px');
+});
+
 it('mirrors resize ArrowLeft/ArrowRight under RTL and passes axe populated', async () => {
   const el = (await fixture(html`<lr-table dir="rtl"></lr-table>`)) as LyraTable<Row>;
   el.columns = [

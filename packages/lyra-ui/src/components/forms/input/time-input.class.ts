@@ -283,6 +283,10 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @cssprop [--column-width=calc(var(--lr-size-1em)*3)] - Picker column width.
  * @cssprop [--show-duration=var(--lr-duration-fast)] - Picker opening duration.
  * @cssprop [--hide-duration=var(--lr-duration-fast)] - Picker closing duration.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` while this control is focused. One name for every field-shaped control in the
+ * library, so a halo is configured once rather than per component. Additive: the focus outline and
+ * border cue are the accessibility answer to focus and are never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.
@@ -295,6 +299,15 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @cssstate open - Present while the column picker is open.
  * @method show - `show(): Promise<void>` opens the picker and settles after `lr-after-show`.
  * @method hide - `hide(): Promise<void>` closes the picker and settles after `lr-after-hide`.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-raised)] - Shared floating-surface fill, on
+ * the anchored picker panel. The family's own default is `var(--lr-color-surface-overlay)`; this
+ * panel deliberately keeps the raised tone as its unset value so it stays separated from the field
+ * it drops from, and it never read as a hole in dark mode.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
+ * the anchored picker panel.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
+ * anchored picker panel.
+ * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
  * @status stable
  * @since 4.0.0
  */

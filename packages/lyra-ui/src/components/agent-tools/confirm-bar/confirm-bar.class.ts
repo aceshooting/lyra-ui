@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import { hasRealContent, hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import '../../layout/details/details.class.js';
 import '../../utility/json-viewer/json-viewer.class.js';
@@ -205,19 +206,19 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   @property({ attribute: false }) args: unknown = undefined;
 
   // `decision`/`pending` are accessor-backed rather than plain fields so `decide()` can tell "a
-  // synchronous listener wrote here" apart from "nothing wrote here" -- see
-  // `dispatchWriteTouched` below. Comparing before/after *values* cannot make that distinction: the
-  // guard in `decide()` only reaches its check once both are already `null`, so a listener that
-  // writes `pending = null` right back (bouncing out to an out-of-band resolution) is
-  // value-identical to a listener that touched nothing at all.
+  // synchronous listener wrote here" apart from "nothing wrote here" -- see `dispatchWriteGuard`
+  // below. Comparing before/after *values* cannot make that distinction: the guard in `decide()`
+  // only reaches its check once both are already `null`, so a listener that writes `pending = null`
+  // right back (bouncing out to an out-of-band resolution) is value-identical to a listener that
+  // touched nothing at all.
   private _decision: ConfirmBarDecision = null;
   private _pending: ApprovalAction | null = null;
 
-  /** Set on every write to `decision`/`pending`, from any source. `decide()` clears it immediately
-   *  before dispatching `lr-approve`/`lr-deny` and reads it back afterward: since the dispatch is
-   *  synchronous, only a listener invoked during that same `emit()` call can have set it in
-   *  between. */
-  private dispatchWriteTouched = false;
+  /** Marked on every write to `decision`/`pending`, from any source. `decide()` opens it
+   *  immediately before dispatching `lr-approve`/`lr-deny` and reads it back afterward: since the
+   *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have
+   *  marked it in between. */
+  private readonly dispatchWriteGuard = new VetoWriteGuard();
 
   /** Decided state. Set by the component on activation *and* host-writable (an externally-resolved
    *  decision -- timeout, another reviewer -- renders identically but emits nothing). */
@@ -226,7 +227,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   set decision(value: ConfirmBarDecision) {
     const previous = this._decision;
     this._decision = value;
-    this.dispatchWriteTouched = true;
+    markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('decision', previous);
   }
 
@@ -238,7 +239,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   set pending(value: ApprovalAction | null) {
     const previous = this._pending;
     this._pending = value;
-    this.dispatchWriteTouched = true;
+    markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('pending', previous);
   }
 
@@ -374,12 +375,12 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     // preventDefault() and resolves the decision itself out of band, or bounces `pending` back to
     // null immediately). A before/after *value* comparison can't detect that last case -- both are
     // already null, so a listener writing `pending = null` reads identically to a listener that
-    // touched nothing. `dispatchWriteTouched` tracks the write itself, not its value: cleared here,
-    // then set by the `decision`/`pending` setters if a listener assigns either one during the
-    // synchronous `emit()` below. Only when it's still false did the listener leave both alone, and
-    // the built-in "awaiting the host" pending state applies; otherwise it would silently clobber
-    // whatever the listener just did.
-    this.dispatchWriteTouched = false;
+    // touched nothing. `dispatchWriteGuard` tracks the write itself, not its value: opened here,
+    // then marked by the `decision`/`pending` setters if a listener assigns either one during the
+    // synchronous `emit()` below. Only when it stays untouched did the listener leave both alone,
+    // and the built-in "awaiting the host" pending state applies; otherwise it would silently
+    // clobber whatever the listener just did.
+    this.dispatchWriteGuard.open();
     const event = this.emit(eventName, detail, { cancelable: true });
     if (event.defaultPrevented) {
       // Same handoff as the synchronous path below, and for the same reason: `?loading` on the
@@ -389,7 +390,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
       // <body> for the whole duration of the host's async work. Ordered before the `pending` write
       // so the button is still focusable when focus leaves it.
       this.statusEl?.focus();
-      if (!this.dispatchWriteTouched) {
+      if (!this.dispatchWriteGuard.touched) {
         this.pending = approvalAction(next);
       }
       return;

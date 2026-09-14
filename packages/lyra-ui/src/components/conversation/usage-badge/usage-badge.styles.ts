@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -54,10 +55,11 @@ export const styles = css`
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-24rem));
     min-inline-size: 0;
     padding: var(--lr-space-s) var(--lr-space-m);
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow-m);
+    /* Anchored overlay: a positioner-placed panel floating over page content, on the shared
+       overlay-surface family (internal/overlay-surface.styles.ts) so it retints with every other
+       popup rather than with the page behind it. */
+    ${overlaySurface}
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-1-4);
     color: var(--lr-color-text);

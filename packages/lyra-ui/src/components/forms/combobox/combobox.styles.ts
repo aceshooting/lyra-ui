@@ -1,5 +1,9 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -32,6 +36,10 @@ export const styles = css`
        Re-pointing a property cannot regress that way -- no [part] rule out-ranks another. */
     --_lr-combobox-fill: var(--lr-color-surface);
     --_lr-combobox-border-color: var(--lr-color-border);
+    /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
+       declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
+       reaches this row. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
     /* --lr-combobox-trigger-height is deliberately undeclared: read only through the two var()
        fallbacks on [part='combobox'] below, so any declared value (even 'auto') dead-arms them and
        makes --lr-combobox-trigger-min-height dead code. The per-tier floor then falls out of the
@@ -128,15 +136,23 @@ export const styles = css`
       --lr-combobox-trigger-padding,
       var(--_lr-combobox-trigger-padding)
     );
-    border: var(--lr-border-width-thin) solid var(--_lr-combobox-border-color);
+    /* The public arm the private pair above never had: a consumer value wins, and with nothing set
+       the per-appearance private default resolves exactly as before. Read through an inline
+       fallback rather than declared on :host, so an ancestor value is never shadowed. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-combobox-border-color, var(--_lr-combobox-border-color));
     border-radius: var(--lr-combobox-radius, var(--_lr-combobox-radius));
-    background: var(--_lr-combobox-fill);
+    background: var(--lr-combobox-fill, var(--_lr-combobox-fill));
     font-size: var(--lr-combobox-font-size, var(--_lr-combobox-font-size));
     cursor: text;
   }
   [part="combobox"]:focus-within {
-    border-color: var(--lr-color-brand);
+    /* The open/focused edge, now a real hook rather than a hardcoded brand token -- the one state
+       this row had no way to retheme without a ::part rule. The forced-colors outline below and the
+       halo are additive: neither replaces this border. */
+    border-color: var(--lr-combobox-open-border-color, var(--lr-color-brand));
     outline: var(--lr-border-width-medium) solid transparent;
+    ${formControlFocusHalo}
   }
   :host(:disabled) [part="combobox"] {
     /* Shared library-wide disabled-state token; still 0.5 by fallback, so no visual change here. */
@@ -357,11 +373,12 @@ export const styles = css`
       var(--lr-positioner-available-inline-size, 100vw)
     );
     padding: var(--lr-space-xs);
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    /* The shared overlay-surface family (internal/overlay-surface.styles.ts). The popup is the
+       public arm the private trigger pair never had: retinting it no longer means retinting the
+       page surface every card and input reads. */
+    ${overlaySurface}
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
-    box-shadow: var(--lr-shadow-m);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     /* Closed state: invisible and slightly raised. visibility rather than display:none so
        opacity/transform can transition; the part is already position:fixed, so hit-testing and a11y
        exposure stay off. */

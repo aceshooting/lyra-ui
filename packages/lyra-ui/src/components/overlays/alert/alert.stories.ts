@@ -101,3 +101,23 @@ export const NarrowLongContent: StoryObj = {
     </div>
   `,
 };
+
+export const SizeTiers: StoryObj = {
+  name: 'Size tiers',
+  render: () => html`
+    <div style="display:grid; gap:0.75rem;">
+      <lr-alert open>No size: the pre-ladder panel, unchanged.</lr-alert>
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`
+          <lr-alert open closable size=${size} variant="success">
+            <span slot="icon" aria-hidden="true">✓</span>
+            size="${size}"
+          </lr-alert>
+        `,
+      )}
+      <lr-alert open size="large" variant="warning">
+        The Web Awesome and Shoelace spellings work too: size="large".
+      </lr-alert>
+    </div>
+  `,
+};

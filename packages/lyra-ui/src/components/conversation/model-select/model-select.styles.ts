@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { overlaySurfaceFill } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -196,14 +197,16 @@ export const styles = css`
       var(--lr-size-28rem)
     );
     padding: var(--lr-space-xs);
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Fill and edge from the shared overlay-surface family
+       (internal/overlay-surface.styles.ts). The radius arm stays this component's own hook, with
+       the family only as its middle fallback, so a component-scoped override still wins. */
+    ${overlaySurfaceFill}
     border-radius: var(
       --lr-model-select-radius,
-      var(--_lr-model-select-radius-default)
+      var(--lr-overlay-radius, var(--_lr-model-select-radius-default))
     );
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
-    box-shadow: var(--lr-shadow-m);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     /* Closed state: invisible and slightly raised. visibility, not display:none, so
        opacity/transform can transition; hit-testing and a11y exposure stay off since this part is
        already position:fixed. */

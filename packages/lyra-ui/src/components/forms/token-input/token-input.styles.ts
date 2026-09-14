@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -25,6 +28,10 @@ export const styles = css`
     /* --lr-token-input-control-height is deliberately not declared here, as in
        lr-input/lr-select/lr-combobox: an exact-height escape hatch read only through the var()
        fallback on [part='input-wrapper'] below. */
+    /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
+       declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
+       reaches this row. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host([pill]) {
     --_lr-token-input-radius: var(--lr-radius-pill);
@@ -112,9 +119,12 @@ export const styles = css`
       --lr-token-input-font-size,
       var(--_lr-token-input-font-size)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Resting edge and fill as inline var() fallbacks, never :host declarations, so an ancestor or
+       :root value still wins -- the same quartet lr-input/lr-textarea already publish. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-token-input-border-color, var(--lr-color-border));
     border-radius: var(--lr-token-input-radius, var(--_lr-token-input-radius));
-    background: var(--lr-color-surface);
+    background: var(--lr-token-input-fill, var(--lr-color-surface));
   }
   [part="input-wrapper"]:focus-within {
     border-color: var(
@@ -123,6 +133,7 @@ export const styles = css`
     );
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+    ${formControlFocusHalo}
   }
   /* padding-block: 0 replaces the UA's 1px default, as lr-input does on its [part='input']: the
      wrapper above owns this row's block padding, and the UA's spent two more pixels of the floor's

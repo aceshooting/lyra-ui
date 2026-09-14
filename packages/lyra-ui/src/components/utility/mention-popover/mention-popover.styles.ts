@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -22,11 +23,11 @@ export const styles = css`
     min-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-14rem), var(--lr-positioner-available-inline-size, 100vw));
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-24rem), var(--lr-positioner-available-inline-size, 100vw));
     padding: var(--lr-space-xs);
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    /* The shared overlay-surface family (internal/overlay-surface.styles.ts): a floating surface
+       retints with every other popup, not with the page behind it. */
+    ${overlaySurface}
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
-    box-shadow: var(--lr-shadow-m);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));

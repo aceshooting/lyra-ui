@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -16,6 +19,10 @@ export const styles = css`
     --_lr-file-input-dropzone-icon-size: var(--lr-font-size-xl);
     --_lr-file-input-dropzone-padding: var(--lr-space-l);
     --_lr-file-input-detail-font-size: var(--lr-font-size-sm);
+    /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
+       declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
+       reaches this dropzone. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host([size="2xs"]),
   :host([size="xs"]) {
@@ -91,9 +98,13 @@ export const styles = css`
       --lr-file-input-dropzone-padding,
       var(--_lr-file-input-dropzone-padding)
     );
-    border: var(--lr-border-width-medium) dashed var(--lr-color-border);
+    /* Resting edge and fill, each an inline var() fallback rather than a :host declaration, so an
+       ancestor or :root value still wins. The drag accept/reject states below already had their
+       hooks; the resting state it spends most of its life in did not. */
+    border: var(--lr-border-width-medium) dashed
+      var(--lr-file-input-dropzone-border-color, var(--lr-color-border));
     border-radius: var(--lr-file-input-radius, var(--lr-radius));
-    background: var(--lr-color-surface);
+    background: var(--lr-file-input-dropzone-fill, var(--lr-color-surface));
     color: var(--lr-color-text-quiet);
     font-size: var(
       --lr-file-input-dropzone-font-size,
@@ -200,11 +211,14 @@ export const styles = css`
       outline-offset: calc(-1 * var(--lr-border-width-medium));
     }
   }
+  /* Both selector shapes take the hook, because the pointer can be over the button itself or over
+     the pointer-events: none content stacked on it in the same grid cell -- the same pairing the
+     pressed rules below already use. */
   :host(:not(:disabled)) [part~="base"]:hover {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand));
   }
   :host(:not(:disabled)) .dropzone:hover [part~="base"] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand));
   }
   /* [part~='base'] opens the file dialog, so a press is a real activation needing its own answer --
      the hover border alone repeats what hover already said. Both selector shapes are mirrored
@@ -229,6 +243,12 @@ export const styles = css`
   [part~="base"]:focus-visible {
     outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
+     accessibility answer to KEYBOARD focus and is untouched, while a halo a consumer deliberately
+     configured should read on a pointer focus too. Unset it resolves to none. */
+  [part~="base"]:focus {
+    ${formControlFocusHalo}
   }
   :host(:disabled) [part~="base"] {
     opacity: var(--lr-opacity-disabled);
