@@ -372,6 +372,17 @@ export const styles = css`
     appearance: none;
     margin: 0;
   }
+  /* editType: 'select' renders a native select for cell-editor; reset its own UA chrome (the
+     browser's default arrow/inset) and recolor its options explicitly, since an option list
+     paints in a top-layer the shadow root's own color/background do not reach on every engine. */
+  select[part='cell-editor'] {
+    appearance: none;
+    cursor: pointer;
+  }
+  select[part='cell-editor'] option {
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+  }
   [part='cell'][data-align='end'] {
     text-align: end;
   }

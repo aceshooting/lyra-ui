@@ -172,6 +172,14 @@ export type TableEdgeAlign = 'start' | 'end';
 /** Explicit interaction that opens a column's editor. */
 export type TableColumnEditTrigger = 'double-click' | 'always';
 
+/** One choice offered by an `editType: 'select'` column's editor (`columns[].editOptions`) --
+ *  the same `value`/`label` shape this library already uses for a flat list of choices (see
+ *  `LyraSegmentedItem`). */
+export interface TableColumnEditOption {
+  value: string;
+  label: string;
+}
+
 /** `<lr-table>`'s `selectionMode` property: `'none'` disables row selection,
  *  `'single'` allows one selected row at a time, `'multiple'` allows any
  *  number through row activation. */
@@ -327,10 +335,16 @@ export interface TableColumn<T> {
    *  value normally. */
   editTrigger?: TableColumnEditTrigger;
   /** Reads the value shown in the inline editor. When omitted, `row[key]` is
-   *  used for record-like rows. */
+   *  used for record-like rows. For `editType: 'select'`, this is the selected option's
+   *  `value` -- match one entry of `editOptions`, or none of them renders selected. */
   editValue?: (row: T) => string | number;
-  /** Native editor type used when `editTrigger` is set. */
-  editType?: 'text' | 'number';
+  /** Native editor type used when `editTrigger` is set. `'select'` renders a native `<select>`
+   *  populated from `editOptions`, one `<option>` per entry in order; a `'select'` column with no
+   *  `editOptions` renders an empty, valueless `<select>` rather than throwing. */
+  editType?: 'text' | 'number' | 'select';
+  /** Choices offered by an `editType: 'select'` column's editor. Ignored for every other
+   *  `editType`. */
+  editOptions?: TableColumnEditOption[];
   cell: (row: T) => unknown;
 }
 
@@ -570,9 +584,11 @@ export interface LyraTableEventMap<T = unknown> {
  * silent; every post-mount transition into either
  * loading appearance appends to the shared light-DOM polite sink — including repeated cycles —
  * while every placeholder opts out of `<lr-skeleton>`'s own announcement.
- * Columns with `editTrigger: 'double-click'` open a native text/number editor on
- * double-click and emit `lr-cell-edit`; row mutation remains consumer-owned.
- * `editTrigger: 'always'` instead renders that editor in every body cell of the
+ * Columns with `editTrigger: 'double-click'` open a native text/number/select editor on
+ * double-click and emit `lr-cell-edit`; row mutation remains consumer-owned. `editType: 'select'`
+ * renders a native `<select>` populated from `editOptions` (`{ value, label }[]`) instead of an
+ * `<input>` -- a column with no `editOptions` renders an empty, valueless `<select>` rather than
+ * throwing. `editTrigger: 'always'` instead renders that editor in every body cell of the
  * column from first paint — a settings/rate-style column meant to be typed
  * straight into. Persistent editors are plain tab stops (no `tabindex` of their
  * own, exactly like the row-expand toggle) outside the header/row roving model,
@@ -581,11 +597,15 @@ export interface LyraTableEventMap<T = unknown> {
  * Escape has nothing to cancel back to, so it is left uncancelled for an
  * ancestor dialog/popover. Their value binds as a content attribute, so once
  * the user has typed into one an out-of-band `rows` update to that same cell no
- * longer replaces the draft; an untouched editor still picks up a new value.
+ * longer replaces the draft; an untouched editor still picks up a new value. A persistent
+ * `editType: 'select'` editor has no such native protection -- `<select>`/`<option>` carry no
+ * dirty-value flag, so an out-of-band `rows` update to that cell re-applies the selection even
+ * after the user has picked a different option.
  * Focus is restored across a re-sort that moves the editor's node, and dropped
  * (never re-aimed at an unrelated row) when its row leaves the rendered page.
  * `spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`
- * (the default) `editType`, the inline cell editor -- no effect on a `'number'` cell editor.
+ * (the default) `editType`, the inline cell editor -- no effect on a `'number'` or `'select'` cell
+ * editor.
  * `groupBy` inserts non-focusable group header rows before each group; use
  * `groupLabel` when the raw group key needs custom content. A client-mode
  * sort applies *within* each group, so grouping survives sorting on a column
@@ -683,7 +703,8 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart foot - The `<tfoot>`, only rendered when at least one column defines `footer`.
  * @csspart footer-row - The single footer row.
  * @csspart footer-cell - A single footer cell.
- * @csspart cell-editor - The native inline cell editor: shown after a double-click on an
+ * @csspart cell-editor - The native inline cell editor -- an `<input>` for `editType: 'text'`/
+ *   `'number'`, a `<select>` for `editType: 'select'`: shown after a double-click on an
  *   `editTrigger: 'double-click'` cell, and rendered persistently in every body cell of an
  *   `editTrigger: 'always'`
  *   column.
@@ -997,7 +1018,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   /** Forwarded to the filter input's, and (when the active column's `editType` is `'text'`, the
    *  default) the inline cell-editor input's, native `spellcheck`. Defaults to `true`, matching
    *  the native element's own default. `spellcheck="false"` is parsed as `false` (see
-   *  `spellcheckConverter` above). No effect on a `'number'` cell editor. */
+   *  `spellcheckConverter` above). No effect on a `'number'` or `'select'` cell editor. */
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   /** Forwarded to the same inputs' native `autocapitalize`. Empty string omits the attribute
    *  (browser default). */
@@ -2437,7 +2458,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private commitEdit(event: Event, rowKey: string, columnKey: string): void {
     event.stopPropagation();
-    const input = event.currentTarget as HTMLInputElement;
+    const field = event.currentTarget as HTMLInputElement | HTMLSelectElement;
     const entry = this.rowsByKey.get(rowKey);
     const column = this.columnsByKey.get(columnKey);
     const isTransient = this.editingCell?.rowKey === rowKey && this.editingCell.columnKey === columnKey;
@@ -2445,7 +2466,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       if (isTransient) this.editingCell = null;
       return;
     }
-    const value = column.editType === 'number' && input.value !== '' ? Number(input.value) : input.value;
+    const value = column.editType === 'number' && field.value !== '' ? Number(field.value) : field.value;
     this.emit('lr-cell-edit', Object.freeze({ row: entry.row, columnKey, value }));
     if (isTransient) this.editingCell = null;
   }
@@ -2455,14 +2476,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  Matched by walking `data-row-key`/`data-col-key` rather than by interpolating them into a
    *  selector: both are consumer-supplied strings, and the row key additionally carries an encoding
    *  prefix (`string:a`), so neither is safe to splat into CSS unescaped. */
-  private editorElementFor(rowKey: string, columnKey: string): HTMLInputElement | null {
+  private editorElementFor(rowKey: string, columnKey: string): HTMLInputElement | HTMLSelectElement | null {
     const row = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')].find(
       (el) => el.dataset['rowKey'] === rowKey
     );
     const cell = row
       ? [...row.querySelectorAll<HTMLElement>('td[data-col-key]')].find((el) => el.dataset['colKey'] === columnKey)
       : undefined;
-    return (cell?.querySelector('[part="cell-editor"]') as HTMLInputElement | null) ?? null;
+    return (cell?.querySelector('[part="cell-editor"]') as HTMLInputElement | HTMLSelectElement | null) ?? null;
   }
 
   /** Records which persistent editor holds focus, and drops the record as soon as focus lands on
@@ -2684,19 +2705,26 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   /** One body cell's inline editor.
    *
-   *  The persistent (`editTrigger: 'always'`) and double-click flavors differ in exactly one binding:
-   *  the persistent editor binds `value` as a **content attribute**, the double-click one keeps the
-   *  `.value` **property**. Native HTML sets an input's dirty-value flag on the user's first edit,
-   *  after which content-attribute updates no longer overwrite what is displayed -- so an
-   *  out-of-band `rows` update to a cell the user is already typing into leaves their draft alone,
-   *  with no is-focused bookkeeping of the library's own. An untouched persistent editor has no
-   *  dirty flag set, so it still picks up a new `rows` value normally. A double-click editor is
-   *  short-lived and opens against the value it is editing, so the property binding's deliberate
-   *  re-assert is right for it. Two templates rather than one because a lit template literal fixes
-   *  each binding's kind at authoring time.
+   *  For `editType: 'text'`/`'number'`, the persistent (`editTrigger: 'always'`) and double-click
+   *  flavors differ in exactly one binding: the persistent editor binds `value` as a **content
+   *  attribute**, the double-click one keeps the `.value` **property**. Native HTML sets an input's
+   *  dirty-value flag on the user's first edit, after which content-attribute updates no longer
+   *  overwrite what is displayed -- so an out-of-band `rows` update to a cell the user is already
+   *  typing into leaves their draft alone, with no is-focused bookkeeping of the library's own. An
+   *  untouched persistent editor has no dirty flag set, so it still picks up a new `rows` value
+   *  normally. A double-click editor is short-lived and opens against the value it is editing, so the
+   *  property binding's deliberate re-assert is right for it. Two templates rather than one because a
+   *  lit template literal fixes each binding's kind at authoring time.
    *
-   *  No `tabindex` on either: a persistent editor is a plain tab stop, exactly like the row-expand
-   *  toggle rendered a few lines above, and stays outside the header/row roving model. */
+   *  `editType: 'select'` renders a native `<select>` instead, populated from `editOptions`
+   *  (`col.editOptions ?? []`, so a column with none renders an empty, valueless `<select>` rather
+   *  than throwing). `<select>`/`<option>` carry no native dirty-value flag, so there is no
+   *  content-attribute-vs-property distinction to make here -- both flavors bind `.value` the same
+   *  way, and (unlike the text/number editors) a persistent select editor does not protect an
+   *  in-progress, uncommitted selection from an out-of-band `rows` update to that cell.
+   *
+   *  No `tabindex` on any of them: a persistent editor is a plain tab stop, exactly like the
+   *  row-expand toggle rendered a few lines above, and stays outside the header/row roving model. */
   /**
    * Renders one cell, tolerating a column that omits its required `cell` renderer.
    *
@@ -2720,14 +2748,28 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private renderCellEditor(row: T, col: TableColumn<T>, rowKey: string, alwaysOn: boolean): TemplateResult {
     const type = col.editType ?? 'text';
-    const isText = type === 'text';
     const value = this.editorValue(row, col);
     const label = this.localize('tableEditCell', undefined, { column: col.label });
+    const onChange = (event: Event): void => this.commitEdit(event, rowKey, col.key);
+    const onKeyDown = (event: KeyboardEvent): void => this.onEditorKeyDown(event, rowKey, col.key);
+    if (type === 'select') {
+      const options = col.editOptions ?? [];
+      return html`<select
+        part="cell-editor"
+        aria-label=${label}
+        .value=${value}
+        @change=${onChange}
+        @focus=${this.onNativeFocus}
+        @blur=${this.onNativeBlur}
+        @keydown=${onKeyDown}
+      >
+        ${options.map((option) => html`<option value=${option.value}>${option.label}</option>`)}
+      </select>`;
+    }
+    const isText = type === 'text';
     const spellcheck = isText ? this.spellcheck : nothing;
     const autocapitalize = isText ? this.autocapitalize || nothing : nothing;
     const autocorrect = isText ? this.autoCorrect || nothing : nothing;
-    const onChange = (event: Event): void => this.commitEdit(event, rowKey, col.key);
-    const onKeyDown = (event: KeyboardEvent): void => this.onEditorKeyDown(event, rowKey, col.key);
     return alwaysOn
       ? html`<input
           part="cell-editor"

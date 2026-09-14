@@ -591,7 +591,8 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 headerCell?, width?, minWidth?, maxWidth?,
 resizable?, sortable?, sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start'|'end',
 priority?: 'medium'|'low',
-sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
+sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editType?: 'text'|'number'|'select',
+editOptions?: { value: string; label: string }[], footer?, cellStyle?, heatValue?,
 cell: (row) => unknown }` —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
   client-mode sorting for that column: a finite number sorts numerically, a string sorts through an
@@ -632,7 +633,10 @@ cell: (row) => unknown }` —
   `editTrigger: 'double-click'` opens a native editor on that cell's double-click (one cell at a
   time), while `'always'` renders a persistent editor in every body cell from first paint, for a
   settings/rate-style column meant to be typed straight into — while `editValue` supplies the editor
-  value and `editType` selects `text` or `number`
+  value and `editType` selects `'text'`, `'number'`, or `'select'` (a native `<select>` populated
+  from `editOptions: { value: string; label: string }[]`, one `<option>` per entry in order; a
+  `'select'` column with no `editOptions` renders an empty, valueless `<select>` instead of
+  throwing)
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
   the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
   timestamp behind a relative one;
@@ -658,10 +662,13 @@ cell: (row) => unknown }` —
     existing row-expand toggle, and stays _outside_ the header/row roving-tabindex model. Tab walks
     down the column; arrow keys still navigate the grid from a row's own roving stop, and act as
     ordinary caret movement once focus is inside a field. Non-editable columns are unaffected.
-  - **Value binding.** A persistent editor binds its `value` as a **content attribute**, not as the
-    `.value` property, so native dirty-value-flag semantics apply. Trade-off: once the user has
-    typed into a cell, an out-of-band `rows` update to that same cell will **not** visibly replace
-    their draft. An editor the user has not touched still picks up a new `rows` value normally.
+  - **Value binding.** A persistent `'text'`/`'number'` editor binds its `value` as a **content
+    attribute**, not as the `.value` property, so native dirty-value-flag semantics apply.
+    Trade-off: once the user has typed into a cell, an out-of-band `rows` update to that same cell
+    will **not** visibly replace their draft. An editor the user has not touched still picks up a
+    new `rows` value normally. A persistent `'select'` editor has no equivalent protection —
+    `<select>`/`<option>` carry no native dirty-value flag, so an out-of-band `rows` update to that
+    cell re-applies the selection even after the user has picked a different, uncommitted option.
     `lr-cell-edit` remains the only mutation channel — the table never mutates `row`.
   - **Keys.** Enter commits (emits `lr-cell-edit`) and _keeps focus_ in the field, since there is no
     closed state to fall back to. `change` (blur after a modification) commits in both modes.
@@ -747,7 +754,7 @@ cell: (row) => unknown }` —
   an explicit verbatim override
 - `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
   (attribute `autocorrect`) — forwarded to the filter input and, for a `'text'` (the default)
-  `editType`, the inline cell editor; no effect on a `'number'` cell editor. `spellcheck="false"`
+  `editType`, the inline cell editor; no effect on a `'number'` or `'select'` cell editor. `spellcheck="false"`
   is parsed as `false` via a string-aware converter (Lit's default presence-based boolean
   converter would otherwise treat any attribute value, including the literal string `"false"`, as
   `true`).
@@ -1107,15 +1114,24 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   as the cell's accessible _name_, replacing the cell's content rather than supplementing it (the
   same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
   shows, never for information that exists nowhere else.
-- `editTrigger: 'always'` deliberately does not re-assert a cell's source value once the user has typed
-  into it. That is the native dirty-value-flag behavior the attribute binding buys, and it is the
-  point: a background `rows` refresh cannot silently overwrite an in-progress edit. If you need the
+- `editTrigger: 'always'` deliberately does not re-assert a `'text'`/`'number'` cell's source value
+  once the user has typed into it. That is the native dirty-value-flag behavior the attribute
+  binding buys, and it is the point: a background `rows` refresh cannot silently overwrite an
+  in-progress edit. If you need the
   opposite — an authoritative external value that always wins — do not use `'always'`; re-key the
   row (`rowKey`) so the editor is recreated rather than updated, or use `editTrigger: 'double-click'` and let
   the short-lived double-click editor's property binding re-assert. Also note the two things
   `'always'` intentionally does _not_ do: it never sets the roving `tabindex` (its editors are
   ordinary tab stops, so Tab order in that column interleaves with the grid's two roving stops,
   the same way the row-expand toggle's already does), and it never cancels Escape.
+- `editType: 'select'` renders a native `<select>`, populated from `columns[].editOptions`
+  (`{ value: string; label: string }[]`, one `<option>` per entry in order); a `'select'` column
+  with no `editOptions` renders an empty, valueless `<select>` rather than throwing. Unlike the
+  `'text'`/`'number'` editors, `<select>`/`<option>` carry no native dirty-value flag, so the
+  protection described above for a persistent `'always'` editor does not extend to a `'select'`
+  one — a background `rows` refresh re-applies the selection to a persistent select editor even
+  after the user has picked a different, uncommitted option. The double-click flavor is unaffected
+  by this distinction either way, since it is always short-lived.
 
 ---
 
@@ -4418,8 +4434,14 @@ These named interfaces and helper signatures are available to typed integrations
     heatValue?(row: T): number | null | undefined;
     editTrigger?: TableColumnEditTrigger;
     editValue?: (row: T) => string | number;
-    editType?: 'text' | 'number';
+    editType?: 'text' | 'number' | 'select';
+    editOptions?: TableColumnEditOption[];
     cell: (row: T) => unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/table/table.class.js`.
+  `TableColumnEditOption {
+    value: string;
+    label: string;
   }`
   Import: `@aceshooting/lyra-ui/components/data/table/table.class.js`.
   `TableSortCommitDetail {

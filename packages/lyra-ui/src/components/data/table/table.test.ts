@@ -5796,6 +5796,176 @@ describe("editTrigger: 'always'", () => {
   });
 });
 
+describe("editType: 'select'", () => {
+  const selectEditableColumns: TableColumn<Row>[] = [
+    {
+      key: 'name',
+      label: 'Name',
+      editTrigger: 'double-click',
+      editType: 'select',
+      editOptions: [
+        { value: 'Alpha', label: 'Alpha' },
+        { value: 'Beta', label: 'Beta' },
+        { value: 'Gamma', label: 'Gamma' },
+      ],
+      editValue: (r) => r.name,
+      cell: (r) => r.name,
+    },
+  ];
+
+  const selectTable = async (
+    columnsForTest = selectEditableColumns,
+    rowsForTest = rows
+  ): Promise<LyraTable<Row>> => {
+    const el = (await fixture(html`<lr-table aria-label="People"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columnsForTest;
+    el.rows = rowsForTest;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    return el;
+  };
+
+  it('renders the resting cell as plain text with no control mounted (performance contract)', async () => {
+    const manyRows: Row[] = Array.from({ length: 5 }, (_, index) => ({
+      id: `r${index}`,
+      name: index % 2 === 0 ? 'Alpha' : 'Beta',
+      score: index,
+    }));
+    const el = await selectTable(selectEditableColumns, manyRows);
+
+    expect(el.shadowRoot!.querySelectorAll('select').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('input').length).to.equal(0);
+    const cells = [...el.shadowRoot!.querySelectorAll('td[data-col-key="name"]')] as HTMLElement[];
+    expect(cells.length).to.equal(5);
+    expect(cells[0]!.textContent?.trim()).to.equal('Alpha');
+
+    cells[0]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('select[part="cell-editor"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('input[part="cell-editor"]').length).to.equal(0);
+  });
+
+  it('opens a select editor on double-click and not before', async () => {
+    const el = await selectTable();
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    expect(cell.querySelector('select[part="cell-editor"]') == null).to.be.true;
+
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
+    expect(select.tagName).to.equal('SELECT');
+    expect(select.value).to.equal('Alpha');
+  });
+
+  it('emits lr-cell-edit exactly once with the selected value when the select commits', async () => {
+    const el = await selectTable();
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
+
+    let edits = 0;
+    el.addEventListener('lr-cell-edit', () => (edits += 1));
+    const eventPromise = oneEvent(el, 'lr-cell-edit');
+    select.value = 'Gamma';
+    select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    const event = await eventPromise;
+
+    expect(event.detail.columnKey).to.equal('name');
+    expect(event.detail.value).to.equal('Gamma');
+    expect(event.detail.row).to.deep.equal(rows[0]);
+    expect(edits).to.equal(1);
+    await el.updateComplete;
+    expect(cell.querySelector('select[part="cell-editor"]') == null).to.be.true;
+  });
+
+  it('cancels a select editor on Escape without emitting lr-cell-edit', async () => {
+    const el = await selectTable();
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
+
+    let emitted = false;
+    el.addEventListener('lr-cell-edit', () => (emitted = true));
+    const notPrevented = select.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true })
+    );
+    await el.updateComplete;
+
+    expect(notPrevented).to.be.false;
+    expect(emitted).to.be.false;
+    expect(cell.querySelector('select[part="cell-editor"]') == null).to.be.true;
+  });
+
+  it('commits a select editor with Enter', async () => {
+    const el = await selectTable();
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
+    select.value = 'Beta';
+
+    const eventPromise = oneEvent(el, 'lr-cell-edit');
+    select.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true })
+    );
+    const event = await eventPromise;
+
+    expect(event.detail.value).to.equal('Beta');
+    await el.updateComplete;
+    expect(cell.querySelector('select[part="cell-editor"]') == null).to.be.true;
+  });
+
+  it('moves focus into the select editor once it opens, so focus is never stranded', async () => {
+    const el = await selectTable();
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
+    await waitUntil(() => el.shadowRoot!.activeElement === select, 'focus never reached the select editor');
+  });
+
+  it('names the select editor through the tableEditCell key', async () => {
+    const el = await selectTable();
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
+    expect(select.getAttribute('aria-label')).to.equal('Edit Name');
+  });
+
+  it('degrades to an empty, valueless select instead of throwing when editOptions is omitted', async () => {
+    const el = await selectTable([
+      {
+        key: 'name',
+        label: 'Name',
+        editTrigger: 'double-click',
+        editType: 'select',
+        editValue: (r) => r.name,
+        cell: (r) => r.name,
+      },
+    ]);
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
+    expect(select).to.not.equal(null);
+    expect(select.options.length).to.equal(0);
+    expect(select.value).to.equal('');
+  });
+
+  it('is accessible with a select cell editor open', async () => {
+    const el = await selectTable();
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('select[part="cell-editor"]').length).to.equal(1);
+    await expect(el).to.be.accessible();
+  });
+});
+
 describe('lifecycle super calls', () => {
   it('calls super.willUpdate() and super.updated() (regression guard: a future mixin layered under LyraTable must still run)', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
