@@ -14,6 +14,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 import type {
   LyraGraphCommunity,
+  LyraGraphNodeLabelsMode,
   LyraGraphRenderer,
   LyraGraph,
   LyraGraphLink,
@@ -190,7 +191,12 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @customElement lr-knowledge-graph-explorer
  * @slot details - Overrides the details popover's default content (an `lr-entity-card` with a
  *   nested `lr-neighbor-list` and a pin toggle). Receives no data -- a consumer overriding this
- *   slot reads the selected entity from `selectedNodeId`/`nodes` itself.
+ *   slot reads the selected entity from `selectedNodeId`/`nodes` itself. Replaces the default
+ *   card entirely, including `detail-body`/`detail-actions` below.
+ * @slot detail-body - Additive content appended inside the default `lr-entity-card`'s body,
+ *   alongside its `lr-neighbor-list`. No effect while `details` is overridden.
+ * @slot detail-actions - Additive content appended into the default `lr-entity-card`'s `actions`
+ *   slot, beside its built-in pin toggle. No effect while `details` is overridden.
  * @event lr-selection-change - The explorer changed its self-managed selection. `detail:
  *   { selectedNodeId: string | null }`. Direct host assignments do not emit.
  * @event lr-path-request - `detail: { sourceNodeId, targetNodeId }`. See the class doc above.
@@ -224,8 +230,11 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @csspart graph - The composed `lr-graph`.
  * @csspart detail-popover - The composed `lr-popover` hosting the details overlay.
  * @csspart detail-card - The default-content `lr-entity-card`, only present while `selectedNodeId` resolves to a node.
- * @cssprop [--lr-canvas-reserved-height=var(--lr-size-24rem)] - Default host block size, shared
- *   with the pre-upgrade reservation stylesheet. An explicit outer `block-size` still wins.
+ * @cssprop [--lr-canvas-reserved-height=var(--lr-size-24rem)] - Default block size of both this
+ *   host and the composed `lr-graph`, shared with the pre-upgrade reservation stylesheet. Below
+ *   this in the fallback chain, the composed `lr-graph`'s own normalized `height` (forwarded from
+ *   this component's own `height`) sizes it instead; an explicit outer `block-size` still wins over
+ *   both.
  * @status stable
  * @since 4.1.0
  */
@@ -300,9 +309,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  narrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the
    *  class doc's anchoring note. */
   @property() renderer: LyraGraphRenderer = 'svg';
+  /** Forwarded to `lr-graph.nodeLabels`. Unset (the default) leaves the composed `lr-graph` to
+   *  apply its own per-renderer default -- see that property's own doc. */
+  @property({ attribute: 'node-labels' }) nodeLabels?: LyraGraphNodeLabelsMode;
   /** Requested width of the composed graph viewport in CSS pixels. */
   @property({ type: Number }) width = 800;
-  /** Requested height of the composed graph viewport in CSS pixels. */
+  /** Requested height of the composed graph viewport in CSS pixels. Also sizes the rendered
+   *  `[part="graph"]`/host (see `--lr-canvas-reserved-height`'s doc) whenever neither that nor an
+   *  explicit outer `block-size` overrides it. */
   @property({ type: Number }) height = 600;
   /** Fallback name for the root group; defaults to localized `graphExplorerLabel`. A non-empty
    *  host `aria-label` makes the host the sole overall owner; an explicitly empty host label stays
@@ -655,8 +669,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     return !this.hasUpdated && this.graphModel.nodes.length === 0;
   }
 
+  /** `label` beats `accessibleLabel` beats a bare fallback to `id` -- the same precedence
+   *  `entityFor()`'s own `label` field and the search-result list use, so every derived node name
+   *  agrees. */
   private nodeLabel(id: string): string {
-    return this.nodeById.get(id)?.label || id;
+    const node = this.nodeById.get(id);
+    return node?.label || node?.accessibleLabel || id;
   }
 
   private degreeOf(id: string): number {
@@ -669,7 +687,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     const details = this.entityDetails[id];
     return {
       id: node.id,
-      label: node.label || node.id,
+      label: node.label || node.accessibleLabel || node.id,
       type: node.type,
       communityId: node.communityId,
       description: details?.description,
@@ -1042,7 +1060,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                             type="button"
                             @click=${() => void this.activateEntity(n.id)}
                           >
-                            ${n.label || n.id}
+                            ${n.label || n.accessibleLabel || n.id}
                           </button>
                         </div>
                       `
@@ -1096,6 +1114,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           .dimmedNodeIds=${this.computedDimmedNodeIds}
           .dimmedLinkIds=${this.computedDimmedLinkIds}
           renderer=${this.renderer}
+          node-labels=${this.nodeLabels ?? nothing}
           width=${finiteRange(this.width, 800, 1)}
           height=${finiteRange(this.height, 600, 1)}
           @lr-node-click=${this.onGraphNodeClick}
@@ -1129,6 +1148,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                       )}
                       expandable
                     ></lr-neighbor-list>
+                    <slot name="detail-body"></slot>
                     <lr-button
                       slot="actions"
                       size="s"
@@ -1140,6 +1160,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                         isPinned ? 'graphExplorerUnpin' : 'graphExplorerPin'
                       )}
                     </lr-button>
+                    <slot name="detail-actions" slot="actions"></slot>
                   </lr-entity-card>
                 `
               : nothing}

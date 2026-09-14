@@ -12,6 +12,7 @@ import {
   LyraGraph as LyraGraphElement,
   type LyraGraphLink,
   type LyraGraphNode,
+  type LyraGraphNodeLabelsMode,
 } from './graph.js';
 import type {
   D3SimulationLinkDatum,
@@ -64,6 +65,34 @@ const links = [{ source: 'a', target: 'b' }];
 it('uses the same canvas-height token as the pre-upgrade reservation', async () => {
   const el = (await fixture(html`
     <lr-graph style="--lr-canvas-reserved-height: 275px"></lr-graph>
+  `)) as LyraGraph;
+  expect(getComputedStyle(el).blockSize).to.equal('275px');
+  expect(el.getBoundingClientRect().height).to.be.closeTo(275, 1);
+});
+
+it('sizes the rendered host from height when --lr-canvas-reserved-height is unset (regression: height used to only size the viewBox)', async () => {
+  const el = (await fixture(
+    html`<lr-graph height="450"></lr-graph>`
+  )) as LyraGraph;
+  expect(getComputedStyle(el).blockSize).to.equal('450px');
+  expect(el.getBoundingClientRect().height).to.be.closeTo(450, 1);
+});
+
+it('updates the rendered host size when height changes after mount', async () => {
+  const el = (await fixture(
+    html`<lr-graph height="450"></lr-graph>`
+  )) as LyraGraph;
+  el.height = 320;
+  await el.updateComplete;
+  expect(getComputedStyle(el).blockSize).to.equal('320px');
+});
+
+it('lets an author-set --lr-canvas-reserved-height keep winning over height', async () => {
+  const el = (await fixture(html`
+    <lr-graph
+      height="450"
+      style="--lr-canvas-reserved-height: 275px"
+    ></lr-graph>
   `)) as LyraGraph;
   expect(getComputedStyle(el).blockSize).to.equal('275px');
   expect(el.getBoundingClientRect().height).to.be.closeTo(275, 1);
@@ -2067,6 +2096,194 @@ describe('drawn edge labels', () => {
     // Playwright reporter.
     const cacheRefreshed = currentLabelEl === (el as any).linkLabelEls[0];
     expect(cacheRefreshed).to.be.true;
+  });
+});
+
+describe('nodeLabels', () => {
+  it('defaults to drawing every node label unconditionally for renderer="svg" (unset regression)', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    expect(el.nodeLabels).to.be.undefined;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    expect(el.shadowRoot!.querySelectorAll('[part="label"]').length).to.equal(
+      2
+    );
+    expect(
+      el.shadowRoot!.querySelector('g')!.hasAttribute('data-node-labels-hidden')
+    ).to.be.false;
+  });
+
+  it('renders no [part="label"] elements when nodeLabels is "none", even though nodes carry labels', async () => {
+    const el = (await fixture(
+      html`<lr-graph node-labels="none"></lr-graph>`
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    expect(el.shadowRoot!.querySelectorAll('[part="label"]').length).to.equal(
+      0
+    );
+  });
+
+  it('hides svg node labels below the zoom-declutter threshold via a data-node-labels-hidden toggle on the zoomed g, when nodeLabels is "zoom", without a Lit re-render', async () => {
+    const el = (await fixture(
+      html`<lr-graph node-labels="zoom"></lr-graph>`
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+    expect(g.hasAttribute('data-node-labels-hidden')).to.be.false;
+    (
+      el as unknown as { updateNodeLabelZoomGate: (k: number) => void }
+    ).updateNodeLabelZoomGate(0.3);
+    expect(g.getAttribute('data-node-labels-hidden')).to.equal('');
+    (
+      el as unknown as { updateNodeLabelZoomGate: (k: number) => void }
+    ).updateNodeLabelZoomGate(1);
+    expect(g.hasAttribute('data-node-labels-hidden')).to.be.false;
+  });
+
+  it('never hides svg node labels via the zoom gate when nodeLabels is "always", even far below the declutter threshold', async () => {
+    const el = (await fixture(
+      html`<lr-graph node-labels="always"></lr-graph>`
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+    (
+      el as unknown as { updateNodeLabelZoomGate: (k: number) => void }
+    ).updateNodeLabelZoomGate(0.01);
+    expect(g.hasAttribute('data-node-labels-hidden')).to.be.false;
+  });
+
+  it('re-evaluates the node-label zoom gate immediately when nodeLabels changes post-mount, without waiting for a new pan/zoom gesture', async () => {
+    const el = (await fixture(
+      html`<lr-graph node-labels="always"></lr-graph>`
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+    // Zoom out well past the fixed, internal node-label declutter threshold -- 'always' must not
+    // hide regardless (same deltaY this file's edge-label-min-zoom regression test already proves
+    // saturates the camera at the scaleExtent's minimum, well below either threshold).
+    svgEl.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaY: 100000,
+        clientX: 10,
+        clientY: 10,
+      })
+    );
+    await el.updateComplete;
+    expect(g.hasAttribute('data-node-labels-hidden')).to.be.false;
+
+    // Switching to 'zoom' with no further pan/zoom gesture must re-apply the gate immediately
+    // against the already-zoomed-out camera, not wait for the next wheel/drag event.
+    el.nodeLabels = 'zoom';
+    await el.updateComplete;
+    expect(g.getAttribute('data-node-labels-hidden')).to.equal('');
+  });
+
+  describe('renderer="canvas"', () => {
+    async function mountCanvas(
+      nodeLabels?: LyraGraphNodeLabelsMode
+    ): Promise<LyraGraph> {
+      const el = (await fixture(
+        html`<lr-graph
+          renderer="canvas"
+          width="400"
+          height="300"
+          style="width:400px;height:300px"
+        ></lr-graph>`
+      )) as LyraGraph;
+      if (nodeLabels) el.nodeLabels = nodeLabels;
+      el.nodes = nodes;
+      el.links = links;
+      await el.updateComplete;
+      await waitUntil(
+        () =>
+          (el as unknown as { canvasScene?: { nodes: unknown[] } }).canvasScene
+            ?.nodes.length === 2,
+        undefined,
+        { timeout: NODE_COUNT_TIMEOUT }
+      );
+      return el;
+    }
+    type Internals = { canvasScene?: { showNodeLabels: boolean } };
+
+    it('defaults to zoom-gated node labels for renderer="canvas" (unset regression)', async () => {
+      const el = await mountCanvas();
+      // The initial identity transform is k=1, above the 0.5 declutter threshold that gated
+      // canvas node labels before this property existed -- so labels are visible by default,
+      // matching today's canvas-only behavior exactly.
+      expect((el as unknown as Internals).canvasScene!.showNodeLabels).to.be
+        .true;
+    });
+
+    it('disables canvas node labels regardless of zoom when nodeLabels is "none"', async () => {
+      const el = await mountCanvas('none');
+      expect((el as unknown as Internals).canvasScene!.showNodeLabels).to.be
+        .false;
+    });
+
+    it('keeps canvas node labels visible when explicitly zoomed below the declutter threshold and nodeLabels is "always"', async () => {
+      const el = await mountCanvas('always');
+      (
+        el as unknown as {
+          canvasCamera: { k: number; x: number; y: number };
+        }
+      ).canvasCamera = { k: 0.1, x: 0, y: 0 };
+      expect(
+        (
+          el as unknown as { canvasNodeLabelsVisible(): boolean }
+        ).canvasNodeLabelsVisible()
+      ).to.be.true;
+    });
+
+    it('hides canvas node labels below the declutter threshold when nodeLabels is "zoom"', async () => {
+      const el = await mountCanvas('zoom');
+      (
+        el as unknown as {
+          canvasCamera: { k: number; x: number; y: number };
+        }
+      ).canvasCamera = { k: 0.1, x: 0, y: 0 };
+      expect(
+        (
+          el as unknown as { canvasNodeLabelsVisible(): boolean }
+        ).canvasNodeLabelsVisible()
+      ).to.be.false;
+    });
   });
 });
 

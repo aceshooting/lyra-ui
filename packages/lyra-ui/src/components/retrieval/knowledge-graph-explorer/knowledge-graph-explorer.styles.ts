@@ -99,12 +99,19 @@ export const styles = css`
   }
   /* The one flexible row: it takes what the toolbar, search results, pinned row and path strip
      leave. flex-basis stays auto so the graph contributes its configured block size when room is
-     distributed; min-block-size: 0 drops the content-based minimum that would stop it shrinking. */
+     distributed; min-block-size: 0 drops the content-based minimum that would stop it shrinking.
+     block-size mirrors graph.styles.ts's own host rule: --_lr-graph-requested-height (set from the
+     normalized height property, see willUpdate()) is the private fallback beneath the
+     author-facing --lr-canvas-reserved-height, so an explicit outer reservation still wins. */
   [part='graph'] {
     display: block;
     inline-size: 100%;
     flex: 1 1 auto;
     min-block-size: 0;
+    block-size: var(
+      --lr-canvas-reserved-height,
+      var(--_lr-graph-requested-height, var(--lr-size-24rem))
+    );
   }
   [part='detail-card'] {
     max-inline-size: min(

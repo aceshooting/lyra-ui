@@ -3,7 +3,13 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    block-size: var(--lr-canvas-reserved-height, var(--lr-size-24rem));
+    /* --_lr-graph-requested-height is written from the normalized height property (see
+       willUpdate()) -- a private fallback so an author-set --lr-canvas-reserved-height still wins,
+       exactly like --_lr-chart-height beneath --lr-chart-height in chart.styles.ts. */
+    block-size: var(
+      --lr-canvas-reserved-height,
+      var(--_lr-graph-requested-height, var(--lr-size-24rem))
+    );
   }
   [part="base"] {
     position: relative;
@@ -170,6 +176,9 @@ export const styles = css`
   }
   g[data-edge-labels-hidden] [part="link-label"],
   g[data-edge-labels-hidden] [part="community-label"] {
+    display: none;
+  }
+  g[data-node-labels-hidden] [part="label"] {
     display: none;
   }
   [part="empty"] {

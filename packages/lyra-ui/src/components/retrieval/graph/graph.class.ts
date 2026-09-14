@@ -92,6 +92,8 @@ const GRAPH_LAYOUT = literalSetConverter<LyraGraphLayout>(
 export type LyraGraphRenderer = 'svg' | 'canvas';
 export type LyraGraphSelectionMode = 'none' | 'single' | 'multiple';
 export type LyraGraphPickKind = 'node' | 'link';
+/** See `nodeLabels`'s own doc for the per-renderer default when unset. */
+export type LyraGraphNodeLabelsMode = 'always' | 'zoom' | 'none';
 
 type BrowserWindow = Window & typeof globalThis;
 
@@ -131,7 +133,7 @@ const EXPAND_BADGE_R = 5; // world px, the "+" badge circle radius
 const EXPAND_BADGE_OFFSET = Math.SQRT1_2; // places the badge at the node's edge, diagonally upper-right
 const FOCUS_HALO_PADDING = 6; // world px added to the node's own radius for the halo ring
 const HULL_PADDING = 24; // world px; CSS mirrors this via stroke-width: 2 * --lr-size-24px
-const CANVAS_NODE_LABEL_MIN_ZOOM = 0.5; // canvas-only declutter -- node labels draw only at/above this scale
+const NODE_LABEL_MIN_ZOOM = 0.5; // nodeLabels === 'zoom' declutter (both renderers) -- node labels draw only at/above this scale
 // WebKit does not pointer-hit-test a mathematically zero-length SVG line. A sub-pixel segment
 // preserves the circular target created by the round, zoom-compensated 24px stroke in every engine.
 const NODE_HIT_SEGMENT_HALF = 0.5;
@@ -360,7 +362,8 @@ export interface LyraGraphEventMap {
  * @csspart node - A graph node.
  * @csspart link - A graph link.
  * @csspart arrowhead - The marker used by directed graph links.
- * @csspart label - A node label.
+ * @csspart label - A node label (`renderer="svg"` only; not rendered at all when `nodeLabels` is
+ *   `'none'`).
  * @csspart link-label - A drawn edge label (only rendered when `showEdgeLabels` is set).
  * @csspart expand-indicator - The "+" badge rendered on a node with `expandable: true`.
  * @csspart focus-halo - The persistent ring tracking `focusNodeId`'s node.
@@ -377,7 +380,10 @@ export interface LyraGraphEventMap {
  * @csspart cursor-items - The container of offscreen keyboard-roving items (`renderer="canvas"` only).
  * @csspart cursor-item - An offscreen keyboard-roving item (`renderer="canvas"`'s a11y virtual cursor).
  * @cssprop [--lr-canvas-reserved-height=var(--lr-size-24rem)] - Default host block size, shared
- *   with the pre-upgrade reservation stylesheet. An explicit outer `block-size` still wins.
+ *   with the pre-upgrade reservation stylesheet. Below this in the fallback chain, the normalized
+ *   `height` property sizes the host too (a private custom property, not itself settable) --
+ *   setting this always overrides `height`, and an explicit outer `block-size` still wins over
+ *   both.
  * @cssprop [--lr-node-fill=var(--lr-color-brand)] - Default node fill, overridden per-node by `LyraGraphNode.color`.
  * @cssprop [--lr-link-color=var(--lr-color-border)] - Default link stroke, overridden per-link by a link's own `color`.
  * @cssprop [--lr-graph-cat-1=var(--lr-theme-graph-cat-1,#8250df)] - First categorical fallback color for typed nodes.
@@ -533,7 +539,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   @property() renderer: LyraGraphRenderer = 'svg';
   /** Requested graph viewport width in CSS pixels. */
   @property({ type: Number }) width = 800;
-  /** Requested graph viewport height in CSS pixels. */
+  /** Requested graph viewport height in CSS pixels. Also sizes the rendered host itself (see
+   *  `--lr-canvas-reserved-height`'s doc) whenever neither that nor an explicit outer `block-size`
+   *  overrides it. */
   @property({ type: Number }) height = 600;
   /** Many-body force strength used by the force layout. Negative values repel nodes. */
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength =
@@ -566,6 +574,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  false. */
   @property({ type: Number, attribute: 'edge-label-min-zoom' })
   edgeLabelMinZoom = 0.6;
+  /** Node-label visibility. `'always'` draws every node's label unconditionally; `'zoom'` hides
+   *  them below `NODE_LABEL_MIN_ZOOM` (a `data-node-labels-hidden` attribute toggled on the zoomed
+   *  `<g>`, mirroring `showEdgeLabels`/`edgeLabelMinZoom`'s own zoom-gate mechanism, no Lit
+   *  re-render); `'none'` never renders them. Unset (the default) preserves each renderer's
+   *  pre-existing behavior exactly -- `'always'` for `renderer="svg"`, `'zoom'` for
+   *  `renderer="canvas"` -- so this stays a purely additive opt-in. */
+  @property({ attribute: 'node-labels' }) nodeLabels?: LyraGraphNodeLabelsMode;
   /** Declaratively centers the camera on this node id once, the first time it resolves (on mount
    *  or when the id first appears in `nodes`) -- does not re-center on later mutations, so it
    *  can't fight a user's panning on a streaming graph. Renders a persistent halo
@@ -750,7 +765,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  state or node positions actually change. */
   private canvasScene?: CanvasScene;
   /** Whether `canvasScene` was built with edge labels included -- the zoom gate makes the scene
-   *  camera-dependent at exactly two thresholds (`edgeLabelMinZoom`, `CANVAS_NODE_LABEL_MIN_ZOOM`),
+   *  camera-dependent at exactly two thresholds (`edgeLabelMinZoom`, `NODE_LABEL_MIN_ZOOM`),
    *  so a camera-only draw that crosses either must rebuild instead of reusing the cache. */
   private canvasSceneHasEdgeLabels = false;
   /** The in-flight `requestAnimationFrame` id for a camera tween (`focusNode()`/`fit()`), if any --
@@ -1153,6 +1168,24 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  otherwise make every `>=`/`<` comparison against it silently `false`/`true` forever. */
   private get safeEdgeLabelMinZoom(): number {
     return finiteRange(this.edgeLabelMinZoom, 0.6, 0.001, 1000);
+  }
+
+  /** An explicit `nodeLabels` always wins; unset preserves each renderer's own pre-existing
+   *  default instead of picking a single shared literal default that would change one of them --
+   *  see `nodeLabels`'s own doc. */
+  private get resolvedNodeLabelsMode(): LyraGraphNodeLabelsMode {
+    return this.nodeLabels ?? (this.renderer === 'canvas' ? 'zoom' : 'always');
+  }
+
+  /** `renderer="canvas"`'s own node-label visibility, folding `resolvedNodeLabelsMode` in with the
+   *  live camera scale -- `'zoom'`'s threshold check only applies at this one call site, so it's
+   *  centralized here rather than repeated at both `buildCanvasScene()`'s and `drawCanvas()`'s own
+   *  call sites. */
+  private canvasNodeLabelsVisible(): boolean {
+    const mode = this.resolvedNodeLabelsMode;
+    if (mode === 'none') return false;
+    if (mode === 'zoom') return this.canvasCamera.k >= NODE_LABEL_MIN_ZOOM;
+    return true; // 'always' -- an unrecognized attribute value also fails open to visible.
   }
 
   /** `seed`, normalized to a finite integer when set -- `undefined` (unseeded/random) is left
@@ -1810,7 +1843,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         keyboardFocusHull: activeCommunity
           ? { d: hullPathD(this.communityHull(activeCommunity.members)) }
           : undefined,
-        showNodeLabels: this.canvasCamera.k >= CANVAS_NODE_LABEL_MIN_ZOOM,
+        showNodeLabels: this.canvasNodeLabelsVisible(),
         haloColor: resolveColor(
           this.ownerWindow?.matchMedia?.('(forced-colors: active)').matches
             ? 'CanvasText'
@@ -1882,7 +1915,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // the scene bakes in (see canvasSceneHasEdgeLabels' doc).
     const edgeLabelsVisible =
       this.showEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom;
-    const nodeLabelsVisible = this.canvasCamera.k >= CANVAS_NODE_LABEL_MIN_ZOOM;
+    const nodeLabelsVisible = this.canvasNodeLabelsVisible();
     if (
       !this.canvasScene ||
       this.canvasScene.showNodeLabels !== nodeLabelsVisible ||
@@ -2391,6 +2424,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but a future shared mixin under LyraElement must still run
+    // Keep the author-facing --lr-canvas-reserved-height hook entirely consumer-owned (see
+    // graph.styles.ts's :host rule): this only supplies the private fallback beneath it, resolved
+    // from the normalized height, so an ancestor's --lr-canvas-reserved-height always still wins.
+    // Always finite (safeHeight falls back to 600), so there is no unset branch to handle.
+    if (changed.has('height')) {
+      this.style.setProperty(
+        '--_lr-graph-requested-height',
+        `${this.safeHeight}px`
+      );
+    }
     this.resolvedCssColorCache.clear();
     // Every update gets a fresh navigableLinks() result computed at most once (see that cache
     // field's own doc comment for why this can't be gated on graphItemsChanged like the sibling
@@ -2637,6 +2680,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           this.gEl?.setAttribute('transform', event.transform.toString());
           this.updateHitAreaZoomScale(event.transform.k);
           this.updateEdgeLabelZoomGate(event.transform.k);
+          this.updateNodeLabelZoomGate(event.transform.k);
           this.scheduleViewportChange();
         })
         .on('end', () => {
@@ -2647,11 +2691,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // `.call(zoomBehavior)` does not synchronously fire the 'zoom' handler above (only a real
       // user gesture or an explicit `.transform()` call does, and nothing in this component ever
       // calls `.transform()`) -- so the initial transform right here is always d3-zoom's own
-      // identity transform, k=1. Apply the edge-label zoom gate against that known value now, or
-      // it stays unset (edge labels wrongly visible) until the user's first pan/zoom, regardless
-      // of what edgeLabelMinZoom actually is.
+      // identity transform, k=1. Apply the edge-label/node-label zoom gates against that known
+      // value now, or they stay unset (labels wrongly visible) until the user's first pan/zoom,
+      // regardless of what edgeLabelMinZoom/nodeLabels actually are.
       this.updateHitAreaZoomScale(1);
       this.updateEdgeLabelZoomGate(1);
+      this.updateNodeLabelZoomGate(1);
     } else if (
       this.zoomBehavior &&
       (changed.has('minZoom') || changed.has('maxZoom'))
@@ -2660,12 +2705,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.zoomBehavior.scaleExtent([bounds.min, bounds.max]);
     }
 
+    // A renderer/mode change to `nodeLabels` alone (no structural change) still needs the zoom
+    // gate re-evaluated immediately against the live camera scale -- otherwise switching from
+    // 'always' to 'zoom' (or back) only takes visible effect on the next pan/zoom gesture.
+    if (changed.has('nodeLabels') && this.zoomedEl) {
+      this.updateNodeLabelZoomGate(this.d3.zoomTransform(this.zoomedEl).k);
+    }
+
     if (
       !(
         changed.has('simNodes') ||
         changed.has('simLinks') ||
         changed.has('nodeTypes') ||
         changed.has('showEdgeLabels') ||
+        changed.has('nodeLabels') ||
         changed.has('communities')
       )
     )
@@ -3426,6 +3479,19 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     else this.gEl.removeAttribute('data-edge-labels-hidden');
   }
 
+  /** The `renderer="svg"` sibling of `updateEdgeLabelZoomGate()`: toggles
+   *  `data-node-labels-hidden` on the cached zoomed `<g>` when `resolvedNodeLabelsMode === 'zoom'`
+   *  crosses `NODE_LABEL_MIN_ZOOM`, and always clears it otherwise (`'always'` never hides,
+   *  `'none'` never renders `[part="label"]` in the first place, so the attribute is moot either
+   *  way) -- render-free, CSS hides `[part="label"]` beneath the attribute, so this scales with
+   *  every pan/zoom event without a Lit re-render. */
+  private updateNodeLabelZoomGate(k: number): void {
+    if (!this.gEl) return;
+    if (this.resolvedNodeLabelsMode === 'zoom' && k < NODE_LABEL_MIN_ZOOM)
+      this.gEl.setAttribute('data-node-labels-hidden', '');
+    else this.gEl.removeAttribute('data-node-labels-hidden');
+  }
+
   /** The roving-tabindex/keyboard-cursor index space concatenates three item kinds in one order:
    *  nodes, then links, then community hulls. These two helpers are the single definition of where
    *  each later segment starts. Every consumer -- the total count, the identity/text
@@ -3962,7 +4028,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const tabindex =
                 this.normalizedGraphItem() === itemIndex ? '0' : '-1';
               const label = this.nodeAccessibleText(n);
-              const visibleLabel = ownGraphText(n, 'label');
+              // 'none' renders no <text part="label"> at all, same as showEdgeLabels === false for
+              // edge labels; 'zoom' still renders it here and lets the data-node-labels-hidden
+              // zoom gate (see updateNodeLabelZoomGate()) hide it via CSS below NODE_LABEL_MIN_ZOOM.
+              const visibleLabel =
+                this.resolvedNodeLabelsMode === 'none'
+                  ? undefined
+                  : ownGraphText(n, 'label');
               // Unlike link styling below (which always renders style=${styleMap(...)}, even as
               // an empty string), an untyped/unknown-type node must render with NO style
               // attribute at all -- not just an empty one -- so hasAttribute('style') distinguishes

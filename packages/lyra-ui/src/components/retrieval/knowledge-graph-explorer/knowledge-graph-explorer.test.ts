@@ -108,6 +108,50 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.getBoundingClientRect().height).to.be.closeTo(275, 1);
   });
 
+  it('sizes the composed graph from height, given the host has room to grow into (regression: height used to only size the composed graph viewBox)', async () => {
+    // block-size (a physical CSS property, not the --lr-canvas-reserved-height custom property)
+    // gives this host enough room without inheriting a reservation down into the composed
+    // lr-graph, so the graph's own rendered size can only be coming from its forwarded height.
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        height="200"
+        style="block-size: 500px"
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const graph = graphEl(el);
+    await graph.updateComplete;
+    expect(getComputedStyle(graph).blockSize).to.equal('200px');
+  });
+
+  it('updates the composed graph size when height changes after mount', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        height="200"
+        style="block-size: 500px"
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    el.height = 320;
+    await el.updateComplete;
+    const graph = graphEl(el);
+    await graph.updateComplete;
+    expect(getComputedStyle(graph).blockSize).to.equal('320px');
+  });
+
+  it('lets an author-set --lr-canvas-reserved-height on the explorer host keep winning over height for the composed graph', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        height="200"
+        style="block-size: 500px; --lr-canvas-reserved-height: 275px"
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const graph = graphEl(el);
+    await graph.updateComplete;
+    expect(getComputedStyle(graph).blockSize).to.equal('275px');
+  });
+
   it('keeps an explicitly empty label distinct from an omitted one', async () => {
     const el = (await fixture(
       html`<lr-knowledge-graph-explorer label=""></lr-knowledge-graph-explorer>`
@@ -784,6 +828,52 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(popover.accessibleLabel).to.equal('Marie Curie');
   });
 
+  it('falls back to accessibleLabel over id for the popover name when label is absent', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${[
+          { id: 'marie', accessibleLabel: 'Marie Curie, chemist' },
+          { id: 'pierre', label: 'Pierre Curie' },
+        ]}
+        .links=${[]}
+        .selectedNodeId=${'marie'}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
+    await waitUntil(() => popover.open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(popover.accessibleLabel).to.equal('Marie Curie, chemist');
+  });
+
+  it('uses accessibleLabel over id in the rendered search-result text when label is absent', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${[{ id: 'marie', accessibleLabel: 'Marie Curie, chemist' }]}
+        .links=${[]}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    await waitUntil(() => graphNodeEls(el).length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector(
+      'input'
+    ) as HTMLInputElement;
+    native.value = 'marie';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    const result = el.shadowRoot!.querySelector(
+      '[part="search-result"] button'
+    ) as HTMLButtonElement;
+    expect(result.textContent?.trim()).to.equal('Marie Curie, chemist');
+  });
+
   it('focuses and opens a valid selectedNodeId assigned after mount', async () => {
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';
@@ -1414,6 +1504,71 @@ describe('lr-knowledge-graph-explorer', () => {
     // (transitional) opacity, so sampling mid-fade blends its text and background toward each
     // other and reports a false "serious" violation. Finishing it outright matches the idiom
     // overlay.test.ts already uses for this same kind of reveal animation.
+    popover.shadowRoot
+      ?.querySelector('[part~="popup"]')
+      ?.getAnimations()
+      .forEach((animation) => animation.finish());
+    await expect(el).to.be.accessible();
+  });
+
+  it('renders detail-body and detail-actions slot content additively alongside the default card body/actions', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .selectedNodeId=${'marie'}
+      >
+        <span slot="detail-body" id="extra-body">Extra body</span>
+        <button slot="detail-actions" id="extra-action" type="button">
+          Extra action
+        </button>
+      </lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
+    await waitUntil(() => popover.open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    // The default content is still present -- these two slots are additive, not a replacement.
+    expect(el.shadowRoot!.querySelector('[part="detail-card"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('lr-neighbor-list')).to.exist;
+    expect(
+      el.shadowRoot!.querySelector('lr-button[slot="actions"]')
+    ).to.exist;
+
+    const extraBody = el.querySelector('#extra-body') as HTMLElement;
+    const extraAction = el.querySelector('#extra-action') as HTMLElement;
+    expect(extraBody.assignedSlot?.getAttribute('name')).to.equal(
+      'detail-body'
+    );
+    expect(extraAction.assignedSlot?.getAttribute('name')).to.equal(
+      'detail-actions'
+    );
+  });
+
+  it('is accessible with detail-body and detail-actions slot content in the open details popover', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+        .selectedNodeId=${'marie'}
+      >
+        <p slot="detail-body">Extra detail body copy.</p>
+        <button slot="detail-actions" type="button">Extra action</button>
+      </lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
+    await waitUntil(() => popover.open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    await aTimeout(0);
+    // Finish the popover's own reveal fade before sampling colors -- see the identical comment on
+    // the "is accessible with search results..." test above.
     popover.shadowRoot
       ?.querySelector('[part~="popup"]')
       ?.getAnimations()
