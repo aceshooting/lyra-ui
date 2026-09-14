@@ -4,8 +4,9 @@ import {
   html,
   elementUpdated,
   oneEvent,
+  waitUntil,
 } from "@open-wc/testing";
-import { sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import "./multi-split.js";
 import type {
   LyraMultiSplit,
@@ -234,6 +235,35 @@ it("splits children evenly by default", async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="divider"]').length).to.equal(
     2
   );
+});
+
+it("gives every slotted panel box-sizing: border-box so its own padding/border stays inside its flex-basis allocation, not just declared in the stylesheet", async () => {
+  const el = (await fixture(html`
+    <lr-multi-split style="inline-size: 300px; block-size: 120px"
+      ><div style="padding: 20px; border: 5px solid black;">A</div>
+      <div>B</div></lr-multi-split
+    >`)) as LyraMultiSplit;
+  await elementUpdated(el);
+  const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
+  expect(getComputedStyle(panelA).boxSizing).to.equal("border-box");
+  expect(getComputedStyle(panelB).boxSizing).to.equal("border-box");
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+  const baseRect = base.getBoundingClientRect();
+  const aRect = panelA.getBoundingClientRect();
+  const bRect = panelB.getBoundingClientRect();
+  const dividerRect = divider.getBoundingClientRect();
+
+  // Padding + border on the rendered box (getBoundingClientRect always reports the border box)
+  // still add up to no more than the container -- a content-box panel with the same padding/
+  // border would push this total past baseRect.width instead.
+  expect(aRect.width + dividerRect.width + bRect.width).to.be.at.most(
+    baseRect.width + 0.5
+  );
+  expect(aRect.right).to.be.at.most(baseRect.right + 0.5);
 });
 
 it("formats divider indices with the effective locale", async () => {
@@ -1683,6 +1713,149 @@ it("reserves a contained vertical divider gutter and paints only its center", as
   expect(
     (hit as HTMLElement | null)?.closest("button")?.dataset["side"]
   ).to.equal("a");
+});
+
+// -- Divider color/thickness cssprop hooks ---------------------------------
+
+/** Resolves a CSS value (e.g. a `var()`/`color-mix()` expression) to its computed value using a
+ *  throwaway probe in `el`'s own shadow root, so a comparison uses the browser's own resolution
+ *  instead of restating token math by hand. */
+function resolvedInShadow(el: LyraMultiSplit, declaration: string, property: string): string {
+  const probe = document.createElement("span");
+  probe.setAttribute("style", declaration);
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return value;
+}
+
+it("defaults the divider hairline to --lr-color-border/-brand/-brand+mix with none of the new color cssprops set (unset regression)", async () => {
+  const el = (await fixture(html`
+    <lr-multi-split style="inline-size: 320px; block-size: 120px"
+      ><div>A</div>
+      <div>B</div></lr-multi-split
+    >`)) as LyraMultiSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+
+  const expectedResting = resolvedInShadow(
+    el,
+    "background-color: var(--lr-color-border)",
+    "background-color"
+  );
+  const expectedHover = resolvedInShadow(
+    el,
+    "background-color: var(--lr-color-brand)",
+    "background-color"
+  );
+  const expectedActive = resolvedInShadow(
+    el,
+    "background-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+    "background-color"
+  );
+
+  expect(getComputedStyle(divider, "::before").backgroundColor).to.equal(
+    expectedResting
+  );
+
+  try {
+    await hoverUntilMatched(divider, "the divider never reported :hover");
+    await waitUntil(
+      () =>
+        getComputedStyle(divider, "::before").backgroundColor ===
+        expectedHover,
+      "the divider hairline never reached its default hover color"
+    );
+    await sendMouse({ type: "down" });
+    await waitUntil(
+      () =>
+        getComputedStyle(divider, "::before").backgroundColor ===
+        expectedActive,
+      "the divider hairline never reached its default active color"
+    );
+  } finally {
+    await resetMouse();
+  }
+});
+
+it("lets a consumer retheme the divider hairline via --lr-multi-split-divider-color/-hover-color/-active-color", async () => {
+  const el = (await fixture(html`
+    <lr-multi-split
+      style="inline-size: 320px; block-size: 120px;
+        --lr-multi-split-divider-color: rgb(10, 20, 30);
+        --lr-multi-split-divider-hover-color: rgb(40, 50, 60);
+        --lr-multi-split-divider-active-color: rgb(70, 80, 90);"
+      ><div>A</div>
+      <div>B</div></lr-multi-split
+    >`)) as LyraMultiSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+
+  expect(getComputedStyle(divider, "::before").backgroundColor).to.equal(
+    "rgb(10, 20, 30)"
+  );
+
+  try {
+    await hoverUntilMatched(divider, "the divider never reported :hover");
+    await waitUntil(
+      () =>
+        getComputedStyle(divider, "::before").backgroundColor ===
+        "rgb(40, 50, 60)",
+      "the divider hairline never reached its overridden hover color"
+    );
+    await sendMouse({ type: "down" });
+    await waitUntil(
+      () =>
+        getComputedStyle(divider, "::before").backgroundColor ===
+        "rgb(70, 80, 90)",
+      "the divider hairline never reached its overridden active color"
+    );
+  } finally {
+    await resetMouse();
+  }
+});
+
+it("separates the painted hairline's thickness (--lr-multi-split-divider-thickness) from the pointer target size, without shrinking the WCAG 2.5.8 target", async () => {
+  const el = (await fixture(html`
+    <lr-multi-split
+      style="inline-size: 320px; block-size: 120px; --lr-multi-split-divider-thickness: 9px;"
+      ><div>A</div>
+      <div>B</div></lr-multi-split
+    >`)) as LyraMultiSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+  const dividerRect = divider.getBoundingClientRect();
+  const paintedRule = getComputedStyle(divider, "::before");
+
+  // The painted line grew to the overridden thickness...
+  expect(parseFloat(paintedRule.width)).to.be.closeTo(9, 0.5);
+  // ...but the pointer target track is untouched -- it's still governed solely by
+  // --lr-multi-split-divider-target-size (unset here, so its own default floor).
+  expect(dividerRect.width).to.be.at.least(39.5);
+});
+
+it("never shrinks the divider's pointer target even when the painted thickness is set larger than the target track", async () => {
+  const el = (await fixture(html`
+    <lr-multi-split
+      style="inline-size: 320px; block-size: 120px; --lr-multi-split-divider-thickness: 60px;"
+      ><div>A</div>
+      <div>B</div></lr-multi-split
+    >`)) as LyraMultiSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+  const dividerRect = divider.getBoundingClientRect();
+
+  // The default target-size floor (max(--lr-icon-button-size, --lr-size-3px), 40px today) is
+  // unaffected by an oversized thickness hook -- the two are read by disjoint declarations.
+  expect(dividerRect.width).to.be.at.least(39.5);
 });
 
 it("reconciles panelCount and sizes when a panel is added after connect (slotchange)", async () => {
@@ -3820,6 +3993,70 @@ it('lets a consumer override the floating drawer\'s position/inset geometry with
   }
 });
 
+it("keeps the floating panel's default inline-size at its own live percent, unset regression", async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    // Fixed size: see the fixed-size comment on the "wide -> rail -> floating" test above.
+    const el = (await fixture(
+      html`<lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+        ><div>A</div>
+        <div>B</div></lr-multi-split
+      >`
+    )) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
+    el.open = true;
+    await elementUpdated(el);
+
+    const [panelA] = [...el.children] as [HTMLElement];
+    const percent = el.sizes[0]!;
+    // The seam's fallback reproduces the pre-existing literal percent exactly when unset.
+    expect(panelA.style.getPropertyValue("inline-size")).to.equal(
+      `var(--lr-multi-split-floating-panel-inline-size, ${percent}%)`
+    );
+    expect(parseFloat(getComputedStyle(panelA).width)).to.be.closeTo(
+      (percent / 100) * 300,
+      0.5
+    );
+  } finally {
+    spy.restore();
+  }
+});
+
+it("lets a consumer override the floating panel's inline-size via --lr-multi-split-floating-panel-inline-size without !important", async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px; --lr-multi-split-floating-panel-inline-size: 220px;"
+        ><div>A</div>
+        <div>B</div></lr-multi-split
+      >`
+    )) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
+    el.open = true;
+    await elementUpdated(el);
+
+    const [panelA] = [...el.children] as [HTMLElement];
+    // No !important anywhere -- the override reaches the rendered box through the seam alone.
+    expect(getComputedStyle(panelA).width).to.equal("220px");
+
+    // The owned inline style is rewritten on every render (it mirrors the live sizes[i] percent
+    // as its fallback) -- prove the override survives a subsequent re-render, not just first paint.
+    el.open = false;
+    await elementUpdated(el);
+    el.open = true;
+    await elementUpdated(el);
+    expect(getComputedStyle(panelA).width).to.equal("220px");
+  } finally {
+    spy.restore();
+  }
+});
+
 it("honors a custom rail-width for the rail state", async () => {
   const spy = installStubResizeObserver();
   try {
@@ -4119,10 +4356,39 @@ it("defaults open to false: the floating pane renders nothing (hidden, out of th
 
     const [panelA] = [...el.children] as [HTMLElement];
     expect(panelA.hidden).to.be.true;
+    expect(getComputedStyle(panelA).display).to.equal("none");
     expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
       true
     );
   } finally {
+    spy.restore();
+  }
+});
+
+it("keeps the closed floating panel display:none even against an author 'display' rule targeting it directly (regression)", async () => {
+  const spy = installStubResizeObserver();
+  const style = document.createElement("style");
+  style.textContent = `[data-hostile-display] { display: flex; }`;
+  document.head.append(style);
+  try {
+    const el = (await fixture(
+      html`<lr-multi-split collapse="start"
+        ><div data-hostile-display>A</div>
+        <div>B</div></lr-multi-split
+      >`
+    )) as LyraMultiSplit;
+    await elementUpdated(el);
+
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating, closed by default (open defaults false)
+    await elementUpdated(el);
+
+    const [panelA] = [...el.children] as [HTMLElement];
+    expect(panelA.hidden).to.be.true;
+    // Before the fix, this stylesheet's own author-origin 'display: flex' -- ordinary weight, no
+    // !important -- silently defeated the UA's '[hidden] { display: none }' default.
+    expect(getComputedStyle(panelA).display).to.equal("none");
+  } finally {
+    style.remove();
     spy.restore();
   }
 });

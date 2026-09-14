@@ -16,6 +16,18 @@ export const styles = css`
       var(--lr-icon-button-size),
       var(--lr-size-3px)
     );
+    /* The painted hairline's own thickness, independent of the target-size track above. Only
+       the ::before inset calc below reads this -- the WCAG 2.5.8 pointer target stays governed
+       solely by --lr-multi-split-divider-target-size, so retuning one can never shrink the
+       other. */
+    --_lr-multi-split-divider-thickness: var(--lr-size-3px);
+    --_lr-multi-split-divider-color: var(--lr-color-border);
+    --_lr-multi-split-divider-hover-color: var(--lr-color-brand);
+    --_lr-multi-split-divider-active-color: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part="base"] {
     --_lr-multi-split-panel-min: 0;
@@ -40,6 +52,22 @@ export const styles = css`
     max-block-size: 100%;
     overflow: auto;
     overflow-wrap: anywhere;
+    /* box-sizing does not inherit across the slot boundary, so a slotted panel with its own
+       padding/border would otherwise overflow the percent/flex-basis allocation computed for its
+       content-box. */
+    box-sizing: border-box;
+  }
+  /* The display above is author-origin, so it outranks the UA stylesheet's own
+     '[hidden] { display: none }' -- restating it keeps a hidden panel (including the 'floating'
+     drawer's closed state, applied via applyOwnedPanelHidden()) actually invisible. '!important'
+     is required, not stylistic: per CSS Cascade 5's shadow-tree encapsulation-context ordering, a
+     normal-weight rule in the slotted element's OWN (light-DOM) tree already outranks a
+     same-specificity ::slotted() rule declared in this shadow tree, so any author 'display' rule
+     targeting the panel directly would otherwise silently win and re-show it. Only '!important'
+     reverses that so this (inner) tree wins. The :not([hidden='until-found' i]) carve-out
+     matches every other ::slotted([hidden]) override in the library. */
+  ::slotted([hidden]:not([hidden="until-found" i])) {
+    display: none !important;
   }
   :host([orientation="vertical"]) [part="base"] {
     flex-direction: column;
@@ -77,8 +105,19 @@ export const styles = css`
     content: "";
     position: absolute;
     inset-block: 0;
-    inset-inline: calc((100% - var(--lr-size-3px)) / 2);
-    background: var(--lr-color-border);
+    inset-inline: calc(
+      (
+          100% -
+            var(
+              --lr-multi-split-divider-thickness,
+              var(--_lr-multi-split-divider-thickness)
+            )
+        ) / 2
+    );
+    background: var(
+      --lr-multi-split-divider-color,
+      var(--_lr-multi-split-divider-color)
+    );
     pointer-events: none;
   }
   /* :where() drops this from (0,3,0) to (0,1,0); at (0,3,0) its cursor: row-resize out-ranks the
@@ -102,7 +141,15 @@ export const styles = css`
     cursor: row-resize;
   }
   :host(:where([orientation="vertical"])) [part="divider"]::before {
-    inset-block: calc((100% - var(--lr-size-3px)) / 2);
+    inset-block: calc(
+      (
+          100% -
+            var(
+              --lr-multi-split-divider-thickness,
+              var(--_lr-multi-split-divider-thickness)
+            )
+        ) / 2
+    );
     inset-inline: 0;
   }
   /* orientationBreakpoint's live axis, present only when that feature is opted into (updated()).
@@ -136,7 +183,15 @@ export const styles = css`
   }
   :host(:where([data-effective-orientation="vertical"]))
     [part="divider"]::before {
-    inset-block: calc((100% - var(--lr-size-3px)) / 2);
+    inset-block: calc(
+      (
+          100% -
+            var(
+              --lr-multi-split-divider-thickness,
+              var(--_lr-multi-split-divider-thickness)
+            )
+        ) / 2
+    );
     inset-inline: 0;
   }
   :host(:where([data-effective-orientation="horizontal"])) [part="divider"] {
@@ -158,19 +213,29 @@ export const styles = css`
   :host(:where([data-effective-orientation="horizontal"]))
     [part="divider"]::before {
     inset-block: 0;
-    inset-inline: calc((100% - var(--lr-size-3px)) / 2);
+    inset-inline: calc(
+      (
+          100% -
+            var(
+              --lr-multi-split-divider-thickness,
+              var(--_lr-multi-split-divider-thickness)
+            )
+        ) / 2
+    );
   }
   [part="divider"]:hover::before {
-    background: var(--lr-color-brand);
+    background: var(
+      --lr-multi-split-divider-hover-color,
+      var(--_lr-multi-split-divider-hover-color)
+    );
   }
   /* Pointer capture holds :active for the whole gesture, so the deeper mix persists from mousedown
      to release; a divider beside a collapsed pane never reaches it -- [aria-disabled='true'] below
      removes its pointer events. */
   [part="divider"]:active::before {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-multi-split-divider-active-color,
+      var(--_lr-multi-split-divider-active-color)
     );
   }
   [part="divider"]:focus-visible {
@@ -184,11 +249,16 @@ export const styles = css`
     cursor: default;
     pointer-events: none;
   }
-  /* The 'floating' overlay card. inline-size, flex and order stay inline, set by updated() from
-     the live sizes[i] percent -- the value 'wide' renders at, so un-floating never jumps; retune
-     via .sizes, since the live sync undoes an override here. position, inset-block and the
-     inset-inline-* edge below are fixed defaults, so consumer CSS overrides them at normal
-     specificity without !important. z-index above [part="backdrop"] covers the drawer's scrim. */
+  /* The 'floating' overlay card. flex and order stay inline, set by updated() from the live
+     sizes[i] percent -- the value 'wide' renders at, so un-floating never jumps; retune via
+     .sizes, since the live sync undoes a direct override of those two. inline-size is also set
+     inline, but wrapped as a var() reading --lr-multi-split-floating-panel-inline-size with the
+     live percent as its fallback -- that fallback keeps it byte-identical when unset, while the
+     custom property itself is a durable seam a consumer can set (e.g. on an ancestor) to override
+     the geometry at normal specificity, without !important, and without it being undone by the
+     next live-sync render. position, inset-block and the inset-inline-* edge below are fixed
+     defaults, so consumer CSS overrides them at normal specificity without !important. z-index
+     above [part="backdrop"] covers the drawer's scrim. */
   ::slotted([data-collapse-state="floating"]) {
     position: absolute;
     inset-block: 0;

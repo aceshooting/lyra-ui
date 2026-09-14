@@ -269,6 +269,22 @@ export interface LyraMultiSplitEventMap {
  * @cssprop [--lr-multi-split-divider-target-size=max(var(--lr-icon-button-size),var(--lr-size-3px))] -
  *   The real layout gutter reserved for each divider along the resize axis. The narrow visual rule
  *   is centered inside this owned track, so the target never overlaps either adjacent panel.
+ * @cssprop [--lr-multi-split-divider-thickness=var(--lr-size-3px)] - The painted hairline's own
+ *   thickness, independent of `--lr-multi-split-divider-target-size` above -- retuning either one
+ *   never changes the other, so the WCAG 2.5.8 pointer target can never be shrunk by a thinner or
+ *   thicker visual line.
+ * @cssprop [--lr-multi-split-divider-color=var(--lr-color-border)] - The divider hairline's
+ *   resting color.
+ * @cssprop [--lr-multi-split-divider-hover-color=var(--lr-color-brand)] - The divider hairline's
+ *   color on hover.
+ * @cssprop [--lr-multi-split-divider-active-color=color-mix(in oklab,var(--lr-color-brand),var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ *   The divider hairline's color while a resize gesture is pressed (pointer capture holds this
+ *   through the whole drag).
+ * @cssprop --lr-multi-split-floating-panel-inline-size - Overrides the `'floating'` collapse
+ *   state's overlay card `inline-size`, which otherwise mirrors its own live `sizes[i]` percent
+ *   (i.e. what it renders at in the `'wide'` state). Unset, geometry is identical to today's
+ *   behavior; set, it wins over that percent without needing `!important` against the
+ *   live-synced inline style.
  * @status stable
  * @since 9.0.0
  */
@@ -2291,12 +2307,20 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         // at in the `'wide'` state), so there's no visual size jump the moment
         // it un-floats — this one stays inline since it's genuinely live,
         // synced to the same draggable `sizes[i]` the `'wide'` state uses.
-        this.applyOwnedPanelStyleValue(panel, snapshot, 'flex', 'none');
+        // Wrapped in `var(--lr-multi-split-floating-panel-inline-size, ...)` --
+        // a plain inline style is otherwise unbeatable by a consumer stylesheet
+        // rule short of `!important` (an inline style always outranks a
+        // stylesheet rule regardless of specificity), and this one is
+        // rewritten every render, so an `!important` override would itself be
+        // wiped the next time `sizes` changes. The custom property is a
+        // stable seam instead: unset, the fallback reproduces today's percent
+        // exactly; set (e.g. on an ancestor, so it survives re-renders), it
+        // wins over the percent fallback at ordinary specificity.
         this.applyOwnedPanelStyleValue(
           panel,
           snapshot,
           'inline-size',
-          `${percent}%`
+          `var(--lr-multi-split-floating-panel-inline-size, ${percent}%)`
         );
       } else if (collapsingIndex !== -1 && i !== collapsingIndex) {
         // The pane(s) sharing the split with a currently rail/floating
