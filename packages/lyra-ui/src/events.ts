@@ -1446,6 +1446,13 @@ export type LyraGroupExpandEvent = LyraDataGridEventMap['lr-group-expand'];
 export type LyraGroupToggleEvent = LyraThreadListEventMap['lr-group-toggle'];
 
 /**
+ * `lr-group-toggle-request` — dispatched by `<lr-thread-list>`.
+ *
+ * Detail type: `LyraThreadListEventMap['lr-group-toggle-request']`.
+ */
+export type LyraGroupToggleRequestEvent = LyraThreadListEventMap['lr-group-toggle-request'];
+
+/**
  * `lr-hidden-types-change` — dispatched by `<lr-knowledge-graph-explorer>`.
  *
  * Detail type: `LyraKnowledgeGraphExplorerEventMap['lr-hidden-types-change']`.
@@ -3635,6 +3642,7 @@ export interface LyraGlobalEventMap {
   'lr-group-collapse': LyraGroupCollapseEvent;
   'lr-group-expand': LyraGroupExpandEvent;
   'lr-group-toggle': LyraGroupToggleEvent;
+  'lr-group-toggle-request': LyraGroupToggleRequestEvent;
   'lr-hidden-types-change': LyraHiddenTypesChangeEvent;
   'lr-hide': LyraHideEvent;
   'lr-highlight-activate': LyraHighlightActivateEvent;

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -116,8 +116,21 @@ WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same 
 fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independently retints its
 checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
 retint the pointer states (their defaults remain mixes from the current resting fill).
-`--lr-switch-thumb-fill` (default `--lr-color-surface`) controls the thumb in either state. None of
-these hooks touches the label text beside the track. Plus shared tokens
+`--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
+renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
+look) without affecting any other switch.
+`--lr-switch-thumb-fill` (default `--lr-color-surface`) controls the thumb while unchecked, and is
+also the checked-state fallback. `--lr-switch-checked-thumb-fill` (default
+`var(--lr-switch-thumb-fill)`) independently retints the thumb only while checked, leaving the
+unchecked thumb untouched.
+`--lr-switch-label-color` (default `var(--lr-color-text)`) controls `[part='label']`'s text color,
+and is also the checked-state fallback. `--lr-switch-checked-label-color` (default
+`var(--lr-switch-label-color)`) independently retints the label only while checked. Both label hooks
+read the switch's **live** checked state (the same `:state(checked)` custom state the class doc's
+`@cssstate checked` documents), not the `checked` *attribute* — which instead reflects
+`defaultChecked`, the form-reset value — so the checked-state hook tracks user interaction correctly
+even though the attribute does not.
+Plus shared tokens
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 

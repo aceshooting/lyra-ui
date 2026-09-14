@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 29 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 30 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -230,7 +230,11 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
 - `sourceTruncated: boolean` (read-only) — whether the response reported or contained more rows
   than the bounded retained snapshot; the overflow row includes that hidden count
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
-  `multiple` mode
+  `multiple` mode. Assigning `undefined`/`null` clears the selection; every string, including `''`,
+  is instead a candidate value resolved against the current local options/async rows — an
+  `<lr-option value="">` (or a matching async row) is legitimate and round-trips like any other
+  value. A value matching no current option/row still commits rather than being dropped or treated
+  as a clear — see "Unknown committed values" below
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `selectedRows` (read: `ComboboxSourceRow[]`; write: `readonly ComboboxSourceRow[]`) — structured
   rows for the current selection, including any opaque `data` payload supplied by an async source.
@@ -240,6 +244,15 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   no longer contains them
 - `selectionStart`, `selectionEnd`, and `selectionDirection` — selection getters/setters forwarded
   to the internal input
+
+**Unknown committed values.** A committed value matching no current option/row (a stale value from
+a removed option, or a programmatic assignment with a typo) still commits — the raw string stays
+fully reachable through `value`/`selectedRows` — but renders a dashed/italic
+`[part='unknown-value']` badge next to the closed single-select input, or on the relevant
+`multiple`-mode tag, instead of an unexplained bare label, mirroring `<lr-model-select>`'s synthetic
+"not in catalog" stale-value row — see `--lr-combobox-unknown-value-border-style`/`-color` below.
+The badge is suppressed while an async `source` fetch is still in flight, and never shown for an
+`allowCustomValue` commit, which is a sanctioned unmatched value, not a stale one.
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
@@ -367,7 +380,9 @@ attribute when provided), plus two adornment slots:
 `start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
 `tag-label`, `tag__content`, `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
-`clear-button`, `expand-icon`, `listbox`,
+`clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
+input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
+`expand-icon`, `listbox`,
 `group-label` (the heading of an option group — rows sharing a `group` — named as on `lr-select` and
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
@@ -405,6 +420,10 @@ and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`)
 four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
 Like the active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer
 can retheme the selected row without hijacking `--lr-color-brand` library-wide.
+
+`--lr-combobox-unknown-value-border-style` (default `dashed`) and
+`--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
+`[part='unknown-value']` badge described above under "Unknown committed values".
 
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by

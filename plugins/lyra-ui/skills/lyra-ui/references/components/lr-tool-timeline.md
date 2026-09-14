@@ -80,6 +80,11 @@ can ignore it; one actually executing the tool needs it. This is a cancelable ve
 `preventDefault()` preserves the pending approval dialog and its current inline argument edits
 instead of closing/resetting them, sets `pendingApproval`, and requires the host to call
 `finalizePendingApproval()` after persistence succeeds or `revertPendingApproval()` after it fails.
+A host may instead resolve the decision synchronously by reassigning `entries` (with the entry's
+`approved` field set) from within that same listener, without ever calling
+`finalizePendingApproval()`: the entry's live state is re-checked immediately after dispatch, so
+`pendingApproval` — and the shared dialog's pending presentation — is never set or left set for
+an entry that no longer needs a decision.
 
 ```ts
 timeline.addEventListener("lr-tool-approval-decide", async (event) => {

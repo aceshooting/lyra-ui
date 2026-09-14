@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-chip` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -76,6 +76,10 @@ relied on `<lr-chip selected>` to create an action.
 - `value?: string` — opaque consumer bookkeeping value, never read, validated, or rendered by this
   component itself, only ever echoed back verbatim (including `undefined` if never set) in
   `lr-remove`'s detail
+- `wrap: boolean = false` (reflected) — wraps `[part='label']` onto multiple lines instead of
+  ellipsis-truncating it to one line. `false` (the default) reproduces the chip's original
+  single-line, ellipsis-truncated label exactly. Matches `<lr-suggestion-chips>`'s identical `wrap`
+  opt-in.
 
 **Events:** `lr-remove` (`detail: { value }` — the remove (×) button was activated via click or
 Enter/Space while focused; only rendered/reachable while `removable`), `lr-chip-select`
@@ -215,7 +219,9 @@ usage)
 actively causing an overflow—a locally-styled pill, not an instantiated real `<lr-chip>`, with the
 shared minimum hit area in both axes)
 
-**Themeable custom properties:** `--lr-chip-group-overflow-expanded-color` (default
+**Themeable custom properties:** `--lr-chip-group-gap` (default `var(--lr-space-xs)`) — the gap
+between `[part='base']`'s wrapped children (chips and the overflow indicator alike); previously
+hardcoded. `--lr-chip-group-overflow-expanded-color` (default
 `var(--lr-color-text)`) — text color of `[part="overflow-indicator"]` while expanded
 (`aria-expanded="true"`). `--lr-chip-group-overflow-expanded-border-style` (default `solid`) —
 that same expanded indicator's border style; its resting border deliberately remains dashed, so a

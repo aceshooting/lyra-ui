@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -111,7 +111,12 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
-**Themeable custom properties:** `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
+**Themeable custom properties:** `--lr-stat-padding` (default `var(--lr-space-m)`) and
+`--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
+rendering path — the default card, `compact` (own defaults `var(--lr-space-s)` /
+`var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal
+`.linked-content` wrapper used when `href` is set, so one override reaches a linked and an
+unlinked stat identically. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
 and `--lr-stat-trend-good-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%,
 transparent)`) — text/background of `[part="trend"]` when its polarity (per `goodDirection`) is
 "good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`

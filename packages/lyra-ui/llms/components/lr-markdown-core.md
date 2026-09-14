@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -79,15 +79,21 @@ as the full class; the core route exports its own `Marked` alias.
 anchor-jump message), `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`,
 `link`, `table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
 
-**Themeable custom properties:** `--lr-code-block-tab-size` (default `2` — tab width inside a
-rendered fenced or indented `code-block`), with exactly the mechanics described under
-`<lr-markdown>` above: the same property name and default that `<lr-code-block>`/`<lr-code-editor>`
-read, declared as a `var()` fallback at the point of use rather than on `:host` so a page- or
-container-level value reaches it, and carried here in its own right because this element is a
-**sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown code blocks wrap
-(`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width can render
-differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by rendered
-code and defaults to `var(--lr-font-mono)`.
+**Themeable custom properties:** identical to `<lr-markdown>`'s own code-surface tokens —
+`--lr-markdown-code-bg` (default `var(--lr-color-brand-quiet)`, shared by inline `code` and the
+fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-radius` (inline
+`code` span padding/radius, defaulting to `var(--lr-size-0-125rem) var(--lr-size-0-3125rem)`/
+`calc(var(--lr-radius) * 0.5)`), and `--lr-markdown-code-block-padding`/
+`--lr-markdown-code-block-radius` (the fenced `code-block` surface's padding/radius, defaulting to
+`var(--lr-space-s) var(--lr-space-m)`/`var(--lr-radius)`) — plus `--lr-code-block-tab-size` (default
+`2` — tab width inside a rendered fenced or indented `code-block`), with exactly the mechanics
+described under `<lr-markdown>` above: the same property name and default that
+`<lr-code-block>`/`<lr-code-editor>` read, declared as a `var()` fallback at the point of use rather
+than on `:host` so a page- or container-level value reaches it, and carried here in its own right
+because this element is a **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown
+code blocks wrap (`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width
+can render differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by
+rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only

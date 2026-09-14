@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -64,10 +64,16 @@ color hook as `segment`) and `legend-label`
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the
 two can never disagree. `--lr-context-meter-legend-swatch-size` (default `var(--lr-size-0-625rem)`)
-sizes a legend chip on both axes. Otherwise the component consumes shared tokens
+sizes a legend chip on both axes. The `bar`-shape track is independently retunable:
+`--lr-context-meter-track-size` (default `var(--lr-size-0-5rem)`) is its block size (and so the
+block size of its filled segments), `--lr-context-meter-track-radius` (default
+`calc(var(--lr-radius) * 0.5)`) its corner radius, `--lr-context-meter-track-bg` (default
+`color-mix(in srgb, var(--lr-color-border) 30%, transparent)`) the background of its unfilled
+remainder, and `--lr-context-meter-segment-seam-color` (default `var(--lr-color-surface)`) the
+hairline seam painted between adjacent segments. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
-`--lr-color-surface` (the bar variant's inter-segment seam), `--lr-color-brand`,
-`--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`, `--lr-transition-base`.
+`--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,
+`--lr-transition-base`.
 
 **Optional peer deps:** none.
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -174,10 +174,18 @@ carrying `data-display="inline"|"block"`)
 
 **Themeable custom properties:** `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
-`--lr-theme-font-family-mono` override reaches it), `--lr-code-block-tab-size` (default `2` — tab width inside a
-rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/-m/-l`,
-`--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`, `--lr-color-text-quiet`,
-`--lr-radius`.
+`--lr-theme-font-family-mono` override reaches it), `--lr-markdown-code-bg` (default
+`var(--lr-color-brand-quiet)` — background shared by every inline `code` span and the fenced
+`code-block` surface, so a consumer can retheme either or both together without repainting every
+other surface that reads the shared brand-quiet token), `--lr-markdown-code-padding` (default
+`var(--lr-size-0-125rem) var(--lr-size-0-3125rem)` — inline `code` span padding),
+`--lr-markdown-code-radius` (default `calc(var(--lr-radius) * 0.5)` — inline `code` span border
+radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr-space-m)` — the
+fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (default `var(--lr-radius)`
+— the fenced `code-block` surface's border radius), `--lr-code-block-tab-size` (default `2` — tab
+width inside a rendered fenced or indented `code-block`), plus shared tokens
+`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`,
+`--lr-color-text-quiet`, `--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
 `loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half

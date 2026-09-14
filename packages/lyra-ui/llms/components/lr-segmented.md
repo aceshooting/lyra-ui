@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -91,7 +91,10 @@ when a label is a single character and the track ends up taller than its nominal
 thumb lifted a hair off its own track) style the checked segment's pill;
 `--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
-bleeds onto hover. These five existing state hooks are inline `var()` fallbacks at the
+bleeds onto hover. `--lr-segmented-hover-bg` (default `transparent`) and `--lr-segmented-hover-shadow`
+(default `none`) style that same hovered segment's background and box shadow; both are undeclared by
+default, so they fall back to the segment's own resting values and change nothing about today's
+hover paint until set. These seven state hooks are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so each can be set on the element _or on any
 ancestor_; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
@@ -143,5 +146,9 @@ resolves.
 - `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
 - `--lr-segmented-track-padding` — Track inset padding. Default: `var(--lr-size-0-125rem)`.
+- `--lr-segmented-track-bg` — Background of the `base` track. Undeclared by default (transparent),
+  matching its own current absence of a background.
+- `--lr-segmented-track-border-color` — Border color of the `base` track, which previously read
+  `--lr-color-border` as a literal with no override hook. Default: `var(--lr-color-border)`.
 
 ---

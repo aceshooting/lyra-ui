@@ -68,7 +68,10 @@ renders at the start of the action row, before Deny/Edit/Approve.
   also still `disabled` while an in-progress edit is invalid JSON, independent of `pending`).
   Escape and an enabled backdrop dismissal are suppressed while `pending` is set. Finalize by calling
   `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
-  state; `pending` also resets to `null` every time the dialog re-opens.
+  state; `pending` also resets to `null` every time the dialog re-opens. If that same listener
+  resolves the decision itself synchronously (calling `close('approve'|'deny')` or setting
+  `.pending` directly before returning), that wins outright: the component's own built-in `pending`
+  bookkeeping only applies when the listener left both `.pending` and `.open` untouched.
 
 **Methods:** `show(): void` opens the dialog; `hide(reason: ToolApprovalDialogCloseReason = 'api'):
 void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,

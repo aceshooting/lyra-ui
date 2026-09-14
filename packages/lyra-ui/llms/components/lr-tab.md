@@ -47,6 +47,10 @@ this tab is projected into lives in `<lr-tab-group>`'s shadow root, so it inheri
 `--lr-tab-group-selected-color`, `--lr-tab-group-indicator-color` and `--lr-tab-group-hover-color`
 from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself does nothing: this
 element is _inside_ that button in the flattened tree, and inheritance only runs the other way.
+`<lr-tab>`'s own host is `color: inherit; font: inherit;` for exactly this reason — it makes the
+projected element (and therefore its visible label) pick up the real tab button's own computed
+color and font, so `--lr-tab-group-selected-color`/`--lr-tab-group-hover-color` reach the rendered
+tab text rather than being shadowed by the library's own default text color.
 
 Before group hydration, an unassigned tab places itself in the public `nav` slot. The group then
 writes its internal per-tab `slot` attribute itself. A labeled tab with no `panel` gets a stable

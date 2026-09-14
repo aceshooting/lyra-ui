@@ -79,6 +79,10 @@ highlighted markup.
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
   `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
   the type-only granular import emits no registration side effect.
+  The map key need not be the grammar module's own registered name or one of its declared
+  aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
+  `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
+  second near-identical grammar) still highlights under that key.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`

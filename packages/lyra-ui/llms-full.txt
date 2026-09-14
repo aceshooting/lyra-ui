@@ -4420,7 +4420,11 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
 - `sourceTruncated: boolean` (read-only) — whether the response reported or contained more rows
   than the bounded retained snapshot; the overflow row includes that hidden count
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
-  `multiple` mode
+  `multiple` mode. Assigning `undefined`/`null` clears the selection; every string, including `''`,
+  is instead a candidate value resolved against the current local options/async rows — an
+  `<lr-option value="">` (or a matching async row) is legitimate and round-trips like any other
+  value. A value matching no current option/row still commits rather than being dropped or treated
+  as a clear — see "Unknown committed values" below
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `selectedRows` (read: `ComboboxSourceRow[]`; write: `readonly ComboboxSourceRow[]`) — structured
   rows for the current selection, including any opaque `data` payload supplied by an async source.
@@ -4430,6 +4434,15 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   no longer contains them
 - `selectionStart`, `selectionEnd`, and `selectionDirection` — selection getters/setters forwarded
   to the internal input
+
+**Unknown committed values.** A committed value matching no current option/row (a stale value from
+a removed option, or a programmatic assignment with a typo) still commits — the raw string stays
+fully reachable through `value`/`selectedRows` — but renders a dashed/italic
+`[part='unknown-value']` badge next to the closed single-select input, or on the relevant
+`multiple`-mode tag, instead of an unexplained bare label, mirroring `<lr-model-select>`'s synthetic
+"not in catalog" stale-value row — see `--lr-combobox-unknown-value-border-style`/`-color` below.
+The badge is suppressed while an async `source` fetch is still in flight, and never shown for an
+`allowCustomValue` commit, which is a sanctioned unmatched value, not a stale one.
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
@@ -4557,7 +4570,9 @@ attribute when provided), plus two adornment slots:
 `start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
 `tag-label`, `tag__content`, `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
-`clear-button`, `expand-icon`, `listbox`,
+`clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
+input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
+`expand-icon`, `listbox`,
 `group-label` (the heading of an option group — rows sharing a `group` — named as on `lr-select` and
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
@@ -4595,6 +4610,10 @@ and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`)
 four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
 Like the active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer
 can retheme the selected row without hijacking `--lr-color-brand` library-wide.
+
+`--lr-combobox-unknown-value-border-style` (default `dashed`) and
+`--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
+`[part='unknown-value']` badge described above under "Unknown committed values".
 
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
@@ -4870,12 +4889,23 @@ unknown`, exported under that name from the component's own module, renders one
 - `value: string | string[]` — a getter/setter: a plain `string` in single mode (empty when nothing
   is selected), a `string[]` in `multiple` mode
 - `defaultValue: string | string[]` (attribute `default-value` accepts the single string form) —
-  reset selection; changing it updates the live value only while the control is pristine
+  reset selection; changing it updates the live value only while the control is pristine. Assigning
+  `undefined`/`null` to either clears the selection; every string, including `''`, is a candidate
+  value resolved against the current `<lr-option>`s instead — an `<lr-option value="">` is a
+  legitimate row and round-trips like any other value. A value matching no current option still
+  commits — see "Unknown committed values" below
 - `selectedOptions: LyraOption[]` — a writable, fresh snapshot of the live selected occurrences.
   Assigning live child options commits their exact occurrences through the same event-silent path
   as `value`; foreign/detached options are ignored, and single mode keeps only the first. Mutating
   an array returned by the getter never mutates the control
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
+
+**Unknown committed values.** A committed value matching no current `<lr-option>` (a stale value
+from a removed option, or a programmatic assignment with a typo) still commits — the raw string
+stays fully reachable through `value`/`selectedOptions` — but renders a dashed/italic
+`[part='unknown-value']` badge next to the trigger label, or on the relevant `multiple`-mode tag,
+instead of an unexplained bare label, mirroring `<lr-model-select>`'s synthetic "not in catalog"
+stale-value row — see `--lr-select-unknown-value-border-style`/`-color` below.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once
@@ -4929,13 +4959,18 @@ text are part of the focused control's accessible description.
 `tag__remove-button`/`tag__remove-button__base`, and `tag-overflow` (the "+N" chip standing in for the selections past
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
-is encoded in the part name instead), `clear-button` (the `with-clear` button, present only while
+is encoded in the part name instead), `unknown-value` (the dashed/italic badge shown next to the
+trigger label, or on a `multiple`-mode tag, when the committed value matches no current
+`<lr-option>`), `clear-button` (the `with-clear` button, present only while
 there is a selection to clear), `listbox` (the managed nonmodal popup, layered by
 `--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback),
 `group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
 the previous one's — its stable ID labels a `role="group"` wrapper that semantically owns the
 following option rows; options with an empty `group` get no heading or group wrapper),
-`option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
+`option`, `option-dot` (the leading status dot, when a row's `dotColor` is set),
+`option-start`/`option-end` (an option row's leading/trailing adornment, cloned from the source
+`<lr-option>`'s `start`/`prefix`/`end`/`suffix` slot — inert and `aria-hidden`, exactly like
+`lr-combobox`'s identical parts), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
@@ -4997,6 +5032,10 @@ active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a
 retheme the selected row without hijacking `--lr-color-brand` library-wide. Note the shadow-parts
 spec forbids an attribute selector after `::part()` — `::part(option)[aria-selected='true']` is
 invalid CSS and never matches — which is exactly why these tokens exist.
+
+`--lr-select-unknown-value-border-style` (default `dashed`) and
+`--lr-select-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
+`[part='unknown-value']` badge described above under "Unknown committed values".
 
 **Optional peer deps:** none.
 
@@ -5936,7 +5975,14 @@ for `accent`); the chrome-less tiers paint nothing, so they mix from the page su
 var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) is the hovered background and
 `--lr-button-active-background` the same mix at the stronger `--lr-color-mix-active` share, so a
 press reads as more than a hover. `appearance="link"` moves its text colour by those two shares
-instead of taking a background. **Breaking in 8.0.0:** this replaced `--lr-button-hover-brightness`,
+instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border` are the
+text/border counterparts, letting e.g. `appearance="quiet"` (which has its own resting
+`--lr-button-quiet-text`/`-border`) theme its hover state independently. Both are **undeclared by
+default**, falling back to whatever colour/border the active `appearance` already paints at rest —
+every appearance's current hover paint is unchanged until one is set.
+`appearance="link"` ignores `--lr-button-hover-color` (its own hover rule sets a higher-specificity
+colour mix) and renders with no border at any state, so `--lr-button-hover-border` has no visible
+effect there. **Breaking in 8.0.0:** this replaced `--lr-button-hover-brightness`,
 which no longer exists — a `filter: brightness()` multiplies every channel, so it moved a mid-toned
 fill but did nothing at all to a pure white or pure black one, and it dimmed the label and icons
 along with the box. Retuning `--lr-button-fill` or `--lr-button-accent-fill` now retunes that tier's
@@ -5976,7 +6022,8 @@ chevron's font size — declared in `em`, so it tracks every `size` tier through
 size instead of needing a per-tier value.
 `--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
 byte-identical to before this property existed — set it to add a drop shadow (e.g. an
-elevated/floating action button) without a `::part(base)` rule.
+elevated/floating action button) without a `::part(base)` rule. `appearance="link"` always renders
+with no shadow regardless of this token — a zero-chrome inline link has no box to elevate.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no
@@ -7845,8 +7892,21 @@ WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same 
 fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independently retints its
 checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
 retint the pointer states (their defaults remain mixes from the current resting fill).
-`--lr-switch-thumb-fill` (default `--lr-color-surface`) controls the thumb in either state. None of
-these hooks touches the label text beside the track. Plus shared tokens
+`--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
+renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
+look) without affecting any other switch.
+`--lr-switch-thumb-fill` (default `--lr-color-surface`) controls the thumb while unchecked, and is
+also the checked-state fallback. `--lr-switch-checked-thumb-fill` (default
+`var(--lr-switch-thumb-fill)`) independently retints the thumb only while checked, leaving the
+unchecked thumb untouched.
+`--lr-switch-label-color` (default `var(--lr-color-text)`) controls `[part='label']`'s text color,
+and is also the checked-state fallback. `--lr-switch-checked-label-color` (default
+`var(--lr-switch-label-color)`) independently retints the label only while checked. Both label hooks
+read the switch's **live** checked state (the same `:state(checked)` custom state the class doc's
+`@cssstate checked` documents), not the `checked` *attribute* — which instead reflects
+`defaultChecked`, the form-reset value — so the checked-state hook tracks user interaction correctly
+even though the attribute does not.
+Plus shared tokens
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -10208,7 +10268,12 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
-**Themeable custom properties:** `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
+**Themeable custom properties:** `--lr-stat-padding` (default `var(--lr-space-m)`) and
+`--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
+rendering path — the default card, `compact` (own defaults `var(--lr-space-s)` /
+`var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal
+`.linked-content` wrapper used when `href` is set, so one override reaches a linked and an
+unlinked stat identically. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
 and `--lr-stat-trend-good-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%,
 transparent)`) — text/background of `[part="trend"]` when its polarity (per `goodDirection`) is
 "good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
@@ -10584,7 +10649,8 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
   bounded to the first 10,000 source positions; blank keys and later duplicates are omitted first-wins
   before header, cell, sort, focus, and event paths; reassign to update) — `{ key, label,
 headerCell?, width?, minWidth?, maxWidth?,
-resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
+resizable?, sortable?, sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start'|'end',
+priority?: 'medium'|'low',
 sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
 cell: (row) => unknown }` —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
@@ -10595,13 +10661,23 @@ cell: (row) => unknown }` —
   stringified `cell()` output instead — meaningful only when `cell()` returns a string or number, so
   define `sortValue` whenever `cell()` returns a template or element. Ignored under
   `sortMode="server"` and on a column that is not `sortable`;
+  `defaultSortDir` sets this column's own initial sort direction the first time header activation
+  makes it the active `sortKey`, taking precedence over the element-level `defaultSortDir` (see
+  below), which remains the fallback when this is omitted — useful for giving one column in an
+  otherwise-ascending table (e.g. a "last updated" column) the opposite starting direction.
+  Re-activating a column that is already `sortKey` still only toggles between `'asc'` and `'desc'`,
+  exactly as the element-level `defaultSortDir` already does;
   `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
   breakpoints are fixed in `table.styles.ts`, not themeable tokens), reversible via
   `[part='reveal-columns-button']`; `sticky` pins that column's header/cells to the logical start or
   end edge while the table scrolls horizontally — multiple sticky columns stack
   in logical order (each measures every earlier sticky column's rendered width via
-  `--lr-table-sticky-offset`) instead of overlapping at the same edge; `footer` renders a
+  `--lr-table-sticky-offset`) instead of overlapping at the same edge. A sticky body cell's
+  background always matches its own row's effective fill — striped, selected, hovered, or pressed —
+  rather than painting a flat opaque surface over that state; a sticky header cell is unaffected
+  (headers are never striped/selected) and keeps its plain surface fill, see
+  `--lr-table-row-selected-bg`/`--lr-table-row-stripe-bg` below; `footer` renders a
   sticky-bottom footer cell for that column, computed from every currently-rendered row (post-sort,
   pre-pagination) — e.g. a column total — omit it for a column with no footer value, and a
   `[part='foot']` (`<tfoot>`) only renders at all when at least one column defines `footer`;
@@ -10693,9 +10769,19 @@ cell: (row) => unknown }` —
   holds the globally-smallest rows rather than a re-sorted slice
 - `defaultSortDir: 'asc'|'desc' = 'asc'` (attribute `default-sort-dir`) — the direction applied
   whenever header activation switches sorting to a **different** column, including the first column
-  ever sorted. Re-activating the column that is already `sortKey` toggles between `'asc'` and
-  `'desc'` instead, so `defaultSortDir` never overrides a direction the user just chose for the
-  column they are still on. Set `'desc'` for a most-recent-first or highest-first table
+  ever sorted, for any column that does not declare its own `columns[].defaultSortDir` (that
+  column-level value wins first when set — see `columns` above). Re-activating the column that is
+  already `sortKey` toggles between `'asc'` and `'desc'` instead, so `defaultSortDir` never
+  overrides a direction the user just chose for the column they are still on. Set `'desc'` for a
+  most-recent-first or highest-first table
+- `viewRows: readonly T[]` (readonly; computed, no attribute) — `rows` after filtering and
+  (client-mode) sorting, ignoring pagination — the same set `columns[].footer(rows)`/
+  `grandTotal(rows)`/the heat-tint domain already compute over. Read this instead of
+  re-implementing filtering/sorting in a consumer that needs "what the grid currently shows" (e.g.
+  to export it). A fresh, frozen array on every read: mutating the result cannot reach or corrupt
+  the table's own internal state
+- `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
+  currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
 - `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
@@ -10800,8 +10886,14 @@ cell: (row) => unknown }` —
   Priority-hidden columns hide their header, body, and footer cells together at the existing
   container breakpoints in either direction; revealing columns restores all three bands.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
-  `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount. Unset
-  (the default) touches storage not at all. Mirrors `lr-app-rail`'s identical `storage-key` pattern
+  `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount, without
+  overwriting an explicitly declared `true` (`priority-columns-visible` present, or a
+  `.priorityColumnsVisible=${true}` binding) on that same mount. Unset (the default) touches storage
+  not at all. This is the same "explicit beats persisted" guarantee `lr-app-rail` gives each of its
+  several `persist`-selected fields, but not byte-identical: `lr-app-rail`'s undefaulted
+  `railWidthPx`/`preferredMode` fields let it key the guard off `willUpdate()`'s `changed` map,
+  while this property's own `false` default already reads as "changed" on every mount, so this
+  guard instead checks the property's own current value
 - `heatTintScale?: { min?: number; max?: number }` (attribute: false) — overrides the auto-derived
   heat-tint domain (min/max of every `heatValue` result across every currently-rendered row —
   post-sort, pre-pagination, the same rows `footer(rows)` already sees). Unset (the default) computes
@@ -10897,7 +10989,13 @@ one — and that `empty` disappears entirely once the `empty` slot is filled.
 `--lr-table-cell-link-hover-color` — an anchor returned from a column's `cell(row)` renders inside
 the component's shadow root, where page CSS cannot reach it and `::part()` cannot select past the
 first compound selector to reach it either, so without these it computes to the UA default link
-blue; set `revert` for the UA default. `--lr-table-max-height` (default `none`; controls the scrollable
+blue; set `revert` for the UA default. `--lr-table-cell-padding` (default `var(--lr-space-s)`) sets
+the padding of a header cell, a body cell, and the row-total cell; `--lr-table-cell-padding-compact`
+(default `var(--lr-space-xs) var(--lr-space-s)`) is the same hook for the group-header cell and the
+footer cell, which default to a tighter block/inline shorthand rather than sharing the first token
+outright — two hooks instead of one preserve that distinction. `--lr-table-font-size` (default
+`inherit`) sets the `<table>` element's font size; the rest of the font shorthand (family,
+weight, etc.) keeps inheriting from the host regardless of this override. `--lr-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-brand-quiet)`) and
 `--lr-table-heat-tint-hi` (default `var(--lr-color-brand)`) — the `color-mix()` ramp endpoints
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
@@ -10910,15 +11008,19 @@ opacity), `--lr-table-resize-handle-active-bg` (defaulting to the hover backgrou
 retune the rendered interaction states. These heat-tint/resize hooks are not redeclared on the component host: set them on
 `lr-table` or on a theme ancestor, and a table-level value wins through the normal cascade.
 `--lr-table-row-selected-bg` (default `var(--lr-color-brand-quiet)`) — the background of a row whose
-`aria-selected` is `true`. Like every state-scoped custom property in this library it is an inline
+`aria-selected` is `true`, including that row's own `sticky` column cell. Like every state-scoped
+custom property in this library it is an inline
 `var()` fallback at its point of use and is **not** declared on `:host`, so it can be set on the
 element _or on any ancestor_ and still reach the rule that reads it. It exists because Shadow Parts
 forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
 so the only prior lever for restyling the selected row was overriding the library-wide
 `--lr-color-brand-quiet` token, which repaints everything else reading it.
-`--lr-table-row-stripe-bg` (default `transparent`) — the background of alternating body rows. The
+`--lr-table-row-stripe-bg` (default `transparent`) — the background of alternating body rows,
+including each row's own `sticky` column cell. The
 component marks the alternating rows itself, so this works without an invalid `::part(row)` attribute
-or structural-pseudo-class selector and does not affect group, expanded, hover, or selected rows.
+or structural-pseudo-class selector and does not affect group, expanded, hover, or selected rows. A
+row's hover and pressed fills reach its `sticky` column cell the same way, through an internal
+custom property rather than a themeable token, since neither state has a public hook today.
 `--lr-table-header-sorted-bg` (default `var(--lr-color-surface)`) and `--lr-table-header-sorted-color` (default
 `inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`). The opaque surface default prevents body rows from
 showing through the sticky header while it scrolls.
@@ -11001,6 +11103,11 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
 - A grid with **none** of `accessibleLabel`, host `aria-label`, or `caption` logs a one-time
   `console.warn` on first render in development builds only — an unnamed grid is an accessibility
   defect that otherwise renders silently. Production and unknown/unbundled runtimes do not log it.
+- `revealColumnsLabel`/`hideColumnsLabel` only ever reach the DOM on
+  `[part='reveal-columns-button']`, which itself only renders while at least one column declares
+  `priority`. Setting either label with no `priority` column is therefore always inert — it logs
+  the same shape of one-time, development-only, production-silent `console.warn` as the missing
+  accessible-name check above, rather than failing silently.
 - Full roving-tabindex grid keyboard pattern (one `tabindex="0"` stop among header cells, one among
   body rows) — Left/Right/Home/End move within the header row, Up/Down/Home/End move within the
   body, Down from the header enters the body's roving stop and Up from the body's first row returns
@@ -13188,10 +13295,16 @@ color hook as `segment`) and `legend-label`
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the
 two can never disagree. `--lr-context-meter-legend-swatch-size` (default `var(--lr-size-0-625rem)`)
-sizes a legend chip on both axes. Otherwise the component consumes shared tokens
+sizes a legend chip on both axes. The `bar`-shape track is independently retunable:
+`--lr-context-meter-track-size` (default `var(--lr-size-0-5rem)`) is its block size (and so the
+block size of its filled segments), `--lr-context-meter-track-radius` (default
+`calc(var(--lr-radius) * 0.5)`) its corner radius, `--lr-context-meter-track-bg` (default
+`color-mix(in srgb, var(--lr-color-border) 30%, transparent)`) the background of its unfilled
+remainder, and `--lr-context-meter-segment-seam-color` (default `var(--lr-color-surface)`) the
+hairline seam painted between adjacent segments. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
-`--lr-color-surface` (the bar variant's inter-segment seam), `--lr-color-brand`,
-`--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`, `--lr-transition-base`.
+`--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,
+`--lr-transition-base`.
 
 **Optional peer deps:** none.
 
@@ -14564,7 +14677,8 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
 - `open: boolean = false` (reflected) — whether the `'floating'` collapse state's drawer is shown.
   While `collapseState` is `'floating'` and `open` is `false` (the default), the collapsing panel
   renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
-  card this state rendered before `open` existed. Setting `open = true` reveals it as a
+  card this state rendered before `open` existed — not just visually hidden; this holds even
+  against an author `display` rule targeting the panel directly. Setting `open = true` reveals it as a
   focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a backdrop click set
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
@@ -14610,10 +14724,24 @@ when `storage-key` is used).
 the `'floating'` drawer's `[part='backdrop']` scrim; scoped to `[part='base']`, not the viewport.
 `--lr-multi-split-divider-target-size` (default
 `max(var(--lr-icon-button-size), var(--lr-size-3px))`) — the real flex track/gutter reserved for the
-divider along the resize axis. The 3px visual rule is painted in its center; no pseudo-element
+divider along the resize axis. The visual rule is painted in its center; no pseudo-element
 extends into either adjacent panel, so slotted controls retain pointer ownership up to their edge.
 Set it on an ancestor to retune a split subtree or directly on one component; either public value
 remains authoritative.
+`--lr-multi-split-divider-thickness` (default `var(--lr-size-3px)`) sets the painted hairline's own
+width, independent of `--lr-multi-split-divider-target-size` above — retuning one never changes the
+other, so the WCAG 2.5.8 pointer target can never be shrunk by a thinner or thicker visual line.
+`--lr-multi-split-divider-color` (default `var(--lr-color-border)`),
+`--lr-multi-split-divider-hover-color` (default `var(--lr-color-brand)`), and
+`--lr-multi-split-divider-active-color` (default
+`color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+theme the divider hairline's resting/hover/pressed color; the active color is only reachable while a
+resize gesture is pressed (pointer capture holds `:active` for the whole gesture).
+`--lr-multi-split-floating-panel-inline-size` overrides the `'floating'` collapse state's overlay
+card `inline-size`, which otherwise mirrors its own live `sizes[i]` percent (i.e. what it renders
+at in the `'wide'` state, so un-floating never jumps). Unset, the rendered geometry is unchanged;
+set (e.g. on an ancestor), it wins over that percent at ordinary specificity, with no `!important`
+needed against the inline style the component rewrites on every render.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.
@@ -14864,9 +14992,16 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
-  under `lr-widget:${storageKey}` and restores it on the next mount (mirrors `lr-app-rail`'s/
-  `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
-  storage is never touched — listen for `lr-collapse-change` and persist the state yourself.
+  under `lr-widget:${storageKey}` and restores it on the next mount, without overwriting a `collapsed`/
+  `.collapsed=${…}` binding already explicitly assigned on that same mount (any assignment sets a
+  single-shot flag, checked once before the restore runs). This is not byte-identical to
+  `lr-app-rail`'s or `lr-table`'s guard: `lr-app-rail`'s undefaulted `railWidthPx`/`preferredMode`
+  fields key their guard off `willUpdate()`'s own per-field `changed.has(...)`, checked fresh on
+  every update; `lr-table`'s `priorityColumnsVisible` instead checks its own current value, since
+  its `false` default would otherwise always read as "changed"; this component's flag is a single
+  boolean set by any assignment (including the restore's own write) and never reset. Without a
+  `storageKey` there is no persistence and storage is never touched — listen for
+  `lr-collapse-change` and persist the state yourself.
 
 **Events:** `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
 built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
@@ -15670,6 +15805,10 @@ this tab is projected into lives in `<lr-tab-group>`'s shadow root, so it inheri
 `--lr-tab-group-selected-color`, `--lr-tab-group-indicator-color` and `--lr-tab-group-hover-color`
 from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself does nothing: this
 element is _inside_ that button in the flattened tree, and inheritance only runs the other way.
+`<lr-tab>`'s own host is `color: inherit; font: inherit;` for exactly this reason — it makes the
+projected element (and therefore its visible label) pick up the real tab button's own computed
+color and font, so `--lr-tab-group-selected-color`/`--lr-tab-group-hover-color` reach the rendered
+tab text rather than being shadowed by the library's own default text color.
 
 Before group hydration, an unassigned tab places itself in the public `nav` slot. The group then
 writes its internal per-tab `slot` attribute itself. A labeled tab with no `panel` gets a stable
@@ -15735,11 +15874,15 @@ toolbars that combine segmented controls, selects, buttons, and other interactiv
 
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`; a host
   `aria-label`, when present, wins including an explicitly empty value.
-- `responsive: boolean = false` (reflected) — opts into a `@container` narrow-allocation breakpoint
-  (switches to a full-width allocation below `20rem`) by making the host a CSS size-query
-  container. Left unset, the host is `container-type: normal`, since `container-type: inline-size`
-  unconditionally would collapse the group to 0 inline size whenever it sits as an ordinary
-  (`flex-basis: auto`) child of a shrink-to-fit flex row — this component's own primary use case.
+- `responsive: boolean = false` (reflected) — makes the host a CSS size-query container
+  (`container-type: inline-size`) so a future `@container` rule can react to this group's own
+  allocated width. Left unset, the host is `container-type: normal`, since `container-type:
+  inline-size` unconditionally would collapse the group to 0 inline size whenever it sits as an
+  ordinary (`flex-basis: auto`) child of a shrink-to-fit flex row — this component's own primary
+  use case. `[part="base"]` itself now fills the host's inline size unconditionally (not gated by
+  `responsive`): a percentage inline-size against an indefinite/shrink-to-fit containing block
+  resolves as `auto`, so this is a no-op unless the host is given a definite inline size, directly
+  or via an ancestor.
 
 **Events:** none.
 
@@ -15763,10 +15906,12 @@ between grouped controls; shared spacing and layout tokens apply as well.
 - This is a layout and semantics primitive; it does not coordinate child values or emit a group
   change event.
 - Children wrap according to the group's own allocated inline size, not the viewport width.
-- The `@container` narrow-allocation breakpoint only applies when `responsive` is set. Setting
-  `responsive` while this group also sits as a shrink-to-fit flex child re-introduces the 0-width
-  collapse this default is designed to avoid — only opt in when the group's own size comes from
-  somewhere else (a percentage width, a grid track, a block-level parent).
+- `[part="base"]` fills the host's inline size unconditionally, but the host itself never gets a
+  size from `responsive`/`container-type` alone — give the host a definite inline size directly
+  (a percentage width, a grid track, a block-level parent) for the fill to have any visible effect.
+- Setting `responsive` while this group also sits as a shrink-to-fit flex child re-introduces the
+  0-width collapse the unset default is designed to avoid — only opt in when the group's own size
+  comes from somewhere else.
 
 ---
 
@@ -15954,7 +16099,10 @@ when a label is a single character and the track ends up taller than its nominal
 thumb lifted a hair off its own track) style the checked segment's pill;
 `--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
-bleeds onto hover. These five existing state hooks are inline `var()` fallbacks at the
+bleeds onto hover. `--lr-segmented-hover-bg` (default `transparent`) and `--lr-segmented-hover-shadow`
+(default `none`) style that same hovered segment's background and box shadow; both are undeclared by
+default, so they fall back to the segment's own resting values and change nothing about today's
+hover paint until set. These seven state hooks are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so each can be set on the element _or on any
 ancestor_; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
@@ -16006,6 +16154,10 @@ resolves.
 - `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
 - `--lr-segmented-track-padding` — Track inset padding. Default: `var(--lr-size-0-125rem)`.
+- `--lr-segmented-track-bg` — Background of the `base` track. Undeclared by default (transparent),
+  matching its own current absence of a background.
+- `--lr-segmented-track-border-color` — Border color of the `base` track, which previously read
+  `--lr-color-border` as a literal with no override hook. Default: `var(--lr-color-border)`.
 
 ---
 
@@ -16340,7 +16492,9 @@ persist its committed `widthPx` yourself. Listen for the preceding cancelable
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
 automatically regardless — it's only consulted while `forceMode` is `'auto'` or unset; an explicit
-`forceMode` value takes full priority.
+`forceMode` value takes full priority. A `preferredMode` restored from `localStorage` on mount is
+observable the same way a live change is: it fires `lr-mode-change` too (see **Events** below),
+letting a consumer that syncs app chrome to the rail's mode pick up the restored value on load.
 
 **Properties:**
 
@@ -16409,8 +16563,12 @@ Also settable as a plain `aria-label` attribute (not a reactive property): overr
 role, matching `<lr-date-input>`'s `accessibleLabel`.
 
 **Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
-effective mode changed, whether from a breakpoint crossing or a `forceMode` assignment — not
-fired for a redundant reassignment to the mode already in effect), `lr-toggle`
+effective mode changed, whether from a breakpoint crossing, a `forceMode` assignment, or a
+persisted `preferred-mode` restored on mount (`storage-key` + `persist="preferred-mode"`) — the
+restored-on-mount case fires once, from the first `updated()` after that mount's render and
+attribute reflection have both landed, rather than synchronously during the mount itself; it is
+not fired for a redundant reassignment to the mode already in effect, nor when no preferred mode
+was persisted), `lr-toggle`
 (`detail: LyraAppRailToggleDetail` = `{ open: boolean }`; the mobile overlay is opening or closing — via
 the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a
 breakpoint/forced mode change leaving `'mobile'` while open — not fired when a consumer sets `open`
@@ -16909,8 +17067,12 @@ expanding the popup.
 
 **Themeable custom properties:** `--lr-menu-item-gap`, `--lr-menu-item-radius`,
 `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
-`--lr-menu-item-danger-active-bg`, and `--submenu-offset`, plus shared size/focus/color/spacing
-tokens.
+`--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
+`--lr-menu-item-checked-color` (default `inherit`), `--lr-menu-item-checked-font-weight` (default
+`inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
+apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked/selected-state
+hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
+a checked row paints identically to an unchecked one.
 
 ### Nested submenus
 
@@ -17214,6 +17376,11 @@ Appearance and interaction paint can be rethemed independently through `--lr-car
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
 former brand and active-mix values when unset.
+`--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
+byte-identical to before this property existed — mirroring `--lr-button-shadow`'s pattern; set it
+for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an
+`actionable`/linked card's shadow while hovered, falling back to `--lr-card-shadow` itself so a
+card given only a resting shadow keeps that exact shadow on hover.
 
 **Optional peer deps:** none.
 
@@ -17587,7 +17754,14 @@ evenly. Each `size` tier changes both private defaults from the shared ladder; a
 ancestor or the element remains authoritative. Note that the spacing knob
 deliberately reads the ladder's _inline_-padding value: a stacked panel wants generous block rhythm,
 whereas the ladder's own block padding exists to fit text inside a fixed control height and would
-collapse the summary row. `--spacing` aliases the Details rhythm, while `--show-duration` and
+collapse the summary row. The summary's and the panel content's padding can also be tuned
+independently of each other and of `--lr-details-spacing`: `--lr-details-summary-padding-block` and
+`--lr-details-summary-padding-inline` control the summary alone, and
+`--lr-details-content-padding-block-end` and `--lr-details-content-padding-inline` control the
+panel content alone. All four default to the same `--lr-details-spacing` resolution described
+above, mirroring how `--lr-details-gap`/`--lr-details-radius` (below) are already independent of
+the spacing knob. `--spacing` aliases the Details rhythm and remains the highest-precedence
+override, ahead of these four as well. `--show-duration` and
 `--hide-duration` (both default `var(--lr-duration-base)`) tune its icon transitions. Motion stops
 under `prefers-reduced-motion`, so the `lr-after-*` events still settle promptly in that branch.
 `--lr-details-gap` (default `var(--lr-space-s)`) independently controls the summary content/icon
@@ -19698,6 +19872,10 @@ relied on `<lr-chip selected>` to create an action.
 - `value?: string` — opaque consumer bookkeeping value, never read, validated, or rendered by this
   component itself, only ever echoed back verbatim (including `undefined` if never set) in
   `lr-remove`'s detail
+- `wrap: boolean = false` (reflected) — wraps `[part='label']` onto multiple lines instead of
+  ellipsis-truncating it to one line. `false` (the default) reproduces the chip's original
+  single-line, ellipsis-truncated label exactly. Matches `<lr-suggestion-chips>`'s identical `wrap`
+  opt-in.
 
 **Events:** `lr-remove` (`detail: { value }` — the remove (×) button was activated via click or
 Enter/Space while focused; only rendered/reachable while `removable`), `lr-chip-select`
@@ -19837,7 +20015,9 @@ usage)
 actively causing an overflow—a locally-styled pill, not an instantiated real `<lr-chip>`, with the
 shared minimum hit area in both axes)
 
-**Themeable custom properties:** `--lr-chip-group-overflow-expanded-color` (default
+**Themeable custom properties:** `--lr-chip-group-gap` (default `var(--lr-space-xs)`) — the gap
+between `[part='base']`'s wrapped children (chips and the overflow indicator alike); previously
+hardcoded. `--lr-chip-group-overflow-expanded-color` (default
 `var(--lr-color-text)`) — text color of `[part="overflow-indicator"]` while expanded
 (`aria-expanded="true"`). `--lr-chip-group-overflow-expanded-border-style` (default `solid`) —
 that same expanded indicator's border style; its resting border deliberately remains dashed, so a
@@ -22132,7 +22312,11 @@ including after its previous deadline fired. With `nextInMs` unset it simply cle
 **Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
 background of `indicator` while `data-due` is set. Component-scoped indirection over the shared
 `--lr-color-success` token, so a consumer can retheme just this due-state indicator without
-repainting every other component that reuses the same shared success token. Plus shared tokens —
+repainting every other component that reuses the same shared success token. `--lr-poll-status-pause-hover-bg`/`--lr-poll-status-pause-hover-color` (defaults
+`var(--lr-color-brand-quiet)`/`var(--lr-color-brand)`) and
+`--lr-poll-status-pause-active-bg`/`--lr-poll-status-pause-active-color` (defaults the former
+brand-quiet active `color-mix()`/`var(--lr-color-brand)`) retheme the built-in `pause-button`'s
+hover/pressed paint independently of those same shared brand tokens. Plus shared tokens —
 `--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.
@@ -22402,6 +22586,8 @@ First-party invention (no Web Awesome equivalent).
   all-removals diff of `oldText`.
 - `copyable: boolean = false` — shows a copy-to-clipboard button for the full unified-diff text.
   `false` (the default) renders no button.
+- `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
+  view scrolls internally past this height instead of growing the page. Invalid values are ignored.
 - `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders today's
   single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
   the same diff alignment. Unsupported attributes and untyped property writes normalize to
@@ -22449,7 +22635,9 @@ marker), `copy-button` (the copy affordance, only
 rendered while `copyable`), `limit` (the localized over-`maxLines` fallback), `side` (one column in
 `layout="split"`, `data-side="old"|"new"`).
 
-**Themeable custom properties:** `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
+**Themeable custom properties:** `--lr-diff-view-max-height` (default `none` — an independently
+settable scroll cap on `[part="base"]`; the `maxHeight` property writes the same custom property
+inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
 shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.
@@ -24843,7 +25031,10 @@ coalesce into one update.
 - `thumbnailOnly: boolean = false` (reflected, attribute `thumbnail-only`) — when both this and
   `compact` are set, hides `[part='meta']` (the filename/size text) entirely for an image-mime
   attachment, leaving only the thumbnail. Has no effect for a non-image chip, or when `compact` is
-  unset. `false` (the default) reproduces the chip's exact existing output.
+  unset. `false` (the default) reproduces the chip's exact existing output. While it actually hides
+  `[part='meta']`, `[part='base']` also switches to a reduced, symmetric padding sized for a lone
+  thumbnail instead of the compact text row's padding — see
+  `--lr-attachment-chip-compact-thumbnail-only-padding` below.
 - `removeLabel?: string` (attribute `remove-label`) — verb used in the remove button's accessible
   name; omitting it reads back `undefined` and routes through the complete localized
   `removeWithContext` template
@@ -24915,7 +25106,17 @@ or direct public value remains authoritative; `--lr-attachment-chip-compact-thum
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
 size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-duration` (default
 `var(--lr-transition-ambient)`) controls the indeterminate rotation's duration and easing and stops
-under reduced motion; plus shared tokens `--lr-space-xs`, `--lr-space-s`,
+under reduced motion.
+`--lr-attachment-chip-padding` (default `var(--lr-space-xs) var(--lr-space-s)`) and
+`--lr-attachment-chip-compact-padding` (default `var(--lr-size-0-125rem) var(--lr-space-xs)`) make
+`[part='base']`'s padding themeable in the resting and `compact` states respectively — both were
+previously hardcoded. `--lr-attachment-chip-compact-thumbnail-only-padding` (default
+`var(--lr-size-0-125rem)`, applied symmetrically to every side) governs `[part='base']`'s padding
+specifically while `compact` and `thumbnail-only` together actually hide `[part='meta']` for an
+image-mime attachment — reduced from the compact padding above, since the lone thumbnail no longer
+needs inline padding sized for a text row that isn't rendering. It has no effect for a non-image
+chip, where `[part='meta']` stays visible and the ordinary compact padding still applies.
+Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
 `--lr-radius`, `--lr-color-text`, `--lr-color-danger`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-transition-base`, `--lr-focus-ring-width`,
 `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
@@ -31080,10 +31281,18 @@ carrying `data-display="inline"|"block"`)
 
 **Themeable custom properties:** `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
-`--lr-theme-font-family-mono` override reaches it), `--lr-code-block-tab-size` (default `2` — tab width inside a
-rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/-m/-l`,
-`--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`, `--lr-color-text-quiet`,
-`--lr-radius`.
+`--lr-theme-font-family-mono` override reaches it), `--lr-markdown-code-bg` (default
+`var(--lr-color-brand-quiet)` — background shared by every inline `code` span and the fenced
+`code-block` surface, so a consumer can retheme either or both together without repainting every
+other surface that reads the shared brand-quiet token), `--lr-markdown-code-padding` (default
+`var(--lr-size-0-125rem) var(--lr-size-0-3125rem)` — inline `code` span padding),
+`--lr-markdown-code-radius` (default `calc(var(--lr-radius) * 0.5)` — inline `code` span border
+radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr-space-m)` — the
+fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (default `var(--lr-radius)`
+— the fenced `code-block` surface's border radius), `--lr-code-block-tab-size` (default `2` — tab
+width inside a rendered fenced or indented `code-block`), plus shared tokens
+`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`,
+`--lr-color-text-quiet`, `--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
 `loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half
@@ -31235,15 +31444,21 @@ as the full class; the core route exports its own `Marked` alias.
 anchor-jump message), `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`,
 `link`, `table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
 
-**Themeable custom properties:** `--lr-code-block-tab-size` (default `2` — tab width inside a
-rendered fenced or indented `code-block`), with exactly the mechanics described under
-`<lr-markdown>` above: the same property name and default that `<lr-code-block>`/`<lr-code-editor>`
-read, declared as a `var()` fallback at the point of use rather than on `:host` so a page- or
-container-level value reaches it, and carried here in its own right because this element is a
-**sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown code blocks wrap
-(`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width can render
-differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by rendered
-code and defaults to `var(--lr-font-mono)`.
+**Themeable custom properties:** identical to `<lr-markdown>`'s own code-surface tokens —
+`--lr-markdown-code-bg` (default `var(--lr-color-brand-quiet)`, shared by inline `code` and the
+fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-radius` (inline
+`code` span padding/radius, defaulting to `var(--lr-size-0-125rem) var(--lr-size-0-3125rem)`/
+`calc(var(--lr-radius) * 0.5)`), and `--lr-markdown-code-block-padding`/
+`--lr-markdown-code-block-radius` (the fenced `code-block` surface's padding/radius, defaulting to
+`var(--lr-space-s) var(--lr-space-m)`/`var(--lr-radius)`) — plus `--lr-code-block-tab-size` (default
+`2` — tab width inside a rendered fenced or indented `code-block`), with exactly the mechanics
+described under `<lr-markdown>` above: the same property name and default that
+`<lr-code-block>`/`<lr-code-editor>` read, declared as a `var()` fallback at the point of use rather
+than on `:host` so a page- or container-level value reaches it, and carried here in its own right
+because this element is a **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown
+code blocks wrap (`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width
+can render differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by
+rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
@@ -31466,12 +31681,22 @@ sit inline at the tail end of streamed text still being appended to).
 Removing `label` restores the localized thinking name while preserving an explicit host
 `aria-label`. Later label assignments remain reactive.
 
+`label-placement="after"` additionally renders `label` (or its localized "Thinking…" fallback)
+visibly next to the animated shape, in a new `part="label"` element, mirroring `<lr-spinner>`'s own
+`labelPlacement` vocabulary. The default, `"none"`, is unchanged from this component's
+screen-reader-only rendering before this property existed: a single `.sr-only` text node, no
+visible twin.
+
 **Properties:**
 
 - `shape: TypingIndicatorShape = 'dots'` (`'dots' | 'pulse' | 'cursor'`, reflected)
 - `label: string = ''` — caller-supplied accessible name. Empty or whitespace-only values use the
   localized “Thinking…” fallback; an explicit host `aria-label`, including `aria-label=""`, wins.
   The status is not re-announced on every animation frame, only on mount and on later label changes
+- `labelPlacement: TypingIndicatorLabelPlacement = 'none'` (`'none' | 'after'`, attribute
+  `label-placement`, reflected) — where the accessible label renders. `'none'` (default) keeps
+  `label` screen-reader-only, exactly as this component rendered before this property
+  existed. `'after'` also renders it visibly next to the animated shape.
 - `size: TypingIndicatorSize = 'm'` (reflected) — visual size on the library-wide ladder;
   `TypingIndicatorSize` is an alias of the shared `LyraSize`, so it accepts `2xs`/`xs`/`s`/`m`/`l`/
   `xl` plus the `small`/`medium`/`large` spellings of `s`/`m`/`l`. A presence cue has three usefully
@@ -31486,7 +31711,8 @@ Removing `label` restores the localized thinking name while preserving an explic
 
 **CSS parts:** `base` (the decorative, `aria-hidden`, wrapper around the animated shape), `dot`
 (each of the three dots in the `dots` variant), `pulse` (the single pulsing dot in the `pulse`
-variant), `cursor` (the blinking bar in the `cursor` variant)
+variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible label, rendered
+only while `label-placement="after"`)
 
 **Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
 `0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default
@@ -31506,6 +31732,10 @@ off it — untouched.
 
 ```html
 <lr-typing-indicator label="Assistant is responding…"></lr-typing-indicator>
+<lr-typing-indicator
+  label-placement="after"
+  label="Assistant is responding…"
+></lr-typing-indicator>
 <lr-typing-indicator shape="pulse" size="s"></lr-typing-indicator>
 <lr-typing-indicator shape="cursor"></lr-typing-indicator>
 <lr-typing-indicator
@@ -31938,6 +32168,14 @@ retune every row at once from an ancestor. `[part='content']`'s gap collapses to
 `compact` with no hatch of its own — there is no smaller step left to retune to. `:host([compact])
 [part='base']` is ordered _before_ `:host([active]) [part='base']` (equal specificity), so a row that
 is both compact and active keeps the active background and the promoted excerpt/timestamp contrast.
+
+`--lr-conversation-item-align` (default `flex-start`) controls the cross-axis `align-items` of both
+`[part='base']` and `[part='select-button']`. `flex-start` — today's only behavior — suits the
+common multi-line row (a title plus an `excerpt`): centering that layout against a single-line
+trailing action would misalign the title's own baseline. Set it to `center` for a row that is
+reliably single-line (no excerpt, no wrapping title) alongside a taller trailing action (e.g. an
+`actions` control), where centered alignment reads better. It is not the default because switching
+it would misalign every existing multi-line row.
 
 Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-color-text/-text-quiet/-brand/-brand-quiet/-surface`,
@@ -32528,6 +32766,10 @@ highlighted markup.
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
   `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
   the type-only granular import emits no registration side effect.
+  The map key need not be the grammar module's own registered name or one of its declared
+  aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
+  `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
+  second near-identical grammar) still highlights under that key.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
@@ -33409,9 +33651,11 @@ are skipped rather than becoming false boundaries.
 **Exported types:** `LyraChatThread { id: string; title: string; excerpt?: string; timestamp?: Date |
 string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pin' | 'archive' |
 'delete'`; `ThreadListGrouping = 'date' | 'custom' | 'none'`; `ThreadBucketKey = 'pinned' |
-'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`; and
+'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`;
 `ThreadGroupContext { id: string; threads: readonly LyraChatThread[]; bucket?: ThreadBucketKey;
-date?: Date }`. `LyraThreadList` and `LyraThreadListEventMap` are exported alongside them. The class
+date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; collapsed: boolean }` (the shared
+payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair). `LyraThreadList` and
+`LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
 Data-mode thread ids must be nonempty, nonblank, and unique, and every row must have a string
@@ -33426,7 +33670,11 @@ collection; changing an assigned record or mutating the assigned array does not 
 **Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
 (attribute `active-conversation-id`) — data mode:
 marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
-false` (reflected) — shows the built-in search field. `filter?: (thread, query) => boolean`
+false` (reflected) — shows the built-in search field, including a `part="clear-button"` icon button
+that appears next to it once it has a value (never when empty), clears it on click, fires the same
+`lr-filter-change`/`lr-query-change` event typing already fires, and returns focus to the field. Its
+accessible name is the localized `clear` message (the same key `<lr-input>`'s own clear button
+uses). `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
@@ -33438,9 +33686,12 @@ plain-text accessible/visible label; `renderGroupAdornment?: (context) => Templa
 separate rich content beside the toggle without nesting it inside the button. `groupOrder?: string[] | ((a: string, b:
 string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an
 array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
-controlled collapsed state for both date and custom groups. A collapsed group's header remains in
-the virtual list while its conversation rows are removed from the virtual-list item/measurement
-set; `lr-group-toggle` requests the matching state change. Group headers and threads use separate
+collapsed state for both date and custom groups, **self-managed by default**: activating the
+built-in group toggle updates this array directly. A collapsed group's header remains in the
+virtual list while its conversation rows are removed from the virtual-list item/measurement set.
+Prevent the default of the cancelable `lr-group-toggle-request` event (see **Events** below) to
+veto that write and keep this property fully controlled instead — the only behavior it had before
+self-management existed. Group headers and threads use separate
 internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
@@ -33499,14 +33750,23 @@ With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
 re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
 instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
-`lr-group-toggle` (`detail: { groupId, collapsed }` —
-controlled intent; native group buttons provide Enter/Space activation and explicit
-`aria-expanded="true"|"false"`). `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
+`lr-group-toggle-request` (`detail: { groupId, collapsed }`, cancelable) — proposed before a
+custom/date group's collapse state changes; calling `preventDefault()` skips the built-in
+`collapsedGroupIds` write and suppresses the following `lr-group-toggle`, leaving the group's
+collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, collapsed }`) — the
+change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
+`collapsedGroupIds`; native group buttons provide Enter/Space activation and explicit
+`aria-expanded="true"|"false"` regardless. A consumer that already listens for `lr-group-toggle`
+and reassigns `collapsedGroupIds` itself keeps working unchanged: this component's own write, when
+it happens, always precedes that listener in the same synchronous dispatch, so the host's own
+assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
 which are neither.
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
-type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list
+type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
+mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
+`viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
 `group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
@@ -35826,7 +36086,10 @@ renders at the start of the action row, before Deny/Edit/Approve.
   also still `disabled` while an in-progress edit is invalid JSON, independent of `pending`).
   Escape and an enabled backdrop dismissal are suppressed while `pending` is set. Finalize by calling
   `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
-  state; `pending` also resets to `null` every time the dialog re-opens.
+  state; `pending` also resets to `null` every time the dialog re-opens. If that same listener
+  resolves the decision itself synchronously (calling `close('approve'|'deny')` or setting
+  `.pending` directly before returning), that wins outright: the component's own built-in `pending`
+  bookkeeping only applies when the listener left both `.pending` and `.open` untouched.
 
 **Methods:** `show(): void` opens the dialog; `hide(reason: ToolApprovalDialogCloseReason = 'api'):
 void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,
@@ -36918,6 +37181,10 @@ Before 9.0.0 `compact` alone did both jobs; a bar that relied on that now needs
 resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
 now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
 to finalize, or clear `.pending` back to `null` to bounce back to the undecided state.
+`disabled: boolean = false` (reflected) — disables both Deny and Approve and makes activating either
+a no-op, without discarding any in-flight `decision`/`pending` state. Distinct from `pending`:
+`pending` marks one specific action as awaiting the host while the other stays interactive;
+`disabled` blocks both regardless of `pending`.
 
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
@@ -36971,7 +37238,13 @@ repainting everything else that reads them.
   `<lr-button>` host, where those declarations either do nothing or must be re-expressed through
   `lr-button`'s own parts/custom properties.
 - An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
-  its own async work is in flight — see `pending` above.
+  its own async work is in flight — see `pending` above. If that same listener resolves the
+  decision itself synchronously (setting `.decision` or `.pending` directly before returning), that
+  wins outright: the component's own built-in `pending` bookkeeping only applies when the listener
+  left both untouched, so a listener finalizing out of band is never silently clobbered back into
+  the built-in loading/disabled presentation.
+- `disabled` blocks both Deny and Approve and makes activating either a no-op — see `disabled`
+  above. It is independent of, and composes with, `pending`.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>
@@ -37591,6 +37864,11 @@ can ignore it; one actually executing the tool needs it. This is a cancelable ve
 `preventDefault()` preserves the pending approval dialog and its current inline argument edits
 instead of closing/resetting them, sets `pendingApproval`, and requires the host to call
 `finalizePendingApproval()` after persistence succeeds or `revertPendingApproval()` after it fails.
+A host may instead resolve the decision synchronously by reassigning `entries` (with the entry's
+`approved` field set) from within that same listener, without ever calling
+`finalizePendingApproval()`: the entry's live state is re-checked immediately after dispatch, so
+`pendingApproval` — and the shared dialog's pending presentation — is never set or left set for
+an entry that no longer needs a decision.
 
 ```ts
 timeline.addEventListener("lr-tool-approval-decide", async (event) => {

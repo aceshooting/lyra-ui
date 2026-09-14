@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -51,7 +51,11 @@ including after its previous deadline fired. With `nextInMs` unset it simply cle
 **Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
 background of `indicator` while `data-due` is set. Component-scoped indirection over the shared
 `--lr-color-success` token, so a consumer can retheme just this due-state indicator without
-repainting every other component that reuses the same shared success token. Plus shared tokens —
+repainting every other component that reuses the same shared success token. `--lr-poll-status-pause-hover-bg`/`--lr-poll-status-pause-hover-color` (defaults
+`var(--lr-color-brand-quiet)`/`var(--lr-color-brand)`) and
+`--lr-poll-status-pause-active-bg`/`--lr-poll-status-pause-active-color` (defaults the former
+brand-quiet active `color-mix()`/`var(--lr-color-brand)`) retheme the built-in `pause-button`'s
+hover/pressed paint independently of those same shared brand tokens. Plus shared tokens —
 `--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 30 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -144,12 +144,23 @@ unknown`, exported under that name from the component's own module, renders one
 - `value: string | string[]` — a getter/setter: a plain `string` in single mode (empty when nothing
   is selected), a `string[]` in `multiple` mode
 - `defaultValue: string | string[]` (attribute `default-value` accepts the single string form) —
-  reset selection; changing it updates the live value only while the control is pristine
+  reset selection; changing it updates the live value only while the control is pristine. Assigning
+  `undefined`/`null` to either clears the selection; every string, including `''`, is a candidate
+  value resolved against the current `<lr-option>`s instead — an `<lr-option value="">` is a
+  legitimate row and round-trips like any other value. A value matching no current option still
+  commits — see "Unknown committed values" below
 - `selectedOptions: LyraOption[]` — a writable, fresh snapshot of the live selected occurrences.
   Assigning live child options commits their exact occurrences through the same event-silent path
   as `value`; foreign/detached options are ignored, and single mode keeps only the first. Mutating
   an array returned by the getter never mutates the control
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
+
+**Unknown committed values.** A committed value matching no current `<lr-option>` (a stale value
+from a removed option, or a programmatic assignment with a typo) still commits — the raw string
+stays fully reachable through `value`/`selectedOptions` — but renders a dashed/italic
+`[part='unknown-value']` badge next to the trigger label, or on the relevant `multiple`-mode tag,
+instead of an unexplained bare label, mirroring `<lr-model-select>`'s synthetic "not in catalog"
+stale-value row — see `--lr-select-unknown-value-border-style`/`-color` below.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once
@@ -203,13 +214,18 @@ text are part of the focused control's accessible description.
 `tag__remove-button`/`tag__remove-button__base`, and `tag-overflow` (the "+N" chip standing in for the selections past
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
-is encoded in the part name instead), `clear-button` (the `with-clear` button, present only while
+is encoded in the part name instead), `unknown-value` (the dashed/italic badge shown next to the
+trigger label, or on a `multiple`-mode tag, when the committed value matches no current
+`<lr-option>`), `clear-button` (the `with-clear` button, present only while
 there is a selection to clear), `listbox` (the managed nonmodal popup, layered by
 `--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback),
 `group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
 the previous one's — its stable ID labels a `role="group"` wrapper that semantically owns the
 following option rows; options with an empty `group` get no heading or group wrapper),
-`option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
+`option`, `option-dot` (the leading status dot, when a row's `dotColor` is set),
+`option-start`/`option-end` (an option row's leading/trailing adornment, cloned from the source
+`<lr-option>`'s `start`/`prefix`/`end`/`suffix` slot — inert and `aria-hidden`, exactly like
+`lr-combobox`'s identical parts), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
@@ -271,6 +287,10 @@ active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a
 retheme the selected row without hijacking `--lr-color-brand` library-wide. Note the shadow-parts
 spec forbids an attribute selector after `::part()` — `::part(option)[aria-selected='true']` is
 invalid CSS and never matches — which is exactly why these tokens exist.
+
+`--lr-select-unknown-value-border-style` (default `dashed`) and
+`--lr-select-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
+`[part='unknown-value']` badge described above under "Unknown committed values".
 
 **Optional peer deps:** none.
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -118,6 +118,14 @@ retune every row at once from an ancestor. `[part='content']`'s gap collapses to
 `compact` with no hatch of its own — there is no smaller step left to retune to. `:host([compact])
 [part='base']` is ordered _before_ `:host([active]) [part='base']` (equal specificity), so a row that
 is both compact and active keeps the active background and the promoted excerpt/timestamp contrast.
+
+`--lr-conversation-item-align` (default `flex-start`) controls the cross-axis `align-items` of both
+`[part='base']` and `[part='select-button']`. `flex-start` — today's only behavior — suits the
+common multi-line row (a title plus an `excerpt`): centering that layout against a single-line
+trailing action would misalign the title's own baseline. Set it to `center` for a row that is
+reliably single-line (no excerpt, no wrapping title) alongside a taller trailing action (e.g. an
+`actions` control), where centered alignment reads better. It is not the default because switching
+it would misalign every existing multi-line row.
 
 Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-color-text/-text-quiet/-brand/-brand-quiet/-surface`,

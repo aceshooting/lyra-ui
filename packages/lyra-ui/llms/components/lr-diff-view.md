@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,6 +30,8 @@ First-party invention (no Web Awesome equivalent).
   all-removals diff of `oldText`.
 - `copyable: boolean = false` — shows a copy-to-clipboard button for the full unified-diff text.
   `false` (the default) renders no button.
+- `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
+  view scrolls internally past this height instead of growing the page. Invalid values are ignored.
 - `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders today's
   single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
   the same diff alignment. Unsupported attributes and untyped property writes normalize to
@@ -77,7 +79,9 @@ marker), `copy-button` (the copy affordance, only
 rendered while `copyable`), `limit` (the localized over-`maxLines` fallback), `side` (one column in
 `layout="split"`, `data-side="old"|"new"`).
 
-**Themeable custom properties:** `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
+**Themeable custom properties:** `--lr-diff-view-max-height` (default `none` — an independently
+settable scroll cap on `[part="base"]`; the `maxHeight` property writes the same custom property
+inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
 shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.

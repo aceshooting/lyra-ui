@@ -1,69 +1,63 @@
 ---
-description: Migrate an application from @aceshooting/lyra-ui 3.x to 4.0.0
+description: Rename Web Awesome (wa-*) and/or Shoelace (sl-*) usage in a consumer project to lyra-ui (lr-*) equivalents using verified per-source mappings and required warnings
+argument-hint: [path]
+allowed-tools: Read, Edit, Grep, Glob, Bash(grep:*), Bash(git:*)
 ---
 
-# Migrate Lyra UI 3.x to 4.0.0
+Migrate the project at `$1` (default to the current working directory if `$1` is empty) off Web
+Awesome (`<wa-*>`, `@awesome.me/webawesome`) and/or Shoelace (`<sl-*>`, `@shoelace-style/shoelace`)
+onto `@aceshooting/lyra-ui`'s `lr-*` equivalents.
 
-Lyra UI 4.0.0 keeps the npm packages and JavaScript class names stable, but renames the public
-namespace used by custom elements, library-specific events, and CSS custom properties.
+Migration is best-effort for both ecosystems. Resolve each occurrence against the source prefix
+and installed package version that actually supplied it, then use the corresponding classification
+and warnings in `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/migration.md`. Coverage of a
+source tag means its mapping is classified; it does not promise an automatic or lossless rename.
+Mapped manual and warning-required cases remain manual, including included remote markup and
+Shoelace alert listener timing. Installing both libraries does not change an occurrence's source.
 
-## Breaking changes
+Steps:
 
-| 3.x | 4.0.0 |
-| --- | --- |
-| `<lyra-button>` | `<lr-button>` |
-| `lyra-change` | `lr-change` |
-| `--lyra-color-brand` | `--lr-color-brand` |
-| `@aceshooting/lyra-ui` | `@aceshooting/lyra-ui` |
-| `LyraButton` | `LyraButton` |
+1. Grep the target path for `<wa-`/`<sl-` tag usages and for `@awesome.me/webawesome`/
+   `@shoelace-style/shoelace` import statements (check `package.json` for the exact specifier the
+   project actually uses). Build a list of every distinct tag name found, split by source library,
+   with file:line references and the installed version of its source package. If neither library is
+   present, say so and stop.
 
-`lyra-ui` and `lyra-flags` remain the package names. Do not rename package imports, repository
-paths, `Lyra*` classes, or internal `lyra-element` filenames. The old custom-element tags, events,
-and tokens are not aliases in 4.0.0.
+2. For each distinct `wa-*` tag, look it up in
+   `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/migration.md`. A tag absent from that table has
+   no documented counterpart. Then read the target's own
+   `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/components/<lr-tag>.md` for intentional
+   differences — do not guess from memory, mirror status and differences are only accurate there.
 
-## Automated migration
+3. For each distinct `sl-*` tag, use its own Shoelace row in
+   `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/migration.md`, regardless of whether Web Awesome
+   is also installed. Read the mapped target's `references/components/<lr-tag>.md`. For both
+   ecosystems, check every used attribute, slot, event, method, part and CSS custom property against
+   the actual source-version mapping and target reference. Apply documented rewrites and preserve
+   required warnings; do not infer parity from similar tag names or discard unmatched members.
+   Lyra combobox accepts both `clearable` and `with-clear`; neither spelling alone requires a rename.
 
-Run this from the application repository after updating the dependency:
+4. Classify each library's tag list:
+   - **Automatic or rewritten** (a verified automatic mapping from step 2 or 3): migrate every
+     call site — rename the tag (`wa-button`/`sl-button` -> `lr-button`), update the import
+     specifier to the stable tag-shaped registration path
+     `@aceshooting/lyra-ui/components/<lr-tag>.js` (the exact **Import** line each
+     `references/components/<lr-tag>.md` states), and carry over any attribute/slot/event names
+     that differ between the source and lyra-ui per that component's documented differences.
+   - **Manual or warning-required**: retain the original occurrence, its exact mapping and warnings
+     in the report for manual work. Include keeps its sanitization and same-origin differences;
+     Shoelace alert keeps its lifecycle timing and cancellation warning. Do not silently promote
+     either to an automatic rewrite.
+   - **Unresolved**: leave the original tag in place and list it separately; do not attempt a
+     partial migration for a tag with no verified mapping.
 
-```bash
-pnpm add @aceshooting/lyra-ui@^4.0.0
-rg -l --glob '!node_modules/**' --glob '!dist/**' \
-  --glob '*.{html,css,scss,less,ts,tsx,js,jsx,md,mdx}' \
-  'lyra-' . | xargs -r perl -0pi -e 's/lyra-/lr-/g'
-rg -l --glob '!node_modules/**' --glob '!dist/**' '--lyra-' . \
-  | xargs -r perl -0pi -e 's/--lyra-/--lr-/g'
-```
+5. After editing, grep the target path again for `<wa-`, `<sl-`, and both import specifiers to
+   confirm only the reported manual/warning-required and unresolved usages remain.
 
-Review the diff and restore intentional non-component names such as package imports and paths if
-the command touched them. The safer targeted form for an application that only needs markup,
-events, and CSS is:
-
-```bash
-find src public docs -type f \( -name '*.html' -o -name '*.css' -o -name '*.scss' -o -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' \) \
-  -print0 | xargs -0r perl -0pi -e 's/<\/?lyra-([a-z0-9-]+)/<$1/g; s/lyra-([a-z0-9-]+)/lr-$1/g; s/--lyra-/--lr-/g'
-```
-
-The first command is preferred for normal source trees because it preserves the `lyra-` package
-and path names in imports when those are excluded from the replacement review. Never run a blind
-repository-wide replacement over lockfiles or dependency directories.
-
-## Checklist
-
-- Update every custom-element opening and closing tag to `lr-*`.
-- Update every library-specific event listener, event assertion, and event-map reference to `lr-*`.
-- Update `--lyra-*`, `--lyra-theme-*`, and component-specific custom-property overrides to `--lr-*`.
-- Keep `@aceshooting/lyra-ui`, `@aceshooting/lyra-flags`, `Lyra*` class imports, and package paths.
-- Regenerate generated editor metadata if the application vendors it.
-- Run `pnpm build`, `pnpm test`, and the application’s accessibility tests.
-- Check RTL layouts, localized strings, shadow-DOM accessible names, and 320px/narrow-pane layouts.
-- Search for stale public names:
-
-  ```bash
-  rg -n --glob '!node_modules/**' --glob '!dist/**' '<\/?lyra-[a-z]|--lyra-|\blyra-(show|hide|change|select|copy|search|error|request|open|close)\b' .
-  ```
-
-## New in 4.0.0
-
-The release also includes `lr-control-group`, the completed `lr-segmented` size scale, and the
-updated generated API/editor documentation. Use `lr-control-group` for responsive rows of mixed
-form controls and actions; use `lr-button-group` for uniform button groups.
+6. Report, grouped by source library then by component: how many tags were migrated and the exact
+   files touched (with a one-line note per component on what, if anything, changed name besides
+   the tag), and the full list of what's still `wa-*`/`sl-*` and why. For any remaining `wa-*`,
+   suggest the user run `/lyra-ui:update` to check whether a newer lyra-ui release has since closed
+   that gap, or file it upstream via that command. For any migrated or remaining `sl-*`, recommend
+   a review of the used contracts and remaining warnings. Apply that same review to Web Awesome
+   migrations; neither source ecosystem has a blanket automatic-rename guarantee.

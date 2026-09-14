@@ -745,6 +745,7 @@ export type {
 } from './components/conversation/chat-message/chat-message.class.js';
 export { LyraTypingIndicator } from './components/conversation/typing-indicator/typing-indicator.class.js';
 export type {
+  TypingIndicatorLabelPlacement,
   TypingIndicatorShape,
   TypingIndicatorSize,
 } from './components/conversation/typing-indicator/typing-indicator.class.js';
@@ -1401,6 +1402,7 @@ export type {
   LyraThreadListEventMap,
   ThreadBucketKey,
   ThreadGroupContext,
+  ThreadGroupToggleDetail,
   ThreadListGrouping,
   ThreadRowAction,
 } from './components/conversation/thread-list/thread-list.class.js';

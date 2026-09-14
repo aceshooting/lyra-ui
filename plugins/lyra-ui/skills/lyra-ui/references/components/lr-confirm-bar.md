@@ -53,6 +53,10 @@ Before 9.0.0 `compact` alone did both jobs; a bar that relied on that now needs
 resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
 now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
 to finalize, or clear `.pending` back to `null` to bounce back to the undecided state.
+`disabled: boolean = false` (reflected) — disables both Deny and Approve and makes activating either
+a no-op, without discarding any in-flight `decision`/`pending` state. Distinct from `pending`:
+`pending` marks one specific action as awaiting the host while the other stays interactive;
+`disabled` blocks both regardless of `pending`.
 
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
@@ -106,7 +110,13 @@ repainting everything else that reads them.
   `<lr-button>` host, where those declarations either do nothing or must be re-expressed through
   `lr-button`'s own parts/custom properties.
 - An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
-  its own async work is in flight — see `pending` above.
+  its own async work is in flight — see `pending` above. If that same listener resolves the
+  decision itself synchronously (setting `.decision` or `.pending` directly before returning), that
+  wins outright: the component's own built-in `pending` bookkeeping only applies when the listener
+  left both untouched, so a listener finalizing out of band is never silently clobbered back into
+  the built-in loading/disabled presentation.
+- `disabled` blocks both Deny and Approve and makes activating either a no-op — see `disabled`
+  above. It is independent of, and composes with, `pending`.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>

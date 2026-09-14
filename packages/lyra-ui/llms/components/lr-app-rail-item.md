@@ -43,7 +43,9 @@ persist its committed `widthPx` yourself. Listen for the preceding cancelable
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
 automatically regardless — it's only consulted while `forceMode` is `'auto'` or unset; an explicit
-`forceMode` value takes full priority.
+`forceMode` value takes full priority. A `preferredMode` restored from `localStorage` on mount is
+observable the same way a live change is: it fires `lr-mode-change` too (see **Events** below),
+letting a consumer that syncs app chrome to the rail's mode pick up the restored value on load.
 
 **Properties:**
 
@@ -112,8 +114,12 @@ Also settable as a plain `aria-label` attribute (not a reactive property): overr
 role, matching `<lr-date-input>`'s `accessibleLabel`.
 
 **Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
-effective mode changed, whether from a breakpoint crossing or a `forceMode` assignment — not
-fired for a redundant reassignment to the mode already in effect), `lr-toggle`
+effective mode changed, whether from a breakpoint crossing, a `forceMode` assignment, or a
+persisted `preferred-mode` restored on mount (`storage-key` + `persist="preferred-mode"`) — the
+restored-on-mount case fires once, from the first `updated()` after that mount's render and
+attribute reflection have both landed, rather than synchronously during the mount itself; it is
+not fired for a redundant reassignment to the mode already in effect, nor when no preferred mode
+was persisted), `lr-toggle`
 (`detail: LyraAppRailToggleDetail` = `{ open: boolean }`; the mobile overlay is opening or closing — via
 the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a
 breakpoint/forced mode change leaving `'mobile'` while open — not fired when a consumer sets `open`

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,9 +39,11 @@ are skipped rather than becoming false boundaries.
 **Exported types:** `LyraChatThread { id: string; title: string; excerpt?: string; timestamp?: Date |
 string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pin' | 'archive' |
 'delete'`; `ThreadListGrouping = 'date' | 'custom' | 'none'`; `ThreadBucketKey = 'pinned' |
-'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`; and
+'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`;
 `ThreadGroupContext { id: string; threads: readonly LyraChatThread[]; bucket?: ThreadBucketKey;
-date?: Date }`. `LyraThreadList` and `LyraThreadListEventMap` are exported alongside them. The class
+date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; collapsed: boolean }` (the shared
+payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair). `LyraThreadList` and
+`LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
 Data-mode thread ids must be nonempty, nonblank, and unique, and every row must have a string
@@ -56,7 +58,11 @@ collection; changing an assigned record or mutating the assigned array does not 
 **Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
 (attribute `active-conversation-id`) — data mode:
 marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
-false` (reflected) — shows the built-in search field. `filter?: (thread, query) => boolean`
+false` (reflected) — shows the built-in search field, including a `part="clear-button"` icon button
+that appears next to it once it has a value (never when empty), clears it on click, fires the same
+`lr-filter-change`/`lr-query-change` event typing already fires, and returns focus to the field. Its
+accessible name is the localized `clear` message (the same key `<lr-input>`'s own clear button
+uses). `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
@@ -68,9 +74,12 @@ plain-text accessible/visible label; `renderGroupAdornment?: (context) => Templa
 separate rich content beside the toggle without nesting it inside the button. `groupOrder?: string[] | ((a: string, b:
 string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an
 array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
-controlled collapsed state for both date and custom groups. A collapsed group's header remains in
-the virtual list while its conversation rows are removed from the virtual-list item/measurement
-set; `lr-group-toggle` requests the matching state change. Group headers and threads use separate
+collapsed state for both date and custom groups, **self-managed by default**: activating the
+built-in group toggle updates this array directly. A collapsed group's header remains in the
+virtual list while its conversation rows are removed from the virtual-list item/measurement set.
+Prevent the default of the cancelable `lr-group-toggle-request` event (see **Events** below) to
+veto that write and keep this property fully controlled instead — the only behavior it had before
+self-management existed. Group headers and threads use separate
 internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
@@ -129,14 +138,23 @@ With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
 re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
 instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
-`lr-group-toggle` (`detail: { groupId, collapsed }` —
-controlled intent; native group buttons provide Enter/Space activation and explicit
-`aria-expanded="true"|"false"`). `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
+`lr-group-toggle-request` (`detail: { groupId, collapsed }`, cancelable) — proposed before a
+custom/date group's collapse state changes; calling `preventDefault()` skips the built-in
+`collapsedGroupIds` write and suppresses the following `lr-group-toggle`, leaving the group's
+collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, collapsed }`) — the
+change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
+`collapsedGroupIds`; native group buttons provide Enter/Space activation and explicit
+`aria-expanded="true"|"false"` regardless. A consumer that already listens for `lr-group-toggle`
+and reassigns `collapsedGroupIds` itself keeps working unchanged: this component's own write, when
+it happens, always precedes that listener in the same synchronous dispatch, so the host's own
+assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
 which are neither.
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
-type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list
+type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
+mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
+`viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
 `group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current

@@ -866,7 +866,10 @@ export type LyraAttachmentChipSvelteProps = LyraSvelteElementProps<
   | '--lr-attachment-chip-border'
   | '--lr-attachment-chip-compact-font-size'
   | '--lr-attachment-chip-compact-gap'
+  | '--lr-attachment-chip-compact-padding'
+  | '--lr-attachment-chip-compact-thumbnail-only-padding'
   | '--lr-attachment-chip-compact-thumbnail-size'
+  | '--lr-attachment-chip-padding'
   | '--lr-attachment-chip-spinner-duration',
   {
     'attachment-id'?: LyraAttachmentChip['attachmentId'];
@@ -1478,6 +1481,8 @@ export type LyraButtonSvelteProps = LyraSvelteElementProps<
   | '--lr-button-height'
   | '--lr-button-hover-background'
   | '--lr-button-hover-base'
+  | '--lr-button-hover-border'
+  | '--lr-button-hover-color'
   | '--lr-button-min-height'
   | '--lr-button-on-fill'
   | '--lr-button-outlined-border'
@@ -1643,6 +1648,8 @@ export type LyraCardSvelteProps = LyraSvelteElementProps<
   | '--lr-card-interactive-active-border-color'
   | '--lr-card-interactive-active-overlay'
   | '--lr-card-interactive-hover-border-color'
+  | '--lr-card-interactive-hover-shadow'
+  | '--lr-card-shadow'
   | '--padding'
   | '--spacing',
   {
@@ -2066,7 +2073,8 @@ export type LyraChipSvelteProps = LyraSvelteElementProps<
   | 'strings'
   | 'toggleable'
   | 'value'
-  | 'variant',
+  | 'variant'
+  | 'wrap',
   {},
   LyraChipEventMap,
   | 'lr-chip-select'
@@ -2096,6 +2104,7 @@ export type LyraChipGroupSvelteProps = LyraSvelteElementProps<
   {},
   LyraChipGroupEventMap,
   | 'lr-overflow-toggle',
+  | '--lr-chip-group-gap'
   | '--lr-chip-group-overflow-expanded-border-style'
   | '--lr-chip-group-overflow-expanded-color',
   {
@@ -2491,6 +2500,8 @@ export type LyraComboboxSvelteProps = LyraSvelteElementProps<
   | '--lr-combobox-trigger-height'
   | '--lr-combobox-trigger-min-height'
   | '--lr-combobox-trigger-padding'
+  | '--lr-combobox-unknown-value-border-color'
+  | '--lr-combobox-unknown-value-border-style'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -2637,6 +2648,7 @@ export type LyraConfirmBarSvelteProps = LyraSvelteElementProps<
   | 'args'
   | 'compact'
   | 'decision'
+  | 'disabled'
   | 'frame'
   | 'heading'
   | 'locale'
@@ -2723,7 +2735,11 @@ export type LyraContextMeterSvelteProps = LyraSvelteElementProps<
   {},
 never,
   | '--lr-context-meter-legend-swatch-size'
-  | '--lr-context-meter-segment-color',
+  | '--lr-context-meter-segment-color'
+  | '--lr-context-meter-segment-seam-color'
+  | '--lr-context-meter-track-bg'
+  | '--lr-context-meter-track-radius'
+  | '--lr-context-meter-track-size',
   {
     'show-legend'?: LyraContextMeter['showLegend'];
   }
@@ -2768,6 +2784,7 @@ export type LyraConversationItemSvelteProps = LyraSvelteElementProps<
   | '--lr-conversation-item-active-indicator-color'
   | '--lr-conversation-item-active-indicator-inset-inline'
   | '--lr-conversation-item-active-indicator-width'
+  | '--lr-conversation-item-align'
   | '--lr-conversation-item-compact-gap'
   | '--lr-conversation-item-compact-padding',
   {
@@ -3242,6 +3259,8 @@ export type LyraDetailsSvelteProps = LyraSvelteElementProps<
   | 'lr-show'
   | 'lr-toggle',
   | '--hide-duration'
+  | '--lr-details-content-padding-block-end'
+  | '--lr-details-content-padding-inline'
   | '--lr-details-filled-bg'
   | '--lr-details-filled-border-color'
   | '--lr-details-filled-outlined-bg'
@@ -3254,6 +3273,8 @@ export type LyraDetailsSvelteProps = LyraSvelteElementProps<
   | '--lr-details-spacing'
   | '--lr-details-summary-active-bg'
   | '--lr-details-summary-hover-bg'
+  | '--lr-details-summary-padding-block'
+  | '--lr-details-summary-padding-inline'
   | '--show-duration'
   | '--spacing',
   {
@@ -3320,6 +3341,7 @@ export type LyraDiffViewSvelteProps = LyraSvelteElementProps<
   | 'languages'
   | 'layout'
   | 'locale'
+  | 'maxHeight'
   | 'maxLines'
   | 'newText'
   | 'oldText'
@@ -3334,10 +3356,12 @@ export type LyraDiffViewSvelteProps = LyraSvelteElementProps<
   | '--lr-diff-view-fold-background'
   | '--lr-diff-view-fold-color'
   | '--lr-diff-view-font'
+  | '--lr-diff-view-max-height'
   | '--lr-diff-view-remove-background'
   | '--lr-diff-view-remove-color',
   {
     'context-lines'?: LyraDiffView['contextLines'];
+    'max-height'?: LyraDiffView['maxHeight'];
     'max-lines'?: LyraDiffView['maxLines'];
   }
 >;
@@ -3809,6 +3833,9 @@ export type LyraDropdownItemSvelteProps = LyraSvelteElementProps<
   | 'focus'
   | 'lr-menu-item-change'
   | 'lr-menu-item-state-change',
+  | '--lr-menu-item-checked-bg'
+  | '--lr-menu-item-checked-color'
+  | '--lr-menu-item-checked-font-weight'
   | '--lr-menu-item-danger-active-bg'
   | '--lr-menu-item-danger-color'
   | '--lr-menu-item-danger-hover-bg'
@@ -6023,6 +6050,11 @@ export type LyraMarkdownSvelteProps = LyraSvelteElementProps<
   | 'lr-render-error'
   | 'lr-text-select',
   | '--lr-code-block-tab-size'
+  | '--lr-markdown-code-bg'
+  | '--lr-markdown-code-block-padding'
+  | '--lr-markdown-code-block-radius'
+  | '--lr-markdown-code-padding'
+  | '--lr-markdown-code-radius'
   | '--lr-markdown-font-mono'
   | '--lr-markdown-highlight-accent-bg'
   | '--lr-markdown-highlight-active-bg'
@@ -6070,6 +6102,11 @@ export type LyraMarkdownCoreSvelteProps = LyraSvelteElementProps<
   | 'lr-render-error'
   | 'lr-text-select',
   | '--lr-code-block-tab-size'
+  | '--lr-markdown-code-bg'
+  | '--lr-markdown-code-block-padding'
+  | '--lr-markdown-code-block-radius'
+  | '--lr-markdown-code-padding'
+  | '--lr-markdown-code-radius'
   | '--lr-markdown-font-mono'
   | '--lr-markdown-highlight-accent-bg'
   | '--lr-markdown-highlight-active-bg'
@@ -6217,6 +6254,9 @@ export type LyraMenuItemSvelteProps = LyraSvelteElementProps<
   LyraMenuItemEventMap,
   | 'lr-menu-item-change'
   | 'lr-menu-item-state-change',
+  | '--lr-menu-item-checked-bg'
+  | '--lr-menu-item-checked-color'
+  | '--lr-menu-item-checked-font-weight'
   | '--lr-menu-item-danger-active-bg'
   | '--lr-menu-item-danger-color'
   | '--lr-menu-item-danger-hover-bg'
@@ -6480,7 +6520,12 @@ export type LyraMultiSplitSvelteProps = LyraSvelteElementProps<
   | 'lr-resize'
   | 'lr-resize-request'
   | 'lr-toggle',
+  | '--lr-multi-split-divider-active-color'
+  | '--lr-multi-split-divider-color'
+  | '--lr-multi-split-divider-hover-color'
   | '--lr-multi-split-divider-target-size'
+  | '--lr-multi-split-divider-thickness'
+  | '--lr-multi-split-floating-panel-inline-size'
   | '--lr-multi-split-overlay-color',
   {
     'collapse-breakpoint-basis'?: LyraMultiSplit['collapseBreakpointBasis'];
@@ -7442,7 +7487,11 @@ export type LyraPollStatusSvelteProps = LyraSvelteElementProps<
   LyraPollStatusEventMap,
   | 'lr-pause-change'
   | 'lr-poll-due',
-  | '--lr-poll-status-due-bg',
+  | '--lr-poll-status-due-bg'
+  | '--lr-poll-status-pause-active-bg'
+  | '--lr-poll-status-pause-active-color'
+  | '--lr-poll-status-pause-hover-bg'
+  | '--lr-poll-status-pause-hover-color',
   {
     'next-in-ms'?: LyraPollStatus['nextInMs'];
   }
@@ -8675,12 +8724,16 @@ export type LyraSegmentedSvelteProps = LyraSvelteElementProps<
   | '--lr-segmented-active-bg'
   | '--lr-segmented-active-color'
   | '--lr-segmented-font-size'
+  | '--lr-segmented-hover-bg'
   | '--lr-segmented-hover-color'
+  | '--lr-segmented-hover-shadow'
   | '--lr-segmented-segment-padding'
   | '--lr-segmented-selected-bg'
   | '--lr-segmented-selected-color'
   | '--lr-segmented-selected-font-weight'
   | '--lr-segmented-selected-shadow'
+  | '--lr-segmented-track-bg'
+  | '--lr-segmented-track-border-color'
   | '--lr-segmented-track-gap'
   | '--lr-segmented-track-height'
   | '--lr-segmented-track-min-height'
@@ -8760,6 +8813,8 @@ export type LyraSelectSvelteProps = LyraSvelteElementProps<
   | '--lr-select-trigger-hover-bg'
   | '--lr-select-trigger-min-height'
   | '--lr-select-trigger-padding'
+  | '--lr-select-unknown-value-border-color'
+  | '--lr-select-unknown-value-border-style'
   | '--show-duration'
   | '--tag-max-size',
   {
@@ -9226,11 +9281,13 @@ export type LyraStatSvelteProps = LyraSvelteElementProps<
 never,
   | '--lr-stat-emphasis-border-color'
   | '--lr-stat-emphasis-value-color'
+  | '--lr-stat-gap'
   | '--lr-stat-link-active-bg'
   | '--lr-stat-link-active-border-color'
   | '--lr-stat-link-active-shadow'
   | '--lr-stat-link-hover-border-color'
   | '--lr-stat-link-hover-shadow'
+  | '--lr-stat-padding'
   | '--lr-stat-trend-bad-bg'
   | '--lr-stat-trend-bad-color'
   | '--lr-stat-trend-good-bg'
@@ -9447,12 +9504,16 @@ export type LyraSwitchSvelteProps = LyraSvelteElementProps<
   | 'lr-input'
   | 'lr-invalid',
   | '--height'
+  | '--lr-switch-checked-label-color'
+  | '--lr-switch-checked-thumb-fill'
   | '--lr-switch-checked-track-fill'
   | '--lr-switch-gap'
+  | '--lr-switch-label-color'
   | '--lr-switch-thumb-fill'
   | '--lr-switch-thumb-offset'
   | '--lr-switch-track-active-fill'
   | '--lr-switch-track-block-size'
+  | '--lr-switch-track-border'
   | '--lr-switch-track-fill'
   | '--lr-switch-track-hover-fill'
   | '--lr-switch-track-inline-size'
@@ -9604,6 +9665,9 @@ export type LyraTableSvelteProps = LyraSvelteElementProps<
   | '--lr-table-cell-color'
   | '--lr-table-cell-link-color'
   | '--lr-table-cell-link-hover-color'
+  | '--lr-table-cell-padding'
+  | '--lr-table-cell-padding-compact'
+  | '--lr-table-font-size'
   | '--lr-table-header-sorted-bg'
   | '--lr-table-header-sorted-color'
   | '--lr-table-heat-t'
@@ -9947,6 +10011,7 @@ export type LyraThreadListSvelteProps = LyraSvelteElementProps<
   | 'focus'
   | 'lr-filter-change'
   | 'lr-group-toggle'
+  | 'lr-group-toggle-request'
   | 'lr-query-change'
   | 'lr-select'
   | 'lr-thread-archive'
@@ -10721,6 +10786,7 @@ export type LyraTreeItemSvelteProps = LyraSvelteElementProps<
 export type LyraTypingIndicatorSvelteProps = LyraSvelteElementProps<
   LyraTypingIndicator,
   | 'label'
+  | 'labelPlacement'
   | 'locale'
   | 'shape'
   | 'size'
@@ -10735,7 +10801,9 @@ never,
   | '--lr-typing-dot-stagger-2'
   | '--lr-typing-duration'
   | '--lr-typing-gap',
-  {}
+  {
+    'label-placement'?: LyraTypingIndicator['labelPlacement'];
+  }
 >;
 
 export type LyraUsageBadgeSvelteProps = LyraSvelteElementProps<

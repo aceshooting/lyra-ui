@@ -222,7 +222,14 @@ evenly. Each `size` tier changes both private defaults from the shared ladder; a
 ancestor or the element remains authoritative. Note that the spacing knob
 deliberately reads the ladder's _inline_-padding value: a stacked panel wants generous block rhythm,
 whereas the ladder's own block padding exists to fit text inside a fixed control height and would
-collapse the summary row. `--spacing` aliases the Details rhythm, while `--show-duration` and
+collapse the summary row. The summary's and the panel content's padding can also be tuned
+independently of each other and of `--lr-details-spacing`: `--lr-details-summary-padding-block` and
+`--lr-details-summary-padding-inline` control the summary alone, and
+`--lr-details-content-padding-block-end` and `--lr-details-content-padding-inline` control the
+panel content alone. All four default to the same `--lr-details-spacing` resolution described
+above, mirroring how `--lr-details-gap`/`--lr-details-radius` (below) are already independent of
+the spacing knob. `--spacing` aliases the Details rhythm and remains the highest-precedence
+override, ahead of these four as well. `--show-duration` and
 `--hide-duration` (both default `var(--lr-duration-base)`) tune its icon transitions. Motion stops
 under `prefers-reduced-motion`, so the `lr-after-*` events still settle promptly in that branch.
 `--lr-details-gap` (default `var(--lr-space-s)`) independently controls the summary content/icon

@@ -110,8 +110,13 @@ Read `references/components/<tag>.md` for the target's actual contract. Lyra com
 `clearable` and `with-clear`; both are supported spellings. A tag absent from the tables has no
 documented counterpart; check `references/index.md` for a component covering the same need.
 
-Run `/lyra-ui:migrate-legacy` for verified rewrites and a report of manual/unresolved occurrences,
+Run `/lyra-ui:migrate` for verified rewrites and a report of manual/unresolved occurrences,
 or `/lyra-ui:update` for the broader periodic review. Migration is best-effort for both ecosystems.
+
+Run `/lyra-ui:review` to audit a whole consumer project: it fixes local misuse and every workaround
+the installed version already covers, and files what the library genuinely lacks through the API
+below, with the user's consent, keeping a request ledger in the project so a later run can close
+each item out.
 
 ## Report gaps, bugs, and improvement ideas on a user's behalf
 

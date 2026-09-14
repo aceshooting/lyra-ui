@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -226,7 +226,14 @@ for `accent`); the chrome-less tiers paint nothing, so they mix from the page su
 var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) is the hovered background and
 `--lr-button-active-background` the same mix at the stronger `--lr-color-mix-active` share, so a
 press reads as more than a hover. `appearance="link"` moves its text colour by those two shares
-instead of taking a background. **Breaking in 8.0.0:** this replaced `--lr-button-hover-brightness`,
+instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border` are the
+text/border counterparts, letting e.g. `appearance="quiet"` (which has its own resting
+`--lr-button-quiet-text`/`-border`) theme its hover state independently. Both are **undeclared by
+default**, falling back to whatever colour/border the active `appearance` already paints at rest —
+every appearance's current hover paint is unchanged until one is set.
+`appearance="link"` ignores `--lr-button-hover-color` (its own hover rule sets a higher-specificity
+colour mix) and renders with no border at any state, so `--lr-button-hover-border` has no visible
+effect there. **Breaking in 8.0.0:** this replaced `--lr-button-hover-brightness`,
 which no longer exists — a `filter: brightness()` multiplies every channel, so it moved a mid-toned
 fill but did nothing at all to a pure white or pure black one, and it dimmed the label and icons
 along with the box. Retuning `--lr-button-fill` or `--lr-button-accent-fill` now retunes that tier's
@@ -266,7 +273,8 @@ chevron's font size — declared in `em`, so it tracks every `size` tier through
 size instead of needing a per-tier value.
 `--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
 byte-identical to before this property existed — set it to add a drop shadow (e.g. an
-elevated/floating action button) without a `::part(base)` rule.
+elevated/floating action button) without a `::part(base)` rule. `appearance="link"` always renders
+with no shadow regardless of this token — a zero-chrome inline link has no box to elevate.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no

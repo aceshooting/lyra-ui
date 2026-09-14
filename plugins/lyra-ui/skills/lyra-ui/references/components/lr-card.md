@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -99,6 +99,11 @@ Appearance and interaction paint can be rethemed independently through `--lr-car
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
 former brand and active-mix values when unset.
+`--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
+byte-identical to before this property existed — mirroring `--lr-button-shadow`'s pattern; set it
+for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an
+`actionable`/linked card's shadow while hovered, falling back to `--lr-card-shadow` itself so a
+card given only a resting shadow keeps that exact shadow on hover.
 
 **Optional peer deps:** none.
 

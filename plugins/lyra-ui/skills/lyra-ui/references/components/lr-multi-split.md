@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -163,7 +163,8 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
 - `open: boolean = false` (reflected) — whether the `'floating'` collapse state's drawer is shown.
   While `collapseState` is `'floating'` and `open` is `false` (the default), the collapsing panel
   renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
-  card this state rendered before `open` existed. Setting `open = true` reveals it as a
+  card this state rendered before `open` existed — not just visually hidden; this holds even
+  against an author `display` rule targeting the panel directly. Setting `open = true` reveals it as a
   focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a backdrop click set
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
@@ -209,10 +210,24 @@ when `storage-key` is used).
 the `'floating'` drawer's `[part='backdrop']` scrim; scoped to `[part='base']`, not the viewport.
 `--lr-multi-split-divider-target-size` (default
 `max(var(--lr-icon-button-size), var(--lr-size-3px))`) — the real flex track/gutter reserved for the
-divider along the resize axis. The 3px visual rule is painted in its center; no pseudo-element
+divider along the resize axis. The visual rule is painted in its center; no pseudo-element
 extends into either adjacent panel, so slotted controls retain pointer ownership up to their edge.
 Set it on an ancestor to retune a split subtree or directly on one component; either public value
 remains authoritative.
+`--lr-multi-split-divider-thickness` (default `var(--lr-size-3px)`) sets the painted hairline's own
+width, independent of `--lr-multi-split-divider-target-size` above — retuning one never changes the
+other, so the WCAG 2.5.8 pointer target can never be shrunk by a thinner or thicker visual line.
+`--lr-multi-split-divider-color` (default `var(--lr-color-border)`),
+`--lr-multi-split-divider-hover-color` (default `var(--lr-color-brand)`), and
+`--lr-multi-split-divider-active-color` (default
+`color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+theme the divider hairline's resting/hover/pressed color; the active color is only reachable while a
+resize gesture is pressed (pointer capture holds `:active` for the whole gesture).
+`--lr-multi-split-floating-panel-inline-size` overrides the `'floating'` collapse state's overlay
+card `inline-size`, which otherwise mirrors its own live `sizes[i]` percent (i.e. what it renders
+at in the `'wide'` state, so un-floating never jumps). Unset, the rendered geometry is unchanged;
+set (e.g. on an ancestor), it wins over that percent at ordinary specificity, with no `!important`
+needed against the inline style the component rewrites on every render.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.

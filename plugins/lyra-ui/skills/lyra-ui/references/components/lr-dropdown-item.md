@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu`, `lr-menu-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -162,8 +162,12 @@ expanding the popup.
 
 **Themeable custom properties:** `--lr-menu-item-gap`, `--lr-menu-item-radius`,
 `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
-`--lr-menu-item-danger-active-bg`, and `--submenu-offset`, plus shared size/focus/color/spacing
-tokens.
+`--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
+`--lr-menu-item-checked-color` (default `inherit`), `--lr-menu-item-checked-font-weight` (default
+`inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
+apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked/selected-state
+hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
+a checked row paints identically to an unchecked one.
 
 ### Nested submenus
 

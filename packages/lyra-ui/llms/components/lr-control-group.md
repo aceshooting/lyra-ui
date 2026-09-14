@@ -24,11 +24,15 @@ toolbars that combine segmented controls, selects, buttons, and other interactiv
 
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`; a host
   `aria-label`, when present, wins including an explicitly empty value.
-- `responsive: boolean = false` (reflected) — opts into a `@container` narrow-allocation breakpoint
-  (switches to a full-width allocation below `20rem`) by making the host a CSS size-query
-  container. Left unset, the host is `container-type: normal`, since `container-type: inline-size`
-  unconditionally would collapse the group to 0 inline size whenever it sits as an ordinary
-  (`flex-basis: auto`) child of a shrink-to-fit flex row — this component's own primary use case.
+- `responsive: boolean = false` (reflected) — makes the host a CSS size-query container
+  (`container-type: inline-size`) so a future `@container` rule can react to this group's own
+  allocated width. Left unset, the host is `container-type: normal`, since `container-type:
+  inline-size` unconditionally would collapse the group to 0 inline size whenever it sits as an
+  ordinary (`flex-basis: auto`) child of a shrink-to-fit flex row — this component's own primary
+  use case. `[part="base"]` itself now fills the host's inline size unconditionally (not gated by
+  `responsive`): a percentage inline-size against an indefinite/shrink-to-fit containing block
+  resolves as `auto`, so this is a no-op unless the host is given a definite inline size, directly
+  or via an ancestor.
 
 **Events:** none.
 
@@ -52,9 +56,11 @@ between grouped controls; shared spacing and layout tokens apply as well.
 - This is a layout and semantics primitive; it does not coordinate child values or emit a group
   change event.
 - Children wrap according to the group's own allocated inline size, not the viewport width.
-- The `@container` narrow-allocation breakpoint only applies when `responsive` is set. Setting
-  `responsive` while this group also sits as a shrink-to-fit flex child re-introduces the 0-width
-  collapse this default is designed to avoid — only opt in when the group's own size comes from
-  somewhere else (a percentage width, a grid track, a block-level parent).
+- `[part="base"]` fills the host's inline size unconditionally, but the host itself never gets a
+  size from `responsive`/`container-type` alone — give the host a definite inline size directly
+  (a percentage width, a grid track, a block-level parent) for the fill to have any visible effect.
+- Setting `responsive` while this group also sits as a shrink-to-fit flex child re-introduces the
+  0-width collapse the unset default is designed to avoid — only opt in when the group's own size
+  comes from somewhere else.
 
 ---

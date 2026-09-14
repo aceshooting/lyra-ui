@@ -62,9 +62,16 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
-  under `lr-widget:${storageKey}` and restores it on the next mount (mirrors `lr-app-rail`'s/
-  `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
-  storage is never touched — listen for `lr-collapse-change` and persist the state yourself.
+  under `lr-widget:${storageKey}` and restores it on the next mount, without overwriting a `collapsed`/
+  `.collapsed=${…}` binding already explicitly assigned on that same mount (any assignment sets a
+  single-shot flag, checked once before the restore runs). This is not byte-identical to
+  `lr-app-rail`'s or `lr-table`'s guard: `lr-app-rail`'s undefaulted `railWidthPx`/`preferredMode`
+  fields key their guard off `willUpdate()`'s own per-field `changed.has(...)`, checked fresh on
+  every update; `lr-table`'s `priorityColumnsVisible` instead checks its own current value, since
+  its `false` default would otherwise always read as "changed"; this component's flag is a single
+  boolean set by any assignment (including the restore's own write) and never reset. Without a
+  `storageKey` there is no persistence and storage is never touched — listen for
+  `lr-collapse-change` and persist the state yourself.
 
 **Events:** `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
 built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state

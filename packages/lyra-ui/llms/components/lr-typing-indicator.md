@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,12 +28,22 @@ sit inline at the tail end of streamed text still being appended to).
 Removing `label` restores the localized thinking name while preserving an explicit host
 `aria-label`. Later label assignments remain reactive.
 
+`label-placement="after"` additionally renders `label` (or its localized "Thinking…" fallback)
+visibly next to the animated shape, in a new `part="label"` element, mirroring `<lr-spinner>`'s own
+`labelPlacement` vocabulary. The default, `"none"`, is unchanged from this component's
+screen-reader-only rendering before this property existed: a single `.sr-only` text node, no
+visible twin.
+
 **Properties:**
 
 - `shape: TypingIndicatorShape = 'dots'` (`'dots' | 'pulse' | 'cursor'`, reflected)
 - `label: string = ''` — caller-supplied accessible name. Empty or whitespace-only values use the
   localized “Thinking…” fallback; an explicit host `aria-label`, including `aria-label=""`, wins.
   The status is not re-announced on every animation frame, only on mount and on later label changes
+- `labelPlacement: TypingIndicatorLabelPlacement = 'none'` (`'none' | 'after'`, attribute
+  `label-placement`, reflected) — where the accessible label renders. `'none'` (default) keeps
+  `label` screen-reader-only, exactly as this component rendered before this property
+  existed. `'after'` also renders it visibly next to the animated shape.
 - `size: TypingIndicatorSize = 'm'` (reflected) — visual size on the library-wide ladder;
   `TypingIndicatorSize` is an alias of the shared `LyraSize`, so it accepts `2xs`/`xs`/`s`/`m`/`l`/
   `xl` plus the `small`/`medium`/`large` spellings of `s`/`m`/`l`. A presence cue has three usefully
@@ -48,7 +58,8 @@ Removing `label` restores the localized thinking name while preserving an explic
 
 **CSS parts:** `base` (the decorative, `aria-hidden`, wrapper around the animated shape), `dot`
 (each of the three dots in the `dots` variant), `pulse` (the single pulsing dot in the `pulse`
-variant), `cursor` (the blinking bar in the `cursor` variant)
+variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible label, rendered
+only while `label-placement="after"`)
 
 **Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
 `0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default
@@ -68,6 +79,10 @@ off it — untouched.
 
 ```html
 <lr-typing-indicator label="Assistant is responding…"></lr-typing-indicator>
+<lr-typing-indicator
+  label-placement="after"
+  label="Assistant is responding…"
+></lr-typing-indicator>
 <lr-typing-indicator shape="pulse" size="s"></lr-typing-indicator>
 <lr-typing-indicator shape="cursor"></lr-typing-indicator>
 <lr-typing-indicator
