@@ -1369,6 +1369,87 @@ describe("lr-button", () => {
       await expect(el).to.be.accessible();
     });
 
+    // An <a> carries the UA stylesheet's link underline and a native <button> does not, so without
+    // a reset on the shared base every non-link appearance rendered an underlined label only in
+    // anchor mode.
+    describe("text decoration matches button mode", () => {
+      const baseDecoration = (el: LyraButton) =>
+        getComputedStyle(
+          el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement
+        ).textDecorationLine;
+
+      it("renders no underline for any non-link appearance, in either mode", async () => {
+        for (const appearance of [
+          "accent",
+          "filled",
+          "filled-outlined",
+          "outlined",
+          "plain",
+          "quiet",
+        ]) {
+          const link = (await fixture(
+            html`<lr-button appearance=${appearance} href="https://example.com"
+              >Go</lr-button
+            >`
+          )) as LyraButton;
+          const native = (await fixture(
+            html`<lr-button appearance=${appearance}>Go</lr-button>`
+          )) as LyraButton;
+          expect(baseDecoration(link), `${appearance} anchor`).to.equal("none");
+          expect(baseDecoration(native), `${appearance} button`).to.equal(
+            "none"
+          );
+        }
+      });
+
+      it("renders no underline for the boolean outline alias in anchor mode", async () => {
+        const el = (await fixture(
+          html`<lr-button outline href="https://example.com">Go</lr-button>`
+        )) as LyraButton;
+        expect(baseDecoration(el)).to.equal("none");
+      });
+
+      it('keeps appearance="link" underlined in both modes', async () => {
+        const link = (await fixture(
+          html`<lr-button appearance="link" href="https://example.com"
+            >Go</lr-button
+          >`
+        )) as LyraButton;
+        const native = (await fixture(
+          html`<lr-button appearance="link">Go</lr-button>`
+        )) as LyraButton;
+        expect(baseDecoration(link)).to.equal("underline");
+        expect(baseDecoration(native)).to.equal("underline");
+      });
+
+      it("renders no underline on the disabled, href-less anchor", async () => {
+        const el = (await fixture(
+          html`<lr-button disabled appearance="accent" href="https://example.com"
+            >Go</lr-button
+          >`
+        )) as LyraButton;
+        expect(baseDecoration(el)).to.equal("none");
+      });
+
+      it("lets a consumer ::part(base) text-decoration win over the reset", async () => {
+        const wrapper = await fixture(html`
+          <div>
+            <style>
+              .decorated::part(base) {
+                text-decoration: line-through;
+              }
+            </style>
+            <lr-button class="decorated" href="https://example.com"
+              >Go</lr-button
+            >
+          </div>
+        `);
+        const el = wrapper.querySelector("lr-button") as LyraButton;
+        await el.updateComplete;
+        expect(baseDecoration(el)).to.equal("line-through");
+      });
+    });
+
     describe("a disabled link button omits href and cannot navigate", () => {
       it("renders an <a> with NO href attribute when disabled", async () => {
         const el = (await fixture(

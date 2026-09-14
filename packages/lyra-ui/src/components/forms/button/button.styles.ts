@@ -139,6 +139,10 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     /* After the "font" shorthand, which would otherwise reset font-size back to the inherited one. */
     font-size: var(--lr-button-font-size, var(--_lr-button-font-size));
+    /* In href mode the root is an <a>, which the UA stylesheet underlines while a native <button>
+       is not, so every non-link appearance rendered an underline only as a link. appearance="link"
+       re-declares its own underline further down. */
+    text-decoration: none;
     cursor: pointer;
     /* Undeclared by default (byte-identical to today's absent box-shadow); set it for an elevated
        button without a ::part(base) rule. */
