@@ -210,6 +210,29 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
   way `<lr-app-rail>` closes its mobile overlay when leaving `'mobile'` while open.
+- `releasePinOnBreakpoint: boolean = false` (attribute `release-pin-on-breakpoint`, reflected) — opts a
+  pinned `collapseState` in to releasing itself when the layout it was made for is gone: either the
+  measured collapse band changes to a different one than the pin was made in, or
+  `effectiveOrientation` crosses `orientationBreakpoint`. The pin is dropped exactly as if `'auto'`
+  had been assigned and the state re-derives from the current measurement, firing
+  `lr-multi-split-collapse-change` when that is a real transition. Re-measuring the same band never
+  releases a pin, so ordinary resizing inside one band leaves it alone. Left unset (the default), a
+  pin survives every band and orientation change until a consumer writes `'auto'` — the pre-existing
+  behavior.
+
+**Methods:** `expandPane()`, `collapsePane()` and `togglePane()` drive the collapse feature
+semantically, each picking the mechanism the pane's *current band* provides rather than its pinned
+state: inside the `floatBreakpoint` band that is the overlay drawer (`open`), above it it is the
+`collapseState` pin (`'wide'` expanded, `'rail'` collapsed). `togglePane()` reads the pane's current
+presentation — `'wide'` counts as expanded, `'rail'` as collapsed, `'floating'` as expanded exactly
+while `open` — so toggling a pane pinned to `'rail'` after the container narrowed into the floating
+band opens the drawer instead of doing nothing visible. All three are no-ops while `collapse='none'`
+or fewer than two panels exist, none creates a pin the band already produces, and a pin one of them
+cancels is released rather than replaced, so an expand/collapse cycle leaves automatic breakpoint
+tracking as it found it. They emit no `lr-toggle`, matching the existing rule that a direct `open`
+write does not. They are named `…Pane()` rather than `expand()`/`collapse()`/`toggle()` because
+`collapse` is already the pane-selection property, following `<lr-page>`'s `showNavigation()` trio.
+The component still renders no trigger of its own — wire these to your own control.
 
 `collapse`'s three resulting states — `'wide'` (default, today's plain layout) / `'rail'` / `'floating'`
 — are exposed as: a `data-collapse-state` attribute on both the host and the collapsing panel element
@@ -229,7 +252,13 @@ or keyboard step commits. A genuine pointer gesture has one terminal persistence
 `pointerup`; no-move, fully clamped, vetoed, canceled, and lost-capture gestures have none. Pointer
 release emits no additional event; direct `sizes` assignments stay silent),
 `lr-multi-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
-on a real `collapse`-state transition, never on every resize/render),
+on a real `collapse`-state transition, never on every resize/render. It fires *after* the collapsing
+panel is decorated for the new state — its `data-collapse-state` marker, the closed drawer's `hidden`
+flag and its owned inline sizing are all applied first — so a listener can read the panel
+synchronously inside its own handler instead of deferring past `updateComplete`. Focus is also moved
+out of a pane the new state hides (`'floating'` while closed) or clamps (`'rail'`) before the event
+fires, landing on the first surviving pane that can take it, otherwise on the split's own divider;
+focus anywhere other than the collapsing pane is untouched),
 `lr-toggle` (`detail: LyraMultiSplitToggleDetail = { open: boolean }`) — Escape/backdrop close
 proposals are cancelable and fire before `open` changes; preventing the event or making a synchronous
 reentrant mutation aborts the proposal. A forced close when a responsive collapse transition leaves
@@ -269,6 +298,11 @@ card `inline-size`, which otherwise mirrors its own live `sizes[i]` percent (i.e
 at in the `'wide'` state, so un-floating never jumps). Unset, the rendered geometry is unchanged;
 set (e.g. on an ancestor), it wins over that percent at ordinary specificity, with no `!important`
 needed against the inline style the component rewrites on every render.
+`--lr-multi-split-floating-panel-inset` (default `0`) sets the `'floating'` drawer's distance from
+`[part="base"]`'s edges, applied to both block insets and to whichever logical inline edge
+`collapse` anchors the drawer to, so one declaration insets all three anchored edges; the free inline
+edge stays governed by the panel's own width. Unset, the drawer is flush with its container exactly
+as before.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.
@@ -1567,8 +1601,12 @@ while not disabled; handled by the parent `<lr-reorder-list>`, which performs th
 
 **Slots:** default — arbitrary row content.
 
-**CSS parts:** `base` (row wrapper), `move-up-button`, `move-down-button`, `content` (default-slot
-wrapper).
+**CSS parts:** `base` (row wrapper), `move-up-button`, `move-down-button`,
+`move-up-button__control` / `move-down-button__control` (each move control's own native `<button>` —
+as of 16.0.0 the move controls are composed `<lr-icon-button>`s: the old part names keep placement,
+rotation and activation, while background, radius, hover/press mixes, focus ring and hit-area floor
+come from `--lr-icon-button-*`, and the component's own `--lr-reorder-item-move-button-*` hooks still
+win over those defaults), `content` (default-slot wrapper).
 
 **Themeable custom properties:** `--lr-reorder-item-gap` (default `var(--lr-space-xs)`) — gap
 between the move buttons and the row content. The move-button interaction paints are independent,
@@ -2136,6 +2174,14 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   to a genuinely too-narrow-for-any-inline-rail viewport. Only consulted while `forceMode` is
   `'auto'` or unset (see above); an explicit `forceMode` value takes full priority.
   Unset (the default, `null`) reproduces the original breakpoint-only behavior exactly.
+- `collapsible: boolean = false` (reflected) — opts in a desktop collapse control rendered inside
+  `[part="header"]`. It flips the rail between its `'full'` and `'icon-only'` presentations by
+  writing `preferredMode`, so the `mobile-breakpoint` keeps being tracked automatically and a
+  genuinely too-narrow viewport still wins. The control is not rendered at all while `mode` is
+  `'mobile'`, and `[part="header"]`'s layout is unchanged when this is unset. The collapse survives
+  a reload only when `storage-key` is set AND `persist` includes `preferred-mode` — the default
+  `persist` is `open width`, which does not. Pair them: `persist="width preferred-mode"`. Either
+  route announces itself through the existing `lr-mode-change` event; there is no new event.
 - `hideToggle: boolean = false` (reflected, attribute `hide-toggle`) — suppresses the built-in mobile
   `[part='toggle']` hamburger/OPEN button, for a consumer that already owns an external mobile-menu
   trigger wired to this rail's own `open` property (pair it with `trigger`/`for` below so focus
@@ -2154,7 +2200,13 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   return target for the remainder of that overlay's open lifetime. Read alongside `for`; this direct
   reference wins when both resolve to different elements. Unset (the default, `null`) reproduces the
   exact existing behavior: only the built-in toggle's own click supplies a return target, for that
-  interaction alone.
+  interaction alone. The resolved trigger also receives `aria-expanded` (rendered in both states)
+  and `aria-controls` pointing at the rail's own panel, so an external control announces the
+  overlay's state across the shadow boundary. Because a light-DOM element cannot hold a raw
+  reference into another element's shadow tree, engines resolve `aria-controls` to the
+  `<lr-app-rail>` host itself; either resolution is correct. The association applies while `mode` is
+  `'mobile'` and is released when the rail leaves that mode or disconnects, and it tracks live —
+  reassigning `trigger` moves the state to the new element.
 - `for: string = ''` — id of an external element that opens this rail's mobile overlay, the
   label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
   `for`). Resolved against this element's own root (shadow root or document) when the overlay opens.
@@ -2190,6 +2242,11 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
 Also settable as a plain `aria-label` attribute (not a reactive property): overrides the computed
 `label`/localized-default accessible name on both the navigation landmark and the mobile dialog
 role, matching `<lr-date-input>`'s `accessibleLabel`.
+
+**Methods:** `toggleCollapse(): void` performs the same `'full'`/`'icon-only'` flip `collapsible`'s
+built-in control does, for a consumer rendering its own control (app chrome, a command palette, a
+keyboard shortcut). A no-op while `mode` is `'mobile'`. While `forceMode` pins the mode the
+preference is still recorded and takes effect once the pin is released.
 
 **Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
 effective mode changed, whether from a breakpoint crossing, a `forceMode` assignment, or a
@@ -2230,7 +2287,15 @@ it renders as its own reserved row ahead of the `header` slot rather than an abs
 top of it, so a wide/slotted header is never obscured), `backdrop`, `panel` (`base`/`panel` are mutually exclusive on the same
 underlying element — see above), `resizer` (the `resizable` opt-in's drag handle, only rendered while
 `resizable` and `mode` is `'full'`; its hit target is `--lr-icon-button-size`-wide), `resizer-track`
-(the slim 3px visible drag line centered inside that hit target, tinted `--lr-color-brand` on hover).
+(the slim 3px visible drag line centered inside that hit target, tinted `--lr-color-brand` on hover),
+`collapse-toggle` (the opt-in desktop collapse control, rendered inside `[part="header"]` only while
+`collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
+`aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
+containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
+`appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the chevron wrapper, mirrored by its own
+`transform` under RTL). Collapsing to `'icon-only'` removes nothing from the accessibility tree — it
+clips each item's `label`/`meta` visually — so `aria-expanded` reports which of the two
+presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
 
 **Themeable custom properties:** `--lr-app-rail-width` (default `15rem` — the inline rail width in
 `'full'` mode), `--lr-app-rail-icon-width` (default `4rem` — the inline rail width in `'icon-only'`
@@ -2262,7 +2327,11 @@ tokens (`--lr-color-border`,
 `railWidthPx`'s inline `inline-size` style rather than a new custom property.
 The mobile toggle's hover/pressed background and foreground are independently inheritable through
 `--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,
-`--lr-app-rail-toggle-active-bg`, and `--lr-app-rail-toggle-active-color`. The resizer track uses
+`--lr-app-rail-toggle-active-bg`, and `--lr-app-rail-toggle-active-color`. `[part="collapse-toggle"]`
+has the matching set: `--lr-app-rail-collapse-toggle-hover-bg` (default
+`var(--lr-color-brand-quiet)`), `--lr-app-rail-collapse-toggle-hover-color` (default
+`var(--lr-color-brand)`), `--lr-app-rail-collapse-toggle-active-bg` (no default) and
+`--lr-app-rail-collapse-toggle-active-color` (default `var(--lr-color-brand)`). The resizer track uses
 `--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`. Each hook is an inline
 fallback at its exact state rule and preserves the previous brand or active-mix value when unset.
 
@@ -2405,10 +2474,27 @@ external focus move is always preserved, and this repair dispatches no activatio
 assistive technology and inert across its flattened subtree; the default slot or host `aria-label`
 names the native control, which remains the sole action).
 
+- `meta` slot — secondary trailing text (an unread count, a keyboard shortcut). Rendered as a
+  SIBLING of the item's own link/button, so its text is not part of the item's accessible name and a
+  pointer landing on it does not activate the item. Visually clipped in `icon-only` mode exactly as
+  the label is, staying available to assistive technology.
+- `end` slot — trailing controls or adornments (an overflow-menu trigger, a status badge). Also a
+  sibling of the link/button — the shape `<lr-details>` uses for `header-actions` — so a slotted
+  control keeps its own click, keyboard activation and focus order instead of being swallowed.
+  Unlike `meta` it stays visible in `icon-only` mode, where it shares the narrow rail's width with
+  the icon.
+
+Both wrappers (`[part="meta"]`, `[part="end"]`) are hidden while empty, so an item using neither
+renders exactly as before. Note that while the mobile overlay is open, a click anywhere in the
+rail's default slot closes it — including a click on an `end` control; that is the rail's documented
+nav-slot behaviour, not new to these slots.
+
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
 shipped `active-indicator` part), `tooltip` (the hover/focus label flyout, only rendered while
-`tooltip` is set, the item is `icon-only`, and it is hovered or focused).
+`tooltip` is set, the item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around
+the `meta` slot, hidden while empty) and `end` (the wrapper around the `end` slot, hidden while
+empty).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-app-rail-item-current-color` (default
@@ -2432,9 +2518,80 @@ brand/active-mix values as fallbacks.
 same token regardless of the override so the row's own hit target can never shrink below the WCAG
 2.5.8 minimum), `--lr-app-rail-item-padding` (default `var(--lr-space-s)`),
 `--lr-app-rail-item-gap` (default `var(--lr-space-s)`, the gap between `[part="icon"]` and
-`[part="label"]`), and `--lr-app-rail-item-icon-size` (default `var(--lr-icon-button-size)`, not
+`[part="label"]`, and now also between the item's control and the `meta`/`end` adornments),
+`--lr-app-rail-item-meta-color` (default `var(--lr-color-text-quiet)`),
+`--lr-app-rail-item-meta-font-size` (default `var(--lr-font-size-sm)`), and
+`--lr-app-rail-item-icon-size` (default `var(--lr-icon-button-size)`, not
 floor-clamped since the icon is decorative, not itself a pointer target) retune the row's
 geometry.
+
+**Optional peer deps:** none.
+
+---
+
+### `lr-app-rail-group`
+
+Titles, and optionally collapses, a section of `<lr-app-rail-item>`s. Grouping is by composition —
+the group holds whatever it is given; there is no items array and no renderer callback, so it can
+never disagree with what is rendered inside it.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/layout/app-rail-group/app-rail-group.js';
+</script>
+
+<lr-app-rail>
+  <lr-app-rail-group heading="Workspaces" collapsible>
+    <button slot="header-actions" aria-label="Add workspace">+</button>
+    <lr-app-rail-item href="/atlas" current>Atlas</lr-app-rail-item>
+    <lr-app-rail-item href="/beacon">Beacon</lr-app-rail-item>
+  </lr-app-rail-group>
+</lr-app-rail>
+```
+
+**Properties:**
+
+- `heading: string = ''` — the section title. The `heading` slot replaces it when populated.
+- `headingLevel: number = 3` (attribute `heading-level`) — the `aria-level` the heading landmark
+  reports. Clamped to 1-6 and rounded; a non-finite value falls back to `3`. Settable because a rail
+  sits at a different depth in every page that embeds it.
+- `collapsible: boolean = false` (reflected) — opts in the built-in collapse control. The heading's
+  own text becomes the button carrying `aria-expanded` and `aria-controls`, which is the accordion
+  pattern; an unnamed group falls back to a localized `Collapse`/`Expand` name.
+- `open: boolean = true` (reflected) — whether the content is shown. Carries a true-default
+  converter, so `open="false"` parses from markup (a plain presence-based boolean cannot). `open`
+  governs visibility whether or not `collapsible` is set, so a consumer can drive collapse entirely
+  from its own chrome.
+
+**Events:** `lr-toggle-request` — cancelable, emitted before `open` changes from the built-in
+control (`detail: { open }`). Call `preventDefault()` to keep the current state, or assign `open`
+from the listener to resolve it yourself; a write during the dispatch suppresses the default commit
+even when it assigns the value the property already held. Not emitted for a direct `open` write.
+`lr-toggle` — non-cancelable, emitted after `open` is written, never for a vetoed or
+listener-resolved request (`detail: { open }`).
+
+**Slots:** default — the group's items, and any nested `<lr-app-rail-group>`s; `heading` — rich
+heading content; `header-actions` — controls beside the heading, rendered as a sibling of the
+collapse control so activating one never toggles the group.
+
+**CSS parts:** `base`, `header`, `heading`, `heading-text`, `toggle`, `toggle-icon`,
+`header-actions`, `content`.
+
+**Themeable custom properties:** `--lr-app-rail-group-gap` (default `var(--lr-space-xs)`),
+`--lr-app-rail-group-padding-block` (default `var(--lr-space-xs)`),
+`--lr-app-rail-group-heading-color` (default `var(--lr-color-text-quiet)`),
+`--lr-app-rail-group-heading-font-size` (default `var(--lr-font-size-sm)`),
+`--lr-app-rail-group-hover-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-app-rail-group-hover-color` (default `var(--lr-color-brand)`),
+`--lr-app-rail-group-active-bg` (no default), `--lr-app-rail-group-active-color` (default
+`var(--lr-color-brand)`).
+
+The owning rail marks a slotted group `icon-only` exactly as it marks a slotted item, and the group
+forwards that to the items and nested groups it *directly* owns — including ones appended later —
+so grouping survives the rail's icon-only presentation. A nested group re-forwards in turn, so
+exactly one element ever writes `icon-only` onto any given node and a nested group clips its own
+heading too. In that mode the heading text is clipped out of layout — whether or not the group is
+collapsible — but stays in the accessibility tree.
 
 **Optional peer deps:** none.
 
@@ -3041,6 +3198,17 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   independent. A valid `href` is inherently actionable and receives the same interaction paint
   without this flag. `false` (the default) leaves a no-link card static: no button, listeners, or
   events.
+- `disabled: boolean = false` (reflected) — turns the card's OWN activation off. The native
+  `activation-button` renders `disabled`; a linked card's stretched `<a>` loses its `href`, so it
+  genuinely cannot navigate rather than merely claiming to be disabled while still clickable, and
+  gains an explicit `role="link"` so its accessible name and `aria-current` stay valid on an
+  element that no longer has an implicit role. `lr-card-activate` stops firing from every path,
+  `click()` included, the control leaves the tab order, and the card paints at
+  `--lr-opacity-disabled` with a `not-allowed` cursor. Scoped to the card's own action: a passive
+  card (no `actionable`, no `href`) has nothing to turn off, so `disabled` leaves it untouched,
+  and slotted controls stay yours to disable. `<lr-card>` is deliberately not form-associated (it
+  is a layout container, not a form control), so an ancestor `<fieldset disabled>` does not
+  cascade into it — disable each card explicitly.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of the
   native whole-card owner: the activation button without `href`, or the stretched link with it.
   An explicitly empty value is retained; only an absent value falls back to card or linked content,
@@ -3054,6 +3222,14 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
 - `rel?: string` — author relationship tokens such as `nofollow`, `sponsored`, `me`, or `license`.
   `opener` is always stripped, other tokens are preserved, and any set `target` force-adds the
   non-negotiable `noopener noreferrer` floor. With no target, safe author tokens render unchanged.
+- `aria-pressed` and `aria-current` (attributes only) — forwarded reactively onto the native
+  control the card actually renders, the same mechanism `<lr-button>` and `<lr-icon-button>` use.
+  `aria-pressed` accepts `'true' | 'false' | 'mixed'` and reaches the `activation-button` only —
+  `link` has no pressed state, so a linked card never receives it. The global `aria-current`
+  accepts `'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'` and reaches both the
+  activation button and the stretched link. Anything outside those sets is dropped rather than
+  passed through, so a typo never reaches the accessibility tree. This is what lets a single-select
+  list of card-shaped tiles announce which one is the active selection.
 
 **Events:** `lr-card-activate` (no detail) — the whole card was activated, by a click anywhere on it
 or by Enter/Space on `[part='activation-button']`. Only fired while `actionable` is set **without**
@@ -3089,7 +3265,10 @@ gap around card sections. Shoelace-compatible `--padding` is its fallback; `--bo
 tokens — `--lr-color-border`/`-surface`/`-brand`/
 `-brand-quiet`, `--lr-radius`, `--lr-space-s`/`-m`, `--lr-transition-fast`,
 `--lr-focus-ring-*`.
-Appearance and interaction paint can be rethemed independently through `--lr-card-filled-bg`,
+Appearance and interaction paint can be rethemed independently through `--lr-card-outlined-bg`
+(the DEFAULT `outlined` appearance's background, and `accent`'s, which adds a stripe without
+restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-details>`'s
+`--lr-details-outlined-bg`), `--lr-card-filled-bg`,
 `--lr-card-filled-outlined-bg`, `--lr-card-accent-border-color`,
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
@@ -3890,6 +4069,15 @@ chips (`filter-control-tag-label` is capped by that control's own `--tag-max-siz
 expand-button/popup apply to date filters. This lets a consumer theme the composed tier from
 `lr-filter-bar::part(...)` without depending on the built-in control type selected by a filter
 definition. Custom renderers retain ownership of their own part forwarding.
+On a `'checkbox-menu'` filter, `filter-control-field` is the trigger button's own frame — the
+element inside `<lr-button>` that draws the border, background and radius, not the chrome-less
+button host, so a `::part(filter-control-field) { border-color: … }` rule works there exactly as it
+does for every other filter type. `filter-control-start` is that trigger's adornment wrapper (where
+a definition `icon` lands), `filter-control-input` is its selection summary, `filter-control-label`
+is the trigger's own label text (not a stacked label above the control), `filter-control-listbox` is
+the dropdown's popup surface, `filter-control-option` is one `role="menuitemcheckbox"` row, and
+`filter-control-error` is the revealed required message — rendered by the bar itself, because the
+composed dropdown has no error chrome of its own.
 
 `field` wraps one filter's composed control and its validation spacer inside `controls`; its
 flex-basis is themeable via `--lr-filter-bar-field-basis` (default `var(--lr-size-12rem)`).
@@ -3906,8 +4094,13 @@ starting with a letter); an id that doesn't (for example one containing whitespa
 alone, exactly as before this part existed, rather than risking a `part` attribute whose
 space-separated token list fabricates an unrelated second token.
 
-A `'select'`/`'combobox'` filter's required `options` entries are
-`LyraFilterBarOption { value, label, icon? }`.
+A `'select'`, `'combobox'` or `'checkbox-menu'` filter's required `options` entries are
+`LyraFilterBarOption { value, label, icon?, searchText? }`. `searchText` is extra text the option
+also matches on, forwarded verbatim to `<lr-option>`'s own `search-text`, so a row can keep a short
+visible `label` ("Urgent") while still matching a long canonical key ("SEV-1 production outage").
+It affects a `'combobox'` filter only: the attribute is written on every choice type's `<lr-option>`,
+but `<lr-select>`'s listbox type-ahead matches the option's `label` alone and never reads it, and a
+`'checkbox-menu'` has no text entry to match against.
 `icon` is optional Lit content — a status dot, a type glyph, a flag — rendered into the composed
 `<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome, so it never joins the option's
 accessible name:
@@ -3931,13 +4124,26 @@ to `<lr-input>` for an open-ended free-text query rather than a closed choice se
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
 text the user typed, not a truncated or normalized form.
 
-A `'text'` or `'combobox'` filter definition additionally accepts optional `clearable: boolean`,
-`size: LyraSize`, and `icon: unknown` fields, forwarded verbatim to the composed
-`<lr-input>`/`<lr-combobox>`'s own same-named properties (`icon` into that control's `start`
-slot, exactly like a choice option's own `icon`). `'text'` also accepts `inputType: LyraInputType`
-(forwarded to the composed `<lr-input>`'s own `type`, e.g. `'search'`/`'email'`/`'tel'`/`'url'`).
-Every one of these is optional and defaults to that composed control's own default, so an
-existing filter definition renders unchanged.
+Every built-in (non-`'custom'`) filter definition additionally accepts optional `size: LyraSize`,
+`icon: unknown` and `labelVisibility: 'visible' | 'hidden'` fields, and every one whose composed
+control ships a clear action also accepts `clearable: boolean`. They are forwarded verbatim to that
+control's own same-named property — `icon` into its `start` slot exactly like a choice option's own
+`icon`, rendered inert and `aria-hidden`; `clearable` reaching `<lr-date-input>` under its own
+`with-clear` spelling, since that control has no `clearable`. `'text'` also accepts
+`inputType: LyraInputType` (forwarded to the composed `<lr-input>`'s own `type`, e.g.
+`'search'`/`'email'`/`'tel'`/`'url'`), and `'combobox'` also accepts `emptyText: string` (forwarded
+to its `empty-text`, the row its listbox shows when a query matches none of the declared options). A
+`'custom'` definition deliberately accepts none of them: its renderer owns the control's markup
+outright, so a field the bar could not forward anywhere would be inert API. Every one of these is
+optional and defaults to that composed control's own default, so an existing filter definition
+renders unchanged.
+
+`labelVisibility: 'hidden'` routes the filter's `label` to the composed control's own `aria-label`
+instead of rendering it as a stacked visible label, and — when the definition declares no
+`placeholder` of its own — also uses it as the placeholder. The label is re-routed, never dropped,
+so a compact toolbar row still names every field for assistive technology; visually hiding
+`::part(filter-control-label)` in CSS, the only previous option, removed the accessible name along
+with the text.
 
 `'combobox'` also accepts the same `debounce?: number` (ms) `'text'` already had: it coalesces a
 burst of rapid selection changes (picks, a multi-select toggle, an
@@ -3947,6 +4153,54 @@ fully controlled: while a commit is pending it renders that pending selection ra
 last-committed `value`, so the control's own display never reverts mid-delay. A pending debounce
 is flushed by the control's own blur and cancelled by `reset()`, a chip removal, and
 disconnection — identical to `'text'`.
+
+### `'checkbox-menu'` filters
+
+A `'checkbox-menu'` filter composes `<lr-dropdown>` plus one `<lr-dropdown-item type="checkbox">`
+(`role="menuitemcheckbox"`) per option, behind a single toolbar trigger button. The menu stays open
+across toggles, so several categories can be switched in one visit. Its value is a `string[]`,
+identical to a `'combobox'` with `multiple`, so the two are interchangeable everywhere the bar's own
+bookkeeping is concerned — the same `value` record, active-filter chips, `reset()` path, `required`
+validation and single full-value `lr-input`. Choose between them on interaction, not on data shape:
+reach for `'checkbox-menu'` when the set is small and fixed and typing to filter would only be in
+the way.
+
+Rows are controlled by `value` rather than self-toggling, so a toggle the bar refuses (a `disabled`
+bar, a filter removed mid-interaction) can never leave a checkmark the bar disagrees with.
+
+It is the one built-in type that renders no stacked label above its control: the trigger button
+carries the `label` as its own text next to the selection summary, and `labelVisibility: 'hidden'`
+makes that text visually hidden — never removed — so the button keeps its accessible name. In the
+one case where the hidden label would be the *only* thing the button says (hidden routing, no
+declared `placeholder`, nothing selected) the label routes to the visible summary instead of being
+emitted twice, so the trigger's accessible name stays "Teams", never "Teams Teams".
+
+Because its trigger is a button rather than a field, a `required` `'checkbox-menu'` deliberately
+renders **no** required asterisk and sets **no** `aria-invalid`: the shared required marker has no
+selector that matches a button trigger's label, and `<lr-button>` does not forward a host
+`aria-invalid` onto the element that owns the button role, so writing one would be silently inert. A
+revealed required error still reaches assistive technology — it joins the trigger's accessible name
+as a screen-reader-only run, alongside the visible `filter-control-error` line under the field.
+
+```ts
+const filters: LyraFilterBarFilterDefinition[] = [
+  {
+    filterId: "teams",
+    label: "Teams",
+    type: "checkbox-menu",
+    placeholder: "Any team",
+    options: [
+      { value: "core", label: "Core" },
+      { value: "infra", label: "Infrastructure" },
+      { value: "design", label: "Design" },
+    ],
+  },
+];
+// bar.value -> { teams: ["core", "design"] }
+```
+
+A filter bar detached and reattached while a checkbox menu is open comes back closed, like every
+other transient state the bar owns.
 
 ### Date-range quick ranges
 
@@ -4245,6 +4499,12 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js`.
   `computeAppRailMode(iconOnlyMatches: boolean, mobileMatches: boolean, preferredMode?: LyraAppRailPreferredMode | null): LyraAppRailMode`
 
+- **`components-layout-app-rail-group-app-rail-group-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/app-rail-group/app-rail-group.class.js`.
+  `LyraAppRailGroupToggleDetail {
+    open: boolean;
+  }`
+
 - **`components-layout-command-palette-command-palette-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js`.
   `LyraCommand {
@@ -4437,14 +4697,33 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-layout-filter-bar-filter-bar-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
-  `LyraFilterBarComboboxDefinition extends LyraFilterBarDefinitionBase {
+  `LyraFilterBarComboboxDefinition extends LyraFilterBarClearableDefinitionBase {
     readonly type: 'combobox';
     readonly options: readonly LyraFilterBarOption[];
     readonly multiple?: boolean;
     readonly debounce?: number;
+    readonly emptyText?: string;
+    // Inherited from LyraFilterBarClearableDefinitionBase.
     readonly clearable?: boolean;
+    // Inherited from LyraFilterBarComposedDefinitionBase.
     readonly size?: LyraSize;
     readonly icon?: unknown;
+    readonly labelVisibility?: LyraFilterBarLabelVisibility;
+    // Inherited from LyraFilterBarDefinitionBase.
+    readonly filterId: string;
+    readonly label: string;
+    readonly placeholder?: string;
+    readonly required?: boolean;
+    readonly defaultValue?: string | readonly string[] | boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
+  `LyraFilterBarCheckboxMenuDefinition extends LyraFilterBarComposedDefinitionBase {
+    readonly type: 'checkbox-menu';
+    readonly options: readonly LyraFilterBarOption[];
+    // Inherited from LyraFilterBarComposedDefinitionBase.
+    readonly size?: LyraSize;
+    readonly icon?: unknown;
+    readonly labelVisibility?: LyraFilterBarLabelVisibility;
     // Inherited from LyraFilterBarDefinitionBase.
     readonly filterId: string;
     readonly label: string;
@@ -4498,6 +4777,10 @@ These named interfaces and helper signatures are available to typed integrations
     // Inherited from LyraFilterBarDateDefinitionBase.
     readonly min?: string;
     readonly max?: string;
+    readonly clearable?: boolean;
+    readonly size?: LyraSize;
+    readonly icon?: unknown;
+    readonly labelVisibility?: LyraFilterBarLabelVisibility;
     readonly filterId: string;
     readonly label: string;
     readonly placeholder?: string;
@@ -4511,6 +4794,10 @@ These named interfaces and helper signatures are available to typed integrations
     // Inherited from LyraFilterBarDateDefinitionBase.
     readonly min?: string;
     readonly max?: string;
+    readonly clearable?: boolean;
+    readonly size?: LyraSize;
+    readonly icon?: unknown;
+    readonly labelVisibility?: LyraFilterBarLabelVisibility;
     readonly filterId: string;
     readonly label: string;
     readonly placeholder?: string;
@@ -4528,15 +4815,22 @@ These named interfaces and helper signatures are available to typed integrations
     readonly value: string;
     readonly label: string;
     readonly icon?: unknown;
+    readonly searchText?: string;
   }`
   Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
   `LyraFilterBarResetDetail {
     readonly value: LyraFilterBarValue;
   }`
   Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
-  `LyraFilterBarSelectDefinition extends LyraFilterBarDefinitionBase {
+  `LyraFilterBarSelectDefinition extends LyraFilterBarClearableDefinitionBase {
     readonly type: 'select';
     readonly options: readonly LyraFilterBarOption[];
+    // Inherited from LyraFilterBarClearableDefinitionBase.
+    readonly clearable?: boolean;
+    // Inherited from LyraFilterBarComposedDefinitionBase.
+    readonly size?: LyraSize;
+    readonly icon?: unknown;
+    readonly labelVisibility?: LyraFilterBarLabelVisibility;
     // Inherited from LyraFilterBarDefinitionBase.
     readonly filterId: string;
     readonly label: string;
@@ -4545,13 +4839,16 @@ These named interfaces and helper signatures are available to typed integrations
     readonly defaultValue?: string | readonly string[] | boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
-  `LyraFilterBarTextDefinition extends LyraFilterBarDefinitionBase {
+  `LyraFilterBarTextDefinition extends LyraFilterBarClearableDefinitionBase {
     readonly type: 'text';
     readonly debounce?: number;
     readonly inputType?: LyraInputType;
+    // Inherited from LyraFilterBarClearableDefinitionBase.
     readonly clearable?: boolean;
+    // Inherited from LyraFilterBarComposedDefinitionBase.
     readonly size?: LyraSize;
     readonly icon?: unknown;
+    readonly labelVisibility?: LyraFilterBarLabelVisibility;
     // Inherited from LyraFilterBarDefinitionBase.
     readonly filterId: string;
     readonly label: string;

@@ -548,3 +548,90 @@ export const TextAndComboboxPassthrough: Story = {
     return html`<lr-filter-bar style="max-width: 40rem" .filters=${filters} .value=${{ q: 'timeout', owners: ['ada'] }}></lr-filter-bar>`;
   },
 };
+
+/** A `'checkbox-menu'` filter composes `<lr-dropdown>` plus one
+ *  `<lr-dropdown-item type="checkbox">` per option: a toolbar button that opens a menu of
+ *  independently togglable categories and stays open across toggles. Its value is a `string[]`
+ *  exactly like a `'combobox'` with `multiple`, so it joins the same value record, chip row, reset
+ *  path and `lr-input` contract. Reach for it over a combobox when the set is small and fixed and
+ *  typing to filter would only be in the way. */
+export const CheckboxMenu: Story = {
+  render: () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'teams',
+        label: 'Teams',
+        type: 'checkbox-menu',
+        placeholder: 'Any team',
+        options: [
+          { value: 'core', label: 'Core' },
+          { value: 'infra', label: 'Infrastructure' },
+          { value: 'design', label: 'Design' },
+          { value: 'docs', label: 'Documentation' },
+        ],
+      },
+      {
+        filterId: 'severity',
+        label: 'Severity',
+        type: 'checkbox-menu',
+        size: 's',
+        icon: html`<span aria-hidden="true">⚑</span>`,
+        options: [
+          { value: 'sev1', label: 'Sev 1' },
+          { value: 'sev2', label: 'Sev 2' },
+          { value: 'sev3', label: 'Sev 3' },
+        ],
+      },
+    ];
+    return html`<lr-filter-bar
+      style="max-width: 40rem"
+      .filters=${filters}
+      .value=${{ teams: ['core', 'design'] }}
+    ></lr-filter-bar>`;
+  },
+};
+
+/** `labelVisibility: 'hidden'` routes a filter's `label` to the composed control's own
+ *  `aria-label` (and, with no `placeholder` of its own, to its placeholder) instead of rendering a
+ *  stacked label above it — a compact toolbar row that still names every field for assistive tech.
+ *  A `'combobox'` filter can also declare `emptyText` for its no-matches row, and an option can
+ *  carry `searchText` so a short label still matches a long canonical key. */
+export const CompactLabels: Story = {
+  render: () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'q',
+        label: 'Search incidents',
+        type: 'text',
+        inputType: 'search',
+        clearable: true,
+        labelVisibility: 'hidden',
+        icon: html`<span aria-hidden="true">🔍</span>`,
+      },
+      {
+        filterId: 'owners',
+        label: 'Owners',
+        type: 'combobox',
+        multiple: true,
+        labelVisibility: 'hidden',
+        emptyText: 'No matching owners',
+        options: [
+          { value: 'ada', label: 'Ada', searchText: 'Ada Lovelace analytical engine' },
+          { value: 'grace', label: 'Grace', searchText: 'Grace Hopper compiler' },
+        ],
+      },
+      {
+        filterId: 'teams',
+        label: 'Teams',
+        type: 'checkbox-menu',
+        labelVisibility: 'hidden',
+        placeholder: 'Any team',
+        options: [
+          { value: 'core', label: 'Core' },
+          { value: 'infra', label: 'Infrastructure' },
+        ],
+      },
+    ];
+    return html`<lr-filter-bar style="max-width: 44rem" .filters=${filters}></lr-filter-bar>`;
+  },
+};

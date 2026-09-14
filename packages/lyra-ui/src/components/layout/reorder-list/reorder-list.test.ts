@@ -509,11 +509,11 @@ describe("<lr-reorder-list>", () => {
     expect(movedItem.value).to.equal("a");
     const active = movedItem.shadowRoot!.activeElement;
     expect((active) != null, "focus lands on a real element inside the moved item, not lost to document.body").to.equal(true);
-    expect(active?.tagName).to.equal("BUTTON");
+    expect(active?.localName).to.equal("lr-icon-button");
     expect(
-      (active as HTMLButtonElement).disabled,
+      (active as HTMLElement & { disabled?: boolean }).disabled,
       "the focused button is not disabled"
-    ).to.be.false;
+    ).to.equal(false);
     expect(active?.getAttribute("part")).to.equal("move-up-button");
     expect(
       document.activeElement === el || el.contains(document.activeElement),
@@ -549,11 +549,11 @@ describe("<lr-reorder-list>", () => {
     expect(movedItem.value).to.equal("a");
     const active = movedItem.shadowRoot!.activeElement;
     expect((active) != null, "focus lands on a real element inside the moved item, not lost to document.body").to.equal(true);
-    expect(active?.tagName).to.equal("BUTTON");
+    expect(active?.localName).to.equal("lr-icon-button");
     expect(
-      (active as HTMLButtonElement).disabled,
+      (active as HTMLElement & { disabled?: boolean }).disabled,
       "the focused button is not disabled"
-    ).to.be.false;
+    ).to.equal(false);
     expect(active?.getAttribute("part")).to.equal("move-up-button");
   });
 

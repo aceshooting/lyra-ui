@@ -1,4 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './context-meter.js';
 import type { LyraContextMeter, ContextMeterSegment } from './context-meter.js';
 
@@ -658,4 +659,27 @@ it("paints a ring segment's custom color property, not just the bar variant", as
   await el.updateComplete;
   const circle = el.shadowRoot!.querySelector('circle[part="segment"]') as SVGElement;
   expect(circle.style.getPropertyValue('--lr-context-meter-segment-color')).to.equal('rgb(9, 8, 7)');
+});
+
+it('activates a focused band from the keyboard while interactive, and never otherwise', async () => {
+  const el = (await fixture(html`<lr-context-meter interactive total="10000"></lr-context-meter>`)) as LyraContextMeter;
+  el.segments = SEGMENTS;
+  await el.updateComplete;
+  const indexes: number[] = [];
+  el.addEventListener('lr-segment-activate', (event) => {
+    indexes.push((event as CustomEvent<{ index: number }>).detail.index);
+  });
+
+  const band = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="segment"]')!;
+  band.focus();
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(indexes, 'Enter on the focused band activates it').to.deep.equal([0]);
+
+  el.interactive = false;
+  await el.updateComplete;
+  const span = el.shadowRoot!.querySelector<HTMLElement>('[part~="segment"]')!;
+  span.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  await el.updateComplete;
+  expect(indexes, 'a presentational band answers no key').to.deep.equal([0]);
 });

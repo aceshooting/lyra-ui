@@ -117,10 +117,26 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
   a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded from
   `d3-force`'s own simulation input and from click/keyboard interaction.
-- `width: number = 800`
+- `fitTo: 'none' | 'container' = 'none'` (attribute `fit-to`) — where the drawing space comes from.
+  `'none'` uses the numeric `width`/`height` below, unchanged. `'container'` measures the host's own
+  content box and feeds that to the SVG `viewBox`, the layout's centring force,
+  `focusNode()`/`fit()`'s camera math and the loading skeleton, so the drawing always matches the box
+  it is rendered into and no host-side `ResizeObserver` is needed. The first measurement is taken
+  synchronously before the first paint, with the host's own height already applied, so the first
+  painted frame is already the right size; every later one arrives on the component's own
+  host-resize watcher and is rounded to whole CSS pixels, so sub-pixel jitter changes nothing. A resize re-centres the running layout in place (`forceCenter`
+  plus a low-alpha restart) and never rebuilds the simulation, so settled node positions, pins and an
+  in-flight drag all survive it. Works in both renderers and across a renderer switch. While
+  `'container'` is in effect the measured box wins over `width`/`height`; it falls back to them when
+  the box is unmeasurable (detached, `display: none`, or a realm with no `ResizeObserver`). It does
+  **not** change how the host itself is sized — an outer `block-size`,
+  `--lr-canvas-reserved-height` and `height` still do that, and `'container'` simply follows
+  whichever of them won
+- `width: number = 800` — ignored while `fitTo` is `'container'`
 - `height: number = 600` — also sizes the rendered host itself (see
   `--lr-canvas-reserved-height`'s entry below) whenever neither that nor an explicit outer
-  `block-size` overrides it
+  `block-size` overrides it. Only the drawing space is ignored while `fitTo` is `'container'`; the
+  host sizing above still applies
 - `chargeStrength: number = -300` (attribute `charge-strength` — live-reactive, see gotchas)
 - `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
@@ -569,8 +585,10 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
 `description`, `properties`, `property` (one key/value row), `degree`, `community`, `actions`,
 `focus-button`, `empty` (shown when `entity` is `null`).
 
-**Themeable custom properties:** `--lr-entity-card-compact-padding` (default `var(--lr-space-s)`) —
-`[part='base']`'s padding while `compact`; `--lr-entity-card-compact-gap` (default
+**Themeable custom properties:** `--lr-entity-card-bg` (default `var(--lr-color-surface)`) —
+`[part='base']`'s RESTING background, the companion to the `compact` tier's levers below;
+`frame='plain'` still drops the fill entirely. `--lr-entity-card-compact-padding` (default
+`var(--lr-space-s)`) — `[part='base']`'s padding while `compact`; `--lr-entity-card-compact-gap` (default
 `var(--lr-space-xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
 the `compact` state, so a dense card can be tuned without re-pointing shared spacing tokens for
 everything else. Otherwise shared tokens; a data-driven `entity.type` color is applied as
@@ -825,7 +843,10 @@ activated).
 `overflow` (the "+N" chip button), `drill-button`, `actions`, `empty` (shown when `community` is
 `null`).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-community-card-bg` (default `var(--lr-color-surface)`) —
+`[part='base']`'s RESTING background, so a panel retinting its `lr-entity-card`/`lr-source-card`
+siblings can retint this card with it; `frame='plain'` still drops the fill entirely. Otherwise
+shared tokens.
 
 **Optional peer deps:** none.
 
@@ -1387,6 +1408,25 @@ source"` when empty.
   `plain` wins over `compact` when both are set — nothing left to tighten. The title and toggle keep
   their brand color and hover underline under `plain`, since neither ever depended on the card
   chrome. Use the shared `LyraFrame` type when authoring this property.
+- `disabled: boolean = false` (reflected) — turns off this card's OWN controls. The `title` button
+  and the "Show more"/"Show less" `toggle` both render `disabled`, so neither one can emit `lr-open`
+  or `lr-expand` and neither remains in the tab order, and the card paints at
+  `--lr-opacity-disabled` with a `not-allowed` cursor on both. The one `lr-expand` a disabled card
+  can still emit is the automatic collapse when the `full` slot empties while expanded — that
+  reports a state change the card genuinely made, exactly as it does when enabled. Both buttons
+  carry the native `:disabled`, so `::part(title):disabled` / `::part(toggle):disabled` restyle the
+  disabled affordance from outside. Every self-rendered sub-control is
+  gated, not just the primary one: a card whose title is inert but whose disclosure toggle still
+  expands reads as half-broken rather than disabled. Slotted `excerpt`/`full` content stays yours
+  to disable. Not form-associated, so an ancestor `<fieldset disabled>` does not cascade here.
+- `aria-pressed` and `aria-current` (attributes only) — forwarded reactively onto the `title`
+  button, the control that carries this card's action, the same mechanism `<lr-button>` and
+  `<lr-icon-button>` use. `aria-pressed` accepts `'true' | 'false' | 'mixed'`; `aria-current`
+  accepts `'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'`. Anything outside
+  those sets is dropped rather than passed through. The `toggle` button never receives either — it
+  already owns `aria-expanded` for its own disclosure state, and two conflicting state claims on
+  one control is worse than one. This is what lets a single-select citation list announce which
+  source is the active one.
 
 **Events:**
 
@@ -1408,7 +1448,10 @@ behind the "Show more"/"Show less" toggle — when left empty, no toggle renders
 (wrapper around the `full` slot, `hidden` while collapsed), `toggle` (the "Show more"/"Show less"
 button — only rendered when the `full` slot has content).
 
-**Themeable custom properties:** `--lr-source-card-compact-padding` (default `var(--lr-space-xs)`) —
+**Themeable custom properties:** `--lr-source-card-bg` (default `var(--lr-color-surface)`) —
+`[part='base']`'s RESTING background, the companion to the `compact` tier's levers below;
+`frame='plain'` still drops the fill entirely. `--lr-source-card-compact-padding` (default
+`var(--lr-space-xs)`) —
 `[part='base']`'s padding while `compact`; `--lr-source-card-compact-gap` (default
 `var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
 the `compact` state, so a dense citation list can be tuned without re-pointing shared spacing tokens
@@ -1818,15 +1861,25 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
-- `searchQuery: string = ''` (attribute `search-query`) — the id/label filter applied to the node
-  set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`.
-  Presettable, so a host can deep-link straight into a filtered view; the toolbar's search box keeps
-  it up to date afterwards. A missing or nonstring label is ignored for label matching while the
-  node's valid string id remains searchable
+- `searchQuery: string = ''` (attribute `search-query`) — the filter applied to the visible node
+  set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`. A node
+  matches when the query appears in **any** name it can be known by — its `id`, its `label` or its
+  `accessibleLabel` — each folded with the active locale, so a node named only through
+  `accessibleLabel` is findable by the very name the search results, pinned chips and details
+  popover already display for it, and a node carrying both a `label` and an `accessibleLabel` matches
+  either. Presettable, so a host can deep-link straight into a filtered view; the toolbar's search
+  box keeps it up to date afterwards. A missing or nonstring `label`/`accessibleLabel` is skipped
+  while the node's valid string id remains searchable
 
 (presentation)
 
 - `renderer: 'svg' | 'canvas' = 'svg'` — forwarded to `lr-graph.renderer`
+- `fitTo: 'none' | 'container' = 'none'` (attribute `fit-to`) — forwarded to `lr-graph.fitTo`.
+  `'container'` makes the composed graph draw at exactly the pane this component's own layout gave
+  it — the reservation minus whatever the toolbar, search results, pinned row and path strip take,
+  which is not derivable from `height` — and follow it live as the explorer is resized. `'none'`
+  keeps forwarding the numeric `width`/`height` below unchanged. See that property's own entry in
+  this file's `lr-graph` section
 - `width: number = 800`, `height: number = 600` — `height` also sizes the composed graph's own
   rendered box (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback
   chain `lr-graph.height` uses on its own host

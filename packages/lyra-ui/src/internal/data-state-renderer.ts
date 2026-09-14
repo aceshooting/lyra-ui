@@ -96,6 +96,19 @@ export interface DataStateConfig {
    * type this interface already supplies; `RequestCommitOptions.emitRequest` states why in full.
    */
   emitRetry?: (detail: null, init: { cancelable: true }) => CustomEvent;
+  /**
+   * Overrides the name of the `<slot>` a branch is wrapped in. Each branch defaults to its own
+   * name (`loading`/`error`/`empty`), which is the library convention and what `lr-table` ships.
+   *
+   * It exists because `error` is ALSO the shared form-control slot name: every form-associated
+   * control in this library already publishes `<slot name="error">` for its validation message. A
+   * form control adopting this ladder -- `lr-combobox` is the first -- would render a second
+   * `slot[name="error"]`, and slot assignment goes to the FIRST such slot in tree order, so the
+   * data-state slot would silently swallow the field's own error content. Renaming that one branch
+   * (`{ error: 'source-error' }`) is the only way to publish both, and it has to be the adopting
+   * component's decision because the name becomes its permanent public API.
+   */
+  slotNames?: Partial<Record<LyraDataStatePrecedence, string>>;
 }
 
 /**
@@ -245,7 +258,8 @@ export function renderDataState(
   const branch = resolveDataState(config);
   if (branch === null) return nothing;
   const override = config.slots?.[branch];
-  return html`<slot name=${branch}
+  const slotName = config.slotNames?.[branch] ?? branch;
+  return html`<slot name=${slotName}
     >${override === undefined
       ? builtInState(host, config, prefixFor(partPrefix, branch), retryEventName, branch)
       : override}</slot

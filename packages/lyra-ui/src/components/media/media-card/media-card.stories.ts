@@ -303,3 +303,59 @@ export const BeforeDownloadEvent: Story = {
     </div>
   `,
 };
+
+export const RestingBackgroundToken: Story = {
+  name: 'Retinting the resting frame',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-media-card-bg` is the resting companion to the pressed state\'s `--lr-media-card-active-bg`, so a themed attachment list no longer needs a `::part(base)` rule or an app-wide `--lr-color-surface` change.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-media-card
+      kind="file"
+      filename="sizing-notes.txt"
+      style="--lr-media-card-bg: var(--lr-color-brand-quiet)"
+    ></lr-media-card>
+  `,
+};
+
+export const Disabled: Story = {
+  name: 'Disabled actions',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`disabled` turns off this card\'s own action: the image button and the video `open-button` render `disabled`, a file chip\'s anchor loses its `href`/`download` and leaves the tab order, `lr-media-open`/`lr-before-media-download` stop firing, and the affordance paints at `--lr-opacity-disabled`. The `kind="video"` player keeps its own native transport — that is media, not this card\'s action.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-m);flex-wrap:wrap;align-items:flex-start;">
+      <lr-media-card kind="file" src="/fixtures/sample.pdf" filename="report.pdf"></lr-media-card>
+      <lr-media-card kind="file" src="/fixtures/sample.pdf" filename="report.pdf" disabled></lr-media-card>
+      <lr-media-card src=${SAMPLE_IMAGE} .kind=${IMAGE_KIND} alt="Rooftop array" disabled></lr-media-card>
+    </div>
+  `,
+};
+
+export const SelectableAttachments: Story = {
+  name: 'Selectable attachments with aria-pressed',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A host `aria-pressed` reaches the card\'s action when that action is a button (`kind="image"`, and `kind="video"`\'s `open-button`); `aria-current` reaches every kind, anchor included. A file chip never receives `aria-pressed` — `link` has no pressed state.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-m);flex-wrap:wrap;align-items:flex-start;">
+      <lr-media-card src=${SAMPLE_IMAGE} .kind=${IMAGE_KIND} alt="Rooftop array" aria-pressed="true"></lr-media-card>
+      <lr-media-card src=${SAMPLE_IMAGE} .kind=${IMAGE_KIND} alt="Inverter bay" aria-pressed="false"></lr-media-card>
+    </div>
+  `,
+};

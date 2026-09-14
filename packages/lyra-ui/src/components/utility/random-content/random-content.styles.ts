@@ -80,9 +80,19 @@ export const styles = css`
      wins over user-agent origin -- so without this a candidate carrying hidden and
      aria-hidden="true" stayed painted, leaving every rotation visually inert with only assistive
      technology seeing the selection. "until-found" is excluded as the UA rule excludes it, so a
-     candidate marked that way stays find-in-page revealable. */
+     candidate marked that way stays find-in-page revealable.
+
+     '!important' is required rather than stylistic, and only because THIS component owns the
+     flag: applyManagedSelection() writes hidden itself as rotation state, not as an author
+     declaration. Per CSS Cascade 5's encapsulation-context ordering a normal-weight rule in the
+     candidate's own (light-DOM) tree already outranks a same-specificity ::slotted() rule declared
+     here, so any author 'display' rule matching the candidate would silently re-show every
+     rotated-out one; only '!important' reverses that ordering in this (inner) tree's favour. The
+     library's other ::slotted([hidden]) overrides deliberately stay normal-weight, because there
+     the hidden flag is the AUTHOR's own -- matching lr-multi-split's owned panels, lr-toast's
+     queued items and lr-avatar-group's overflow, which all force their own state the same way. */
   ::slotted([hidden]:not([hidden='until-found' i])) {
-    display: none;
+    display: none !important;
   }
   :host(:where([animation='fade'])) ::slotted(:not([hidden])) {
     animation-name: lr-random-content-fade-in;

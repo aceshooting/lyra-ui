@@ -46,6 +46,11 @@ import {
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { tag } from '../../../internal/prefix.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
+import { renderDataState } from '../../../internal/data-state-renderer.js';
+import type {
+  LyraPickerDetailValue,
+  LyraPickerValue,
+} from '../../../internal/picker-value.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
   acquireAnnouncementSink,
@@ -66,7 +71,7 @@ import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
@@ -182,6 +187,9 @@ export interface ComboboxSourceRow {
   readonly disabled?: boolean;
   /** @internal Marks the synthetic, cancelable "create this value" action row. */
   readonly createInput?: string;
+  /** @internal Marks the synthetic row standing in for a committed value no option or async row
+   *  claims -- see `<lr-combobox>`'s `showUnknownOption`. */
+  readonly unknownValue?: string;
 }
 
 /** Bounded async response envelope. `total` is the provider-side match count before its own cap. */
@@ -325,7 +333,9 @@ export interface ComboboxFilterDetail {
   value: string;
 }
 
-export interface LyraComboboxEventMap {
+export type { LyraPickerDetailValue, LyraPickerValue };
+
+export interface LyraComboboxEventMap<Multiple extends boolean = boolean> {
   'lr-invalid': CustomEvent<null>;
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
@@ -335,18 +345,30 @@ export interface LyraComboboxEventMap {
   'lr-create': CustomEvent<{ inputValue: string }>;
   'lr-filter': CustomEvent<ComboboxFilterDetail>;
   'lr-change': CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
   >;
   'lr-activate': CustomEvent<{ value: string }>;
+  'lr-source-error': CustomEvent<{ error: unknown }>;
+  'lr-retry': CustomEvent<null>;
   input: InputEvent | CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
   >;
   change: CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
   >;
   blur: FocusEvent;
   focus: FocusEvent;
 }
+/**
+ * Stable per-event aliases, so a host can name one event's type without restating the detail
+ * schema (or re-deriving it from `LyraComboboxEventMap`). Each narrows with the same `Multiple`
+ * parameter the component does: `LyraComboboxChangeEvent<false>`'s `detail.value` is a `string`.
+ */
+export type LyraComboboxChangeEvent<Multiple extends boolean = boolean> =
+  LyraComboboxEventMap<Multiple>['lr-change'];
+export type LyraComboboxSourceErrorEvent =
+  LyraComboboxEventMap['lr-source-error'];
+
 /**
  * `<lr-combobox>` — a filterable single/multi select that combines a text
  * input with a listbox. Mirrors the core `<wa-combobox>` API under `lr-`.
@@ -401,13 +423,13 @@ export interface LyraComboboxEventMap {
  *   expand icon — so consumer content never sits outboard of the dropdown chevron.
  * @slot clear-icon - Replaces the clear button's built-in icon.
  * @slot expand-icon - Replaces the dropdown indicator's built-in icon.
- * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} change - The selection changed through user
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>>} change - The selection changed through user
  * interaction. A bubbling, composed, non-cancelable event carrying `detail: { value }` (the new
  * committed selection: a string in single mode, a string[] in `multiple` mode).
- * @event {InputEvent | CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} input - The user typed in the
+ * @event {InputEvent | CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>>} input - The user typed in the
  * filter or changed the selection. Text edits expose the original InputEvent (no `value` detail);
  * selection changes emit a bubbling, composed, non-cancelable event carrying `detail: { value }`.
- * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} lr-change - Prefixed compatibility alias fired
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>>} lr-change - Prefixed compatibility alias fired
  * after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s `lr-change`.
  * `detail: { value }`. Not fired for typing or a programmatic `value` assignment.
  * @event lr-activate - Fired on every activation of an available listbox row -- a click, or
@@ -422,6 +444,19 @@ export interface LyraComboboxEventMap {
  *   move the selection, `input`/`change`/`lr-change` are emitted first. Not fired for typing, for a
  *   committed custom value that matches no row, for the clear button, or for a programmatic `value`
  *   assignment.
+ * @event lr-source-error - An async `source` call rejected. `detail: { error }` carries the raw
+ *   rejection, so a host can log or report it; the rendered copy stays localized and never shows
+ *   it. Not cancelable — the failure has already happened and the error row is already what
+ *   rendered, so there is nothing to veto.
+ * @event lr-retry - The failed-load state's `[part='retry-button']` was activated. Cancelable —
+ *   the built-in action calls `refresh()`, and `preventDefault()` leaves the failure on screen for
+ *   a host that owns its own retry timing.
+ * @method refresh - `refresh(): void` — re-runs the current `source` query without changing the
+ *   source's identity, its debounce controller, or its delay. Queues for the next open when the
+ *   listbox is closed; does nothing without a `source`.
+ * @slot source-error - Replaces the built-in failed-`source` state, retry control included. Named
+ *   apart from the form-control `error` slot deliberately: they are different failures and a
+ *   control has to be able to show both.
  * @event lr-show - The listbox is about to open, however `open` became true. Cancelable —
  *   `preventDefault()` leaves it closed and the reflected attribute untouched.
  * @event lr-after-show - The listbox finished opening and its transition settled.
@@ -468,7 +503,8 @@ export interface LyraComboboxEventMap {
  *   subtree remains visible but is inert and hidden from assistive technology.
  * @csspart option-label - An option row's label/sub wrapper.
  * @csspart option-sub - An option row's secondary line (when `sub` is set).
- * @csspart option-badge - An async option row's optional trailing metadata badge.
+ * @csspart option-badge - An async option row's optional trailing metadata badge, and the
+ *   localized "not in catalog" badge on a synthetic unmatched-value row (`show-unknown-option`).
  * @csspart option-overflow - The "+N more" indicator shown when rows are capped by `maxRender`.
  * @csspart unknown-value - Badge shown next to the closed single-select input, or a `multiple`-mode
  *   tag, when the committed value matches no current option/row (see `isUnknownValue()`).
@@ -482,6 +518,11 @@ export interface LyraComboboxEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart error - Ordinary form-validation text referenced by the internal input; it is not a
  *   live region, avoiding a second announcement alongside native validation/focus feedback.
+ * @csspart source-error-row - The listbox row holding the failed-`source` state.
+ * @csspart source-error - The shared failed-load state itself, with `source-error-base`,
+ *   `source-error-icon`, `source-error-heading`, `source-error-description` and
+ *   `source-error-actions` forwarded from the composed `<lr-empty>`.
+ * @csspart retry-button - The retry control inside the failed-load state.
  * @csspart hint - The hint message.
  * @cssprop --lr-combobox-trigger-padding - Padding inside the input container.
  * @cssprop [--lr-combobox-trigger-min-height=var(--lr-form-control-height)] - Minimum
@@ -566,7 +607,9 @@ export interface LyraComboboxEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
+export class LyraCombobox<
+  Multiple extends boolean = boolean,
+> extends LyraElement<LyraComboboxEventMap<Multiple>> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -585,6 +628,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
+    noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
     open: LYRA_DEFAULT_open,
@@ -592,8 +636,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     progress: LYRA_DEFAULT_progress,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     restore: LYRA_DEFAULT_restore,
+    retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
+    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -656,6 +702,31 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   /** Lets a single-select combobox commit arbitrary text without adding an option. */
   @property({ type: Boolean, attribute: 'allow-custom-value' })
   allowCustomValue = false;
+  /**
+   * Appends every committed value that no option or async row claims to the end of the listbox as
+   * a synthetic, re-selectable row badged with the localized `notInCatalog` text -- the policy
+   * `<lr-model-select>` already ships.
+   *
+   * Off by default, because it adds a row to a listbox that has always rendered only real options.
+   * Turn it on wherever a stored value can outlive its catalog entry: without it, the out-of-list
+   * value is visible on the trigger but absent from the listbox, so a user who opens the listbox
+   * has no way back to the value they arrived with.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'show-unknown-option', reflect: true })
+  showUnknownOption = false;
+  /**
+   * Renders the label for a committed value that matches no option or row.
+   *
+   * The existing tag/option renderers cannot serve this case: they are handed a matched option,
+   * which by definition does not exist here, so the raw value string was the only thing left to
+   * render. This hook applies everywhere that value's label appears -- the trigger, a `multiple`
+   * tag, and the synthetic listbox row -- and is used only while the value is genuinely unmatched,
+   * so it can never override a real option's own label. A blank return falls back to the raw
+   * value, exactly as no hook at all would. Caller-supplied text: it is not localized here.
+   */
+  @property({ attribute: false }) getUnknownLabel?: (value: string) => string;
+
   /** Visual treatment shared with other Lyra form controls. */
   @property({ reflect: true })
   appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined';
@@ -784,6 +855,18 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   // asterisk. The default option slot keeps its identity-aware collection handler below.
   private readonly slotPresence = new SlotPresenceController(this);
   @state() private loading = false;
+  /**
+   * True while the last `source` call rejected and the popup shows the retry state instead of rows.
+   *
+   * The popup swaps `role="listbox"` for `role="dialog"` (and the input gains the matching
+   * `aria-haspopup="dialog"`) for exactly that span, because the failure state's retry `button` is
+   * not a valid listbox child -- axe's `aria-required-children` fails outright on it. `dialog` is
+   * one of the four popup roles WAI-ARIA allows a `role="combobox"` to own, so the still-expanded
+   * `aria-controls` target keeps a valid owner; `role="presentation"` would leave the expanded
+   * popup with none. `aria-activedescendant` is dropped over the same span: no option row renders
+   * while the failure state is the only content, so any retained active index would be a dangling
+   * idref.
+   */
   @state() private sourceFailed = false;
   @state() private asyncRows: ComboboxSourceRow[] = [];
   private _sourceTotal = 0;
@@ -799,6 +882,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     () => this.ownerDocument.defaultView,
   );
   private sourceToken = 0;
+  /** A `refresh()` asked for while the listbox was closed. Held rather than run, because a closed
+   *  combobox deliberately does not fetch -- the same convention that already governs the
+   *  open-driven first query -- and replayed on the next open. */
+  private refreshQueued = false;
   /** Aborted when a newer query supersedes the in-flight one, or on disconnect, so the source's
    *  own `fetch` can cancel. */
   private sourceAbort?: AbortController;
@@ -1245,11 +1332,18 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
    *  Every string, including `''`, is instead a candidate value: `<lr-option value="">` (or a
    *  matching async row) is a legitimate row, and assigning `''` selects it when present,
    *  mirroring what picking that row already did. A `''`/string assignment that matches nothing
-   *  still commits, exactly like any other unmatched string -- see `isUnknownValue()`. */
-  get value(): string | string[] {
-    return this.multiple ? [...this._selected] : this._selected[0] ?? '';
+   *  still commits, exactly like any other unmatched string -- see `isUnknownValue()`.
+   *
+   *  `LyraPickerValue<Multiple>` narrows to `string` on a `LyraCombobox<false>` and `string[]` on a
+   *  `LyraCombobox<true>`; the unnarrowed default resolves to the published union below, which is
+   *  why the manifest type is pinned here rather than left to the inferred alias name.
+   *  @type {string | string[]} */
+  get value(): LyraPickerValue<Multiple> {
+    return (
+      this.multiple ? [...this._selected] : this._selected[0] ?? ''
+    ) as LyraPickerValue<Multiple>;
   }
-  set value(next: string | string[] | null | undefined) {
+  set value(next: LyraPickerValue<Multiple> | null | undefined) {
     this.setValue(next, true);
   }
 
@@ -1399,6 +1493,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
    *  the same contract: a thrown validator fails closed with the generic localized message rather
    *  than escaping into the caller that happened to write `value`. */
   private validatorResult(): { flags?: ValidityStateFlags; message?: string } {
+    // Validators are declared against the un-narrowed class (`LyraFormValidator<LyraCombobox>`),
+    // which `this` is not assignable to while `Multiple` is an unresolved type parameter. Resolved
+    // once here rather than cast at each of the call sites below.
+    const self = this as unknown as LyraCombobox<boolean>;
+    const current = self.value;
     for (const validator of Array.isArray(this.validators)
       ? this.validators
       : []) {
@@ -1429,8 +1528,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         }
         result =
           typeof validator === 'function'
-            ? validator(this.value, this)
-            : validator?.validate(this.value, this);
+            ? validator(current, self)
+            : validator?.validate(current, self);
       } catch {
         return {
           flags: { customError: true },
@@ -1643,7 +1742,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     }
     // `.slice(0, 1)` -- not `selected[0] ?? ''` -- so "nothing was ever submitted" stays an empty
     // array (clear) rather than the sentinel `''`, which is now a real candidate value.
-    this.value = this.multiple ? selected : selected.slice(0, 1);
+    this.assignValue(this.multiple ? selected : selected.slice(0, 1));
     this._restoredStateActive = true;
   }
   /**
@@ -1780,7 +1879,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         // safe: initial.length is truthy, so initial[0] exists.
         const next = this.multiple ? initial : initial[0]!;
         if (fromDefaults && !optionDirty) this.setValue(next, false);
-        else this.value = next;
+        else this.assignValue(next);
         return; // The selection write already called reflectSelected().
       }
       if (optionDirty) this._valueDirty = true;
@@ -1808,7 +1907,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           ? [...new Set([...this._selected, ...values])]
           : // safe: eligible.length is truthy, so the last value exists.
             values[values.length - 1]!;
-        if (newLive.length > 0) this.value = next;
+        if (newLive.length > 0) this.assignValue(next);
         else this.setValue(next, false);
         return; // `value=`'s setter already called reflectSelected()
       }
@@ -1846,7 +1945,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         const next = option.selected
           ? this._selected.includes(option.value) ? this._selected : [...this._selected, option.value]
           : this._selected.filter((value) => value !== option.value);
-        this.value = next;
+        this.assignValue(next);
       } else {
         this._valueDirty = true;
         this._restoredStateActive = false;
@@ -1892,6 +1991,15 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // rather than rendering/announcing an empty segment.
     const nonBlank = (label: string | undefined): string | undefined =>
       label !== undefined && label.trim().length > 0 ? label : undefined;
+    // The unmatched-value hook wins outright, and only for a value that is genuinely unmatched:
+    // `getTag` cannot serve this case because it is handed a matched option, which by definition
+    // does not exist here. It stays ahead of the label cache so the hook can never be shadowed by
+    // a cached raw string -- `pickRow()` keeps a synthetic row out of that cache precisely so the
+    // two can never disagree about whether a value is unmatched.
+    if (this.getUnknownLabel && this.isUnknownValue(value)) {
+      const override = nonBlank(this.getUnknownLabel(value));
+      if (override !== undefined) return override;
+    }
     // Checked in order: an explicit pick's own label (works even after the
     // source rows backing it have since changed), a slotted `<lr-option>`
     // (local mode), then the last-fetched async row set (source mode) -- a
@@ -2012,7 +2120,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // rather than `limited[0]?.value ?? ''` -- commits an empty array, not the sentinel `''`, when
     // nothing matched.
     const limited = this.multiple ? rows : rows.slice(0, 1);
-    this.value = limited.map((row) => row.value);
+    this.assignValue(limited.map((row) => row.value));
     for (const row of limited) this._selectedRowCache.set(row.value, row);
   }
 
@@ -2032,6 +2140,41 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private get effectiveRows(): ComboboxSourceRow[] {
     if (this.source) return this.asyncRows;
     return this.filtered.map((option) => this.rowForOption(option));
+  }
+
+  /**
+   * Synthetic rows standing in for committed values that no option or async row claims.
+   *
+   * Opt-in, and derived fresh from the current `value` on every render -- never stored -- so the
+   * row appears exactly while the value is genuinely unmatched and vanishes the moment a real row
+   * claims it. Without it, a committed out-of-list value is visible on the trigger but absent from
+   * the listbox, so a user who opens the listbox has no way back to the value they arrived with.
+   *
+   * Filtered by the active query, exactly like `createRow` is: a row that survives a query it does
+   * not match would both mislead (the user typed `zzz` and is shown `ghost`) and suppress the
+   * "no matches" copy forever, since `render()` derives that branch from the rendered row count.
+   * An empty query keeps every unmatched value's row. The fold is the default substring one rather
+   * than the author's `filter` hook, which is typed against a real `<lr-option>` this row has none
+   * of.
+   */
+  private get unknownRows(): ComboboxSourceRow[] {
+    if (!this.showUnknownOption) return [];
+    const locale = this.effectiveLocale;
+    const query = this.query.trim().toLocaleLowerCase(locale);
+    return this._selected
+      .filter((value) => this.isUnknownValue(value))
+      .map((value) => ({
+        value,
+        label: this.labelFor(value),
+        badge: this.localize('notInCatalog'),
+        unknownValue: value,
+      }))
+      .filter(
+        (row) =>
+          !query ||
+          row.label.toLocaleLowerCase(locale).includes(query) ||
+          row.value.toLocaleLowerCase(locale).includes(query)
+      );
   }
 
   /** Synthetic action shown only when the current nonempty query has no exact label/value match. */
@@ -2070,9 +2213,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const sourceOverflow = this.source
       ? Math.max(0, this._sourceTotal - all.length)
       : 0;
+    const unknown = this.unknownRows;
     if (all.length <= this.maxRender) {
       return {
-        rows: create ? [...all, create] : all,
+        rows: [...all, ...unknown, ...(create ? [create] : [])],
         overflow: sourceOverflow,
       };
     }
@@ -2097,10 +2241,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       // time after whatever group happens to trail the cap.
       capped.sort((a, b) => originalIndex.get(a)! - originalIndex.get(b)!);
     }
+    // Appended AFTER the cap, exactly like the create row: a value the user has already committed
+    // must stay visible however long the match list is.
+    capped.push(...unknown);
     if (create) capped.push(create);
     return {
       rows: capped,
-      overflow: all.length - capped.length + (create ? 1 : 0) + sourceOverflow,
+      overflow:
+        all.length - capped.length + unknown.length + (create ? 1 : 0) + sourceOverflow,
     };
   }
 
@@ -2421,8 +2569,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         if (!this._isFirstUpdate) {
           void this.settleTransition('lr-after-show');
         }
-        if (this.source && this.asyncRows.length === 0)
+        // Both branches go through the DEBOUNCED path on purpose: this runs inside updated(), and
+        // the immediate path writes `loading` synchronously, which is a Lit change-in-update.
+        if (this.refreshQueued) {
+          this.refreshQueued = false;
           this.runSource(this.query);
+        } else if (this.source && this.asyncRows.length === 0) {
+          this.runSource(this.query);
+        }
       } else if (!this.open) {
         this.teardownListboxOverlay();
         if (!this._isFirstUpdate) {
@@ -2527,9 +2681,26 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
    * data/inputType metadata is not lost. `this.emit()` (from `LyraElement`)
    * already dispatches a bubbling, composed, non-cancelable `CustomEvent`. */
   private emitValueEvents(): void {
-    this.emit('input', { value: this.value });
-    this.emit('change', { value: this.value });
-    this.emit('lr-change', { value: this.value });
+    // Pinned to the un-narrowed class. Inside the class body `Multiple` is an unresolved type
+    // parameter, which leaves the detail type an unresolved conditional that no concrete argument
+    // list can be checked against -- the same reason `<lr-popover>`'s own lifecycle emits resolve
+    // against its base event map. The constraint already guarantees the payload's shape.
+    const self = this as unknown as LyraCombobox<boolean>;
+    self.emit('input', { value: self.value });
+    self.emit('change', { value: self.value });
+    self.emit('lr-change', { value: self.value });
+  }
+
+  /**
+   * This component's own channel for writing `value`.
+   *
+   * The public accessor is narrowed by `Multiple`, and inside the class body that parameter is
+   * unresolved -- so no concrete `string` or `string[]` is assignable to it, even though every
+   * value written here is one of the two. One documented cast in one place, rather than a dozen at
+   * the call sites; the runtime path is the public setter, unchanged.
+   */
+  private assignValue(next: string | string[] | null | undefined): void {
+    this.value = next as LyraPickerValue<Multiple> | null | undefined;
   }
 
   /** Runs the cancelable option-creation contract, then performs its default append/select behavior. */
@@ -2551,7 +2722,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     if (this.liveDisabled || this.multiple || !inputValue) return;
     const selectionChanged = this._selected[0] !== inputValue;
     this._selectedLabelCache.set(inputValue, inputValue);
-    this.value = inputValue;
+    this.assignValue(inputValue);
     this.query = '';
     this.explicitInputValue = false;
     void this.hide();
@@ -2565,6 +2736,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       this.createOption(row.createInput);
       return;
     }
+    // A synthetic unmatched-value row is derived FROM the committed value (`unknownRows`), so
+    // picking it is not evidence the value is known -- caching its label would make
+    // `isUnknownValue()` report it as a sanctioned pick from then on, permanently retiring the
+    // `[part="unknown-value"]` badge and the row itself for a value that still matches nothing.
+    // `_selectedRowCache` is skipped for the same reason: it backs the public `selectedRows`,
+    // which must never hand back a row this component invented. `lr-select` keeps the same
+    // separation by routing the identical click through `selectUnknownValue()`.
+    const synthetic = row.unknownValue !== undefined;
     const selectionChanged = this.multiple || this._selected[0] !== row.value;
     if (this.multiple) {
       const set = new Set(this._selected);
@@ -2573,16 +2752,20 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         this._selectedRowCache.delete(row.value);
       } else {
         set.add(row.value);
-        this._selectedLabelCache.set(row.value, row.label);
-        this._selectedRowCache.set(row.value, row);
+        if (!synthetic) {
+          this._selectedLabelCache.set(row.value, row.label);
+          this._selectedRowCache.set(row.value, row);
+        }
       }
-      this.value = [...set];
+      this.assignValue([...set]);
       this.query = '';
       this.explicitInputValue = false;
     } else {
-      this._selectedLabelCache.set(row.value, row.label);
-      this._selectedRowCache.clear();
-      this._selectedRowCache.set(row.value, row);
+      if (!synthetic) {
+        this._selectedLabelCache.set(row.value, row.label);
+        this._selectedRowCache.clear();
+        this._selectedRowCache.set(row.value, row);
+      }
       this.setValue(row.value, true, sourceOption);
       this.query = '';
       this.explicitInputValue = false;
@@ -2604,7 +2787,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     if (this.liveDisabled) return;
     const next = this._selected.filter((v) => v !== value);
     if (next.length === this._selected.length) return;
-    this.value = next;
+    this.assignValue(next);
     this.emitValueEvents();
   }
 
@@ -2620,7 +2803,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const hadSelection = this._selected.length > 0;
     const queryChanged = this.query !== '';
     if (!hadSelection && !queryChanged) return;
-    if (hadSelection) this.value = [];
+    if (hadSelection) this.assignValue([]);
     this.query = '';
     this.explicitInputValue = false;
     if (this.source) this.runSource(this.query);
@@ -2643,7 +2826,32 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.emit('lr-filter', { value: this.query });
   };
 
-  private runSource(query: string): void {
+  /**
+   * Re-runs the current `source` query.
+   *
+   * The gap it closes: nothing else could invalidate a *stable* `source`. Reassigning the property
+   * is the only other route, and that is a source-IDENTITY change -- it clears `asyncRows`, the
+   * totals, and the pending-selection cache, which is the correct reaction to a genuinely
+   * different provider and the wrong one for "ask the same provider again". `refresh()` therefore
+   * changes nothing about the source, the debounce controller, or its delay: it simply issues one
+   * more request for the text already typed, bypassing the debounce wait (the caller IS the
+   * intent; there is no keystroke burst to coalesce).
+   *
+   * Called while the listbox is closed, it queues for the next open rather than fetching, matching
+   * the component's existing "only queries while open" behaviour. Without a `source` it does
+   * nothing at all -- local `<lr-option>` children are already live DOM.
+   */
+  refresh(): void {
+    if (!this.source) return;
+    if (!this.open) {
+      this.refreshQueued = true;
+      return;
+    }
+    this.refreshQueued = false;
+    this.runSource(this.query, { immediate: true });
+  }
+
+  private runSource(query: string, options?: { immediate?: boolean }): void {
     const source = this.source;
     if (!source) return;
     this.clearSourceTimer();
@@ -2653,8 +2861,15 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const token = ++this.sourceToken;
     const ownerWindow = this.ownerDocument.defaultView;
     if (!this.isConnected || !ownerWindow) return;
+    const request = { query, token, owner: ownerWindow, source };
+    if (options?.immediate) {
+      // Straight through the same settle callback the debounce would have called, so the token
+      // guard, abort wiring and result handling stay in exactly one place.
+      this.runSourceRequest(request);
+      return;
+    }
     this.sourceDebounce.delayMs = this._sourceDelay;
-    this.sourceDebounce.push({ query, token, owner: ownerWindow, source });
+    this.sourceDebounce.push(request);
   }
 
   /** Runs one debounced `source()` call. The generation `token` is the guard that keeps a stale
@@ -2734,6 +2949,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         this.sourceErrorAnnouncementSink?.announce(
           this.localize('comboboxLoadError')
         );
+        // Non-cancelable: the failure has already happened and the error row is already the
+        // rendered outcome, so there is nothing here for a listener to veto. It carries the raw
+        // rejection so a host can log or report it -- the rendered copy stays localized and never
+        // leaks the message.
+        this.emit('lr-source-error', { error: err });
         console.warn('<lr-combobox> source() rejected:', err);
       })
       .finally(() => {
@@ -2933,6 +3153,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           role="option"
           data-value=${o.value}
           ?data-create=${o.createInput !== undefined}
+          ?data-unknown-value=${o.unknownValue !== undefined}
           aria-selected=${selected ? 'true' : 'false'}
           aria-disabled=${o.disabled ? 'true' : 'false'}
           aria-label=${o.accessibleLabel || nothing}
@@ -3088,7 +3309,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
               aria-describedby=${describedBy || nothing}
               aria-expanded=${this.open ? 'true' : 'false'}
               aria-controls=${this.listId}
-              aria-activedescendant=${activeId || nothing}
+              aria-haspopup=${this.sourceFailed ? 'dialog' : nothing}
+              aria-activedescendant=${this.sourceFailed ? nothing : activeId || nothing}
               aria-autocomplete="list"
               aria-required=${this.required ? 'true' : 'false'}
               aria-invalid=${invalid ? 'true' : 'false'}
@@ -3144,8 +3366,13 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           part="listbox"
           ?data-positioned=${this.listboxPositioned}
           id=${this.listId}
-          role="listbox"
-          aria-multiselectable=${this.multiple ? 'true' : 'false'}
+          role=${this.sourceFailed ? 'dialog' : 'listbox'}
+          aria-label=${this.sourceFailed ? this.localize('comboboxLoadError') : nothing}
+          aria-multiselectable=${this.sourceFailed
+            ? nothing
+            : this.multiple
+            ? 'true'
+            : 'false'}
           @mousedown=${this.onListboxMouseDown}
           @click=${this.onListboxClick}
         >
@@ -3154,13 +3381,30 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
                 >${this.statusText('loading', this.loadingText)}</div
               >`
             : this.sourceFailed
-            ? html`<div
-                class="source-error"
-                role="option"
-                aria-selected="false"
-                aria-disabled="true"
-              >
-                ${this.localize('comboboxLoadError')}
+            ? html`<div class="source-error" part="source-error-row" role="presentation">
+                ${renderDataState(
+                  this,
+                  {
+                    loading: false,
+                    error: true,
+                    empty: false,
+                    // The component's own catalog key, resolved here so adopting the shared
+                    // renderer does not change a single word of the shipped copy.
+                    errorHeading: this.localize('comboboxLoadError'),
+                    compact: true,
+                    // A listbox may not own a document-outline heading -- the renderer's own doc
+                    // comment names this exact position as the case to opt out in.
+                    headingLevel: 'none',
+                    onRetry: () => this.refresh(),
+                    emitRetry: (detail, init: { cancelable: true }) =>
+                      this.emit('lr-retry', detail, init),
+                    // `error` is already this form control's validation-message slot; see the
+                    // renderer's `slotNames` doc for why that collision has to be renamed here.
+                    slotNames: { error: 'source-error' },
+                  },
+                  { error: 'source-error' },
+                  'lr-retry'
+                )}
               </div>`
             : rows.length === 0
             ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true"

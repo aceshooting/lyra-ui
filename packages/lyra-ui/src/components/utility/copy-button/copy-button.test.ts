@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './copy-button.js';
 import type { LyraCopyButton } from './copy-button.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
@@ -34,6 +34,22 @@ const settle = async (el: LyraCopyButton): Promise<void> => {
 
 const baseButton = (el: LyraCopyButton): HTMLButtonElement =>
   el.shadowRoot!.querySelector('[part~="base"]') as HTMLButtonElement;
+
+/** The node that actually PAINTS. `[part~="base"]` is the composed `<lr-icon-button>` host, which
+ *  owns the part names, the accessible name and the activation API; the colour, the disabled
+ *  dimming and the focus ring all live on the native control inside it. */
+const paintedControl = (el: LyraCopyButton): HTMLElement =>
+  baseButton(el).shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
+
+/** The composed control eases its colour over --lr-transition-fast, so a synchronous read right
+ *  after the outcome lands catches an intermediate blend rather than the target. Poll for the
+ *  exact value instead of asserting once. */
+const waitForControlColor = async (el: LyraCopyButton, expected: string): Promise<void> => {
+  await waitUntil(
+    () => getComputedStyle(paintedControl(el)).color === expected,
+    `the composed control settles on ${expected}`,
+  );
+};
 
 const feedbackText = (el: LyraCopyButton): string =>
   (el.shadowRoot!.querySelector('[part="feedback"]') as HTMLElement).textContent!.trim();
@@ -602,7 +618,7 @@ it('restores each copy trigger baseline across replacement and preserves a consu
     `)) as LyraCopyButton;
     baseButton(el).click();
     await settle(el);
-    expect(getComputedStyle(baseButton(el)).color).to.equal('rgb(1, 120, 45)');
+    await waitForControlColor(el, 'rgb(1, 120, 45)');
     try {
       expect(el.matches(':state(success)')).to.be.true;
       expect(el.matches(':state(error)')).to.be.false;
@@ -839,7 +855,7 @@ it('restores each copy trigger baseline across replacement and preserves a consu
     // --lr-disabled-opacity (reversed word order), which left the
     // invalid opacity declaration at its initial value (1) instead of the
     // shared 0.5 dimming used by every other disabled control.
-    expect(getComputedStyle(baseButton(el)).opacity).to.equal('0.5');
+    expect(getComputedStyle(paintedControl(el)).opacity).to.equal('0.5');
   });
 });
 
@@ -903,7 +919,7 @@ describe('lr-copy-button clipboard failure', () => {
       expect(feedbackText(el)).to.equal('Could not copy token');
       const errorSlot = el.shadowRoot!.querySelector('slot[name="error-icon"]') as HTMLSlotElement;
       expect(errorSlot.assignedElements()[0]!.textContent!.trim()).to.equal('E');
-      expect(getComputedStyle(baseButton(el)).color).to.equal('rgb(190, 10, 20)');
+      await waitForControlColor(el, 'rgb(190, 10, 20)');
       try {
         expect(el.matches(':state(error)')).to.be.true;
         expect(el.matches(':state(success)')).to.be.false;
@@ -1065,7 +1081,12 @@ describe('lr-copy-button clipboard failure', () => {
       expect(errorIcon.getAttribute('aria-hidden')).to.equal('true');
       expect(baseButton(el).getAttribute('aria-label')).to.not.equal(restingLabel);
       expect(feedbackText(el).length).to.be.greaterThan(0);
-      expect(getComputedStyle(baseButton(el)).color).to.not.equal(getComputedStyle(baseButton(resting)).color);
+      await waitUntil(
+        () =>
+          getComputedStyle(paintedControl(el)).color !==
+          getComputedStyle(paintedControl(resting)).color,
+        'the failure colour differs from the resting one',
+      );
       await expect(el).to.be.accessible();
     });
   });

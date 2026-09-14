@@ -288,7 +288,8 @@ interface ToolProjection {
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  * Native/prefixed input and change events from the composed checkbox and switch controls stop at
- * this dialog's boundary; consumers receive only the aggregate `lr-change` proposal above.
+ * this dialog's boundary, as do their own `lr-checkbox-toggle-request`/`lr-switch-toggle-request`
+ * proposals; consumers receive only the aggregate `lr-change` proposal above.
  *
  * @customElement lr-tool-select-dialog
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
@@ -296,7 +297,9 @@ interface ToolProjection {
  * @event lr-change - A proposed enabled-tool selection or `useDefaults` toggle.
  * `detail: { selectedToolIds: string[], useDefaults: boolean }`, with `selectedToolIds` from the
  * canonical first-10,000-input-position selection. Cancelable; preventing it preserves both
- * properties and restores the built-in checkbox or switch to its current checked state.
+ * properties, and the built-in checkbox or switch never flips at all -- the proposal is raised
+ * from that control's own `lr-checkbox-toggle-request`/`lr-switch-toggle-request`, before it
+ * writes its `checked` state, so a refused change shows no flip-and-snap-back.
  * @event lr-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
  * via Escape, an opted-in backdrop click, or a `close()` call.
  * @event focus - Re-dispatched when the internal search input receives focus.
@@ -547,13 +550,6 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     return !event.defaultPrevented;
   }
 
-  private restoreChildChecked(event: Event, checked: boolean): void {
-    // Both child controls update themselves before their lr-change event bubbles here. A veto keeps
-    // the host property unchanged, so it cannot rely on a host re-render to reconcile the child.
-    const control = event.currentTarget as { checked: boolean } | null;
-    if (control) control.checked = checked;
-  }
-
   private onSearchInput = (e: Event): void => {
     this.query = (e.target as HTMLInputElement).value;
     this.renderedToolLimit = MAX_RENDERED_TOOLS;
@@ -575,22 +571,31 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     event.stopPropagation();
   };
 
-  private onDefaultsToggle = (e: CustomEvent<{ checked: boolean }>): void => {
+  /** The composed switch proposes its toggle before writing it, so the aggregate proposal is
+   *  raised here and a refused change is vetoed on the child's own request -- the switch then
+   *  never slides at all, rather than sliding and being written back a frame later. */
+  private onDefaultsToggleRequest = (e: CustomEvent<{ checked: boolean }>): void => {
     e.stopPropagation();
     const next: ToolSelectionChangeDetail = {
       selectedToolIds: this.canonicalSelectedToolIds,
       useDefaults: e.detail.checked,
     };
-    if (this.emitChange(next)) {
-      this.useDefaults = next.useDefaults;
+    if (!this.emitChange(next)) {
+      e.preventDefault();
       return;
     }
-    this.restoreChildChecked(e, this.useDefaults);
+    this.useDefaults = next.useDefaults;
   };
 
-  private onToolToggle(tool: CanonicalTool, e: CustomEvent<{ checked: boolean }>): void {
+  /** Same request/veto path as {@link onDefaultsToggleRequest}, for one tool row's checkbox. */
+  private onToolToggleRequest(tool: CanonicalTool, e: CustomEvent<{ checked: boolean }>): void {
     e.stopPropagation();
-    if (tool.disabled || this.useDefaults) return;
+    // Defensive: a row in either state renders its checkbox `disabled`, which emits no request at
+    // all. Refusing rather than returning keeps that guard's meaning if one ever arrives anyway.
+    if (tool.disabled || this.useDefaults) {
+      e.preventDefault();
+      return;
+    }
     const selected = this.canonicalSelectedToolIds;
     const index = selected.indexOf(tool.id);
     // A change detail is itself an immutable, bounded public collection. Keep the existing
@@ -608,16 +613,16 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       selectedToolIds,
       useDefaults: this.useDefaults,
     };
-    if (this.emitChange(next)) {
-      this.selectedToolIds = next.selectedToolIds;
-      // A listener can synchronously trigger another checkbox change before the scheduled
-      // `willUpdate()` invalidates this cache. Keep that same-turn read aligned with the just
-      // accepted, already-bounded proposal so the second toggle extends rather than replaces it.
-      this.canonicalSelectedToolIdsCache = next.selectedToolIds;
-      this.canonicalSelectedToolIdsSource = this.selectedToolIds;
+    if (!this.emitChange(next)) {
+      e.preventDefault();
       return;
     }
-    this.restoreChildChecked(e, this.canonicalSelectedToolIds.includes(tool.id));
+    this.selectedToolIds = next.selectedToolIds;
+    // A listener can synchronously trigger another checkbox change before the scheduled
+    // `willUpdate()` invalidates this cache. Keep that same-turn read aligned with the just
+    // accepted, already-bounded proposal so the second toggle extends rather than replaces it.
+    this.canonicalSelectedToolIdsCache = next.selectedToolIds;
+    this.canonicalSelectedToolIdsSource = this.selectedToolIds;
   }
 
   private categoryId(category: ToolCategoryKey): string {
@@ -732,7 +737,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
           @input=${this.stopNestedControlEvent}
           @lr-input=${this.stopNestedControlEvent}
           @change=${this.stopNestedControlEvent}
-          @lr-change=${(e: CustomEvent<{ checked: boolean }>) => this.onToolToggle(tool, e)}
+          @lr-change=${this.stopNestedControlEvent}
+          @lr-checkbox-toggle-request=${(e: CustomEvent<{ checked: boolean }>) =>
+            this.onToolToggleRequest(tool, e)}
         >
           <span part="tool-name">
             ${tool.icon ? html`<span part="tool-icon" aria-hidden="true">${tool.icon}</span>` : nothing}${tool.name}
@@ -850,7 +857,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
             @input=${this.stopNestedControlEvent}
             @lr-input=${this.stopNestedControlEvent}
             @change=${this.stopNestedControlEvent}
-            @lr-change=${this.onDefaultsToggle}
+            @lr-change=${this.stopNestedControlEvent}
+            @lr-switch-toggle-request=${this.onDefaultsToggleRequest}
           >
             ${this.localize('useDefaultTools')}
           </lr-switch>

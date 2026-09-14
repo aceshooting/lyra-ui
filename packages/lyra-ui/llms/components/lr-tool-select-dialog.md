@@ -83,14 +83,18 @@ void` performs the reasoned API dismissal;
 
 **Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
 `useDefaults` state) is cancelable and fires before either property changes. Calling
-`preventDefault()` retains the current `selectedToolIds`/`useDefaults` values and restores the built-in
-checkbox or switch. A host can prevent a proposal while it validates or persists it, then assign
-the desired detail values after that work succeeds. `lr-close`
+`preventDefault()` retains the current `selectedToolIds`/`useDefaults` values, and the built-in
+checkbox or switch never flips at all — the proposal is raised from that control's own
+`lr-checkbox-toggle-request`/`lr-switch-toggle-request`, before it writes its `checked` state, so a
+refused change shows no flip-and-snap-back. A host can prevent a proposal while it validates or
+persists it, then assign the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
 click when `lightDismiss` is enabled, or a `close()` call), and no-detail `focus`/`blur` events
 re-dispatched when the internal search input gains or loses focus.
-Native `input`/`change` and prefixed `lr-input` events from the built-in checkbox and switch
-controls stop at the dialog boundary; listen for the single aggregate `lr-change` proposal.
+Native `input`/`change` and prefixed `lr-input`/`lr-change` events from the built-in checkbox and
+switch controls stop at the dialog boundary, as do their own
+`lr-checkbox-toggle-request`/`lr-switch-toggle-request` proposals; listen for the single aggregate
+`lr-change` proposal.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has

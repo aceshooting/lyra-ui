@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,6 +42,13 @@ capability as a row.
   localized accessible-name fallback. A host `aria-label`, including explicit empty, wins.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
+- `appearance: LyraAppearance = 'plain'` (reflected) — how the trigger fills itself, from the
+  library's shared `accent`/`filled`/`outlined`/`filled-outlined`/`plain` vocabulary. `'plain'` is
+  exactly the treatment this component shipped before it had the property
+- `size: LyraSize = 'm'` (reflected) — size on the shared six-step ladder, accepting the
+  `small`/`medium`/`large` spellings too. The tier scales the **glyph**, never the tappable box:
+  `--lr-icon-button-size` is an accessibility floor and the ladder's tightest steps resolve below
+  WCAG 2.5.8's minimum. Override `--lr-icon-button-size` to make that trade-off explicitly
 
 **Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files: readonly File[] }`) — fired
 once a file-backed capability's hidden input produces a real selection. `files` is a fresh frozen
@@ -65,6 +72,9 @@ contained inside the trigger. Only the attachment events listed above cross the 
 `capabilities.length > 1`), `menu-trigger` (the multi-capability button slotted into `lr-dropdown`'s
 `trigger` slot, only rendered when `capabilities.length > 1`), `expand-icon` (the disclosure chevron
 inside the multi-capability trigger button, only rendered when `capabilities.length > 1`),
+`trigger__control` / `menu-trigger__control` (each trigger's own native `<button>` — as of 16.0.0
+both triggers are composed `<lr-icon-button>`s, so `trigger`/`menu-trigger` name those hosts and the
+painted surface sits one boundary deeper),
 `hidden-input` (the internal native `<input type="file">` that actually opens the OS file picker;
 hidden via CSS by default, exposed as a part only so a consumer can override that with
 `::part(hidden-input)` in the unlikely case their integration needs to).

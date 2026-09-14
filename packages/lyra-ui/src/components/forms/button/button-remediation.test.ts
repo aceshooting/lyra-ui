@@ -26,7 +26,10 @@ describe('lr-button semantic state forwarding', () => {
     action.href = '#monthly';
     await action.updateComplete;
     expect(control().localName).to.equal('a');
-    expect(control().getAttribute('aria-pressed')).to.equal('true');
+    // `aria-pressed` deliberately stops at the anchor: only a button can be a toggle, so `link`
+    // does not allow it and forwarding it fails axe's aria-allowed-attr. `aria-current` is global
+    // and does forward.
+    expect(control().hasAttribute('aria-pressed')).to.equal(false);
     expect(control().getAttribute('aria-current')).to.equal('false');
     action.removeAttribute('aria-pressed');
     action.removeAttribute('aria-current');

@@ -126,6 +126,12 @@ export const styles = css`
     min-inline-size: 0;
     scroll-snap-align: start;
     aspect-ratio: var(--aspect-ratio, 16 / 9);
+    /* box-sizing does not inherit across the slot boundary. The basis above is definite and the
+       slide cannot shrink (flex: 0 0), so a padded or bordered slide would otherwise resolve it as
+       its CONTENT box, overrun the track and land its scroll-snap edge past the next slide. The
+       cloned loop slides live in this shadow tree and are already border-box through the shared
+       reset, so this also keeps a clone the same width as the slide it copies. */
+    box-sizing: border-box;
   }
 
   [data-orientation="vertical"] [part="track"] > ::slotted(*),

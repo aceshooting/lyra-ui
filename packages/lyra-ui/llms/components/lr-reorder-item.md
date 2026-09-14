@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-reorder-list` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -108,8 +108,12 @@ while not disabled; handled by the parent `<lr-reorder-list>`, which performs th
 
 **Slots:** default — arbitrary row content.
 
-**CSS parts:** `base` (row wrapper), `move-up-button`, `move-down-button`, `content` (default-slot
-wrapper).
+**CSS parts:** `base` (row wrapper), `move-up-button`, `move-down-button`,
+`move-up-button__control` / `move-down-button__control` (each move control's own native `<button>` —
+as of 16.0.0 the move controls are composed `<lr-icon-button>`s: the old part names keep placement,
+rotation and activation, while background, radius, hover/press mixes, focus ring and hit-area floor
+come from `--lr-icon-button-*`, and the component's own `--lr-reorder-item-move-button-*` hooks still
+win over those defaults), `content` (default-slot wrapper).
 
 **Themeable custom properties:** `--lr-reorder-item-gap` (default `var(--lr-space-xs)`) — gap
 between the move buttons and the row content. The move-button interaction paints are independent,

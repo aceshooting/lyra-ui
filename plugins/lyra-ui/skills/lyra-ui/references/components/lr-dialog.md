@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -169,9 +169,13 @@ the built-in close button), `footer` (action buttons, rendered in a bottom row, 
 empty). The `label` and `header-actions` slots are new in 8.0.0.
 
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
-`header-actions`; `close-button close-button__base`; `body`; `footer`. Names grouped together are
-additive aliases on the same functional node, so a mapped `::part(title)` rule styles the same
-visible title as Lyra's `::part(heading)`.
+`header-actions`; `close-button close-button__base`; `close-button__control`; `body`; `footer`.
+Names grouped together are additive aliases on the same functional node, so a mapped
+`::part(title)` rule styles the same visible title as Lyra's `::part(heading)`.
+`close-button__control` is the composed `<lr-icon-button>`'s own native `<button>`: as of 16.0.0 the
+close button IS an `<lr-icon-button>`, so `close-button`/`close-button__base` name that host and the
+painted surface sits one boundary deeper. `<lr-drawer>` inherits this control and now registers
+`<lr-icon-button>` itself.
 
 **The body is keyboard-reachable while it overflows.** `[part="body"]` is the element that scrolls,
 so it carries `tabindex="-1"` and joins the focus order **only while its content actually

@@ -615,6 +615,30 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  rendering the label alone when unset (today's exact legend output), mirroring `pointText`'s and
    *  `tickFormat`'s existing opt-in-hook convention. Has no effect while `legend` is `false`. */
   @property({ attribute: false }) legendText?: (label: string, datasetIndex: number) => string;
+  /**
+   * Visual-only override for one category-axis tick's text — receives that category's own `labels`
+   * entry and its index, and returns the string to draw, or `null` to draw no tick there at all.
+   *
+   * Display, not data: `labels` stays the single authoritative source for the generated accessible
+   * table's row headers, the per-mark `<title>`/accessible name, the live announcement and CSV
+   * export, so blanking a tick here never blanks the same category anywhere a reader or a
+   * spreadsheet needs it. That separation is the whole point — folding the same intent into
+   * `labels` (passing `''` for the categories that should carry no tick) empties the table row
+   * header too, which is what made boundary-aligned ticks impossible before this hook existed.
+   *
+   * Complements `maxLabels` rather than replacing it: `maxLabels` decimates evenly to prevent
+   * label collision and is applied FIRST, so a category it already dropped never reaches this
+   * callback. Use this one for ticks that must line up with an external grouping boundary (a
+   * month, a release, a shift change) instead of an even stride, and leave `maxLabels` unset there.
+   *
+   * The returned string is ellipsized to the tick's own slot exactly like a source label, with the
+   * full text kept as the tick's accessible name; a return value that is neither a string nor
+   * `null` falls back to the source label rather than reaching the DOM.
+   */
+  @property({ attribute: false }) axisLabelText?: (
+    label: string,
+    index: number,
+  ) => string | null;
   /** `type="bar"` only: draws each bar as a rounded-top-corner shape instead of the default
    *  square-cornered rect. Default `false` renders exactly today's plain `<rect>`. */
   @property({ type: Boolean, attribute: 'rounded-bars' }) roundedBars = false;
@@ -763,6 +787,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                 index,
                 label,
                 seriesLabel: series.label,
+                axis: 'y',
               }) ?? value
             : '';
         }),
@@ -1161,13 +1186,20 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   /** Dispatches to the host-provided `pointText` formatter when set, otherwise `undefined` (the
    *  caller falls back to its own built-in template) — mirrors `lr-heatmap`'s `resolveCellText()`. */
-  private resolvePointText(label: string, value: number, datasetIndex: number): string | undefined {
+  private resolvePointText(
+    label: string,
+    value: number,
+    datasetIndex: number,
+    index?: number,
+  ): string | undefined {
     return this.formatter?.({
       value,
       surface: 'visual',
       datasetIndex,
+      ...(index === undefined ? {} : { index }),
       label,
       seriesLabel: this.datasets[datasetIndex]?.label,
+      axis: 'y',
     }) ?? this.pointText?.(label, value, datasetIndex);
   }
 
@@ -1183,6 +1215,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       index: context.index,
       label: context.label,
       seriesLabel: context.seriesLabel ?? undefined,
+      axis: 'y',
       ...(context.kind === 'total' ? { statistic: 'total' as const } : {}),
     }) ?? this.tableCellFormatter?.(value, context) ?? numberFormat.format(value);
   }
@@ -1295,7 +1328,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       index: mark.index,
       label: mark.label,
       seriesLabel: series,
-    }) ?? this.resolvePointText(mark.label, mark.value, mark.datasetIndex);
+      axis: 'y',
+    }) ?? this.resolvePointText(mark.label, mark.value, mark.datasetIndex, mark.index);
     if (custom) {
       return this.localize('liteChartCustomMarkSummary', undefined, {
         content: custom,
@@ -1555,7 +1589,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private formatValueAxisTick(value: number): string {
-    return this.formatter?.({ value, surface: 'tick' }) ??
+    // This chart has exactly one value scale, but the formatter contract is shared with
+    // `<lr-chart>`, where it is the field that tells a dual-axis formatter which unit to render.
+    // Naming it here too is what lets one formatter serve both components unchanged.
+    return this.formatter?.({ value, surface: 'tick', axis: 'y' }) ??
       (this.tickFormat ? this.tickFormat(value) : formatTick(value, this.effectiveLocale));
   }
 
@@ -1790,7 +1827,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         y1 = clampSvgCoordinate(y1);
         y2 = clampSvgCoordinate(y2);
         const label = this.labels[i] ?? ''; // matches interactiveMarks(): a missing category label renders empty
-        const custom = this.resolvePointText(label, v, di);
+        const custom = this.resolvePointText(label, v, di, i);
         const barText =
           custom ??
           this.localize('liteChartBarLabel', undefined, {
@@ -1970,7 +2007,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         const v = s.data[i];
         if (v == null || !Number.isFinite(v)) return nothing;
         const label = this.labels[i] ?? ''; // matches interactiveMarks(): a missing category label renders empty
-        const custom = this.resolvePointText(label, v, di);
+        const custom = this.resolvePointText(label, v, di, i);
         const barText =
           custom ??
           this.localize('liteChartBarLabel', undefined, {
@@ -2239,7 +2276,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const categoryLabels = awaitingFitMeasurement ? [] : recordSample.rowIndexes.map((i) => {
       const label = this.labels[i] ?? '';
       if (visibleLabelIndexes && !visibleLabelIndexes.has(i)) return nothing;
-      const fullLabel = label ?? '';
+      // A public callback's return value is data from outside: only a string is drawn, `null`
+      // deliberately draws no tick, and anything else falls back to the source label rather than
+      // reaching SVG text as `undefined`/`[object Object]`.
+      const override = this.axisLabelText?.(label, i);
+      if (override === null) return nothing;
+      const fullLabel = typeof override === 'string' ? override : label;
       const x =
         this.effectiveType === 'bar' && n > 0
           ? (barOrigins.get(i) ?? plotX + i * slot) + slot / 2
@@ -2443,6 +2485,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                           surface: 'legend',
                           datasetIndex: i,
                           seriesLabel: s.label,
+                          axis: 'y',
                         }) ?? this.legendText?.(s.label, i)}</span>`
                       : nothing}
                   </span>

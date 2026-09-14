@@ -22,7 +22,10 @@ immediately) or multi-format (click opens a small menu).
 **Properties:**
 
 - `rows: readonly Readonly<Record<string, unknown>>[] = []` (attribute: false) — assignment takes
-  shallow frozen snapshots of the collection and row records; nested cell values remain opaque
+  shallow frozen snapshots of the collection and row records; nested cell values remain opaque; the
+  built-in download reads this **after** the cancelable `lr-export` event, so a listener that lets
+  the download proceed may assign `.rows` from inside its own handler and that data is what gets
+  downloaded
 - `columns: readonly Readonly<LyraCsvColumn>[] = []` (attribute: false) — assignment takes a
   shallow frozen snapshot. `{ key, label }` acts as a field allow-list **and**
   CSV header-label source for **both** export formats when non-empty. Left empty, **both** CSV and
@@ -30,6 +33,15 @@ immediately) or multi-format (click opens a small menu).
   of CSV degrading to a header-less/blank file while only JSON had a fallback — so an unconfigured
   export still produces a proper header + data file in either format
 - `filename: string = 'export'`
+- `getRows?: () => readonly Record<string, unknown>[]` (attribute: false) — lazy row source,
+  consulted only when a built-in CSV/JSON download is actually about to be built: after a
+  non-prevented `lr-export`, and never for a custom format this component does not serialize itself.
+  When set it replaces `rows` for that download, so a consumer can export a collection it already
+  holds — an `<lr-table>`'s `viewRows`, say — without copying it into this element and keeping a
+  second live copy. The `columns` fallback derives its header row from the lazily supplied rows. A
+  non-array return is treated as no rows, matching how `rows` normalizes one; a callback that throws
+  is reported through `lr-export-error` and the shared failure announcement, since an export whose
+  data could not be collected has failed
 - `bom: boolean = false` (reflected) — prepends a UTF-8 byte-order mark (U+FEFF) to the built-in
   CSV download only. Excel on Windows ignores a downloaded file's MIME charset and decodes a
   BOM-less CSV with the system ANSI code page, so accented, Arabic, CJK, and typographic characters
@@ -63,7 +75,9 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 
 **Events:** `lr-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
-substitute your own server-generated download instead of the built-in client-side one),
+substitute your own server-generated download instead of the built-in client-side one; the rows a
+non-prevented built-in download serializes are read **after** this dispatch, so `.rows` assigned from
+inside the listener still reaches it, and `getRows` is consulted at the same point),
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
 built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
 unknown }`, fires when a built-in export cannot be serialized or downloaded; the same failure is

@@ -161,11 +161,12 @@ export type {
 } from './components/forms/emoji-picker/emoji-picker.class.js';
 export { LyraLocalePicker } from './components/forms/locale-picker/locale-picker.class.js';
 export type {
-  LyraLocaleEntry,
   LyraLocaleCatalog,
-  LyraLocaleTriggerDisplay,
   LyraLocaleChangeDetail,
+  LyraLocaleEntry,
+  LyraLocaleOptionDisplay,
   LyraLocalePickerEventMap,
+  LyraLocaleTriggerDisplay,
 } from './components/forms/locale-picker/locale-picker.class.js';
 export { LyraToast } from './components/overlays/toast/toast.class.js';
 export type {
@@ -185,12 +186,15 @@ export type {
 export { toast } from './components/overlays/toast/toaster.js';
 export type { ToastHandle } from './components/overlays/toast/toaster.js';
 export { LyraCombobox } from './components/forms/combobox/combobox.class.js';
+export type { LyraPickerDetailValue, LyraPickerValue } from './internal/picker-value.js';
 export type {
-  LyraComboboxPlacement,
-  OptionFilter,
-  LyraComboboxSelectionDirection,
-  LyraComboboxTagRenderer,
   ComboboxSourceResult,
+  LyraComboboxChangeEvent,
+  LyraComboboxPlacement,
+  LyraComboboxSelectionDirection,
+  LyraComboboxSourceErrorEvent,
+  LyraComboboxTagRenderer,
+  OptionFilter,
 } from './components/forms/combobox/combobox.class.js';
 export type {
   LyraComboboxValidator,
@@ -201,7 +205,11 @@ export type {
 
 export { LyraOption } from './components/forms/combobox/option.class.js';
 export { LyraSelect } from './components/forms/select/select.class.js';
-export type { LyraSelectTagRenderer } from './components/forms/select/select.class.js';
+export type {
+  LyraSelectChangeEvent,
+  LyraSelectInputEvent,
+  LyraSelectTagRenderer,
+} from './components/forms/select/select.class.js';
 export { LyraDatePicker } from './components/forms/date-picker/date-picker.class.js';
 export type {
   DateRange,
@@ -347,14 +355,15 @@ export type {
   TableColumnEditOption,
   TableColumnEditTrigger,
   TableEdgeAlign,
+  TableExpansionMode,
   TableLoadingAppearance,
   TableScrollMode,
   TableSelectionMode,
   TableSortCommitDetail,
   TableSortDetail,
   TableSortDirection,
-  TableSortMode,
   TableSortIndicators,
+  TableSortMode,
   TableSortRequestDetail,
 } from './components/data/table/table.class.js';
 export { LyraDataGrid } from './components/data/data-grid/data-grid.class.js';
@@ -550,31 +559,32 @@ export { LyraRadarChart } from './components/charts/chart/radar-chart.class.js';
 export { LyraScatterChart } from './components/charts/chart/scatter-chart.class.js';
 export { LyraHistogram } from './components/charts/chart/histogram.class.js';
 export type {
-  LyraChartPoint,
-  LyraChartSeries,
-  LyraChartStatistic,
-  LyraChartInstance,
+  LyraChartAnnotation,
   LyraChartArea,
+  LyraChartAxes,
   LyraChartConfiguration,
   LyraChartDataConfiguration,
   LyraChartDatasetConfiguration,
-  LyraChartType,
-  LyraChartGrid,
-  LyraChartAxes,
-  LyraChartIndexAxis,
-  LyraChartScaleType,
-  LyraChartAnnotation,
-  LyraChartLayoutPosition,
-  LyraChartLegendPosition,
-  LyraChartLegendMode,
-  LyraChartLegendDisplay,
+  LyraChartDatumActivateDetail,
+  LyraChartDatumKind,
   LyraChartExportFormat,
-  LyraChartPlugin,
   LyraChartFormatSurface,
   LyraChartFormatter,
+  LyraChartFormatterAxis,
   LyraChartFormatterContext,
-  LyraChartDatumKind,
-  LyraChartDatumActivateDetail,
+  LyraChartGrid,
+  LyraChartIndexAxis,
+  LyraChartInstance,
+  LyraChartLayoutPosition,
+  LyraChartLegendDisplay,
+  LyraChartLegendMode,
+  LyraChartLegendPosition,
+  LyraChartPlugin,
+  LyraChartPoint,
+  LyraChartScaleType,
+  LyraChartSeries,
+  LyraChartStatistic,
+  LyraChartType,
   LyraChartValueFormatter,
   LyraChartValueFormatterContext,
 } from './components/charts/chart/chart.class.js';
@@ -595,13 +605,14 @@ export type {
 export { LyraGraph } from './components/retrieval/graph/graph.class.js';
 export type {
   LyraGraphCommunity,
+  LyraGraphFit,
   LyraGraphLayout,
+  LyraGraphLink,
+  LyraGraphNode,
   LyraGraphNodeLabelsMode,
   LyraGraphPickKind,
   LyraGraphRenderer,
   LyraGraphSelectionMode,
-  LyraGraphLink,
-  LyraGraphNode,
   LyraScoreThresholds,
 } from './components/retrieval/graph/graph.class.js';
 export type { LyraNodeTypeStyle } from './internal/node-type-style.js';
@@ -845,6 +856,11 @@ export {
   computeAppRailMode,
 } from './components/layout/app-rail/app-rail.class.js';
 export { LyraAppRailItem } from './components/layout/app-rail/app-rail-item.class.js';
+export { LyraAppRailGroup } from './components/layout/app-rail-group/app-rail-group.class.js';
+export type {
+  LyraAppRailGroupEventMap,
+  LyraAppRailGroupToggleDetail,
+} from './components/layout/app-rail-group/app-rail-group.class.js';
 export type {
   LyraAppRailMode,
   LyraAppRailModeInput,
@@ -891,6 +907,7 @@ export type {
   LyraGenerationMetricsEventMap,
 } from './components/conversation/generation-metrics/generation-metrics.class.js';
 export { LyraCodeBlock } from './components/conversation/code-block/code-block.class.js';
+export type { LyraCodeBlockCopyAppearance } from './components/conversation/code-block/code-block-shared.js';
 export { LyraToolApprovalDialog } from './components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js';
 export type {
   ToolApprovalDialogWrap,
@@ -936,6 +953,7 @@ export type {
 } from './components/overlays/popup/popup.class.js';
 export type {
   LyraPopoverEventMap,
+  LyraPopoverTrigger,
   LyraPopupRole,
   OverlayVirtualRect,
 } from './components/overlays/overlay/popover.class.js';
@@ -965,9 +983,12 @@ export type {
 } from './components/conversation/model-settings-panel/model-settings-panel.class.js';
 export { LyraContextMeter } from './components/data/context-meter/context-meter.class.js';
 export type {
+  ContextMeterLegendDisplay,
+  ContextMeterSegment,
   ContextMeterShape,
   ContextMeterTone,
-  ContextMeterSegment,
+  LyraContextMeterEventMap,
+  LyraContextMeterSegmentActivateDetail,
 } from './components/data/context-meter/context-meter.class.js';
 export { LyraControlGroup } from './components/layout/control-group/control-group.class.js';
 export { LyraDockPanel } from './components/layout/dock-panel/dock-panel.class.js';
@@ -1277,6 +1298,7 @@ export { LyraCheckboxGroup } from './components/forms/checkbox-group/checkbox-gr
 export type {
   CheckboxGroupOrientation,
   LyraCheckboxGroupEventMap,
+  LyraCheckboxGroupToggleRequestDetail,
 } from './components/forms/checkbox-group/checkbox-group.class.js';
 export { LyraTokenInput } from './components/forms/token-input/token-input.class.js';
 export type {

@@ -182,7 +182,7 @@ component and a release blocker for a new one.
   custom properties actually reach the rendered animation declarations.
 - **A pointer target that repaints owes that repaint one shared transition.** A part that declares
   `cursor: pointer` and changes its background, text or border colour under `:hover`/`:active`
-  writes `transition: var(--lr-interactive-transition);` on its *resting* rule — one token
+  writes `transition: var(--lr-transition-interactive);` on its *resting* rule — one token
   (`internal/tokens.styles.ts`, next to `--lr-transition-fast`) holding the three-property list
   that ninety-odd rules used to re-type one at a time. A component that wants it on every part it
   renders composes `internal/interactive-transition.styles.ts` into `static styles` instead; that

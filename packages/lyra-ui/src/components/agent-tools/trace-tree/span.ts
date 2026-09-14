@@ -75,6 +75,19 @@ export interface LyraSpanProjection {
   spans: LyraSpan[];
   byId: Map<string, LyraSpan>;
   truncated: boolean;
+  /**
+   * The greatest trace-relative end across every span in the source array, measured BEFORE the
+   * `MAX_RENDERED_LYRA_SPANS` cap drops anything — never below `0`. A maximum, not the last
+   * element's end: `normalizeLyraSpans()` preserves input order, so an unsorted `spans` can put
+   * the latest-ending span anywhere in the array.
+   *
+   * A timeline view has to scale to this, not to `spans`'s own extent: the cap keeps the first
+   * spans, so on a trace whose long tail is truncated the surviving extent collapses and every
+   * remaining bar stretches to fill the track. `<lr-span-waterfall>` then drew a 1s span in a 10s
+   * trace at 100% width, and `<lr-trace-tree>` did the same, both silently. Truncating the ROWS is
+   * a resource bound; rescaling the AXIS underneath them is a misreport.
+   */
+  extentEndMs: number;
 }
 
 /** A source span remains an opaque identity after its admitted data fields have been copied. */
@@ -226,5 +239,9 @@ export function normalizeLyraSpans(
 
   const spans = normalized.filter((span) => chosenIds.has(span.id));
   const byId = new Map(spans.map((span) => [span.id, span]));
-  return { spans, byId, truncated: spans.length < normalized.length };
+  let extentEndMs = 0;
+  for (const span of normalized) {
+    extentEndMs = Math.max(extentEndMs, span.endMs ?? span.startMs, span.startMs);
+  }
+  return { spans, byId, truncated: spans.length < normalized.length, extentEndMs };
 }

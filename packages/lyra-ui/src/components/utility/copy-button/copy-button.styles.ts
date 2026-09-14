@@ -3,6 +3,21 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
+    /* Captured on the HOST, where this component declares no --lr-icon-button-color of its own, so
+       each var() reads whatever an ancestor theme wrapper set and falls back to this button's own
+       quiet resting tone only when nothing did. The trigger rule below then re-declares the public
+       token from the capture. Declaring the quiet tone directly on the trigger would shadow the
+       inherited value instead of falling back to it -- the exact trap the library's
+       component-scoped-theme-input convention exists to avoid. */
+    --_lr-copy-button-color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
+    --_lr-copy-button-color-hover: var(
+      --lr-icon-button-color-hover,
+      var(--lr-icon-button-color, var(--lr-color-text))
+    );
+    --_lr-copy-button-color-active: var(
+      --lr-icon-button-color-active,
+      var(--lr-icon-button-color-hover, var(--lr-icon-button-color, var(--lr-color-text)))
+    );
   }
   lr-tooltip {
     display: inline-flex;
@@ -10,58 +25,44 @@ export const styles = css`
   slot:not([name]) {
     display: contents;
   }
-  /* Every selector below matches with ~= rather than =, because the button's part list gains a
-     state token ('base base-error') while the feedback state is showing. */
+  /* The trigger IS an lr-icon-button now, so the hit-area floor, the radius, the hover/press mixes
+     and the focus ring all come from that one component instead of being re-derived here. What
+     stays is this button's own resting foreground and its two outcome colours, expressed through
+     the composed control's public token contract so a consumer setting --lr-icon-button-* on an
+     ancestor reaches it exactly as it reaches a standalone icon button.
+     Every selector matches with ~= rather than =, because the trigger's part list gains a state
+     token (base base-error) while the feedback state is showing. */
   [part~='base'] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    padding: 0;
-    border: none;
-    border-radius: calc(var(--lr-radius) * 0.6);
-    background: transparent;
-    color: var(--lr-color-text-quiet);
-    font: inherit;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lr-transition-fast);
+    --lr-icon-button-color: var(--_lr-copy-button-color);
+    --lr-icon-button-color-hover: var(--_lr-copy-button-color-hover);
+    --lr-icon-button-color-active: var(--_lr-copy-button-color-active);
   }
-  /* :where() keeps this at (0,1,0), tying it with the pressed rule and with
-     [part~='base-success']/[part~='base-error'] below -- see their comment for what the tie buys.
-     */
-  :where([part~='base']:not(:disabled)):hover {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
-    color: var(--lr-color-text);
+  /* The outcome colours repaint the glyph while the composed control keeps its own hover/press
+     background. The state token never appears without 'base' (the list is 'base base-success'), so
+     both tokens are named in the selector: that makes these rules (0,2,0) against the resting
+     rule's (0,1,0), and the outcome wins on SPECIFICITY rather than on source order. Written as a
+     lone [part~='base-success'] they would tie at (0,1,0) and depend on staying below the resting
+     rule -- a reorder of this sheet would then silently stop applying the success/error colour.
+     Each re-points the hover and press colours too: keyboard activation raises :active with no
+     :hover, and the failure colour must not be repainted away by either. */
+  [part~='base'][part~='base-success'] {
+    --lr-icon-button-color: var(--success-color, var(--lr-color-success));
+    --lr-icon-button-color-hover: var(--success-color, var(--lr-color-success));
+    --lr-icon-button-color-active: var(--success-color, var(--lr-color-success));
   }
-  :where([part~='base']:not(:disabled)):active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    color: var(--lr-color-text);
-  }
-  /* After the hover and pressed rules at equal specificity, so hovering or holding the failed button
-     still changes its background without repainting the failure color away. */
-  [part~='base-success'] {
-    color: var(--success-color, var(--lr-color-success));
-  }
-  [part~='base-error'] {
-    color: var(--error-color, var(--lr-color-danger));
-  }
-  [part~='base']:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
-  }
-  [part~='base']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+  [part~='base'][part~='base-error'] {
+    --lr-icon-button-color: var(--error-color, var(--lr-color-danger));
+    --lr-icon-button-color-hover: var(--error-color, var(--lr-color-danger));
+    --lr-icon-button-color-active: var(--error-color, var(--lr-color-danger));
   }
   [part~='copy-icon'],
   [part~='success-icon'],
   [part~='error-icon'] {
     display: inline-flex;
   }
-  [part~='base'] svg {
+  [part~='copy-icon'] svg,
+  [part~='success-icon'] svg,
+  [part~='error-icon'] svg {
     display: block;
   }
   /* The outcome is announced, not shown: the button is icon-only, so the status text exists for

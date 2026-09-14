@@ -635,3 +635,54 @@ export const NarrowLongContent: Story = {
     </div>
   `,
 };
+
+export const StretchedLabelLayout: Story = {
+  name: "Stretched label layout",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "The label no longer grows to fill a stretched button, so an icon and its label centre together. A `with-caret` or `end`-adornment button keeps the growing label so the trailing affordance stays pinned. `--lr-button-label-grow: 1` restores the previous stretch and `--lr-button-justify` repositions the centred row.",
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid;gap:0.75rem;inline-size:320px">
+      <lr-button appearance="outlined">
+        <svg
+          slot="start"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+        >
+          <rect x="3" y="3" width="10" height="10" rx="2"></rect>
+        </svg>
+        Copy
+      </lr-button>
+      <lr-button appearance="outlined" with-caret>Menu</lr-button>
+      <lr-button appearance="outlined" style="--lr-button-label-grow:1">
+        <svg
+          slot="start"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+        >
+          <rect x="3" y="3" width="10" height="10" rx="2"></rect>
+        </svg>
+        Restored stretch
+      </lr-button>
+      <lr-button appearance="outlined" style="--lr-button-justify:flex-start">
+        Packed to the leading edge
+      </lr-button>
+      <lr-button appearance="outlined" wrap
+        >A rather long multi word button label that wraps</lr-button
+      >
+    </div>
+  `,
+};

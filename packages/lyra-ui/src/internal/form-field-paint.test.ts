@@ -15,10 +15,10 @@ import '../components/forms/token-input/token-input.js';
 import '../components/forms/input/time-input.js';
 
 /**
- * Decision 3's contract: every field-shaped control publishes the same quartet — resting fill,
+ * The form-field paint contract: every field-shaped control publishes the same quartet — resting fill,
  * resting border, hover border, focus halo — and each name reaches exactly one control.
  *
- * Ten controls, not the five decision 3 names: the sweep for the same shape turned up
+ * Ten controls, not the five the contract originally enumerated: the sweep for the same shape turned up
  * `lr-date-input`, `lr-file-input`, `lr-phone-input` and `lr-token-input` painting a resting
  * fill/border with no hook at all, and `lr-time-input` already publishing the resting pair but
  * missing the halo. Each one is covered here rather than on the strength of `lr-select`'s row.

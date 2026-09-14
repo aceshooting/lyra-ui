@@ -266,7 +266,7 @@ const baseTokens = css`
     /* The one pointer-interaction transition. Ninety-odd rules across the library had each
        re-typed the same three-property list against --lr-transition-fast, so "what does a
        control do under the pointer" was a value nobody could retune and no one could read off
-       one line. A resting rule now writes transition: var(--lr-interactive-transition) and gets
+       one line. A resting rule now writes transition: var(--lr-transition-interactive) and gets
        the whole vocabulary: fill, text and border move together, which is what a hover or a
        press actually changes. Anything else a component animates (transform, opacity, an
        inline-size disclosure) stays its own declaration -- this token is deliberately not a
@@ -275,7 +275,7 @@ const baseTokens = css`
        directly, which is the whole reason the reduced-motion block below needs no new entry:
        flattening --lr-transition-fast there flattens every one of the three properties here,
        including for a theme that set the legacy compound input. */
-    --lr-interactive-transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
+    --lr-transition-interactive: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
 
     /* Disabled state — one opacity value for every disabled control,
        replacing three previously-independent hardcoded values (0.5/0.4/0.35). */

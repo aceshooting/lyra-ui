@@ -6,6 +6,7 @@ import {
 } from '../../../internal/lyra-element.js';
 import { installFormControlInternalsCapture } from '../../../internal/form-control-labels.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
+import { tag } from '../../../internal/prefix.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import {
   syncAriaControlsElements,
@@ -69,6 +70,29 @@ export interface LyraButtonEventMap {
 }
 
 /**
+ * Whether `element` paints nothing while staying in the accessibility tree (or is hidden
+ * outright), so it must not count as visible label content.
+ *
+ * Three shapes, in cost order. `<lr-visually-hidden>` is recognised by tag, since its own `:host`
+ * rules are `!important` and cannot be overridden into visibility. `hidden`/`display: none`/
+ * `visibility: hidden` are hidden outright. The third is the standard clip-path algorithm every
+ * `.sr-only` copy in this library (and `styles/utilities.css`) uses: an absolutely positioned
+ * hairline box clipped with `inset(50%)`. Computed style is read rather than class names, so a
+ * consumer's own utility class -- whatever it is called -- is recognised too.
+ *
+ * Returns `false` with no window (SSR): nothing is painted there, so the client's first update is
+ * the authority and guessing would make the server and client disagree.
+ */
+function isVisuallyHidden(element: Element): boolean {
+  if (element.localName === tag('visually-hidden')) return true;
+  const view = element.ownerDocument.defaultView;
+  if (!view) return false;
+  const style = view.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden') return true;
+  return style.position === 'absolute' && style.clipPath.startsWith('inset(50%');
+}
+
+/**
  * `<lr-button>` — a generic action-button primitive. Renders an internal native
  * `<button part="base">`. `type="submit"`/`type="reset"`
  * are handled by this component itself via the host's associated form — a shadow-internal
@@ -122,8 +146,13 @@ export interface LyraButtonEventMap {
  * Circle and automatically detected icon-only buttons keep the shared
  * `--lr-icon-button-size` minimum target in every `size` tier; the tier still scales their glyph
  * and chrome, but cannot collapse the clickable box below that floor.
- * In a constrained row the default-slot label ellipsizes, while each `start`/`end` adornment is
- * capped at 40% of the control so unbroken consumer content cannot force the button wider.
+ * In a constrained row the default-slot label ellipsizes (set `wrap` for a multi-line label
+ * instead), while each `start`/`end` adornment is capped at 40% of the control so unbroken
+ * consumer content cannot force the button wider.
+ * The label does **not** grow to fill a stretched button: icon and label centre together under
+ * `--lr-button-justify`. A `with-caret` button, and one with an `end`/`suffix` adornment, keep the
+ * old growing label so that trailing affordance stays pinned to the trailing content edge;
+ * `--lr-button-label-grow` overrides both directions.
  *
  * @customElement lr-button
  * @event focus - Native focus relayed once from the internal button or anchor.
@@ -238,6 +267,15 @@ export interface LyraButtonEventMap {
  * @cssprop [--lr-button-gap=var(--lr-form-control-gap)] - Gap between the icon/label and any
  * slotted content in the internal button. Constant across the ladder's tiers. Override it to retune
  * without a `::part(base)` rule.
+ * @cssprop [--lr-button-justify=center] - `justify-content` of the internal button's row. With the
+ * label no longer growing by default, this is what positions the whole icon+label pair inside a
+ * stretched control: `flex-start` packs it against the leading edge, `space-between` pushes the
+ * adornments apart.
+ * @cssprop [--lr-button-label-grow=0] - `flex-grow` of `[part="label"]`. `0` (the default) lets the
+ * label shrink-wrap its text so `--lr-button-justify` positions the real content; `1` restores the
+ * pre-16.0.0 behaviour where the label absorbed every spare pixel of a stretched button. It also
+ * overrides the automatic grow a `with-caret`/`end`-adornment button applies, so `0` opts those
+ * rows out of pinning their trailing affordance.
  * @cssprop [--lr-button-radius=var(--lr-form-control-radius)] - Corner radius of the internal
  * button, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller
  * radius, since a 6px corner on a 20px-tall control reads as a lozenge). `appearance="link"`
@@ -251,7 +289,10 @@ export interface LyraButtonEventMap {
  * an elevated/floating action button) without a `::part(base)` rule. `appearance="link"` always
  * renders with no shadow regardless of this token — a zero-chrome inline link has no box to elevate.
  * @cssstate disabled - The button is disabled directly, by a fieldset, or by `loading`.
- * @cssstate icon-button - The default slot contains one icon-like element and no text.
+ * @cssstate icon-button - The default slot contains one icon-like element and no visible text. A
+ * visually hidden label (`<lr-visually-hidden>`, `hidden`/`display: none`/`visibility: hidden`, or
+ * the standard absolutely-positioned `clip-path: inset(50%)` algorithm) does not count as content,
+ * so the recommended icon-plus-screen-reader-name shape still gets the square treatment.
  * @cssstate link - A safe `href` currently renders the native anchor mode.
  * @cssstate loading - The button is showing its loading spinner.
  * @status stable
@@ -483,6 +524,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   @property({ attribute: 'with-start', type: Boolean }) withStart = false;
   /** SSR presence hint for the `end` adornment wrapper. */
   @property({ attribute: 'with-end', type: Boolean }) withEnd = false;
+  /** Wraps a long label onto multiple lines instead of ellipsis-truncating it to one, matching
+   *  `<lr-chip>`'s identical opt-in. `false` (the default) reproduces the exact single-line,
+   *  ellipsis-truncated `[part="label"]`. */
+  @property({ type: Boolean, reflect: true }) wrap = false;
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above
    *  for why this component (not the shadow-internal `<button>`) owns that behavior. */
   @property() type: ButtonType = 'button';
@@ -836,9 +881,13 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   private hasIconOnlyDefaultContent(): boolean {
     const childElements = (this as unknown as { children?: HTMLCollection })
       .children;
-    const elements = (childElements ? Array.from(childElements) : []).filter(
-      (element) => !element.getAttribute('slot')
-    );
+    const elements = (childElements ? Array.from(childElements) : [])
+      .filter((element) => !element.getAttribute('slot'))
+      // A visually hidden label names the action for assistive technology and paints nothing, so
+      // counting it as content made an icon+`.sr-only` button -- the library's own recommended way
+      // to name an icon-only action without a tooltip -- render as a wide labelled button with a
+      // blank second column. It is invisible content; the square icon-only treatment applies.
+      .filter((element) => !isVisuallyHidden(element));
     if (elements.length !== 1) return false;
     const childNodes = (
       this as unknown as { childNodes?: NodeListOf<ChildNode> }
@@ -855,6 +904,14 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     this.isIconButton = this.hasIconOnlyDefaultContent();
     this.syncButtonStates();
   };
+
+  /** Whether the label takes the row's slack so a trailing affordance stays pinned to the trailing
+   *  content edge. Exactly the caret and the `end`/`suffix` adornment qualify: both read as
+   *  detached glyphs when they float mid-row. A plain button (or one with only a `start`
+   *  adornment) centres its content instead. */
+  private get labelGrows(): boolean {
+    return this.withCaret || this.hasEndSlot || this.withEnd;
+  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -965,17 +1022,28 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
       // not focusable or activatable, so the button genuinely cannot navigate -- unlike a bare
       // `aria-disabled` on a still-navigable `<a href>`. `@click`/submit-reset are deliberately
       // absent: native navigation is the anchor's own activation (mirrors `lr-card`).
+      //
+      // Two departures from the `<button>` branch below, both because an anchor is not a button
+      // (`lr-card`/`lr-media-card` render the same pair):
+      //   1. `aria-pressed` never reaches this anchor. `link` does not support it -- only a button
+      //      can be a toggle -- so forwarding it fails axe's `aria-allowed-attr` outright. The
+      //      global `aria-current` does forward.
+      //   2. A disabled link button gets an explicit `role="link"`. Dropping `href` is the only way
+      //      a link genuinely stops navigating, but it also drops the implicit role, and
+      //      `aria-label`/`aria-haspopup`/`aria-expanded`/`aria-current` are prohibited on the
+      //      role-less generic element that leaves behind.
       return html`<a
         part="base button"
         ?data-icon-button=${this.isIconButton}
+        ?data-grow-label=${this.labelGrows}
         href=${disabled ? nothing : href}
         target=${this.target || nothing}
         rel=${this.resolvedRel ?? nothing}
         download=${hasDownload ? this.download ?? '' : nothing}
+        role=${disabled ? 'link' : nothing}
         aria-label=${this.accessibleLabel ?? nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
-        aria-pressed=${pressed}
         aria-current=${current}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
@@ -992,6 +1060,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
       <button
         part="base button"
         ?data-icon-button=${this.isIconButton}
+        ?data-grow-label=${this.labelGrows}
         type="button"
         aria-label=${this.accessibleLabel ?? nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}

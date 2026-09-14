@@ -257,9 +257,11 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     )
       return;
     this.pendingFocusTarget = null;
+    // The move controls are composed `<lr-icon-button>`s, which expose `disabled` and `focus()`
+    // but are not `HTMLButtonElement`s; read both structurally.
     const button = focusTarget.item.shadowRoot?.querySelector(
       `[part='${focusTarget.buttonPart}']`
-    ) as HTMLButtonElement | null;
+    ) as (HTMLElement & { disabled?: boolean }) | null;
     if (!button?.disabled) button?.focus();
   }
 
@@ -436,7 +438,14 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     const itemIndex = path.indexOf(item);
     const originatedInNestedControl = path.slice(0, itemIndex).some((target) => {
       if (!(target instanceof Element)) return false;
-      if (target instanceof HTMLButtonElement && target.getRootNode() === item.shadowRoot) return false;
+      // Anything the item RENDERED ITSELF is the row's own chrome, never consumer content:
+      // consumer content arrives through a slot, so its root node is the document, never the
+      // item's shadow root. The predicate used to exempt only a native <button> in that root,
+      // which broke the moment the move controls became composed <lr-icon-button>s -- the native
+      // button's root became the icon button's shadow root, and the icon-button host itself
+      // matched the "custom element" arm below, so every Ctrl/Cmd+Arrow press from a move button
+      // was discarded as though it had come from a consumer's own control.
+      if (target.getRootNode() === item.shadowRoot) return false;
       const name = target.localName;
       return (
         name === 'a' ||

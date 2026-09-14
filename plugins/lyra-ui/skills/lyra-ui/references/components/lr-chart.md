@@ -164,12 +164,26 @@ structured points retain their y-value formatting.
   x-axis's own labels (line/bar's `labels` strings) — Chart.js's category scale passes the tick
   index to `ticks.callback`, not the label text
 - `formatter?: LyraChartFormatter` (attribute: false) — the family-wide context-object formatter:
-  `({ value, surface, datasetIndex?, index?, label?, seriesLabel?, statistic? }) => string`.
+  `({ value, surface, datasetIndex?, index?, label?, seriesLabel?, statistic?, axis? }) => string`.
   `surface` identifies `visual`, `spoken`, `export`, `tick`, `tooltip`, `legend`, or `table`.
   `statistic`, when present for a structured datum or stack total, is one of `x`, `y`, `r`,
   `min`, `q1`, `median`, `q3`, `max`, or `total`. It takes precedence over the legacy positional
   `valueFormatter` where both are supplied. The legacy callback remains a visual/table compatibility
   hook; use `formatter` when a generated spoken value or CSV cell must use the same unit text.
+  `axis` names the scale the number is plotted on — `'x'` wherever it carries numbers rather than
+  categories (scatter/bubble, and a horizontal bar/line), `'y'`/`'y2'` for the two cartesian value
+  axes, `'r'` for a radar/polar-area ring, and `undefined` where there is no axis at all (a
+  pie/doughnut slice). Two value axes usually exist precisely because they carry different units,
+  so without it one formatter cannot render a secondary axis correctly. `datasetIndex`, `index`,
+  `label` and `seriesLabel` now reach the `tick`, `tooltip`, `legend` and `visual` surfaces as well
+  as the `table`, `export` and `spoken` ones they always reached, and indexes are reported in
+  source space — the same space the data table, the CSV export and `lr-point-click` use. Every one
+  of these fields was `undefined` before, so no existing formatter changes behaviour. A
+  `stackTotals`/`tableTotals` stack total is the exception in the other direction: it is a sum
+  *across* the stack's datasets, so it carries `statistic: 'total'`, the category `index`/`label`
+  and the stack's own `axis`, but no `datasetIndex` and no `seriesLabel` — naming the topmost
+  series would make a unit-switching formatter render that one series' unit for a cross-series
+  number. `lr-lite-chart`'s total cells drop the same two fields.
 - `area: boolean = false` — chart-wide default for whether line-type series fill the region under
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom

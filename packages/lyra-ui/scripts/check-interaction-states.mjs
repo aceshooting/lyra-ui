@@ -51,9 +51,9 @@ import { isMainModule } from './is-main-module.mjs';
 //      click target AND repaints under the pointer owes that repaint a transition, or the fill
 //      jumps between two colours in one frame and reads as a flicker rather than as feedback.
 //      Ninety-odd rules reached that conclusion one at a time and each re-typed the same
-//      three-property list; `--lr-interactive-transition` (tokens.styles.ts) is now the one place
+//      three-property list; `--lr-transition-interactive` (tokens.styles.ts) is now the one place
 //      that list lives, so the declaration a rule owes is exactly:
-//          transition: var(--lr-interactive-transition);
+//          transition: var(--lr-transition-interactive);
 //      Coverage is read NARROWLY, and every narrowing is a correction of a way the first version of
 //      this rule could be silenced without animating anything. `transition` is not an inherited
 //      property and applies only to the element whose own value changes, so: a rule on the part
@@ -149,7 +149,7 @@ const namedProperty = (segment) =>
   splitTopLevel(segment, /\s/).find((token) => !NOT_A_PROPERTY.test(token));
 
 /**
- * The paint families `--lr-interactive-transition` itself animates, READ from the token rather than
+ * The paint families `--lr-transition-interactive` itself animates, READ from the token rather than
  * re-typed here. The token is the one place that property list lives (that is the whole argument
  * for it), so a checker carrying a second copy would be the exact duplication rule 3 exists to
  * end -- and widening the token later, say to cover `box-shadow`, would silently leave the gate
@@ -157,10 +157,10 @@ const namedProperty = (segment) =>
  */
 const INTERACTIVE_TRANSITION_FAMILIES = (() => {
   const tokens = readFileSync(join(internalRoot, 'tokens.styles.ts'), 'utf8');
-  const declaration = /--lr-interactive-transition\s*:([^;]*);/.exec(tokens);
+  const declaration = /--lr-transition-interactive\s*:([^;]*);/.exec(tokens);
   if (!declaration) {
     throw new Error(
-      '--lr-interactive-transition is not declared in src/internal/tokens.styles.ts -- rule 3 of ' +
+      '--lr-transition-interactive is not declared in src/internal/tokens.styles.ts -- rule 3 of ' +
         'the interaction-state contract reads its property list from there.',
     );
   }
@@ -186,7 +186,7 @@ const INTERACTIVE_TRANSITION_FAMILIES = (() => {
 export function transitionedFamilies(value) {
   const families = new Set();
   for (const segment of splitTopLevel(value.replace(/!important/g, ''), /,/)) {
-    if (/var\(\s*--lr-interactive-transition/.test(segment)) {
+    if (/var\(\s*--lr-transition-interactive/.test(segment)) {
       for (const family of INTERACTIVE_TRANSITION_FAMILIES) families.add(family);
       continue;
     }
@@ -677,8 +677,8 @@ export function hoverContract(styleSource, templateSources = []) {
       const remedy =
         outside.length === repaints.size
           ? `Declare a transition naming ${outside.join('/')} on the resting rule ` +
-            `(\`var(--lr-interactive-transition)\` covers only ${[...INTERACTIVE_TRANSITION_FAMILIES].join('/')})`
-          : 'Declare `transition: var(--lr-interactive-transition);` on the resting rule';
+            `(\`var(--lr-transition-interactive)\` covers only ${[...INTERACTIVE_TRANSITION_FAMILIES].join('/')})`
+          : 'Declare `transition: var(--lr-transition-interactive);` on the resting rule';
       findings.push({
         rule: 'transition',
         line: rule.line,
@@ -730,7 +730,7 @@ function templateSourcesFor(styleFile) {
 
 /**
  * Pointer parts that repaint with no transition covering that repaint, and PREDATE
- * `--lr-interactive-transition`.
+ * `--lr-transition-interactive`.
  *
  * This list exists so rule 3 could land at full strength without a source sweep attached to it.
  * Adding a transition to a part that never had one changes what a test reading a hovered colour
@@ -739,7 +739,7 @@ function templateSourcesFor(styleFile) {
  * assertions, which is a per-component job, not a one-line edit made in bulk.
  *
  * WHAT DISCHARGES AN ENTRY, since a grandfather list with no named owner is just a nicer silence:
- * the component's own next substantive change. Add `transition: var(--lr-interactive-transition);`
+ * the component's own next substantive change. Add `transition: var(--lr-transition-interactive);`
  * to the resting rule, re-read that component's pointer-state assertions for the
  * read-a-hovered-colour pattern docs/agents/testing.md describes, run its test file on all three
  * engines, and delete the line here in the same commit. Nothing else retires these; in particular
@@ -769,7 +769,6 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   'src/components/conversation/checkpoint/checkpoint.styles.ts:confirm-button',
   'src/components/conversation/checkpoint/checkpoint.styles.ts:cancel-button',
   'src/components/conversation/code-block/code-block.styles.ts:toggle',
-  'src/components/conversation/code-block/code-block.styles.ts:copy-button',
   'src/components/conversation/message-feedback/message-feedback.styles.ts:up-button',
   'src/components/conversation/message-feedback/message-feedback.styles.ts:down-button',
   'src/components/conversation/model-select/model-select.styles.ts:trigger',
@@ -839,14 +838,10 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   'src/components/agent-tools/tool-result-dialog/tool-result-dialog.styles.ts:maximize-button',
   'src/components/agent-tools/tool-result-dialog/tool-result-dialog.styles.ts:close-button',
   'src/components/conversation/chat-viewport/chat-viewport.styles.ts:jump-pill',
-  'src/components/conversation/message-actions/message-actions.styles.ts:regenerate-button',
-  'src/components/conversation/message-actions/message-actions.styles.ts:edit-button',
   'src/components/conversation/message-feedback/message-feedback.styles.ts:submit-button',
   'src/components/data/calendar/calendar.styles.ts:event',
   'src/components/forms/input/time-input.styles.ts:now-button',
   'src/components/layout/page/page.styles.ts:navigation-toggle',
-  'src/components/layout/reorder-list/reorder-item.styles.ts:move-up-button',
-  'src/components/layout/reorder-list/reorder-item.styles.ts:move-down-button',
   'src/components/layout/widget/widget.styles.ts:collapse-button',
   'src/components/layout/widget/widget.styles.ts:fullscreen-button',
   'src/components/media/video/video.styles.ts:poster-play-button',
@@ -946,7 +941,7 @@ if (isMainModule(import.meta.url)) {
     console.error(
       '\nAdd the matching :active rule, or record the omission with a `no-pressed-state: <reason>` comment.' +
         '\nAdd the matching :hover rule, or record the omission with a `no-hover-state: <reason>` comment.' +
-        '\nAdd `transition: var(--lr-interactive-transition);` to the resting rule, or record the ' +
+        '\nAdd `transition: var(--lr-transition-interactive);` to the resting rule, or record the ' +
         'omission with a `no-transition-needed: <reason>` comment.',
     );
     process.exitCode = 1;

@@ -1,6 +1,7 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './lite-chart.js';
 import { LyraLiteChart } from './lite-chart.js';
+import type { LyraChartFormatterContext } from './chart.class.js';
 import { styles } from './lite-chart.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -522,6 +523,9 @@ it('routes the unified formatter through the multi-series table (value and total
     label: 'Q1',
     seriesLabel: undefined,
     statistic: 'total',
+    // This chart has one value scale, and naming it is what lets a formatter written against
+    // <lr-chart>'s dual-axis context serve both components unchanged.
+    axis: 'y',
   });
 });
 
@@ -4206,3 +4210,51 @@ for (const mode of ['bar', 'rounded', 'line'] as const) {
     expect(el.shadowRoot!.querySelector('[data-mark-index]')!.getAttribute('aria-label')).to.equal(`Updated ${text}`);
   });
 }
+
+describe('lr-lite-chart formatter metadata', () => {
+  it('names the value axis and the datum on every surface it formats', async () => {
+    const seen: LyraChartFormatterContext[] = [];
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      legend
+      .labels=${['Jan', 'Feb']}
+      .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+      .formatter=${(context: LyraChartFormatterContext) => {
+        seen.push(context);
+        return `#${context.value}`;
+      }}
+    ></lr-lite-chart>`);
+
+    const tick = seen.find((context) => context.surface === 'tick');
+    expect(tick?.axis, 'a value-axis tick names its scale').to.equal('y');
+
+    const visual = seen.find((context) => context.surface === 'visual');
+    expect(visual?.axis, 'a mark label names its scale').to.equal('y');
+    expect(visual?.index, 'and the category it belongs to').to.be.a('number');
+    expect(visual?.seriesLabel, 'and its series').to.equal('Revenue');
+
+    const legend = seen.find((context) => context.surface === 'legend');
+    expect(legend?.axis, 'a legend entry names its scale').to.equal('y');
+    expect(legend?.datasetIndex, 'and its dataset').to.equal(0);
+
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="legend-text"]').length,
+      'the legend entry still renders its formatted text',
+    ).to.equal(1);
+  });
+
+  it('tells the visual formatter which category a mark is, not just which series', async () => {
+    const indexes: (number | undefined)[] = [];
+    await mount(html`<lr-lite-chart
+      type="line"
+      .labels=${['A', 'B', 'C']}
+      .datasets=${[{ label: 'Series', data: [1, 2, 3] }]}
+      .formatter=${(context: LyraChartFormatterContext) => {
+        if (context.surface === 'visual') indexes.push(context.index);
+        return String(context.value);
+      }}
+    ></lr-lite-chart>`);
+    expect(indexes, 'every plotted point reports its own category index').to.deep.equal([0, 1, 2]);
+  });
+});
+

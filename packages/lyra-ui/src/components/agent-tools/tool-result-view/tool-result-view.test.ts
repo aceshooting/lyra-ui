@@ -574,8 +574,15 @@ it('registers and upgrades the copy button it renders, through its own entry poi
   // shadow root with the real button inside it.
   expect(copy instanceof customElements.get('lr-copy-button')!, 'upgraded, not inert').to.be.true;
   expect(copy!.shadowRoot !== null, 'an upgraded element renders its own shadow root').to.be.true;
+  // The clickable affordance is the composed <lr-icon-button>'s own native control, one shadow
+  // boundary deeper than <lr-copy-button>'s `[part~="base"]`. Reaching it at all proves both
+  // elements upgraded, which is exactly what this test is for.
+  const trigger = copy!.shadowRoot!.querySelector('[part~="base"]') as HTMLElement | null;
+  expect(trigger?.localName, 'the built-in trigger is a composed icon button').to.equal(
+    'lr-icon-button',
+  );
   expect(
-    copy!.shadowRoot!.querySelector('button') !== null,
+    trigger!.shadowRoot!.querySelector('button') !== null,
     'the clickable affordance an inert element never grew',
   ).to.be.true;
   expect(copy!.value).to.equal('copy me');

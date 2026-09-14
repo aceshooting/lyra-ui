@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
 import "./app-rail.js";
+import "../app-rail-group/app-rail-group.js";
 import type { LyraAppRail } from "./app-rail.js";
 import { storyColor } from "../../../../../../.storybook/theme-contract.js";
 
@@ -376,4 +377,61 @@ export const StopResizingOnRequest: Story = {
       ${navItems}
     </lr-app-rail>
   `),
+};
+
+export const CollapsibleDesktopRail: Story = {
+  name: "Desktop collapse control",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`collapsible` renders a collapse control in the header that flips the rail between its full and icon-only presentations. It writes `preferred-mode`, so pairing it with `storage-key` and `persist=\"width preferred-mode\"` remembers the choice across reloads; the control is not rendered at all in mobile mode.",
+      },
+    },
+  },
+  render: () =>
+    page(html`
+      <lr-app-rail
+        label="Primary"
+        collapsible
+        storage-key="storybook-collapse"
+        persist="width preferred-mode"
+        style="block-size:100%;"
+      >
+        <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
+        ${navItems}
+      </lr-app-rail>
+    `),
+};
+
+export const GroupedSections: Story = {
+  name: "Grouped sections",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`<lr-app-rail-group>` titles a section of items and can collapse it. A slotted group is marked icon-only by the rail exactly like a slotted item, and forwards that state to the items it owns.",
+      },
+    },
+  },
+  render: () =>
+    page(html`
+      <lr-app-rail label="Primary" collapsible style="block-size:100%;">
+        <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
+        <lr-app-rail-group collapsible heading="Workspaces">
+          <lr-app-rail-item href="#atlas" current
+            ><span slot="icon">🗂️</span>Atlas
+            <span slot="meta">12</span></lr-app-rail-item
+          >
+          <lr-app-rail-item href="#beacon"
+            ><span slot="icon">📡</span>Beacon</lr-app-rail-item
+          >
+        </lr-app-rail-group>
+        <lr-app-rail-group heading="Support">
+          <lr-app-rail-item href="#docs"
+            ><span slot="icon">📚</span>Docs</lr-app-rail-item
+          >
+        </lr-app-rail-group>
+      </lr-app-rail>
+    `),
 };

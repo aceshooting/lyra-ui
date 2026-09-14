@@ -60,6 +60,24 @@ const links: LyraGraphLink[] = [
 function graphEl(el: LyraKnowledgeGraphExplorer): LyraGraph {
   return el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
 }
+/** The block size the explorer's own column math must hand the composed graph: its reservation
+ *  minus every OTHER in-flow row and the flex gaps between them. Derived from the rendered rows,
+ *  so it stays an independent check on the pane rather than a restatement of whatever the graph
+ *  happened to measure. `.sr-only` live regions are absolutely positioned, so they are not flex
+ *  items and consume neither height nor a gap. */
+function expectedPaneHeight(el: LyraKnowledgeGraphExplorer): number {
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const pane = graphEl(el) as unknown as HTMLElement;
+  const rows = (Array.from(base.children) as HTMLElement[]).filter(
+    (row) => getComputedStyle(row).position !== 'absolute'
+  );
+  const chrome = rows
+    .filter((row) => row !== pane)
+    .reduce((sum, row) => sum + row.getBoundingClientRect().height, 0);
+  const gap = parseFloat(getComputedStyle(base).rowGap) || 0;
+  return base.clientHeight - chrome - gap * Math.max(0, rows.length - 1);
+}
+
 function graphNodeEls(el: LyraKnowledgeGraphExplorer): SVGElement[] {
   return Array.from(graphEl(el).shadowRoot!.querySelectorAll('[part="node"]'));
 }
@@ -2262,4 +2280,243 @@ it('contains long search results horizontally and suppresses the consumed child 
   expect(getComputedStyle(results).overflowX).to.be.oneOf(['clip', 'hidden']);
   expect(getComputedStyle(button).overflowWrap).to.equal('anywhere');
   expect(leaked).to.equal(0);
+});
+
+describe('search matching against accessibleLabel', () => {
+  const namedOnlyByAccessibleLabel: LyraGraphNode[] = [
+    { id: 'repo/pkg/1f2e', accessibleLabel: 'Marie Curie' },
+    { id: 'repo/pkg/9a8b', label: 'Pierre Curie' },
+  ];
+
+  function typeQuery(el: LyraKnowledgeGraphExplorer, value: string): void {
+    el.shadowRoot!.querySelector('[part="search"]')!.dispatchEvent(
+      new CustomEvent('lr-input', {
+        detail: { value },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  function resultTexts(el: LyraKnowledgeGraphExplorer): string[] {
+    return Array.from(
+      el.shadowRoot!.querySelectorAll('[part="search-result"] button')
+    ).map((button) => button.textContent?.trim() ?? '');
+  }
+
+  it('finds a node named only through accessibleLabel by typing that name', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${namedOnlyByAccessibleLabel}
+        .links=${[]}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    typeQuery(el, 'marie');
+    await el.updateComplete;
+    expect(resultTexts(el)).to.deep.equal(['Marie Curie']);
+  });
+
+  it('matches accessibleLabel even when a visible label is also set, since both name the node', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${[
+          { id: 'n1', label: 'Radium', accessibleLabel: 'Radium, element 88' },
+        ]}
+        .links=${[]}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    typeQuery(el, 'element 88');
+    await el.updateComplete;
+    expect(resultTexts(el)).to.deep.equal(['Radium']);
+  });
+
+  it('dims every node an accessibleLabel-only match excludes, and none of the matched one', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${namedOnlyByAccessibleLabel}
+        .links=${[]}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    typeQuery(el, 'marie');
+    await el.updateComplete;
+    const graph = graphEl(el);
+    await graph.updateComplete;
+    expect([...graph.dimmedNodeIds]).to.deep.equal(['repo/pkg/9a8b']);
+  });
+
+  it('reports the accessibleLabel match in the lr-search-change count', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${namedOnlyByAccessibleLabel}
+        .links=${[]}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const counts: number[] = [];
+    el.addEventListener('lr-search-change', (event) => {
+      counts.push(
+        (event as LyraKnowledgeGraphExplorerEventMap['lr-search-change']).detail
+          .matchCount
+      );
+    });
+    typeQuery(el, 'marie');
+    await el.updateComplete;
+    expect(counts).to.deep.equal([1]);
+  });
+
+  it('still matches the raw id and the visible label (unset regression)', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${namedOnlyByAccessibleLabel}
+        .links=${[]}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    typeQuery(el, '9a8b');
+    await el.updateComplete;
+    expect(resultTexts(el)).to.deep.equal(['Pierre Curie']);
+    typeQuery(el, 'pierre');
+    await el.updateComplete;
+    expect(resultTexts(el)).to.deep.equal(['Pierre Curie']);
+  });
+
+  it('matches an accessibleLabel case-insensitively in the active locale', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        locale="tr"
+        .nodes=${[{ id: 'n1', accessibleLabel: 'IĞDIR' }]}
+        .links=${[]}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    typeQuery(el, 'ığdır');
+    await el.updateComplete;
+    expect(resultTexts(el)).to.deep.equal(['IĞDIR']);
+  });
+});
+
+describe('fit-to="container"', () => {
+  it('defaults to fit-to="none" and forwards it to the composed graph (unset regression)', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+      ></lr-knowledge-graph-explorer>`
+    )) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    expect(el.fitTo).to.equal('none');
+    const graph = graphEl(el);
+    await graph.updateComplete;
+    expect(graph.fitTo).to.equal('none');
+    await waitUntil(
+      () =>
+        graph.shadowRoot!.querySelector('svg')?.getAttribute('viewBox') ===
+        '0 0 800 600',
+      'composed graph never drew at the forwarded numeric width/height',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+  });
+
+  it('forwards fit-to="container" so the composed graph draws at the pane it was actually given', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        fit-to="container"
+        .nodes=${nodes}
+        .links=${links}
+        style="inline-size: 420px; --lr-canvas-reserved-height: 220px"
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const graph = graphEl(el);
+    expect(graph.fitTo).to.equal('container');
+    await waitUntil(
+      () => graph.shadowRoot!.querySelector('svg') != null,
+      'composed graph never mounted its svg renderer',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    // The pane's real height is the explorer's reservation minus whatever the toolbar, search
+    // results, pinned row and path strip take -- no literal from the public API can state it,
+    // which is the whole point of the mode. So pin it independently of the viewBox first: the
+    // graph row is the last in-flow row, so it must run from below the chrome above it to the very
+    // bottom of the reservation, leaving no dead space. Only then is the captured number worth
+    // asserting a viewBox against.
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const paneHeight = graph.clientHeight;
+    expect(
+      base.clientHeight,
+      'the explorer did not honour its own --lr-canvas-reserved-height'
+    ).to.equal(220);
+    expect(
+      graph.getBoundingClientRect().top - base.getBoundingClientRect().top,
+      'nothing was rendered above the pane, so the reservation was not shared'
+    ).to.be.greaterThan(0);
+    expect(
+      paneHeight,
+      'pane height is not the reservation minus the other measured rows'
+    ).to.be.closeTo(expectedPaneHeight(el), 1);
+    // Asserted against the captured constants, never against a box re-read at assertion time: a
+    // height that drifts by any amount after this point now fails instead of being matched.
+    await waitUntil(
+      () =>
+        graph.shadowRoot!.querySelector('svg')?.getAttribute('viewBox') ===
+        `0 0 420 ${paneHeight}`,
+      `composed graph never drew at its own rendered pane (420x${paneHeight})`,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    expect(graph.clientWidth, 'pane collapsed, so the match proves nothing').to.equal(420);
+  });
+
+  it('follows the composed pane when the explorer host is resized', async () => {
+    const holder = (await fixture(html`
+      <div style="inline-size: 420px">
+        <lr-knowledge-graph-explorer
+          fit-to="container"
+          .nodes=${nodes}
+          .links=${links}
+          style="--lr-canvas-reserved-height: 220px"
+        ></lr-knowledge-graph-explorer>
+      </div>
+    `)) as HTMLDivElement;
+    const el = holder.querySelector(
+      'lr-knowledge-graph-explorer'
+    ) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const graph = graphEl(el);
+    await waitUntil(
+      () => graph.shadowRoot!.querySelector('svg') != null,
+      'composed graph never mounted its svg renderer',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const paneHeight = graph.clientHeight;
+    expect(
+      base.clientHeight,
+      'the explorer did not honour its own --lr-canvas-reserved-height'
+    ).to.equal(220);
+    expect(
+      paneHeight,
+      'pane height is not the reservation minus the other measured rows'
+    ).to.be.closeTo(expectedPaneHeight(el), 1);
+    await waitUntil(
+      () =>
+        graph.shadowRoot!.querySelector('svg')?.getAttribute('viewBox') ===
+        `0 0 420 ${paneHeight}`,
+      `composed graph never drew at its initial pane (420x${paneHeight})`,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    holder.style.inlineSize = '600px';
+    // The SAME captured height, deliberately: a wider host must move the drawing space's width and
+    // nothing else, so a viewBox matched against a freshly re-read clientHeight would hide a
+    // block-size drift here.
+    await waitUntil(
+      () =>
+        graph.shadowRoot!.querySelector('svg')?.getAttribute('viewBox') ===
+        `0 0 600 ${paneHeight}`,
+      `composed graph never followed the resized pane (600x${paneHeight})`,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+  });
 });

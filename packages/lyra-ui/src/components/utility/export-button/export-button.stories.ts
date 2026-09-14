@@ -56,6 +56,29 @@ export const EmptyVisibleLabel: Story = {
   `,
 };
 
+/** `getRows` is read when a download is actually built, so the file always carries the rows that
+ *  exist at that moment rather than a copy assigned earlier. */
+export const LazyRowSource: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The callback runs only after a non-prevented lr-export, so the export carries a fresh timestamp every time the button is used -- the same seam a consumer uses to export an <lr-table>\'s current viewRows without copying them into this element.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-export-button
+      filename="lazy"
+      .columns=${[
+        { key: 'name', label: 'Name' },
+        { key: 'capturedAt', label: 'Captured at' },
+      ] satisfies LyraCsvColumn[]}
+      .getRows=${() => rows.map((row) => ({ name: row.name, capturedAt: new Date().toISOString() }))}
+    ></lr-export-button>
+  `,
+};
+
 export const MultiFormatMenu: Story = {
   render: () => html`
     <lr-export-button

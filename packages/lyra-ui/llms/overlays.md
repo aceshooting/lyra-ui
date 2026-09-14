@@ -590,8 +590,9 @@ lifecycle.
 controls, rendered before the built-in close button), `footer` — all inherited from `lr-dialog`.
 
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
-`header-actions`; `close-button close-button__base`; `body`; `footer`. Names grouped together are
-aliases on the same functional node.
+`header-actions`; `close-button close-button__base`; `close-button__control`; `body`; `footer`.
+Names grouped together are aliases on the same functional node; `close-button__control` is the
+composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` as of 16.0.0.
 
 **Themeable custom properties:** mapped `--size` controls the active axis. For start/end drawers,
 the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
@@ -786,9 +787,13 @@ the built-in close button), `footer` (action buttons, rendered in a bottom row, 
 empty). The `label` and `header-actions` slots are new in 8.0.0.
 
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
-`header-actions`; `close-button close-button__base`; `body`; `footer`. Names grouped together are
-additive aliases on the same functional node, so a mapped `::part(title)` rule styles the same
-visible title as Lyra's `::part(heading)`.
+`header-actions`; `close-button close-button__base`; `close-button__control`; `body`; `footer`.
+Names grouped together are additive aliases on the same functional node, so a mapped
+`::part(title)` rule styles the same visible title as Lyra's `::part(heading)`.
+`close-button__control` is the composed `<lr-icon-button>`'s own native `<button>`: as of 16.0.0 the
+close button IS an `<lr-icon-button>`, so `close-button`/`close-button__base` name that host and the
+painted surface sits one boundary deeper. `<lr-drawer>` inherits this control and now registers
+`<lr-icon-button>` itself.
 
 **The body is keyboard-reachable while it overflows.** `[part="body"]` is the element that scrolls,
 so it carries `tabindex="-1"` and joins the focus order **only while its content actually
@@ -1512,6 +1517,29 @@ If the import fails, leave the native disclosure visible and usable.
   `show()`/`hide()`, so the property, the reflected attribute and the two methods can never disagree
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
   under RTL
+- `positioningStrategy: PlaceStrategy = 'fixed'` (attribute `positioning-strategy`, reflected) — CSS
+  positioning scheme the popup is laid out with, `'absolute' | 'fixed'`. The one property
+  `<lr-popover>`, `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell
+  the same way; each keeps its own default, so setting nothing changes nothing. An unsupported value
+  resolves back to that default.
+- `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
+  `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
+  `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
+  keyword. The two transient modes open after `showDelay`, close after `hideDelay` once the
+  interaction ends, never move focus into the surface, and stay open while focus rests anywhere
+  inside it. A click on the trigger pins a transient surface open; the next click releases the pin
+  and closes it. `manual` refuses every interaction, leaves the surface to `show()`/`hide()`/`open`,
+  and wins over any keyword beside it. Unrecognized tokens are dropped and the property reads back
+  as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
+  `'click'` rather than to manual, so a typo can never strand a popover's content behind `show()`.
+  Both the slotted trigger and a `for=`-resolved external trigger honour every keyword.
+- `showDelay: number = 0` (attribute `show-delay`) — ms before a `hover`/`focus` interaction opens
+  the popover.
+- `hideDelay: number = 0` (attribute `hide-delay`) — ms before the interaction ending closes it; the
+  grace period that lets a pointer cross the gap to the popup.
+- `hoverBridge: boolean = false` (attribute `hover-bridge`, reflected) — clips an invisible
+  `[part='hover-bridge']` quad across the `distance` gap while a `hover` popover is open, so a
+  pointer travelling between trigger and popup never leaves both at once.
 - `distance: number = 8` — anchor-offset distance in px (Floating UI's main-axis `offset()`). May
   legitimately be negative to overlap the trigger; a non-finite value falls back to the default.
 - `skidding: number = 0` — offset _along_ the anchor's edge, in px (Floating UI's cross-axis
@@ -1639,9 +1667,10 @@ method-promise settlement.
 **Slots:** `trigger` (the interactive element that toggles the popover), default (popover content;
 an enabled, non-inert descendant with `data-popover="close"` closes its nearest owning popover).
 
-**CSS parts:** `trigger`; `popup dialog popup__popup`; `content body`; and
-`arrow popup__arrow` (rendered unless suppressed). Names grouped together are aliases on the same
-node. The arrow's part attribute also carries the **resolved side** as a second token — `arrow-top`,
+**CSS parts:** `trigger`; `popup dialog popup__popup`; `content body`;
+`arrow popup__arrow` (rendered unless suppressed); and `hover-bridge` (the invisible quad, rendered
+only while a `hover` popover with `hover-bridge` set is open). Names grouped together are aliases on
+the same node. The arrow's part attribute also carries the **resolved side** as a second token — `arrow-top`,
 `arrow-bottom`, `arrow-left`, `arrow-right` — so `::part(arrow arrow-top)` styles one side.
 `::part(arrow)[data-side]` and `::part(arrow) .inner` are invalid selectors that silently never
 match; the state is in the part name.
@@ -1730,6 +1759,10 @@ later text renders normally.
 - `disabled: boolean = false` (reflected) — prevents both interaction and programmatic opening;
   setting it while open closes the tooltip
 - `hoist: boolean = false` (reflected) — switches the mapped absolute positioning default to fixed
+- `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
+  see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
+  (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
+  attributes can never disagree. Prefer `positioning-strategy` in new code.
 - `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
   reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
@@ -1933,6 +1966,11 @@ their controls without putting arbitrary content inside the menu role.
 - `hoist: boolean = false` (reflected) — uses viewport-fixed positioning; otherwise the popup uses
   the containing-block (`absolute`) strategy.
 - `sync?: 'width'|'height'|'both'` (reflected) — copies the trigger dimension(s) onto the popup.
+- `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
+  see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
+  (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
+  attributes can never disagree. Prefer `positioning-strategy` in new code. `<lr-dropdown>` also
+  inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`.
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
 - `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`
@@ -1968,8 +2006,12 @@ only keyframes. Passing `null` disables motion without skipping the after-event 
 `lr-menu`; that menu may use its own `header`/`footer` regions). **CSS parts:** `trigger`;
 `popup dialog popup__popup base base__popup panel` (all six tokens on the neutral positioned
 popup, preserving the popover, Web Awesome and Shoelace wrapper names on the same node); `menu`
-(the contained semantic/controller owner); `content body`; and the retained optional
-`arrow popup__arrow` token set.
+(the contained semantic/controller owner); `content body`; the retained optional
+`arrow popup__arrow` token set; and the inherited `hover-bridge` — the invisible quad the positioner
+clips across the `distance` gap between trigger and popup, rendered only while a `hover`-triggered
+dropdown with `hover-bridge` set is open, so a pointer travelling from the trigger to the popup
+never leaves both at once and the surface does not close underneath it. It paints nothing by
+default; style it only to debug the travel region.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
@@ -2471,9 +2513,19 @@ configured semantic heading wrapper), `icon`.
 
 **CSS parts:** `base` (the transparent grid wrapper inside the host-owned surface), `icon`
 (hidden while the `icon` slot is empty), `content`, `heading`,
-`message` (wrapper around the default slot), `close-button` (the close control's hit target, always
-at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-icon` (the
-visible "×" glyph inside it — this is what shrinks under `inline`, so the hit target never does).
+`message` (wrapper around the default slot), `close-button` (the close control, always
+at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-button__control`,
+`close-icon` (the visible "×" glyph inside it — this is what shrinks under `inline`, so the hit
+target never does).
+
+As of 16.0.0 the close control is a composed `<lr-icon-button>`: `close-button` names that host —
+it still owns the grid placement, the accessible name and the click/focus API — while
+`close-button__control` is its own native `<button>`, where the background, radius, hover/press
+fill, focus ring and hit-area floor are painted. A rule that sets `background`, `border`,
+`padding` or `outline` through `::part(close-button)` must move to `::part(close-button__control)`
+or, better, to the `--lr-icon-button-*` tokens, which reach it the same way they reach a standalone
+icon button. Layout-only rules (`margin`, `grid-column`, `order`, `display`) keep working on
+`close-button` untouched.
 
 The surface chrome lives on the custom-element host, not inside `base`. Ordinary host
 `background`, `border`, `border-radius`, `color`, `padding`, and `margin` declarations therefore

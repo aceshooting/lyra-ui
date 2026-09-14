@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -75,5 +75,8 @@ invalid actions and later duplicates are omitted before roving focus ownership.
 navigation.
 
 **CSS parts:** `base` (the toolbar, `role="toolbar"`), `copy-button` (the embedded
-`lr-copy-button`), `regenerate-button`, `edit-button`, and `feedback` (the embedded
-`lr-message-feedback`).
+`lr-copy-button`), `regenerate-button`, `edit-button`,
+`regenerate-button__control` / `edit-button__control` (each built-in action's own native `<button>` —
+as of 16.0.0 both are composed `<lr-icon-button>`s, so `--lr-icon-button-*` retunes them and the
+toolbar's roving tab stop is leased on the native control rather than the host), and `feedback` (the
+embedded `lr-message-feedback`).

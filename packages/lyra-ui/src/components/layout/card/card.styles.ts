@@ -24,7 +24,14 @@ export const styles = css`
     border: var(--border-width, var(--lr-border-width-thin)) solid
       var(--border-color, var(--lr-color-border));
     border-radius: var(--_lr-card-radius);
-    background: var(--lr-color-surface);
+    /* The DEFAULT (outlined) tier's own hook, alongside the filled tiers' existing ones -- the
+       tier most cards render was the only one with no card-specific lever, so retinting one
+       themed card meant a ::part(base) rule or an app-wide --lr-color-surface change. Declared
+       here rather than under :host([appearance="outlined"]) because the default value is never
+       reflected as an attribute, so that selector would miss exactly the cards this hook is for;
+       accent, which adds a stripe without restating a surface, inherits it for the same reason.
+       Mirrors lr-details's --lr-details-outlined-bg. */
+    background: var(--lr-card-outlined-bg, var(--lr-color-surface));
     /* Fills the host's allocated block-size (a stretch-aligned grid row) so a short card's border
        and background reach the row's full height instead of shrink-wrapping. Matches lyra-stat,
        word-cloud and context-meter; card.class.ts advertises clickable grid tiles. box-sizing
@@ -113,8 +120,8 @@ export const styles = css`
     cursor: pointer;
     transition: border-color var(--lr-transition-fast);
   }
-  [part="base"][data-actionable="true"]:hover,
-  .linked-shell:hover > [part="base"][data-actionable="true"] {
+  [part="base"][data-actionable="true"]:not([data-disabled]):hover,
+  .linked-shell:hover > [part="base"][data-actionable="true"]:not([data-disabled]) {
     border-color: var(--lr-card-interactive-hover-border-color, var(--lr-color-brand));
     /* Unset, this falls back to the SAME --lr-card-shadow the base rule above already paints, so
        hovering an actionable card with no shadow theming stays byte-identical; set it to lift an
@@ -125,8 +132,8 @@ export const styles = css`
      another colour of the same step. A background-IMAGE layer, not a background colour: the
      appearance variants own background-color (filled and filled-outlined set brand-quiet), so a
      colour here would replace theirs and flash a filled card back to plain surface. */
-  [part="base"][data-actionable="true"]:active,
-  .linked-shell:active > [part="base"][data-actionable="true"] {
+  [part="base"][data-actionable="true"]:not([data-disabled]):active,
+  .linked-shell:active > [part="base"][data-actionable="true"]:not([data-disabled]) {
     border-color: var(--lr-card-interactive-active-border-color, var(--lr-color-brand));
     background-image: linear-gradient(
       var(
@@ -146,6 +153,22 @@ export const styles = css`
         )
       )
     );
+  }
+  /* MUST stay after the pointer/hover/pressed rules above: [part="base"][data-disabled] and
+     [part="base"][data-actionable="true"] are both (0,2,0), so source order alone decides whose
+     cursor a disabled actionable card shows.
+     :host(:disabled), never :host([disabled]) -- only :disabled tracks a fieldset-cascaded
+     disablement, and the attribute spelling is the one that would silently stop tracking. Like
+     lr-icon-button's identical selector group, this branch is inert while the component is not
+     form-associated (see the disabled property's doc for why a layout container stays out of
+     form.elements); the data-disabled branches are what actually paint today. The linked variant
+     needs its own selector because .linked-content is a SIBLING of the stretched anchor, not a
+     descendant, so dimming [part="base"] alone would leave every visible pixel at full opacity. */
+  :host(:disabled) [part="base"],
+  [part="base"][data-disabled],
+  .linked-content[data-disabled] {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
   }
   [part="activation-button"] {
     position: absolute;

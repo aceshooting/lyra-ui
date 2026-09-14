@@ -129,3 +129,64 @@ export const NarrowLongContent: Story = {
     </div>
   `,
 };
+
+export const RestingBackgroundToken: Story = {
+  name: 'Retinting the resting frame',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-source-card-bg` is the resting companion to the `compact` tier\'s existing padding/gap levers, so a themed citation list no longer needs a `::part(base)` rule or an app-wide `--lr-color-surface` change.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-source-card
+      source-id="doc-1"
+      title="annual_report.pdf"
+      page="12"
+      style="max-width: 28rem; --lr-source-card-bg: var(--lr-color-brand-quiet)"
+    >
+      <span slot="excerpt">Revenue grew 12% year over year, driven primarily by...</span>
+    </lr-source-card>
+  `,
+};
+
+export const Disabled: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`disabled` gates every self-rendered control, not just the title: both the title button and the "Show more" toggle render `disabled`, `lr-open`/`lr-expand` stop firing, neither stays in the tab order, and the card paints at `--lr-opacity-disabled`.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12" disabled style="max-width: 28rem;">
+      <span slot="excerpt">Revenue grew 12% year over year, driven primarily by...</span>
+      <span slot="full">Revenue grew 12% year over year, driven primarily by strong performance.</span>
+    </lr-source-card>
+  `,
+};
+
+export const SelectedCitation: Story = {
+  name: 'Single-select citations with aria-pressed',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A host `aria-pressed` or `aria-current` is forwarded onto the `title` button, the control that actually carries this card\'s action. The `toggle` button never receives it — it already owns `aria-expanded` for its own disclosure state.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex;flex-direction:column;gap:var(--lr-space-s);max-width:28rem;">
+      <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12" aria-pressed="true">
+        <span slot="excerpt">Revenue grew 12% year over year...</span>
+      </lr-source-card>
+      <lr-source-card source-id="doc-2" title="risk_register.pdf" page="4" aria-pressed="false">
+        <span slot="excerpt">Supply chain exposure remains concentrated...</span>
+      </lr-source-card>
+    </div>
+  `,
+};

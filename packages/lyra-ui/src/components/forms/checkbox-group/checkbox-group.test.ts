@@ -1929,3 +1929,237 @@ describe('value assignment', () => {
     expect([...snapshot], 'an earlier read must not track later assignments').to.deep.equal(['a']);
   });
 });
+
+/** Records every write that reaches `checked`'s own setter on one child, then restores the
+ *  prototype accessor. A veto that lets the child flip and then writes it back does so inside the
+ *  same task, so Lit coalesces both writes into one render and neither the property nor the
+ *  rendered `aria-checked` can tell "never flipped" from "flipped and snapped back" afterwards.
+ *  The write log can. */
+function recordCheckedWrites(box: LyraCheckbox): {
+  writes: boolean[];
+  release: () => void;
+} {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    Object.getPrototypeOf(box) as object,
+    'checked',
+  )!;
+  const writes: boolean[] = [];
+  Object.defineProperty(box, 'checked', {
+    configurable: true,
+    get: () => descriptor.get!.call(box) as boolean,
+    set: (next: boolean) => {
+      writes.push(Boolean(next));
+      descriptor.set!.call(box, next);
+    },
+  });
+  return {
+    writes,
+    release: () => {
+      delete (box as unknown as Record<string, unknown>)['checked'];
+    },
+  };
+}
+
+describe('lr-checkbox-group-toggle-request', () => {
+  it('keeps the last remaining option checked when the host vetoes the emptying toggle, with no flip at all', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group name="topics">
+        <lr-checkbox value="a" checked>A</lr-checkbox>
+        <lr-checkbox value="b" checked>B</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    const boxes = Array.from(el.querySelectorAll('lr-checkbox')) as LyraCheckbox[];
+    expect(boxes.length, 'the group owns both options').to.equal(2);
+    const first = boxes[0]!;
+    const second = boxes[1]!;
+    const proposals: Array<{
+      value: readonly string[];
+      previousValue: readonly string[];
+      option: string | null;
+    }> = [];
+    el.addEventListener('lr-checkbox-group-toggle-request', (event) => {
+      const detail = (event as CustomEvent<{
+        value: readonly string[];
+        previousValue: readonly string[];
+        option: LyraCheckbox;
+      }>).detail;
+      proposals.push({
+        value: detail.value,
+        previousValue: detail.previousValue,
+        option: detail.option.getAttribute('value'),
+      });
+      // The filed scenario: refuse any toggle that would leave the group with nothing checked.
+      if (detail.value.length === 0) event.preventDefault();
+    });
+    const settled: string[] = [];
+    for (const name of ['input', 'change', 'lr-change'] as const) {
+      el.addEventListener(name, (event) => settled.push(event.type));
+    }
+
+    // Unchecking the first of two is allowed and commits.
+    (
+      first.shadowRoot!.querySelector('[part~="base"]') as HTMLElement
+    ).click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['b']);
+    expect(settled).to.deep.equal(['input', 'change', 'lr-change']);
+
+    // Unchecking the last one is refused, and the control must never flip.
+    const spy = recordCheckedWrites(second);
+    const secondBase = second.shadowRoot!.querySelector(
+      '[part~="base"]',
+    ) as HTMLElement;
+    try {
+      secondBase.click();
+      await el.updateComplete;
+      await second.updateComplete;
+
+      expect(proposals).to.deep.equal([
+        { value: ['b'], previousValue: ['a', 'b'], option: 'a' },
+        { value: [], previousValue: ['b'], option: 'b' },
+      ]);
+      expect(spy.writes, 'the vetoed option is never written at all').to.deep.equal([]);
+      expect(second.checked, 'the vetoed option stays checked').to.be.true;
+      expect(secondBase.getAttribute('aria-checked')).to.equal('true');
+      expect(el.value).to.deep.equal(['b']);
+      expect(settled, 'no second round of group change events').to.deep.equal([
+        'input',
+        'change',
+        'lr-change',
+      ]);
+    } finally {
+      spy.release();
+    }
+  });
+
+  it('translates the child request into one group-level veto point', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group>
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    const seen: string[] = [];
+    for (const name of [
+      'lr-checkbox-toggle-request',
+      'lr-checkbox-group-toggle-request',
+    ] as const) {
+      el.addEventListener(name, (event) => seen.push(event.type));
+    }
+
+    (box.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+    await el.updateComplete;
+
+    expect(seen).to.deep.equal(['lr-checkbox-group-toggle-request']);
+    expect(el.value).to.deep.equal(['a']);
+  });
+
+  it('fires no group toggle request while the group itself is disabled', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group disabled>
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    let requests = 0;
+    el.addEventListener(
+      'lr-checkbox-group-toggle-request',
+      () => (requests += 1),
+    );
+
+    (box.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+    box.click();
+    await el.updateComplete;
+
+    expect(requests).to.equal(0);
+    expect(el.value).to.deep.equal([]);
+  });
+
+  it('leaves the commit to a listener that resolves the request by assigning value itself', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group>
+        <lr-checkbox value="a" checked>A</lr-checkbox>
+        <lr-checkbox value="b">B</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    el.addEventListener('lr-checkbox-group-toggle-request', () => {
+      // No preventDefault(): the host answers by assigning the value it wants, which is the value
+      // the group already holds. A before/after value compare cannot see this write.
+      el.value = ['a'];
+    });
+
+    (box.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+    await el.updateComplete;
+
+    expect(el.value, "the host's own assignment survives").to.deep.equal(['a']);
+    expect(box.checked).to.be.true;
+  });
+
+  it('behaves exactly as before when nothing listens for the group request', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group>
+        <lr-checkbox value="a">A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    const order: string[] = [];
+    for (const name of ['input', 'change', 'lr-change'] as const) {
+      el.addEventListener(name, (event) => order.push(event.type));
+    }
+
+    (box.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+    await el.updateComplete;
+
+    expect(order).to.deep.equal(['input', 'change', 'lr-change']);
+    expect(el.value).to.deep.equal(['a']);
+    expect(box.checked).to.be.true;
+  });
+
+  it('still translates and can still veto after a disconnect and reconnect', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group>
+        <lr-checkbox value="a" checked>A</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    const parent = el.parentNode as ParentNode & { append: (node: Node) => void };
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    const seen: string[] = [];
+    el.addEventListener('lr-checkbox-toggle-request', (event) => seen.push(event.type));
+    el.addEventListener('lr-checkbox-group-toggle-request', (event) => {
+      seen.push(event.type);
+      event.preventDefault();
+    });
+
+    (box.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+    await el.updateComplete;
+
+    expect(seen).to.deep.equal(['lr-checkbox-group-toggle-request']);
+    expect(box.checked, 'the reconnected group still vetoes the toggle').to.be.true;
+    expect(el.value).to.deep.equal(['a']);
+  });
+
+  it('is accessible while a vetoed option keeps its checked state', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group label="Topics">
+        <lr-checkbox value="a" checked>A</lr-checkbox>
+        <lr-checkbox value="b">B</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    el.addEventListener('lr-checkbox-group-toggle-request', (event) => {
+      if ((event as CustomEvent<{ value: readonly string[] }>).detail.value.length === 0) {
+        event.preventDefault();
+      }
+    });
+    const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+    (box.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+    await el.updateComplete;
+
+    expect(box.checked).to.be.true;
+    await expect(el).to.be.accessible();
+  });
+});

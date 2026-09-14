@@ -175,7 +175,7 @@ const CLICKABLE = [
   "  [part='toggle'] {",
   '    border: none;',
   '    cursor: pointer;',
-  '    transition: var(--lr-interactive-transition);',
+  '    transition: var(--lr-transition-interactive);',
   '  }',
   '`;',
 ].join('\n');
@@ -300,11 +300,11 @@ test('FIRES: a pointer part repainted under the pointer with no transition anywh
   assert.equal(result.findings[0].rule, 'transition');
   assert.equal(result.findings[0].line, 2, 'the finding points at the resting rule that owes the declaration');
   assert.match(result.findings[0].message, /nothing transitions it/);
-  assert.match(result.findings[0].message, /--lr-interactive-transition/);
+  assert.match(result.findings[0].message, /--lr-transition-interactive/);
 });
 
 test('PASSES: the resting rule declares the shared interactive transition', () => {
-  const compliant = REPAINTS.replace('    cursor: pointer;', '    cursor: pointer;\n    transition: var(--lr-interactive-transition);');
+  const compliant = REPAINTS.replace('    cursor: pointer;', '    cursor: pointer;\n    transition: var(--lr-transition-interactive);');
   const result = hoverContract(compliant, [TOGGLE_TEMPLATE]);
   assert.deepEqual(messages(result), []);
   assert.equal(result.repaintedPointerParts, 1, 'the part is still counted, so the rule cannot silently empty');
@@ -319,7 +319,7 @@ test('FIRES: an ancestor part carries the transition -- which covers the ancesto
     'export const styles = css`',
     "  [part='row'] {",
     '    background: var(--lr-color-surface);',
-    '    transition: var(--lr-interactive-transition);',
+    '    transition: var(--lr-transition-interactive);',
     '  }',
     "  [part='row']:hover {",
     '    background: var(--lr-color-brand-quiet);',
@@ -391,7 +391,7 @@ test('FIRES: a resting transition that lives only inside the reduced-motion bloc
   const result = hoverContract(reduced, [TOGGLE_TEMPLATE]);
   assert.equal(result.findings.length, 1);
   assert.equal(result.findings[0].rule, 'transition');
-  const kept = reduced.replace('transition: none !important;', 'transition: var(--lr-interactive-transition);');
+  const kept = reduced.replace('transition: none !important;', 'transition: var(--lr-transition-interactive);');
   assert.equal(
     hoverContract(kept, [TOGGLE_TEMPLATE]).findings.length,
     1,
@@ -486,7 +486,7 @@ test('transition coverage reads the subject compound, and a bare [part] presence
   assert.deepEqual([...scoped.parts.keys()], ['cell'], 'the transition applies to the subject, not to the hovered ancestor');
   assert.equal(scoped.treeWide.size, 0);
   assert.deepEqual(
-    [...transitionCoverage(readStyleRules(':where([part]) { transition: var(--lr-interactive-transition); }')).treeWide],
+    [...transitionCoverage(readStyleRules(':where([part]) { transition: var(--lr-transition-interactive); }')).treeWide],
     ['background', 'color', 'border'],
     'the shared sheet interpolated into a component stylesheet covers every part it renders',
   );

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraMultiSplitToggleDetail } from './multi-split.class.js';
+import '../../forms/button/button.js';
 
 const meta: Meta = {
   title: 'Multi Split',
@@ -457,5 +458,43 @@ export const DisabledCollapseIntent: Story = {
       </div>
       <div style="padding: 0.5rem">Main content remains alongside it.</div>
     </lr-multi-split>
+  `,
+};
+
+function togglePaneFromTrigger(event: Event): void {
+  const trigger = event.currentTarget as HTMLElement;
+  trigger
+    .closest('[data-multi-split-demo]')
+    ?.querySelector('lr-multi-split')
+    ?.togglePane();
+}
+
+export const ConsumerOwnedTrigger: Story = {
+  name: 'Consumer-owned trigger with expandPane/collapsePane/togglePane',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The split renders no collapsed UI of its own, so the trigger is the consumer’s. `togglePane()` picks the mechanism the pane’s current band provides: pinning `wide`/`rail` above the float breakpoint, and opening or closing the floating drawer below it. `release-pin-on-breakpoint` drops a pin created for one band once the measured band or the effective orientation moves on, instead of leaving it to leak into the next layout. `--lr-multi-split-floating-panel-inset` insets the drawer from the split’s own edges.',
+      },
+    },
+  },
+  render: () => html`
+    <div data-multi-split-demo>
+      <lr-button @click=${togglePaneFromTrigger}>Toggle inspector</lr-button>
+      <lr-multi-split
+        collapse="end"
+        release-pin-on-breakpoint
+        style="height: 10rem; margin-block-start: 0.5rem; border: 1px solid var(--lr-color-border); --lr-multi-split-floating-panel-inset: 0.5rem"
+      >
+        <div style="padding: 0.5rem">Main content</div>
+        <div
+          aria-label="Inspector"
+          style="padding: 0.5rem; background: var(--lr-color-surface-raised)"
+        >
+          Inspector
+        </div>
+      </lr-multi-split>
+    </div>
   `,
 };

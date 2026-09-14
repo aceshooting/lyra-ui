@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -58,9 +58,19 @@ configured semantic heading wrapper), `icon`.
 
 **CSS parts:** `base` (the transparent grid wrapper inside the host-owned surface), `icon`
 (hidden while the `icon` slot is empty), `content`, `heading`,
-`message` (wrapper around the default slot), `close-button` (the close control's hit target, always
-at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-icon` (the
-visible "×" glyph inside it — this is what shrinks under `inline`, so the hit target never does).
+`message` (wrapper around the default slot), `close-button` (the close control, always
+at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-button__control`,
+`close-icon` (the visible "×" glyph inside it — this is what shrinks under `inline`, so the hit
+target never does).
+
+As of 16.0.0 the close control is a composed `<lr-icon-button>`: `close-button` names that host —
+it still owns the grid placement, the accessible name and the click/focus API — while
+`close-button__control` is its own native `<button>`, where the background, radius, hover/press
+fill, focus ring and hit-area floor are painted. A rule that sets `background`, `border`,
+`padding` or `outline` through `::part(close-button)` must move to `::part(close-button__control)`
+or, better, to the `--lr-icon-button-*` tokens, which reach it the same way they reach a standalone
+icon button. Layout-only rules (`margin`, `grid-column`, `order`, `display`) keep working on
+`close-button` untouched.
 
 The surface chrome lives on the custom-element host, not inside `base`. Ordinary host
 `background`, `border`, `border-radius`, `color`, `padding`, and `margin` declarations therefore

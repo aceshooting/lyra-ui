@@ -66,7 +66,7 @@ describe("lr-code-block-core", () => {
       ></lr-code-block-core>
     `)) as LyraCodeBlockCore;
     const copy = el.shadowRoot!.querySelector(
-      '[part="copy-button"]'
+      '[part~="copy-button"]'
     ) as HTMLButtonElement;
     const toggle = el.shadowRoot!.querySelector(
       '[part="toggle"]'
@@ -1190,7 +1190,7 @@ describe("copy button", () => {
         html`<lr-code-block-core .code=${"const x = 1;"}></lr-code-block-core>`
       )) as LyraCodeBlockCore;
       const button = el.shadowRoot!.querySelector(
-        '[part="copy-button"]'
+        '[part~="copy-button"]'
       ) as HTMLButtonElement;
       expect(button.textContent!.trim()).to.equal("Copy");
 
@@ -1266,7 +1266,7 @@ describe("copy button", () => {
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
     const button = el.shadowRoot!.querySelector(
-      '[part="copy-button"]'
+      '[part~="copy-button"]'
     ) as HTMLButtonElement;
 
     try {
@@ -1326,7 +1326,7 @@ describe("copy button", () => {
         html`<lr-code-block-core .code=${"const x = 1;"}></lr-code-block-core>`
       )) as LyraCodeBlockCore;
       const button = el.shadowRoot!.querySelector(
-        '[part="copy-button"]'
+        '[part~="copy-button"]'
       ) as HTMLButtonElement;
 
       let copied = false;
@@ -1368,7 +1368,7 @@ describe("copy button", () => {
         html`<lr-code-block-core .code=${"const x = 1;"}></lr-code-block-core>`
       )) as LyraCodeBlockCore;
       const button = el.shadowRoot!.querySelector(
-        '[part="copy-button"]'
+        '[part~="copy-button"]'
       ) as HTMLButtonElement;
 
       let copied = false;
@@ -1401,7 +1401,7 @@ describe("copy button", () => {
         filename="x.ts"
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    expect(el.shadowRoot!.querySelector('[part="copy-button"]') == null).to.be
+    expect(el.shadowRoot!.querySelector('[part~="copy-button"]') == null).to.be
       .true;
   });
 });

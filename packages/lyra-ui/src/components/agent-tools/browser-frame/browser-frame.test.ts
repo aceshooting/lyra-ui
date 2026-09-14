@@ -561,3 +561,25 @@ describe('a slotted [hidden] viewport child', () => {
     expect(shown.getClientRects().length).to.equal(1);
   });
 });
+
+it('fits a padded slotted viewport surface inside the frame', async () => {
+  const el = (await fixture(html`<lr-browser-frame
+    url="https://example.com"
+    style="inline-size:400px"
+  >
+    <div id="surface" style="padding:12px">Live surface</div>
+  </lr-browser-frame>`)) as LyraBrowserFrame;
+  await el.updateComplete;
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+  const surface = el.querySelector<HTMLElement>('#surface')!;
+  // The slotted surface is given a definite `inline-size`/`block-size: 100%`, which a content-box
+  // slotted node resolves as content only -- its own padding then pushes it past the viewport.
+  expect(surface.getBoundingClientRect().width).to.be.closeTo(
+    viewport.getBoundingClientRect().width,
+    0.5
+  );
+  expect(surface.getBoundingClientRect().height).to.be.closeTo(
+    viewport.getBoundingClientRect().height,
+    0.5
+  );
+});

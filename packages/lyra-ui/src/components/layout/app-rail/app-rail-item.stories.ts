@@ -92,3 +92,22 @@ export const ThemedCurrent: StoryObj = {
     </div>
   `,
 };
+
+export const WithMetaAndEndSlots: StoryObj = {
+  name: 'Meta and end slots',
+  render: () => html`
+    <div
+      style="inline-size: 16rem; border: 1px solid var(--lr-color-border); border-radius: 0.5rem; padding: 0.5rem;"
+    >
+      <lr-app-rail-item href="/inbox" current>
+        <span slot="icon">📥</span>Inbox
+        <span slot="meta">12</span>
+        <button slot="end" aria-label="Archive inbox">×</button>
+      </lr-app-rail-item>
+      <lr-app-rail-item href="/chats">
+        <span slot="icon">💬</span>Chats
+        <span slot="meta">3</span>
+      </lr-app-rail-item>
+    </div>
+  `,
+};

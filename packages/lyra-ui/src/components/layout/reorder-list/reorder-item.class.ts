@@ -43,8 +43,13 @@ function isReorderOwnerState(value: unknown): value is ReorderOwnerState {
  * while not disabled. Bubbles (composed) to the owning `<lr-reorder-list>`, which performs the
  * actual move and boundary-state recomputation.
  * @csspart base - The row's root wrapper.
- * @csspart move-up-button - The move-up button.
- * @csspart move-down-button - The move-down button.
+ * @csspart move-up-button - The move-up control, a composed `<lr-icon-button>` as of 16.0.0. It
+ *   still owns the accessible name, the activation and the rotation; its background, radius,
+ *   hover/press mixes, focus ring and hit-area floor now come from `--lr-icon-button-*`.
+ * @csspart move-up-button__control - The move-up control's own native `<button>`, forwarded
+ *   because the painted surface sits one shadow boundary deeper than `move-up-button`.
+ * @csspart move-down-button - The move-down control, likewise a composed `<lr-icon-button>`.
+ * @csspart move-down-button__control - The move-down control's own native `<button>`.
  * @csspart content - Wrapper around the default slot.
  * @cssstate at-start - This is the first valid item in its owning list.
  * @cssstate at-end - This is the last valid item in its owning list.
@@ -272,24 +277,24 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
           >${this.localize('moveDown')}</span
         >
         <span id=${this.itemLabelId} hidden>${itemLabel}</span>
-        <button
+        <lr-icon-button
           part="move-up-button"
-          type="button"
+          exportparts="button:move-up-button__control"
           aria-labelledby=${`${this.moveUpLabelId} ${this.itemLabelId}`}
           ?disabled=${this.moveUpDisabled}
           @click=${this.onMoveUpClick}
         >
           ${chevronIcon()}
-        </button>
-        <button
+        </lr-icon-button>
+        <lr-icon-button
           part="move-down-button"
-          type="button"
+          exportparts="button:move-down-button__control"
           aria-labelledby=${`${this.moveDownLabelId} ${this.itemLabelId}`}
           ?disabled=${this.moveDownDisabled}
           @click=${this.onMoveDownClick}
         >
           ${chevronIcon()}
-        </button>
+        </lr-icon-button>
         <span part="content"
           ><slot @slotchange=${this.refreshContentObserver}></slot
         ></span>

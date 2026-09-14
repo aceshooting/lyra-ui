@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -46,6 +46,17 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   independent. A valid `href` is inherently actionable and receives the same interaction paint
   without this flag. `false` (the default) leaves a no-link card static: no button, listeners, or
   events.
+- `disabled: boolean = false` (reflected) — turns the card's OWN activation off. The native
+  `activation-button` renders `disabled`; a linked card's stretched `<a>` loses its `href`, so it
+  genuinely cannot navigate rather than merely claiming to be disabled while still clickable, and
+  gains an explicit `role="link"` so its accessible name and `aria-current` stay valid on an
+  element that no longer has an implicit role. `lr-card-activate` stops firing from every path,
+  `click()` included, the control leaves the tab order, and the card paints at
+  `--lr-opacity-disabled` with a `not-allowed` cursor. Scoped to the card's own action: a passive
+  card (no `actionable`, no `href`) has nothing to turn off, so `disabled` leaves it untouched,
+  and slotted controls stay yours to disable. `<lr-card>` is deliberately not form-associated (it
+  is a layout container, not a form control), so an ancestor `<fieldset disabled>` does not
+  cascade into it — disable each card explicitly.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of the
   native whole-card owner: the activation button without `href`, or the stretched link with it.
   An explicitly empty value is retained; only an absent value falls back to card or linked content,
@@ -59,6 +70,14 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
 - `rel?: string` — author relationship tokens such as `nofollow`, `sponsored`, `me`, or `license`.
   `opener` is always stripped, other tokens are preserved, and any set `target` force-adds the
   non-negotiable `noopener noreferrer` floor. With no target, safe author tokens render unchanged.
+- `aria-pressed` and `aria-current` (attributes only) — forwarded reactively onto the native
+  control the card actually renders, the same mechanism `<lr-button>` and `<lr-icon-button>` use.
+  `aria-pressed` accepts `'true' | 'false' | 'mixed'` and reaches the `activation-button` only —
+  `link` has no pressed state, so a linked card never receives it. The global `aria-current`
+  accepts `'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'` and reaches both the
+  activation button and the stretched link. Anything outside those sets is dropped rather than
+  passed through, so a typo never reaches the accessibility tree. This is what lets a single-select
+  list of card-shaped tiles announce which one is the active selection.
 
 **Events:** `lr-card-activate` (no detail) — the whole card was activated, by a click anywhere on it
 or by Enter/Space on `[part='activation-button']`. Only fired while `actionable` is set **without**
@@ -94,7 +113,10 @@ gap around card sections. Shoelace-compatible `--padding` is its fallback; `--bo
 tokens — `--lr-color-border`/`-surface`/`-brand`/
 `-brand-quiet`, `--lr-radius`, `--lr-space-s`/`-m`, `--lr-transition-fast`,
 `--lr-focus-ring-*`.
-Appearance and interaction paint can be rethemed independently through `--lr-card-filled-bg`,
+Appearance and interaction paint can be rethemed independently through `--lr-card-outlined-bg`
+(the DEFAULT `outlined` appearance's background, and `accent`'s, which adds a stripe without
+restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-details>`'s
+`--lr-details-outlined-bg`), `--lr-card-filled-bg`,
 `--lr-card-filled-outlined-bg`, `--lr-card-accent-border-color`,
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact

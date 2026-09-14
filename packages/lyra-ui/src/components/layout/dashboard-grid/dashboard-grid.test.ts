@@ -3622,3 +3622,34 @@ it('reads the collision outline width from --lr-border-width-medium, not the gen
   expect(getComputedStyle(cell).outlineWidth).to.equal('12px');
   expect(getComputedStyle(cell).outlineOffset).to.equal('12px');
 });
+
+// box-sizing does not inherit across the slot boundary, so an adopted tile keeps the outer tree's
+// value -- the UA's content-box unless the author set otherwise -- and the cell's three percentage
+// allocations would then describe its CONTENT box. The flex cell plus min-inline-size: 0 shrinks a
+// shrinkable tile back inside on its own; a tile the author pinned with flex-shrink: 0 has nothing
+// to absorb the overshoot, which is what the border-box declaration in the rule guarantees.
+it('keeps an adopted cell child inside its grid cell, padding and all', async () => {
+  const layout: LyraDashboardCell[] = [
+    { cellId: 'a', x: 0, y: 0, w: 4, h: 1, label: 'Alpha' },
+    { cellId: 'b', x: 0, y: 1, w: 4, h: 1, label: 'Beta' },
+  ];
+  const el = (await fixture(
+    html`<lr-dashboard-grid style="inline-size: 600px" .layout=${layout}>
+      <div cell-id="a" style="padding: 16px; border: 2px solid">Alpha</div>
+      <div cell-id="b" style="padding: 16px; border: 2px solid; flex-shrink: 0">Beta</div>
+    </lr-dashboard-grid>`
+  )) as LyraDashboardGrid;
+  await settleChildReconciliation(el);
+
+  for (const cellId of ['a', 'b']) {
+    const cell = el.shadowRoot!.querySelector(
+      `[part="cell"][data-cell-id="${cellId}"]`
+    ) as HTMLElement;
+    const tile = el.querySelector(`[cell-id="${cellId}"]`) as HTMLElement;
+    expect(cell !== null && tile !== null, `cell ${cellId} and its tile both render`).to.be.true;
+    expect(
+      tile.getBoundingClientRect().width,
+      `cell ${cellId}'s tile fills its allocation rather than overflowing it`
+    ).to.be.closeTo(cell.getBoundingClientRect().width, 0.5);
+  }
+});

@@ -22,6 +22,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { svg, type SVGTemplateResult } from 'lit';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -688,6 +689,33 @@ export function renderCodeBlockPlainCode(
   >`;
 }
 
+/**
+ * How the header's copy control presents itself. `'text'` (the default) is the labelled button
+ * this component has always rendered; `'icon'` is the compact glyph form for a dense header, where
+ * the localized Copy/Copied/failure string becomes the accessible name instead of visible text.
+ */
+export type LyraCodeBlockCopyAppearance = 'text' | 'icon';
+
+/** The two-rectangle copy glyph, matching `<lr-copy-button>`'s own so the library reads as one
+ *  visual language. Same 24x24 viewBox and 1.75 stroke as `internal/icons.ts`; not added to that
+ *  shared set because only these two components render it and the set is imported wholesale. */
+function copyGlyph(): SVGTemplateResult {
+  return svg`
+    <svg
+      width="1em"
+      height="1em"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+  `;
+}
+
 interface CodeBlockHeaderOptions {
   collapsible: boolean;
   collapsed: boolean;
@@ -696,6 +724,14 @@ interface CodeBlockHeaderOptions {
   filename: string;
   language: string;
   copyable: boolean;
+  copyAppearance: LyraCodeBlockCopyAppearance;
+  /** Whether a light-DOM child is assigned to the `header-actions` slot. Stamps `hidden` on the
+   *  wrapper when nothing is: `[part="header"]` is a flex row with a `gap`, and a flex gap applies
+   *  between adjacent items regardless of their size, so an always-rendered empty wrapper would
+   *  push the trailing copy control one gap away from the padding edge on every header that slots
+   *  nothing -- which is nearly all of them. Same collapse `button.styles.ts` gives its adornment
+   *  wrappers; `:empty` cannot do it, because a bare `<slot>` is itself an element child. */
+  hasHeaderActions: boolean;
   justCopied: boolean;
   copyFailed: boolean;
   localize: LyraLocalizeFn;
@@ -736,9 +772,9 @@ function renderCodeBlockHeader(
         ${options.language ? html`<span part="language">${options.language}</span>` : nothing}
         ${options.copyable
           ? html`
-              <button
-                part="copy-button"
-                type="button"
+              <lr-icon-button
+                part=${options.copyAppearance === 'icon' ? 'copy-button copy-button-icon' : 'copy-button copy-button-text'}
+                exportparts="button:copy-button__control"
                 aria-label=${codeBlockCopyLabel(
                   options.localize,
                   options.justCopied,
@@ -746,14 +782,17 @@ function renderCodeBlockHeader(
                 )}
                 @click=${options.onCopy}
               >
-                ${options.copyFailed
-                  ? options.localize('copyFailed')
-                  : options.justCopied
-                    ? options.localize('copied')
-                    : options.localize('copy')}
-              </button>
+                ${options.copyAppearance === 'icon'
+                  ? copyGlyph()
+                  : options.copyFailed
+                    ? options.localize('copyFailed')
+                    : options.justCopied
+                      ? options.localize('copied')
+                      : options.localize('copy')}
+              </lr-icon-button>
             `
           : nothing}
+        <span part="header-actions" ?hidden=${!options.hasHeaderActions}><slot name="header-actions"></slot></span>
       </div>
     `;
 }
@@ -762,6 +801,10 @@ export interface CodeBlockShellOptions {
   filename: string;
   language: string;
   copyable: boolean;
+  copyAppearance: LyraCodeBlockCopyAppearance;
+  /** Whether a light-DOM child is assigned to the `header-actions` slot, so the header renders for
+   *  a code block that has nothing else to put in it. */
+  hasHeaderActions: boolean;
   collapsible: boolean;
   collapsed: boolean;
   justCopied: boolean;
@@ -804,7 +847,8 @@ export function renderCodeBlockShell(
     !!options.filename ||
     !!options.language ||
     options.copyable ||
-    options.collapsible;
+    options.collapsible ||
+    options.hasHeaderActions;
   const bodyHidden = options.collapsible && options.collapsed;
   const bodyLabel =
     options.accessibleLabel ??
@@ -822,6 +866,8 @@ export function renderCodeBlockShell(
               filename: options.filename,
               language: options.language,
               copyable: options.copyable,
+              copyAppearance: options.copyAppearance,
+              hasHeaderActions: options.hasHeaderActions,
               justCopied: options.justCopied,
               copyFailed: options.copyFailed,
               localize: options.localize,

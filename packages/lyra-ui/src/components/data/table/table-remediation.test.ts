@@ -325,6 +325,13 @@ describe('inert revealColumnsLabel/hideColumnsLabel dev warning', () => {
 // Regression: willUpdate()'s persisted priorityColumnsVisible restore used to run with no guard at
 // all, so a storage-key mount silently clobbered an explicit priority-columns-visible/
 // .priorityColumnsVisible=${true} declaration with stale localStorage state.
+//
+// Every fixture here declares `priorityInertLabelColumns`, not the file-level `columns`: a
+// `storage-key`/`priority-columns-visible` table whose columns declare no `priority` is the exact
+// inert configuration the dev diagnostic further down warns about, so the file-level columns would
+// make each of these mounts log a warning nobody in this block asserts. A leaked console warning is
+// not merely noise -- the strict-console runner wrapper trips once per file, so one leaked here
+// disarms the detection for every test after it.
 describe('storage-key persistence of priorityColumnsVisible', () => {
   it('keeps an explicitly declared priority-columns-visible over a conflicting persisted value', async () => {
     const key = 'table-priority-columns-explicit-attr';
@@ -335,7 +342,7 @@ describe('storage-key persistence of priorityColumnsVisible', () => {
         storage-key=${key}
         priority-columns-visible
         .rows=${rows}
-        .columns=${columns}
+        .columns=${priorityInertLabelColumns}
         .rowKey=${rowKey}
       ></lr-table>`);
       expect(element.priorityColumnsVisible).to.equal(true);
@@ -353,7 +360,7 @@ describe('storage-key persistence of priorityColumnsVisible', () => {
         storage-key=${key}
         .priorityColumnsVisible=${true}
         .rows=${rows}
-        .columns=${columns}
+        .columns=${priorityInertLabelColumns}
         .rowKey=${rowKey}
       ></lr-table>`);
       expect(element.priorityColumnsVisible).to.equal(true);
@@ -376,7 +383,7 @@ describe('storage-key persistence of priorityColumnsVisible', () => {
         storage-key=${key}
         .priorityColumnsVisible=${false}
         .rows=${rows}
-        .columns=${columns}
+        .columns=${priorityInertLabelColumns}
         .rowKey=${rowKey}
       ></lr-table>`);
       expect(element.priorityColumnsVisible).to.equal(false);
@@ -393,7 +400,7 @@ describe('storage-key persistence of priorityColumnsVisible', () => {
         caption="Names"
         storage-key=${key}
         .rows=${rows}
-        .columns=${columns}
+        .columns=${priorityInertLabelColumns}
         .rowKey=${rowKey}
       ></lr-table>`);
       expect(element.priorityColumnsVisible).to.equal(true);
@@ -797,5 +804,97 @@ describe('error state', () => {
       element.shadowRoot!.querySelector('lr-empty[part="empty"]') === null,
       'the filterable no-rows empty branch should not render while error takes precedence'
     ).to.be.true;
+  });
+});
+
+describe('inert priority-column configuration dev warning and public toggle availability', () => {
+  let originalWarn: typeof console.warn;
+  let originalIssuedWarnings: Set<string> | undefined;
+  let warnings: unknown[][];
+  beforeEach(() => {
+    originalWarn = console.warn;
+    warnings = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    originalIssuedWarnings = runtime.litIssuedWarnings;
+    runtime.litIssuedWarnings = new Set();
+  });
+  afterEach(() => {
+    console.warn = originalWarn;
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
+  });
+
+  it('warns when storage-key is set but no column declares priority', async () => {
+    const key = 'table-inert-storage-key';
+    const element = await fixture<LyraTable<Row>>(html`<lr-table
+      caption="Names"
+      storage-key=${key}
+      .rows=${rows}
+      .columns=${plainInertLabelColumns}
+      .rowKey=${rowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    localStorage.removeItem(`lr-table:${key}`);
+
+    expect(warnings.length).to.equal(1);
+    expect(String(warnings[0]![0])).to.include('storageKey');
+    expect(String(warnings[0]![0])).to.include('priority');
+  });
+
+  it('warns when priority-columns-visible is declared but no column declares priority', async () => {
+    const element = await fixture<LyraTable<Row>>(html`<lr-table
+      caption="Names"
+      priority-columns-visible
+      .rows=${rows}
+      .columns=${plainInertLabelColumns}
+      .rowKey=${rowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    expect(warnings.length).to.equal(1);
+    expect(String(warnings[0]![0])).to.include('priorityColumnsVisible');
+  });
+
+  it('does not warn for either member once a priority column exists', async () => {
+    const key = 'table-inert-storage-key-priority';
+    const element = await fixture<LyraTable<Row>>(html`<lr-table
+      caption="Names"
+      storage-key=${key}
+      priority-columns-visible
+      .rows=${rows}
+      .columns=${priorityInertLabelColumns}
+      .rowKey=${rowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    localStorage.removeItem(`lr-table:${key}`);
+
+    expect(warnings.length).to.equal(0);
+  });
+
+  it('exposes priorityColumnsToggleAvailable as a public read-only counterpart of the rendered toggle', async () => {
+    const element = await fixture<LyraTable<Row>>(html`<lr-table
+      caption="Names"
+      style="display: block; width: 300px;"
+      .rows=${rows}
+      .columns=${plainInertLabelColumns}
+      .rowKey=${rowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    expect(element.priorityColumnsToggleAvailable).to.equal(false);
+
+    element.columns = priorityInertLabelColumns;
+    await waitUntil(() => element.priorityColumnsToggleAvailable === true, 'toggle never became available');
+    expect(
+      element.shadowRoot!.querySelector('[part="reveal-columns-button"]') !== null,
+      'the reveal button renders exactly while priorityColumnsToggleAvailable is true'
+    ).to.equal(true);
+
+    // Read-only: an assignment attempt must not flip the derived state.
+    expect(() => {
+      (element as unknown as { priorityColumnsToggleAvailable: boolean }).priorityColumnsToggleAvailable = false;
+    }).to.throw();
+    expect(element.priorityColumnsToggleAvailable).to.equal(true);
   });
 });

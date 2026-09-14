@@ -436,7 +436,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   /** The always-rendered header button, this component's single focus-repair fallback target. */
   private get headerElement(): HTMLElement | null {
-    return this.renderRoot.querySelector<HTMLElement>('[part="header"]');
+    // `willUpdate()` runs before the first render, and under SSR there is no render root at all
+    // (`@lit-labs/ssr` drives `connectedCallback` -> `willUpdate` with `renderRoot` still
+    // undefined), so reading it unguarded throws during a server render. Focus repair is
+    // meaningless before anything is painted, so an absent root is simply "nothing to repair".
+    return this.hasUpdated ? (this.renderRoot?.querySelector<HTMLElement>('[part="header"]') ?? null) : null;
   }
 
   /** Moves focus already inside the body to `[part="header"]` before the body becomes hidden --

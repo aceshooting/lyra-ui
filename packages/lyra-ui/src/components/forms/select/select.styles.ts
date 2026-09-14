@@ -610,6 +610,26 @@ export const styles = css`
       var(--lr-select-unknown-value-border-style, dashed)
       var(--lr-select-unknown-value-border-color, var(--lr-color-border));
   }
+  /* The synthetic listbox row for that same unmatched value (showUnknownOption): same dashed and
+     italic treatment, so the row and the trigger read as one thing. */
+  [part~="option"][data-unknown-value] [part="option-label"] {
+    font-style: italic;
+  }
+  [part~="option"][data-unknown-value] {
+    border: var(--lr-border-width-thin)
+      var(--lr-select-unknown-value-border-style, dashed)
+      var(--lr-select-unknown-value-border-color, var(--lr-color-border));
+  }
+  [part="option-badge"] {
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    padding: 0 var(--lr-space-xs);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-xs);
+    font-style: normal;
+  }
   [part="unknown-value"] {
     margin-inline-start: var(--lr-space-2xs);
     font-size: var(--lr-size-0-6875rem);

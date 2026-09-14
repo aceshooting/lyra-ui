@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -48,7 +48,10 @@ activated).
 `overflow` (the "+N" chip button), `drill-button`, `actions`, `empty` (shown when `community` is
 `null`).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-community-card-bg` (default `var(--lr-color-surface)`) —
+`[part='base']`'s RESTING background, so a panel retinting its `lr-entity-card`/`lr-source-card`
+siblings can retint this card with it; `frame='plain'` still drops the fill entirely. Otherwise
+shared tokens.
 
 **Optional peer deps:** none.
 

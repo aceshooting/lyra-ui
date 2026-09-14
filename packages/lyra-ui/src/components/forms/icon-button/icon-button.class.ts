@@ -10,6 +10,7 @@ import { styles } from './icon-button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute } from '../../../internal/safe-svg.js';
+import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings.generated.js';
@@ -75,9 +76,15 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * favorite, pin); `aria-current` (`page`, `step`, `location`, `date`, `time`, `true`, `false`)
  * supports current-item icon buttons. Both follow attribute changes, removal and button/link
  * replacement without changing the native role; empty or unsupported tokens are omitted. Host
- * `aria-describedby` IDREFs are resolved through `ariaDescribedByElements`.
- * Description targets follow same-ID replacement, removal, reinsertion, reconnection and document
+ * `aria-describedby` and `aria-labelledby` IDREFs are resolved through
+ * `ariaDescribedByElements`/`ariaLabelledByElements`.
+ * Relationship targets follow same-ID replacement, removal, reinsertion, reconnection and document
  * adoption, including transitions between the native button and anchor.
+ *
+ * `getToolbarActions()` contributes this control as one logical action to an enclosing composite
+ * toolbar (`<lr-message-actions>`), so a roving-tabindex owner leases the internal control's own
+ * `tabindex` rather than the host's -- setting `tabindex` on a custom-element host neither adds nor
+ * removes its shadow-internal button's tab stop.
  * When host `aria-controls` names elements in the host's own root, the controls relationship is
  * resolved onto that focused control through the reflected element-reference API so it remains
  * valid across this component's shadow boundary. Assigning that relationship intentionally clears
@@ -122,6 +129,10 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @event blur - Native blur relayed once from the internal button.
  * @attr aria-pressed - Toggle state forwarded reactively to the internal control: true, false or mixed.
  * @attr aria-current - Current-item state forwarded reactively to the internal control: page, step, location, date, time, true or false.
+ * @attr aria-labelledby - Host IDREFs resolved onto the internal control through
+ *   `ariaLabelledByElements`, so a composing component can name this button from elements in its
+ *   own shadow root. An IDREF string alone cannot cross that boundary; the reflected element
+ *   reference can. Per ARIA it wins over `aria-label`/`label` and the localized fallback name.
  * @attr rel - Independently settable author relationship tokens (no default). `opener` is always
  *   stripped, and any `target` force-adds the non-removable `noopener noreferrer` guard.
  * @slot - Optional custom icon content, rendered beside (not inside) the `icon` glyph.
@@ -178,6 +189,8 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
 
   private _disabled = false;
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+  private externalLabelLease?: ResolvedAriaRelationshipLease;
+  private readonly toolbarAction = this.createToolbarAction();
 
   get disabled(): boolean {
     return this._disabled;
@@ -256,6 +269,17 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     return tokens.size > 0 ? [...tokens].join(' ') : undefined;
   }
 
+  /**
+   * The internal native `<button>` (or `<a>` in link mode) that owns the role -- the element a
+   * composing component must project a host IDREF relationship onto, since an idref cannot cross
+   * this shadow boundary and assigning the relationship to THIS host would leave the real control
+   * unnamed. `null` before the first render. Mirrors `<lr-virtual-list>`'s `scrollContainer`, which
+   * exists for exactly the same reason.
+   */
+  get control(): HTMLButtonElement | HTMLAnchorElement | null {
+    return this.baseEl ?? null;
+  }
+
   /** Activates the internal native action or link. */
   override click(): void {
     if (this.effectiveDisabled) return;
@@ -286,11 +310,13 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.toolbarAction.releaseTabIndex?.();
     this.releaseExternalDescription();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
+    this.toolbarAction.releaseTabIndex?.();
     super.adoptedCallback();
     this.releaseExternalDescription();
     if (this.isConnected && this.hasUpdated) this.syncDescribedByElements();
@@ -312,11 +338,92 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     }
     if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
     else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+    // `aria-labelledby` is projected the same way, and for the same reason an IDREF cannot do it
+    // on its own: the ids a composing component writes live in ITS shadow root, while the element
+    // that owns the button role lives in this one. The reflected element-reference API is the only
+    // relationship that crosses that boundary, so a composed control (lr-reorder-item's move
+    // buttons) can name itself from the hidden label spans it already renders.
+    if (this.externalLabelLease) this.externalLabelLease.update(target);
+    else this.externalLabelLease = acquireResolvedAriaRelationship(this, target, 'aria-labelledby');
   }
 
   private releaseExternalDescription(): void {
     this.externalDescriptionLease?.release();
     this.externalDescriptionLease = undefined;
+    this.externalLabelLease?.release();
+    this.externalLabelLease = undefined;
+  }
+
+  /**
+   * The stable logical action this control contributes to an enclosing composite toolbar
+   * (`<lr-message-actions>` and anything else speaking `LyraToolbarAction`).
+   *
+   * Without it a roving-tabindex owner has no way to manage an icon button at all: it would set
+   * `tabindex` on this HOST, which neither removes the shadow-internal native button from the tab
+   * order nor adds it -- so the control either stayed permanently tabbable or silently dropped out
+   * of the toolbar's stop list. The action leases the internal control's own `tabindex` instead,
+   * and restores an authored value when the toolbar releases it.
+   */
+  getToolbarActions(): readonly LyraToolbarAction[] {
+    return [this.toolbarAction];
+  }
+
+  private createToolbarAction(): LyraToolbarAction {
+    const host = this;
+    let leasedTrigger: HTMLElement | undefined;
+    let authoredTabIndex: string | null = null;
+    let lastManagedTabIndex: string | null = null;
+    let consumerOwnsTabIndex = false;
+    const releaseTabIndex = (): void => {
+      const target = leasedTrigger;
+      if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
+        if (authoredTabIndex === null) target.removeAttribute('tabindex');
+        else target.setAttribute('tabindex', authoredTabIndex);
+      }
+      leasedTrigger = undefined;
+      authoredTabIndex = null;
+      lastManagedTabIndex = null;
+      consumerOwnsTabIndex = false;
+    };
+    return {
+      id: 'icon-button',
+      get disabled() {
+        return host.effectiveDisabled || !host.baseEl;
+      },
+      focus(options) {
+        host.focus(options);
+      },
+      setTabIndex(tabIndex) {
+        const trigger = host.baseEl;
+        if (!trigger) {
+          releaseTabIndex();
+          return;
+        }
+        if (leasedTrigger !== trigger) {
+          releaseTabIndex();
+          leasedTrigger = trigger;
+          authoredTabIndex = trigger.getAttribute('tabindex');
+        }
+        if (
+          consumerOwnsTabIndex ||
+          (lastManagedTabIndex !== null &&
+            trigger.getAttribute('tabindex') !== lastManagedTabIndex)
+        ) {
+          consumerOwnsTabIndex = true;
+          return;
+        }
+        trigger.tabIndex = tabIndex;
+        lastManagedTabIndex = trigger.getAttribute('tabindex');
+      },
+      releaseTabIndex,
+      matchesEventPath(path) {
+        // `!= null`, not `!== undefined`: Lit's @query getter is
+        // `this.renderRoot?.querySelector(selector) ?? null`, so before the first render it yields
+        // NULL. An `!== undefined` guard is therefore always true and guards nothing.
+        const control = host.baseEl;
+        return path.includes(host) || (control != null && path.includes(control));
+      },
+    };
   }
 
   /** Mirrors `<lr-icon>`'s own `syncCustomNodes()`: repopulates `[part="fallback"]` from scratch
@@ -355,16 +462,25 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
 
     if (href) {
       const disabled = this.effectiveDisabled;
+      // Two departures from the `<button>` branch below, both because an anchor is not a button
+      // (`lr-button`/`lr-media-card` render the same pair):
+      //   1. `aria-pressed` never reaches this anchor. `link` does not support it -- only a button
+      //      can be a toggle -- so forwarding it fails axe's `aria-allowed-attr` outright. The
+      //      global `aria-current` does forward.
+      //   2. A disabled link button gets an explicit `role="link"`. Dropping `href` is the only way
+      //      a link genuinely stops navigating, but it also drops the implicit role, and
+      //      `aria-label`/`aria-haspopup`/`aria-expanded`/`aria-current` are prohibited on the
+      //      role-less generic element that leaves behind.
       return html`<a
         part="base button"
         href=${disabled ? nothing : href}
         target=${this.target || nothing}
         rel=${this.resolvedRel ?? nothing}
         download=${hasDownload ? this.download ?? '' : nothing}
+        role=${disabled ? 'link' : nothing}
         aria-label=${label}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
-        aria-pressed=${pressed}
         aria-current=${current}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}

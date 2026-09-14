@@ -170,3 +170,91 @@ export const DisclosureNavigation: Story = {
     </lr-popover>
   `,
 };
+
+export const HoverTrigger: Story = {
+  name: 'trigger="hover" with delays and a bridge',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`trigger="hover"` opens the surface on pointer entry after `show-delay` and closes it after `hide-delay` once the pointer leaves both the trigger and the popup. It deliberately never moves focus, so an autofocus target inside is left alone. `hover-bridge` has the positioner clip an invisible quad across the `distance` gap, so travelling from the trigger to the popup never leaves both at once. Clicking the trigger pins the surface open; clicking again releases the pin and closes it.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-popover
+      .open=${context.viewMode !== 'docs'}
+      trigger="hover"
+      show-delay="120"
+      hide-delay="200"
+      hover-bridge
+      distance="12"
+      placement="bottom"
+    >
+      <button slot="trigger">Hover me</button>
+      <p>Cross the gap without losing the surface, then click the trigger to pin it.</p>
+    </lr-popover>
+  `,
+};
+
+export const FocusTrigger: Story = {
+  name: 'trigger="focus" with focus-within retention',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`trigger="focus"` opens the surface when the trigger takes focus and keeps it open while focus stays anywhere inside it, so a keyboard user can tab straight from the trigger into the content. It closes when focus leaves the whole surface. `trigger="manual"` disables every interaction and leaves the surface to `show()`/`hide()`/`open`.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-popover .open=${context.viewMode !== 'docs'} trigger="focus" placement="bottom-start">
+      <button slot="trigger">Focus me</button>
+      <p>Tab onward and the surface stays open:</p>
+      <button>An action inside</button>
+    </lr-popover>
+  `,
+};
+
+export const TriggerList: Story = {
+  name: 'trigger="hover focus" on an external for= trigger',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`trigger` is a space-separated list over the same four keywords `<lr-tooltip>` accepts, so `trigger="hover focus"` reads identically on both and a pointer user and a keyboard user reach the same surface. Every keyword also works on the `for=` shape, where the interaction owner is a real element outside the popover: the listeners bind to that element, not to the host it is not inside. Unrecognized keywords are dropped, `manual` wins over anything beside it, and a list left with nothing recognized falls back to `click` rather than stranding the content.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <button id="popover-list-trigger" type="button">Hover or focus me</button>
+    <lr-popover
+      .open=${context.viewMode !== 'docs'}
+      for="popover-list-trigger"
+      trigger="hover focus"
+      hide-delay="200"
+      placement="bottom-start"
+    >
+      <p>Reached by pointer and by keyboard, from a trigger that lives outside this element.</p>
+    </lr-popover>
+  `,
+};
+
+export const PositioningStrategy: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`positioning-strategy` is the one property `<lr-popover>`, `<lr-dropdown>` and `<lr-select>` all spell the same way. `<lr-popover>` keeps its own `fixed` default; `<lr-dropdown>`/`<lr-select>` keep `absolute`, where the retained `hoist` boolean is the exact alias of `positioning-strategy="fixed"`. Writing either spelling updates the other, so the two attributes can never disagree.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <div style="overflow: hidden; padding: 1rem; border: 1px solid currentColor;">
+      <lr-popover .open=${context.viewMode !== 'docs'} positioning-strategy="absolute">
+        <button slot="trigger">Scrolls with its container</button>
+        <p>Positioned against the containing block.</p>
+      </lr-popover>
+    </div>
+  `,
+};

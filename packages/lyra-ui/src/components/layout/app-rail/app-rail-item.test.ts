@@ -3,6 +3,7 @@ import "./app-rail-item.js";
 import "./app-rail.js";
 import type { LyraAppRailItem } from "./app-rail-item.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { sendKeys } from '@web/test-runner-commands';
 
 if (!customElements.get('app-rail-icon-forwarder')) {
   customElements.define(
@@ -607,6 +608,10 @@ describe("current-state cssprops", () => {
   ): string {
     const probe = document.createElement("span");
     probe.setAttribute("style", declaration);
+    // :host is a flex row (so [part="meta"]/[part="end"] can sit beside the item's own control),
+    // which makes anything appended to this shadow root a flex item -- including this probe. Left
+    // shrinkable it reports the squeezed width rather than the token it was asked to resolve.
+    probe.style.flexShrink = "0";
     el.shadowRoot!.appendChild(probe);
     const value = getComputedStyle(probe).getPropertyValue(property);
     probe.remove();
@@ -715,6 +720,10 @@ describe('current-indicator part', () => {
   ): string {
     const probe = document.createElement('span');
     probe.setAttribute('style', declaration);
+    // :host is a flex row (so [part="meta"]/[part="end"] can sit beside the item's own control),
+    // which makes anything appended to this shadow root a flex item -- including this probe. Left
+    // shrinkable it reports the squeezed width rather than the token it was asked to resolve.
+    probe.style.flexShrink = '0';
     el.shadowRoot!.appendChild(probe);
     const value = getComputedStyle(probe).getPropertyValue(property);
     probe.remove();
@@ -819,6 +828,10 @@ describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
   ): string {
     const probe = document.createElement('span');
     probe.setAttribute('style', declaration);
+    // :host is a flex row (so [part="meta"]/[part="end"] can sit beside the item's own control),
+    // which makes anything appended to this shadow root a flex item -- including this probe. Left
+    // shrinkable it reports the squeezed width rather than the token it was asked to resolve.
+    probe.style.flexShrink = '0';
     el.shadowRoot!.appendChild(probe);
     const value = getComputedStyle(probe).getPropertyValue(property);
     probe.remove();
@@ -883,5 +896,171 @@ describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
     const actual = parseFloat(getComputedStyle(base).minBlockSize);
     expect(actual).to.be.at.least(floor);
     expect(actual).to.not.equal(4);
+  });
+});
+
+// -- end / meta slots (siblings of the activation target) -------------------
+
+describe('end and meta slots', () => {
+  it('renders `end` content as a sibling of the item control, never inside it', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item href="/inbox">
+        Inbox
+        <button slot="end" id="rail-end-action">Archive</button>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+
+    expect(end.localName).to.equal('span');
+    expect(base.contains(end)).to.equal(
+      false,
+      'the end wrapper must not live inside the link/button'
+    );
+    expect(end.parentNode === base.parentNode).to.equal(
+      true,
+      'the end wrapper is a sibling of the activation target'
+    );
+    const slot = end.querySelector('slot') as HTMLSlotElement;
+    expect(slot.assignedElements().map((node) => node.id).join()).to.equal('rail-end-action');
+  });
+
+  it('keeps `end` activation out of the item own activation target', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Inbox
+        <button slot="end" id="rail-end-action-2">Archive</button>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    let itemClicks = 0;
+    base.addEventListener('click', () => {
+      itemClicks += 1;
+    });
+    let endClicks = 0;
+    const action = el.querySelector('#rail-end-action-2') as HTMLButtonElement;
+    action.addEventListener('click', () => {
+      endClicks += 1;
+    });
+
+    action.click();
+    expect(endClicks).to.equal(1);
+    expect(itemClicks).to.equal(0);
+
+    base.click();
+    expect(itemClicks).to.equal(1);
+  });
+
+  it('activates the item from the keyboard while a slotted end control is present', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Inbox
+        <button slot="end">Archive</button>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    let clicks = 0;
+    base.addEventListener('click', () => {
+      clicks += 1;
+    });
+    base.focus();
+    expect(el.shadowRoot!.activeElement === base).to.equal(true);
+    // A real key press, and no programmatic .click(): a synthetic KeyboardEvent never produces a
+    // native click, so a dispatch-then-click pair asserts nothing about the keyboard.
+    await sendKeys({ press: 'Enter' });
+    await waitUntil(
+      () => clicks === 1,
+      'Enter on the focused item activates it past the slotted end control'
+    );
+  });
+
+  it('renders `meta` content between the label and the end slot', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item href="/inbox">
+        Inbox
+        <span slot="meta" id="rail-meta">12</span>
+        <button slot="end" id="rail-end-3">Archive</button>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const nodes = Array.from(el.shadowRoot!.children)
+      .map((node) => node.getAttribute('part'))
+      .filter((part): part is string => part !== null);
+    expect(nodes.join(' ')).to.equal('base meta end');
+  });
+
+  it('hides both wrappers when nothing is slotted into them', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+    const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
+    expect(end.hasAttribute('hidden')).to.equal(true);
+    expect(meta.hasAttribute('hidden')).to.equal(true);
+    expect(getComputedStyle(end).display).to.equal('none');
+    expect(getComputedStyle(meta).display).to.equal('none');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getBoundingClientRect().width).to.equal(el.getBoundingClientRect().width);
+  });
+
+  it('reveals the wrappers when content is slotted in later', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const badge = document.createElement('span');
+    badge.slot = 'meta';
+    badge.textContent = '3';
+    el.appendChild(badge);
+    await waitUntil(
+      () => !(el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement).hasAttribute('hidden'),
+      'the meta wrapper reveals itself on slotchange'
+    );
+    expect(
+      (el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement).hasAttribute('hidden')
+    ).to.equal(false);
+  });
+
+  it('places the end slot at the inline-end edge under dir="rtl"', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item dir="rtl" href="/inbox">
+        Inbox
+        <button slot="end">Archive</button>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+    expect(end.getBoundingClientRect().left).to.be.below(base.getBoundingClientRect().left);
+  });
+
+  it('keeps meta available to assistive technology while icon-only clips it', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item icon-only href="/inbox">
+        Inbox
+        <span slot="meta">12</span>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
+    expect(getComputedStyle(meta).display).to.not.equal('none');
+    expect(meta.getBoundingClientRect().width).to.be.below(2);
+  });
+
+  it('stays accessible with both slots populated', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item href="/inbox">
+        <span slot="icon" aria-hidden="true">📥</span>
+        Inbox
+        <span slot="meta">12</span>
+        <button slot="end" aria-label="Archive inbox">x</button>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
   });
 });

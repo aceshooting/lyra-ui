@@ -896,13 +896,37 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
             ...((this.formatter || this.valueFormatter)
               ? {
                   callbacks: {
-                    label: (context: { dataset?: { label?: unknown }; raw?: unknown }) => {
+                    label: (context: {
+                      dataset?: { label?: unknown };
+                      raw?: unknown;
+                      datasetIndex?: unknown;
+                      dataIndex?: unknown;
+                    }) => {
                       const raw = context.raw;
                       const point = this.validPoint(raw as LyraBoxPlotSummary)
                         ? (raw as LyraBoxPlotSummary)
                         : undefined;
                       if (!point) return undefined;
-                      const value = this.formatValue(point.median, 'tooltip');
+                      // The peer hands the hovered datum's indexes to this callback; they used to
+                      // be dropped, leaving a tooltip formatter unable to tell which series or
+                      // category it was formatting -- the same gap the table and CSV never had.
+                      const datasetIndex = Number.isInteger(context.datasetIndex)
+                        ? (context.datasetIndex as number)
+                        : undefined;
+                      const index = Number.isInteger(context.dataIndex)
+                        ? (context.dataIndex as number)
+                        : undefined;
+                      const value = this.formatValue(point.median, 'tooltip', {
+                        ...(datasetIndex === undefined ? {} : { datasetIndex }),
+                        ...(index === undefined
+                          ? {}
+                          : { index, label: this.labels[index] || undefined }),
+                        ...(datasetIndex === undefined
+                          ? {}
+                          : { seriesLabel: this.datasets[datasetIndex]?.label }),
+                        statistic: 'median',
+                        axis: 'y',
+                      });
                       const label = String(context.dataset?.label ?? '');
                       return label
                         ? this.localize('chartValueLabel', undefined, { label, value })
@@ -925,7 +949,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
             ticks: {
               color: theme.tick,
               ...((this.formatter || this.valueFormatter)
-                ? { callback: (value: unknown) => this.formatValue(Number(value), 'tick') }
+                ? {
+                    callback: (value: unknown) =>
+                      this.formatValue(Number(value), 'tick', { axis: 'y' }),
+                  }
                 : {}),
             },
             grid: { color: theme.grid },
@@ -1033,6 +1060,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           index,
           label: this.labels[index] || undefined,
           seriesLabel: series.label,
+          axis: 'y',
         };
         rows.push([
           this.labels[index] ?? '',
@@ -1098,6 +1126,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           label: this.labels[minIndex] || undefined,
           seriesLabel: series.label,
           statistic: 'median',
+          axis: 'y',
         }),
         max: this.formatValue(max, 'spoken', {
           datasetIndex: index,
@@ -1105,6 +1134,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           label: this.labels[maxIndex] || undefined,
           seriesLabel: series.label,
           statistic: 'median',
+          axis: 'y',
         }),
         trend,
       });
@@ -1174,6 +1204,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
             label: datum.label,
             seriesLabel: this.datasets[datum.datasetIndex]?.label,
             statistic,
+            axis: 'y',
           }),
         }),
       )
@@ -1330,6 +1361,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
                   index,
                   label: this.labels[index] || undefined,
                   seriesLabel: series.label,
+                  axis: 'y',
                 };
                 return this.validPoint(point) ? html`
                 <tr>

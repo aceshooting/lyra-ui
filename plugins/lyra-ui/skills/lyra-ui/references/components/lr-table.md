@@ -46,6 +46,13 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 `lr-sort-request`/`lr-sort`. A bare table now projects 100 rows per page (with inputs bounded to
 1..500); set an explicit finite `page-size` when a different window is required.
 
+**TypeScript:** `LyraTable<T, K extends string | number = string | number>` takes a second type
+parameter for the row-key type. `K` types `rowKey`'s return value,
+`selectedRowKeys`/`expandedRowKeys`, and every event detail's `rowKey`/`rowKeys`, so
+`LyraTable<Row, number>` reads `event.detail.rowKey` as `number` with no cast. It defaults to the
+`string | number` union, so an untyped element and an existing `LyraTable<Row>` annotation compile
+unchanged.
+
 **Properties:**
 
 - `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection,
@@ -192,11 +199,13 @@ cell: (row) => unknown }` —
   the table's own internal state
 - `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
   currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
-- `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
+- `rowKey?: (row: T) => K` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
   sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong
-  row. Empty string identities and later duplicates are omitted; the first valid occurrence wins
+  row. Empty string identities and later duplicates are omitted; the first valid occurrence wins.
+  The element's second type parameter (`K`, default `string | number`) is this callback's return
+  type
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
 - `selectedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
@@ -265,13 +274,32 @@ cell: (row) => unknown }` —
   callback returns (the same `::part()` limitation a column's `cell(row)` anchors run into, see
   `--lr-table-cell-link-color` below). Style such content by returning already-styled elements —
   inline `style`, or elements that reference this table's own `--lr-*` design tokens, which
-  inherit across the shadow boundary like any custom property
+  inherit across the shadow boundary like any custom property. When script has to reach the
+  rendered panel anyway, `expandedContentElement(rowKey)` (below) resolves that `<td>`;
+  `rowElement(rowKey)` does not, because the panel is a sibling `<tr>` rather than part of the row
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
-- `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
-  expanded state bounded to 10,000 keys; malformed and whitespace-only string keys are omitted while valid
-  off-page keys remain controlled; reads return immutable detached `ReadonlySet` facades, and
-  consumers reassign it after
-  `lr-row-expand-toggle`
+- `expansionMode: 'none'|'single'|'multiple' = 'none'` (attribute `expansion-mode`, reflected) —
+  mirrors `selectionMode` member for member, for expansion. The default `'none'` keeps
+  `expandedRowKeys` fully consumer-controlled: an activation only reports `lr-row-expand-toggle`.
+  `'single'` and `'multiple'` self-manage the set behind the cancelable `lr-row-expand-request`, so
+  an expandable table needs no host handler at all; `'single'` keeps at most one row open and
+  coerces an already-larger `expandedRowKeys` down to its first key when this property becomes
+  `'single'` (no event for that fix-up — read `expandedRowKeys` back). Closing a row to make room
+  for another is an ordinary expansion change, so `'single'` reports the displaced row with its own
+  `lr-row-expand-toggle` (`expanded: false`) immediately **before** the accepted one — the one
+  exception being a displaced row that is filtered or paged out of view, which has no `row` object
+  for the detail to carry and is reported through `expandedRowKeys` alone. An unrecognized attribute
+  value falls back to the controlled behaviour rather than self-managing
+- `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false; `ReadonlySet<K>` on a
+  parameterized element) — expanded state bounded to 10,000 keys. Who writes it depends on
+  `expansionMode`: under the default `'none'` the table never mutates it and consumers reassign it
+  after `lr-row-expand-toggle`; under `'single'`/`'multiple'` the table writes it on each accepted
+  activation, and a `preventDefault()` on `lr-row-expand-request` hands that one change back.
+  Malformed and whitespace-only string keys are omitted while valid off-view keys remain controlled
+  in every mode — filtering, sorting and pagination never clear them, so a row paged or filtered out
+  of view comes back expanded and a key matching no current row simply renders nothing until one
+  exists again (the same convention `selectedRowKeys` follows for server pagination). Reads return
+  immutable detached `ReadonlySet` facades; reassign a new set to update
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
 - `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `error: boolean = false` (attribute `error`, reflected) — replaces `<tbody>`'s row content with
@@ -313,6 +341,14 @@ cell: (row) => unknown }` —
   binding that pins it to `false`, its own default. Unset (the default) touches storage not at all.
   The same "explicit beats persisted" guarantee `lr-app-rail` gives each of its `persist`-selected
   fields and `lr-widget` gives `collapsed`; all three share one mechanism
+- `priorityColumnsToggleAvailable: boolean` (readonly; computed, no attribute) — whether the
+  reveal/hide control is currently offered at all, the public counterpart of the measurement
+  `[part='reveal-columns-button']` itself renders from. True while at least one `priority` column is
+  actually hidden at the current allocation, and it stays true once `priorityColumnsVisible` has
+  revealed them (otherwise the control would remove itself the moment it was used). Always `false`
+  with no `priority` column declared — the state the development-mode inert-configuration warning
+  describes. Remeasured after every render and container resize, so read it after
+  `await table.updateComplete`
 - `heatTintScale?: { min?: number; max?: number }` (attribute: false) — overrides the auto-derived
   heat-tint domain (min/max of every `heatValue` result across every currently-rendered row —
   post-sort, pre-pagination, the same rows `footer(rows)` already sees). Unset (the default) computes
@@ -327,13 +363,45 @@ cell: (row) => unknown }` —
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
 
+**Methods:**
+
+- `rowElement(rowKey)` — the rendered `<tr>` for one row key, or `null` when that row is not in the
+  current render output (filtered out, paged away, never present)
+- `cellElement(rowKey, columnKey)` — the rendered `<td>` at a row/column pair, on the same terms;
+  `columnKey` is the column's own `key`
+- `expandedContentElement(rowKey)` — the rendered `[part='expanded-cell']` holding that row's
+  `expandedContent(row)` output, or `null` when the row is not currently rendered, is not expanded,
+  or the table sets no `expandedContent`
+
+All three exist for code that has to reach content a `cell(row)`/`expandedContent(row)` callback
+rendered into this component's shadow root — measuring it, scrolling it into view, or applying a
+style `::part()` cannot express, since only pseudo-classes may follow a part selector. One method per
+callback, and the split is not cosmetic: the expansion panel is a **sibling** `<tr part='expanded-row'>`
+of the data row rather than a descendant of it, so `rowElement(rowKey)` cannot reach
+`expandedContent` output at all — use `expandedContentElement(rowKey)` for that half. All three read
+the DOM as it stands, so `await table.updateComplete` first and treat `null` as "not rendered right
+now". The `data-row-key`, `data-col-key` and `data-expanded-row-key` attributes they resolve are
+documented stable API: `data-col-key` is the column's own `key`, while `data-row-key` (on the data
+row) and `data-expanded-row-key` (on the panel row) are a type-tagged encoding of the row key
+(`string:a` vs `number:1`) that keeps a numeric key distinct from the string that stringifies the
+same way. The panel deliberately does **not** repeat `data-row-key`, so a `[data-row-key]` query
+still resolves exactly one element per row. Prefer these three methods over building a selector from
+any of the attributes — a consumer-supplied key is not safe to interpolate into CSS unescaped.
+
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
 sort properties; server mode leaves them controlled. Other events are `lr-row-click`
 (`detail: { row }`), `lr-load-more` (fired on the "load more" button),
-`lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and `lr-row-expand-toggle`
-(`detail: { row, rowKey }`; the table does not mutate `expandedRowKeys`), and
+`lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
+pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
+emitted only while `expansionMode` is `'single'` or `'multiple'`; `preventDefault()` skips the
+built-in `expandedRowKeys` write and suppresses the following toggle) and `lr-row-expand-toggle`
+(frozen readonly `detail: { row, rowKey, expanded }`, where `expanded` is the state the activation
+resolves to; under the default `expansionMode: 'none'` the table does not mutate `expandedRowKeys`,
+while under a self-managed mode the write has already landed when it fires, and `'single'` fires it
+once more — with `expanded: false`, immediately ahead of the accepted one — for the row it closed to
+make room, unless that row is out of view), and
 `lr-selection-change` (frozen readonly `detail: { rowKeys }`, not cancelable) when selection is
 enabled — fired both from a row activation and from a `selectionMode` flip to `'single'` that coerces
 an existing multi-row selection down to one key (skipped on the very first render, since an

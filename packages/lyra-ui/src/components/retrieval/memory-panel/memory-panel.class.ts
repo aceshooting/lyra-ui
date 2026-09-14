@@ -692,6 +692,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
           e.stopPropagation();
           this.resolveItemDecision(p, false);
         }}
+        @lr-decision-settled=${(e: CustomEvent) => e.stopPropagation()}
         >${p.item.text}</lr-confirm-bar
       >
     `;
@@ -807,6 +808,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
             e.stopPropagation();
             this.resolveForgetAllDecision(forgetPending, false);
           }}
+          @lr-decision-settled=${(e: CustomEvent) => e.stopPropagation()}
           >${this.localize('memoryPanelConfirmForgetBody', undefined, {
             count: getNumberFormat(this.effectiveLocale).format(
               this.normalizedLongTerm.length

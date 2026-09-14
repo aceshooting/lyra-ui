@@ -1141,3 +1141,223 @@ describe('an explicitly empty alt', () => {
     expect(withNeither.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal('Image attachment');
   });
 });
+
+describe('lr-media-card parity pass: resting background token, disabled, pressed/current forwarding', () => {
+  const partOf = (el: LyraMediaCard, selector: string): HTMLElement =>
+    el.shadowRoot!.querySelector(selector) as HTMLElement;
+
+  it('retints the resting card frame through --lr-media-card-bg', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="file" filename="notes.txt" style="--lr-media-card-bg: rgb(1, 2, 3)"></lr-media-card>`
+    );
+    expect(getComputedStyle(partOf(el, '[part="base"]')).backgroundColor).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('leaves the resting frame on the shared surface token when --lr-media-card-bg is unset', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="file" filename="notes.txt" style="--lr-color-surface: rgb(4, 5, 6)"></lr-media-card>`
+    );
+    expect(getComputedStyle(partOf(el, '[part="base"]')).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('defaults disabled to false and leaves the image action operable', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="image" src=${DATA_URI} alt="Chart"></lr-media-card>`
+    );
+    expect(el.disabled).to.equal(false);
+    expect(el.hasAttribute('disabled')).to.equal(false);
+    expect((partOf(el, 'button[part="base"]') as HTMLButtonElement).disabled).to.equal(false);
+  });
+
+  it('disables the image action, dims it, and stops lr-media-open', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card
+        kind="image"
+        src=${DATA_URI}
+        alt="Chart"
+        disabled
+        style="--lr-opacity-disabled: 0.42"
+      ></lr-media-card>`
+    );
+    const button = partOf(el, 'button[part="base"]') as HTMLButtonElement;
+    expect(el.hasAttribute('disabled')).to.equal(true);
+    expect(button.disabled).to.equal(true);
+    expect(getComputedStyle(button).opacity).to.equal('0.42');
+    expect(getComputedStyle(button).cursor).to.equal('not-allowed');
+
+    let opens = 0;
+    el.addEventListener('lr-media-open', () => (opens += 1));
+    button.click();
+    el.click();
+    expect(opens).to.equal(0);
+  });
+
+  // The disabled paint is keyed off state the rendered element already carries natively, not off a
+  // second invented attribute: only a pseudo-class may follow ::part(), so ::part(base):disabled is
+  // a selector a consumer can actually write, while ::part(base)[data-disabled] never parses.
+  it('lets an outside rule reach the disabled image action through ::part(base):disabled', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="image" src=${DATA_URI} alt="Chart" disabled></lr-media-card>`
+    );
+    const sheet = document.createElement('style');
+    sheet.textContent = 'lr-media-card::part(base):disabled { outline-color: rgb(9, 9, 9); }';
+    document.head.append(sheet);
+    try {
+      expect(getComputedStyle(partOf(el, 'button[part="base"]')).outlineColor).to.equal('rgb(9, 9, 9)');
+    } finally {
+      sheet.remove();
+    }
+  });
+
+  it('leaves an enabled image action untouched by that same ::part(base):disabled rule', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="image" src=${DATA_URI} alt="Chart"></lr-media-card>`
+    );
+    const sheet = document.createElement('style');
+    sheet.textContent = 'lr-media-card::part(base):disabled { outline-color: rgb(9, 9, 9); }';
+    document.head.append(sheet);
+    try {
+      expect(getComputedStyle(partOf(el, 'button[part="base"]')).outlineColor).to.not.equal('rgb(9, 9, 9)');
+    } finally {
+      sheet.remove();
+    }
+  });
+
+  it('lets an outside rule reach the disabled file anchor through the reflected host attribute', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="file" src="https://example.com/a.pdf" filename="a.pdf" disabled></lr-media-card>`
+    );
+    const sheet = document.createElement('style');
+    // An anchor has no :disabled pseudo-class, so the host attribute (reflected) is the route --
+    // the selector sits BEFORE ::part(), which is valid.
+    sheet.textContent = 'lr-media-card[disabled]::part(base) { outline-color: rgb(9, 9, 9); }';
+    document.head.append(sheet);
+    try {
+      expect(getComputedStyle(partOf(el, 'a[part="base"]')).outlineColor).to.equal('rgb(9, 9, 9)');
+    } finally {
+      sheet.remove();
+    }
+  });
+
+  it('dims and blocks the pointer on a disabled file anchor without an invented attribute', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card
+        kind="file"
+        src="https://example.com/a.pdf"
+        filename="a.pdf"
+        disabled
+        style="--lr-opacity-disabled: 0.42"
+      ></lr-media-card>`
+    );
+    const link = partOf(el, 'a[part="base"]');
+    expect(link.hasAttribute('data-disabled'), 'aria-disabled already carries this state').to.equal(false);
+    expect(getComputedStyle(link).opacity).to.equal('0.42');
+    expect(getComputedStyle(link).cursor).to.equal('not-allowed');
+  });
+
+  it('disables the video open-button without touching the embedded player', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="video" src="https://example.com/clip.mp4" filename="clip.mp4" disabled></lr-media-card>`
+    );
+    const open = partOf(el, '[part="open-button"]') as HTMLButtonElement;
+    expect(open.disabled).to.equal(true);
+    const video = partOf(el, 'video[part="media"]') as HTMLVideoElement;
+    expect(video.hasAttribute('controls'), 'the player keeps its own native controls').to.equal(true);
+  });
+
+  it('strips href from a disabled file anchor and marks it aria-disabled', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="file" src="https://example.com/a.pdf" filename="a.pdf" disabled></lr-media-card>`
+    );
+    const link = partOf(el, 'a[part="base"]') as HTMLAnchorElement;
+    expect(link.hasAttribute('href'), 'a disabled file card cannot download').to.equal(false);
+    expect(link.getAttribute('aria-disabled')).to.equal('true');
+    expect(link.getAttribute('tabindex')).to.equal('-1');
+    expect(
+      link.getAttribute('role'),
+      'the dropped href must be replaced by an explicit role, or aria-label is prohibited',
+    ).to.equal('link');
+  });
+
+  it('renders aria-disabled="false" and keeps the href on an enabled file anchor', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="file" src="https://example.com/a.pdf" filename="a.pdf"></lr-media-card>`
+    );
+    const link = partOf(el, 'a[part="base"]') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).to.equal('https://example.com/a.pdf');
+    expect(link.getAttribute('aria-disabled')).to.equal('false');
+    expect(link.hasAttribute('tabindex')).to.equal(false);
+  });
+
+  it('forwards host aria-pressed and aria-current onto the image action reactively', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="image" src=${DATA_URI} alt="Chart" aria-pressed="true" aria-current="true"></lr-media-card>`
+    );
+    const button = () => partOf(el, 'button[part="base"]');
+    expect(button().getAttribute('aria-pressed')).to.equal('true');
+    expect(button().getAttribute('aria-current')).to.equal('true');
+
+    el.setAttribute('aria-pressed', 'false');
+    await el.updateComplete;
+    expect(button().getAttribute('aria-pressed')).to.equal('false');
+
+    el.removeAttribute('aria-pressed');
+    el.removeAttribute('aria-current');
+    await el.updateComplete;
+    expect(button().hasAttribute('aria-pressed')).to.equal(false);
+    expect(button().hasAttribute('aria-current')).to.equal(false);
+  });
+
+  it('forwards aria-current but never aria-pressed onto the file anchor, and both onto the video open-button', async () => {
+    const file = await fixture<LyraMediaCard>(
+      html`<lr-media-card
+        kind="file"
+        src="https://example.com/a.pdf"
+        filename="a.pdf"
+        aria-pressed="mixed"
+        aria-current="page"
+      ></lr-media-card>`
+    );
+    expect(partOf(file, 'a[part="base"]').getAttribute('aria-current')).to.equal('page');
+    expect(
+      partOf(file, 'a[part="base"]').hasAttribute('aria-pressed'),
+      'a link is not a toggle -- aria-pressed is not in role=link\'s supported set',
+    ).to.equal(false);
+    await expect(file).to.be.accessible();
+
+    const video = await fixture<LyraMediaCard>(
+      html`<lr-media-card
+        kind="video"
+        src="https://example.com/clip.mp4"
+        filename="clip.mp4"
+        aria-pressed="true"
+      ></lr-media-card>`
+    );
+    expect(partOf(video, '[part="open-button"]').getAttribute('aria-pressed')).to.equal('true');
+  });
+
+  it('ignores values outside the aria-pressed/aria-current vocabularies', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card kind="image" src=${DATA_URI} alt="Chart" aria-pressed="yes" aria-current="maybe"></lr-media-card>`
+    );
+    expect(partOf(el, 'button[part="base"]').hasAttribute('aria-pressed')).to.equal(false);
+    expect(partOf(el, 'button[part="base"]').hasAttribute('aria-current')).to.equal(false);
+  });
+
+  it('stays accessible as a disabled, pressed, right-to-left file card', async () => {
+    const el = await fixture<LyraMediaCard>(
+      html`<lr-media-card
+        dir="rtl"
+        kind="file"
+        src="https://example.com/a.pdf"
+        filename="تقرير.pdf"
+        disabled
+        aria-current="page"
+      ></lr-media-card>`
+    );
+    // color-contrast is excluded, not ignored: the chip paints at --lr-opacity-disabled, and WCAG
+    // 1.4.3 exempts text that is part of an inactive user interface component -- an exemption axe
+    // cannot see, because the opacity sits on the anchor rather than on a native disabled control.
+    await expect(el).to.be.accessible({ ignoredRules: ['color-contrast'] });
+  });
+});

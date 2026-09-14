@@ -591,3 +591,29 @@ export const MatrixPresentation: Story = {
     ></lr-heatmap>
   `,
 };
+
+export const WithoutLegend: Story = {
+  parameters: { docs: { description: { story: 'Set `without-legend` — the same name and polarity `lr-chart` uses — to drop the colour key entirely. The row leaves the DOM rather than being hidden, taking its swatches, endpoint labels, value caption, annotation entries and `legend` slot with it, so it contributes no layout box. Cells, tooltips, keyboard interaction and the generated accessible summary are untouched.' } } },
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-l);flex-wrap:wrap;align-items:flex-start">
+      <lr-heatmap
+        aria-label="Weekly activity with a legend" value-label="events"
+        .data=${{
+          kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed'],
+          colLabels: ['Morning', 'Noon', 'Evening'],
+          values: [[1, 6, 3], [4, 2, 8], [7, 5, 2]],
+        }}
+      ></lr-heatmap>
+      <lr-heatmap
+        without-legend
+        aria-label="Weekly activity without a legend" value-label="events"
+        .data=${{
+          kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed'],
+          colLabels: ['Morning', 'Noon', 'Evening'],
+          values: [[1, 6, 3], [4, 2, 8], [7, 5, 2]],
+        }}
+      ></lr-heatmap>
+    </div>
+  `,
+};
+

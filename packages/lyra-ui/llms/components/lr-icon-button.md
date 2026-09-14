@@ -32,6 +32,18 @@ retain their separate contracts.
 Its public `--lr-icon-button-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override the built-in fallbacks; a value set directly on the element still wins.
 
+Host `aria-labelledby` IDREFs are resolved onto the internal control through
+`ariaLabelledByElements`, so a composing component can name the button from elements in its own
+shadow root — an idref cannot cross that boundary, the reflected element reference can. Per ARIA it
+wins over `aria-label`/`label` and the localized fallback name.
+
+**Lean registration entry.** `components/forms/icon-button/icon-button.js` eagerly imports
+`<lr-icon>` so an `icon`/`src` attribute paints synchronously. A consumer who only ever slots their
+own SVG can import `components/forms/icon-button/icon-button-register.js` instead, which registers
+`<lr-icon-button>` and nothing else — no `<lr-icon>` implementation in the entry chunk and no
+unreachable sanitizer chunk. Setting `icon`/`src` on a button registered that way renders no glyph
+until `<lr-icon>` is registered by something else.
+
 **Properties:**
 
 - `icon: string = ''` — an `lr-icon` glyph name (see `llms/components/lr-icon.md`)
@@ -56,11 +68,15 @@ button whose purpose isn't generic.
 
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
 native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
-mute, favorite, or pin; `aria-current` (`page`, `step`, `location`, `date`, `time`, `true`, `false`)
-supports current-item icon buttons such as an active nav/pagination target. Both follow attribute
-changes, removal, and button/link replacement without changing the native role; an empty or
-unsupported token is omitted — mirroring `lr-button`'s own `aria-pressed`/`aria-current`
-forwarding. Host `aria-describedby` targets in the host's own root are resolved through
+mute, favorite, or pin, and reaches the `<button>` rendering only — a link icon-button (`href` set)
+never receives it, since `role="link"` has no pressed state; `aria-current` (`page`, `step`,
+`location`, `date`, `time`, `true`, `false`) is global and supports current-item icon buttons such
+as an active nav/pagination target in both renderings. Both follow attribute
+changes, removal, and button/link replacement without changing the native role of an enabled
+control; an empty or unsupported token is omitted — mirroring `lr-button`'s own
+`aria-pressed`/`aria-current` forwarding. A disabled link icon-button drops `href` and renders an
+explicit `role="link"` in place of the implicit role that goes with it, keeping its forwarded
+accessible name legal. Host `aria-describedby` targets in the host's own root are resolved through
 `ariaDescribedByElements`. Host `aria-controls` targets use the corresponding
 `ariaControlsElements` API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>` exposes
 the menu relationship and expanded state on the element that actually receives focus. Supporting
@@ -70,6 +86,13 @@ best-effort fallbacks.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native interactive root,
 activating the action button or a safe anchor through the same path as pointer/keyboard input.
+`getToolbarActions(): readonly LyraToolbarAction[]` contributes this control as one logical action
+to `<lr-message-actions>` and any other `LyraToolbarAction` toolbar. A roving-tabindex owner needs
+it: writing `tabindex` on a custom-element host neither adds nor removes its shadow-internal
+button's tab stop, so without it a slotted icon button either stays permanently tabbable or drops
+out of the toolbar's stop list. `control: HTMLButtonElement | HTMLAnchorElement | null` (read-only)
+is the internal native control that owns the role, for projecting a host IDREF relationship onto it;
+it is `null` before the first render, mirroring `<lr-virtual-list>`'s `scrollContainer`.
 
 **Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events.
@@ -106,7 +129,8 @@ that several other components size their icon-only controls against), so overrid
 above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-radius`) is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
-counterpart to it.
+counterpart to it. The internal control sets `font: inherit`, so an `em`-sized slotted glyph takes
+the surrounding text's font-size rather than the native button's UA default.
 
 The rest come in resting/hover/pressed triples, each falling through to the next-quieter state so
 setting only one still behaves:

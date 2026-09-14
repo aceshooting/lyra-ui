@@ -1,6 +1,6 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './box-plot.js';
-import type { LyraBoxPlot } from './box-plot.js';
+import type { LyraBoxPlot, LyraBoxPlotSummary } from './box-plot.js';
 import { loadBoxPlotAndRegister, LyraBoxPlot as LyraBoxPlotClass } from './box-plot.class.js';
 import type { ChartJsModule } from './chart-core-loader.js';
 import { styles } from './box-plot.styles.js';
@@ -192,6 +192,58 @@ describe('box-plot family-contract regressions', () => {
     ).to.equal(undefined);
   });
 
+  it('identifies the series, category and scale behind a tooltip value', async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['First', 'Second'];
+    el.datasets = [
+      { label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+      {
+        label: 'Cost',
+        data: [
+          null as unknown as LyraBoxPlotSummary,
+          { min: 6, q1: 7, median: 8, q3: 9, max: 10 },
+        ],
+      },
+    ];
+    el.formatter = (context) => {
+      seen.push({ ...context });
+      return String(context.value);
+    };
+    await el.updateComplete;
+    const label = (el as unknown as { buildConfig(): any }).buildConfig().options.plugins.tooltip
+      .callbacks.label as (context: unknown) => string | undefined;
+    label({
+      dataset: { label: 'Cost' },
+      datasetIndex: 1,
+      dataIndex: 1,
+      raw: { min: 6, q1: 7, median: 8, q3: 9, max: 10 },
+    });
+
+    const tooltip = seen.find((context) => context['surface'] === 'tooltip');
+    expect(tooltip?.['datasetIndex'], 'the hovered dataset reaches the formatter').to.equal(1);
+    expect(tooltip?.['index'], 'so does the hovered category index').to.equal(1);
+    expect(tooltip?.['label'], 'so does the category label').to.equal('Second');
+    expect(tooltip?.['seriesLabel'], 'so does the series label').to.equal('Cost');
+    expect(tooltip?.['statistic'], 'the tooltip formats the median').to.equal('median');
+    expect(tooltip?.['axis'], 'and names the scale it is plotted on').to.equal('y');
+  });
+
+  it('names the value scale on every axis tick it formats', async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.datasets = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.formatter = (context) => {
+      seen.push({ ...context });
+      return String(context.value);
+    };
+    await el.updateComplete;
+    const ticks = (el as unknown as { buildConfig(): any }).buildConfig().options.scales.y.ticks;
+    ticks.callback(4);
+    const tick = seen.find((context) => context['surface'] === 'tick');
+    expect(tick?.['axis'], 'a value tick names its scale').to.equal('y');
+  });
+
   it('uses the legacy value formatter when the structured formatter is absent', () => {
     const el = document.createElement('lr-box-plot') as LyraBoxPlot;
     el.valueFormatter = (value, context) => `${context}:${value}`;
@@ -243,6 +295,7 @@ describe('box-plot family-contract regressions', () => {
 
   it('labels the spoken median range with median formatter metadata', () => {
     const contexts: Array<{ value: number; statistic?: string; index?: number }> = [];
+    const axes: (string | undefined)[] = [];
     const el = document.createElement('lr-box-plot') as LyraBoxPlot;
     el.labels = ['First', 'Last'];
     el.datasets = [{
@@ -254,6 +307,7 @@ describe('box-plot family-contract regressions', () => {
     }];
     el.formatter = (context) => {
       contexts.push({ value: context.value, statistic: context.statistic, index: context.index });
+      axes.push(context.axis);
       return `${context.statistic}:${context.value}`;
     };
 
@@ -264,6 +318,10 @@ describe('box-plot family-contract regressions', () => {
       { value: 3, statistic: 'median', index: 0 },
       { value: 9, statistic: 'median', index: 1 },
     ]);
+    expect(
+      axes,
+      'every spoken summary value names the scale it was measured on',
+    ).to.deep.equal(['y', 'y']);
   });
 });
 

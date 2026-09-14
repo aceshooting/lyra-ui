@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -89,7 +89,11 @@ the built-in button. Exactly one named icon is rendered at a time.
 
 **CSS parts:**
 
-- `base`, `button` — aliases on the built-in button in every state.
+- `base` / `button` — the built-in trigger, a composed `<lr-icon-button>` as of 16.0.0. It owns the
+  accessible name, the activation and every state part below; its background, radius, hover/press
+  mixes, focus ring and hit-area floor come from `--lr-icon-button-*`.
+- `base__control` — the composed `<lr-icon-button>`'s own native `<button>`. A rule that set
+  `background`/`border`/`padding` through `::part(base)` moves here, or onto the token.
 - `base-success` — added to the button's part list while the confirmation shows
   (`part="base button base-success"`).
 - `base-error` — the same while the failure state shows (`part="base button base-error"`).

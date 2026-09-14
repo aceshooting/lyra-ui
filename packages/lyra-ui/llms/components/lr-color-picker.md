@@ -105,6 +105,15 @@ and:
   and its events so switching back to popup mode has a deterministic result
 - `hoist: boolean = false` (reflected) — uses fixed popup positioning to escape clipping
   ancestors; the default absolute strategy stays in the component's local scrolling context
+- `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
+  see `<lr-popover>` (`llms/components/lr-popover.md`): the one property `<lr-popover>`,
+  `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell the same way,
+  `'absolute' | 'fixed'`. `absolute` is this control's mirrored default and keeps the panel in the
+  component's local scrolling context; `fixed` escapes most clipping ancestors. An unsupported value
+  resolves back to the default, and a change applies live while the panel is open.
+  `hoist: boolean = false` is its retained exact alias (`hoist` ⇔ `positioning-strategy="fixed"`);
+  writing either spelling updates the other, so the two attributes can never disagree. Prefer
+  `positioning-strategy` in new code
 - `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
   (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
   is present before client-side slot observation

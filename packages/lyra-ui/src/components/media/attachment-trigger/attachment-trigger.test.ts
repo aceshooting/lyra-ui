@@ -8,8 +8,16 @@ import type { LyraMenuItem } from '../../layout/menu/menu-item.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
+/** The single-capability control. `[part="trigger"]` is a composed `<lr-icon-button>` as of
+ *  16.0.0, which owns the accessible name, the activation API and the part names. */
 function trigger(el: LyraAttachmentTrigger): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+}
+
+/** The native control inside a composed `<lr-icon-button>`: the node that paints, carries the
+ *  native `disabled` state, and receives projected host IDREF relationships. */
+function composedControl(host: Element): HTMLButtonElement {
+  return host.shadowRoot!.querySelector('[part~="button"]') as HTMLButtonElement;
 }
 
 function menuEl(el: LyraAttachmentTrigger): LyraMenu {
@@ -17,7 +25,7 @@ function menuEl(el: LyraAttachmentTrigger): LyraMenu {
 }
 
 function menuTriggerButton(el: LyraAttachmentTrigger): HTMLButtonElement {
-  return dropdownEl(el).querySelector('button[slot="trigger"]') as HTMLButtonElement;
+  return dropdownEl(el).querySelector('[part="menu-trigger"]') as unknown as HTMLButtonElement;
 }
 
 function dropdownEl(el: LyraAttachmentTrigger): LyraDropdown {
@@ -458,12 +466,12 @@ it('gives the multi-capability trigger its own stylable part and a disclosure ch
 
 it('gives both the single-capability and multi-capability trigger buttons the shared minimum hit area', async () => {
   const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
-  expect(getComputedStyle(trigger(el)).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(trigger(el)).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(composedControl(trigger(el))).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(composedControl(trigger(el))).minBlockSize).to.equal('40px');
 
   el.capabilities = ['files', 'image'];
   await el.updateComplete;
-  const menuBtn = menuTriggerButton(el);
+  const menuBtn = composedControl(menuTriggerButton(el));
   expect(getComputedStyle(menuBtn).minInlineSize).to.equal('40px');
   expect(getComputedStyle(menuBtn).minBlockSize).to.equal('40px');
 });
@@ -830,7 +838,7 @@ describe('aria-describedby forwarding', () => {
     `)) as HTMLElement;
     const el = wrapper.querySelector('lr-attachment-trigger') as LyraAttachmentTrigger;
     const description = wrapper.querySelector('#attach-hint')!;
-    const button = menuTriggerButton(el) as HTMLButtonElement & {
+    const button = composedControl(menuTriggerButton(el)) as HTMLButtonElement & {
       ariaDescribedByElements?: Element[] | null;
     };
 

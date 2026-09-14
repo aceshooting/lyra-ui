@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Items and categories are copied into frozen canonical snapshots bounded to 10,000 entries, with at most 200 mounted at once. Empty and blank IDs are omitted and later duplicates are first-wins. Unnamed categories use a localized fallback, and hover/focus tooltips track their active cell. Reassign either collection after changing it.',
+          'Items and categories are copied into frozen canonical snapshots bounded to 10,000 entries, rendered as at most 200 cells — one item each below that cap, one dominant-coloured item range each above it. Empty and blank IDs are omitted and later duplicates are first-wins. Unnamed categories use a localized fallback, and hover/focus tooltips track their active cell. Reassign either collection after changing it.',
       },
     },
   },
@@ -100,17 +100,23 @@ export const LegendNarrowAllocation: Story = {
   `,
 };
 
-/** High-cardinality strips mount a bounded 200-cell window at 320px. End shifts the projection to
- *  the final global item while `aria-posinset`/`aria-setsize` retain the complete model. */
+/** High-cardinality strips render at most 200 cells. At the cap each cell is still one item; past
+ *  it the cells become contiguous item RANGES coloured by each range's dominant category, so the
+ *  strip keeps covering the whole sequence at full width instead of stretching a leading window
+ *  across it. The 200 and 600 rows below should therefore show the same left-to-right progression,
+ *  and only the 600 row carries the `[part="bucket-summary"]` disclosure. */
 export const HighCardinalityNarrow: Story = {
-  name: 'Windowed high cardinality (200 / 500 at 320px, LTR / RTL)',
+  name: 'Span-preserving high cardinality (200 / 600 at 320px, LTR / RTL)',
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-l); justify-items: start">
-      ${([200, 500] as const).flatMap((count) =>
+      ${([200, 600] as const).flatMap((count) =>
         (['ltr', 'rtl'] as const).map((direction) => {
           const denseItems: SequenceStripItem[] = Array.from({ length: count }, (_, index) => ({
             id: `${count}-${index}`,
-            categoryId: index % 3 === 0 ? 'tool' : index % 3 === 1 ? 'mixed' : 'text',
+            // Three contiguous blocks rather than an interleave, so a stretched window would be
+            // obvious on screen: it would paint the whole strip in the first block's colour.
+            categoryId:
+              index < count / 3 ? 'tool' : index < (count * 2) / 3 ? 'mixed' : 'text',
             marker: index % 17 === 0,
             label: `Item ${index + 1} of ${count}`,
           }));

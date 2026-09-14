@@ -187,3 +187,14 @@ export const ManualLifecycle: Story = {
     </div>
   `,
 };
+
+export const PositioningStrategy: Story = {
+  parameters: { docs: { description: { story: '`positioning-strategy` is the one property every anchored surface in the library spells the same way. `<lr-tooltip>` keeps its mirrored `absolute` default; the retained `hoist` boolean is the exact alias of `positioning-strategy="fixed"`, and writing either spelling updates the other so the two attributes can never disagree.' } } },
+  render: () => html`
+    <div style="overflow: hidden; padding: 1rem; border: 1px solid currentColor;">
+      <lr-tooltip content="Escapes the clipping ancestor" positioning-strategy="fixed">
+        <button>Hover me</button>
+      </lr-tooltip>
+    </div>
+  `,
+};

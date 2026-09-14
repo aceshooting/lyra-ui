@@ -1,5 +1,6 @@
 export * from './app-rail/app-rail-item.js';
 export * from './app-rail/app-rail.js';
+export * from './app-rail-group/app-rail-group.js';
 export * from './breadcrumb/breadcrumb-item.js';
 export * from './breadcrumb/breadcrumb.js';
 export * from './button-group/button-group.js';

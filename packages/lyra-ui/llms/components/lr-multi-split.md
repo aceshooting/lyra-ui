@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -169,6 +169,29 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
   way `<lr-app-rail>` closes its mobile overlay when leaving `'mobile'` while open.
+- `releasePinOnBreakpoint: boolean = false` (attribute `release-pin-on-breakpoint`, reflected) — opts a
+  pinned `collapseState` in to releasing itself when the layout it was made for is gone: either the
+  measured collapse band changes to a different one than the pin was made in, or
+  `effectiveOrientation` crosses `orientationBreakpoint`. The pin is dropped exactly as if `'auto'`
+  had been assigned and the state re-derives from the current measurement, firing
+  `lr-multi-split-collapse-change` when that is a real transition. Re-measuring the same band never
+  releases a pin, so ordinary resizing inside one band leaves it alone. Left unset (the default), a
+  pin survives every band and orientation change until a consumer writes `'auto'` — the pre-existing
+  behavior.
+
+**Methods:** `expandPane()`, `collapsePane()` and `togglePane()` drive the collapse feature
+semantically, each picking the mechanism the pane's *current band* provides rather than its pinned
+state: inside the `floatBreakpoint` band that is the overlay drawer (`open`), above it it is the
+`collapseState` pin (`'wide'` expanded, `'rail'` collapsed). `togglePane()` reads the pane's current
+presentation — `'wide'` counts as expanded, `'rail'` as collapsed, `'floating'` as expanded exactly
+while `open` — so toggling a pane pinned to `'rail'` after the container narrowed into the floating
+band opens the drawer instead of doing nothing visible. All three are no-ops while `collapse='none'`
+or fewer than two panels exist, none creates a pin the band already produces, and a pin one of them
+cancels is released rather than replaced, so an expand/collapse cycle leaves automatic breakpoint
+tracking as it found it. They emit no `lr-toggle`, matching the existing rule that a direct `open`
+write does not. They are named `…Pane()` rather than `expand()`/`collapse()`/`toggle()` because
+`collapse` is already the pane-selection property, following `<lr-page>`'s `showNavigation()` trio.
+The component still renders no trigger of its own — wire these to your own control.
 
 `collapse`'s three resulting states — `'wide'` (default, today's plain layout) / `'rail'` / `'floating'`
 — are exposed as: a `data-collapse-state` attribute on both the host and the collapsing panel element
@@ -188,7 +211,13 @@ or keyboard step commits. A genuine pointer gesture has one terminal persistence
 `pointerup`; no-move, fully clamped, vetoed, canceled, and lost-capture gestures have none. Pointer
 release emits no additional event; direct `sizes` assignments stay silent),
 `lr-multi-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
-on a real `collapse`-state transition, never on every resize/render),
+on a real `collapse`-state transition, never on every resize/render. It fires *after* the collapsing
+panel is decorated for the new state — its `data-collapse-state` marker, the closed drawer's `hidden`
+flag and its owned inline sizing are all applied first — so a listener can read the panel
+synchronously inside its own handler instead of deferring past `updateComplete`. Focus is also moved
+out of a pane the new state hides (`'floating'` while closed) or clamps (`'rail'`) before the event
+fires, landing on the first surviving pane that can take it, otherwise on the split's own divider;
+focus anywhere other than the collapsing pane is untouched),
 `lr-toggle` (`detail: LyraMultiSplitToggleDetail = { open: boolean }`) — Escape/backdrop close
 proposals are cancelable and fire before `open` changes; preventing the event or making a synchronous
 reentrant mutation aborts the proposal. A forced close when a responsive collapse transition leaves
@@ -228,6 +257,11 @@ card `inline-size`, which otherwise mirrors its own live `sizes[i]` percent (i.e
 at in the `'wide'` state, so un-floating never jumps). Unset, the rendered geometry is unchanged;
 set (e.g. on an ancestor), it wins over that percent at ordinary specificity, with no `!important`
 needed against the inline style the component rewrites on every render.
+`--lr-multi-split-floating-panel-inset` (default `0`) sets the `'floating'` drawer's distance from
+`[part="base"]`'s edges, applied to both block insets and to whichever logical inline edge
+`collapse` anchors the drawer to, so one declaration insets all three anchored edges; the free inline
+edge stays governed by the panel's own width. Unset, the drawer is flush with its container exactly
+as before.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.

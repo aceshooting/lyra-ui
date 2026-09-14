@@ -7,6 +7,7 @@ import {
   type LyraAppRailToggleDetail,
 } from "./app-rail.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { sendKeys } from '@web/test-runner-commands';
 
 // Deterministic matchMedia stand-in -- avoids depending on the real test
 // browser's viewport width (which @web/test-runner gives no control over)
@@ -3149,4 +3150,330 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     expect(getComputedStyle(header).padding).to.equal("4px");
     expect(getComputedStyle(footer).padding).to.equal("20px");
   });
+});
+
+// -- external trigger ARIA (aria-expanded / aria-controls) ------------------
+// The resolved external trigger has to announce the overlay's expanded state and what it
+// controls; `lr-popover` is the reference for the same association.
+
+function expectControls(trigger: HTMLElement, rail: LyraAppRail, panel: HTMLElement): void {
+  const reflected = trigger as HTMLElement & { ariaControlsElements?: Element[] | null };
+  if (Reflect.has(reflected, 'ariaControlsElements')) {
+    expect(reflected.ariaControlsElements?.length ?? 0).to.equal(
+      1,
+      'external trigger should control exactly one element'
+    );
+    // A light-DOM trigger cannot hold a raw reference into another element's shadow tree: the
+    // engine retargets it to the nearest public shadow host, which is what `<lr-popover>`'s own
+    // trigger wiring documents. Either resolution proves the relationship reached the trigger.
+    const controlled = reflected.ariaControlsElements?.[0] ?? null;
+    expect(controlled === rail || controlled === panel).to.equal(
+      true,
+      'external trigger should control the rail surface'
+    );
+    return;
+  }
+  expect(trigger.getAttribute('aria-controls')).to.equal(panel.id);
+}
+
+it('gives a direct `trigger` reference aria-expanded and aria-controls in mobile mode', async () => {
+  const external = document.createElement('button');
+  document.body.appendChild(external);
+  const el = (await fixture(
+    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  el.trigger = external;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+
+  expect(external.getAttribute('aria-expanded')).to.equal('false');
+  expectControls(external, el, el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement);
+
+  el.open = true;
+  await el.updateComplete;
+  expect(external.getAttribute('aria-expanded')).to.equal('true');
+
+  el.open = false;
+  await el.updateComplete;
+  expect(external.getAttribute('aria-expanded')).to.equal('false');
+  external.remove();
+});
+
+it('gives a `for`-resolved trigger the same association', async () => {
+  const external = document.createElement('button');
+  external.id = 'rail-aria-for';
+  document.body.appendChild(external);
+  const el = (await fixture(
+    html`<lr-app-rail hide-toggle for="rail-aria-for"><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+
+  expect(external.getAttribute('aria-expanded')).to.equal('false');
+  expectControls(external, el, el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement);
+  external.remove();
+});
+
+it('releases the external trigger ARIA when the rail leaves mobile mode', async () => {
+  const external = document.createElement('button');
+  document.body.appendChild(external);
+  const el = (await fixture(
+    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  el.trigger = external;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  expect(external.getAttribute('aria-expanded')).to.equal('false');
+
+  fireMobileChange(el, false);
+  await el.updateComplete;
+  expect(external.hasAttribute('aria-expanded')).to.equal(
+    false,
+    'a rail with no overlay to open leaves no stale disclosure state behind'
+  );
+  external.remove();
+});
+
+it('releases the external trigger ARIA when the rail disconnects', async () => {
+  const external = document.createElement('button');
+  document.body.appendChild(external);
+  const el = (await fixture(
+    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  el.trigger = external;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  expect(external.getAttribute('aria-expanded')).to.equal('false');
+
+  el.remove();
+  await el.updateComplete;
+  expect(external.hasAttribute('aria-expanded')).to.equal(false);
+  expect(external.hasAttribute('aria-controls')).to.equal(false);
+  external.remove();
+});
+
+// -- desktop collapse control ----------------------------------------------
+
+it('renders no collapse toggle unless `collapsible` is set', async () => {
+  const el = (await fixture(
+    html`<lr-app-rail><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="collapse-toggle"]') === null).to.equal(true);
+  expect(el.collapsible).to.equal(false);
+});
+
+it('flips preferredMode between full and icon-only from the collapse toggle', async () => {
+  const el = (await fixture(
+    html`<lr-app-rail collapsible><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
+  expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+
+  toggle.click();
+  await el.updateComplete;
+  expect(el.preferredMode).to.equal('icon-only');
+  expect(el.mode).to.equal('icon-only');
+  const collapsed = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
+  expect(collapsed.getAttribute('aria-expanded')).to.equal('false');
+
+  collapsed.click();
+  await el.updateComplete;
+  expect(el.preferredMode).to.equal('full');
+  expect(el.mode).to.equal('full');
+});
+
+it('points the collapse toggle at the nav list it re-presents, never at its own ancestor', async () => {
+  const el = (await fixture(
+    html`<lr-app-rail collapsible><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
+  const controlled = toggle.getAttribute('aria-controls')!;
+  const target = el.shadowRoot!.getElementById(controlled);
+  // Ids, never the nodes themselves: a chai failure carrying a live DOM node hangs the whole file.
+  expect(target === null).to.equal(false);
+  expect(target!.getAttribute('part')).to.equal('nav');
+  expect(target!.contains(toggle)).to.equal(false);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(controlled === base.id).to.equal(false);
+});
+
+it('persists the collapse preference through storage-key and persist="preferred-mode"', async () => {
+  localStorage.removeItem('lr-app-rail:collapse-pref');
+  const el = (await fixture(html`
+    <lr-app-rail collapsible storage-key="collapse-pref" persist="preferred-mode">
+      <button>a</button>
+    </lr-app-rail>
+  `)) as LyraAppRail;
+  await el.updateComplete;
+  el.toggleCollapse();
+  await el.updateComplete;
+  expect(el.preferredMode).to.equal('icon-only');
+  expect(localStorage.getItem('lr-app-rail:collapse-pref')).to.contain('icon-only');
+
+  const restored = (await fixture(html`
+    <lr-app-rail collapsible storage-key="collapse-pref" persist="preferred-mode">
+      <button>a</button>
+    </lr-app-rail>
+  `)) as LyraAppRail;
+  await restored.updateComplete;
+  expect(restored.mode).to.equal('icon-only');
+  localStorage.removeItem('lr-app-rail:collapse-pref');
+});
+
+it('renders no collapse toggle in mobile mode and `toggleCollapse()` is inert there', async () => {
+  const el = (await fixture(
+    html`<lr-app-rail collapsible><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="collapse-toggle"]') === null).to.equal(true);
+
+  el.toggleCollapse();
+  await el.updateComplete;
+  expect(el.preferredMode == null).to.equal(true);
+  expect(el.mode).to.equal('mobile');
+});
+
+it('honors a strings override for the collapse toggle name', async () => {
+  const el = (await fixture(html`
+    <lr-app-rail
+      collapsible
+      .strings=${{ appRailCollapse: 'Replier la navigation', appRailExpand: 'Déplier la navigation' }}
+    >
+      <button>a</button>
+    </lr-app-rail>
+  `)) as LyraAppRail;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
+  expect(toggle.getAttribute('aria-label')).to.equal('Replier la navigation');
+
+  el.toggleCollapse();
+  await el.updateComplete;
+  const collapsed = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
+  expect(collapsed.getAttribute('aria-label')).to.equal('Déplier la navigation');
+});
+
+it('activates the collapse toggle from the keyboard when it holds focus', async () => {
+  const el = (await fixture(
+    html`<lr-app-rail collapsible><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
+  toggle.focus();
+  expect(el.shadowRoot!.activeElement === toggle).to.equal(true);
+  // A real key press, and no programmatic .click(): a synthetic KeyboardEvent never produces a
+  // native click, so a dispatch-then-click pair asserts nothing about the keyboard -- it would
+  // still pass with this button replaced by a <div role="button"> carrying no key handler.
+  await sendKeys({ press: 'Enter' });
+  await waitUntil(
+    () => el.mode === 'icon-only',
+    'Enter on the focused collapse toggle collapses the rail'
+  );
+});
+
+it('keeps the collapse toggle reachable and accessible in a populated rail', async () => {
+  const el = (await fixture(html`
+    <lr-app-rail collapsible>
+      <span slot="header">Brand</span>
+      <lr-app-rail-item href="/a">Alpha</lr-app-rail-item>
+      <span slot="footer">Account</span>
+    </lr-app-rail>
+  `)) as LyraAppRail;
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
+it('points the collapse glyph the opposite way under dir="rtl"', async () => {
+  // Every reading is captured as a string the moment it is taken: getComputedStyle() returns a
+  // LIVE declaration, so holding one across the toggle below would silently re-read the new state.
+  const glyphTransform = (el: LyraAppRail): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="collapse-icon"]') as HTMLElement)
+      .transform;
+  const ltr = (await fixture(
+    html`<lr-app-rail collapsible><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  const rtl = (await fixture(
+    html`<lr-app-rail dir="rtl" collapsible><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  await ltr.updateComplete;
+  await rtl.updateComplete;
+  const ltrExpanded = glyphTransform(ltr);
+  const rtlExpanded = glyphTransform(rtl);
+
+  ltr.toggleCollapse();
+  rtl.toggleCollapse();
+  await ltr.updateComplete;
+  await rtl.updateComplete;
+  const ltrCollapsed = glyphTransform(ltr);
+  const rtlCollapsed = glyphTransform(rtl);
+
+  expect(ltrExpanded).to.not.equal(ltrCollapsed);
+  expect(rtlExpanded).to.equal(ltrCollapsed);
+  expect(rtlCollapsed).to.equal(ltrExpanded);
+});
+
+it('restores the external trigger ARIA after the rail reconnects at an unchanged mode', async () => {
+  // The mobile query matches for the whole test, so the reconnect below lands on the mode the rail
+  // already held -- setEffectiveMode() early-returns, no update is scheduled, and updated() (the
+  // only other caller of syncExternalTriggerA11y) never runs. Nothing but connectedCallback's own
+  // catch-up can bring the lease back, which is exactly the regression this guards.
+  window.matchMedia = ((query: string) =>
+    ({
+      matches: query.includes('600px'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    } as unknown as MediaQueryList)) as typeof window.matchMedia;
+  const external = document.createElement('button');
+  document.body.appendChild(external);
+  const el = (await fixture(
+    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  el.trigger = external;
+  await el.updateComplete;
+  expect(el.mode).to.equal('mobile');
+  expect(external.getAttribute('aria-expanded')).to.equal('false');
+
+  const parent = el.parentElement!;
+  el.remove();
+  await el.updateComplete;
+  expect(external.hasAttribute('aria-expanded')).to.equal(false);
+
+  parent.appendChild(el);
+  await el.updateComplete;
+  expect(el.mode).to.equal('mobile');
+  await waitUntil(
+    () => external.getAttribute('aria-expanded') === 'false',
+    'the reconnected rail re-acquires the external trigger lease on its own'
+  );
+  external.remove();
+});
+
+it('re-acquires the external trigger ARIA when a reconnect is followed by a breakpoint change', async () => {
+  const external = document.createElement('button');
+  document.body.appendChild(external);
+  const el = (await fixture(
+    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+  )) as LyraAppRail;
+  el.trigger = external;
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  await el.updateComplete;
+  expect(external.hasAttribute('aria-expanded')).to.equal(false);
+
+  // The default stub reports every query unmatched, so this reconnect genuinely leaves mobile
+  // mode: the association must stay off until the rail is back in mobile.
+  parent.appendChild(el);
+  await el.updateComplete;
+  expect(el.mode).to.equal('full');
+  expect(external.hasAttribute('aria-expanded')).to.equal(false);
+  fireMobileChange(el, true);
+  await el.updateComplete;
+  expect(external.getAttribute('aria-expanded')).to.equal('false');
+  external.remove();
 });

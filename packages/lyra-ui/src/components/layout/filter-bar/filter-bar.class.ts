@@ -19,6 +19,8 @@ import { DebounceController } from '../../../internal/debounce-controller.js';
 import { styles } from './filter-bar.styles.js';
 import '../../forms/select/select.class.js';
 import '../../forms/combobox/combobox.class.js';
+import '../../overlays/overlay/dropdown.class.js';
+import '../menu/dropdown-item.class.js';
 import '../../forms/combobox/option.class.js';
 import '../../forms/date-picker/date-input.class.js';
 import '../../forms/input/input.class.js';
@@ -28,7 +30,7 @@ import '../../forms/button/button.class.js';
 import '../../overlays/spinner/spinner.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -39,12 +41,16 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_D
  *  `'text'` -- an open-ended free-text query rather than a closed choice set -- maps to
  *  `<lr-input>`, composed exactly like the rest (its own label/hint/error chrome, its own
  *  `required`), with this component adding only the optional `debounce` every free-text filter
- *  otherwise hand-rolls at the call site. `'custom'` delegates rendering and event-to-value
- *  conversion to the definition's `custom` adapter, so an existing Lyra control can participate
- *  without this component growing a branch for every control family. */
+ *  otherwise hand-rolls at the call site. `'checkbox-menu'` maps to `<lr-dropdown>` plus one
+ *  `<lr-dropdown-item type="checkbox">` per option -- the library's own checkbox menu, a
+ *  toolbar-button shape for a small fixed set of independently togglable categories, with the
+ *  same `string[]` value a `'combobox'` with `multiple` carries. `'custom'` delegates rendering
+ *  and event-to-value conversion to the definition's `custom` adapter, so an existing Lyra
+ *  control can participate without this component growing a branch for every control family. */
 export type LyraFilterBarControlType =
   | 'select'
   | 'combobox'
+  | 'checkbox-menu'
   | 'date'
   | 'date-range'
   | 'text'
@@ -59,6 +65,15 @@ export interface LyraFilterBarOption {
    *  matching `LyraSegmentedItem`/`LyraPaletteItem`'s own `icon` fields. It is rendered inert and
    *  `aria-hidden`, so it never contributes to the option's accessible name. */
   readonly icon?: unknown;
+  /** Extra text this option also matches on, forwarded verbatim to `<lr-option>`'s own
+   *  `search-text`, so a `'combobox'` filter can match a long canonical key ("SEV-1 production
+   *  outage") while the row keeps displaying the short `label` ("Urgent"). **`'combobox'` only.**
+   *  The attribute is written on every choice type's `<lr-option>`, but only `<lr-combobox>`
+   *  consults it: `<lr-select>`'s listbox type-ahead matches the option's `label` alone, so
+   *  declaring `searchText` on a `'select'` filter's options changes nothing there, and a
+   *  `'checkbox-menu'` has no text entry to match against at all. Omitted leaves the control's
+   *  default (match on the label alone). */
+  readonly searchText?: string;
 }
 
 /** One filter's current value. Built-in controls use strings/string arrays; an untyped boolean
@@ -124,6 +139,11 @@ export interface LyraFilterBarCustomControl {
   readonly adapter: LyraFilterBarCustomControlAdapter;
 }
 
+/** Whether a filter's `label` renders as the composed control's own visible label -- `'visible'`,
+ *  the default and the behaviour every definition had before this option existed -- or is routed
+ *  to that control's accessible name instead (`'hidden'`), for a compact toolbar row. */
+export type LyraFilterBarLabelVisibility = 'visible' | 'hidden';
+
 interface LyraFilterBarDefinitionBase {
   /** Stable, unique business identity and the key used in `LyraFilterBarValue`. */
   readonly filterId: string;
@@ -137,12 +157,56 @@ interface LyraFilterBarDefinitionBase {
   readonly defaultValue?: string | readonly string[] | boolean;
 }
 
-export interface LyraFilterBarSelectDefinition extends LyraFilterBarDefinitionBase {
+/** The fields every built-in (non-`'custom'`) filter type forwards to whichever Lyra control it
+ *  composes. They live here rather than on each type so one filter row can be declared compact,
+ *  adorned and labelled the same way regardless of which control renders it. A `'custom'`
+ *  definition deliberately does NOT extend this: its renderer owns the control's markup outright,
+ *  so a field this component could not forward anywhere would be inert public API. */
+interface LyraFilterBarComposedDefinitionBase extends LyraFilterBarDefinitionBase {
+  /** Forwarded to the composed control's own `size`, the library's one shared control ladder.
+   *  Defaults to `'m'`, matching every one of those controls' own default. */
+  readonly size?: LyraSize;
+  /** Optional decorative leading visual rendered into the composed control's own `start` slot,
+   *  exactly like `LyraFilterBarOption.icon`: inert and `aria-hidden`, so it never contributes to
+   *  the field's accessible name. */
+  readonly icon?: unknown;
+  /** Whether `label` renders as the composed control's own visible label (`'visible'`, the
+   *  default) or is routed to its accessible name instead (`'hidden'`) -- which also supplies the
+   *  label as the control's `placeholder` when the definition declares none, so the field still
+   *  reads as itself with no stacked label above it. The label never simply disappears: routing it
+   *  is the point, and a filter whose label were dropped would leave the control unnamed. */
+  readonly labelVisibility?: LyraFilterBarLabelVisibility;
+}
+
+/** The composed fields whose control also ships a built-in clear action. `'checkbox-menu'` is
+ *  deliberately absent: its composed `<lr-dropdown>` has no clear affordance of its own, and the
+ *  active-filter chip's own remove action already clears it. */
+interface LyraFilterBarClearableDefinitionBase extends LyraFilterBarComposedDefinitionBase {
+  /** Forwarded to the composed control's own clear action (`clearable` on `<lr-input>`/
+   *  `<lr-combobox>`/`<lr-select>`, the same option under its `with-clear` spelling on
+   *  `<lr-date-input>`). Defaults to `false`, matching those controls' own default. */
+  readonly clearable?: boolean;
+}
+
+export interface LyraFilterBarSelectDefinition extends LyraFilterBarClearableDefinitionBase {
   readonly type: 'select';
   readonly options: readonly LyraFilterBarOption[];
 }
 
-export interface LyraFilterBarComboboxDefinition extends LyraFilterBarDefinitionBase {
+/** A `'checkbox-menu'` filter: `<lr-dropdown>` plus one `<lr-dropdown-item type="checkbox">`
+ *  (`role="menuitemcheckbox"`) per option, behind a single toolbar trigger button. Its value is a
+ *  `string[]` exactly like a `'combobox'` with `multiple`, so the two are interchangeable in the
+ *  bar's value record, chips, reset path and events -- the choice between them is an interaction
+ *  one: a searchable list of many values versus a small fixed set toggled in place. Unlike every
+ *  other built-in type it renders no stacked label above its control; the trigger button carries
+ *  the label as its own text, and `labelVisibility: 'hidden'` makes that text visually hidden
+ *  (never removed) so the button keeps its accessible name. */
+export interface LyraFilterBarCheckboxMenuDefinition extends LyraFilterBarComposedDefinitionBase {
+  readonly type: 'checkbox-menu';
+  readonly options: readonly LyraFilterBarOption[];
+}
+
+export interface LyraFilterBarComboboxDefinition extends LyraFilterBarClearableDefinitionBase {
   readonly type: 'combobox';
   readonly options: readonly LyraFilterBarOption[];
   readonly multiple?: boolean;
@@ -157,19 +221,14 @@ export interface LyraFilterBarComboboxDefinition extends LyraFilterBarDefinition
    *  by the control's own blur/focusout and cancelled outright by `reset()`, a chip removal, and
    *  disconnection -- identical to `'text'`. */
   readonly debounce?: number;
-  /** Forwarded to the composed `<lr-combobox>`'s own `clearable`, adding its built-in clear
-   *  action. Defaults to `false`, matching that control's own default. */
-  readonly clearable?: boolean;
-  /** Forwarded to the composed `<lr-combobox>`'s own `size`. Defaults to `'m'`, matching that
-   *  control's own default. */
-  readonly size?: LyraSize;
-  /** Optional decorative leading visual rendered into the composed `<lr-combobox>`'s own `start`
-   *  slot, exactly like `LyraFilterBarOption.icon`: inert and `aria-hidden`, so it never
-   *  contributes to the field's accessible name. */
-  readonly icon?: unknown;
+  /** Forwarded to the composed `<lr-combobox>`'s own `empty-text`: what its listbox shows when a
+   *  query matches none of the declared options ("No matching tags"). `'combobox'` only. Caller
+   *  copy, so -- like `label` -- it is not routed through `this.localize()`; omitted leaves that
+   *  control's own localized default in place. */
+  readonly emptyText?: string;
 }
 
-export interface LyraFilterBarTextDefinition extends LyraFilterBarDefinitionBase {
+export interface LyraFilterBarTextDefinition extends LyraFilterBarClearableDefinitionBase {
   readonly type: 'text';
   /** `'text'` only -- how long (ms) to wait after the last keystroke before committing the typed
    *  value to `value` and emitting a single `lr-input`, so a server-side query runs once per pause
@@ -182,19 +241,9 @@ export interface LyraFilterBarTextDefinition extends LyraFilterBarDefinitionBase
   /** Forwarded verbatim to the composed `<lr-input>`'s own `type`, so a `'text'` filter can render
    *  as `search`/`email`/`tel`/`url`/etc. instead of the default `text`. `'text'` only. */
   readonly inputType?: LyraInputType;
-  /** Forwarded to the composed `<lr-input>`'s own `clearable`, adding its built-in clear action.
-   *  Defaults to `false`, matching that control's own default. */
-  readonly clearable?: boolean;
-  /** Forwarded to the composed `<lr-input>`'s own `size`. Defaults to `'m'`, matching that
-   *  control's own default. */
-  readonly size?: LyraSize;
-  /** Optional decorative leading visual rendered into the composed `<lr-input>`'s own `start`
-   *  slot, exactly like `LyraFilterBarOption.icon`: inert and `aria-hidden`, so it never
-   *  contributes to the field's accessible name. */
-  readonly icon?: unknown;
 }
 
-interface LyraFilterBarDateDefinitionBase extends LyraFilterBarDefinitionBase {
+interface LyraFilterBarDateDefinitionBase extends LyraFilterBarClearableDefinitionBase {
   /** ISO `YYYY-MM-DD` lower bound, forwarded to `<lr-date-input>`'s own `min`. `'date'`/`'date-range'` only. */
   readonly min?: string;
   /** ISO `YYYY-MM-DD` upper bound, forwarded to `<lr-date-input>`'s own `max`. `'date'`/`'date-range'` only. */
@@ -230,6 +279,7 @@ export interface LyraFilterBarCustomDefinition extends LyraFilterBarDefinitionBa
 export type LyraFilterBarFilterDefinition =
   | LyraFilterBarSelectDefinition
   | LyraFilterBarComboboxDefinition
+  | LyraFilterBarCheckboxMenuDefinition
   | LyraFilterBarTextDefinition
   | LyraFilterBarDateDefinition
   | LyraFilterBarDateRangeDefinition
@@ -491,6 +541,30 @@ const INPUT_EXPORT_PARTS = [
   'hint: filter-control-hint',
 ].join(', ');
 
+const CHECKBOX_MENU_EXPORT_PARTS = [
+  // The dropdown's positioned popup is the checkbox menu's own options surface, so it forwards
+  // under the same `filter-control-listbox` name a select's or combobox's options popover already
+  // uses -- one part name per surface across every filter type, rather than a fifth synonym.
+  'base: filter-control-listbox',
+].join(', ');
+
+/** The `'checkbox-menu'` trigger's forwarded parts. `part="filter-control-field"` written on the
+ * `<lr-button>` HOST would be silently inert: that host is `display: inline-block` and paints
+ * nothing -- the border, background and radius all live on its internal `[part~='base']`. So a
+ * consumer's `lr-filter-bar::part(filter-control-field) { border-color: … }`, which works for
+ * every other filter type (a select's `trigger`, an input's/date's `input-wrapper`), would do
+ * nothing at all here. Forwarding `base` puts the name on the element that actually draws the
+ * field frame. `start` is forwarded for the same reason every other type forwards its own:
+ * `'checkbox-menu'` accepts a definition `icon`, and lr-button's adornment wrapper is otherwise
+ * unreachable across that shadow boundary. lr-button's `label` wrapper is deliberately NOT
+ * forwarded -- this component renders its own `filter-control-label` and `filter-control-input`
+ * spans inside it, so forwarding would put a third element under a name two real elements already
+ * carry. */
+const CHECKBOX_MENU_TRIGGER_EXPORT_PARTS = [
+  'base: filter-control-field',
+  'start: filter-control-start',
+].join(', ');
+
 const DATE_INPUT_EXPORT_PARTS = [
   'form-control-label: filter-control-label',
   'input-wrapper: filter-control-field',
@@ -524,6 +598,24 @@ const SAFE_FILTER_ID_PART = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
  * match every field. */
 function fieldPartNames(filterId: string): string {
   return SAFE_FILTER_ID_PART.test(filterId) ? `field field-${filterId}` : 'field';
+}
+
+/** The three built-in types that declare a closed `options` set. They share option validation,
+ * `<lr-option>`-style rendering data and the same option-label chip formatting; only the control
+ * they compose differs. */
+type LyraFilterBarChoiceDefinition =
+  | LyraFilterBarSelectDefinition
+  | LyraFilterBarComboboxDefinition
+  | LyraFilterBarCheckboxMenuDefinition;
+
+function isChoiceDefinition(
+  definition: LyraFilterBarFilterDefinition
+): definition is LyraFilterBarChoiceDefinition {
+  return (
+    definition.type === 'select' ||
+    definition.type === 'combobox' ||
+    definition.type === 'checkbox-menu'
+  );
 }
 
 /** A built-in filter's value counts as active (shown as a chip, counted toward
@@ -590,11 +682,28 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * fire after teardown. A `'combobox'` filter may declare the same `debounce`, coalescing a burst
  * of rapid picks into one delayed commit; unlike `'text'` its `.value=` binding stays fully
  * controlled, rendering the pending selection in place of the last-committed `value` for as long
- * as the commit is delayed. `'text'`/`'combobox'` also accept optional `clearable`/`size`/`icon`
- * (and, `'text'`-only, `inputType`), forwarded verbatim to the composed `<lr-input>`/
- * `<lr-combobox>`'s own same-named properties (`icon` into that control's `start` slot, exactly
- * like `LyraFilterBarOption.icon`); every one of these is optional and defaults to that composed
- * control's own default, so an existing filter definition renders unchanged.
+ * as the commit is delayed. Every built-in (non-`'custom'`) type also accepts optional
+ * `size`/`icon`/`labelVisibility`, and every one whose composed control ships a clear action also
+ * accepts `clearable` -- forwarded verbatim to that control's own same-named property (`icon` into
+ * its `start` slot exactly like `LyraFilterBarOption.icon`; `clearable` reaching
+ * `<lr-date-input>` under its `with-clear` spelling). `'text'` adds `inputType`, `'combobox'` adds
+ * `emptyText`, and an option may carry `searchText` -- which only `<lr-combobox>` reads, since
+ * `<lr-select>`'s type-ahead matches on the option label alone. `labelVisibility: 'hidden'` routes `label` to
+ * the composed control's own `aria-label` and, with no declared `placeholder`, to its placeholder,
+ * so a compact toolbar row still names every field. Every one of these is optional and defaults to
+ * that composed control's own default, so an existing filter definition renders unchanged.
+ *
+ * A `'checkbox-menu'` filter is the one built-in type whose composed control is not a field:
+ * `<lr-dropdown>` plus one `<lr-dropdown-item type="checkbox">` per option, behind a single
+ * toolbar trigger that carries the label as its own text (no stacked label above it) and a menu
+ * that stays open across toggles. Its value is a `string[]`, identical to a `'combobox'` with
+ * `multiple`, so the two are interchangeable everywhere the bar's own bookkeeping is concerned --
+ * choose between them on interaction, not on data shape. Because its trigger is a button rather
+ * than a field, it deliberately renders no required marker and sets no `aria-invalid`: the
+ * library's shared `formControlRequiredMarker` has no selector that matches a button trigger's
+ * label, and `<lr-button>` does not forward a host `aria-invalid` onto the element that owns the
+ * button role, so writing one would be silently inert. A revealed `required` error still reaches
+ * assistive technology, as a screen-reader-only run inside the trigger's accessible name.
  *
  * Controlled, like every other Lyra data component: `value` is a plain, JSON-serializable object
  * (`LyraFilterBarValue`) the host reads/writes directly -- this component never touches
@@ -657,15 +766,25 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  *   one colliding with a real part name like `active-filters`).
  * @csspart end - Wrapper around the `end` slot; hidden while nothing is slotted.
  * @csspart filter-control - One filter's composed built-in control, or the wrapper around a
- *   custom renderer's control.
- * @csspart filter-control-label - A built-in control's label element.
+ *   custom renderer's control (and around a `'checkbox-menu'`'s dropdown plus its error line).
+ * @csspart filter-control-label - A built-in control's label element. On a `'checkbox-menu'` this
+ *   is the trigger button's own label text rather than a stacked label above the control, and it
+ *   is visually hidden (never removed) under `labelVisibility: 'hidden'` -- except in the one case
+ *   where the trigger's selection summary already IS the label (hidden routing, no declared
+ *   `placeholder`, nothing selected), where it is omitted rather than naming the button twice.
  * @csspart filter-control-field - A built-in control's field frame: select trigger, combobox
- *   container, or text/date input wrapper.
- * @csspart filter-control-input - A built-in control's display or editable input.
- * @csspart filter-control-start - A built-in control's start adornment wrapper.
+ *   container, text/date input wrapper, or a `'checkbox-menu'` trigger button's own frame (the
+ *   element inside `<lr-button>` that draws the border, background and radius -- not the
+ *   chrome-less button host).
+ * @csspart filter-control-input - A built-in control's display or editable input, or a
+ *   `'checkbox-menu'` trigger's selection summary.
+ * @csspart filter-control-start - A built-in control's start adornment wrapper, including a
+ *   `'checkbox-menu'` trigger button's own.
  * @csspart filter-control-end - A built-in control's end adornment wrapper.
- * @csspart filter-control-listbox - A select or combobox options popover.
- * @csspart filter-control-option - A select or combobox option row.
+ * @csspart filter-control-listbox - A select or combobox options popover, or a
+ *   `'checkbox-menu'`'s popup surface.
+ * @csspart filter-control-option - A select or combobox option row, or a `'checkbox-menu'`'s
+ *   `role="menuitemcheckbox"` row.
  * @csspart filter-control-tags - A combobox's multi-select tag container.
  * @csspart filter-control-tag - A combobox's individual selected tag.
  * @csspart filter-control-tag-label - A combobox tag's wrapping/ellipsis-safe label; capped by
@@ -674,7 +793,10 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * @csspart filter-control-expand-button - A date input's calendar-popup action.
  * @csspart filter-control-expand-icon - A select, combobox, or date-input expansion icon.
  * @csspart filter-control-popup - A date input's positioned calendar popup.
- * @csspart filter-control-error - A built-in control's validation message.
+ * @csspart filter-control-error - A built-in control's validation message. A `'checkbox-menu'`
+ *   renders this one itself (its composed dropdown has no error chrome), `aria-hidden` because the
+ *   same text also joins the trigger's accessible name -- an idref cannot cross into that button's
+ *   own shadow root.
  * @csspart filter-control-hint - A built-in control's hint message.
  * @csspart reset-button - The reset `<lr-button>`.
  * @csspart status - The loading `<lr-spinner>`, only rendered while `loading`.
@@ -696,6 +818,10 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     filterBarActiveFilters: LYRA_DEFAULT_filterBarActiveFilters,
     filterBarReset: LYRA_DEFAULT_filterBarReset,
+    loading: LYRA_DEFAULT_loading,
+    noData: LYRA_DEFAULT_noData,
+    retry: LYRA_DEFAULT_retry,
+    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -786,7 +912,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
           return false;
         if (typeof definition.label !== 'string' || definition.label.trim().length === 0) return false;
         if (seen.has(definition.filterId)) return false;
-        if ((definition.type === 'select' || definition.type === 'combobox') && !Array.isArray(definition.options)) {
+        if (isChoiceDefinition(definition) && !Array.isArray(definition.options)) {
           return false;
         }
         if (definition.type === 'custom' && (!definition.custom?.adapter || typeof definition.custom.render !== 'function')) return false;
@@ -796,7 +922,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         return false;
       }
     }).map((definition) => {
-      if (definition.type !== 'select' && definition.type !== 'combobox') return definition;
+      if (!isChoiceDefinition(definition)) return definition;
       const options = definition.options.filter((option) => {
         try {
           return option !== null && typeof option === 'object'
@@ -1144,7 +1270,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     const clearValue: LyraFilterBarFieldValue =
       def.type === 'custom'
         ? def.custom.adapter.clearValue
-        : def.type === 'combobox' && def.multiple
+        : def.type === 'checkbox-menu' || (def.type === 'combobox' && def.multiple)
           ? []
           : '';
     this.setFilterValue(id, clearValue);
@@ -1170,7 +1296,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       }
       return value === undefined ? '' : String(value);
     }
-    if (def.type === 'select' || def.type === 'combobox') {
+    if (isChoiceDefinition(def)) {
       const values = Array.isArray(value)
         ? value.filter((entry): entry is string => typeof entry === 'string')
         : typeof value === 'string'
@@ -1246,13 +1372,28 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cancelDebounce();
+    this.closeCheckboxMenus();
     this.schemaAbortController?.abort();
     this.schemaAbortController = undefined;
     this.schemaGeneration += 1;
   }
 
+  /** Closes every composed `'checkbox-menu'` dropdown outright. `<lr-popover>` deliberately
+   *  *suspends* rather than closes on disconnect, so a filter bar moved between containers would
+   *  otherwise come back with a menu the user never reopened -- the same transient-state reset
+   *  this component already does for an in-flight debounce and the custom-renderer schema. Closing
+   *  on both edges covers the case where the detached update lands too late to take effect. */
+  private closeCheckboxMenus(): void {
+    for (const menu of this.renderRoot?.querySelectorAll<HTMLElement & { open: boolean }>(
+      'lr-dropdown[data-filter-id]'
+    ) ?? []) {
+      if (menu.open) menu.open = false;
+    }
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.closeCheckboxMenus();
     if (!this.schemaAbortController || this.schemaAbortController.signal.aborted) {
       this.renewSchemaContext();
       if (this.hasUpdated) this.requestUpdate();
@@ -1309,22 +1450,174 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     }
   }
 
-  /** Optional decorative leading visual, rendered into a composed control's own `start` slot as
+  /** Optional decorative leading visual, rendered into a composed control's own leading slot as
    *  inert, aria-hidden chrome so it can neither take focus nor join that control's accessible
-   *  name. Shared by `<lr-option>`'s own `icon` (select/combobox rows) and a `'text'`/`'combobox'`
-   *  filter definition's own `icon` (the composed field itself). */
-  private renderStartAdornment(icon: unknown): TemplateResult | typeof nothing {
+   *  name. Shared by `<lr-option>`'s own `icon` (select/combobox rows), a built-in filter
+   *  definition's own `icon` (the composed field itself), and the `'checkbox-menu'` rows -- whose
+   *  composed `<lr-dropdown-item>` names its leading slot `icon` rather than `start`, which is why
+   *  the slot name is a parameter instead of a constant. */
+  private renderStartAdornment(
+    icon: unknown,
+    slotName = 'start'
+  ): TemplateResult | typeof nothing {
     return icon === undefined || icon === null
       ? nothing
-      : html`<span slot="start" aria-hidden="true" inert>${icon}</span>`;
+      : html`<span slot=${slotName} aria-hidden="true" inert>${icon}</span>`;
   }
 
   /** One `<lr-option>`, shared by the select and combobox branches so an option's optional `icon`
-   *  reaches both. */
+   *  reaches both and `searchText` reaches the one control that reads it (`<lr-combobox>`; see
+   *  `LyraFilterBarOption.searchText`). */
   private renderOption(option: LyraFilterBarOption): TemplateResult {
-    return html`<lr-option value=${option.value}
+    return html`<lr-option
+      value=${option.value}
+      search-text=${option.searchText ?? nothing}
       >${this.renderStartAdornment(option.icon)}${option.label}</lr-option
     >`;
+  }
+
+  /** The label/placeholder/accessible-name triple one composed control receives, resolved from
+   *  `labelVisibility`. Hiding the label routes it to the control's own `aria-label` (which every
+   *  composed control here honours over its computed internal name) and, when the definition
+   *  declares no `placeholder` of its own, also uses it as the placeholder -- so the field still
+   *  reads as itself once the stacked label is gone. */
+  private labelRouting(def: LyraFilterBarComposedDefinitionBase): {
+    readonly label: string;
+    readonly placeholder: string;
+    readonly accessibleLabel: string | typeof nothing;
+  } {
+    const hidden = def.labelVisibility === 'hidden';
+    return {
+      label: hidden ? '' : def.label,
+      placeholder: def.placeholder || (hidden ? def.label : ''),
+      accessibleLabel: hidden ? def.label : nothing,
+    };
+  }
+
+  /** A `'checkbox-menu'` row was activated. The composed `<lr-dropdown-item>` fires this
+   *  cancelable event with its *proposed* next `checked` state and commits that state itself
+   *  unless the event is prevented -- so this handler always prevents it and derives the next
+   *  `string[]` from the bar's own value instead. Without that, the row would self-toggle and the
+   *  `?checked=` binding's dirty check would see no change on the next render, permanently
+   *  desynchronizing a rejected toggle (a `disabled` bar, a removed filter) from the rendered
+   *  checkmark. */
+  private onCheckboxMenuToggle(
+    def: LyraFilterBarCheckboxMenuDefinition,
+    event: Event
+  ): void {
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.disabled) return;
+    const detail = (event as CustomEvent<{ value: string; checked: boolean }>).detail;
+    const current = this.valueFor(def);
+    const selected = Array.isArray(current)
+      ? current.filter((entry): entry is string => typeof entry === 'string')
+      : [];
+    const next = detail.checked
+      ? selected.includes(detail.value)
+        ? selected
+        : [...selected, detail.value]
+      : selected.filter((entry) => entry !== detail.value);
+    this.setFilterValue(def.filterId, Object.freeze(next));
+  }
+
+  /** The `'checkbox-menu'` branch: `<lr-dropdown>` plus one `<lr-dropdown-item type="checkbox">`
+   *  per option. The menu deliberately stays open across toggles (`stay-open-on-select`), which is
+   *  the whole interaction difference from a combobox. Unlike every other built-in branch the
+   *  composed control brings no label/error chrome of its own, so this renders the only copy of
+   *  each: the label as the trigger's own text (visually hidden, never removed, when
+   *  `labelVisibility` is `'hidden'`), and the revealed required error both as a visible,
+   *  `aria-hidden` line under the field and as a screen-reader-only run inside the trigger -- an
+   *  idref cannot reach the trigger's own internal button across that shadow boundary, so joining
+   *  the button's accessible name is the only way the error reaches assistive tech.
+   *
+   *  The label and the selection summary are two separate runs slotted into ONE `<lr-button>`
+   *  label wrapper. lr-button's own `gap` sits between its start/label/end wrappers, not inside the
+   *  label, so left alone the two runs concatenate ("TeamsCore and Design"); `filter-bar.styles.ts`
+   *  lays that wrapper out as a flex row with its own gap instead. Under
+   *  `labelVisibility: 'hidden'` with no declared `placeholder`, `labelRouting()` deliberately
+   *  falls back to the label itself as the summary so the trigger still reads as itself once the
+   *  stacked label is gone -- and the screen-reader-only label run is then dropped, because
+   *  emitting both would name the button twice ("Teams Teams").
+   *
+   *  Two affordances every other built-in type inherits from its composed control are deliberately
+   *  absent here, for mechanical reasons rather than editorial ones:
+   *
+   *  - **No `aria-invalid` on the trigger.** `<lr-button>` forwards exactly six host ARIA
+   *    attributes onto the internal element that owns the button role (`aria-label`,
+   *    `aria-haspopup`, `aria-expanded`, `aria-pressed`, `aria-current`, `aria-describedby`);
+   *    `aria-invalid` is not one of them, so writing it here would leave it on a role-less
+   *    `display: inline-block` host where no assistive technology would ever read it. A
+   *    silently-inert ARIA attribute is worse than none, and the revealed error already reaches
+   *    assistive tech through the trigger's accessible name.
+   *  - **No required marker.** `formControlRequiredMarker` (`internal/form-control.styles.ts`)
+   *    carries the library's only two marker shapes -- `:host([required])
+   *    [part~='form-control-label']` and `[part='field'][data-required] [part='label']` -- and
+   *    neither matches this structure: the host is not the required field, and this trigger's label
+   *    part is `filter-control-label`. Re-typing the `::after` locally is precisely what that
+   *    shared sheet exists to prevent, and renaming the span to `label`/`form-control-label` to fit
+   *    would mint a permanent public part name on `<lr-filter-bar>` for a styling side effect. */
+  private renderCheckboxMenu(
+    def: LyraFilterBarCheckboxMenuDefinition,
+    value: LyraFilterBarFieldValue,
+    errorText: string
+  ): TemplateResult {
+    const selected = Array.isArray(value)
+      ? value.filter((entry): entry is string => typeof entry === 'string')
+      : [];
+    const size = def.size ?? 'm';
+    const routing = this.labelRouting(def);
+    const summary = selected.length > 0
+      ? this.displayValueFor(def, value)
+      : routing.placeholder;
+    // See the doc block: under hidden routing the summary may already BE the label (the
+    // placeholder fallback), and emitting the screen-reader-only label run as well would name the
+    // trigger twice. Emit it only when it adds a name the summary does not already carry.
+    const showLabel = def.labelVisibility !== 'hidden' || summary !== def.label;
+    return html`<div part="filter-control" class="checkbox-menu">
+      <lr-dropdown
+        exportparts=${CHECKBOX_MENU_EXPORT_PARTS}
+        data-filter-id=${def.filterId}
+        aria-label=${def.label}
+        stay-open-on-select
+        .size=${size}
+        ?disabled=${this.disabled}
+        @lr-select=${this.stopControlAlias}
+        @focusout=${() => this.onFieldFocusout(def.filterId)}
+      >
+        <lr-button
+          slot="trigger"
+          exportparts=${CHECKBOX_MENU_TRIGGER_EXPORT_PARTS}
+          appearance="outlined"
+          .size=${size}
+          ?disabled=${this.disabled}
+          >${this.renderStartAdornment(def.icon)}${showLabel
+            ? html`<span
+                part="filter-control-label"
+                class=${def.labelVisibility === 'hidden' ? 'sr-only' : ''}
+                >${def.label}</span
+              >`
+            : nothing}${summary
+            ? html`<span part="filter-control-input">${summary}</span>`
+            : nothing}${errorText
+            ? html`<span class="sr-only">${errorText}</span>`
+            : nothing}</lr-button
+        >
+        ${def.options.map(
+          (option) => html`<lr-dropdown-item
+            part="filter-control-option"
+            type="checkbox"
+            value=${option.value}
+            ?checked=${selected.includes(option.value)}
+            @lr-menu-item-change=${(event: Event) => this.onCheckboxMenuToggle(def, event)}
+            >${this.renderStartAdornment(option.icon, 'icon')}${option.label}</lr-dropdown-item
+          >`
+        )}
+      </lr-dropdown>
+      ${errorText
+        ? html`<span part="filter-control-error" aria-hidden="true">${errorText}</span>`
+        : nothing}
+    </div>`;
   }
 
   private renderControl(def: LyraFilterBarFilterDefinition): TemplateResult {
@@ -1372,6 +1665,10 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       >${custom.render(context)}</div>`;
     }
 
+    if (def.type === 'checkbox-menu') return this.renderCheckboxMenu(def, value, errorText);
+
+    const routing = this.labelRouting(def);
+
     if (def.type === 'combobox') {
       const multiple = Boolean(def.multiple);
       // While a debounce is in flight, render the pending (not-yet-committed) selection instead
@@ -1392,12 +1689,14 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         part="filter-control"
         exportparts=${COMBOBOX_EXPORT_PARTS}
         data-filter-id=${def.filterId}
-        .label=${def.label}
-        placeholder=${def.placeholder || ''}
+        .label=${routing.label}
+        aria-label=${routing.accessibleLabel}
+        placeholder=${routing.placeholder}
         ?multiple=${multiple}
         ?required=${Boolean(def.required)}
         ?clearable=${Boolean(def.clearable)}
         .size=${def.size ?? 'm'}
+        .emptyText=${def.emptyText}
         .errorText=${errorText}
         .value=${comboValue}
         ?disabled=${this.disabled}
@@ -1429,8 +1728,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         exportparts=${INPUT_EXPORT_PARTS}
         data-filter-id=${def.filterId}
         type=${def.inputType ?? 'text'}
-        .label=${def.label}
-        placeholder=${def.placeholder || ''}
+        .label=${routing.label}
+        aria-label=${routing.accessibleLabel}
+        placeholder=${routing.placeholder}
         ?required=${Boolean(def.required)}
         ?clearable=${Boolean(def.clearable)}
         .size=${def.size ?? 'm'}
@@ -1454,11 +1754,14 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         part="filter-control"
         exportparts=${DATE_INPUT_EXPORT_PARTS}
         data-filter-id=${def.filterId}
-        .label=${def.label}
-        placeholder=${def.placeholder || ''}
+        .label=${routing.label}
+        aria-label=${routing.accessibleLabel}
+        placeholder=${routing.placeholder}
         .mode=${def.type === 'date-range' ? 'range' : 'single'}
         .min=${def.min || ''}
         .max=${def.max || ''}
+        ?with-clear=${Boolean(def.clearable)}
+        .size=${def.size ?? 'm'}
         .presets=${def.type === 'date-range'
           ? def.presets ?? EMPTY_DATE_PRESETS
           : EMPTY_DATE_PRESETS}
@@ -1470,7 +1773,8 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         @lr-input=${this.stopControlAlias}
         @lr-change=${this.stopControlAlias}
         @focusout=${onFocusout}
-      ></lr-date-input>`;
+        >${this.renderStartAdornment(def.icon)}</lr-date-input
+      >`;
     }
 
     // 'select' (also the fallback for an unrecognized type, so a filter with a bad `type` still
@@ -1479,9 +1783,12 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       part="filter-control"
       exportparts=${SELECT_EXPORT_PARTS}
       data-filter-id=${def.filterId}
-      .label=${def.label}
-      placeholder=${def.placeholder || ''}
+      .label=${routing.label}
+      aria-label=${routing.accessibleLabel}
+      placeholder=${routing.placeholder}
       ?required=${Boolean(def.required)}
+      ?clearable=${Boolean(def.clearable)}
+      .size=${def.size ?? 'm'}
       .errorText=${errorText}
       .value=${typeof value === 'string' ? value : ''}
       ?disabled=${this.disabled}
@@ -1490,7 +1797,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       @lr-input=${this.stopControlAlias}
       @lr-change=${this.stopControlAlias}
       @focusout=${onFocusout}
-      >${(def.options ?? []).map((o) => this.renderOption(o))}</lr-select
+      >${this.renderStartAdornment(def.icon)}${(def.options ?? []).map((o) =>
+        this.renderOption(o)
+      )}</lr-select
     >`;
   }
 

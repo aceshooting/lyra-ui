@@ -180,6 +180,15 @@ export type LyraChartStatistic =
   | 'max'
   | 'total';
 
+/**
+ * The scale a formatted number belongs to: the two cartesian value axes (`y`, and `y2` for a
+ * `LyraChartSeries.axis: 'y2'` series), the `x` scale wherever it carries numbers rather than
+ * categories (scatter/bubble, and a horizontal bar/line), and the single radial `r` scale of a
+ * radar/polar-area chart. `undefined` where there is no axis at all -- a pie/doughnut slice, or a
+ * surface whose value is not bound to one scale.
+ */
+export type LyraChartFormatterAxis = 'x' | 'y' | 'y2' | 'r';
+
 export interface LyraChartFormatterContext {
   readonly value: number;
   readonly surface: LyraChartFormatSurface;
@@ -188,6 +197,14 @@ export interface LyraChartFormatterContext {
   readonly label?: string;
   readonly seriesLabel?: string;
   readonly statistic?: LyraChartStatistic;
+  /**
+   * Which scale this number is plotted against. Two axes usually exist precisely because they
+   * carry different units, so without it one formatter cannot render a secondary axis correctly --
+   * the gap that forced dual-axis and scatter charts onto the raw `config` tick callback, which
+   * bypasses this formatter and so drops the same unit text from the data table, the CSV export and
+   * the spoken announcement.
+   */
+  readonly axis?: LyraChartFormatterAxis;
 }
 
 export type LyraChartFormatter = (context: LyraChartFormatterContext) => string;
@@ -2447,11 +2464,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           // reaches the CSV -- the place it matters most, and what <lr-lite-chart> has always done.
           // exportCell() leaves a cell untouched when no formatter is installed, keeping the
           // default output the raw machine-readable number.
+          const axis = this.datasetValueAxis(column.dataset);
           const metadata = {
             datasetIndex,
             index,
             label: label || undefined,
             seriesLabel: column.label,
+            ...(axis === undefined ? {} : { axis }),
           } satisfies LyraChartFormatterMetadata;
           if (!column.point) return [exportCell(value, metadata)];
           const point = normalizedChartPoint(value);
@@ -3551,14 +3570,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         const { datasetIndex, index } = indexes;
         const dataset = datasets[sourceDatasetIndex(datasetIndex)];
         const axis = chartDatasetAxis(dataset);
+        const metadata = this.datumFormatterMetadata(datasetIndex, index, effective);
         if (stackTotalsActive && topDatasetIndexByAxis.get(axis) === datasetIndex) {
           const total = totalsByAxis?.[axis][sourceRowIndex(index)];
-          if (total != null) return this.formatDataLabel(total);
+          if (total != null) return this.formatDataLabel(total, this.stackTotalMetadata(metadata));
         }
         const numeric = chartDatumNumericValue(this.scaledSliceDatasets.has(datasetIndex)
           ? this.datasetValues(dataset!)[sourceRowIndex(index)] : value);
         if (numeric === undefined) return '';
-        return this.formatDataLabel(numeric);
+        return this.formatDataLabel(numeric, metadata);
       },
     };
   }
@@ -3567,9 +3587,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    *  drawn label matches the rest of the chart; falls back to a plain locale string. The formatter
    *  runs in the `'tooltip'` context — the closest semantic match to an on-point value label, so a
    *  consumer formatter that branches on context behaves predictably rather than seeing `undefined`. */
-  private formatDataLabel(value: number): string {
+  private formatDataLabel(
+    value: number,
+    metadata: LyraChartFormatterMetadata = {},
+  ): string {
     if (this.formatter || this.valueFormatter) {
-      const formatted = this.formatter?.({ value, surface: 'visual' }) ??
+      const formatted = this.formatter?.({ value, surface: 'visual', ...metadata }) ??
         this.valueFormatter?.(value, 'tooltip');
       if (formatted != null) return String(formatted);
     }
@@ -3627,12 +3650,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private tickOptions(
     theme: ThemeColors,
-    kind: 'category' | 'value' = 'value'
+    kind: 'category' | 'value' = 'value',
+    axis: LyraChartFormatterAxis = 'y',
   ): Record<string, unknown> {
     return {
       color: theme.tick,
       ...((this.formatter || this.valueFormatter) && kind === 'value'
-        ? { callback: (value: unknown) => this.formatValue(value, 'tick') }
+        ? { callback: (value: unknown) => this.formatValue(value, 'tick', { axis }) }
         : {}),
     };
   }
@@ -3700,7 +3724,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           // polarArea wedge or radar fill paints over the ring labels sitting inside the plot
           // area (unlike a cartesian axis, whose tick labels sit outside the chart area and are
           // never at risk of being covered by data regardless of draw order).
-          ticks: { ...this.tickOptions(theme), showLabelBackdrop: false, z: 1 },
+          ticks: { ...this.tickOptions(theme, 'value', 'r'), showLabelBackdrop: false, z: 1 },
           grid: {
             color: theme.grid,
             display: this.gridAxisVisible('y'),
@@ -3740,7 +3764,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         beginAtZero: xKind === 'value' ? this.valueBeginAtZero() : undefined,
         ...(valueAxis === 'x' ? bounds : {}),
         title: { display: !!this.xLabel, text: this.xLabel, color: theme.tick },
-        ticks: this.tickOptions(theme, xKind),
+        ticks: this.tickOptions(theme, xKind, 'x'),
         grid: {
           color: theme.grid,
           display: this.gridAxisVisible('x'),
@@ -3756,7 +3780,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         beginAtZero: yKind === 'value' ? this.valueBeginAtZero() : undefined,
         ...(valueAxis === 'y' ? bounds : {}),
         title: { display: !!this.yLabel, text: this.yLabel, color: theme.tick },
-        ticks: this.tickOptions(theme, yKind),
+        ticks: this.tickOptions(theme, yKind, 'y'),
         grid: {
           color: theme.grid,
           display: this.gridAxisVisible('y'),
@@ -3780,7 +3804,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               },
               border: { width: chartStyle.gridBorderWidth },
               title: { display: !!this.y2Label, text: this.y2Label, color: theme.tick, },
-              ticks: this.tickOptions(theme),
+              ticks: this.tickOptions(theme, 'value', 'y2'),
               stacked,
             },
           }
@@ -3918,6 +3942,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         index: datum.index,
         label: datum.label,
         seriesLabel: series,
+        ...(this.datasetValueAxis(dataset) === undefined
+          ? {}
+          : { axis: this.datasetValueAxis(dataset) }),
       }),
       index: getNumberFormat(this.effectiveLocale).format(position + 1),
       total: getNumberFormat(this.effectiveLocale).format(total),
@@ -4007,18 +4034,115 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return key ? this.localize(key) : String(type);
   }
 
-  private formatValue(value: unknown, context: LyraChartValueFormatterContext): string | unknown {
+  /**
+   * The tick/tooltip/legend/table value path. `metadata` is spread onto the unified formatter's
+   * context exactly as the table/export/spoken helpers already do theirs; the legacy positional
+   * `valueFormatter` has no place to carry it and is called unchanged.
+   */
+  private formatValue(
+    value: unknown,
+    context: LyraChartValueFormatterContext,
+    metadata: LyraChartFormatterMetadata = {},
+  ): string | unknown {
     const numeric = chartDatumNumericValue(value);
     if (numeric === undefined) return value;
     return (
-      this.formatter?.({ value: numeric, surface: context }) ??
+      this.formatter?.({ value: numeric, surface: context, ...metadata }) ??
       this.valueFormatter?.(numeric, context) ??
       value
     );
   }
 
-  private legendValue(item: ChartLegendItem, _chart: RuntimeChart): number | undefined {
-    const effective = this.effectiveData();
+  /**
+   * The scale `dataset`'s values are plotted against, for the formatter context's `axis` field.
+   * A point dataset's `x`/`r` components are told apart by `statistic`, not by this -- `axis`
+   * names the scale the dataset's primary value sits on.
+   */
+  private datasetValueAxis(
+    dataset: LyraChartDatasetConfiguration | undefined,
+  ): LyraChartFormatterAxis | undefined {
+    const type = this.effectiveType();
+    if (type === 'pie' || type === 'doughnut') return undefined;
+    if (type === 'radar' || type === 'polarArea') return 'r';
+    if ((type === 'bar' || type === 'line') && this.effectiveIndexAxis() === 'y') return 'x';
+    return dataset === undefined ? undefined : chartDatasetAxis(dataset);
+  }
+
+  /**
+   * Formatter metadata for one datum, in SOURCE index space -- the same space the data table,
+   * CSV export and `lr-point-click` already report, so a formatter's `datasetIndex`/`index` mean
+   * one thing across every surface even while sampling has renumbered what Chart.js sees.
+   */
+  private datumFormatterMetadata(
+    visualDatasetIndex: number,
+    visualRowIndex?: number,
+    effective = this.effectiveData(),
+  ): LyraChartFormatterMetadata {
+    return this.sourceDatumFormatterMetadata(
+      this.visualDatasetSourceIndexes?.[visualDatasetIndex] ?? visualDatasetIndex,
+      visualRowIndex === undefined
+        ? undefined
+        : this.visualRowSourceIndexes?.[visualRowIndex] ?? visualRowIndex,
+      effective,
+    );
+  }
+
+  /**
+   * The same metadata for a call site that ALREADY holds source indexes -- the rendered DOM legend,
+   * whose entries come from `dataTableSample()`'s source-space `seriesIndexes`/`rowIndexes`.
+   * Mapping those through the visual tables a second time renumbers them onto a different series
+   * whenever sampling is active, so the legend entry would report the label and index of a series
+   * other than the one its own swatch paints.
+   */
+  private sourceDatumFormatterMetadata(
+    datasetIndex: number,
+    index?: number,
+    effective = this.effectiveData(),
+  ): LyraChartFormatterMetadata {
+    const dataset = effective.datasets[datasetIndex];
+    const point =
+      index === undefined || dataset === undefined
+        ? null
+        : normalizedChartPoint(this.datasetValues(dataset)[index]);
+    const label =
+      index === undefined
+        ? undefined
+        : point?.label ?? (labelText(effective.labels[index]) || undefined);
+    const axis = this.datasetValueAxis(dataset);
+    return {
+      datasetIndex,
+      ...(index === undefined ? {} : { index }),
+      ...(label === undefined ? {} : { label }),
+      ...(dataset === undefined
+        ? {}
+        : { seriesLabel: this.datasetLabel(dataset, datasetIndex) }),
+      ...(axis === undefined ? {} : { axis }),
+    };
+  }
+
+  /**
+   * A stack total is the sum ACROSS the stack's datasets, so it names none of them. Carrying the
+   * topmost dataset's `datasetIndex`/`seriesLabel` would make a formatter that branches on the
+   * series render one series' unit for a cross-series number; `lr-lite-chart`'s total cells drop
+   * both for exactly that reason. The axis survives, because every dataset in one stack shares it
+   * and it is what a dual-axis formatter needs to pick the total's unit.
+   */
+  private stackTotalMetadata(metadata: LyraChartFormatterMetadata): LyraChartFormatterMetadata {
+    return {
+      ...(metadata.index === undefined ? {} : { index: metadata.index }),
+      ...(metadata.label === undefined ? {} : { label: metadata.label }),
+      ...(metadata.axis === undefined ? {} : { axis: metadata.axis }),
+      statistic: 'total',
+    };
+  }
+
+  /** `effective` is threaded in: `effectiveData()` rebuilds every label and dataset array, and this
+   *  runs once per legend entry, so resolving it here would rebuild it N times per legend pass. */
+  private legendValue(
+    item: ChartLegendItem,
+    _chart: RuntimeChart,
+    effective = this.effectiveData(),
+  ): number | undefined {
     const datasetIndex = this.callbackDatasetIndex(item, effective);
     if (datasetIndex === undefined) return undefined;
     const sourceDatasetIndex = this.visualDatasetSourceIndexes?.[datasetIndex] ?? datasetIndex;
@@ -4063,8 +4187,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       datasetIndex: index,
     }));
     return labels.map((item) => {
-      const value = this.legendValue(item, chart);
-      const formatted = this.formatValue(value, 'legend');
+      const value = this.legendValue(item, chart, effective);
+      const visualDatasetIndex = this.callbackDatasetIndex(item, effective);
+      const visualRowIndex = chartIndex(chartDatasetValue(item, 'index'));
+      const formatted = this.formatValue(
+        value,
+        'legend',
+        visualDatasetIndex === undefined
+          ? {}
+          : this.datumFormatterMetadata(visualDatasetIndex, visualRowIndex, effective),
+      );
       return formatted === value || formatted === undefined
         ? item
         : {
@@ -4085,13 +4217,33 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // contract, and partial/radial parsed shapes retain the existing numeric fallback.
     let rawValue = (horizontal && !normalizedChartPoint(raw) ? parsedPoint?.x : parsedPoint?.y) ??
       parsed ?? raw;
-    const indexes = this.scaledSliceDatasets.size ? this.callbackIndexes(context) : undefined;
-    const scaled = indexes !== undefined && this.scaledSliceDatasets.has(indexes.datasetIndex);
+    // A tooltip callback runs once per item per pointer move and `effectiveData()` is not
+    // memoized -- it copies every label and every dataset's values and re-runs the config merge --
+    // so resolve it at most once here, and only when something actually consumes the datum's
+    // identity: a rescaled slice, or an installed `formatter` (the positional `valueFormatter`
+    // never receives metadata).
+    const scaledSlices = this.scaledSliceDatasets.size > 0;
+    const effective =
+      scaledSlices || this.formatter !== undefined ? this.effectiveData() : undefined;
+    const hit = effective === undefined ? undefined : this.callbackIndexes(context, effective);
+    const indexes = scaledSlices ? hit : undefined;
+    const scaled =
+      indexes !== undefined &&
+      effective !== undefined &&
+      this.scaledSliceDatasets.has(indexes.datasetIndex);
     if (scaled) {
-      const dataset = this.effectiveData().datasets[this.visualDatasetSourceIndexes?.[indexes.datasetIndex] ?? indexes.datasetIndex];
+      const dataset = effective.datasets[this.visualDatasetSourceIndexes?.[indexes.datasetIndex] ?? indexes.datasetIndex];
       rawValue = this.datasetValues(dataset!)[this.visualRowSourceIndexes?.[indexes.index] ?? indexes.index];
     }
-    let formatted = this.formatValue(rawValue, 'tooltip');
+    // The hovered datum is already resolved here; it used to be resolved and then dropped, leaving
+    // a tooltip formatter unable to tell which series it was formatting.
+    let formatted = this.formatValue(
+      rawValue,
+      'tooltip',
+      hit === undefined || effective === undefined
+        ? {}
+        : this.datumFormatterMetadata(hit.datasetIndex, hit.index, effective),
+    );
     if ((!scaled && formatted === rawValue) || formatted === undefined) return undefined;
     if (scaled && typeof formatted === 'number') formatted = this.formatSummaryValue(formatted);
     const label = chartDatasetLabel(chartDatasetValue(context, 'dataset'));
@@ -4743,6 +4895,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     ));
     const stackAxes = this.tableStackAxes();
     const stackTotals = new Map(stackAxes.map((axis) => [axis, this.computeStackTotals(axis)]));
+    // A stack total sits on the same scale as the datasets it sums, so a dual-axis formatter picks
+    // the right unit for the total column as well as for the cells. Resolved from a dataset on that
+    // stack rather than from the axis id, because a horizontal bar/line plots its values on `x`.
+    const stackValueAxes = new Map(stackAxes.map((axis) => [
+      axis,
+      this.datasetValueAxis(
+        effective.datasets.find((dataset) => chartDatasetAxis(dataset) === axis),
+      ),
+    ]));
     return html`
       <table class=${this.dataTableVisible ? nothing : 'sr-only'}>
         <caption>${this.accessibleName(this.localize('chartData'))}</caption>
@@ -4786,11 +4947,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   label: point?.label ?? (labelText(effective.labels[index]) || undefined),
                   value: datum,
                 };
+                const axis = this.datasetValueAxis(dataset);
                 const metadata: LyraChartFormatterMetadata = {
                   datasetIndex,
                   index,
                   label: detail.label,
                   seriesLabel: this.datasetLabel(dataset, datasetIndex),
+                  ...(axis === undefined ? {} : { axis }),
                 };
                 return html`<td><button
                   type="button"
@@ -4807,11 +4970,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 const total = stackTotals.get(axis)?.[index];
                 return html`<td>${total == null
                   ? this.localize('noData')
-                  : this.formatTableValue(total, {
+                  : this.formatTableValue(total, this.stackTotalMetadata({
                       index,
                       label: labelText(effective.labels[index]) || undefined,
-                      statistic: 'total',
-                    })}</td>`;
+                      axis: stackValueAxes.get(axis),
+                    }))}</td>`;
               })}
             </tr>
             `
@@ -4829,12 +4992,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     label: string,
     value: number | undefined,
     percentage: number,
+    metadata: LyraChartFormatterMetadata = {},
   ): string {
     if (this.legendDisplay === 'label' || value === undefined) return label;
     const explicit = this.legendDisplay === 'value' || this.legendDisplay === 'percentage';
     const formatted = this.legendDisplay === 'percentage'
       ? getNumberFormat(this.effectiveLocale, { style: 'percent', maximumFractionDigits: 1 }).format(percentage)
-      : this.formatValue(value, 'legend');
+      : this.formatValue(value, 'legend', metadata);
     return (!explicit && formatted === value) || formatted === undefined
       ? label
       : this.localize('chartValueLabel', undefined, {
@@ -5013,7 +5177,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   colorCache,
                 )}"
               ></span>
-              <span>${this.legendTextFor(label, value, total ? Math.abs(scaledValue) * (valueScale / maximum) / total : 0)}</span>
+              <span>${this.legendTextFor(
+                label,
+                value,
+                total ? Math.abs(scaledValue) * (valueScale / maximum) / total : 0,
+                // A dataset entry aggregates every row, so it carries no row index; a per-slice
+                // entry names the category it stands for. Both indexes are already SOURCE indexes
+                // here -- `entries` is built from `dataTableSample()`'s `seriesIndexes`/`rowIndexes`
+                // -- so they must NOT be mapped through the visual tables a second time.
+                datumMode
+                  ? this.sourceDatumFormatterMetadata(datasetIndex, index, effective)
+                  : this.sourceDatumFormatterMetadata(index, undefined, effective),
+              )}</span>
             </button>
           `;
         })}

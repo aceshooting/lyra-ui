@@ -36,6 +36,7 @@ import {
   scrollCodeBlockToAnchor,
   tokenizeCodeBlock,
 } from './code-block-shared.js';
+import type { LyraCodeBlockCopyAppearance } from './code-block-shared.js';
 import type {
   LyraAnchor,
   LyraHighlight,
@@ -140,7 +141,19 @@ export interface LyraCodeBlockEventMap {
  * @csspart language - The `language` badge, when set, so the language is
  *   exposed to assistive tech as visible text rather than only a `language`
  *   attribute a screen reader would never announce.
- * @csspart copy-button - The copy-to-clipboard button, when `copyable`.
+ * @csspart copy-button - The copy-to-clipboard control, when `copyable`. A composed
+ *   `<lr-icon-button>` as of 16.0.0: it still owns the accessible name, the activation and the part
+ *   names, while its background, radius, hover/press mixes, focus ring and hit-area floor now come
+ *   from `--lr-icon-button-*`. Also carries `copy-button-text` or `copy-button-icon` for the active
+ *   `copyAppearance`, since a state cannot be selected with `::part(copy-button)[attr]`.
+ * @csspart copy-button-text - The copy control while `copyAppearance` is `'text'`.
+ * @csspart copy-button-icon - The copy control while `copyAppearance` is `'icon'`.
+ * @csspart copy-button__control - The copy control's own native `<button>`, forwarded because the
+ *   painted surface sits one shadow boundary deeper than `copy-button`.
+ * @csspart header-actions - The wrapper around the `header-actions` slot, at the trailing end of
+ *   the header row.
+ * @slot header-actions - Extra controls for the header row, rendered after the copy control. Their
+ *   presence alone is enough to render the header.
  * @csspart toggle - The collapse/expand chevron button, when `collapsible`.
  * @csspart body - The scrollable region wrapping the code (or the loading
  *   skeleton); respects `max-height`, `hidden` while `collapsible` and
@@ -233,6 +246,26 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     converter: trueDefaultBooleanConverter,
   })
   copyable = true;
+
+  /** How the header's copy control presents itself. `'text'` (the default) is the labelled button
+   *  this component has always rendered -- unset, nothing about the header changes. `'icon'` swaps
+   *  the visible label for a compact glyph and promotes the same localized Copy/Copied/failure
+   *  string to the control's accessible name, for a dense header that already carries a filename,
+   *  a language chip and slotted `header-actions`. */
+  @property({ attribute: 'copy-appearance', reflect: true })
+  copyAppearance: LyraCodeBlockCopyAppearance = 'text';
+
+  /** Whether a light-DOM child is assigned to `header-actions`. Read from `children` rather than a
+   *  `slotchange`, because the slot only exists once the header renders -- and whether the header
+   *  renders at all is exactly what this answers for a code block with no filename, language,
+   *  copy control or collapse toggle. `headerActionsObserver` closes that loop for a child appended
+   *  after first render, which no `slotchange` could ever report for a header that isn't there. */
+  @state() private hasHeaderActions = false;
+
+  /** Watches the host's own light DOM so appending (or removing) a `slot="header-actions"` child
+   *  brings the header into existence -- or retires it -- without the consumer touching a
+   *  property. */
+  private headerActionsObserver?: MutationObserver;
 
   /** A CSS length (e.g. `"20rem"`); once set, the code scrolls internally
    *  past this height instead of growing the page. */
@@ -360,6 +393,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.refreshTheme();
+    this.observeHeaderActions();
     this.ensureDefaultHighlighter();
     if (this.preSuppliedGrammar() || this.highlighter) this.syncHighlight();
   }
@@ -390,6 +424,8 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   override disconnectedCallback(): void {
     this.highlightToken++;
     super.disconnectedCallback();
+    this.headerActionsObserver?.disconnect();
+    this.headerActionsObserver = undefined;
     this.interactions.disconnect();
     this.highlightedHtml = null;
   }
@@ -449,6 +485,10 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
+    // Derived here, not in updated(): assigning the @state after an update has completed schedules
+    // a whole second render pass (and trips Lit's dev-mode "scheduled an update after an update
+    // completed" warning) the first time a consumer slots header actions.
+    this.syncHeaderActions();
     this.restoreFocusedLineAfterUpdate = codeBlockLineHasFocus(this);
     if (changed.has('code')) {
       this.focusedLine = clampCodeBlockFocusedLine(
@@ -480,6 +520,31 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
       restoreCodeBlockLineFocus(this, this.focusedLine);
       this.restoreFocusedLineAfterUpdate = false;
     }
+  }
+
+  private syncHeaderActions(): void {
+    const children = (this as unknown as { children?: HTMLCollection }).children;
+    this.hasHeaderActions = (children ? Array.from(children) : []).some(
+      (child) => child.getAttribute('slot') === 'header-actions',
+    );
+  }
+
+  private observeHeaderActions(): void {
+    if (this.headerActionsObserver || typeof MutationObserver === 'undefined') return;
+    this.syncHeaderActions();
+    // childList covers append/remove; the slot attribute filter covers a child that is already
+    // here and only later claims the slot.
+    this.headerActionsObserver = new MutationObserver(() => this.syncHeaderActions());
+    // childList covers append/remove. The slot-attribute filter covers a child that is already
+    // here and only later claims the slot, and needs subtree to see the CHILD's attribute rather
+    // than the host's -- cheap here, because `header-actions` is this component's only slot, so
+    // the light DOM carries nothing else (the code itself arrives on the `code` property).
+    this.headerActionsObserver.observe(this, {
+      childList: true,
+      attributes: true,
+      attributeFilter: ['slot'],
+      subtree: true,
+    });
   }
 
   /** Whether this render shows the loading skeleton instead of the code. */
@@ -598,6 +663,8 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
       filename: this.filename,
       language: this.language,
       copyable: this.copyable,
+      copyAppearance: this.copyAppearance,
+      hasHeaderActions: this.hasHeaderActions,
       collapsible: this.collapsible,
       collapsed: this.collapsed,
       justCopied: this.justCopied,

@@ -212,7 +212,8 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
 
-  [part="columns-menu"],
+  /* columns-menu is deliberately not in this group any more: it is now an <lr-dropdown>, whose
+     own shell lays out a trigger plus a positioned popup. A flex row here would fight that. */
   [part="column-menu"],
   [part="filter-panel"] {
     display: flex;

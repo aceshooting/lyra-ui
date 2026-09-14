@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,8 +55,10 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
 `description`, `properties`, `property` (one key/value row), `degree`, `community`, `actions`,
 `focus-button`, `empty` (shown when `entity` is `null`).
 
-**Themeable custom properties:** `--lr-entity-card-compact-padding` (default `var(--lr-space-s)`) —
-`[part='base']`'s padding while `compact`; `--lr-entity-card-compact-gap` (default
+**Themeable custom properties:** `--lr-entity-card-bg` (default `var(--lr-color-surface)`) —
+`[part='base']`'s RESTING background, the companion to the `compact` tier's levers below;
+`frame='plain'` still drops the fill entirely. `--lr-entity-card-compact-padding` (default
+`var(--lr-space-s)`) — `[part='base']`'s padding while `compact`; `--lr-entity-card-compact-gap` (default
 `var(--lr-space-xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
 the `compact` state, so a dense card can be tuned without re-pointing shared spacing tokens for
 everything else. Otherwise shared tokens; a data-driven `entity.type` color is applied as

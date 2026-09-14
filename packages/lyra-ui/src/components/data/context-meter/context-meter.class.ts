@@ -4,7 +4,8 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
-import { resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
   getOwnDataDescriptor,
@@ -24,6 +25,44 @@ import { LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_contextMeterSegme
 export type ContextMeterTone = LyraVariant;
 /** The meter geometry. This is deliberately separate from the semantic `variant` vocabulary. */
 export type ContextMeterShape = 'ring' | 'bar';
+/**
+ * What each legend row shows beside its swatch. Combinable rather than mutually exclusive (the
+ * `label | value | percentage` spelling `<lr-chart>`'s own legend uses cannot express "count AND
+ * share", which is the ordinary reading of a part-to-whole key).
+ */
+export type ContextMeterLegendDisplay =
+  | 'label'
+  | 'label-value'
+  | 'label-percent'
+  | 'label-value-percent';
+
+const CONTEXT_METER_LEGEND_DISPLAYS: readonly ContextMeterLegendDisplay[] = Object.freeze([
+  'label',
+  'label-value',
+  'label-percent',
+  'label-value-percent',
+]);
+
+/** Foreign attribute values normalize to the label-only default, as `shape` does. */
+function normalizeContextMeterLegendDisplay(value: unknown): ContextMeterLegendDisplay {
+  return CONTEXT_METER_LEGEND_DISPLAYS.includes(value as ContextMeterLegendDisplay)
+    ? (value as ContextMeterLegendDisplay)
+    : 'label';
+}
+
+/** Detail of `lr-segment-activate`: which band the user picked, and what it stands for. */
+export interface LyraContextMeterSegmentActivateDetail {
+  /** Zero-based index into the projected `segments` array. */
+  readonly index: number;
+  /** That segment's own `label`, passed through verbatim. */
+  readonly label: string;
+  /** That segment's normalized nonnegative `value` -- the absolute quantity, never a share. */
+  readonly value: number;
+}
+
+export interface LyraContextMeterEventMap {
+  'lr-segment-activate': CustomEvent<LyraContextMeterSegmentActivateDetail>;
+}
 
 export interface ContextMeterSegment {
   label: string;
@@ -133,14 +172,23 @@ function formatCount(n: number, locale: string): string {
  * @csspart base - The component's root wrapper (a `<div>` for `bar`, an `<svg>` for `ring`).
  * @csspart track - The unfilled/empty capacity track.
  * @csspart segment - One occupied segment. Carries `data-tone` for styling and
- *   `--lr-context-meter-segment-color` when `color` is set.
+ *   `--lr-context-meter-segment-color` when `color` is set. While `interactive` is set it is a
+ *   `<button>` (bar) or a `role="button"` arc (ring) carrying `aria-pressed`, and a second
+ *   `segment-selected` part token while its index is in `selectedIndices`.
  * @csspart label - The visible caption, when `label` is set.
  * @csspart semantic - The visually-hidden meter/group carrying aggregate range semantics.
  * @csspart segment-list - The visually-hidden list exposing the segment breakdown.
  * @csspart segment-item - One visually-hidden segment label/count pair.
  * @csspart legend - The visible category key rendered below the meter when `showLegend` is set.
- *   `aria-hidden`, because `segment-list` already exposes the same names to assistive technology.
- * @csspart legend-item - One swatch + label pair in the legend, one per `segments` entry.
+ *   `aria-hidden` in the default presentational mode, because `segment-list` already exposes the
+ *   same names to assistive technology; reachable while `interactive` is set, where its rows are
+ *   the filter controls themselves.
+ * @csspart legend-item - One swatch + label pair in the legend, one per `segments` entry. A
+ *   `<button>` carrying `aria-pressed` while `interactive` is set, a plain `<span>` otherwise.
+ * @csspart legend-value - One legend row's absolute count, rendered by `legendDisplay`'s
+ *   `label-value`/`label-value-percent` settings.
+ * @csspart legend-percent - One legend row's share of `total`, rendered by `legendDisplay`'s
+ *   `label-percent`/`label-value-percent` settings. Always the ratio the bar/ring actually paints.
  * @csspart legend-swatch - The color chip of a legend item, painted from that segment's resolved
  *   `color`/`tone` — the same ladder and the same inline custom-property escape `segment` uses.
  * @csspart legend-label - The text of a legend item (the segment's `label`).
@@ -150,10 +198,17 @@ function formatCount(n: number, locale: string): string {
  * @cssprop [--lr-context-meter-track-radius=calc(var(--lr-radius) * 0.5)] - Corner radius of the `bar`-shape track.
  * @cssprop [--lr-context-meter-track-bg=color-mix(in srgb, var(--lr-color-border) 30%, transparent)] - Background of the unfilled remainder of the `bar`-shape track.
  * @cssprop [--lr-context-meter-segment-seam-color=var(--lr-color-surface)] - Color of the hairline seam painted between adjacent `bar`-shape segments.
+ * @cssprop [--lr-context-meter-selected-ring-color=var(--lr-color-text)] - Colour of the inset ring marking a `bar`-shape band or a legend row whose index is in `selectedIndices`. Painted inside the shadow root because the state lives in the part name, and as a ring rather than an outline so it composes with the hover/press/focus outlines instead of being replaced by them.
+ * @cssprop [--lr-context-meter-selected-ring-width=var(--lr-border-width-thick)] - Width of that selected ring.
+ * @cssprop [--lr-context-meter-selected-arc-stroke=16] - Stroke width, in this component's `0 0 100 100` viewBox units, of a selected `ring`-shape arc. Arcs share one bounding box, so a selected arc reports itself by thickening in place rather than by an outline that would trace the whole ring.
+ * @event lr-segment-activate - A band or its legend row was activated while `interactive` is set.
+ *   `detail: { index, label, value }`. Cancelable: the default action is this component toggling
+ *   `index` in its own `selectedIndices`, so `preventDefault()` hands that state entirely to the
+ *   consumer. Never emitted in the default presentational mode.
  * @status stable
  * @since 4.0.0
  */
-export class LyraContextMeter extends LyraElement {
+export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -165,7 +220,14 @@ export class LyraContextMeter extends LyraElement {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['segments']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'segments',
+    'selectedIndices',
+  ]);
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-segment-activate',
+  ]);
 
   static override styles = [LyraElement.styles, srOnly, styles];
 
@@ -206,6 +268,58 @@ export class LyraContextMeter extends LyraElement {
    *  emits nothing, mirroring `<lr-sequence-strip>`'s `showLegend` rather than the interactive
    *  `<lr-graph-legend>`. */
   @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
+
+  /**
+   * What each legend row shows beside its swatch. `label` (the default) is exactly the output this
+   * component has always produced. The other three add the segment's own count, its share of
+   * `total`, or both, as `[part="legend-value"]`/`[part="legend-percent"]` spans.
+   *
+   * The share is the SAME clamped ratio the bar/ring paints, so a key can never disagree with the
+   * band it stands for, and it is formatted through `effectiveLocale`. Has no effect while
+   * `showLegend` is unset. Folding the number into `segment.label` instead would push it into the
+   * hover title and the visually-hidden breakdown too, where a screen reader would hear the count
+   * twice.
+   */
+  @property({
+    attribute: 'legend-display',
+    converter: { fromAttribute: normalizeContextMeterLegendDisplay },
+  })
+  legendDisplay: ContextMeterLegendDisplay = 'label';
+
+  /**
+   * Opt-in filter mode: every band, and every legend row, becomes a real button that emits the
+   * cancelable `lr-segment-activate`.
+   *
+   * Off by default, and off is unchanged from before this property existed -- a pure part-to-whole
+   * visualization whose visible parts are all `aria-hidden`. On, the bands are `<button>`s (the
+   * ring's arcs carry `role="button"`, since an SVG shape cannot be a native one), the legend
+   * leaves the accessibility tree's shadow and its rows become buttons too, and both carry explicit
+   * `aria-pressed` from `selectedIndices`. The visually-hidden `[part="segment-list"]` steps aside
+   * in this mode: the buttons already expose the same label/count pairs, with the pressed state
+   * attached, so repeating them statically would announce every category twice.
+   *
+   * A pressed state rather than an event alone: a filter toggle that cannot be reported as on or
+   * off is unusable through assistive technology, whatever it looks like.
+   *
+   * A band's width IS its share, so a small band is a small pointer target. Pair `interactive` with
+   * `showLegend` where that matters -- the legend row is the same action at full row height.
+   */
+  @property({ type: Boolean, reflect: true }) interactive = false;
+
+  /**
+   * Indexes of the currently selected segments, rendered as `aria-pressed="true"` plus a second
+   * part token -- `segment-selected` on the band, `legend-item-selected` on its legend row.
+   * Meaningful only while `interactive` is set.
+   *
+   * Uncontrolled by default: an activation this component emits and nobody vetoes toggles the
+   * index here itself. `preventDefault()` on `lr-segment-activate` suppresses that write, which is
+   * how a consumer that owns the selection takes control -- the library's standard request/commit
+   * shape. Assigning the property directly always wins either way. A non-integer or out-of-range
+   * entry selects nothing rather than throwing.
+   */
+  // numeric-guard-exempt: isSelected() rejects anything that is not an in-range integer before the
+  // value reaches rendering, so a non-finite or fractional entry selects nothing.
+  @property({ attribute: false }) selectedIndices: readonly number[] = [];
 
   private projectedSegmentsSource: unknown;
   private projectedSegments: readonly Readonly<ContextMeterSegment>[] = EMPTY_CONTEXT_METER_SEGMENTS;
@@ -290,6 +404,79 @@ export class LyraContextMeter extends LyraElement {
     return segment.color ? sanitizeCssColor(segment.color) : undefined;
   }
 
+  /** The in-range integer entries of `selectedIndices`, deduplicated and ordered. */
+  private canonicalSelectedIndices(): number[] {
+    const count = this.effectiveSegments.length;
+    return [
+      ...new Set(
+        this.selectedIndices.filter(
+          (candidate): candidate is number =>
+            typeof candidate === 'number' &&
+            Number.isInteger(candidate) &&
+            candidate >= 0 &&
+            candidate < count,
+        ),
+      ),
+    ].sort((left, right) => left - right);
+  }
+
+  private isSelected(index: number): boolean {
+    return this.canonicalSelectedIndices().includes(index);
+  }
+
+  /** The same clamped ratio the band paints, as a locale-formatted percentage. */
+  private formatShare(ratio: number): string {
+    return getNumberFormat(this.effectiveLocale, {
+      style: 'percent',
+      maximumFractionDigits: 1,
+    }).format(ratio);
+  }
+
+  /**
+   * Emits the activation and, unless a listener vetoed it, toggles `index` in this component's own
+   * `selectedIndices`. The write is the default action, which is what makes the event a real veto
+   * point rather than a notification wearing a cancelable costume: a consumer that owns the
+   * selection calls `preventDefault()` and assigns the property itself.
+   *
+   * No write-tracking guard: `selectedIndices` is a plain collection property with no setter side
+   * effects, so there is nothing for a guard to observe, and a listener that reassigns it during
+   * the dispatch is deliberately overwritten by this commit -- `preventDefault()` is the documented
+   * way to stop it, exactly as `<lr-thread-list>`'s group-toggle pair behaves.
+   */
+  private activateSegment(index: number): void {
+    if (!this.interactive) return;
+    const segment = this.effectiveSegments[index];
+    if (!segment) return;
+    requestThenCommit({
+      requestDetail: {
+        index,
+        label: segment.label,
+        value: this.normalizedSegmentValue(segment),
+      },
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-segment-activate', detail, init),
+      commit: () => {
+        const selected = this.canonicalSelectedIndices();
+        this.selectedIndices = selected.includes(index)
+          ? selected.filter((candidate) => candidate !== index)
+          : [...selected, index].sort((left, right) => left - right);
+      },
+    });
+  }
+
+  /** Enter/Space on the ring's `role="button"` arcs, which get none of a native button's keys. */
+  private onArcKeyDown(event: KeyboardEvent, index: number): void {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    this.activateSegment(index);
+  }
+
+  /** The part token list for a band or legend row, carrying its selected state in the name --
+   *  `::part(segment)[data-selected]` is invalid CSS, so the state has to live in the part name. */
+  private statePart(base: string, selected: boolean): string {
+    return selected ? `${base} ${base}-selected` : base;
+  }
+
   private renderSemantics(): TemplateResult {
     const { used, total } = this.clampedUsedTotal;
     // A host aria-label names the custom element itself. Reusing it here would expose the same
@@ -305,11 +492,13 @@ export class LyraContextMeter extends LyraElement {
         aria-valuemin=${total > 0 ? '0' : nothing}
         aria-valuemax=${total > 0 ? String(total) : nothing}
       ></div>
-      <ul part="segment-list" class="sr-only">
-        ${this.effectiveSegments.map(
-          (segment) => html`<li part="segment-item">${this.segmentTitle(segment)}</li>`,
-        )}
-      </ul>
+      ${this.interactive
+        ? nothing
+        : html`<ul part="segment-list" class="sr-only">
+            ${this.effectiveSegments.map(
+              (segment) => html`<li part="segment-item">${this.segmentTitle(segment)}</li>`,
+            )}
+          </ul>`}
     `;
   }
 
@@ -318,22 +507,38 @@ export class LyraContextMeter extends LyraElement {
     return html`
       <div part="base">
         ${this.label ? html`<div part="label" aria-hidden="true">${this.label}</div>` : nothing}
-        <div part="track" aria-hidden="true">
-          ${ratios.map(
-            ({ segment, value, ratio }) => html`
-              <span
-                part="segment"
-                data-tone=${segment.tone ?? 'neutral'}
-                title=${this.segmentTitle(segment, value)}
-                style=${styleMap({
-                  flexBasis: `${(ratio * 100).toFixed(4)}%`,
-                  ...(this.segmentColor(segment)
-                    ? { '--lr-context-meter-segment-color': this.segmentColor(segment)! }
-                    : {}),
-                })}
-              ></span>
-            `,
-          )}
+        <div part="track" aria-hidden=${this.interactive ? nothing : 'true'}>
+          ${ratios.map(({ segment, value, ratio }, index) => {
+            const title = this.segmentTitle(segment, value);
+            const selected = this.isSelected(index);
+            const style = styleMap({
+              flexBasis: `${(ratio * 100).toFixed(4)}%`,
+              ...(this.segmentColor(segment)
+                ? { '--lr-context-meter-segment-color': this.segmentColor(segment)! }
+                : {}),
+            });
+            // hit-area-exempt: a band's inline size IS the datum -- the share it stands for -- so a
+            // minimum target size would make the meter lie about its own data. The legend row is
+            // the same action at full row height, which is why `interactive` documents pairing with
+            // `showLegend`.
+            return this.interactive
+              ? html`<button
+                  part=${this.statePart('segment', selected)}
+                  type="button"
+                  data-tone=${segment.tone ?? 'neutral'}
+                  aria-pressed=${selected ? 'true' : 'false'}
+                  aria-label=${title}
+                  title=${title}
+                  style=${style}
+                  @click=${() => this.activateSegment(index)}
+                ></button>`
+              : html`<span
+                  part="segment"
+                  data-tone=${segment.tone ?? 'neutral'}
+                  title=${title}
+                  style=${style}
+                ></span>`;
+          })}
         </div>
       </div>
     `;
@@ -342,14 +547,26 @@ export class LyraContextMeter extends LyraElement {
   private renderRing(): TemplateResult {
     const ratios = this.ratios();
     let cumulative = 0;
-    const arcs: SVGTemplateResult[] = ratios.map(({ segment, value, ratio }) => {
+    const arcs: SVGTemplateResult[] = ratios.map(({ segment, value, ratio }, index) => {
       const segLen = ratio * CIRCUMFERENCE;
       const dashoffset = -cumulative * CIRCUMFERENCE;
       cumulative += ratio;
+      const title = this.segmentTitle(segment, value);
+      const selected = this.isSelected(index);
+      // An SVG shape cannot be a native `<button>`, so an interactive arc carries the role, its own
+      // tab stop and its own Enter/Space handling -- the same shape `<lr-lite-chart>`'s marks use.
       return svg`
         <circle
-          part="segment"
+          part=${this.interactive ? this.statePart('segment', selected) : 'segment'}
           data-tone=${segment.tone ?? 'neutral'}
+          role=${this.interactive ? 'button' : nothing}
+          tabindex=${this.interactive ? '0' : nothing}
+          aria-pressed=${this.interactive ? (selected ? 'true' : 'false') : nothing}
+          aria-label=${this.interactive ? title : nothing}
+          @click=${this.interactive ? () => this.activateSegment(index) : nothing}
+          @keydown=${this.interactive
+            ? (event: KeyboardEvent) => this.onArcKeyDown(event, index)
+            : nothing}
           style=${styleMap(
             this.segmentColor(segment)
               ? { '--lr-context-meter-segment-color': this.segmentColor(segment)! }
@@ -362,11 +579,11 @@ export class LyraContextMeter extends LyraElement {
           stroke-dasharray=${`${segLen} ${CIRCUMFERENCE - segLen}`}
           stroke-dashoffset=${dashoffset}
           transform="rotate(-90 ${CENTER} ${CENTER})"
-        >${nativeSvgTitle(this.segmentTitle(segment, value))}</circle>
+        >${nativeSvgTitle(title)}</circle>
       `;
     });
     return html`
-      <svg part="base" viewBox="0 0 100 100" aria-hidden="true">
+      <svg part="base" viewBox="0 0 100 100" aria-hidden=${this.interactive ? nothing : 'true'}>
         <circle part="track" cx=${CENTER} cy=${CENTER} r=${RADIUS} stroke-width=${STROKE}></circle>
         ${arcs}
         ${this.label ? svg`
@@ -384,18 +601,47 @@ export class LyraContextMeter extends LyraElement {
    *  all. Same stance, and the same `legend`/`legend-item`/`legend-swatch`/`legend-label` part
    *  names, as `<lr-sequence-strip>`'s legend. */
   private renderLegend(): TemplateResult {
+    const display = normalizeContextMeterLegendDisplay(this.legendDisplay);
+    const showsValue = display === 'label-value' || display === 'label-value-percent';
+    const showsPercent = display === 'label-percent' || display === 'label-value-percent';
+    const ratios = this.ratios();
     return html`
-      <div part="legend" aria-hidden="true">
-        ${this.effectiveSegments.map((segment) => {
+      <div part="legend" aria-hidden=${this.interactive ? nothing : 'true'}>
+        ${this.effectiveSegments.map((segment, index) => {
           const color = this.segmentColor(segment);
-          return html`<span part="legend-item">
-            <span
-              part="legend-swatch"
-              data-tone=${segment.tone ?? 'neutral'}
-              style=${styleMap(color ? { '--lr-context-meter-segment-color': color } : {})}
-            ></span>
+          const selected = this.isSelected(index);
+          const swatch = html`<span
+            part="legend-swatch"
+            data-tone=${segment.tone ?? 'neutral'}
+            style=${styleMap(color ? { '--lr-context-meter-segment-color': color } : {})}
+          ></span>`;
+          // The visible text is the row's accessible name in interactive mode, so the count and
+          // share a filter row shows are the ones it announces.
+          const content = html`${swatch}
             <span part="legend-label">${segment.label}</span>
-          </span>`;
+            ${showsValue
+              ? html`<span part="legend-value"
+                  >${formatCount(
+                    this.normalizedSegmentValue(segment),
+                    this.effectiveLocale,
+                  )}</span
+                >`
+              : nothing}
+            ${showsPercent
+              ? html`<span part="legend-percent"
+                  >${this.formatShare(ratios[index]?.ratio ?? 0)}</span
+                >`
+              : nothing}`;
+          return this.interactive
+            ? html`<button
+                part=${this.statePart('legend-item', selected)}
+                type="button"
+                aria-pressed=${selected ? 'true' : 'false'}
+                @click=${() => this.activateSegment(index)}
+              >
+                ${content}
+              </button>`
+            : html`<span part="legend-item">${content}</span>`;
         })}
       </div>
     `;

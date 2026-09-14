@@ -20,14 +20,17 @@ import type {
 } from '../../../internal/positioner.js';
 import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { finiteNumber } from '../../../internal/numbers.js';
+import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import {
   literalSetConverter,
   omittedEmptyStringConverter,
+  optionalLiteralSetConverter,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import {
   activateNonmodalOverlay,
+  composedContains,
   type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -75,7 +78,57 @@ const POPUP_ROLE = literalSetConverter<LyraPopupRole>(
   'dialog',
 );
 
-export type { LyraArrowPlacement, OverlayVirtualRect };
+/**
+ * One keyword of the space-separated `trigger` list -- the same vocabulary, spelled the same way,
+ * that `<lr-tooltip>`'s `trigger` accepts, so `trigger="hover focus"` means one thing everywhere in
+ * this library.
+ *
+ * `'click'` is the shipped behaviour and stays the default. `'hover'` and `'focus'` are the two
+ * transient modes: they open after `showDelay`, close after `hideDelay` once the interaction ends,
+ * never move focus into the surface on their own, and can be *pinned* open by a click on the
+ * trigger (a second click releases the pin and closes). `'manual'` refuses every interaction and
+ * leaves the surface entirely to `show()`/`hide()`/`open`, and wins over any keyword beside it.
+ */
+export type LyraPopoverTrigger = 'click' | 'hover' | 'focus' | 'manual';
+
+const POPOVER_TRIGGER_KEYWORDS: readonly LyraPopoverTrigger[] = [
+  'click',
+  'hover',
+  'focus',
+  'manual',
+];
+
+/**
+ * Canonicalizes an authored `trigger` list: keywords are lowercased, unrecognized tokens are
+ * dropped, duplicates collapse, and author order is preserved.
+ *
+ * A list that keeps no recognized keyword resolves to `'click'` rather than to nothing, which is
+ * where this deliberately parts company with `<lr-tooltip>`'s identical parse. A tooltip that a
+ * typo turned inert loses a hint; a popover is frequently the only way to reach real content, so
+ * a typo must not be able to strand it behind `show()`.
+ */
+function normalizeTriggerList(next: unknown): string {
+  const keywords: LyraPopoverTrigger[] = [];
+  for (const token of String(next ?? '').trim().toLowerCase().split(/\s+/)) {
+    const keyword = POPOVER_TRIGGER_KEYWORDS.find((candidate) => candidate === token);
+    if (keyword && !keywords.includes(keyword)) keywords.push(keyword);
+  }
+  return keywords.length > 0 ? keywords.join(' ') : 'click';
+}
+
+/** Both interaction delays default to zero, so adopting a transient trigger never also changes
+ *  how promptly a click-driven popover has always responded. */
+const DEFAULT_TRIGGER_DELAY = 0;
+
+/** Unsupported values resolve to *absent* rather than to a baked-in member, because each mapped
+ *  overlay keeps a different mirrored default and the fallback therefore has to be read off the
+ *  instance rather than off the converter. */
+const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>([
+  'absolute',
+  'fixed',
+]);
+
+export type { LyraArrowPlacement, OverlayVirtualRect, PlaceStrategy };
 
 /** The `showAt()` rectangle, shared verbatim with `<lr-tooltip>` (see `./overlay-shared.ts`). */
 
@@ -87,7 +140,15 @@ export interface LyraPopoverEventMap {
 }
 
 /**
- * `<lr-popover>` — a click-triggered, light-dismiss floating surface.
+ * `<lr-popover>` — a light-dismiss floating surface, click-triggered by default.
+ *
+ * `trigger` selects which interaction opens it: `click` (the shipped default), `hover`, `focus`,
+ * or `manual`. The two transient modes open after `showDelay`, close after `hideDelay` once the
+ * interaction ends, deliberately never move focus into the surface, and keep it open while focus
+ * rests anywhere inside it. A click on the trigger while a transient surface is open *pins* it --
+ * the pointer may then leave without closing it -- and the next click releases the pin. Set
+ * `hover-bridge` to have the positioner clip an invisible quad across the `distance` gap so a
+ * pointer travelling from the trigger to the popup never leaves both at once.
  *
  * Interaction/ARIA ownership is resolved separately from positioning. A slotted trigger wins and
  * receives the click listener plus `aria-haspopup`, `aria-expanded`, and `aria-controls`; without
@@ -134,6 +195,8 @@ export interface LyraPopoverEventMap {
  *   by default, matching Escape, light dismiss, and `el.open = false`; pass
  *   `focusTrigger: false` to preserve the current focus instead.
  * @csspart trigger - The trigger wrapper.
+ * @csspart hover-bridge - The invisible quad bridging the trigger and the popup, rendered only
+ *   while a `hover` popover with `hover-bridge` set is open.
  * @csspart popup - The positioned popup; also carries `dialog` and `popup__popup` aliases.
  * @csspart dialog - Mapped alias on the positioned popup.
  * @csspart popup__popup - Exported popup alias on the positioned popup.
@@ -202,6 +265,40 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     else void this.hide();
   }
   @property({ reflect: true }) placement: Placement = 'top';
+  private _positioningStrategy?: PlaceStrategy;
+  /**
+   * CSS positioning scheme the popup is laid out with -- the one property `<lr-popover>`,
+   * `<lr-dropdown>` and `<lr-select>` all spell the same way. `fixed` normally positions against
+   * the viewport, so it escapes most clipping ancestors; `absolute` positions against the popup's
+   * containing block and scrolls with it. Each component keeps its own mirrored default, so
+   * setting nothing never changes what it already rendered; an unsupported value resolves to that
+   * same default. Changes apply live while open.
+   * @default 'fixed'
+   */
+  @property({
+    attribute: 'positioning-strategy',
+    reflect: true,
+    converter: POSITIONING_STRATEGY,
+  })
+  get positioningStrategy(): PlaceStrategy {
+    return this._positioningStrategy ?? this.defaultPositioningStrategy;
+  }
+  set positioningStrategy(next: PlaceStrategy) {
+    const normalized =
+      POSITIONING_STRATEGY.normalize(next) ?? this.defaultPositioningStrategy;
+    const old = this.positioningStrategy;
+    if (normalized === old) return;
+    this._positioningStrategy = normalized;
+    this.requestUpdate('positioningStrategy', old);
+    this.onPositioningStrategyChanged(old, normalized);
+  }
+
+  /** Mapped subclasses that also publish the retained `hoist` boolean alias keep the two spellings
+   *  reflecting together from here; the generic popover has no such alias and does nothing. */
+  protected onPositioningStrategyChanged(
+    _previous: PlaceStrategy,
+    _next: PlaceStrategy,
+  ): void {}
   /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware. Can legitimately
    *  be negative (overlaps the popup with the trigger); NaN/non-finite falls back to the default. */
   @property({ type: Number }) distance = 8;
@@ -232,6 +329,56 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */
   @property({ type: Number, attribute: 'arrow-padding' }) arrowPadding = 0;
+  private _trigger = 'click';
+  /**
+   * Space-separated list of the interactions that open the popover -- see
+   * {@link LyraPopoverTrigger} for the keywords, which are exactly `<lr-tooltip>`'s. Unrecognized
+   * tokens are dropped and a list left with none resolves back to `'click'`, so the property always
+   * reads back as a canonical list.
+   * @type {string}
+   * @default 'click'
+   */
+  @property()
+  get trigger(): string {
+    return this._trigger;
+  }
+  set trigger(next: string) {
+    const normalized = normalizeTriggerList(next);
+    if (normalized === this._trigger) return;
+    const old = this._trigger;
+    this._trigger = normalized;
+    this.requestUpdate('trigger', old);
+  }
+  /** The resolved interaction keywords, always at least one. */
+  private get triggerKeywords(): Set<string> {
+    return new Set(this._trigger.split(' '));
+  }
+  /** `manual` beats every other keyword: a surface an author declared programmatic must not still
+   *  be openable by a stray `hover` left beside it. */
+  protected get isManualTrigger(): boolean {
+    return this.triggerKeywords.has('manual');
+  }
+  /** Whether `keyword` is one of the interactions currently allowed to open this popover. */
+  protected opensOn(keyword: LyraPopoverTrigger): boolean {
+    return !this.isManualTrigger && this.triggerKeywords.has(keyword);
+  }
+  /** Delay (ms) between a `hover`/`focus` interaction and the popover opening. NaN, negative and
+   *  oversized values all normalize through `finiteDuration`.
+   *  @default 0 */
+  @property({ type: Number, attribute: 'show-delay' }) showDelay = 0;
+  /** Delay (ms) between the interaction ending and the popover closing again -- the grace period
+   *  that lets a pointer cross the gap to the popup. Normalized like {@link showDelay}.
+   *  @default 0 */
+  @property({ type: Number, attribute: 'hide-delay' }) hideDelay = 0;
+  /**
+   * Renders an invisible `[part='hover-bridge']` quad spanning the `distance` gap between the
+   * trigger and the popup while a `hover` popover is open, so a pointer travelling between them
+   * never leaves both at once and the popover does not close underneath it. Off by default: it is
+   * only meaningful for `trigger="hover"`, and a page that keeps `distance` at `0` does not need
+   * it.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'hover-bridge', reflect: true }) hoverBridge = false;
   /** Accessible name for the semantic popup. An authored host `aria-label` wins by presence,
    *  including an explicitly empty value, before this property or the localized role fallback. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
@@ -274,8 +421,28 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       else this.open = false;
     }
   }
-  private trigger?: HTMLElement;
+  private triggerElement?: HTMLElement;
   private slottedTrigger?: HTMLElement;
+  /**
+   * True while the surface was opened by a transient `hover`/`focus` interaction rather than a
+   * click or a programmatic call. It gates two things: the surface closes again when the
+   * interaction ends, and it never pulls focus (`onPopupPositioned()`), because a popover that
+   * appeared because the pointer drifted over a trigger must not steal the caret from whatever
+   * the user is actually typing into.
+   */
+  protected openedByInteraction = false;
+  /** A click on the trigger pins a `hover`/`focus` popover open: the pointer leaving or focus
+   *  moving away stops closing it, and the next click releases the pin and closes. Transient
+   *  state -- reset on every close and on disconnect. */
+  private pinned = false;
+  /** True for exactly as long as a close is handing focus back to the trigger. Without it a
+   *  `focus`-triggered popover reopens the instant it closes, because the restoration IS a focusin
+   *  on the trigger -- and it reopens from inside `updated()`, which is also what trips Lit's
+   *  change-in-update warning. */
+  private suppressTriggerFocusOpen = false;
+  private delayTimer?: number;
+  private delayTimerView?: Window;
+  private pendingDirection?: 'show' | 'hide';
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
   @state() private anchorPositioned = false;
   private positionedAnchor?: Element | VirtualAnchor;
@@ -318,10 +485,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     return DEFAULT_DISTANCE;
   }
 
-  /** Positioning hooks for mapped overlays that expose Floating UI's strategy/sync surface. */
-  protected get positioningStrategy(): PlaceStrategy {
+  /** The strategy this component resolves to when nothing has been authored. A subclass keeps its
+   *  own mirrored default here rather than changing the shared property's meaning. */
+  protected get defaultPositioningStrategy(): PlaceStrategy {
     return 'fixed';
   }
+
+  /** Positioning hook for mapped overlays that expose Floating UI's sync surface. */
   protected get positioningSync(): PlaceSync | undefined {
     return undefined;
   }
@@ -370,6 +540,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     return this.arrow && !this.withoutArrow;
   }
 
+  /** The bridge only exists while a hover popover is actually open: it is a full-viewport element
+   *  clipped to the trigger/popup quad, and one left behind while closed would be an invisible
+   *  hit-test surface over the page. */
+  protected get rendersHoverBridge(): boolean {
+    return this.hoverBridge && this.opensOn('hover') && this.open;
+  }
+
   /** Subclass opening invariant, checked for initial property/attribute replay and every later
    * imperative `show()`. A disabled popover is never eligible to open. */
   protected get canOpen(): boolean {
@@ -392,13 +569,16 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   /** Lets a mapped subclass include a separate containing element in its dismiss boundary. */
   protected isInsideLightDismissBoundary(path: EventTarget[]): boolean {
-    return path.includes(this) || (this.trigger != null && path.includes(this.trigger));
+    return path.includes(this) || (this.triggerElement != null && path.includes(this.triggerElement));
   }
 
   /** Runs once when a newly opened/re-anchored popup has completed its first placement and is no
    *  longer visibility-hidden. Focus cannot reliably enter a visibility-hidden subtree in Firefox
    *  or WebKit, so autofocus and mapped menu focus wait for this readiness boundary. */
   protected onPopupPositioned(): void {
+    // A hover/focus-opened surface never pulls focus: the user did not ask to go there, and moving
+    // the caret out from under them is the exact defect `trigger="hover"` would otherwise ship.
+    if (this.openedByInteraction) return;
     this.overlayHandle?.focusAutofocus();
   }
 
@@ -431,6 +611,20 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('trigger')) {
+      // A delayed open/close armed under the previous mode is no longer something any interaction
+      // asked for, and a pin only means anything to a transient mode.
+      this.cancelPendingTransition();
+      if (!this.opensOn('hover') && !this.opensOn('focus')) this.pinned = false;
+    }
+    // Re-arm an already-pending transition against the new delay, so shortening it takes effect on
+    // the transition currently waiting rather than only on the next one.
+    if (changed.has('showDelay') && this.pendingDirection === 'show') {
+      this.requestDelayedTransition(true, true);
+    }
+    if (changed.has('hideDelay') && this.pendingDirection === 'hide') {
+      this.requestDelayedTransition(false, true);
+    }
     if (changed.has('for') || changed.has('anchor') || changed.has('open')) {
       this.syncAnchorIdentityObservation();
     }
@@ -439,6 +633,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       this.directionChanged ||
       changed.has('open') ||
       changed.has('placement') ||
+      changed.has('positioningStrategy') ||
+      changed.has('hoverBridge') ||
+      changed.has('trigger') ||
       changed.has('distance') ||
       changed.has('skidding') ||
       changed.has('for') ||
@@ -463,9 +660,17 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
           }
         } else {
           // `anchorPositioned` is cleared in willUpdate(); `positionedAnchor` is not reactive.
+          this.pinned = false;
+          this.openedByInteraction = false;
+          this.cancelPendingTransition();
           this.positionedAnchor = undefined;
           this.stopLightDismiss();
-          this.overlayHandle?.deactivate();
+          this.suppressTriggerFocusOpen = true;
+          try {
+            this.overlayHandle?.deactivate();
+          } finally {
+            this.suppressTriggerFocusOpen = false;
+          }
           this.overlayHandle = undefined;
           this.virtualAnchor = undefined;
           this.returnFocusTo = undefined;
@@ -478,6 +683,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   override connectedCallback(): void {
     super.connectedCallback();
     this.connectionSequence = ++popoverConnectionSequence;
+    // On the host, not the trigger: focus moving OUT of slotted popup content fires `focusout` on
+    // that content, which never reaches a listener bound to the trigger element.
+    this.addEventListener('focusin', this.onSurfaceFocusIn);
+    this.addEventListener('focusout', this.onSurfaceFocusOut);
     // Initial `open` markup is state, not a lifecycle transition, so reconcile it without events.
     // A server-rendered shadow root defers this browser-only ownership decision until after its
     // first hydration render, preserving the server's initial open-state identity.
@@ -508,10 +717,18 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.stopLightDismiss();
     this.resetHostIdObserver();
     this.overlayHandle?.suspend();
-    this.trigger?.removeEventListener('click', this.onTriggerClick);
-    this.trigger?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
+    this.triggerElement?.removeEventListener('click', this.onTriggerClick);
+    this.triggerElement?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
+    if (this.triggerElement) this.unbindTriggerInteractions(this.triggerElement);
     this.releaseTriggerA11y();
-    this.trigger = undefined;
+    this.triggerElement = undefined;
+    this.removeEventListener('focusin', this.onSurfaceFocusIn);
+    this.removeEventListener('focusout', this.onSurfaceFocusOut);
+    // Transient interaction state, per the library's reset-on-disconnect rule: a pin taken before
+    // a drag-and-drop reparent must not outlive the move and strand the surface open.
+    this.cancelPendingTransition();
+    this.pinned = false;
+    this.openedByInteraction = false;
     // A pending after-event must not announce a transition the detached element left behind.
     this.transitionToken++;
     this.cancelTransitionAnimation();
@@ -573,19 +790,26 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   private syncInteractionTrigger(): void {
     const next = this.virtualAnchor ? undefined : (this.slottedTrigger ?? this.resolveForTrigger());
-    if (next === this.trigger) {
+    if (next === this.triggerElement) {
       // Re-resolve a custom trigger's real focus target after late upgrade without interpreting an
       // unrelated root mutation as the loss of an initially undistributed declarative trigger.
       this.syncTriggerA11y();
       return;
     }
-    this.trigger?.removeEventListener('click', this.onTriggerClick);
-    this.trigger?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
-    this.trigger = next;
-    if (this.trigger && this.trigger !== this.slottedTrigger) {
-      this.trigger.addEventListener('click', this.onTriggerClick);
-      this.trigger.addEventListener('keydown', this.onExternalTriggerKeyDown);
+    this.triggerElement?.removeEventListener('click', this.onTriggerClick);
+    this.triggerElement?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
+    if (this.triggerElement) this.unbindTriggerInteractions(this.triggerElement);
+    this.triggerElement = next;
+    if (this.triggerElement && this.triggerElement !== this.slottedTrigger) {
+      this.triggerElement.addEventListener('click', this.onTriggerClick);
+      this.triggerElement.addEventListener('keydown', this.onExternalTriggerKeyDown);
     }
+    // `mouseenter`/`mouseleave` do not bubble, so they bind to the interaction owner itself for
+    // BOTH shapes -- a slotted trigger's own node and a `for` target alike. The shadow
+    // `[part="trigger"]` wrapper cannot stand in for it: a `for` trigger is not inside it at all.
+    // `focusin`/`focusout` DO bubble, but only within the tree they happen in, so the same call
+    // adds them for an out-of-host `for` target (see triggerNeedsOwnFocusListeners()).
+    if (this.triggerElement) this.bindTriggerInteractions(this.triggerElement);
     this.syncTriggerA11y();
     if (this.open) {
       if (!this.resolveAnchor()) {
@@ -680,13 +904,14 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       virtualAnchor: this.virtualAnchor,
       anchor: this.anchor,
       for: this.for,
-      trigger: this.trigger,
+      trigger: this.triggerElement,
     });
   }
   protected positionPopup(): void {
     this.invalidatePositioning();
     const popup = this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null;
     const arrowElement = this.renderRoot.querySelector('[part~="arrow"]') as HTMLElement | null;
+    const bridgeElement = this.renderRoot.querySelector('[part~="hover-bridge"]') as HTMLElement | null;
     const anchor = this.resolveAnchor();
     if (!this.open || !anchor || !popup) {
       this.positionedAnchor = undefined;
@@ -700,7 +925,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.positioningReady = new Promise<boolean>((resolve) => {
       this.resolvePositioningReady = resolve;
     });
-    void this.startPositioning(generation, anchor, popup, arrowElement);
+    void this.startPositioning(generation, anchor, popup, arrowElement, bridgeElement);
   }
 
   private invalidatePositioning(): void {
@@ -722,6 +947,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     anchor: Element | VirtualAnchor,
     popup: HTMLElement,
     arrowElement: HTMLElement | null,
+    bridgeElement: HTMLElement | null,
   ): Promise<void> {
     try {
       const { place } = await loadAnchoredOverlayRuntime();
@@ -742,6 +968,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
         sync: this.positioningSync,
         arrow: this.rendersArrow && arrowElement ? arrowElement : undefined,
         arrowPadding: Math.max(0, finiteNumber(this.arrowPadding, 0)),
+        hoverBridge: this.rendersHoverBridge && bridgeElement ? bridgeElement : undefined,
         onPlaced: ({ placement, arrow }) => {
           if (generation !== this.positioningGeneration) return;
           const becamePositioned = !this.anchorPositioned || this.positionedAnchor !== anchor;
@@ -784,7 +1011,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     }
   }
   private syncTriggerA11y(): void {
-    const trigger = this.trigger ?? null;
+    const trigger = this.triggerElement ?? null;
     // SSR/hydration shims can connect the host before Lit establishes a render root. The trigger
     // still receives its state immediately; the first completed render resynchronizes `controls`
     // to the real popup without reading through an unavailable root during upgrade.
@@ -815,7 +1042,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   private get accessibleTrigger(): HTMLElement | null {
-    return this.trigger ? resolveAccessibleTrigger(this.trigger) : null;
+    return this.triggerElement ? resolveAccessibleTrigger(this.triggerElement) : null;
   }
 
   private releaseTriggerA11y(): void {
@@ -833,9 +1060,163 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private onTriggerClick = (): void => {
     if (this.virtualAnchor) return;
     this.syncTriggerA11y();
-    if (this.open) void this.hide();
-    else void this.show();
+    if (this.isManualTrigger) return;
+    this.cancelPendingTransition();
+    if (this.opensOn('click')) {
+      if (this.open) void this.hide();
+      else void this.show();
+      return;
+    }
+    // Transient modes: a click PINS the surface rather than toggling it, so a user who has found
+    // the content they wanted can stop holding the pointer still. The next click releases it.
+    if (this.open && this.pinned) {
+      void this.hide();
+      return;
+    }
+    this.pinned = true;
+    this.openedByInteraction = false;
+    if (!this.open) void this.show();
   };
+
+  private onTriggerPointerEnter = (): void => {
+    if (!this.opensOn('hover')) return;
+    this.requestDelayedTransition(true);
+  };
+
+  private onTriggerPointerLeave = (event: MouseEvent): void => {
+    if (!this.opensOn('hover')) return;
+    this.requestInteractionClose(event.relatedTarget);
+  };
+
+  private onPopupPointerEnter = (): void => {
+    if (!this.opensOn('hover') || !this.open) return;
+    this.cancelPendingTransition();
+  };
+
+  private onPopupPointerLeave = (event: MouseEvent): void => {
+    if (!this.opensOn('hover')) return;
+    this.requestInteractionClose(event.relatedTarget);
+  };
+
+  private onSurfaceFocusIn = (): void => {
+    if (!this.opensOn('focus') || this.suppressTriggerFocusOpen) return;
+    this.requestDelayedTransition(true);
+  };
+
+  private onSurfaceFocusOut = (event: FocusEvent): void => {
+    if (!this.opensOn('focus')) return;
+    this.requestInteractionClose(event.relatedTarget);
+  };
+
+  /** The shared "the interaction that was holding this open has ended" path. Retention beats
+   *  closing: a pinned surface, a pointer/focus target still inside the trigger or the popup, and
+   *  focus resting anywhere within the surface each keep it open. */
+  private requestInteractionClose(next: EventTarget | null): void {
+    if (this.pinned) return;
+    if (this.isWithinPopoverSurface(next)) return;
+    if (this.hasFocusWithinSurface()) return;
+    this.requestDelayedTransition(false);
+  }
+
+  /** Whether `target` is the trigger, the popup, or anything inside either -- across slots and the
+   *  shadow boundary, which a plain `contains()` cannot see. */
+  private isWithinPopoverSurface(target: EventTarget | null): boolean {
+    if (target === null || (target as Node).nodeType !== 1) return false;
+    const element = target as Element;
+    if (composedContains(this, element)) return true;
+    const popup = this.renderRoot?.querySelector<HTMLElement>('[part~="popup"]') ?? null;
+    if (popup && composedContains(popup, element)) return true;
+    return this.triggerElement != null && composedContains(this.triggerElement, element);
+  }
+
+  /**
+   * Whether focus is resting somewhere that should keep a transient surface open.
+   *
+   * The TRIGGER is deliberately excluded. Focus lands there routinely without the user asking --
+   * a click that pinned the surface, and every close path that restores focus to it -- so counting
+   * it as retention would leave a `hover` popover that can never close once it has been clicked.
+   * Only focus inside the popup (or the host's own slotted content) is a reason to stay.
+   */
+  private hasFocusWithinSurface(): boolean {
+    const active = activeElementIn(this.ownerDocument);
+    if (active === null) return false;
+    if (this.triggerElement && composedContains(this.triggerElement, active)) return false;
+    return this.isWithinPopoverSurface(active);
+  }
+
+  /**
+   * Runs `show()`/`hide()` after the matching delay, replacing whatever was already pending.
+   *
+   * `deferImmediate` keeps a zero (or negative) delay off the *current* task instead of committing
+   * inline. Every interaction path wants the inline commit -- a zero-delay hover must open in the
+   * same turn the pointer arrived. The one caller that must not is `updated()`'s delay re-arm:
+   * committing there writes `open` from inside an update, which is the Lit change-in-update the
+   * combobox's own `refreshQueued` branch exists to avoid.
+   */
+  private requestDelayedTransition(next: boolean, deferImmediate = false): void {
+    this.cancelPendingTransition();
+    if (next && !this.canOpen) return;
+    const commit = (): void => {
+      if (next) {
+        this.openedByInteraction = true;
+        void this.show();
+      } else {
+        void this.hide();
+      }
+    };
+    const delay = Math.max(
+      0,
+      finiteDuration(next ? this.showDelay : this.hideDelay, DEFAULT_TRIGGER_DELAY),
+    );
+    const view = this.ownerDocument.defaultView;
+    if (!view || (delay <= 0 && !deferImmediate)) {
+      commit();
+      return;
+    }
+    this.pendingDirection = next ? 'show' : 'hide';
+    this.delayTimerView = view;
+    const timer = view.setTimeout(() => {
+      if (this.delayTimerView !== view || this.delayTimer !== timer) return;
+      this.delayTimer = undefined;
+      this.delayTimerView = undefined;
+      this.pendingDirection = undefined;
+      commit();
+    }, delay);
+    this.delayTimer = timer;
+  }
+
+  private cancelPendingTransition(): void {
+    if (this.delayTimer !== undefined) this.delayTimerView?.clearTimeout(this.delayTimer);
+    this.delayTimer = undefined;
+    this.delayTimerView = undefined;
+    this.pendingDirection = undefined;
+  }
+
+  /** Whether `trigger` needs its OWN focus listeners. `focusin`/`focusout` bubble, so a trigger
+   *  that sits inside this host (the slotted shape) already reaches the host-level pair bound in
+   *  `connectedCallback()`; a `for` target lives outside the host entirely and would otherwise
+   *  never deliver a focus event to this popover at all. Binding both would double-fire the
+   *  handler, so the containment test -- not just `!== slottedTrigger` -- decides. */
+  private triggerNeedsOwnFocusListeners(trigger: HTMLElement): boolean {
+    return !composedContains(this, trigger);
+  }
+
+  private bindTriggerInteractions(trigger: HTMLElement): void {
+    trigger.addEventListener('mouseenter', this.onTriggerPointerEnter);
+    trigger.addEventListener('mouseleave', this.onTriggerPointerLeave);
+    if (!this.triggerNeedsOwnFocusListeners(trigger)) return;
+    trigger.addEventListener('focusin', this.onSurfaceFocusIn);
+    trigger.addEventListener('focusout', this.onSurfaceFocusOut);
+  }
+
+  private unbindTriggerInteractions(trigger: HTMLElement): void {
+    trigger.removeEventListener('mouseenter', this.onTriggerPointerEnter);
+    trigger.removeEventListener('mouseleave', this.onTriggerPointerLeave);
+    // Unconditionally removed: the trigger may have been reparented into or out of this host since
+    // it was bound, and removing a listener that was never added is a no-op.
+    trigger.removeEventListener('focusin', this.onSurfaceFocusIn);
+    trigger.removeEventListener('focusout', this.onSurfaceFocusOut);
+  }
   private onPopupClick = (event: MouseEvent): void => {
     if (event.defaultPrevented) return;
     const path = event.composedPath();
@@ -1113,9 +1494,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       <span part="trigger" @click=${this.onTriggerClick} @keydown=${this.onTriggerKeyDown}>
         <slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot>
       </span>
+      ${this.rendersHoverBridge
+        ? html`<span part="hover-bridge" aria-hidden="true"></span>`
+        : nothing}
       <div id=${this.popupId} part=${this.popupPartNames} role=${popupRole ?? nothing}
         aria-label=${popupRole ? this.effectivePopupLabel : nothing}
         ?data-hidden=${!this.open || !this.anchorPositioned} ?data-has-arrow=${this.rendersArrow}
+        @mouseenter=${this.onPopupPointerEnter} @mouseleave=${this.onPopupPointerLeave}
         @click=${this.onPopupClick}>
         <div part=${this.contentPartNames}>${this.renderPopupContent()}</div>
         ${this.rendersArrow

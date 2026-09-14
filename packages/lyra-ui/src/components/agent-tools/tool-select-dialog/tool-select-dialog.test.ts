@@ -616,7 +616,7 @@ describe('selection', () => {
     expect(el.selectedToolIds).to.deep.equal(['run_python']);
   });
 
-  it('proposes a checkbox change before committing and restores its checkbox when lr-change is canceled', async () => {
+  it('proposes a checkbox change before committing and never flips its checkbox when lr-change is canceled', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
@@ -728,7 +728,7 @@ describe('useDefaults', () => {
     expect(checkboxFor(el, 'web_search').disabled).to.be.false;
   });
 
-  it('proposes a defaults change before committing and restores its switch when lr-change is canceled', async () => {
+  it('proposes a defaults change before committing and never flips its switch when lr-change is canceled', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
@@ -1148,9 +1148,14 @@ it('ignores programmatic child toggles while a tool is logically disabled', asyn
   const el = (await fixture(
     html`<lr-tool-select-dialog open .tools=${[tool]}></lr-tool-select-dialog>`,
   )) as LyraToolSelectDialog;
-  el.shadowRoot!.querySelector('lr-checkbox')!.dispatchEvent(
-    new CustomEvent('lr-change', { detail: { checked: true }, bubbles: true, composed: true }),
-  );
+  const request = new CustomEvent('lr-checkbox-toggle-request', {
+    detail: { checked: true },
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  el.shadowRoot!.querySelector('lr-checkbox')!.dispatchEvent(request);
+  expect(request.defaultPrevented, 'a logically disabled row refuses the toggle').to.be.true;
   expect(el.selectedToolIds).to.deep.equal([]);
 });
 
@@ -1187,10 +1192,11 @@ it('uses the first tool for a duplicate id across grouping, rendering, counting,
 
   const pending = oneEvent(el, 'lr-change');
   const defaults = el.shadowRoot!.querySelector('lr-switch')!;
-  defaults.dispatchEvent(new CustomEvent('lr-change', {
+  defaults.dispatchEvent(new CustomEvent('lr-switch-toggle-request', {
     detail: { checked: true },
     bubbles: true,
     composed: true,
+    cancelable: true,
   }));
   expect((await pending).detail.selectedToolIds).to.deep.equal(['same']);
 });
@@ -1213,10 +1219,11 @@ it('omits blank tool and selected identities before grouping, counting, and even
   expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent!.trim()).to.equal('1 of 1 tools enabled');
 
   const pending = oneEvent(el, 'lr-change');
-  el.shadowRoot!.querySelector('lr-switch')!.dispatchEvent(new CustomEvent('lr-change', {
+  el.shadowRoot!.querySelector('lr-switch')!.dispatchEvent(new CustomEvent('lr-switch-toggle-request', {
     detail: { checked: true },
     bubbles: true,
     composed: true,
+    cancelable: true,
   }));
   expect((await pending).detail.selectedToolIds).to.deep.equal(['kept']);
 });
@@ -1400,10 +1407,11 @@ it('requires runtime arrays and retains independently valid selected identities 
   expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent!.trim()).to.equal('1 of 1 tools enabled');
 
   const proposed = oneEvent(el, 'lr-change');
-  el.shadowRoot!.querySelector('lr-switch')!.dispatchEvent(new CustomEvent('lr-change', {
+  el.shadowRoot!.querySelector('lr-switch')!.dispatchEvent(new CustomEvent('lr-switch-toggle-request', {
     detail: { checked: true },
     bubbles: true,
     composed: true,
+    cancelable: true,
   }));
   expect((await proposed).detail.selectedToolIds).to.deep.equal(['outside', 'known']);
 });
@@ -1425,10 +1433,11 @@ it('bounds a newly checked tool selection before its immutable change detail is 
   `);
 
   const proposed = oneEvent(el, 'lr-change');
-  checkboxFor(el, 'new-known').dispatchEvent(new CustomEvent('lr-change', {
+  checkboxFor(el, 'new-known').dispatchEvent(new CustomEvent('lr-checkbox-toggle-request', {
     detail: { checked: true },
     bubbles: true,
     composed: true,
+    cancelable: true,
   }));
   const event = await proposed;
 
@@ -1454,10 +1463,11 @@ it('preserves sequential accepted tool toggles in the same update turn', async (
   `);
 
   for (const id of ['first', 'second']) {
-    checkboxFor(el, id).dispatchEvent(new CustomEvent('lr-change', {
+    checkboxFor(el, id).dispatchEvent(new CustomEvent('lr-checkbox-toggle-request', {
       detail: { checked: true },
       bubbles: true,
       composed: true,
+      cancelable: true,
     }));
   }
 
@@ -1480,10 +1490,11 @@ it('merges an external selection write with a synchronous later tool toggle', as
   // queue flushes, so it must derive from the newly written selection rather than the prior
   // render's cache.
   el.selectedToolIds = ['first'];
-  checkboxFor(el, 'second').dispatchEvent(new CustomEvent('lr-change', {
+  checkboxFor(el, 'second').dispatchEvent(new CustomEvent('lr-checkbox-toggle-request', {
     detail: { checked: true },
     bubbles: true,
     composed: true,
+    cancelable: true,
   }));
 
   await el.updateComplete;
@@ -1576,4 +1587,104 @@ it('lets search reach a matching tool beyond the initial projection without moun
   expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(1);
   expect(checkboxFor(el, 'tool-999').value).to.equal('tool-999');
   expect(el.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(0);
+});
+
+/** Records every write that reaches `checked`'s own setter on one composed control, then restores
+ *  the prototype accessor. A dialog that lets its child flip and writes it back does so inside the
+ *  same task, so Lit coalesces both writes into one render and reading `checked` afterwards cannot
+ *  tell "never flipped" from "flipped and snapped back". The write log can. */
+function recordCheckedWrites(control: LyraCheckbox | LyraSwitch): {
+  writes: boolean[];
+  release: () => void;
+} {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    Object.getPrototypeOf(control) as object,
+    'checked',
+  )!;
+  const writes: boolean[] = [];
+  Object.defineProperty(control, 'checked', {
+    configurable: true,
+    get: () => descriptor.get!.call(control) as boolean,
+    set: (next: boolean) => {
+      writes.push(Boolean(next));
+      descriptor.set!.call(control, next);
+    },
+  });
+  return {
+    writes,
+    release: () => {
+      delete (control as unknown as Record<string, unknown>)['checked'];
+    },
+  };
+}
+
+describe('vetoed toggles never flip the composed control', () => {
+  it('leaves a tool checkbox untouched when the host cancels the proposed lr-change', async () => {
+    const el = (await fixture(
+      html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    const checkbox = checkboxFor(el, 'web_search');
+    const spy = recordCheckedWrites(checkbox);
+    el.addEventListener('lr-change', (event) => event.preventDefault());
+
+    try {
+      clickCheckbox(checkbox);
+      await checkbox.updateComplete;
+      await el.updateComplete;
+
+      expect(
+        spy.writes,
+        'the vetoed checkbox is never written at all, not written and written back',
+      ).to.deep.equal([]);
+      expect(checkbox.checked).to.be.true;
+      expect(el.selectedToolIds).to.deep.equal(['web_search']);
+    } finally {
+      spy.release();
+    }
+  });
+
+  it('leaves the defaults switch untouched when the host cancels the proposed lr-change', async () => {
+    const el = (await fixture(
+      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as LyraSwitch;
+    const spy = recordCheckedWrites(toggle);
+    el.addEventListener('lr-change', (event) => event.preventDefault());
+
+    try {
+      (toggle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+      await toggle.updateComplete;
+      await el.updateComplete;
+
+      expect(
+        spy.writes,
+        'the vetoed switch is never written at all, not written and written back',
+      ).to.deep.equal([]);
+      expect(toggle.checked).to.be.true;
+      expect(el.useDefaults).to.be.true;
+    } finally {
+      spy.release();
+    }
+  });
+
+  it('contains the composed controls own toggle-request events at the dialog boundary', async () => {
+    const el = (await fixture(
+      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS}></lr-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as LyraSwitch;
+    const leaked: string[] = [];
+    for (const name of [
+      'lr-checkbox-toggle-request',
+      'lr-switch-toggle-request',
+    ] as const) {
+      el.addEventListener(name, (event) => leaked.push(event.type));
+    }
+
+    (toggle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+    await el.updateComplete;
+    clickCheckbox(checkboxFor(el, 'web_search'));
+    await el.updateComplete;
+
+    expect(leaked).to.deep.equal([]);
+  });
 });

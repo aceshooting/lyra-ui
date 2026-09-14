@@ -63,10 +63,26 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
   a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded from
   `d3-force`'s own simulation input and from click/keyboard interaction.
-- `width: number = 800`
+- `fitTo: 'none' | 'container' = 'none'` (attribute `fit-to`) — where the drawing space comes from.
+  `'none'` uses the numeric `width`/`height` below, unchanged. `'container'` measures the host's own
+  content box and feeds that to the SVG `viewBox`, the layout's centring force,
+  `focusNode()`/`fit()`'s camera math and the loading skeleton, so the drawing always matches the box
+  it is rendered into and no host-side `ResizeObserver` is needed. The first measurement is taken
+  synchronously before the first paint, with the host's own height already applied, so the first
+  painted frame is already the right size; every later one arrives on the component's own
+  host-resize watcher and is rounded to whole CSS pixels, so sub-pixel jitter changes nothing. A resize re-centres the running layout in place (`forceCenter`
+  plus a low-alpha restart) and never rebuilds the simulation, so settled node positions, pins and an
+  in-flight drag all survive it. Works in both renderers and across a renderer switch. While
+  `'container'` is in effect the measured box wins over `width`/`height`; it falls back to them when
+  the box is unmeasurable (detached, `display: none`, or a realm with no `ResizeObserver`). It does
+  **not** change how the host itself is sized — an outer `block-size`,
+  `--lr-canvas-reserved-height` and `height` still do that, and `'container'` simply follows
+  whichever of them won
+- `width: number = 800` — ignored while `fitTo` is `'container'`
 - `height: number = 600` — also sizes the rendered host itself (see
   `--lr-canvas-reserved-height`'s entry below) whenever neither that nor an explicit outer
-  `block-size` overrides it
+  `block-size` overrides it. Only the drawing space is ignored while `fitTo` is `'container'`; the
+  host sizing above still applies
 - `chargeStrength: number = -300` (attribute `charge-strength` — live-reactive, see gotchas)
 - `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
 - `minZoom: number = 0.1` (attribute `min-zoom`)

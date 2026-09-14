@@ -56,7 +56,9 @@ apply when the component reconnects.
   family-wide `spoken` surface for the generated summary and `export` for CSV cells; the legacy
   positional formatter receives `table` for the spoken/export compatibility paths, its normal
   surface name for axis, tooltip, and table work, and no fallback for a `visual` context. The
-  context-object formatter takes precedence.
+  context-object formatter takes precedence. Tick calls name `axis: 'y'`, and a tooltip value now
+  carries the hovered datum's `datasetIndex`, `index`, `label`, `seriesLabel` and
+  `statistic: 'median'` instead of discarding what the callback was handed.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*

@@ -53,6 +53,7 @@
   },
   "assignments": {
     "new-component-experimental": [
+      "lr-app-rail-group",
       "lr-funnel"
     ],
     "published-stable": [
@@ -16990,7 +16991,7 @@
     "current": {
       "version": "15.0.1",
       "sourceCommit": null,
-      "manifestSha256": "736184ff657382e99554dcf6f83faa21a4fe1f1873bfeb4e27ff569574c23aeb",
+      "manifestSha256": "1165b3c2da43f34eec4a5320c4155ec56e35d1a5ee88829a9a4f211682b2333b",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -17003,6 +17004,7 @@
         "lr-animated-image",
         "lr-animation",
         "lr-app-rail",
+        "lr-app-rail-group",
         "lr-app-rail-item",
         "lr-approval-queue",
         "lr-archive-viewer",

@@ -224,6 +224,77 @@ export const styles = css`
   [part="header"][hidden] {
     display: none;
   }
+  /* Row layout only while the opt-in collapse control is actually rendered, so a rail without it
+     keeps [part="header"]'s original block formatting byte-for-byte. */
+  :host([collapsible]:not([mode="mobile"])) [part="header"] {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-s);
+  }
+  :host([collapsible][mode="icon-only"]) [part="header"] {
+    justify-content: center;
+  }
+  [part="collapse-toggle"] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    /* Pushed to the trailing edge with an auto margin rather than justify-content, so slotted
+       header content keeps whatever alignment it had. Logical, so RTL flips it. */
+    margin-inline-start: auto;
+    align-items: center;
+    justify-content: center;
+    font: inherit;
+    /* Same shared WCAG 2.5.8 floor [part="toggle"] takes. */
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: 0;
+    border: 0;
+    border-radius: var(--lr-radius);
+    background: transparent;
+    color: var(--lr-color-text);
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+  :host([collapsible][mode="icon-only"]) [part="collapse-toggle"] {
+    margin-inline-start: 0;
+  }
+  [part="collapse-toggle"]:hover {
+    background: var(--lr-app-rail-collapse-toggle-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-app-rail-collapse-toggle-hover-color, var(--lr-color-brand));
+  }
+  [part="collapse-toggle"]:active {
+    background: var(
+      --lr-app-rail-collapse-toggle-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    color: var(--lr-app-rail-collapse-toggle-active-color, var(--lr-color-brand));
+  }
+  [part="collapse-toggle"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* icons.ts ships one right-pointing chevron and asks callers to rotate the WRAPPING element --
+     never a second mirrored glyph. Expanded, the control points at the edge the rail collapses
+     toward; collapsed, at the edge it expands toward; both flip under RTL. */
+  [part="collapse-icon"] {
+    display: inline-flex;
+    transform: rotate(180deg);
+  }
+  /* The collapsed state is read off the control's own rendered aria-expanded rather than a second
+     :host() qualifier, so the four orientations stay one readable pair of rules; :where() keeps
+     the state qualifier at zero specificity, as the rest of this package's state rules do. */
+  [part="collapse-toggle"]:where([aria-expanded="false"]) [part="collapse-icon"] {
+    transform: none;
+  }
+  :host(:dir(rtl)) [part="collapse-icon"] {
+    transform: none;
+  }
+  :host(:dir(rtl)) [part="collapse-toggle"]:where([aria-expanded="false"]) [part="collapse-icon"] {
+    transform: rotate(180deg);
+  }
   [part="footer"] {
     padding: var(--lr-app-rail-footer-padding, var(--lr-space-m));
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -254,6 +325,7 @@ export const styles = css`
   @media (prefers-reduced-motion: reduce) {
     [part="base"],
     [part="panel"],
+    [part="collapse-toggle"],
     [part="resizer-track"] {
       transition: none !important;
     }

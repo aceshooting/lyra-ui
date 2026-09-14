@@ -3092,9 +3092,12 @@ it("renders a localized, non-live error row and announces each async source fail
     await aTimeout(20);
     await el.updateComplete;
     const error = el.shadowRoot!.querySelector(".source-error") as HTMLElement;
-    expect(error.textContent?.trim()).to.equal("Options unavailable");
+    // The copy now lives on the shared state renderer's composed <lr-empty>, whose heading is in
+    // its own shadow root; the row itself is the presentational wrapper holding it and the retry.
+    const state = error.querySelector('[part~="source-error"]') as HTMLElement;
+    expect(state.getAttribute("heading")).to.equal("Options unavailable");
     expect(error.textContent).to.not.contain("private server detail");
-    expect(error.getAttribute("role")).to.equal("option");
+    expect(error.getAttribute("role")).to.equal("presentation");
     expect(
       el.shadowRoot!.querySelectorAll(
         '[role="alert"], [role="status"], [aria-live]'

@@ -188,6 +188,7 @@
     "word-cloud": "data",
     "chart": "charts",
     "app-rail": "layout",
+    "app-rail-group": "layout",
     "breadcrumb": "layout",
     "button-group": "layout",
     "card": "layout",

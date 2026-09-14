@@ -46,6 +46,17 @@ group boundary, so an ancestor does not receive a second, differently shaped seq
 Programmatic child `checked`/`value` synchronization is silent and completes synchronously, so a
 same-task `new FormData(form)` or validity query observes the same state as the child.
 `lr-invalid` (no detail) is the group's one bubbling/composed native-validity alias.
+**Refusing a toggle.** `lr-checkbox-group-toggle-request` is cancelable and fires *before* the owned
+option flips. `detail: { value: string[], previousValue: string[], option: LyraCheckbox }` carries
+the group value that **would** result, the value as it stands, and the checkbox the user acted on.
+`preventDefault()` keeps the current state, so the option never flips at all rather than flipping
+and snapping back — which is what lets a host refuse "uncheck the last remaining option"
+(`detail.value.length === 0`) with no flicker — and no `input`/`change`/`lr-change` follows.
+Assigning the group's `value` from a listener resolves the request the same way. The owned
+checkbox's own `lr-checkbox-toggle-request` is consumed at the group boundary and republished under
+this name, so an ancestor never receives two veto points for one interaction. The detail is a
+detached, frozen snapshot; `option` is kept by identity. `LyraCheckboxGroupToggleRequestDetail` is
+its exported interface — see **Exported TypeScript contracts** below for the full signature.
 **Methods:** `getForm()` returns the group's owning form, including an external owner selected by
 `form`. `setCustomValidity(message)` sets or clears a consumer-supplied error ("that
 combination of topics is not available"): a non-empty message raises `customError` and blocks

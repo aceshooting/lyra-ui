@@ -11,6 +11,8 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
+import { optionalLiteralSetConverter } from '../../../internal/converters.js';
+import type { PlaceStrategy } from '../../../internal/positioner.js';
 import {
   activateNonmodalOverlay,
   composedContains,
@@ -54,6 +56,14 @@ export type {
   LyraColorPickerFormat,
   LyraColorPickerOutputFormat,
 } from './color-core.js';
+export type { PlaceStrategy };
+
+/** Unsupported values resolve to *absent* so this control's own mirrored default stays the
+ *  fallback, rather than a member baked into the converter. */
+const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>([
+  'absolute',
+  'fixed',
+]);
 
 /** A predefined palette entry. `label` becomes the swatch's accessible name; without one the
  *  raw colour string is announced instead. */
@@ -390,9 +400,50 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   @property({ type: Boolean, attribute: 'no-format-toggle', reflect: true }) noFormatToggle = false;
   /** Renders the full picker panel in normal flow instead of behind a popup trigger. */
   @property({ type: Boolean, reflect: true }) inline = false;
-  /** Uses fixed popup positioning to escape clipping ancestors. The default absolute strategy
-   *  keeps the popup in the component's local scrolling context. */
-  @property({ type: Boolean, reflect: true }) hoist = false;
+  private _positioningStrategy?: PlaceStrategy;
+  /**
+   * CSS positioning scheme the popup panel is laid out with -- the same property, spelled the same
+   * way, as on `<lr-popover>`, `<lr-dropdown>` and `<lr-select>`. `absolute` (this control's
+   * mirrored default) keeps the panel in the component's local scrolling context; `fixed` escapes
+   * most clipping ancestors. An unsupported value resolves back to the default. Changes apply live
+   * while open.
+   * @default 'absolute'
+   */
+  @property({
+    attribute: 'positioning-strategy',
+    reflect: true,
+    converter: POSITIONING_STRATEGY,
+  })
+  get positioningStrategy(): PlaceStrategy {
+    return this._positioningStrategy ?? 'absolute';
+  }
+  set positioningStrategy(next: PlaceStrategy) {
+    const normalized = POSITIONING_STRATEGY.normalize(next) ?? 'absolute';
+    const old = this.positioningStrategy;
+    if (normalized === old) return;
+    this._positioningStrategy = normalized;
+    this.requestUpdate('positioningStrategy', old);
+    // Lit only writes an attribute for a property it saw change, and this write changed `hoist`'s
+    // value without going through its own setter.
+    if ((old === 'fixed') !== (normalized === 'fixed')) {
+      this.requestUpdate('hoist', old === 'fixed');
+    }
+  }
+  /**
+   * Retained boolean alias of {@link positioningStrategy}: `hoist` is exactly
+   * `positioningStrategy === 'fixed'`, and writing either spelling updates the other so the two
+   * attributes can never disagree in the DOM. It is this control's established name (and
+   * Shoelace's own spelling on `sl-color-picker`), so it keeps working indefinitely; prefer
+   * `positioning-strategy` in new code, which reads the same on every anchored surface.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true })
+  get hoist(): boolean {
+    return this.positioningStrategy === 'fixed';
+  }
+  set hoist(next: boolean) {
+    this.positioningStrategy = next ? 'fixed' : 'absolute';
+  }
 
   /** Preferred panel placement; the resolved side still flips to stay in the viewport. */
   @property({ reflect: true }) placement: Placement = 'bottom-start';
@@ -623,7 +674,9 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     } else if (
       this.open &&
       !this.inline &&
-      (changed.has('placement') || changed.has('size') || changed.has('hoist'))
+      (changed.has('placement') ||
+        changed.has('size') ||
+        changed.has('positioningStrategy'))
     ) {
       this.positionPanel();
     }
@@ -788,7 +841,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     if (!anchor || !panel) return;
     const handle = place(anchor, panel, {
       placement: rtlAwarePlacement(this.placement, this),
-      strategy: this.hoist ? 'fixed' : 'absolute',
+      strategy: this.positioningStrategy,
     });
     this.cleanupPositioner = handle;
     void handle.ready.then((positioned) => {

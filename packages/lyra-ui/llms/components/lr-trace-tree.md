@@ -26,7 +26,9 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — the same `LyraSpan` shape documented
 under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy comes from
 `parentId`, and a span whose `parentId` is missing or doesn't resolve within the same array renders
-as a root rather than being dropped. `activeSpanId: string | null = null`
+as a root rather than being dropped. Duration bars scale to the whole trace, measured before the
+shared 500-span cap is applied, so a truncated tail never stretches the surviving bars across their
+tracks. `activeSpanId: string | null = null`
 (attribute `active-span-id`), `label?: string`, `showTokens: boolean = false` (attribute
 `show-tokens`) — surfaces `tokensIn`/`tokensOut`, `showCost: boolean = false` (attribute
 `show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).

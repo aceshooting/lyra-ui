@@ -1909,21 +1909,32 @@ it("dismisses the all-columns panel with Escape through the shared overlay route
       .data=${rows}
     ></lr-data-grid>
   `);
-  const trigger = element.shadowRoot!.querySelector<HTMLButtonElement>(
-    '[part="columns-menu"] > button'
-  )!;
+  // The panel is now an <lr-dropdown>, which routes Escape and focus return through the shared
+  // overlay manager itself -- this grid no longer activates a managed overlay of its own for it.
+  const menu = element.shadowRoot!.querySelector('[part="columns-menu"]') as HTMLElement & {
+    open: boolean;
+    updateComplete: Promise<unknown>;
+  };
+  const trigger = menu.querySelector("lr-button") as HTMLElement;
   trigger.focus();
-  trigger.click();
+  trigger.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    })
+  );
   await element.updateComplete;
-  const input = element.shadowRoot!.querySelector<HTMLInputElement>(
-    '[part="columns-menu"] [role="group"] input'
-  )!;
-  input.focus();
+  await menu.updateComplete;
+  expect(menu.open, "the menu opened from the keyboard contract").to.equal(true);
+
   await sendKeys({ press: "Escape" });
   await element.updateComplete;
-
-  expect(element.shadowRoot!.querySelector('[part="columns-menu"] [role="group"]') === null).to.be.true;
-  expect(element.shadowRoot!.activeElement === trigger).to.be.true;
+  await menu.updateComplete;
+  await waitUntil(() => menu.open === false, "the menu closes on Escape");
+  expect(element.shadowRoot!.activeElement === trigger, "focus returns to the trigger").to.be
+    .true;
 });
 
 it("supports silent programmatic pin/visibility changes and user menu events", async () => {
@@ -1976,16 +1987,13 @@ it("supports silent programmatic pin/visibility changes and user menu events", a
   const columnsMenu = element.shadowRoot!.querySelector(
     '[part="columns-menu"]'
   )!;
-  (columnsMenu.querySelector("button") as HTMLButtonElement).click();
+  (columnsMenu.querySelector("lr-button") as HTMLElement).click();
   await element.updateComplete;
-  const visibilityInput = [
-    ...columnsMenu.querySelectorAll<HTMLInputElement>("input"),
-  ][1]!;
-  visibilityInput.checked = false;
+  const visibilityRow = [
+    ...columnsMenu.querySelectorAll("lr-dropdown-item"),
+  ][1]! as unknown as { select: () => void };
   const visibilityEvent = oneEvent(element, "lr-column-visibility-change");
-  visibilityInput.dispatchEvent(
-    new Event("change", { bubbles: true, composed: true })
-  );
+  visibilityRow.select();
   expect((await visibilityEvent).detail).to.deep.equal({
     columnId: "team",
     visible: false,
@@ -3398,8 +3406,8 @@ it("aborts pending work and resets transient menus across disconnect and reconne
   ).click();
   (
     element.shadowRoot!.querySelector(
-      '[part="columns-menu"] button'
-    ) as HTMLButtonElement
+      '[part="columns-menu"] lr-button'
+    ) as HTMLElement
   ).click();
   (
     header(element, "name").querySelector(
@@ -3426,9 +3434,17 @@ it("aborts pending work and resets transient menus across disconnect and reconne
   await element.updateComplete;
   expect(element.shadowRoot!.querySelector('[part="filter-panel"]') === null).to.be.true;
   expect((element.shadowRoot!.querySelector('[role="menu"]')) == null).to.be.true;
-  expect(
-    (element.shadowRoot!.querySelector('[part="columns-menu"] [role="group"]')) == null
-  ).to.be.true;
+  // lr-popover suspends rather than closes on disconnect, so this grid closes the composed menu
+  // itself -- a reattached grid must not come back with a menu the user never reopened.
+  await waitUntil(
+    () =>
+      (
+        element.shadowRoot!.querySelector('[part="columns-menu"]') as
+          | (HTMLElement & { open: boolean })
+          | null
+      )?.open === false,
+    "the composed columns dropdown reopens closed"
+  );
   await expect(element).to.be.accessible();
 });
 
@@ -8543,5 +8559,108 @@ describe("explicitly empty host aria-label", () => {
     expect(
       omitted.shadowRoot!.querySelector('[part="table"]')!.getAttribute("aria-label")
     ).to.equal("People");
+  });
+});
+
+describe("all-columns visibility menu (lr-dropdown + checkbox items)", () => {
+  const menuGrid = (): Promise<LyraDataGrid<Person>> =>
+    dataGrid(html`
+      <lr-data-grid
+        label="People"
+        with-columns-menu
+        .columns=${[
+          ...columns,
+          { field: "id", label: "Id", hideable: false },
+        ] as DataGridColumn<Person>[]}
+        .data=${rows}
+      ></lr-data-grid>
+    `);
+
+  const menu = (
+    element: LyraDataGrid<Person>,
+  ): HTMLElement & { open: boolean; updateComplete: Promise<boolean> } =>
+    element.shadowRoot!.querySelector('[part="columns-menu"]') as HTMLElement & {
+      open: boolean;
+      updateComplete: Promise<boolean>;
+    };
+
+  const trigger = (element: LyraDataGrid<Person>): HTMLElement =>
+    menu(element).querySelector("lr-button") as HTMLElement;
+
+  const menuItems = (
+    element: LyraDataGrid<Person>
+  ): (HTMLElement & { value: string; checked: boolean; select: () => void })[] =>
+    [...menu(element).querySelectorAll("lr-dropdown-item")] as unknown as (HTMLElement & {
+      value: string;
+      checked: boolean;
+      select: () => void;
+    })[];
+
+  it("composes lr-dropdown with one menuitemcheckbox row per column", async () => {
+    const element = await menuGrid();
+    expect(menu(element).localName).to.equal("lr-dropdown");
+    const items = menuItems(element);
+    expect(items.map((item) => item.value)).to.deep.equal([
+      "name",
+      "team",
+      "score",
+      "id",
+    ]);
+    expect(items.map((item) => item.getAttribute("role"))).to.deep.equal([
+      "menuitemcheckbox",
+      "menuitemcheckbox",
+      "menuitemcheckbox",
+      "menuitemcheckbox",
+    ]);
+    expect(items.map((item) => item.checked)).to.deep.equal([
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect(
+      items[3]!.hasAttribute("disabled"),
+      "a hideable:false column cannot be toggled"
+    ).to.equal(true);
+  });
+
+  it("toggles a column and emits lr-column-visibility-change from a menu row", async () => {
+    const element = await menuGrid();
+    const event = oneEvent(element, "lr-column-visibility-change");
+    menuItems(element)[1]!.select();
+    expect((await event).detail).to.deep.equal({
+      columnId: "team",
+      visible: false,
+    });
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[data-column-id="team"]') === null).to.be
+      .true;
+    expect(menuItems(element).map((item) => item.checked)).to.deep.equal([
+      true,
+      false,
+      true,
+      true,
+    ]);
+  });
+
+  it("stays open across successive toggles, unlike a select-and-close action menu", async () => {
+    const element = await menuGrid();
+    trigger(element).click();
+    await element.updateComplete;
+    await menu(element).updateComplete;
+    expect(menu(element).open).to.equal(true);
+
+    menuItems(element)[1]!.select();
+    await element.updateComplete;
+    await menu(element).updateComplete;
+    expect(menu(element).open, "the menu survives the first toggle").to.equal(true);
+
+    menuItems(element)[2]!.select();
+    await element.updateComplete;
+    await menu(element).updateComplete;
+    expect(menu(element).open, "and the second").to.equal(true);
+    expect(element.shadowRoot!.querySelectorAll('[role="columnheader"]').length).to.be.greaterThan(
+      0
+    );
   });
 });

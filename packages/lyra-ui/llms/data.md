@@ -208,7 +208,11 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
-**Themeable custom properties:** `--lr-stat-padding` (default `var(--lr-space-m)`) and
+**Themeable custom properties:** `--lr-stat-bg` (default `var(--lr-color-surface)`) is
+`[part="base"]`'s RESTING background — the tier a dashboard sits at all day, and the companion to
+the linked card's existing pressed `--lr-stat-link-active-bg` (whose own default now mixes from
+`--lr-stat-bg`, so one override retints both); `frame="plain"` still drops the fill entirely.
+`--lr-stat-padding` (default `var(--lr-space-m)`) and
 `--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
 rendering path — the default card, `compact` (own defaults `var(--lr-space-s)` /
 `var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal
@@ -583,6 +587,13 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 `lr-sort-request`/`lr-sort`. A bare table now projects 100 rows per page (with inputs bounded to
 1..500); set an explicit finite `page-size` when a different window is required.
 
+**TypeScript:** `LyraTable<T, K extends string | number = string | number>` takes a second type
+parameter for the row-key type. `K` types `rowKey`'s return value,
+`selectedRowKeys`/`expandedRowKeys`, and every event detail's `rowKey`/`rowKeys`, so
+`LyraTable<Row, number>` reads `event.detail.rowKey` as `number` with no cast. It defaults to the
+`string | number` union, so an untyped element and an existing `LyraTable<Row>` annotation compile
+unchanged.
+
 **Properties:**
 
 - `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection,
@@ -729,11 +740,13 @@ cell: (row) => unknown }` —
   the table's own internal state
 - `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
   currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
-- `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
+- `rowKey?: (row: T) => K` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
   sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong
-  row. Empty string identities and later duplicates are omitted; the first valid occurrence wins
+  row. Empty string identities and later duplicates are omitted; the first valid occurrence wins.
+  The element's second type parameter (`K`, default `string | number`) is this callback's return
+  type
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
 - `selectedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
@@ -802,13 +815,32 @@ cell: (row) => unknown }` —
   callback returns (the same `::part()` limitation a column's `cell(row)` anchors run into, see
   `--lr-table-cell-link-color` below). Style such content by returning already-styled elements —
   inline `style`, or elements that reference this table's own `--lr-*` design tokens, which
-  inherit across the shadow boundary like any custom property
+  inherit across the shadow boundary like any custom property. When script has to reach the
+  rendered panel anyway, `expandedContentElement(rowKey)` (below) resolves that `<td>`;
+  `rowElement(rowKey)` does not, because the panel is a sibling `<tr>` rather than part of the row
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
-- `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
-  expanded state bounded to 10,000 keys; malformed and whitespace-only string keys are omitted while valid
-  off-page keys remain controlled; reads return immutable detached `ReadonlySet` facades, and
-  consumers reassign it after
-  `lr-row-expand-toggle`
+- `expansionMode: 'none'|'single'|'multiple' = 'none'` (attribute `expansion-mode`, reflected) —
+  mirrors `selectionMode` member for member, for expansion. The default `'none'` keeps
+  `expandedRowKeys` fully consumer-controlled: an activation only reports `lr-row-expand-toggle`.
+  `'single'` and `'multiple'` self-manage the set behind the cancelable `lr-row-expand-request`, so
+  an expandable table needs no host handler at all; `'single'` keeps at most one row open and
+  coerces an already-larger `expandedRowKeys` down to its first key when this property becomes
+  `'single'` (no event for that fix-up — read `expandedRowKeys` back). Closing a row to make room
+  for another is an ordinary expansion change, so `'single'` reports the displaced row with its own
+  `lr-row-expand-toggle` (`expanded: false`) immediately **before** the accepted one — the one
+  exception being a displaced row that is filtered or paged out of view, which has no `row` object
+  for the detail to carry and is reported through `expandedRowKeys` alone. An unrecognized attribute
+  value falls back to the controlled behaviour rather than self-managing
+- `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false; `ReadonlySet<K>` on a
+  parameterized element) — expanded state bounded to 10,000 keys. Who writes it depends on
+  `expansionMode`: under the default `'none'` the table never mutates it and consumers reassign it
+  after `lr-row-expand-toggle`; under `'single'`/`'multiple'` the table writes it on each accepted
+  activation, and a `preventDefault()` on `lr-row-expand-request` hands that one change back.
+  Malformed and whitespace-only string keys are omitted while valid off-view keys remain controlled
+  in every mode — filtering, sorting and pagination never clear them, so a row paged or filtered out
+  of view comes back expanded and a key matching no current row simply renders nothing until one
+  exists again (the same convention `selectedRowKeys` follows for server pagination). Reads return
+  immutable detached `ReadonlySet` facades; reassign a new set to update
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
 - `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `error: boolean = false` (attribute `error`, reflected) — replaces `<tbody>`'s row content with
@@ -850,6 +882,14 @@ cell: (row) => unknown }` —
   binding that pins it to `false`, its own default. Unset (the default) touches storage not at all.
   The same "explicit beats persisted" guarantee `lr-app-rail` gives each of its `persist`-selected
   fields and `lr-widget` gives `collapsed`; all three share one mechanism
+- `priorityColumnsToggleAvailable: boolean` (readonly; computed, no attribute) — whether the
+  reveal/hide control is currently offered at all, the public counterpart of the measurement
+  `[part='reveal-columns-button']` itself renders from. True while at least one `priority` column is
+  actually hidden at the current allocation, and it stays true once `priorityColumnsVisible` has
+  revealed them (otherwise the control would remove itself the moment it was used). Always `false`
+  with no `priority` column declared — the state the development-mode inert-configuration warning
+  describes. Remeasured after every render and container resize, so read it after
+  `await table.updateComplete`
 - `heatTintScale?: { min?: number; max?: number }` (attribute: false) — overrides the auto-derived
   heat-tint domain (min/max of every `heatValue` result across every currently-rendered row —
   post-sort, pre-pagination, the same rows `footer(rows)` already sees). Unset (the default) computes
@@ -864,13 +904,45 @@ cell: (row) => unknown }` —
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
 
+**Methods:**
+
+- `rowElement(rowKey)` — the rendered `<tr>` for one row key, or `null` when that row is not in the
+  current render output (filtered out, paged away, never present)
+- `cellElement(rowKey, columnKey)` — the rendered `<td>` at a row/column pair, on the same terms;
+  `columnKey` is the column's own `key`
+- `expandedContentElement(rowKey)` — the rendered `[part='expanded-cell']` holding that row's
+  `expandedContent(row)` output, or `null` when the row is not currently rendered, is not expanded,
+  or the table sets no `expandedContent`
+
+All three exist for code that has to reach content a `cell(row)`/`expandedContent(row)` callback
+rendered into this component's shadow root — measuring it, scrolling it into view, or applying a
+style `::part()` cannot express, since only pseudo-classes may follow a part selector. One method per
+callback, and the split is not cosmetic: the expansion panel is a **sibling** `<tr part='expanded-row'>`
+of the data row rather than a descendant of it, so `rowElement(rowKey)` cannot reach
+`expandedContent` output at all — use `expandedContentElement(rowKey)` for that half. All three read
+the DOM as it stands, so `await table.updateComplete` first and treat `null` as "not rendered right
+now". The `data-row-key`, `data-col-key` and `data-expanded-row-key` attributes they resolve are
+documented stable API: `data-col-key` is the column's own `key`, while `data-row-key` (on the data
+row) and `data-expanded-row-key` (on the panel row) are a type-tagged encoding of the row key
+(`string:a` vs `number:1`) that keeps a numeric key distinct from the string that stringifies the
+same way. The panel deliberately does **not** repeat `data-row-key`, so a `[data-row-key]` query
+still resolves exactly one element per row. Prefer these three methods over building a selector from
+any of the attributes — a consumer-supplied key is not safe to interpolate into CSS unescaped.
+
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
 sort properties; server mode leaves them controlled. Other events are `lr-row-click`
 (`detail: { row }`), `lr-load-more` (fired on the "load more" button),
-`lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and `lr-row-expand-toggle`
-(`detail: { row, rowKey }`; the table does not mutate `expandedRowKeys`), and
+`lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
+pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
+emitted only while `expansionMode` is `'single'` or `'multiple'`; `preventDefault()` skips the
+built-in `expandedRowKeys` write and suppresses the following toggle) and `lr-row-expand-toggle`
+(frozen readonly `detail: { row, rowKey, expanded }`, where `expanded` is the state the activation
+resolves to; under the default `expansionMode: 'none'` the table does not mutate `expandedRowKeys`,
+while under a self-managed mode the write has already landed when it fires, and `'single'` fires it
+once more — with `expanded: false`, immediately ahead of the accepted one — for the row it closed to
+make room, unless that row is out of view), and
 `lr-selection-change` (frozen readonly `detail: { rowKeys }`, not cancelable) when selection is
 enabled — fired both from a row activation and from a `selectionMode` flip to `'single'` that coerces
 an existing multi-row selection down to one key (skipped on the very first render, since an
@@ -1939,6 +2011,16 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
 - `valueLabel?: string` (attribute `value-label`) — absence uses the localized default. Every
   supplied string is literal, including `"value"` and `""`; unset the property/attribute to resume
   localization.
+- `withoutLegend: boolean = false` (attribute `without-legend`, reflected) — hides the colour
+  legend, under the same name and the same polarity `lr-chart` has always used rather than a third
+  spelling for one idea. The whole row leaves the DOM — the gradient bar or `legendStops` swatches,
+  the `legend-lo`/`legend-hi` endpoint labels, the `valueLabel` caption, the labelled `annotations`
+  entries and the `legend` slot go with it — so it contributes no layout box and assigns no slotted
+  content, rather than being painted and then hidden. The legend's own preparation stops with it:
+  `--lr-heatmap-color-steps-gradient`, which this component writes onto the host for the legend bar
+  and for nothing else, is not written while the legend is hidden, and is removed again if it had
+  been. Cells, tooltips, keyboard interaction, selection and the generated accessible summary are
+  unaffected — the summary already names the value label independently of the legend.
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
@@ -2130,7 +2212,8 @@ in calendar mode)
 **Slots:** `legend` — custom content rendered inside the built-in `[part="legend"]` row, after the
 gradient/`legendStops` swatches, the trailing `valueLabel` caption, and any labeled `annotations`
 entries. Presentation-only, like `legendStops`: slotted content is never consulted by the color
-ramp, the bucket math, the tooltip, or the generated accessible name.
+ramp, the bucket math, the tooltip, or the generated accessible name. Nothing is rendered, and the
+slot itself is absent from the shadow root, while `withoutLegend` is set.
 
 **CSS parts:** `base`, `canvas`, `grid` (the scrollport wrapping the canvas while `stickyLabels`
 freezes an axis — absent entirely otherwise), `row-labels`/`col-labels` (the frozen label bands,
@@ -2164,8 +2247,9 @@ also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay 
 `--lr-heatmap-color-steps-gradient` (default
 `linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))` — the gradient
 painted on the continuous legend bar; the component writes it onto the host itself while
-`colorSteps` is supplied and removes it again when it isn't, so it is a read-out rather than a knob
-you set). `--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
+`colorSteps` is supplied and the legend is rendered, and removes it again when either stops being
+true — `withoutLegend` takes the legend row, this property's only reader, out of the DOM — so it is
+a read-out rather than a knob you set). `--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
 stroked around an annotated cell, deliberately not one of the sequential ramp colors so it stays
 visible regardless of what it's drawn over). `--lr-heatmap-selected-color` (default
 `var(--lr-color-success)` — the canvas-drawn ring stroked around the persistent `selectedCell`, a
@@ -2281,7 +2365,8 @@ is now literal.
 
 ## `lr-sequence-strip`
 
-A compact, one-thin-cell-per-item strip visualizing a sequence of categorical states, with an
+A compact, one-thin-cell-per-item (or per item range) strip visualizing a sequence of categorical
+states, with an
 optional secondary per-cell marker. Pure CSS/flex — no chart.js, no SVG, no canvas — sized/named
 consistently with the sparkline/heatmap family, and read as a glanceable aggregate. `[part="base"]`
 is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`, `aria-posinset`,
@@ -2307,13 +2392,20 @@ identity and connection generation, so a same-turn replacement or disconnect/rec
 focus an unrelated cell that merely inherited the old numeric index.
 
 High-cardinality strips retain at most the first 10,000 assigned items and categories as detached,
-frozen canonical snapshots; reassign either collection after changing it. They mount a bounded
-window of at most 200 cells around the roving stop rather than creating one DOM node per retained
-item. `aria-posinset`/`aria-setsize` retain positions and the total count from that bounded model;
-Home/End and arrows shift the window before moving focus, so every retained item remains keyboard
-reachable. `[part="window-range"]` visibly discloses the currently projected numeric range and
-total. The optional legend likewise mounts at most 200 categories and exposes
-`[part="legend-limit"]` as a rendered/total numeric disclosure.
+frozen canonical snapshots; reassign either collection after changing it. At most 200 cells are
+rendered. **At or below that cap each cell is one item. Past it the strip becomes a span-preserving
+overview rather than a window:** the retained items are distributed over exactly 200 contiguous
+ranges, each cell painted by its range's dominant category (a tie goes to the category appearing
+earliest in the range) and carrying `[part="marker"]` when any item inside it sets `marker`. The 200
+cells tile the sequence exactly once, so the strip always covers the full span at full width and
+never needs horizontal scrolling. Roving focus, `aria-posinset`/`aria-setsize`, `aria-current` and
+activation all address cells rather than items: ArrowLeft/ArrowRight and Home/End step one range at
+a time, and each cell exposes `data-range-start` / `data-range-end` (zero-based, inclusive item
+indices) alongside its `data-index` range position. `[part="bucket-summary"]` visibly discloses the
+item total and range count, and the same localized text is appended as a trailing clause to the
+generated `aria-label` so assistive technology learns the cells are ranges. The optional legend
+likewise mounts at most 200 categories and exposes `[part="legend-limit"]` as a rendered/total
+numeric disclosure.
 
 **Properties:**
 
@@ -2359,14 +2451,19 @@ readonly color, readonly label? }`; `color`
   shape `lr-lite-chart`'s `selectedIndices` and `lr-heatmap`'s `selectedCell` already establish. An
   out-of-range or non-integer value selects nothing. The selected cell carries `aria-current="true"`
   and `data-selected`; the selection is drawn as a ring rather than a background change, because a
-  cell's background is data (its category colour) and tinting it would misreport the category
+  cell's background is data (its category colour) and tinting it would misreport the category. Past
+  the 200-cell cap the whole range that contains `selectedIndex` reads as selected, since that range
+  is the only thing the strip draws for it
 
 The single-member `orientation: 'horizontal'` property was **removed in 9.0.0**: nothing read it and
 the stylesheet never mentioned it, so the reflected attribute styled nothing. Delete the attribute;
 the strip has always laid out horizontally.
 
 **Events:** `lr-item-activate` — `detail: { index: number; id: string; item: SequenceStripItem }`,
-fired when a cell is clicked or activated with Enter/Space on the roving-tabindex focus. Not
+fired when a cell is clicked or activated with Enter/Space on the roving-tabindex focus. Past the
+200-cell cap a cell stands for a range, and the event reports that range's **first** item — a real
+sequence index a playback consumer can scrub from, not a synthesized midpoint. The `detail` shape is
+unchanged. Not
 cancelable: nothing in the component branches on `defaultPrevented`. Bubbles and composed, like every
 library event.
 
@@ -2384,7 +2481,9 @@ as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label p
 color chip, matching that category's cell color), `legend-marker-swatch` (the marker row's chip
 instead: a neutral chip carrying the same bottom bar a `marker: true` cell paints, in the same
 `--lr-sequence-strip-marker-color`), `legend-label` (the category's nonblank `label`, or localized
-`sequenceStripUnnamedCategory`), `window-range` (bounded item projection/total), and `legend-limit`
+`sequenceStripUnnamedCategory`), `bucket-summary` (the item-total/range-count disclosure, rendered
+only while the strip is past its 200-cell cap; it replaced 15.x's `window-range`, which disclosed a
+projection window this component no longer has), and `legend-limit`
 (bounded legend/total).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
@@ -2421,9 +2520,16 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 - the activation event is `lr-item-activate`, not `lr-cell-click`. Click and Enter/Space emit the
   activated item's `index`/`id`, but do not mutate the controlled `selectedIndex`; listen for the
   event and update that property when the application accepts the activation.
-- an `items` entry whose `categoryId` has no matching `categories` entry still renders its own cell
-  (background `transparent`) rather than being dropped, so a strip stays the same length as `items`
-  regardless of `categories` coverage.
+- an `items` entry whose `categoryId` has no matching `categories` entry still contributes to the
+  strip (its cell's background is `transparent`) rather than being dropped, so a strip renders one
+  cell per item — or, above the 200-cell cap, one cell per range — regardless of `categories`
+  coverage.
+- **16.0 migration:** above 200 items the strip renders item RANGES, not a 200-item window. Rename
+  any `::part(window-range)` selector to `::part(bucket-summary)`. Code that read a cell's
+  `data-index` as an item index must read `data-range-start` / `data-range-end` instead — above the
+  cap `data-index` is the range's position in the strip, not an item's position in the sequence. Two
+  localization keys are new: `sequenceStripBucketLabel` (`"{label}, items {start} to {end}"`) and
+  `sequenceStripBucketSummary` (`"{items} items in {ranges} ranges"`).
 - **9.0 migration:** rename category `{ key }` to `{ id }` and item `{ category }` to
   `{ categoryId }`. Reassign after changes; caller mutation no longer changes the installed
   snapshot. Category clauses use effective-locale `Intl.ListFormat` punctuation.
@@ -3317,12 +3423,44 @@ number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: s
   subtree is `aria-hidden`, since `segment-list` already exposes the same names. Under
   `shape="ring"` the host stops being a fixed square so the key flows below the ring instead of
   being clipped.
+- `legendDisplay: ContextMeterLegendDisplay = 'label'` (attribute `legend-display`) — what each
+  legend row shows beside its swatch: `'label'` (the default, byte-identical to before this
+  property existed), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding
+  `[part="legend-value"]` and `[part="legend-percent"]` spans. The share is the same clamped ratio
+  the bar or ring paints, so the key can never disagree with the band it stands for, and both
+  numbers are formatted through `effectiveLocale`. Combinable rather than mutually exclusive,
+  unlike `lr-chart`'s `label | value | percentage` legend vocabulary, because a part-to-whole key is
+  ordinarily read as "count AND share". A foreign attribute value normalizes to `'label'`. No
+  effect while `showLegend` is unset.
+- `interactive: boolean = false` (reflected) — opt-in filter mode. Every band, and every legend row,
+  becomes a real `<button>` emitting the cancelable `lr-segment-activate`; the ring's arcs carry
+  `role="button"` with their own tab stop and Enter/Space handling, since an SVG shape cannot be a
+  native button. In this mode, and only in this mode, `[part="legend"]` drops `aria-hidden` so the
+  rows are reachable, and the visually-hidden `[part="segment-list"]` steps aside because the
+  buttons already expose the same label/count pairs with their pressed state attached. A band's
+  inline size IS its share, so a small band is a small pointer target: pair `interactive` with
+  `showLegend` where that matters, since the legend row is the same action at full row height. The
+  ring's arcs share one bounding box, so a focused arc reports itself by dimming as well as by the
+  shared focus outline — an outline alone cannot say *which* arc.
+- `selectedIndices: readonly number[] = []` (attribute: false) — indexes rendered as
+  `aria-pressed="true"` plus a `segment-selected`/`legend-item-selected` part token on both the band
+  and its legend row; every other control renders `aria-pressed="false"`. Meaningful only while
+  `interactive` is set. Uncontrolled by default: an activation nobody vetoes toggles the index here
+  itself. `preventDefault()` on `lr-segment-activate` suppresses that write, which is how a consumer
+  that owns the selection takes control; assigning the property directly always wins either way. A
+  non-integer or out-of-range entry selects nothing rather than throwing.
 
 Accessible summaries, segment tooltips, and ring titles format normalized nonnegative quantities
 using `effectiveLocale`. A host `aria-label` names the host without being duplicated on the nested
 meter owner, which retains its generated aggregate summary.
 
-**Events:** none.
+**Events:** `lr-segment-activate` — a band or its legend row was activated while `interactive` is
+set. `detail: { index: number; label: string; value: number }`, bubbling and composed like every
+library event. **Cancelable, and a real veto point**: the default action is this component toggling
+`index` in its own `selectedIndices`, so `preventDefault()` keeps the current selection and hands
+that state entirely to the consumer. Never emitted in the default presentational mode. Because the
+event dispatches synchronously *before* the write, a listener reading `selectedIndices` inside its
+own handler sees the pre-activation value.
 
 **Slots:** none.
 
@@ -3331,7 +3469,11 @@ meter semantics), `track` (the unfilled/empty capacity), `segment` (one occupied
 `data-tone` and, for custom colors, `--lr-context-meter-segment-color`), `segment-list` (the hidden
 category list), `segment-item` (one hidden category/value entry), `label`, and — only under
 `showLegend` — `legend`, `legend-item`, `legend-swatch` (carrying the same `data-tone` and custom
-color hook as `segment`) and `legend-label`
+color hook as `segment`) and `legend-label`, plus `legend-value` and `legend-percent` under the
+matching `legendDisplay` settings. While `interactive` is set, `segment` and `legend-item` are
+`<button>`s (a `role="button"` arc under `shape="ring"`) and a selected one carries a second part
+token — `segment-selected` / `legend-item-selected` — because nothing but a pseudo-class may follow
+`::part()`, so the state has to live in the part name
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the
@@ -3342,7 +3484,17 @@ block size of its filled segments), `--lr-context-meter-track-radius` (default
 `calc(var(--lr-radius) * 0.5)`) its corner radius, `--lr-context-meter-track-bg` (default
 `color-mix(in srgb, var(--lr-color-border) 30%, transparent)`) the background of its unfilled
 remainder, and `--lr-context-meter-segment-seam-color` (default `var(--lr-color-surface)`) the
-hairline seam painted between adjacent segments. Otherwise the component consumes shared tokens
+hairline seam painted between adjacent segments.
+`--lr-context-meter-selected-ring-color` (default `var(--lr-color-text)`) and
+`--lr-context-meter-selected-ring-width` (default `var(--lr-border-width-thick)`) paint the inset
+ring marking a selected `bar`-shape band or legend row. It is drawn inward, because the track clips
+its own overflow and an outward ring would be invisible, and it is a ring rather than an outline so
+that it composes with the hover, press and focus outlines instead of being replaced by them — a
+selected band stays visibly selected exactly while it is being pointed at or focused, and its focus
+ring stays intact. `--lr-context-meter-selected-arc-stroke` (default `16`, in this component's
+`0 0 100 100` viewBox units) is the stroke width of a selected `ring`-shape arc: every arc shares
+one bounding box, so a selected arc reports itself by thickening in place rather than by an outline
+that would trace the whole ring identically for every selection. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
 `--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,
 `--lr-transition-base`.
@@ -3946,6 +4098,12 @@ These named interfaces and helper signatures are available to typed integrations
     value: number;
     tone?: ContextMeterTone;
     color?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/context-meter/context-meter.class.js`.
+  `LyraContextMeterSegmentActivateDetail {
+    readonly index: number;
+    readonly label: string;
+    readonly value: number;
   }`
 
 - **`components-data-data-grid-data-grid-types-contracts`** — Supporting data types and helpers for this component family.

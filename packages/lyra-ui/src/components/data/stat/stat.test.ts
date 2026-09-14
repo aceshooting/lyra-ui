@@ -949,6 +949,30 @@ it('leaves the card rendering untouched when both new axes are left unset (they 
   );
 });
 
+it('retints the resting tile through --lr-stat-bg', async () => {
+  const el = (await fixture(
+    html`<lr-stat label="Revenue" value="12.4" style="--lr-stat-bg: rgb(1, 2, 3)"></lr-stat>`
+  )) as LyraStat;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgb(1, 2, 3)');
+});
+
+it('leaves the resting tile on the shared surface token when --lr-stat-bg is unset', async () => {
+  const el = (await fixture(
+    html`<lr-stat label="Revenue" value="12.4" style="--lr-color-surface: rgb(4, 5, 6)"></lr-stat>`
+  )) as LyraStat;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
+it('keeps frame="plain" transparent regardless of --lr-stat-bg', async () => {
+  const el = (await fixture(
+    html`<lr-stat frame="plain" label="Revenue" value="12.4" style="--lr-stat-bg: rgb(1, 2, 3)"></lr-stat>`
+  )) as LyraStat;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+});
+
 it('drops border, background, padding and the block-size stretch under frame="plain"', async () => {
   const el = (await fixture(html`<lr-stat
     frame="plain"

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -66,6 +66,29 @@ If the import fails, leave the native disclosure visible and usable.
   `show()`/`hide()`, so the property, the reflected attribute and the two methods can never disagree
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
   under RTL
+- `positioningStrategy: PlaceStrategy = 'fixed'` (attribute `positioning-strategy`, reflected) — CSS
+  positioning scheme the popup is laid out with, `'absolute' | 'fixed'`. The one property
+  `<lr-popover>`, `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell
+  the same way; each keeps its own default, so setting nothing changes nothing. An unsupported value
+  resolves back to that default.
+- `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
+  `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
+  `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
+  keyword. The two transient modes open after `showDelay`, close after `hideDelay` once the
+  interaction ends, never move focus into the surface, and stay open while focus rests anywhere
+  inside it. A click on the trigger pins a transient surface open; the next click releases the pin
+  and closes it. `manual` refuses every interaction, leaves the surface to `show()`/`hide()`/`open`,
+  and wins over any keyword beside it. Unrecognized tokens are dropped and the property reads back
+  as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
+  `'click'` rather than to manual, so a typo can never strand a popover's content behind `show()`.
+  Both the slotted trigger and a `for=`-resolved external trigger honour every keyword.
+- `showDelay: number = 0` (attribute `show-delay`) — ms before a `hover`/`focus` interaction opens
+  the popover.
+- `hideDelay: number = 0` (attribute `hide-delay`) — ms before the interaction ending closes it; the
+  grace period that lets a pointer cross the gap to the popup.
+- `hoverBridge: boolean = false` (attribute `hover-bridge`, reflected) — clips an invisible
+  `[part='hover-bridge']` quad across the `distance` gap while a `hover` popover is open, so a
+  pointer travelling between trigger and popup never leaves both at once.
 - `distance: number = 8` — anchor-offset distance in px (Floating UI's main-axis `offset()`). May
   legitimately be negative to overlap the trigger; a non-finite value falls back to the default.
 - `skidding: number = 0` — offset _along_ the anchor's edge, in px (Floating UI's cross-axis
@@ -193,9 +216,10 @@ method-promise settlement.
 **Slots:** `trigger` (the interactive element that toggles the popover), default (popover content;
 an enabled, non-inert descendant with `data-popover="close"` closes its nearest owning popover).
 
-**CSS parts:** `trigger`; `popup dialog popup__popup`; `content body`; and
-`arrow popup__arrow` (rendered unless suppressed). Names grouped together are aliases on the same
-node. The arrow's part attribute also carries the **resolved side** as a second token — `arrow-top`,
+**CSS parts:** `trigger`; `popup dialog popup__popup`; `content body`;
+`arrow popup__arrow` (rendered unless suppressed); and `hover-bridge` (the invisible quad, rendered
+only while a `hover` popover with `hover-bridge` set is open). Names grouped together are aliases on
+the same node. The arrow's part attribute also carries the **resolved side** as a second token — `arrow-top`,
 `arrow-bottom`, `arrow-left`, `arrow-right` — so `::part(arrow arrow-top)` styles one side.
 `::part(arrow)[data-side]` and `::part(arrow) .inner` are invalid selectors that silently never
 match; the state is in the part name.

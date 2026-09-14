@@ -177,3 +177,50 @@ export const RemovableGuidance: StoryObj = {
     </div>
   `,
 };
+
+export const StatefulTrackBorder: Story = {
+  name: 'Checked-state track border',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-switch-track-border` gives the track a rim and `--lr-switch-checked-track-border` varies that rim while checked, so a bordered track can differ by state without reaching for `lr-switch:state(checked)::part(track)`. The checked hook falls back to the resting one, which itself falls back to no border, so setting only the resting hook keeps one border in both states. Keep both widths equal unless a size change between states is intended: the track is `box-sizing: content-box`, so a border grows its outer footprint.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-m); justify-items:start;">
+      <lr-switch
+        style="--lr-switch-track-border: var(--lr-border-width-medium) solid var(--lr-color-border-strong); --lr-switch-checked-track-border: var(--lr-border-width-medium) solid var(--lr-color-success);"
+        >Off: neutral rim</lr-switch
+      >
+      <lr-switch
+        checked
+        style="--lr-switch-track-border: var(--lr-border-width-medium) solid var(--lr-color-border-strong); --lr-switch-checked-track-border: var(--lr-border-width-medium) solid var(--lr-color-success);"
+        >On: success rim</lr-switch
+      >
+    </div>
+  `,
+};
+
+export const VetoedToggle: Story = {
+  name: 'Refusing a toggle before it happens',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`lr-switch-toggle-request` is cancelable and fires *before* `checked` moves, carrying the state the switch would take. Calling `preventDefault()` leaves the switch exactly where it is — it never slides and snaps back — and no `input`/`change`/`lr-change` follows. This switch refuses to turn off.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-switch
+      checked
+      @lr-switch-toggle-request=${(event: CustomEvent<{ checked: boolean }>) => {
+        if (!event.detail.checked) event.preventDefault();
+      }}
+      hint="Try turning it off — the request is refused, so nothing moves."
+      >Required safety check</lr-switch
+    >
+  `,
+};

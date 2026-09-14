@@ -173,11 +173,18 @@ it('lr-copy-button value is the assembled label+text of every segment, in order,
     el.segments = segments;
     await el.updateComplete;
     const copyButton = el.shadowRoot!.querySelector('lr-copy-button') as LyraCopyButton;
+    // The host's own update does not await its composed child's first render, and the trigger this
+    // test clicks lives two shadow roots down.
+    await copyButton.updateComplete;
+    const trigger = copyButton.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    await (trigger as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
     expect(copyButton.value).to.equal(
       'System prompt\nYou are helpful.\n\nChunk 1\nParis is the capital of France.',
     );
     const listener = oneEvent(el, 'lr-copy');
-    (copyButton.shadowRoot!.querySelector('button[part~="button"]') as HTMLButtonElement).click();
+    // <lr-copy-button>'s built-in trigger is a composed <lr-icon-button>; its native control sits
+    // one shadow boundary deeper than `[part~="base"]`.
+    (trigger.shadowRoot!.querySelector('button[part~="button"]') as HTMLButtonElement).click();
     const event = await listener;
     expect(event.detail).to.deep.equal({ ok: true, text: copyButton.value });
   } finally {

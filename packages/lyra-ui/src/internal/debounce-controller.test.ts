@@ -1,5 +1,5 @@
 import { expect, aTimeout } from '@open-wc/testing';
-import { DebounceController } from './debounce-controller.js';
+import { DebounceController, type DebounceTimerHost } from './debounce-controller.js';
 
 // Real timers only -- @sinonjs/fake-timers does not work under wtr here. Every assertion below
 // uses a delay short enough to keep the suite fast and a wait margin generous enough (at least
@@ -195,17 +195,22 @@ it('re-reads delayMs on every push, so a host can retune its own debounce betwee
  *  window (the shape `<lr-combobox>`/`<lr-data-grid>` schedule on when they are adopted into a
  *  different document). */
 function trackingTimerHost() {
+  // The handle type is whatever the ambient `setTimeout` returns -- a number in a browser, a
+  // `Timeout` object under the test tree's Node types. The controller only ever round-trips the
+  // handle back to this same host, so the id is tunnelled through that opaque type rather than
+  // widening the shared interface to accommodate a fixture.
+  type Handle = ReturnType<typeof setTimeout>;
   const scheduled: Array<{ id: number; handler: () => void }> = [];
   const cleared: number[] = [];
   let nextId = 1;
-  const host = {
-    setTimeout(handler: () => void, _timeoutMs: number): number {
+  const host: DebounceTimerHost = {
+    setTimeout(handler: () => void, _timeoutMs: number): Handle {
       const id = nextId++;
       scheduled.push({ id, handler });
-      return id;
+      return id as unknown as Handle;
     },
-    clearTimeout(handle: number): void {
-      cleared.push(handle);
+    clearTimeout(handle: Handle): void {
+      cleared.push(handle as unknown as number);
     },
   };
   return { scheduled, cleared, host };

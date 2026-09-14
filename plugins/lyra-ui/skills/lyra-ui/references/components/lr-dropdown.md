@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -74,6 +74,11 @@ their controls without putting arbitrary content inside the menu role.
 - `hoist: boolean = false` (reflected) — uses viewport-fixed positioning; otherwise the popup uses
   the containing-block (`absolute`) strategy.
 - `sync?: 'width'|'height'|'both'` (reflected) — copies the trigger dimension(s) onto the popup.
+- `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
+  see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
+  (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
+  attributes can never disagree. Prefer `positioning-strategy` in new code. `<lr-dropdown>` also
+  inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`.
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
 - `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`
@@ -109,8 +114,12 @@ only keyframes. Passing `null` disables motion without skipping the after-event 
 `lr-menu`; that menu may use its own `header`/`footer` regions). **CSS parts:** `trigger`;
 `popup dialog popup__popup base base__popup panel` (all six tokens on the neutral positioned
 popup, preserving the popover, Web Awesome and Shoelace wrapper names on the same node); `menu`
-(the contained semantic/controller owner); `content body`; and the retained optional
-`arrow popup__arrow` token set.
+(the contained semantic/controller owner); `content body`; the retained optional
+`arrow popup__arrow` token set; and the inherited `hover-bridge` — the invisible quad the positioner
+clips across the `distance` gap between trigger and popup, rendered only while a `hover`-triggered
+dropdown with `hover-bridge` set is open, so a pointer travelling from the trigger to the popup
+never leaves both at once and the surface does not close underneath it. It paints nothing by
+default; style it only to debug the travel region.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained

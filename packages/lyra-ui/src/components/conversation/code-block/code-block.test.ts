@@ -252,13 +252,17 @@ it("gives compact header controls the shared minimum hit area", async () => {
   )) as LyraCodeBlock;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   const copy = el.shadowRoot!.querySelector(
-    '[part="copy-button"]'
+    '[part~="copy-button"]'
   ) as HTMLElement;
+
+  // The copy control is a composed <lr-icon-button>; the floor lives on its native control, one
+  // shadow boundary deeper.
+  const copyControl = copy.shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
 
   expect(getComputedStyle(toggle).minInlineSize).to.equal("40px");
   expect(getComputedStyle(toggle).minBlockSize).to.equal("40px");
-  expect(getComputedStyle(copy).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(copy).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(copyControl).minInlineSize).to.equal("40px");
+  expect(getComputedStyle(copyControl).minBlockSize).to.equal("40px");
 });
 
 it('inherits live host font size into the collapse toggle and its 1em glyph', async () => {
@@ -697,7 +701,7 @@ describe("copy button", () => {
         html`<lr-code-block .code=${jsSample}></lr-code-block>`
       )) as LyraCodeBlock;
       const button = el.shadowRoot!.querySelector(
-        '[part="copy-button"]'
+        '[part~="copy-button"]'
       ) as HTMLButtonElement;
 
       const listener = oneEvent(el, "lr-copy");
@@ -776,7 +780,7 @@ describe("copy button", () => {
       const copied = oneEvent(el, "lr-copy");
       (
         el.shadowRoot!.querySelector(
-          '[part="copy-button"]'
+          '[part~="copy-button"]'
         ) as HTMLButtonElement
       ).click();
       await copied;
@@ -790,14 +794,14 @@ describe("copy button", () => {
       await el.updateComplete;
       expect(
         el
-          .shadowRoot!.querySelector('[part="copy-button"]')!
+          .shadowRoot!.querySelector('[part~="copy-button"]')!
           .textContent!.trim()
       ).to.equal("Copy");
 
       const copiedAgain = oneEvent(el, "lr-copy");
       (
         el.shadowRoot!.querySelector(
-          '[part="copy-button"]'
+          '[part~="copy-button"]'
         ) as HTMLButtonElement
       ).click();
       await copiedAgain;
@@ -806,7 +810,7 @@ describe("copy button", () => {
       await el.updateComplete;
       expect(
         el
-          .shadowRoot!.querySelector('[part="copy-button"]')!
+          .shadowRoot!.querySelector('[part~="copy-button"]')!
           .textContent!.trim(),
         "the retired iframe callback cannot clear the new owner state"
       ).to.equal("Copied!");
@@ -842,7 +846,7 @@ describe("copy button", () => {
         html`<lr-code-block .code=${jsSample}></lr-code-block>`
       )) as LyraCodeBlock;
       const button = el.shadowRoot!.querySelector(
-        '[part="copy-button"]'
+        '[part~="copy-button"]'
       ) as HTMLButtonElement;
 
       let copied = false;
@@ -883,7 +887,7 @@ describe("copy button", () => {
         html`<lr-code-block .code=${jsSample}></lr-code-block>`
       )) as LyraCodeBlock;
       const button = el.shadowRoot!.querySelector(
-        '[part="copy-button"]'
+        '[part~="copy-button"]'
       ) as HTMLButtonElement;
       expect(button.textContent!.trim()).to.equal("Copy");
       const copied = oneEvent(el, "lr-copy");
@@ -914,7 +918,7 @@ describe("copy button", () => {
         html`<lr-code-block .code=${jsSample}></lr-code-block>`
       )) as LyraCodeBlock;
       const button = el.shadowRoot!.querySelector(
-        '[part="copy-button"]'
+        '[part~="copy-button"]'
       ) as HTMLButtonElement;
 
       let copied = false;
@@ -954,7 +958,7 @@ describe("copy button", () => {
       el.strings = { copyFailed: "Could not copy" };
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector(
-        '[part="copy-button"]'
+        '[part~="copy-button"]'
       ) as HTMLButtonElement;
       const failed = oneEvent(el, "lr-copy-error");
       button.click();
@@ -982,7 +986,7 @@ describe("copy button", () => {
         filename="x.ts"
       ></lr-code-block>`
     )) as LyraCodeBlock;
-    expect(el.shadowRoot!.querySelector('[part="copy-button"]') == null).to.be
+    expect(el.shadowRoot!.querySelector('[part~="copy-button"]') == null).to.be
       .true;
   });
 
@@ -997,7 +1001,7 @@ describe("copy button", () => {
     expect(el.copyable).to.be.false;
     expect(el.hasAttribute("copyable")).to.be.false;
     expect(
-      el.shadowRoot!.querySelectorAll('[part="copy-button"]')
+      el.shadowRoot!.querySelectorAll('[part~="copy-button"]')
     ).to.have.lengthOf(0);
   });
 });
@@ -1190,7 +1194,7 @@ describe("localization", () => {
         html`<lr-code-block .code=${jsSample}></lr-code-block>`
       )) as LyraCodeBlock;
       const copyButton = el.shadowRoot!.querySelector(
-        '[part="copy-button"]'
+        '[part~="copy-button"]'
       ) as HTMLButtonElement;
       expect(copyButton.getAttribute("aria-label")).to.equal("Copy code");
 
@@ -1224,7 +1228,7 @@ describe("localization", () => {
       '[part="toggle"]'
     ) as HTMLButtonElement;
     const copyButton = el.shadowRoot!.querySelector(
-      '[part="copy-button"]'
+      '[part~="copy-button"]'
     ) as HTMLButtonElement;
     expect(toggle.getAttribute("aria-label")).to.equal("Réduire le code");
     expect(copyButton.getAttribute("aria-label")).to.equal("Copier le code");

@@ -321,3 +321,25 @@ export const CompactLabels: Story = {
     </div>
   `,
 };
+
+export const VetoedToggle: Story = {
+  name: 'Refusing a toggle before it happens',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`lr-checkbox-toggle-request` is cancelable and fires *before* `checked` moves, carrying the state the control would take. Calling `preventDefault()` leaves the box exactly as it was — it never flips and snaps back — and no `input`/`change`/`lr-change` follows. This checkbox refuses to be unchecked.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-checkbox
+      checked
+      hint="Try unchecking it — the request is refused, so nothing moves."
+      @lr-checkbox-toggle-request=${(event: CustomEvent<{ checked: boolean }>) => {
+        if (!event.detail.checked) event.preventDefault();
+      }}
+      >Accept the terms</lr-checkbox
+    >
+  `,
+};

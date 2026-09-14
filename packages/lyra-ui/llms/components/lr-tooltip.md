@@ -58,6 +58,10 @@ later text renders normally.
 - `disabled: boolean = false` (reflected) — prevents both interaction and programmatic opening;
   setting it while open closes the tooltip
 - `hoist: boolean = false` (reflected) — switches the mapped absolute positioning default to fixed
+- `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
+  see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
+  (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
+  attributes can never disagree. Prefer `positioning-strategy` in new code.
 - `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
   reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the

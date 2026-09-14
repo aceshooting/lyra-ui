@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
 import "./code-block.js";
+import "../../forms/button/button.js";
 
 const meta: Meta = {
   title: "CodeBlock",
@@ -335,6 +336,32 @@ export const LiveGutterLocalization: Story = {
         .code=${'const answer = 42;\nconsole.log(answer);'}
         .strings=${{ codeBlockLineLabel: 'Source line {line}' }}
       ></lr-code-block>
+    </div>
+  `,
+};
+
+export const IconCopyAndHeaderActions: Story = {
+  name: 'Icon copy control and header actions',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`copy-appearance="icon"` swaps the copy control\'s visible label for a compact glyph and promotes the same localized Copy/Copied/failure string to its accessible name, for a dense header. The `header-actions` slot takes extra controls at the trailing end of the header row; its content alone is enough to render the header. The copy control composes a real `<lr-icon-button>`, so `--lr-icon-button-*` retunes it.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; flex-direction:column; gap:1rem;">
+      <lr-code-block
+        filename="deploy.sh"
+        language="bash"
+        copy-appearance="icon"
+        code="pnpm build && pnpm deploy"
+      >
+        <lr-button slot="header-actions" size="2xs" appearance="plain">Run</lr-button>
+      </lr-code-block>
+      <lr-code-block filename="deploy.sh" language="bash" code="pnpm build && pnpm deploy">
+      </lr-code-block>
     </div>
   `,
 };

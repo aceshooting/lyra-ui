@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Documented with** `lr-app-rail-item` (same section below)
+- **Themeable via** 11 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -78,6 +78,14 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   to a genuinely too-narrow-for-any-inline-rail viewport. Only consulted while `forceMode` is
   `'auto'` or unset (see above); an explicit `forceMode` value takes full priority.
   Unset (the default, `null`) reproduces the original breakpoint-only behavior exactly.
+- `collapsible: boolean = false` (reflected) — opts in a desktop collapse control rendered inside
+  `[part="header"]`. It flips the rail between its `'full'` and `'icon-only'` presentations by
+  writing `preferredMode`, so the `mobile-breakpoint` keeps being tracked automatically and a
+  genuinely too-narrow viewport still wins. The control is not rendered at all while `mode` is
+  `'mobile'`, and `[part="header"]`'s layout is unchanged when this is unset. The collapse survives
+  a reload only when `storage-key` is set AND `persist` includes `preferred-mode` — the default
+  `persist` is `open width`, which does not. Pair them: `persist="width preferred-mode"`. Either
+  route announces itself through the existing `lr-mode-change` event; there is no new event.
 - `hideToggle: boolean = false` (reflected, attribute `hide-toggle`) — suppresses the built-in mobile
   `[part='toggle']` hamburger/OPEN button, for a consumer that already owns an external mobile-menu
   trigger wired to this rail's own `open` property (pair it with `trigger`/`for` below so focus
@@ -96,7 +104,13 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   return target for the remainder of that overlay's open lifetime. Read alongside `for`; this direct
   reference wins when both resolve to different elements. Unset (the default, `null`) reproduces the
   exact existing behavior: only the built-in toggle's own click supplies a return target, for that
-  interaction alone.
+  interaction alone. The resolved trigger also receives `aria-expanded` (rendered in both states)
+  and `aria-controls` pointing at the rail's own panel, so an external control announces the
+  overlay's state across the shadow boundary. Because a light-DOM element cannot hold a raw
+  reference into another element's shadow tree, engines resolve `aria-controls` to the
+  `<lr-app-rail>` host itself; either resolution is correct. The association applies while `mode` is
+  `'mobile'` and is released when the rail leaves that mode or disconnects, and it tracks live —
+  reassigning `trigger` moves the state to the new element.
 - `for: string = ''` — id of an external element that opens this rail's mobile overlay, the
   label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
   `for`). Resolved against this element's own root (shadow root or document) when the overlay opens.
@@ -132,6 +146,11 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
 Also settable as a plain `aria-label` attribute (not a reactive property): overrides the computed
 `label`/localized-default accessible name on both the navigation landmark and the mobile dialog
 role, matching `<lr-date-input>`'s `accessibleLabel`.
+
+**Methods:** `toggleCollapse(): void` performs the same `'full'`/`'icon-only'` flip `collapsible`'s
+built-in control does, for a consumer rendering its own control (app chrome, a command palette, a
+keyboard shortcut). A no-op while `mode` is `'mobile'`. While `forceMode` pins the mode the
+preference is still recorded and takes effect once the pin is released.
 
 **Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
 effective mode changed, whether from a breakpoint crossing, a `forceMode` assignment, or a
@@ -172,7 +191,15 @@ it renders as its own reserved row ahead of the `header` slot rather than an abs
 top of it, so a wide/slotted header is never obscured), `backdrop`, `panel` (`base`/`panel` are mutually exclusive on the same
 underlying element — see above), `resizer` (the `resizable` opt-in's drag handle, only rendered while
 `resizable` and `mode` is `'full'`; its hit target is `--lr-icon-button-size`-wide), `resizer-track`
-(the slim 3px visible drag line centered inside that hit target, tinted `--lr-color-brand` on hover).
+(the slim 3px visible drag line centered inside that hit target, tinted `--lr-color-brand` on hover),
+`collapse-toggle` (the opt-in desktop collapse control, rendered inside `[part="header"]` only while
+`collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
+`aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
+containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
+`appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the chevron wrapper, mirrored by its own
+`transform` under RTL). Collapsing to `'icon-only'` removes nothing from the accessibility tree — it
+clips each item's `label`/`meta` visually — so `aria-expanded` reports which of the two
+presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
 
 **Themeable custom properties:** `--lr-app-rail-width` (default `15rem` — the inline rail width in
 `'full'` mode), `--lr-app-rail-icon-width` (default `4rem` — the inline rail width in `'icon-only'`
@@ -204,7 +231,11 @@ tokens (`--lr-color-border`,
 `railWidthPx`'s inline `inline-size` style rather than a new custom property.
 The mobile toggle's hover/pressed background and foreground are independently inheritable through
 `--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,
-`--lr-app-rail-toggle-active-bg`, and `--lr-app-rail-toggle-active-color`. The resizer track uses
+`--lr-app-rail-toggle-active-bg`, and `--lr-app-rail-toggle-active-color`. `[part="collapse-toggle"]`
+has the matching set: `--lr-app-rail-collapse-toggle-hover-bg` (default
+`var(--lr-color-brand-quiet)`), `--lr-app-rail-collapse-toggle-hover-color` (default
+`var(--lr-color-brand)`), `--lr-app-rail-collapse-toggle-active-bg` (no default) and
+`--lr-app-rail-collapse-toggle-active-color` (default `var(--lr-color-brand)`). The resizer track uses
 `--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`. Each hook is an inline
 fallback at its exact state rule and preserves the previous brand or active-mix value when unset.
 
@@ -347,10 +378,27 @@ external focus move is always preserved, and this repair dispatches no activatio
 assistive technology and inert across its flattened subtree; the default slot or host `aria-label`
 names the native control, which remains the sole action).
 
+- `meta` slot — secondary trailing text (an unread count, a keyboard shortcut). Rendered as a
+  SIBLING of the item's own link/button, so its text is not part of the item's accessible name and a
+  pointer landing on it does not activate the item. Visually clipped in `icon-only` mode exactly as
+  the label is, staying available to assistive technology.
+- `end` slot — trailing controls or adornments (an overflow-menu trigger, a status badge). Also a
+  sibling of the link/button — the shape `<lr-details>` uses for `header-actions` — so a slotted
+  control keeps its own click, keyboard activation and focus order instead of being swallowed.
+  Unlike `meta` it stays visible in `icon-only` mode, where it shares the narrow rail's width with
+  the icon.
+
+Both wrappers (`[part="meta"]`, `[part="end"]`) are hidden while empty, so an item using neither
+renders exactly as before. Note that while the mobile overlay is open, a click anywhere in the
+rail's default slot closes it — including a click on an `end` control; that is the rail's documented
+nav-slot behaviour, not new to these slots.
+
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
 shipped `active-indicator` part), `tooltip` (the hover/focus label flyout, only rendered while
-`tooltip` is set, the item is `icon-only`, and it is hovered or focused).
+`tooltip` is set, the item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around
+the `meta` slot, hidden while empty) and `end` (the wrapper around the `end` slot, hidden while
+empty).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-app-rail-item-current-color` (default
@@ -374,9 +422,80 @@ brand/active-mix values as fallbacks.
 same token regardless of the override so the row's own hit target can never shrink below the WCAG
 2.5.8 minimum), `--lr-app-rail-item-padding` (default `var(--lr-space-s)`),
 `--lr-app-rail-item-gap` (default `var(--lr-space-s)`, the gap between `[part="icon"]` and
-`[part="label"]`), and `--lr-app-rail-item-icon-size` (default `var(--lr-icon-button-size)`, not
+`[part="label"]`, and now also between the item's control and the `meta`/`end` adornments),
+`--lr-app-rail-item-meta-color` (default `var(--lr-color-text-quiet)`),
+`--lr-app-rail-item-meta-font-size` (default `var(--lr-font-size-sm)`), and
+`--lr-app-rail-item-icon-size` (default `var(--lr-icon-button-size)`, not
 floor-clamped since the icon is decorative, not itself a pointer target) retune the row's
 geometry.
+
+**Optional peer deps:** none.
+
+---
+
+### `lr-app-rail-group`
+
+Titles, and optionally collapses, a section of `<lr-app-rail-item>`s. Grouping is by composition —
+the group holds whatever it is given; there is no items array and no renderer callback, so it can
+never disagree with what is rendered inside it.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/layout/app-rail-group/app-rail-group.js';
+</script>
+
+<lr-app-rail>
+  <lr-app-rail-group heading="Workspaces" collapsible>
+    <button slot="header-actions" aria-label="Add workspace">+</button>
+    <lr-app-rail-item href="/atlas" current>Atlas</lr-app-rail-item>
+    <lr-app-rail-item href="/beacon">Beacon</lr-app-rail-item>
+  </lr-app-rail-group>
+</lr-app-rail>
+```
+
+**Properties:**
+
+- `heading: string = ''` — the section title. The `heading` slot replaces it when populated.
+- `headingLevel: number = 3` (attribute `heading-level`) — the `aria-level` the heading landmark
+  reports. Clamped to 1-6 and rounded; a non-finite value falls back to `3`. Settable because a rail
+  sits at a different depth in every page that embeds it.
+- `collapsible: boolean = false` (reflected) — opts in the built-in collapse control. The heading's
+  own text becomes the button carrying `aria-expanded` and `aria-controls`, which is the accordion
+  pattern; an unnamed group falls back to a localized `Collapse`/`Expand` name.
+- `open: boolean = true` (reflected) — whether the content is shown. Carries a true-default
+  converter, so `open="false"` parses from markup (a plain presence-based boolean cannot). `open`
+  governs visibility whether or not `collapsible` is set, so a consumer can drive collapse entirely
+  from its own chrome.
+
+**Events:** `lr-toggle-request` — cancelable, emitted before `open` changes from the built-in
+control (`detail: { open }`). Call `preventDefault()` to keep the current state, or assign `open`
+from the listener to resolve it yourself; a write during the dispatch suppresses the default commit
+even when it assigns the value the property already held. Not emitted for a direct `open` write.
+`lr-toggle` — non-cancelable, emitted after `open` is written, never for a vetoed or
+listener-resolved request (`detail: { open }`).
+
+**Slots:** default — the group's items, and any nested `<lr-app-rail-group>`s; `heading` — rich
+heading content; `header-actions` — controls beside the heading, rendered as a sibling of the
+collapse control so activating one never toggles the group.
+
+**CSS parts:** `base`, `header`, `heading`, `heading-text`, `toggle`, `toggle-icon`,
+`header-actions`, `content`.
+
+**Themeable custom properties:** `--lr-app-rail-group-gap` (default `var(--lr-space-xs)`),
+`--lr-app-rail-group-padding-block` (default `var(--lr-space-xs)`),
+`--lr-app-rail-group-heading-color` (default `var(--lr-color-text-quiet)`),
+`--lr-app-rail-group-heading-font-size` (default `var(--lr-font-size-sm)`),
+`--lr-app-rail-group-hover-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-app-rail-group-hover-color` (default `var(--lr-color-brand)`),
+`--lr-app-rail-group-active-bg` (no default), `--lr-app-rail-group-active-color` (default
+`var(--lr-color-brand)`).
+
+The owning rail marks a slotted group `icon-only` exactly as it marks a slotted item, and the group
+forwards that to the items and nested groups it *directly* owns — including ones appended later —
+so grouping survives the rail's icon-only presentation. A nested group re-forwards in turn, so
+exactly one element ever writes `icon-only` onto any given node and a nested group clips its own
+heading too. In that mode the heading text is clipped out of layout — whether or not the group is
+collapsible — but stays in the accessibility tree.
 
 **Optional peer deps:** none.
 

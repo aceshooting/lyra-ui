@@ -4,6 +4,7 @@ import {
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import { dataStateRetryStyles } from '../../../internal/data-state-renderer.styles.js';
 
 export const styles = css`
   :host {
@@ -214,6 +215,16 @@ export const styles = css`
     font-style: italic;
   }
   [part="tag"][data-unknown-value] {
+    border: var(--lr-border-width-thin)
+      var(--lr-combobox-unknown-value-border-style, dashed)
+      var(--lr-combobox-unknown-value-border-color, var(--lr-color-border));
+  }
+  /* The synthetic listbox row for an unmatched committed value (showUnknownOption): the same
+     dashed and italic treatment the trigger and tags already use, so they read as one thing. */
+  [part~="option"][data-unknown-value] [part="option-label"] {
+    font-style: italic;
+  }
+  [part~="option"][data-unknown-value] {
     border: var(--lr-border-width-thin)
       var(--lr-combobox-unknown-value-border-style, dashed)
       var(--lr-combobox-unknown-value-border-color, var(--lr-color-border));
@@ -532,6 +543,12 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
   }
+  /* The shared failed-load row: the same lr-empty shape every data component in the library now
+     renders, sized down to listbox-row proportions. */
+  [part="source-error-row"] {
+    padding: var(--lr-space-xs) var(--lr-space-s);
+  }
+  ${dataStateRetryStyles}
   [part="hint"] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);

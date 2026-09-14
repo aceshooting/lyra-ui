@@ -1229,9 +1229,11 @@ describe('event boundaries', () => {
       let leaked = 0;
       el.addEventListener('lr-copy', () => { leaked++; });
       const copied = oneEvent(codeBlock, 'lr-copy');
+      // The copy control is a composed <lr-icon-button> whose part list also carries the active
+      // appearance token ('copy-button copy-button-text'), so match by token, not by exact value.
       const copyButton = codeBlock.shadowRoot!.querySelector(
-        '[part="copy-button"]',
-      ) as HTMLButtonElement;
+        '[part~="copy-button"]',
+      ) as HTMLElement;
       copyButton.click();
       await copied;
       await aTimeout(0);

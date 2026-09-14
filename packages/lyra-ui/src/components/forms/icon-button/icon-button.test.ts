@@ -414,10 +414,22 @@ function surfaceColor(el: Element): string {
   return painted;
 }
 
-const centerOf = (node: Element): [number, number] => {
-  const rect = node.getBoundingClientRect();
-  return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
-};
+/** Polls until `read()` returns something other than `from`, then returns it. `sendMouse` resolves
+ *  when the synthesized command completes, which is NOT when the browser has processed the
+ *  resulting pointer event -- and the button eases its background over --lr-transition-fast on top
+ *  of that, so a synchronous read can catch either the resting colour or an intermediate blend.
+ *  WebKit reported both the hovered and the pressed background as fully transparent here. */
+async function settledBackground(button: HTMLElement, from: string, message: string): Promise<string> {
+  let current = from;
+  await waitUntil(() => {
+    const next = getComputedStyle(button).backgroundColor;
+    if (next === from) return false;
+    const stable = next === current;
+    current = next;
+    return stable;
+  }, message);
+  return current;
+}
 
 it('hovers to a background that is visibly not the page surface it sits on', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
@@ -425,8 +437,8 @@ it('hovers to a background that is visibly not the page surface it sits on', asy
   const surface = surfaceColor(el);
   const resting = getComputedStyle(button).backgroundColor;
   try {
-    await sendMouse({ type: 'move', position: centerOf(button) });
-    const hovered = getComputedStyle(button).backgroundColor;
+    await hoverUntilMatched(button, 'the icon button is hovered');
+    const hovered = await settledBackground(button, resting, 'the hover background settles');
     expect(hovered, 'hover vs page surface').to.not.equal(surface);
     expect(hovered, 'hover vs resting').to.not.equal(resting);
   } finally {
@@ -437,11 +449,13 @@ it('hovers to a background that is visibly not the page surface it sits on', asy
 it('presses to a background stronger than -- and different from -- its hover', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
   const button = el.shadowRoot!.querySelector('button')!;
+  const resting = getComputedStyle(button).backgroundColor;
   try {
-    await sendMouse({ type: 'move', position: centerOf(button) });
-    const hovered = getComputedStyle(button).backgroundColor;
+    await hoverUntilMatched(button, 'the icon button is hovered before the press');
+    const hovered = await settledBackground(button, resting, 'the hover background settles');
     await sendMouse({ type: 'down' });
-    const pressed = getComputedStyle(button).backgroundColor;
+    await waitUntil(() => button.matches(':active'), 'the physical pointer activates the button');
+    const pressed = await settledBackground(button, hovered, 'the pressed background settles');
     expect(pressed, 'pressed vs hovered').to.not.equal(hovered);
     expect(pressed, 'pressed vs page surface').to.not.equal(surfaceColor(el));
   } finally {
@@ -599,6 +613,45 @@ describe('lr-icon-button — mapped Shoelace surface', () => {
     expect(anchor.rel).to.equal('noopener noreferrer');
     expect(anchor.download).to.equal('icon.svg');
     await expect(el).to.be.accessible();
+  });
+
+  // `aria-pressed` is not in `role="link"`'s supported set -- only a button can be a toggle -- so
+  // forwarding a host `aria-pressed` onto the anchor fails axe's `aria-allowed-attr`. Dropping
+  // `href` when disabled also drops the implicit role, and `aria-label` is prohibited on the
+  // generic element that leaves behind, so an explicit `role="link"` replaces it.
+  it('never forwards aria-pressed onto the anchor, while aria-current (global) still reaches it', async () => {
+    const el = (await fixture(html`
+      <lr-icon-button
+        name="close"
+        label="Pin"
+        href="https://example.com"
+        aria-pressed="true"
+        aria-current="page"
+      ></lr-icon-button>
+    `)) as LyraIconButton;
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    expect(anchor.hasAttribute('aria-pressed'), 'role="link" does not support aria-pressed').to.equal(false);
+    expect(anchor.getAttribute('aria-current')).to.equal('page');
+    await expect(el).to.be.accessible();
+  });
+
+  it('gives a disabled link icon-button an explicit role="link" and keeps its name legal', async () => {
+    const el = (await fixture(html`
+      <lr-icon-button name="close" label="Download" href="https://example.com" disabled></lr-icon-button>
+    `)) as LyraIconButton;
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    expect(anchor.hasAttribute('href'), 'a disabled link icon-button must not carry href').to.equal(false);
+    expect(anchor.getAttribute('role')).to.equal('link');
+    expect(anchor.getAttribute('aria-label')).to.equal('Download');
+    await expect(el).to.be.accessible();
+  });
+
+  it('leaves an enabled link icon-button on its native role, with no explicit role attribute', async () => {
+    const el = (await fixture(html`
+      <lr-icon-button name="close" label="Download" href="https://example.com"></lr-icon-button>
+    `)) as LyraIconButton;
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    expect(anchor.hasAttribute('role')).to.equal(false);
   });
 
   it('accepts a settable rel, strips opener, and force-adds the guard whenever target is set', async () => {

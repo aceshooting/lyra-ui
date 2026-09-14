@@ -1,4 +1,5 @@
 import { html, nothing, type PropertyValues, type ReactiveController, type TemplateResult } from 'lit';
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -33,6 +34,8 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_checkboxGroupRequired, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
@@ -43,11 +46,24 @@ const DUPLICATE_VALUE_WARNING_KEY = 'lyra-checkbox-group-duplicate-child-values'
 const DUPLICATE_VALUE_WARNING =
   '<lr-checkbox-group>: duplicate child values make submitted FormData ambiguous; give each child a distinct value.';
 
+/** The group-level proposal one owned checkbox's pending toggle translates into. */
+export interface LyraCheckboxGroupToggleRequestDetail {
+  /** The group value that would result from the proposed toggle, in DOM order. */
+  readonly value: readonly string[];
+  /** The group value as it stands while the request is dispatched. */
+  readonly previousValue: readonly string[];
+  /** The checkbox the user acted on. */
+  readonly option: LyraCheckbox;
+}
+
 export interface LyraCheckboxGroupEventMap {
   'lr-invalid': CustomEvent<null>;
   input: CustomEvent<Readonly<{ value: readonly string[] }>>;
   change: CustomEvent<Readonly<{ value: readonly string[] }>>;
   'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
+  'lr-checkbox-group-toggle-request': CustomEvent<
+    LyraEventDetailSnapshot<LyraCheckboxGroupToggleRequestDetail>
+  >;
 }
 
 export type CheckboxGroupOrientation = LyraOrientation;
@@ -70,7 +86,18 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * @slot error - Custom validation message.
  * @event input - User selection changed.
  * @event change - User selection changed.
- * @event lr-change - User selection changed; detail is `{ value: string[] }`.
+ * @event lr-change - User selection changed; detail is `{ value: string[] }`. Not fired for a
+ * toggle a listener refused through `lr-checkbox-group-toggle-request`.
+ * @event lr-checkbox-group-toggle-request - One owned checkbox is about to toggle;
+ * `detail: { value, previousValue, option }` carries the group value that *would* result, the
+ * value as it stands right now, and the checkbox the user acted on. Cancelable: calling
+ * `preventDefault()` keeps the current state, so the option never flips at all rather than
+ * flipping and snapping back -- which is what lets a host refuse "uncheck the last remaining
+ * option" (`detail.value.length === 0`) with no flicker -- and no `input`/`change`/`lr-change`
+ * follows. A listener may instead resolve the request by assigning the group's `value` itself
+ * during the dispatch, which suppresses the option's own write the same way. The owned checkbox's
+ * `lr-checkbox-toggle-request` is consumed and republished as this event, exactly as the group
+ * already translates a child's `input`/`change`/`lr-change` into its own.
  * @event lr-invalid - The aggregate checkbox group failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -118,6 +145,17 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  // The proposal detail carries two value arrays; they are detached and frozen before dispatch so
+  // a listener cannot mutate the group's own bookkeeping through them. `option` is the exception
+  // the snapshot boundary keeps by identity -- naming which checkbox is toggling is the whole
+  // point of that field, and a detached copy of it would name nothing.
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-checkbox-group-toggle-request',
+  ]);
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-checkbox-group-toggle-request': Object.freeze(['option']),
+  });
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, srOnly, styles];
@@ -196,6 +234,11 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private childObserverDocument?: Document;
   private childObserverGeneration = 0;
   private childControllers = new Map<LyraCheckbox, ReactiveController>();
+  // Shared with every other veto point in this library: `emit()` is synchronous, so a host that
+  // answers `lr-checkbox-group-toggle-request` by assigning `value` itself finishes before the
+  // child's pending commit runs, and a before/after value compare reads "unchanged" whenever it
+  // assigned the value the group already held. The guard records that a write happened.
+  private toggleGuard = new VetoWriteGuard();
   private authoredChildSizes = new Map<LyraCheckbox, LyraSize>();
 
   /** The form submission key each checked child checkbox's value is grouped under in the group's
@@ -227,6 +270,10 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   get value(): readonly string[] { return Object.freeze([...this._value]); }
 
   set value(next: readonly string[] | null | undefined) {
+    // Unconditional, including an assignment of the value already held, and before the deferral
+    // below: the guard tracks that a write happened, not that a value differs. See
+    // {@link toggleGuard}.
+    markVetoGuardWrite(this.toggleGuard);
     const requested = Array.isArray(next)
       ? next.filter((entry): entry is string => typeof entry === 'string')
       : [];
@@ -416,6 +463,52 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.emit('lr-change', detail());
   };
 
+  /** The group value that would result if `option` took `proposed`, in DOM order. */
+  private projectedValue(option: LyraCheckbox, proposed: boolean): readonly string[] {
+    return Object.freeze(
+      this.boxes
+        .filter((box) => (box === option ? proposed : box.checked))
+        .map((box) => box.value ?? 'on'),
+    );
+  }
+
+  private onChildToggleRequest = (event: Event): void => {
+    // Same ownership boundary as `onChildEvent`: nested groups, and interactive content slotted
+    // inside a checkbox, stay untouched.
+    if (!this.isOwnedCheckbox(event.target)) return;
+    // The group is this aggregate's public event surface, so the child's own request is consumed
+    // here and republished below under the group's name -- exactly what already happens to the
+    // child's `input`/`change`/`lr-change` (see `connectedCallback()` for why capture phase is
+    // what makes that interception reliable). Stopping propagation does not clear the canceled
+    // flag, so the veto this handler may apply still reaches the child that dispatched it.
+    event.stopImmediatePropagation();
+    // A disabled group propagates its state to every child, so a request should not reach here at
+    // all; if one does, it is left to commit exactly as today's `change` translation leaves it,
+    // rather than silently vetoed.
+    if (this.effectiveDisabled) return;
+    const option = event.target;
+    const proposed = (event as CustomEvent<{ checked: boolean }>).detail.checked;
+    let allowed = false;
+    requestThenCommit({
+      requestDetail: {
+        value: this.projectedValue(option, proposed),
+        previousValue: this.value,
+        option,
+      },
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-checkbox-group-toggle-request', detail, init),
+      guard: this.toggleGuard,
+      // The group writes nothing of its own here: committing means letting the child's pending
+      // write run. A flag set inside `commit` is the only reading that stays correct alongside a
+      // guard -- a listener that resolved the request by assigning `value` leaves
+      // `defaultPrevented` false while still suppressing the commit.
+      commit: () => {
+        allowed = true;
+      },
+    });
+    if (!allowed) event.preventDefault();
+  };
+
   private reconcileChildControllers(): void {
     const current = new Set(this.boxes);
     for (const [box, controller] of this.childControllers) {
@@ -525,6 +618,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.addEventListener('input', this.onChildEvent, { capture: true });
     this.addEventListener('change', this.onChildEvent, { capture: true });
     this.addEventListener('lr-change', this.onChildEvent, { capture: true });
+    this.addEventListener('lr-checkbox-toggle-request', this.onChildToggleRequest, {
+      capture: true,
+    });
     // Initialize light-DOM-derived state before the first render. Doing this in firstUpdated()
     // schedules a redundant follow-up update and triggers Lit's change-in-update warning.
     this.onSlotChange();
@@ -571,6 +667,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.removeEventListener('input', this.onChildEvent, { capture: true });
     this.removeEventListener('change', this.onChildEvent, { capture: true });
     this.removeEventListener('lr-change', this.onChildEvent, { capture: true });
+    this.removeEventListener('lr-checkbox-toggle-request', this.onChildToggleRequest, {
+      capture: true,
+    });
     this.resetChildObserver();
     for (const [box, controller] of this.childControllers) {
       box.removeController(controller);

@@ -166,9 +166,16 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
           generation !== this.focusGeneration ||
           !this.isConnected ||
           this.confirming ||
-          !this.restorable ||
-          this.restoring
+          !this.restorable
         ) return;
+        // Deliberately NOT gated on `restoring`. Confirming is the terminal action here: it destroys
+        // the confirm group -- and with it the Confirm button holding focus -- and a host that
+        // reacts to `lr-restore` by setting `restoring` does so synchronously, before this settle
+        // runs. The restore button is still rendered in that state (`aria-disabled`, not `disabled`,
+        // so still focusable) and is the component's only remaining stop, so declining the refocus
+        // drops a keyboard user onto <body> at the moment the restore they authorised begins. The
+        // `restorable` check above stays because that branch renders no button at all, and the
+        // optional call then covers every remaining "nothing to focus" case on its own.
         (this.renderRoot.querySelector('[part="restore-button"]') as HTMLButtonElement | null)?.focus();
       });
     }

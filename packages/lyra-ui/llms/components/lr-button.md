@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,6 +39,18 @@ it is neither focusable nor navigable; it also dims to `--lr-opacity-disabled` w
 cursor and no hover/press feedback, exactly like the disabled `<button>` path (an `<a>` can never
 match `:disabled`, so that arm of the styling keys off `aria-disabled` instead). An
 unsafe/unparseable `href` falls back to the native `<button>`.
+
+The label does **not** grow to fill a stretched button. `[part="label"]` shrink-wraps its text and
+the whole icon+label pair centres under `--lr-button-justify`, so the icon-to-text distance is
+exactly `--lr-button-gap`. Before 16.0.0 the label was `flex: 1 1 auto`, which parked every spare
+pixel inside the label box and — because the native `<button>` UA stylesheet centres text, which the
+label wrapper inherited — floated the text in the middle of a wide empty row. A `with-caret` button,
+and one with an `end`/`suffix` adornment, keep the growing label so that trailing affordance stays
+pinned to the trailing content edge. `--lr-button-label-grow: 1` restores the old stretch and `0`
+opts a caret/end-adornment row out of pinning. The label is also `text-align: start` now, which
+fixes two side effects of the inherited centring: a label narrower than its own text centred the
+overflow so the ellipsis appeared at the end while the start of the word was clipped, and the `<a>`
+root (which never inherited the centring) disagreed with the `<button>` root across a mode switch.
 
 **Properties:**
 
@@ -100,7 +112,14 @@ unsafe/unparseable `href` falls back to the native `<button>`.
   square control with the pill radius and compact inline padding. It is additive to, not a rename
   of, `pill`. Circle and automatically detected icon-only buttons retain the shared
   `--lr-icon-button-size` minimum clickable box at every `size`; the tier still scales their glyph
-  and chrome
+  and chrome. A visually hidden label does not count as content, so an icon plus an `.sr-only` name
+  still gets the square, `--lr-icon-button-size`-floored treatment. `<lr-visually-hidden>`,
+  `hidden`/`display: none`/`visibility: hidden`, and the standard absolutely-positioned
+  `clip-path: inset(50%)` algorithm are all recognised from computed style, so a consumer's own
+  utility class works whatever it is called
+- `wrap: boolean = false` (reflected) — wraps a long label onto multiple lines instead of
+  ellipsis-truncating it to one, the same opt-in `<lr-chip>` ships. Unset, `[part="label"]` keeps
+  its single-line, ellipsis-truncated rule exactly
 - `outline: boolean = false` (reflected) — Shoelace-compatible outlined treatment. It does not
   overwrite `appearance`, so removing `outline` restores the canonical Lyra appearance
 - `withCaret: boolean = false` (attribute `with-caret`, reflected) — renders a decorative trailing
@@ -275,6 +294,12 @@ size instead of needing a per-tier value.
 byte-identical to before this property existed — set it to add a drop shadow (e.g. an
 elevated/floating action button) without a `::part(base)` rule. `appearance="link"` always renders
 with no shadow regardless of this token — a zero-chrome inline link has no box to elevate.
+`--lr-button-justify` (default `center`) is the `justify-content` of the internal button's row. With
+the label no longer growing, this is what positions the icon+label pair inside a stretched control:
+`flex-start` packs it against the leading edge, `space-between` pushes the adornments apart.
+`--lr-button-label-grow` (default `0`) is the `flex-grow` of `[part="label"]`; `1` restores the
+pre-16.0.0 behaviour where the label absorbed every spare pixel of a stretched button, and it also
+overrides the automatic grow a `with-caret`/`end`-adornment button applies.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no
@@ -345,11 +370,18 @@ box no matter what tier or override is in play.
   are resolved onto the focused internal control through `ariaDescribedByElements`; external
   `aria-labelledby` is not copied across the shadow boundary.
 - Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
-  For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button.
-  Navigation can use `aria-current="page|step|location|date|time|true|false"`. Both states update
-  reactively, including native `ariaPressed`/`ariaCurrent` property assignments, attribute removal
-  and `href` changes. Empty or unsupported tokens are omitted. The native button/link role remains
-  unchanged: use pressed state for button toggles and current state for navigation links.
+  For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button —
+  BUTTONS only. A link button (`href` set) never receives it, because `role="link"` does not support
+  `aria-pressed`; remove `href` and the same host attribute starts reaching the `<button>` that
+  replaces the anchor. Navigation can use the global
+  `aria-current="page|step|location|date|time|true|false"`, which does reach the anchor. Both states
+  update reactively, including native `ariaPressed`/`ariaCurrent` property assignments, attribute
+  removal and `href` changes. Empty or unsupported tokens are omitted. The native button/link role
+  remains unchanged for an enabled control: use pressed state for button toggles and current state
+  for navigation links. A DISABLED link button drops `href` (so it genuinely cannot navigate) and
+  therefore also drops the anchor's implicit role, so it renders an explicit `role="link"` — without
+  it, the forwarded `aria-label`/`aria-haspopup`/`aria-expanded`/`aria-current` would sit on a
+  role-less generic element, which is prohibited.
   For host `aria-controls`, targets in the host's own root are resolved through the reflected
   element-reference API so a popup relationship survives the component's shadow boundary; browsers
   with that API expose the relationship through `ariaControlsElements` and intentionally serialize

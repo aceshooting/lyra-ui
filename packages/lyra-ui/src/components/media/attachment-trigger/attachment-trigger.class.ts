@@ -6,6 +6,9 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 import { styles } from './attachment-trigger.styles.js';
 import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
@@ -206,7 +209,14 @@ export interface LyraAttachmentTriggerEventMap {
  *   native event.
  * @event {FocusEvent} blur - Relayed once from the active trigger button as a bubbling, composed
  *   native event.
- * @csspart trigger - The single-capability icon button. Only rendered when `capabilities.length === 1`.
+ * @csspart trigger - The single-capability action, a composed `<lr-icon-button>` as of 16.0.0. Only
+ *   rendered when `capabilities.length === 1`. It still owns the accessible name, the activation
+ *   and the `title`; its background, radius, hover/press mixes, focus ring and hit-area floor now
+ *   come from `--lr-icon-button-*`, retuned by `appearance`/`size`.
+ * @csspart trigger__control - The single-capability action's own native `<button>`, forwarded
+ *   because the painted surface sits one shadow boundary deeper than `trigger`.
+ * @csspart menu-trigger__control - The multi-capability action's own native `<button>`, forwarded
+ *   for the same reason.
  * @csspart menu - The `<lr-dropdown>` shell. Only rendered when `capabilities.length > 1`.
  * @csspart menu-trigger - The multi-capability button slotted into `<lr-dropdown>`'s `trigger` slot. Only rendered when `capabilities.length > 1`.
  * @csspart expand-icon - The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`.
@@ -248,7 +258,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     'capabilities',
   ]);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-files',
   ]);
@@ -279,9 +289,37 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   @property({ type: Boolean, reflect: true }) disabled = false;
 
+  /** How the trigger fills itself, from the library's one shared `appearance` vocabulary. The
+   *  default `'plain'` is exactly the treatment this component shipped before it had the property:
+   *  no fill, no border, quiet glyph. `'filled'`/`'filled-outlined'` tint it, `'outlined'` bounds
+   *  it, `'accent'` makes it the loud primary affordance in a composer's start slot. Painted
+   *  through the composed `<lr-icon-button>`'s own `--lr-icon-button-*` contract, so an ancestor
+   *  theme wrapper still wins over every tier. */
+  @property({ reflect: true }) appearance: LyraAppearance = 'plain';
+
+  /** Size on the library's shared six-step ladder, accepting the Web Awesome/Shoelace spellings
+   *  (`small`/`medium`/`large`) too so a migration stays a tag rename. The tier scales the GLYPH,
+   *  never the tappable box: `--lr-icon-button-size` is an accessibility floor, and the ladder's
+   *  tightest tiers resolve below WCAG 2.5.8's minimum, so wiring the target to it would let
+   *  `size="2xs"` ship an untappable control. Override `--lr-icon-button-size` to make that
+   *  trade-off explicitly, exactly as on a standalone `<lr-icon-button>`. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
   @query('lr-dropdown') private dropdownEl?: LyraDropdown;
-  @query('[part="trigger"], [part="menu-trigger"]') private triggerEl?: HTMLButtonElement;
+  @query('[part="trigger"], [part="menu-trigger"]')
+  private composedTriggerEl?: LyraIconButton;
+
+  /** The element that owns the button role in either shape. Both triggers are composed
+   *  `<lr-icon-button>`s, whose real control lives one shadow boundary deeper -- a host IDREF
+   *  relationship assigned to the icon-button host would never reach it, so project onto the
+   *  composed control itself (the same reason `<lr-activity-feed>` targets `<lr-virtual-list>`'s
+   *  `scrollContainer` rather than its host). Falls back to the host before its first render. */
+  private descriptionSyncGeneration = 0;
+
+  private get triggerEl(): HTMLElement | undefined {
+    return this.composedTriggerEl?.control ?? this.composedTriggerEl;
+  }
   private hasSyncedDescribedByElements = false;
 
   // Which file-backed capability the hidden input's next 'change' event
@@ -314,14 +352,28 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   // never cross the shadow boundary on their own.
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.syncTriggerDescription();
+    // The composed `<lr-icon-button>` exists in the DOM by the time this update finishes, but it
+    // has not run its OWN first update, so `control` is still null and the projection above lands
+    // on nothing. Re-run once the child has rendered. Generation-guarded because a capability
+    // change can swap single-capability trigger for menu trigger while the await is in flight.
+    const composed = this.composedTriggerEl;
+    if (!composed || composed.control) return;
+    const generation = ++this.descriptionSyncGeneration;
+    void composed.updateComplete.then(() => {
+      if (generation !== this.descriptionSyncGeneration || !this.isConnected) return;
+      this.syncTriggerDescription();
+    });
+  }
+
+  private syncTriggerDescription(): void {
     const hostDescribedBy = this.getAttribute('aria-describedby');
-    if (hostDescribedBy || this.hasSyncedDescribedByElements) {
-      this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
-        this,
-        this.triggerEl,
-        hostDescribedBy,
-      );
-    }
+    if (!hostDescribedBy && !this.hasSyncedDescribedByElements) return;
+    this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
+      this,
+      this.triggerEl,
+      hostDescribedBy,
+    );
   }
 
   private effectiveAccept(capability: LyraFileBackedCapability): string {
@@ -438,10 +490,10 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     const hostLabel = hostAriaLabel(this);
     const label = hostLabel ?? this.accessibleLabel ?? this.localize(meta.triggerKey);
     return html`
-      <button
+      <lr-icon-button
         part="trigger"
+        exportparts="button:trigger__control"
         class="trigger-button"
-        type="button"
         aria-label=${label}
         title=${this.triggerTitle ?? nothing}
         ?disabled=${this.disabled}
@@ -450,7 +502,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         @blur=${this.onControlBlur}
       >
         ${meta.icon()}
-      </button>
+      </lr-icon-button>
     `;
   }
 
@@ -466,11 +518,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         @lr-hide=${this.stopInternalEvent}
         @lr-after-hide=${this.stopInternalEvent}
       >
-        <button
+        <lr-icon-button
           slot="trigger"
           part="menu-trigger"
+          exportparts="button:menu-trigger__control"
           class="trigger-button"
-          type="button"
           aria-label=${accessibleLabel}
           title=${this.triggerTitle ?? nothing}
           ?disabled=${this.disabled}
@@ -479,7 +531,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         >
           ${paperclipIcon()}
           <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
-        </button>
+        </lr-icon-button>
         <lr-menu label=${accessibleLabel} @lr-select=${this.onMenuSelect}>
           ${this.effectiveCapabilities.map((capability) => {
             const meta = CAPABILITY_META[capability];

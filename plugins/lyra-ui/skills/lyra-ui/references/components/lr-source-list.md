@@ -79,6 +79,25 @@ source"` when empty.
   `plain` wins over `compact` when both are set — nothing left to tighten. The title and toggle keep
   their brand color and hover underline under `plain`, since neither ever depended on the card
   chrome. Use the shared `LyraFrame` type when authoring this property.
+- `disabled: boolean = false` (reflected) — turns off this card's OWN controls. The `title` button
+  and the "Show more"/"Show less" `toggle` both render `disabled`, so neither one can emit `lr-open`
+  or `lr-expand` and neither remains in the tab order, and the card paints at
+  `--lr-opacity-disabled` with a `not-allowed` cursor on both. The one `lr-expand` a disabled card
+  can still emit is the automatic collapse when the `full` slot empties while expanded — that
+  reports a state change the card genuinely made, exactly as it does when enabled. Both buttons
+  carry the native `:disabled`, so `::part(title):disabled` / `::part(toggle):disabled` restyle the
+  disabled affordance from outside. Every self-rendered sub-control is
+  gated, not just the primary one: a card whose title is inert but whose disclosure toggle still
+  expands reads as half-broken rather than disabled. Slotted `excerpt`/`full` content stays yours
+  to disable. Not form-associated, so an ancestor `<fieldset disabled>` does not cascade here.
+- `aria-pressed` and `aria-current` (attributes only) — forwarded reactively onto the `title`
+  button, the control that carries this card's action, the same mechanism `<lr-button>` and
+  `<lr-icon-button>` use. `aria-pressed` accepts `'true' | 'false' | 'mixed'`; `aria-current`
+  accepts `'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'`. Anything outside
+  those sets is dropped rather than passed through. The `toggle` button never receives either — it
+  already owns `aria-expanded` for its own disclosure state, and two conflicting state claims on
+  one control is worse than one. This is what lets a single-select citation list announce which
+  source is the active one.
 
 **Events:**
 
@@ -100,7 +119,10 @@ behind the "Show more"/"Show less" toggle — when left empty, no toggle renders
 (wrapper around the `full` slot, `hidden` while collapsed), `toggle` (the "Show more"/"Show less"
 button — only rendered when the `full` slot has content).
 
-**Themeable custom properties:** `--lr-source-card-compact-padding` (default `var(--lr-space-xs)`) —
+**Themeable custom properties:** `--lr-source-card-bg` (default `var(--lr-color-surface)`) —
+`[part='base']`'s RESTING background, the companion to the `compact` tier's levers below;
+`frame='plain'` still drops the fill entirely. `--lr-source-card-compact-padding` (default
+`var(--lr-space-xs)`) —
 `[part='base']`'s padding while `compact`; `--lr-source-card-compact-gap` (default
 `var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
 the `compact` state, so a dense citation list can be tuned without re-pointing shared spacing tokens

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -117,6 +117,16 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `hoist: boolean = false` (reflected) — switches Floating UI from its mapped absolute strategy to
   fixed positioning, escaping clipping containers. It also switches live while open; an effective
   direction change refreshes logical left/right placement by the same path
+- `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
+  see `<lr-popover>` (`llms/components/lr-popover.md`). `hoist: boolean = false` is its retained
+  exact alias; writing either spelling updates the other
+- `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
+  committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
+  keyboard-reachable, re-selectable row. Off by default
+- `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
+  committed value that matches no option, everywhere it appears (trigger, `multiple` tag, synthetic
+  row). `getTag` cannot serve this case: it is handed a matched option and there is none. A blank
+  return falls back to the raw value
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
 - `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
@@ -239,8 +249,15 @@ following option rows; options with an empty `group` get no heading or group wra
 `option-start`/`option-end` (an option row's leading/trailing adornment, cloned from the source
 `<lr-option>`'s `start`/`prefix`/`end`/`suffix` slot — inert and `aria-hidden`, exactly like
 `lr-combobox`'s identical parts), `option-label`,
-`option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
+`option-sub` (a row's secondary line, when `sub` is set),
+`option-badge` (the localized "not in catalog" badge on a synthetic unmatched-value row, rendered
+only while `show-unknown-option` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
+
+**TypeScript:** `LyraSelect<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
+`lr-change`/`lr-input` detail `value` narrow to `string` when `Multiple` is `false` and `string[]`
+(`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored surface are
+unchanged, and an untyped `<lr-select>` keeps `string | string[]`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so

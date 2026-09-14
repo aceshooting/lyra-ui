@@ -1,5 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
+import '../../forms/button/button.js';
 import './confirm-bar.js';
 
 const meta: Meta = {
@@ -146,5 +147,84 @@ export const Narrow320px: Story = {
     <div style="max-width:320px;border:1px dashed var(--lr-color-border);padding:8px;">
       <lr-confirm-bar tool-name="run_shell" .args=${{ command: 'npm test' }}></lr-confirm-bar>
     </div>
+  `,
+};
+
+/** The declarative async path: `lr-approve`/`lr-deny`'s detail carries `waitUntil(promise)`,
+ *  ExtendableEvent-style. Calling it holds the bar pending for the promise's lifetime and the
+ *  settlement finalizes the decision — no `preventDefault()`, no cast of `currentTarget`, no manual
+ *  `pending` bookkeeping. Deny here rejects, so the bar bounces back for a retry. */
+export const WaitUntil: Story = {
+  name: 'waitUntil (declarative async decision)',
+  render: () => html`
+    <lr-confirm-bar
+      tool-name="send_email"
+      .args=${{ to: 'ops@example.com' }}
+      @lr-approve=${(e: CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>) => {
+        e.detail.waitUntil(new Promise((resolve) => setTimeout(resolve, 1500)));
+      }}
+      @lr-deny=${(e: CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>) => {
+        e.detail.waitUntil(
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Mailbox locked')), 1500)),
+        );
+      }}
+    ></lr-confirm-bar>
+  `,
+};
+
+/** `returnFocusTo` names where focus belongs once the decision lands, instead of the bar's own
+ *  `[part="status"]`. The motivating case: a host reveals an inline confirmation in response to a
+ *  focused control, so after Approve or Deny focus goes back to that control rather than to a status
+ *  line the host is about to hide. `lr-decision-settled` is the "the status has rendered and been
+ *  announced" signal that makes hiding it again safe. */
+export const ReturnFocus: Story = {
+  name: 'returnFocusTo + lr-decision-settled',
+  render: () => html`
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <lr-button
+        id="return-demo-trigger"
+        variant="danger"
+        @click=${(e: Event) => {
+          const trigger = e.currentTarget as HTMLElement;
+          const bar = trigger.parentElement!.querySelector('lr-confirm-bar') as HTMLElement & {
+            decision: string | null;
+            returnFocusTo: HTMLElement | null;
+          };
+          bar.decision = null;
+          bar.returnFocusTo = trigger;
+          bar.hidden = false;
+        }}
+        >Delete project</lr-button
+      >
+      <lr-confirm-bar
+        hidden
+        compact
+        frame="plain"
+        variant="danger"
+        heading="Delete this project?"
+        @lr-decision-settled=${(e: CustomEvent<{ decision: string }>) => {
+          (e.currentTarget as HTMLElement).hidden = true;
+        }}
+      ></lr-confirm-bar>
+    </div>
+  `,
+};
+
+export const RestingBackgroundToken: Story = {
+  name: 'Retinting the resting bar',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-confirm-bar-bg` is the resting companion to the `compact` tier\'s existing padding/gap levers, so an embedded approval prompt can be retinted without a `::part(base)` rule or an app-wide `--lr-color-surface` change. `frame="plain"` still drops the fill entirely.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-confirm-bar
+      tool-name="delete_row"
+      heading="Delete this row?"
+      style="--lr-confirm-bar-bg: var(--lr-color-brand-quiet)"
+    ></lr-confirm-bar>
   `,
 };

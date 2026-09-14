@@ -626,6 +626,54 @@ it('uses a real hidden attribute for non-HTMLElement assigned children and resto
   expect(svg.hasAttribute('hidden')).to.be.false;
 });
 
+it('keeps a collapsed overflow child hidden against an author display rule', async () => {
+  const authorRule = document.createElement('style');
+  authorRule.textContent = '.cg-item { display: inline-flex; }';
+  document.head.append(authorRule);
+  try {
+    const el = (await fixture(html`
+      <lr-chip-group max-visible="1">
+        <span class="cg-item">A</span>
+        <span class="cg-item">B</span>
+      </lr-chip-group>
+    `)) as LyraChipGroup;
+    await settleChipGroup(el);
+    const children = Array.from(el.children) as HTMLElement[];
+    expect(children.map((child) => child.hidden), 'the second child is collapsed').to.deep.equal([
+      false,
+      true,
+    ]);
+    // The component OWNS this `hidden` -- it is overflow state standing behind the "+N" pill, not
+    // an author declaration -- so a normal-weight rule in the author's own tree must not re-show
+    // it. Without `!important` the outer tree wins the encapsulation-context ordering and the
+    // collapsed chips paint next to the pill that claims to be standing in for them. The slot
+    // documents any content, so an lr-* child's own :host([hidden]) reset cannot be relied on.
+    expect(getComputedStyle(children[1]!).display, 'the collapsed child stays out').to.equal('none');
+    expect(
+      getComputedStyle(children[0]!).display,
+      'the visible child still paints',
+    ).to.not.equal('none');
+  } finally {
+    authorRule.remove();
+  }
+});
+
+it('still lets find-in-page reveal an author hidden="until-found" child', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group>
+      <span id="until-found-child" hidden="until-found">A</span>
+    </lr-chip-group>
+  `)) as LyraChipGroup;
+  await settleChipGroup(el);
+  const child = el.querySelector<HTMLElement>('#until-found-child')!;
+  expect(child.getAttribute('hidden'), 'the author mode is preserved').to.equal('until-found');
+  // The forcing override above deliberately carves this mode out: a `hidden="until-found"` node
+  // must stay revealable, so it must not be pinned to `display: none !important`.
+  child.removeAttribute('hidden');
+  await settleChipGroup(el);
+  expect(getComputedStyle(child).display, 'revealing it is not blocked').to.not.equal('none');
+});
+
 it('keeps the overflow indicator at the shared minimum target size', async () => {
   const el = (await fixture(html`
     <lr-chip-group max-visible="1"><lr-chip>A</lr-chip><lr-chip>B</lr-chip></lr-chip-group>

@@ -208,7 +208,12 @@ export interface LyraDialogEventMap {
  * @csspart header-actions - The wrapper around the `header-actions` slot.
  * @csspart close-button - The built-in close button, rendered inside `header`
  *   only when `closable` is `true`.
- * @csspart close-button__base - Exported mapped alias on the close button.
+ * @csspart close-button__base - Exported mapped alias on the close button, on the same node.
+ * @csspart close-button__control - The composed `<lr-icon-button>`'s own native control, forwarded
+ *   because the painted surface now sits one shadow boundary deeper than `close-button`. As of
+ *   16.0.0 the close button IS an `<lr-icon-button>`, so its background, radius, hover/press mixes,
+ *   focus ring and hit-area floor come from `--lr-icon-button-*`; a rule that painted through
+ *   `::part(close-button)` moves here or onto the token.
  * @csspart label - Mapped alias on the visible title.
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
@@ -928,14 +933,14 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
                     : nothing}
                   ${this.closable
                     ? html`
-                        <button
+                        <lr-icon-button
                           part="close-button close-button__base"
-                          type="button"
+                          exportparts="button:close-button__control"
                           aria-label=${this.localize('close')}
                           @click=${this.onCloseButtonClick}
                         >
                           ${closeIcon()}
-                        </button>
+                        </lr-icon-button>
                       `
                     : nothing}
                 </div>

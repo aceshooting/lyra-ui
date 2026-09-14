@@ -1706,6 +1706,27 @@ and later MIME values restore detection.
   `[part="base"]`'s border, background, padding, and corner radius, so a card inside a dense chat
   transcript (or any container already drawing its own separation between attachments) doesn't
   double the frame.
+- `disabled: boolean = false` (reflected) — turns off this card's OWN action. The `kind="image"`
+  button and the `kind="video"` `open-button` render `disabled`; a safe file chip's anchor loses
+  its `href` and `download`, so it genuinely cannot fetch, and gains an explicit `role="link"` so
+  its accessible name and `aria-current` stay valid on an element that no longer has an implicit
+  role. `lr-media-open` and `lr-before-media-download` stop firing from every path, `click()`
+  included, the action leaves the tab order, and it paints at `--lr-opacity-disabled` with a
+  `not-allowed` cursor. Deliberately does NOT reach into the `kind="video"` player: `<video
+  controls>` is media content with its own native transport, not this card's action. An
+  unsafe-`src` file chip has no action at all, so `disabled` leaves it unchanged. Not
+  form-associated, so an ancestor `<fieldset disabled>` does not cascade here. The disabled paint
+  keys off the state each element already carries — `::part(base):disabled` and
+  `::part(open-button):disabled` restyle the two buttons from outside; the file chip's anchor has no
+  such pseudo-class, so target it through the reflected host attribute
+  (`lr-media-card[disabled]::part(base)`).
+- `aria-pressed` and `aria-current` (attributes only) — forwarded reactively onto whichever native
+  control carries this card's action, the same mechanism `<lr-button>`/`<lr-icon-button>` use.
+  `aria-pressed` accepts `'true' | 'false' | 'mixed'` and reaches BUTTONS only (`kind="image"`'s
+  `base` and `kind="video"`'s `open-button`) — the file chip's anchor never receives it, because
+  `link` has no pressed state. The global `aria-current` accepts `'page' | 'step' | 'location' |
+  'date' | 'time' | 'true' | 'false'` and reaches every kind, anchor included. Anything outside
+  those sets is dropped rather than passed through.
 
 **Renamed in 8.0.0 — breaking:** this was `appearance`. Library-wide, `appearance` now means only
 "how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
@@ -1746,11 +1767,15 @@ below).
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
 `<lr-document-preview>`'s identical `--lr-document-preview-max-height`; override per-instance via
 the `max-height` attribute instead of this property directly).
+`--lr-media-card-bg` (default `var(--lr-color-surface)`) retints the RESTING `frame="card"`
+chrome — the companion to the pressed state's `--lr-media-card-active-bg` below, and the tier a
+card sits at all day; `frame="plain"` still drops the fill entirely.
 `--lr-media-card-active-border-color` (default
 `color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
 and `--lr-media-card-active-bg` (default
-`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
-independently retint only a pressed image/file action. Both are inline `var()` fallbacks in the
+`color-mix(in oklab, var(--lr-media-card-bg, var(--lr-color-surface)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+independently retint only a pressed image/file action; the pressed default mixes from
+`--lr-media-card-bg`, so retinting the resting card carries the pressed state with it. Both are inline `var()` fallbacks in the
 pressed state, so values on a chat or attachment-list ancestor inherit into every card rather than
 being shadowed by host defaults. Plus shared tokens
 `--lr-space-xs`/`-s`, `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`/`-text-quiet`,
@@ -1837,6 +1862,13 @@ capability as a row.
   localized accessible-name fallback. A host `aria-label`, including explicit empty, wins.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
+- `appearance: LyraAppearance = 'plain'` (reflected) — how the trigger fills itself, from the
+  library's shared `accent`/`filled`/`outlined`/`filled-outlined`/`plain` vocabulary. `'plain'` is
+  exactly the treatment this component shipped before it had the property
+- `size: LyraSize = 'm'` (reflected) — size on the shared six-step ladder, accepting the
+  `small`/`medium`/`large` spellings too. The tier scales the **glyph**, never the tappable box:
+  `--lr-icon-button-size` is an accessibility floor and the ladder's tightest steps resolve below
+  WCAG 2.5.8's minimum. Override `--lr-icon-button-size` to make that trade-off explicitly
 
 **Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files: readonly File[] }`) — fired
 once a file-backed capability's hidden input produces a real selection. `files` is a fresh frozen
@@ -1860,6 +1892,9 @@ contained inside the trigger. Only the attachment events listed above cross the 
 `capabilities.length > 1`), `menu-trigger` (the multi-capability button slotted into `lr-dropdown`'s
 `trigger` slot, only rendered when `capabilities.length > 1`), `expand-icon` (the disclosure chevron
 inside the multi-capability trigger button, only rendered when `capabilities.length > 1`),
+`trigger__control` / `menu-trigger__control` (each trigger's own native `<button>` — as of 16.0.0
+both triggers are composed `<lr-icon-button>`s, so `trigger`/`menu-trigger` name those hosts and the
+painted surface sits one boundary deeper),
 `hidden-input` (the internal native `<input type="file">` that actually opens the OS file picker;
 hidden via CSS by default, exposed as a part only so a consumer can override that with
 `::part(hidden-input)` in the unlikely case their integration needs to).

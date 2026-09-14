@@ -275,8 +275,14 @@ function editIcon(): SVGTemplateResult {
  *   `revertPendingSubmit()` on this wrapper. Slotted collisions are contained at the slot boundary.
  * @csspart base - The toolbar (`role="toolbar"`).
  * @csspart copy-button - The embedded `lr-copy-button`.
- * @csspart regenerate-button - The built-in regenerate icon button.
- * @csspart edit-button - The built-in edit icon button.
+ * @csspart regenerate-button - The built-in regenerate action, a composed `<lr-icon-button>` as of
+ *   16.0.0. It still owns the accessible name, the activation and the toolbar tab stop; its
+ *   background, radius, hover/press mixes, focus ring and hit-area floor now come from
+ *   `--lr-icon-button-*`.
+ * @csspart regenerate-button__control - The regenerate action's own native `<button>`, forwarded
+ *   because the painted surface sits one shadow boundary deeper than `regenerate-button`.
+ * @csspart edit-button - The built-in edit action, likewise a composed `<lr-icon-button>`.
+ * @csspart edit-button__control - The edit action's own native `<button>`.
  * @csspart feedback - The embedded `lr-message-feedback`.
  * @status stable
  * @since 4.0.0
@@ -903,23 +909,23 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
             ></lr-copy-button>`
           : nothing;
       case 'regenerate':
-        return html`<button
+        return html`<lr-icon-button
           part="regenerate-button"
-          type="button"
+          exportparts="button:regenerate-button__control"
           aria-label=${this.localize('regenerateResponse')}
           @click=${this.onRegenerateClick}
         >
           ${regenerateIcon()}
-        </button>`;
+        </lr-icon-button>`;
       case 'edit':
-        return html`<button
+        return html`<lr-icon-button
           part="edit-button"
-          type="button"
+          exportparts="button:edit-button__control"
           aria-label=${this.localize('editMessage')}
           @click=${this.onEditClick}
         >
           ${editIcon()}
-        </button>`;
+        </lr-icon-button>`;
       case 'feedback':
         return html`<lr-message-feedback
           part="feedback"

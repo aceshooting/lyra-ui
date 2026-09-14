@@ -46,8 +46,15 @@ export const styles = css`
     block-size: var(--_lr-timeline-content-height, auto);
     inline-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
   }
+  /* box-sizing does not cross the slot boundary -- a slotted node keeps the outer tree's value,
+     which is the UA's content-box unless the author set otherwise. Every definite size below
+     ('inline-size: 100%', and the stack rule's 'calc(100% - indent)') would therefore allocate
+     100% to the item's CONTENT box and let its own padding/border overflow the host, with nothing
+     to absorb it: these items are absolutely positioned, so no flex or grid shrink applies. An
+     <lr-timeline-item> is already border-box through its own :host reset; this covers the rest. */
   :host([scale='time']) ::slotted(*) {
     position: absolute;
+    box-sizing: border-box;
     inset-block-start: var(--_lr-timeline-item-offset, 0%);
     inset-inline-start: 0;
     inline-size: 100%;
@@ -56,7 +63,8 @@ export const styles = css`
      vertically) so they stop covering one another. applyCollisionLanes() writes the lane index per
      item; the step is tokenized so a consumer can widen it for larger markers. Only the inline
      start moves, and the item keeps its inline size minus the indent, so a stack stays inside the
-     host. */
+     host -- which holds for a padded or bordered item only because the rule above makes every
+     slotted item border-box. */
   :host([scale='time'][collision='stack']) ::slotted(*) {
     --_lr-timeline-lane-indent: calc(
       var(--_lr-timeline-item-lane, 0) * var(--lr-timeline-collision-offset, var(--lr-space-l))

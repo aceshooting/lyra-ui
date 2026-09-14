@@ -354,3 +354,61 @@ export const FixedHeightTileGrid: Story = {
     </div>
   `,
 };
+
+export const OutlinedBackgroundToken: Story = {
+  name: 'Retinting the default appearance',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The default `outlined` tier reads `--lr-card-outlined-bg`, alongside the filled tiers\' own `--lr-card-filled-bg`/`--lr-card-filled-outlined-bg` hooks. Retinting one themed card no longer needs a `::part(base)` rule or an app-wide `--lr-color-surface` change.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-card style="max-inline-size:20rem;--lr-card-outlined-bg:${storyColor('successQuiet')}">
+      A retinted default surface, border untouched.
+    </lr-card>
+  `,
+};
+
+export const DisabledActionable: Story = {
+  name: 'Disabled actionable and linked cards',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`disabled` turns off the card\'s own activation: the native `activation-button` renders `disabled`, a linked card\'s stretched anchor loses its `href` and leaves the tab order, `lr-card-activate` stops firing, and the surface paints at `--lr-opacity-disabled` with a `not-allowed` cursor. A passive card has nothing to turn off, so `disabled` leaves it unchanged.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-m);flex-wrap:wrap;">
+      <lr-card actionable style="max-inline-size:16rem;">Launch the rooftop planner</lr-card>
+      <lr-card actionable disabled style="max-inline-size:16rem;">Launch the rooftop planner</lr-card>
+      <lr-card href="/reports" disabled style="max-inline-size:16rem;">Quarterly report (unavailable)</lr-card>
+    </div>
+  `,
+};
+
+export const SelectableTiles: Story = {
+  name: 'Single-select tiles with aria-pressed',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A host `aria-pressed` or `aria-current` is forwarded onto whichever native control carries the card\'s activation, the same way `<lr-button>` and `<lr-icon-button>` forward theirs. That is what lets a list of card-shaped tiles announce which one is the active selection.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-m);flex-wrap:wrap;">
+      <lr-card actionable aria-pressed="true" aria-label="Morning route" style="max-inline-size:14rem;">
+        Morning route
+      </lr-card>
+      <lr-card actionable aria-pressed="false" aria-label="Evening route" style="max-inline-size:14rem;">
+        Evening route
+      </lr-card>
+    </div>
+  `,
+};

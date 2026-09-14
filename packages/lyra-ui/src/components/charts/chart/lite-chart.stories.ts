@@ -389,3 +389,35 @@ export const LogarithmicStacks: Story = {
     ></lr-lite-chart>
   `,
 };
+
+/** A display-only category-axis label, so ticks can line up with a real boundary instead of an even stride. */
+export const BoundaryAlignedAxisLabels: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`axisLabelText` overrides one category tick\'s rendered text, and returning `null` ' +
+          'renders no tick there at all — here, only the first day of each week is labelled. ' +
+          '`labels` stays authoritative for the accessible table, the per-mark title and ' +
+          'accessible name, the announcement and the CSV export, so a blanked tick is still a ' +
+          'named category everywhere a reader or a spreadsheet needs it.',
+      },
+    },
+  },
+  render: () => {
+    const labels = Array.from({ length: 21 }, (_, day) => `Day ${day + 1}`);
+    const series: LyraLiteChartSeries[] = [
+      { label: 'Runs', data: labels.map((_, day) => 8 + ((day * 5) % 11)) },
+    ];
+    return html`<lr-lite-chart
+      type="bar"
+      style="inline-size:var(--lr-size-38rem);max-inline-size:100%"
+      label="Runs per day"
+      .labels=${labels}
+      .datasets=${series}
+      .axisLabelText=${(_label: string, index: number) =>
+        index % 7 === 0 ? `Week ${index / 7 + 1}` : null}
+    ></lr-lite-chart>`;
+  },
+};
+

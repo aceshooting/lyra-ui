@@ -26,6 +26,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
@@ -67,7 +68,7 @@ const DEFAULT_RESIZE_MIN_WIDTH_PX = 48; // used when --lr-table-resize-min-width
 const UNBOUNDED_RESIZE_ARIA_MAX = Number.MAX_SAFE_INTEGER;
 const MISSING_CELL_RENDERER_WARNING = 'lyra-table-missing-cell-renderer';
 const MISSING_ACCESSIBLE_NAME_WARNING = 'lyra-table-missing-accessible-name';
-const INERT_PRIORITY_COLUMN_LABEL_WARNING = 'lyra-table-inert-priority-column-label';
+const INERT_PRIORITY_COLUMN_CONFIG_WARNING = 'lyra-table-inert-priority-column-config';
 
 function frozenArray<Value>(values: Iterable<Value>): readonly Value[] {
   const snapshot: Value[] = [];
@@ -189,6 +190,12 @@ export interface TableColumnEditOption {
  *  `'single'` allows one selected row at a time, `'multiple'` allows any
  *  number through row activation. */
 export type TableSelectionMode = 'none' | 'single' | 'multiple';
+
+/** `<lr-table>`'s `expansionMode` property, mirroring `TableSelectionMode` member for member:
+ *  `'none'` leaves `expandedRowKeys` fully consumer-controlled (the default, and the only
+ *  behaviour before it existed), `'single'` self-manages at most one expanded row at a time, and
+ *  `'multiple'` self-manages any number. */
+export type TableExpansionMode = 'none' | 'single' | 'multiple';
 
 /** `<lr-table>`'s `sortMode` property: `'client'` orders `rows` in the browser from
  *  `sortKey`/`sortDir`, `'server'` renders `rows` in the order given. Mirrors the
@@ -470,17 +477,21 @@ function eventInteractiveTarget(event: Event, boundary: HTMLElement): Element | 
   return null;
 }
 
-export interface LyraTableEventMap<T = unknown> {
+/** Every event `<lr-table>` emits. `K` is the row-key type the element was parameterized with
+ *  (`LyraTable<Row, number>` -> `rowKey: number` in every detail below), defaulting to the
+ *  `string | number` union an unparameterized table has always carried. */
+export interface LyraTableEventMap<T = unknown, K extends string | number = string | number> {
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
   'lr-priority-columns-visibility-change': CustomEvent<Readonly<{ visible: boolean }>>;
   'lr-sort-request': CustomEvent<TableSortRequestDetail>;
   'lr-sort': CustomEvent<TableSortCommitDetail>;
   'lr-row-click': CustomEvent<Readonly<{ row: T }>>;
-  'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; rowKey: string | number }>>;
+  'lr-row-expand-request': CustomEvent<Readonly<{ row: T; rowKey: K; expanded: boolean }>>;
+  'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; rowKey: K; expanded: boolean }>>;
   'lr-load-more': CustomEvent<null>;
   'lr-retry': CustomEvent<null>;
-  'lr-selection-change': CustomEvent<Readonly<{ rowKeys: readonly (string | number)[] }>>;
+  'lr-selection-change': CustomEvent<Readonly<{ rowKeys: readonly K[] }>>;
   'lr-filter-change': CustomEvent<Readonly<{ text: string }>>;
   'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
   'lr-cell-edit': CustomEvent<Readonly<{ row: T; columnKey: string; value: string | number }>>;
@@ -546,28 +557,60 @@ export interface LyraTableEventMap<T = unknown> {
  * preference, and readable back — directly or via the `lr-priority-columns-visibility-change`
  * event — to persist the current one. `columns[].sticky` pins a column's
  * header/cells to the inline-start (`'start'`) or inline-end (`'end'`)
- * edge while the table scrolls horizontally. `revealColumnsLabel`/`hideColumnsLabel` only ever
- * reach the DOM on `[part='reveal-columns-button']`, which itself only renders while at least one
- * column declares `priority` -- setting either label with no `priority` column is always inert, and
- * logs a one-time, production-silent, page-bounded development `console.warn` for it (the same
- * dev-diagnostic shape as an unnamed grid's own warning).
+ * edge while the table scrolls horizontally. Every member of the priority-column family --
+ * `revealColumnsLabel`/`hideColumnsLabel` (which only ever reach the DOM on
+ * `[part='reveal-columns-button']`), `priorityColumnsVisible` (which only overrides a hide rule
+ * there is none of) and `storageKey` (which persists nothing else) -- is inert unless at least one
+ * column declares `priority`, so configuring any of them without one logs a one-time,
+ * production-silent, page-bounded development `console.warn` naming the members that will do
+ * nothing (the same dev-diagnostic shape as an unnamed grid's own warning). The read-only
+ * `priorityColumnsToggleAvailable` reports whether the reveal button is currently offered at all,
+ * which is the same measured state the button itself renders from.
  *
  * `expandedContent` (a table-level `(row: T) => unknown`, not a per-column
  * hook, since the resulting panel spans every column via `colspan`) makes
  * every row render a leading chevron-toggle cell before its data columns.
  * `canExpand` optionally gates which rows actually get an interactive
  * toggle — a row that fails it still gets a blank leading cell for column
- * alignment. Which rows are currently open is fully consumer-owned via
- * `expandedRowKeys` (a `Set<string | number>` of row keys, per `rowKey`/
- * `keyOf()`) — the table only reads it and emits `lr-row-expand-toggle`
- * on activation. (`selectedRowKeys` is self-managed for selection, and
- * `sortKey`/`sortDir` are *not* a parallel case either: under
- * the default `sortMode: 'client'` the table writes them on header
- * activation.)
+ * alignment. Which rows are currently open lives in `expandedRowKeys` (a set of row keys, per
+ * `rowKey`/`keyOf()`), and `expansionMode` decides who writes it — mirroring `selectionMode`
+ * member for member. Under the default `'none'` the set is fully consumer-owned: the table only
+ * reads it and emits `lr-row-expand-toggle` on activation, exactly as it always has. Under
+ * `'single'` or `'multiple'` the table proposes each change with the cancelable
+ * `lr-row-expand-request` first and, unless a listener vetoes it, writes `expandedRowKeys` itself
+ * before announcing the applied change with `lr-row-expand-toggle`. `'single'` keeps at most one
+ * row open; the row it closes to make room gets its own `lr-row-expand-toggle` (`expanded: false`)
+ * just before the accepted one, so the per-row event stays a complete account of what opened and
+ * closed. Flipping `expansionMode` to `'single'` coerces an already-larger set down to its
+ * first key the same way `selectionMode` does for `selectedRowKeys`.
+ *
+ * Neither mode clears keys when the visible rows change: filtering, sorting and pagination leave
+ * `expandedRowKeys` alone, so a row scrolled, filtered or paged out of view returns expanded, and
+ * a key matching no current row simply renders nothing until one exists again. That is
+ * `selectedRowKeys`' own convention — valid off-view keys stay controlled state so a
+ * server-paginated table can keep them.
  *
  * Selection is opt-in through the `selectionMode` property. Use `single` or
  * `multiple` to self-manage row selection; the default `none` remains
  * presentational. `selectedRowKeys` contains the raw keys in every mode; single mode enforces one.
+ *
+ * `rowElement(rowKey)`, `cellElement(rowKey, columnKey)` and `expandedContentElement(rowKey)`
+ * resolve a rendered `<tr>`/`<td>` from the identity a consumer already has, for code that has to
+ * reach content its own `cell(row)` or `expandedContent(row)` callback rendered into this shadow
+ * root (measuring it, scrolling it into view, or applying a style `::part()` cannot express, since
+ * only pseudo-classes may follow a part selector). One method per callback, because the expansion
+ * panel is a *sibling* `<tr part='expanded-row'>` of the data row rather than a descendant of it:
+ * `rowElement`/`cellElement` reach `cell(row)` output only, and `expandedContentElement` returns
+ * the `[part='expanded-cell']` holding `expandedContent(row)` output. All three read the current
+ * render output, so `await table.updateComplete` first and treat `null` as "not rendered right
+ * now". They resolve the `data-row-key`/`data-col-key`/`data-expanded-row-key` attributes those
+ * elements carry: `data-col-key` is the column's own `key`, while `data-row-key` and
+ * `data-expanded-row-key` are a type-tagged encoding of the row key (`string:a` vs `number:1`)
+ * that keeps a numeric key distinct from the string that stringifies the same way. The panel
+ * deliberately does not repeat `data-row-key`, so every `[data-row-key]` query still resolves
+ * exactly one element per row. All three attributes are stable public API; prefer the methods over
+ * building a selector from them, since a consumer-supplied key is not safe to interpolate into CSS
+ * unescaped.
  *
  * `filterable` adds a compact search field above the grid. `filterText` is
  * controlled and emits `lr-filter-change`; `filter` can provide a typed
@@ -671,14 +714,29 @@ export interface LyraTableEventMap<T = unknown> {
  *   set instead.
  * @event lr-priority-columns-visibility-change - `priorityColumnsVisible` was toggled by
  *   `[part='reveal-columns-button']`. Frozen readonly `detail: { visible: boolean }`.
+ * @event lr-row-expand-request - Cancelable proposal before a self-managed expansion change.
+ *   Frozen readonly `detail: { row, rowKey, expanded }`, where `expanded` is the state being
+ *   proposed. Emitted only while `expansionMode` is `'single'` or `'multiple'`; vetoing it skips
+ *   the built-in `expandedRowKeys` write and suppresses the following `lr-row-expand-toggle`,
+ *   leaving the row's expansion fully controlled.
  * @event lr-row-expand-toggle - The row-expand chevron was activated.
- *   Frozen readonly `detail: { row, rowKey }`. Fired only when `expandedContent` is set and
- *   the row passes `canExpand`; does not itself mutate `expandedRowKeys` — the
- *   consumer updates it and passes the new value back in.
+ *   Frozen readonly `detail: { row, rowKey, expanded }`, where `expanded` is the state the
+ *   activation resolves to. Fired only when `expandedContent` is set and the row passes
+ *   `canExpand`. Under the default `expansionMode: 'none'` it does not itself mutate
+ *   `expandedRowKeys` — the consumer updates it and passes the new value back in. Under a
+ *   self-managed mode it follows an unvetoed `lr-row-expand-request` and the write has already
+ *   landed, so a listener reading `expandedRowKeys` sees the new state. `'single'` additionally
+ *   fires it once with `expanded: false` for the row it just closed to make room, immediately
+ *   before the accepted one, so a host mirroring open rows from this event alone stays correct —
+ *   with one boundary: a displaced row that is filtered or paged out of view has no `row` object
+ *   to describe, so that case is reported only through `expandedRowKeys`. The `'single'` coercion
+ *   that runs when `expansionMode` itself becomes `'single'` reports through `expandedRowKeys`
+ *   alone for the same reason — a key that matches no rendered row cannot carry a `row`.
  * @event lr-selection-change - Opt-in row selection changed, from a row activation or from a
  *   `selectionMode` flip to `'single'` coercing an existing multi-row selection down to one key.
- *   Frozen readonly `detail: { rowKeys: readonly (string | number)[] }`. Not cancelable in either
- *   case: it announces a selection that has already changed rather than proposing one.
+ *   Frozen readonly `detail: { rowKeys: readonly K[] }` — `readonly (string | number)[]` on an
+ *   unparameterized table, the default `K`. Not cancelable in either case: it announces a
+ *   selection that has already changed rather than proposing one.
  * @event lr-filter-change - The filter field changed. Frozen readonly `detail: { text }`.
  * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page }`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, columnKey, value }`.
@@ -726,9 +784,12 @@ export interface LyraTableEventMap<T = unknown> {
  *   absent for a row that fails `canExpand`; it inherits the table's typography.
  * @csspart row-expand-icon - The 1em chevron icon inside `row-expand-toggle`.
  * @csspart expanded-row - The full-width panel `<tr>` rendered beneath a
- *   row whose key is in `expandedRowKeys`.
+ *   row whose key is in `expandedRowKeys`. Carries `data-expanded-row-key`, not `data-row-key`:
+ *   it is a sibling of the data row, so repeating that attribute would make every
+ *   `[data-row-key]` query resolve two elements per open row.
  * @csspart expanded-cell - The single `colspan`-spanning `<td>` inside
- *   `expanded-row`, containing `expandedContent(row)`.
+ *   `expanded-row`, containing `expandedContent(row)`. Resolved from script by
+ *   `expandedContentElement(rowKey)`.
  * @csspart group-row - A non-focusable group header row.
  * @csspart group-cell - The full-width group header cell.
  * @csspart filter - The optional row-filter input.
@@ -831,7 +892,9 @@ export interface LyraTableEventMap<T = unknown> {
  * @status stable
  * @since 4.0.0
  */
-export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
+export class LyraTable<T = unknown, K extends string | number = string | number> extends LyraElement<
+  LyraTableEventMap<T, K>
+> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -1000,8 +1063,21 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  targets) can silently attach to the wrong row. Empty string identities and later duplicates
    *  are omitted before every rendered/count/focus/action/event path; the first valid occurrence
    *  wins. */
-  @property({ attribute: false }) rowKey?: (row: T) => string | number;
+  @property({ attribute: false }) rowKey?: (row: T) => K;
   @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: TableSelectionMode = 'none';
+  /** Who owns `expandedRowKeys`, mirroring `selectionMode`'s three members. `'none'` (the default,
+   *  and the behaviour this component shipped with) leaves the set entirely consumer-controlled:
+   *  activation only reports `lr-row-expand-toggle`. `'single'` and `'multiple'` self-manage the
+   *  set behind the cancelable `lr-row-expand-request`, with `'single'` keeping at most one row
+   *  open and coercing an already-larger set down to its first key when this property becomes
+   *  `'single'`. Closing a row to make room for another is an expansion change like any other, so
+   *  `'single'` reports the displaced row with its own `lr-row-expand-toggle` (`expanded: false`)
+   *  ahead of the accepted one -- unless that row is filtered or paged out of view, which leaves
+   *  it no `row` to describe. The property-driven coercion above reports through
+   *  `expandedRowKeys` alone for the same reason. No mode ever clears keys because the visible
+   *  rows changed -- see the class JSDoc's note on off-view keys, which follows
+   *  `selectedRowKeys`' convention. */
+  @property({ reflect: true, attribute: 'expansion-mode' }) expansionMode: TableExpansionMode = 'none';
   /** Which element scrolls when the table overflows; see `TableScrollMode`. `'auto'` keeps page
    *  flow while content fits and contains horizontal overflow only when needed. Defaults to
    *  `'self'`, which is the pre-10.0 behaviour. */
@@ -1013,10 +1089,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    * omitted while valid off-page keys are retained for server pagination. Reassign a new set to
    * update. */
   @property({ attribute: false })
-  get selectedRowKeys(): ReadonlySet<string | number> {
-    return readonlyKeySet(this._selectedKeys);
+  get selectedRowKeys(): ReadonlySet<K> {
+    // The internal store is the `string | number` union every code path here works in; `K` only
+    // narrows what a parameterized element promises its consumer, so the facade is re-typed at
+    // this boundary rather than threading the parameter through the private normalizers.
+    return readonlyKeySet(this._selectedKeys) as ReadonlySet<K>;
   }
-  set selectedRowKeys(value: ReadonlySet<string | number>) {
+  set selectedRowKeys(value: ReadonlySet<K>) {
     const previous = this._selectedKeys;
     this._selectedKeys = keySet(value ?? []);
     this.requestUpdate('selectedRowKeys', previous);
@@ -1095,7 +1174,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  anchors run into). Style such content by returning already-styled elements -- inline
    *  `style`, or elements that reference this table's own `--lr-*` design tokens, which inherit
    *  across the shadow boundary like any custom property -- rather than depending on a
-   *  page-level selector to find it. */
+   *  page-level selector to find it. When script has to reach the rendered panel anyway (to
+   *  measure it or scroll it into view), `expandedContentElement(rowKey)` resolves that `<td>`;
+   *  `rowElement()` does not, since the panel is a sibling `<tr>` rather than part of the row. */
   @property({ attribute: false }) expandedContent?: (row: T) => unknown;
   /** Gates whether a given row gets an interactive chevron/toggle at all,
    *  when `expandedContent` is set. Omit to make every row expandable. A
@@ -1103,22 +1184,41 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  alignment) but it renders empty — no button, no `aria-expanded`, no
    *  click handler. */
   @property({ attribute: false }) canExpand?: (row: T) => boolean;
-  /** Consumer-owned open/closed state, bounded to 10,000 keys and keyed the same way as `rowKey`/
-   *  `selectedRowKeys`. The table never mutates this itself — it only reads it
-   *  to decide which rows currently render `expandedContent`; toggle it in
-   *  response to `lr-row-expand-toggle`. Unlike this controlled expansion axis,
-   *  selection and client sorting are self-managed. Reads return immutable detached `ReadonlySet`
+  /** Open/closed state, bounded to 10,000 keys and keyed the same way as `rowKey`/
+   *  `selectedRowKeys`. Under the default `expansionMode: 'none'` the table never mutates this
+   *  itself — it only reads it to decide which rows currently render `expandedContent`, and the
+   *  consumer toggles it in response to `lr-row-expand-toggle`. Under `expansionMode: 'single'`
+   *  or `'multiple'` the table writes it on each accepted activation, exactly as `selectionMode`
+   *  does for `selectedRowKeys`, and a `preventDefault()` on `lr-row-expand-request` hands one
+   *  change back to the consumer. Reads return immutable detached `ReadonlySet`
    *  facades; malformed and whitespace-only string keys are omitted and valid off-page keys remain
-   *  controlled. Reassign a new set to update. */
+   *  controlled in every mode — filtering, sorting and pagination never clear them. Reassign a new
+   *  set to update. */
   private _expandedKeys = new Set<string | number>();
   @property({ attribute: false })
-  get expandedRowKeys(): ReadonlySet<string | number> {
-    return readonlyKeySet(this._expandedKeys);
+  get expandedRowKeys(): ReadonlySet<K> {
+    // Re-typed at the public boundary for the same reason as `selectedRowKeys` above.
+    return readonlyKeySet(this._expandedKeys) as ReadonlySet<K>;
   }
-  set expandedRowKeys(value: ReadonlySet<string | number>) {
+  set expandedRowKeys(value: ReadonlySet<K>) {
     const previous = this._expandedKeys;
     this._expandedKeys = keySet(value ?? []);
     this.requestUpdate('expandedRowKeys', previous);
+  }
+
+  /** Re-types an internally computed key set for a write to `selectedRowKeys`/`expandedRowKeys`.
+   *  Every key this component derives is the `string | number` union `keyOf()` produces, while a
+   *  parameterized element's public surface promises the narrower `K`; the two are only
+   *  convertible through `unknown`, so the conversion lives in these two helpers rather than at
+   *  each of the six call sites. Nothing is normalized away by going through it -- both setters
+   *  re-run `keySet()` on whatever they receive. */
+  private asKeySet(keys: Set<string | number>): ReadonlySet<K> {
+    return keys as unknown as ReadonlySet<K>;
+  }
+
+  /** The {@link asKeySet} counterpart for a `K`-typed event detail's key list. */
+  private asKeyList(keys: readonly (string | number)[]): readonly K[] {
+    return keys as unknown as readonly K[];
   }
   /** Overrides the auto-derived heat-tint domain (min/max of every `heatValue` result across every
    *  currently-rendered row — post-sort, pre-pagination, the same rows `footer(rows)` already sees).
@@ -1184,7 +1284,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ type: Boolean, attribute: 'has-hidden-priority-columns', reflect: true })
   hasHiddenPriorityColumns = false;
 
-  @state() private priorityColumnsToggleAvailable = false;
+  @state() private priorityToggleAvailable = false;
+
+  /** Whether the reveal/hide control is currently offered at all -- the public, read-only
+   *  counterpart of the measurement `[part='reveal-columns-button']` itself renders from. True
+   *  while at least one `priority` column is actually hidden at the current allocation, and it
+   *  stays true once `priorityColumnsVisible` has revealed those columns (otherwise the control
+   *  would remove itself the moment it was used, stranding the columns visible). Always false with
+   *  no `priority` column declared, which is the state the inert-configuration development
+   *  warning describes. Remeasured from the live DOM after every render and on every container
+   *  resize, so read it after `await table.updateComplete`. */
+  get priorityColumnsToggleAvailable(): boolean {
+    return this.priorityToggleAvailable;
+  }
 
   /** Forces `priority`-hidden columns back into view, overriding the
    *  `@container` hide rules in table.styles.ts. Toggles itself on
@@ -1767,8 +1879,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       );
     const toggleAvailable = anyPriorityHidden || (this.priorityColumnsVisible && wouldHideAtAllocation);
     this.rehomeFocusedColumn();
-    if (this.priorityColumnsToggleAvailable !== toggleAvailable) {
-      this.priorityColumnsToggleAvailable = toggleAvailable;
+    if (this.priorityToggleAvailable !== toggleAvailable) {
+      this.priorityToggleAvailable = toggleAvailable;
     }
     if (this.hasHiddenPriorityColumns !== anyPriorityHidden) {
       this.hasHiddenPriorityColumns = anyPriorityHidden;
@@ -2208,7 +2320,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       (changed.has('selectionMode') || changed.has('selectedRowKeys'))
     ) {
       const first = this._selectedKeys.values().next().value as string | number | undefined;
-      this.selectedRowKeys = first === undefined ? new Set() : new Set([first]);
+      this.selectedRowKeys = this.asKeySet(first === undefined ? new Set<string | number>() : new Set([first]));
       // A host mirroring "selected rows" purely from lr-selection-change must hear about this
       // coercion too -- it is the only other place selectedRowKeys mutates, alongside the
       // click/keyboard handler's two emit sites below. Non-cancelable: this is a consistency
@@ -2216,9 +2328,22 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       // over-large selectedRowKeys combined with selectionMode="single" at mount is the starting
       // state, not a live transition, and `changed` lists every property on that first pass.
       if (this.hasUpdated) {
-        const rowKeys = Object.freeze(first === undefined ? [] : [first]) as readonly (string | number)[];
+        const rowKeys = this.asKeyList(Object.freeze(first === undefined ? [] : [first]));
         this.emit('lr-selection-change', Object.freeze({ rowKeys }));
       }
+    }
+    // The expansion mirror of the coercion above. It emits nothing: `lr-row-expand-toggle`
+    // describes one row's activation, and there is no whole-set expansion event for a fix-up to
+    // report through -- so a host that needs the coerced set reads `expandedRowKeys` back after
+    // assigning `expansionMode`. Unlike the selection coercion this also runs on the first update:
+    // `expansionMode="single"` with a pre-seeded multi-key set must not paint two panels even once.
+    if (
+      this.expansionMode === 'single' &&
+      this._expandedKeys.size > 1 &&
+      (changed.has('expansionMode') || changed.has('expandedRowKeys'))
+    ) {
+      const first = this._expandedKeys.values().next().value as string | number | undefined;
+      this.expandedRowKeys = this.asKeySet(first === undefined ? new Set<string | number>() : new Set([first]));
     }
     // Restore a persisted `priorityColumnsVisible` preference once, before the first render, so the restored
     // value folds into the first paint with no follow-up update -- doing this in firstUpdated()
@@ -2403,21 +2528,46 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       writePersistedState(this.storageFullKey, { priorityColumnsVisible: this.priorityColumnsVisible });
     }
     this.persistReady = true;
-    // `revealColumnsLabel`/`hideColumnsLabel` only ever reach the DOM on
-    // `[part='reveal-columns-button']`, which itself only renders while at least one column
-    // declares `priority` (see `recomputeHiddenPriorityColumns()`). Setting either label with no
-    // `priority` column is therefore always inert -- a real authoring mistake that otherwise
-    // renders silently, exactly the shape the missing-accessible-name diagnostic above addresses.
+    // Every member of the priority-column family is inert without a `priority` column, not just the
+    // two labels this diagnostic originally covered. `revealColumnsLabel`/`hideColumnsLabel` only
+    // reach the DOM on `[part='reveal-columns-button']`, which only renders while a priority column
+    // is hideable (see `recomputeHiddenPriorityColumns()`); `priorityColumnsVisible` overrides
+    // container hide rules that no column opted into; and `storageKey` persists nothing but
+    // `priorityColumnsVisible`. Each is a real authoring mistake that otherwise renders silently,
+    // exactly the shape the missing-accessible-name diagnostic above addresses. Reported as one
+    // page-bounded warning naming every inert member, so a table configured with all three does not
+    // teach the author to fix them one reload at a time.
     if (
-      (changed.has('columns') || changed.has('revealColumnsLabel') || changed.has('hideColumnsLabel')) &&
-      (this.revealColumnsLabel !== undefined || this.hideColumnsLabel !== undefined) &&
-      !this.columns.some((col) => col.priority)
+      changed.has('columns') ||
+      changed.has('revealColumnsLabel') ||
+      changed.has('hideColumnsLabel') ||
+      changed.has('priorityColumnsVisible') ||
+      changed.has('storageKey')
     ) {
-      devWarnOnce(
-        INERT_PRIORITY_COLUMN_LABEL_WARNING,
-        '<lr-table>: `revealColumnsLabel`/`hideColumnsLabel` have no effect unless at least one ' +
-          'column declares `priority`.'
-      );
+      const inertMembers: string[] = [];
+      const labelsInert = this.revealColumnsLabel !== undefined || this.hideColumnsLabel !== undefined;
+      if (labelsInert) inertMembers.push('`revealColumnsLabel`/`hideColumnsLabel`');
+      // `isPersistedPropertyExplicitlySet()`, not the current value: `priorityColumnsVisible`
+      // defaults to `false`, so reading it cannot tell a deliberate `false` from an untouched one,
+      // and `changed.has()` is unconditionally true on the first update.
+      if (isPersistedPropertyExplicitlySet(this, 'priorityColumnsVisible')) {
+        inertMembers.push('`priorityColumnsVisible`');
+      }
+      if (this.storageKey) inertMembers.push('`storageKey`');
+      // An empty `columns` is not an authoring mistake to report: a table configured in markup
+      // routinely receives its columns a tick later, and `columns` is in this guard's trigger list
+      // precisely so the check re-runs when they land. Warning at that point would also spend the
+      // page-bounded diagnostic on a table that is about to be configured correctly, silencing the
+      // real instance somewhere else on the page.
+      if (inertMembers.length > 0 && this.columns.length > 0 && !this.columns.some((col) => col.priority)) {
+        devWarnOnce(
+          INERT_PRIORITY_COLUMN_CONFIG_WARNING,
+          `<lr-table>: ${inertMembers.join(', ')} ` +
+            // The label entry names two members at once, so it reads plural on its own.
+            (inertMembers.length > 1 || labelsInert ? 'have' : 'has') +
+            ' no effect unless at least one column declares `priority`.'
+        );
+      }
     }
     if (changed.has('columns') || changed.has('rows') || changed.has('rowKey')) this.applyStickyOffsets();
     this.syncResizeHandleValues();
@@ -2502,16 +2652,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const { row, key: selectedKey } = entry;
     this.emit('lr-row-click', Object.freeze({ row }));
     if (this.selectionMode === 'single') {
-      this.selectedRowKeys = new Set([selectedKey]);
-      const rowKeys = Object.freeze([selectedKey] as const);
+      this.selectedRowKeys = this.asKeySet(new Set([selectedKey]));
+      const rowKeys = this.asKeyList(Object.freeze([selectedKey]));
       this.emit('lr-selection-change', Object.freeze({ rowKeys }));
     } else if (this.selectionMode === 'multiple') {
       const rawKey = selectedKey;
       const next = new Set(this._selectedKeys);
       if (next.has(rawKey)) next.delete(rawKey);
       else next.add(rawKey);
-      this.selectedRowKeys = next;
-      const rowKeys = Object.freeze([...next]);
+      this.selectedRowKeys = this.asKeySet(next);
+      const rowKeys = this.asKeyList(Object.freeze([...next]));
       this.emit('lr-selection-change', Object.freeze({ rowKeys }));
     }
   }
@@ -2559,12 +2709,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  selector: both are consumer-supplied strings, and the row key additionally carries an encoding
    *  prefix (`string:a`), so neither is safe to splat into CSS unescaped. */
   private editorElementFor(rowKey: string, columnKey: string): HTMLInputElement | HTMLSelectElement | null {
-    const row = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')].find(
-      (el) => el.dataset['rowKey'] === rowKey
-    );
-    const cell = row
-      ? [...row.querySelectorAll<HTMLElement>('td[data-col-key]')].find((el) => el.dataset['colKey'] === columnKey)
-      : undefined;
+    const cell = this.cellElementForToken(rowKey, columnKey);
     return (cell?.querySelector('[part="cell-editor"]') as HTMLInputElement | HTMLSelectElement | null) ?? null;
   }
 
@@ -2635,10 +2780,114 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     }
   };
 
+  /** Chevron activation. Under the default `expansionMode: 'none'` this reports the activation and
+   *  nothing else, which is all it ever did. Under a self-managed mode it runs the library's one
+   *  request/commit helper: the cancelable `lr-row-expand-request` carries the proposed state, and
+   *  only an unvetoed proposal writes `expandedRowKeys` and then announces the applied change with
+   *  `lr-row-expand-toggle`.
+   *
+   *  No `VetoWriteGuard` is passed, matching `<lr-thread-list>`'s group-collapse pair: a request
+   *  listener's own `expandedRowKeys` assignment runs inside `emit()`, i.e. before `commit()`
+   *  writes, so today it is overwritten and only `preventDefault()` stops the built-in write.
+   *  Passing a guard would newly let that assignment suppress the commit — a behaviour change
+   *  rather than the shared shape. A listener that wants to own one change vetoes it. */
   private activateExpandToggle(key: string | number): void {
     const entry = this.rowsByKey.get(encodeKey(key));
-    if (entry !== undefined)
-      this.emit('lr-row-expand-toggle', Object.freeze({ row: entry.row, rowKey: key }));
+    if (entry === undefined) return;
+    const expanded = !this._expandedKeys.has(key);
+    const detail = Object.freeze({ row: entry.row, rowKey: key as K, expanded });
+    // Tested for the two self-managing members rather than against `'none'`, so an unrecognized
+    // attribute value falls back to the controlled behaviour instead of silently self-managing --
+    // the same fail-closed shape `selectionMode`'s own two-member branch has.
+    if (this.expansionMode !== 'single' && this.expansionMode !== 'multiple') {
+      this.emit('lr-row-expand-toggle', detail);
+      return;
+    }
+    requestThenCommit({
+      requestDetail: detail,
+      emitRequest: (requestDetail, init: { cancelable: true }) =>
+        this.emit('lr-row-expand-request', requestDetail, init),
+      commit: () => {
+        // `'single'` starts from an empty set rather than deleting the other keys one by one, so
+        // the mode's invariant holds even for a set seeded larger than it before the mode changed.
+        const next =
+          this.expansionMode === 'single' ? new Set<string | number>() : new Set(this._expandedKeys);
+        if (expanded) next.add(key);
+        else next.delete(key);
+        // Rows `'single'` closed to make room for this one. `lr-row-expand-toggle` is the only
+        // per-row expansion event there is, so a host mirroring open rows from it alone would
+        // otherwise believe a displaced row stayed open forever. Reported after the write lands,
+        // so every listener -- displaced and accepted alike -- reads the settled set.
+        const displaced = [...this._expandedKeys].filter(
+          (other) => other !== key && !next.has(other)
+        );
+        this.expandedRowKeys = this.asKeySet(next);
+        for (const other of displaced) {
+          // A displaced key whose row is filtered or paged out of the current render output has no
+          // row object for the detail to carry, and `expandedRowKeys` stays its only report.
+          const displacedEntry = this.rowsByKey.get(encodeKey(other));
+          if (displacedEntry === undefined) continue;
+          this.emit(
+            'lr-row-expand-toggle',
+            Object.freeze({ row: displacedEntry.row, rowKey: other as K, expanded: false })
+          );
+        }
+        this.emit('lr-row-expand-toggle', detail);
+      },
+    });
+  }
+
+  /** The rendered `<tr>` for one row key, or `null` when that row is not in the current render
+   *  output (filtered out, paginated away, or never present). Public counterpart of the
+   *  `data-row-key` attribute the row carries: the attribute's value is a type-tagged encoding
+   *  (`string:a` vs `number:1`), and a consumer-supplied key is not safe to interpolate into a CSS
+   *  selector unescaped, so resolve it through here instead of building one. Reads the DOM as it
+   *  stands — `await table.updateComplete` before calling it after changing any input. */
+  rowElement(rowKey: K): HTMLElement | null {
+    return this.rowElementForToken(encodeKey(rowKey));
+  }
+
+  /** The rendered `<td>` at one `(rowKey, columnKey)` pair, or `null` when either the row is not
+   *  currently rendered or the column is not in `columns`. `columnKey` is the column's own `key`,
+   *  which is exactly what the cell's public `data-col-key` attribute carries. Same
+   *  `updateComplete` contract as {@link rowElement}. */
+  cellElement(rowKey: K, columnKey: string): HTMLElement | null {
+    return this.cellElementForToken(encodeKey(rowKey), columnKey);
+  }
+
+  /** The rendered `[part='expanded-cell']` holding one row's `expandedContent(row)` output, or
+   *  `null` when that row is not currently rendered, is not expanded, or renders no panel at all.
+   *  {@link rowElement} deliberately cannot reach this: the panel is a *sibling* `<tr>` of the data
+   *  row, not a descendant of it, so it carries its own `data-expanded-row-key` attribute (encoded
+   *  exactly like `data-row-key`, and left off the data-row attribute so every existing
+   *  `[data-row-key]` row query keeps resolving one element per row). Same `updateComplete`
+   *  contract as {@link rowElement}. */
+  expandedContentElement(rowKey: K): HTMLElement | null {
+    const token = encodeKey(rowKey);
+    const panel = [
+      ...this.renderRoot.querySelectorAll<HTMLElement>('tbody tr[data-expanded-row-key]'),
+    ].find((el) => el.dataset['expandedRowKey'] === token);
+    return (panel?.querySelector('[part="expanded-cell"]') as HTMLElement | null) ?? null;
+  }
+
+  /** Row lookup by the already-encoded `data-row-key` token, shared by the public API above and
+   *  the internal editor-focus bookkeeping, which only ever holds encoded tokens. Walks the rows
+   *  rather than interpolating the token into a selector, for the escaping reason above. */
+  private rowElementForToken(token: string): HTMLElement | null {
+    return (
+      [...this.renderRoot.querySelectorAll<HTMLElement>('tbody tr[data-row-key]')].find(
+        (el) => el.dataset['rowKey'] === token
+      ) ?? null
+    );
+  }
+
+  private cellElementForToken(token: string, columnKey: string): HTMLElement | null {
+    const row = this.rowElementForToken(token);
+    return (
+      [...(row?.querySelectorAll<HTMLElement>('td[data-col-key]') ?? [])].find(
+        (el) => el.dataset['colKey'] === columnKey
+      ) ?? null
+    );
   }
 
   /** Header cells currently in the tab sequence — excludes columns hidden by
@@ -3228,7 +3477,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                           ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}
                         </tr>`,
                         rowExpanded
-                          ? html`<tr part="expanded-row" role="row">
+                          ? html`<tr part="expanded-row" role="row" data-expanded-row-key=${encodeKey(key)}>
                               <td part="expanded-cell" role="gridcell" colspan=${spanningColspan}>
                                 ${this.expandedContent?.(row)}
                               </td>
@@ -3282,7 +3531,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             </label>`
           : nothing}
         ${tableContent}
-        ${this.priorityColumnsToggleAvailable
+        ${this.priorityToggleAvailable
           ? html`<button
               part="reveal-columns-button"
               type="button"

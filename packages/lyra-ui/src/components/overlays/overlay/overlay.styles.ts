@@ -38,6 +38,25 @@ export const styles = css`
        Its own elevation tier, so a theme can raise anchored popups without touching dialogs. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
   }
+  /* The hover bridge: a full-viewport box clipped to the quad spanning the trigger and the popup,
+     so a pointer crossing the offset gap never leaves both at once. positioner.ts writes the four
+     corners as viewport-pixel custom properties; every corner defaults to the same point, which
+     clips the element to nothing and leaves it inert until the first placement lands. Physical
+     coordinates and inset are deliberate -- both source rects are already viewport pixels and a
+     quad whose edges belong to two different boxes has no logical spelling. */
+  /* policy-allow(physical-css): the quad's coordinates come from getBoundingClientRect() in
+     viewport pixels, which no logical property can express. */
+  [part~='hover-bridge'] {
+    position: fixed;
+    inset: 0;
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
+    clip-path: polygon(
+      var(--lr-positioner-hover-bridge-top-left-x, 0) var(--lr-positioner-hover-bridge-top-left-y, 0),
+      var(--lr-positioner-hover-bridge-top-right-x, 0) var(--lr-positioner-hover-bridge-top-right-y, 0),
+      var(--lr-positioner-hover-bridge-bottom-right-x, 0) var(--lr-positioner-hover-bridge-bottom-right-y, 0),
+      var(--lr-positioner-hover-bridge-bottom-left-x, 0) var(--lr-positioner-hover-bridge-bottom-left-y, 0)
+    );
+  }
   [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
   [part~='popup'] { opacity: 1; transform: translateY(0); }
   :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }

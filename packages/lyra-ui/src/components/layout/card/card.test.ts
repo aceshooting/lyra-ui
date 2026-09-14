@@ -1198,3 +1198,214 @@ describe('lr-card focus-repair and observer hardening', () => {
     }
   });
 });
+
+describe('lr-card parity pass: default-tier background token, disabled, pressed/current forwarding', () => {
+  const activation = (el: LyraCard): HTMLButtonElement =>
+    el.shadowRoot!.querySelector('[part="activation-button"]') as HTMLButtonElement;
+  const anchor = (el: LyraCard): HTMLAnchorElement =>
+    el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+
+  it('retints the default appearance through --lr-card-outlined-bg', async () => {
+    const el = (await fixture(
+      html`<lr-card style="--lr-card-outlined-bg: rgb(1, 2, 3)">body</lr-card>`
+    )) as LyraCard;
+    expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('leaves the default appearance on the shared surface token when --lr-card-outlined-bg is unset', async () => {
+    const el = (await fixture(
+      html`<lr-card style="--lr-color-surface: rgb(4, 5, 6)">body</lr-card>`
+    )) as LyraCard;
+    expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('keeps the filled tier reading its own token rather than the new default-tier one', async () => {
+    const el = (await fixture(
+      html`<lr-card
+        appearance="filled"
+        style="--lr-card-outlined-bg: rgb(1, 2, 3); --lr-card-filled-bg: rgb(7, 8, 9)"
+        >body</lr-card
+      >`
+    )) as LyraCard;
+    expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgb(7, 8, 9)');
+  });
+
+  it('defaults disabled to false and leaves the actionable card fully operable', async () => {
+    const el = (await fixture(html`<lr-card actionable>body</lr-card>`)) as LyraCard;
+    expect(el.disabled).to.equal(false);
+    expect(el.hasAttribute('disabled')).to.equal(false);
+    expect(activation(el).disabled).to.equal(false);
+    expect(getComputedStyle(base(el)).opacity).to.equal('1');
+  });
+
+  it('reflects disabled, disables the internal activation button, and removes it from the tab order', async () => {
+    const el = (await fixture(html`<lr-card actionable disabled>body</lr-card>`)) as LyraCard;
+    expect(el.disabled).to.equal(true);
+    expect(el.hasAttribute('disabled')).to.equal(true);
+    const button = activation(el);
+    expect(button.disabled, 'the native activation button carries disabled').to.equal(true);
+
+    button.focus();
+    expect(
+      el.shadowRoot!.activeElement === button,
+      'a disabled activation button must not take focus',
+    ).to.equal(false);
+  });
+
+  it('never emits lr-card-activate from a disabled card, by pointer, by the button, or through host click()', async () => {
+    const el = (await fixture(html`<lr-card actionable disabled>body</lr-card>`)) as LyraCard;
+    let activations = 0;
+    el.addEventListener('lr-card-activate', () => (activations += 1));
+
+    base(el).click();
+    activation(el).click();
+    el.click();
+    await el.updateComplete;
+
+    expect(activations).to.equal(0);
+  });
+
+  it('resumes emitting once disabled is cleared', async () => {
+    const el = (await fixture(html`<lr-card actionable disabled>body</lr-card>`)) as LyraCard;
+    el.disabled = false;
+    await el.updateComplete;
+    let activations = 0;
+    el.addEventListener('lr-card-activate', () => (activations += 1));
+    base(el).click();
+    expect(activations).to.equal(1);
+  });
+
+  it('applies the disabled opacity and the not-allowed cursor to a disabled actionable card', async () => {
+    const el = (await fixture(
+      html`<lr-card actionable disabled style="--lr-opacity-disabled: 0.42">body</lr-card>`
+    )) as LyraCard;
+    const computed = getComputedStyle(base(el));
+    expect(computed.opacity).to.equal('0.42');
+    expect(computed.cursor).to.equal('not-allowed');
+  });
+
+  it('strips href from a disabled linked card and marks the anchor aria-disabled', async () => {
+    const el = (await fixture(
+      html`<lr-card href="/reports" disabled style="--lr-opacity-disabled: 0.42">body</lr-card>`
+    )) as LyraCard;
+    const link = anchor(el);
+    expect(link.hasAttribute('href'), 'a disabled link card cannot navigate').to.equal(false);
+    expect(link.getAttribute('aria-disabled')).to.equal('true');
+    expect(link.getAttribute('tabindex')).to.equal('-1');
+    const content = el.shadowRoot!.querySelector('.linked-content') as HTMLElement;
+    expect(getComputedStyle(content).opacity).to.equal('0.42');
+  });
+
+  it('renders aria-disabled="false" on an enabled linked card and keeps its href', async () => {
+    const el = (await fixture(html`<lr-card href="/reports">body</lr-card>`)) as LyraCard;
+    const link = anchor(el);
+    expect(link.getAttribute('href')).to.equal('/reports');
+    expect(link.getAttribute('aria-disabled')).to.equal('false');
+    expect(link.hasAttribute('tabindex')).to.equal(false);
+  });
+
+  it('does not forward a linked-content click to the anchor while disabled', async () => {
+    const el = (await fixture(html`<lr-card href="/reports" disabled>body</lr-card>`)) as LyraCard;
+    let anchorClicks = 0;
+    anchor(el).addEventListener('click', (event) => {
+      event.preventDefault();
+      anchorClicks += 1;
+    });
+    (el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).click();
+    expect(anchorClicks).to.equal(0);
+  });
+
+  it('forwards host aria-pressed and aria-current reactively onto the activation button', async () => {
+    const el = (await fixture(
+      html`<lr-card actionable aria-label="Trip 4021" aria-pressed="true" aria-current="page"
+        >body</lr-card
+      >`
+    )) as LyraCard;
+    expect(activation(el).getAttribute('aria-pressed')).to.equal('true');
+    expect(activation(el).getAttribute('aria-current')).to.equal('page');
+
+    el.setAttribute('aria-pressed', 'false');
+    await el.updateComplete;
+    expect(activation(el).getAttribute('aria-pressed')).to.equal('false');
+
+    el.removeAttribute('aria-pressed');
+    el.removeAttribute('aria-current');
+    await el.updateComplete;
+    expect(activation(el).hasAttribute('aria-pressed')).to.equal(false);
+    expect(activation(el).hasAttribute('aria-current')).to.equal(false);
+  });
+
+  it('ignores values outside the aria-pressed/aria-current vocabularies', async () => {
+    const el = (await fixture(
+      html`<lr-card actionable aria-label="Trip" aria-pressed="yes" aria-current="maybe"
+        >body</lr-card
+      >`
+    )) as LyraCard;
+    expect(activation(el).hasAttribute('aria-pressed')).to.equal(false);
+    expect(activation(el).hasAttribute('aria-current')).to.equal(false);
+  });
+
+  it('forwards aria-current onto a linked card anchor, but never aria-pressed', async () => {
+    const el = (await fixture(
+      html`<lr-card href="/reports" aria-label="Reports" aria-pressed="mixed" aria-current="page"
+        >body</lr-card
+      >`
+    )) as LyraCard;
+    expect(anchor(el).getAttribute('aria-current')).to.equal('page');
+    expect(
+      anchor(el).hasAttribute('aria-pressed'),
+      'a link is not a toggle -- aria-pressed is not in role=link\'s supported set',
+    ).to.equal(false);
+    await expect(el).to.be.accessible();
+  });
+
+  it('keeps the link role explicit on a disabled link, whose dropped href would otherwise drop it', async () => {
+    const el = (await fixture(
+      html`<lr-card href="/reports" disabled aria-pressed="true" aria-current="page" aria-label="Reports"
+        >body</lr-card
+      >`
+    )) as LyraCard;
+    const link = anchor(el);
+    expect(link.getAttribute('role'), 'the dropped href must be replaced by an explicit role').to.equal('link');
+    expect(link.getAttribute('aria-current')).to.equal('page');
+    expect(link.hasAttribute('aria-pressed')).to.equal(false);
+    // color-contrast is excluded, not ignored: the whole card paints at --lr-opacity-disabled,
+    // and WCAG 1.4.3 exempts text that is part of an inactive user interface component. axe
+    // cannot see that exemption here because the opacity sits on a shadow ancestor rather than on
+    // the text node's own disabled control.
+    await expect(el).to.be.accessible({ ignoredRules: ['color-contrast'] });
+  });
+
+  it('restores the forwarded state once a disabled link is re-enabled', async () => {
+    const el = (await fixture(
+      html`<lr-card href="/reports" disabled aria-current="page" aria-label="Reports">body</lr-card>`
+    )) as LyraCard;
+    el.disabled = false;
+    await el.updateComplete;
+    expect(anchor(el).hasAttribute('role'), 'a live link needs no explicit role').to.equal(false);
+    expect(anchor(el).getAttribute('href')).to.equal('/reports');
+  });
+
+  it('keeps disabled and the forwarded state across a disconnect/reconnect', async () => {
+    const el = (await fixture(
+      html`<lr-card actionable disabled aria-pressed="true" aria-label="Trip">body</lr-card>`
+    )) as LyraCard;
+    const host = el.parentNode as HTMLElement;
+    el.remove();
+    host.appendChild(el);
+    await el.updateComplete;
+    expect(el.disabled).to.equal(true);
+    expect(activation(el).disabled).to.equal(true);
+    expect(activation(el).getAttribute('aria-pressed')).to.equal('true');
+  });
+
+  it('stays accessible as a disabled, pressed, right-to-left actionable card', async () => {
+    const el = (await fixture(html`
+      <lr-card actionable disabled dir="rtl" aria-pressed="true" aria-label="بطاقة">
+        <span slot="header">عنوان</span>
+        محتوى
+      </lr-card>
+    `)) as LyraCard;
+    await expect(el).to.be.accessible();
+  });
+});

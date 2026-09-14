@@ -320,7 +320,8 @@ it("contains the composed lr-tab-group's lr-activate on a real repeat pick of th
   } finally {
     document.removeEventListener('lr-activate', listener);
   }
-  expect(el.activeTab, 'the repeat pick changed nothing').to.equal('relationships');
+  await tabs.updateComplete;
+  expect(tabs.active, 'the repeat pick changed nothing').to.equal('relationships');
   expect(
     escaped,
     "this component's documented contract is lr-tab-show with `tabId`; the child's raw event never escapes",

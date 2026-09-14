@@ -524,11 +524,39 @@ export function applyComposedFocusRepair(
   const current = deepActiveElementIn(ownerDocument);
   const lostWithBranch = current === null || current === ownerDocument.body || current === ownerDocument.documentElement;
   if (current !== snapshot.activeElement && !composedContains(owner, current) && !lostWithBranch) return false;
-  for (const candidate of candidates) {
-    if (candidate.ownerDocument !== ownerDocument || !isComposedFocusAvailable(candidate)) continue;
+  return focusFirstAvailable(
+    candidates.filter((candidate) => candidate.ownerDocument === ownerDocument),
+  );
+}
+
+/**
+ * Focuses the first of an ordered target list that both passes `isComposedFocusAvailable()` and
+ * actually ends up holding focus, and reports whether any of them did.
+ *
+ * Unconditional, and that is the whole difference from `repairComposedFocus()`: it makes no
+ * judgement about where focus currently is. That fits a component handing focus over on its *own*
+ * terminal action -- the control the user just activated is about to unmount or become `disabled`,
+ * so the handoff has to happen whether or not that control is provably the focused one. Use
+ * `repairComposedFocus()` instead whenever the move must be declined because focus sits somewhere
+ * unrelated.
+ *
+ * Both halves of the check are load-bearing. `isComposedFocusAvailable()` is the one predicate that
+ * already excludes `inert`, an `inert` composed ancestor, `hidden`, `aria-hidden`, `:disabled` and
+ * unrendered branches -- an `inert` element refuses `focus()` silently, so a hand-rolled
+ * `a ?? b)?.focus()` chain strands the user on `<body>` at exactly the moment something important
+ * was announced. Availability alone is not sufficient either: a plain `<div>` with no `tabindex` is
+ * "available" and still refuses focus, so each attempt is verified by reading focus back before the
+ * next candidate is tried.
+ *
+ * An empty, all-nullish or nullish list is a safe no-op returning false, so a caller never has to
+ * pre-check its own fallback list.
+ */
+export function focusFirstAvailable(targets: ComposedFocusRepairTargetSource): boolean {
+  for (const candidate of resolveComposedFocusRepairTargets(targets)) {
+    if (!isComposedFocusAvailable(candidate)) continue;
     candidate.focus();
-    const repaired = deepActiveElementIn(ownerDocument);
-    if (repaired === candidate || composedContains(candidate, repaired)) return true;
+    const focused = deepActiveElementIn(candidate.ownerDocument);
+    if (focused === candidate || composedContains(candidate, focused)) return true;
   }
   return false;
 }

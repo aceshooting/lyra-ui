@@ -137,8 +137,19 @@ function detectKind(mimeType: string): LyraMediaCardKind {
  * @csspart filename - The filename text, shown only in the file-chip fallback.
  * @csspart open-button - The explicit "open" affordance rendered next to
  * `[part="media"]` for `kind="video"` only — see the class doc.
+ * @attr aria-pressed - Toggle state forwarded reactively onto this card's action when that action
+ * is a BUTTON (`kind="image"`'s `base`, or `kind="video"`'s `open-button`): `true`, `false` or
+ * `mixed`. Anything else is ignored rather than passed through. The file chip's anchor does not
+ * receive it -- `link` has no pressed state, and asserting one there is an ARIA conformance
+ * failure, not a nicety.
+ * @attr aria-current - Current-item state forwarded reactively onto whichever control this card
+ * renders, anchor included (`aria-current` is global): `page`, `step`, `location`, `date`, `time`,
+ * `true` or `false`.
  * @cssprop [--lr-media-card-max-height=var(--lr-size-20rem)] - Cap on the block size of the
  * `<img>`/`<video>` in `[part="media"]`.
+ * @cssprop [--lr-media-card-bg=var(--lr-color-surface)] - Background of the RESTING `frame="card"`
+ * chrome, the companion to the pressed state's `--lr-media-card-active-bg`. `frame="plain"` still
+ * drops the fill entirely.
  * @cssprop [--lr-media-card-active-border-color=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed border color for image/file card actions.
  * @cssprop [--lr-media-card-active-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background color for image/file card actions.
  *
@@ -194,6 +205,42 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
    *  explicit empty string is equivalent to the unset `null` default -- both fall through to the
    *  generated purpose-specific name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
+  /** Turns off this card's OWN action: the image button and the video `open-button` render
+   *  `disabled`, a safe file chip's anchor loses its `href` and `download` (so it genuinely cannot
+   *  fetch rather than merely claiming `aria-disabled` on a live link) and leaves the tab order,
+   *  `lr-media-open`/`lr-before-media-download` stop firing from every path including `click()`,
+   *  and the affordance paints at `--lr-opacity-disabled` with a `not-allowed` cursor.
+   *
+   *  Deliberately does NOT reach into the `kind="video"` player: `<video controls>` is media
+   *  content with its own native transport, not this card's action, and silencing playback is not
+   *  what "the open affordance is unavailable" means. An unsafe-`src` file chip has no action at
+   *  all, so `disabled` leaves it byte-identical.
+   *
+   *  Like `<lr-icon-button>`, this component is not form-associated, so an ancestor
+   *  `<fieldset disabled>` does not cascade here -- disable each card explicitly. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
+  // Host-attribute forwarding onto the native control that actually carries this card's action,
+  // identical in shape to `<lr-button>`/`<lr-icon-button>`: a `role`-less host cannot express a
+  // toggle or current-item state itself, which is what left a selectable attachment grid unable to
+  // announce its selection at all.
+  @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
+  @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
+
+  /** Validated `aria-pressed` token, or `nothing` when the host carries no usable value. */
+  private get forwardedPressed(): string | typeof nothing {
+    return ['true', 'false', 'mixed'].includes(this.triggerPressed ?? '')
+      ? (this.triggerPressed as string)
+      : nothing;
+  }
+
+  /** Validated `aria-current` token, or `nothing` when the host carries no usable value. */
+  private get forwardedCurrent(): string | typeof nothing {
+    return ['page', 'step', 'location', 'date', 'time', 'true', 'false'].includes(this.triggerCurrent ?? '')
+      ? (this.triggerCurrent as string)
+      : nothing;
+  }
 
   /** A CSS length (e.g. `"16rem"`); once set, overrides the
    *  `--lr-media-card-max-height` custom property for this instance only —
@@ -266,6 +313,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   }
 
   private onActivate = (): void => {
+    if (this.disabled) return;
     this.emit('lr-media-open', this.eventDetail());
   };
 
@@ -283,6 +331,12 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   // suppressing exactly that default, so the native click also needs
   // stopping or the download/navigation would proceed anyway.
   private onLinkClick = (e: MouseEvent): void => {
+    // A disabled chip already renders an href-less anchor, so there is no default left to veto --
+    // announcing a download that cannot happen would be a lie to every listener.
+    if (this.disabled) {
+      e.preventDefault();
+      return;
+    }
     if (this.emit('lr-before-media-download', this.eventDetail(), { cancelable: true }).defaultPrevented) {
       e.preventDefault();
     }
@@ -312,9 +366,10 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
 
   /**
    * Activate the primary action: the image button, video open button, or safe-file anchor.
-   * Unsafe/inert file previews have no action, so this is a no-op for them.
+   * Unsafe/inert file previews and `disabled` cards have no action, so this is a no-op for them.
    */
   override click(): void {
+    if (this.disabled) return;
     this.primaryAction?.click();
   }
 
@@ -325,6 +380,9 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
         type="button"
         style=${this.baseStyle}
         aria-label=${this.actionLabel}
+        aria-pressed=${this.forwardedPressed}
+        aria-current=${this.forwardedCurrent}
+        ?disabled=${this.disabled}
         @click=${this.onActivate}
         @focus=${this.onActionFocus}
         @blur=${this.onActionBlur}
@@ -342,6 +400,9 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
           part="open-button"
           type="button"
           aria-label=${this.actionLabel}
+          aria-pressed=${this.forwardedPressed}
+          aria-current=${this.forwardedCurrent}
+          ?disabled=${this.disabled}
           @click=${this.onActivate}
           @focus=${this.onActionFocus}
           @blur=${this.onActionBlur}
@@ -360,13 +421,25 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
       <span part="filename" title=${name}>${name}</span>
     `;
     if (href) {
+      // Two deliberate departures from a literal copy of `<lr-button>`'s forwarding, both because
+      // an anchor is not a button:
+      //   1. `aria-pressed` never reaches this anchor. `link` does not support it (only a button
+      //      can be a toggle), so forwarding it makes axe's `aria-allowed-attr` fail the card
+      //      outright. `aria-current` is global, so it does forward.
+      //   2. A disabled chip gets an explicit `role="link"`. Dropping `href` is the only way a
+      //      link genuinely stops fetching, but it also drops the implicit role, and
+      //      `aria-label`/`aria-current` are prohibited on the resulting generic element.
       return html`
         <a
           part="base"
-          href=${href}
+          href=${this.disabled ? nothing : href}
           style=${this.baseStyle}
-          download=${this.filename || ''}
+          download=${this.disabled ? nothing : this.filename || ''}
+          role=${this.disabled ? 'link' : nothing}
           aria-label=${this.actionLabel}
+          aria-current=${this.forwardedCurrent}
+          aria-disabled=${this.disabled ? 'true' : 'false'}
+          tabindex=${this.disabled ? '-1' : nothing}
           @click=${this.onLinkClick}
           @focus=${this.onActionFocus}
           @blur=${this.onActionBlur}

@@ -35,7 +35,9 @@ projection via `parentId`) — never two shapes. Foreign runtime `kind` and `sta
 as `'other'` and `'pending'` rather than throwing, although hosts should continue to use the
 documented literal sets. At most 500 unique valid spans mount; when `activeSpanId` resolves beyond
 the ordinary input-order budget, that span and its ancestor path reserve positions so the
-controlled active state remains visible. A localized `[part="limit"]` note exposes truncation.
+controlled active state remains visible. A localized `[part="limit"]` note exposes truncation. The
+time axis always scales to the whole trace, measured before that 500-span cap is applied, so a
+truncated tail can never shrink the axis and stretch the surviving bars across the track.
 `activeSpanId: string | null = null`
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time

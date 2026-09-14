@@ -11,6 +11,8 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
@@ -83,6 +85,10 @@ export interface LyraCheckboxEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
   'lr-invalid': CustomEvent<null>;
+  // The proposal, not the outcome: `checked` still holds the old value while this dispatches, so
+  // `detail.checked` is what the control would become. Same request/commit shape `<lr-details>`
+  // uses, with the direction in the detail rather than in two direction-named events.
+  'lr-checkbox-toggle-request': CustomEvent<{ checked: boolean }>;
 }
 /**
  * `<lr-checkbox>` — a boolean form control. Structurally the same idea as
@@ -129,7 +135,17 @@ export interface LyraCheckboxEventMap {
  * @event lr-input - Prefixed compatibility alias for `input`; `detail: { checked }`.
  * @event change - Fired immediately after `input` for the same user toggle.
  * @event lr-change - Compatibility alias fired after `input` and `change` (click or Space).
- * `detail: { checked }`. Not fired for a programmatic `.checked` assignment.
+ * `detail: { checked }`. Not fired for a programmatic `.checked` assignment, nor for a user toggle
+ * a listener refused through `lr-checkbox-toggle-request`.
+ * @event lr-checkbox-toggle-request - A user toggle (click or Space) is about to change `checked`;
+ * `detail: { checked }` carries the state the control *would* take, and `checked` itself still
+ * holds the old value while this dispatches. Cancelable: calling `preventDefault()` keeps the
+ * current state, so the control never flips at all rather than flipping and snapping back, and
+ * none of `input`/`lr-input`/`change`/`lr-change` fire. A listener may instead resolve the request
+ * by assigning `checked` itself during the dispatch, which suppresses the built-in write the same
+ * way. Not fired for a programmatic `.checked` assignment, nor while the control is disabled. An
+ * `<lr-checkbox-group>` owner consumes this event and republishes it as its own
+ * `lr-checkbox-group-toggle-request`, the same way it already translates `input`/`change`.
  * @event focus - Re-dispatched from the internal control as a bubbling, composed event.
  * @event blur - Re-dispatched from the internal control as a bubbling, composed event.
  * @event lr-invalid - The checkbox failed a validity check. Cancelable: calling
@@ -141,8 +157,10 @@ export interface LyraCheckboxEventMap {
  * `setCustomValidity()` error.
  * @cssstate invalid - Matches while it does not — from the very first render, before the user has
  * touched anything.
- * @cssstate user-valid - `valid`, but only after the user has interacted: a toggle, a blur, or a
- * `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-valid - `valid`, but only after the user has interacted: a toggle the host
+ * allowed, a blur, or a `reportValidity()` call (which is what a submit attempt runs). A toggle
+ * refused through `lr-checkbox-toggle-request` is deliberately not one of them -- nothing changed,
+ * so nothing is revealed until the user interacts again.
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required checkbox is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
@@ -304,6 +322,11 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   private _disabled = false;
   private _required = false;
   private _value = 'on';
+  // Shared with every other veto point in this library: `emit()` is synchronous, so a listener
+  // that answers `lr-checkbox-toggle-request` by writing `checked` itself finishes before the
+  // built-in commit runs, and a before/after value compare reads "unchanged" whenever it wrote
+  // back the value the control already held. The guard records that a write happened.
+  private toggleGuard = new VetoWriteGuard();
 
   /** Whether the control is disabled explicitly, by an ancestor fieldset, or by an owning `<lr-checkbox-group>`. */
   get effectiveDisabled(): boolean {
@@ -317,6 +340,9 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     const old = this._checked;
     if (!this.settingDefaultChecked) this._checkedDirty = true;
     this._checked = Boolean(next);
+    // Unconditional, including a write of the value already held: the guard tracks that a write
+    // happened, not that a value differs. See {@link toggleGuard}.
+    markVetoGuardWrite(this.toggleGuard);
     this.syncFormState();
     this.notifyOwningGroup();
     this.requestUpdate('checked', old);
@@ -665,13 +691,36 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private toggle(): void {
     if (this.effectiveDisabled) return;
-    this.hasInteracted = true;
-    this.checked = !this.checked;
-    this.indeterminate = false;
-    dispatchNativeEvent(this, 'input');
-    this.emit('lr-input', { checked: this.checked });
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { checked: this.checked });
+    const proposed = !this.checked;
+    // The veto point sits BEFORE the write, not after it: a host that refuses this toggle (the
+    // canonical case is an `<lr-checkbox-group>` owner refusing to let the last checked option be
+    // cleared) leaves the control exactly as the user found it, instead of letting it flip and
+    // snapping it back a frame later. `requestThenCommit()` also suppresses the commit when a
+    // listener resolved the request by writing `checked` itself.
+    requestThenCommit({
+      requestDetail: { checked: proposed },
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-checkbox-toggle-request', detail, init),
+      guard: this.toggleGuard,
+      commit: () => {
+        // The interacted flag is part of "exactly as the user found it": `reflectInvalid()` feeds
+        // it to `syncValidityStates()`, so setting it before the veto would let a REFUSED first
+        // toggle start matching `:state(user-invalid)` for a change that never happened (the
+        // `data-invalid`/`aria-invalid` pair is gated by `touched`, which only a blur sets, so it
+        // was never affected). It is set here, inside the commit, so only a toggle the host allowed
+        // reveals validity. A real user still ends up interacted a moment later either way --
+        // `onBlur` sets the same flag when focus leaves, which is the native `:user-invalid`
+        // timing. A listener that resolves the request by writing `checked` itself suppresses the
+        // commit, so that write counts as programmatic, exactly like any other `.checked =`.
+        this.hasInteracted = true;
+        this.checked = proposed;
+        this.indeterminate = false;
+        dispatchNativeEvent(this, 'input');
+        this.emit('lr-input', { checked: this.checked });
+        dispatchNativeEvent(this, 'change');
+        this.emit('lr-change', { checked: this.checked });
+      },
+    });
   }
 
   private onClick = (event: MouseEvent): void => {

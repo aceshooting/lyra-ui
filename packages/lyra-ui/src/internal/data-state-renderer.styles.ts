@@ -15,7 +15,7 @@ import { css, unsafeCSS, type CSSResult } from 'lit';
  * declarations are `lr-table`'s shipped ones value for value — including the hover/pressed/focus
  * triad `check-interaction-states.mjs` requires — so a component migrating onto the shared renderer
  * keeps the same resting, hovered, pressed and focused paint. The one addition is the shared
- * `--lr-interactive-transition`, which eases the hover and pressed repaints the same way every
+ * `--lr-transition-interactive`, which eases the hover and pressed repaints the same way every
  * other interactive part in the library now does.
  */
 export const dataStateRetryStyles = css`
@@ -30,7 +30,7 @@ export const dataStateRetryStyles = css`
     color: var(--lr-color-brand);
     font: inherit;
     cursor: pointer;
-    transition: var(--lr-interactive-transition);
+    transition: var(--lr-transition-interactive);
   }
   [part='retry-button']:hover {
     background: var(--lr-color-brand-quiet);

@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './span-waterfall.js';
 import type { LyraSpanWaterfall } from './span-waterfall.js';
-import type { LyraSpan } from '../trace-tree/span.js';
+import { MAX_RENDERED_LYRA_SPANS, type LyraSpan } from '../trace-tree/span.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
@@ -796,4 +796,39 @@ it('routes duration text through the shared duration helper and this.localize() 
   el.strings = { durationSeconds: '{value} seconds' };
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('2.5 seconds');
+});
+
+describe('lr-span-waterfall trace extent past the render cap', () => {
+  it('scales the axis to the whole trace, not just the spans that fit under the render cap', async () => {
+    const spans: LyraSpan[] = [
+      ...Array.from({ length: MAX_RENDERED_LYRA_SPANS }, (_unused, index) => ({
+        id: `early-${index}`,
+        name: `Early ${index}`,
+        kind: 'tool' as const,
+        startMs: 0,
+        endMs: 1000,
+        status: 'success' as const,
+      })),
+      // Dropped by the 500-span cap, but it still happened: the trace really is 10s long.
+      { id: 'late', name: 'Late', kind: 'tool', startMs: 9000, endMs: 10_000, status: 'success' },
+    ];
+    const el = (await fixture(
+      html`<lr-span-waterfall .spans=${spans}></lr-span-waterfall>`,
+    )) as LyraSpanWaterfall;
+    await el.updateComplete;
+
+    const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')];
+    expect(bars.length, 'the row projection stays capped').to.equal(MAX_RENDERED_LYRA_SPANS);
+    expect(
+      bars[0]!.getAttribute('style'),
+      'a 1s span in a 10s trace occupies a tenth of the track, not all of it',
+    ).to.contain('--_lr-span-waterfall-width:10%');
+    const tickLabels = [...el.shadowRoot!.querySelectorAll('[part="tick-label"]')].map(
+      (tick) => tick.textContent?.trim() ?? '',
+    );
+    expect(
+      tickLabels.some((label) => label.includes('10')),
+      `the axis still runs to the full trace duration (ticks: ${tickLabels.join(', ')})`,
+    ).to.equal(true);
+  });
 });

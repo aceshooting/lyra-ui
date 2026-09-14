@@ -13,6 +13,7 @@ import './components/overlays/alert/alert.js';
 import './components/media/animated-image/animated-image.js';
 import './components/media/animation/animation.js';
 import './components/layout/app-rail/app-rail.js';
+import './components/layout/app-rail-group/app-rail-group.js';
 import './components/layout/app-rail/app-rail-item.js';
 import './components/agent-tools/approval-queue/approval-queue.js';
 import './components/viewers/archive-viewer/archive-viewer.js';

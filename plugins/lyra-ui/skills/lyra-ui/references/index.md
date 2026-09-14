@@ -2,7 +2,7 @@
 
 # Component index
 
-285 custom elements, grouped by the source family they live in.
+286 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -79,7 +79,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-graph-query-builder` · lr-graph-query-builder.js · `stable` since `4.1.0` — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
 - `lr-condition-builder` · lr-condition-builder.js · `stable` since `9.0.0` — a composable structured-condition builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with on...
 
-## Layout, navigation & structure — `components/layout/` (35)
+## Layout, navigation & structure — `components/layout/` (36)
 
 - `lr-multi-split` · lr-multi-split.js · `stable` since `9.0.0` — resizable panels for dashboard layouts.
 - `lr-split-panel` · lr-split-panel.js · `stable` since `8.0.0` — an accessible, draggable two-pane layout.
@@ -99,6 +99,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-virtual-list` · lr-virtual-list.js · `stable` since `4.0.0` — a generic windowed/virtualized list host.
 - `lr-app-rail` · lr-app-rail.js · `stable` since `4.0.0` — a responsive navigation rail that adapts across three presentations as the *viewport* narrows (not this element's own inline size — see t...
 - `lr-app-rail-item` · lr-app-rail-item.js · `stable` since `4.0.0` — an explicit icon/label navigation item for `<lr-app-rail>`.
+- `lr-app-rail-group` · lr-app-rail-group.js · `experimental` since `unreleased` — a titled section of navigation items inside `<lr-app-rail>`.
 - `lr-responsive-panel` · lr-responsive-panel.js · `stable` since `4.0.0` — the same slotted content either docked inline in the page's normal layout flow (desktop) or presented as a full-screen/ bottom-sheet over...
 - `lr-menu-label` · lr-menu-label.js · `stable` since `8.0.0` — a non-interactive section heading inside `<lr-menu>`'s default slot.
 - `lr-menu` · lr-menu.js · `stable` since `4.0.0` — the inline semantic controller mapped from `<sl-menu>`.
@@ -129,7 +130,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-chip-group` · lr-chip-group.js · `stable` since `4.0.0` — a flex-wrap container for a set of `<lr-chip>` children (plain light-DOM composition — direct children are the chips, the same shape `<lr...
 - `lr-kbd` · lr-kbd.js · `stable` since `4.0.0` — a small chip representing a keyboard shortcut, rendering the platform-appropriate glyph for cross-platform modifier keys (⌘ on macOS, "Ct...
 - `lr-popup` · lr-popup.js · `stable` since `8.0.0` — the low-level anchored-positioning primitive.
-- `lr-popover` · lr-popover.js · `stable` since `4.0.0` — a click-triggered, light-dismiss floating surface.
+- `lr-popover` · lr-popover.js · `stable` since `4.0.0` — a light-dismiss floating surface, click-triggered by default.
 - `lr-tooltip` · lr-tooltip.js · `stable` since `4.0.0` — a localized tooltip for a consumer-owned trigger.
 - `lr-dropdown` · lr-dropdown.js · `stable` since `4.0.0` — a trigger-owned action menu.
 - `lr-spinner` · lr-spinner.js · `stable` since `4.0.0` — an indeterminate busy indicator.

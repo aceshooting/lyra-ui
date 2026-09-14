@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteRatio, finiteRange } from '../../../internal/numbers.js';
+import { finiteNumber, finiteRatio, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -93,6 +93,9 @@ export interface LyraSpanWaterfallEventMap {
  * identities only long enough for the shared descriptor-safe projection to copy its closed
  * display schema; later rendering never re-reads an admitted source row. Create a new collection
  * and reassign it after changes; mutating the assigned array does not update the view.
+ *
+ * The time axis always scales to the whole trace, including spans the 500-row ceiling drops, so a
+ * truncated tail never stretches the surviving bars across the track.
  *
  * @customElement lr-span-waterfall
  * @event lr-span-select - `detail: { spanId }` — a bar/row was activated (click, Enter, Space).
@@ -192,6 +195,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   private sortedActiveSpanId: string | null = null;
   private sortedCache: LyraSpan[] = [];
   private sortedCacheTruncated = false;
+  /** Trace extent measured before the projection cap, so a truncated tail cannot shrink the axis. */
+  private sortedCacheExtentEndMs = 0;
   private limitAnnouncementSink?: AnnouncementSink;
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
@@ -230,6 +235,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     this.sortedActiveSpanId = this.activeSpanId;
     const projection = normalizeLyraSpans(this.spans, this.activeSpanId);
     this.sortedCacheTruncated = projection.truncated;
+    this.sortedCacheExtentEndMs = projection.extentEndMs;
     this.sortedCache = projection.spans
       .map((s, i) => ({ s, i }))
       .sort((a, b) => a.s.startMs - b.s.startMs || a.i - b.i)
@@ -238,8 +244,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private viewWindow(): ViewWindow {
-    const extentEnd = this.sortedSpans().reduce((m, s) => Math.max(m, s.endMs ?? s.startMs, s.startMs), 0);
-    const fallbackEnd = Math.max(extentEnd, 1);
+    // The extent comes from the projection's pre-cap measurement, never from the rendered rows:
+    // past MAX_RENDERED_LYRA_SPANS the surviving rows are the EARLIEST ones, so reducing over them
+    // shortened the axis to the truncated head and stretched every bar to fill the track -- a 1s
+    // span in a 10s trace drew at 100% width with nothing to indicate it.
+    this.sortedSpans();
+    const fallbackEnd = Math.max(finiteNumber(this.sortedCacheExtentEndMs, 0), 1);
     // `null` means "fit the whole trace"; a non-null-but-NaN value (a bad attribute) falls back
     // to that same default instead of flowing NaN into axisTicks()/barGeometry(). Both bounds are
     // trace-relative ms, so never negative (min 0), mirroring `LyraSpan.startMs`'s own contract.

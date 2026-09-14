@@ -471,3 +471,32 @@ export const CanvasLayeredCommunities: Story = {
     `;
   },
 };
+
+export const ContainerFit: Story = {
+  name: 'Fits its container (fit-to="container")',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'With `fit-to="container"` the drawing space is the graph\'s own rendered content box ' +
+          'rather than the numeric `width`/`height`, so the layout fills a responsive pane and ' +
+          're-centres as that pane changes size. Drag the resizable wrapper to watch the drawing ' +
+          'follow it; the settled node positions are kept across the resize.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="inline-size: 32rem; max-inline-size: 100%; block-size: 18rem; resize: both; overflow: hidden; border: var(--lr-border-width-thin) solid var(--lr-color-border);"
+    >
+      <lr-graph
+        aria-label="Retrieval relationships filling their allocation"
+        fit-to="container"
+        seed="42"
+        style="block-size: 100%"
+        .nodes=${nodes}
+        .links=${links}
+      ></lr-graph>
+    </div>
+  `,
+};

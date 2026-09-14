@@ -35,6 +35,13 @@ for (const ownership of ['inherited', 'own'] as const) {
 }
 
 
+/** The composed `<lr-icon-button>`'s own native control -- the node a pointer actually lands on.
+ *  `[part~="base"]` is the icon-button host, which has no native button semantics of its own. */
+const paintedControl = (host: LyraCopyButton): HTMLButtonElement =>
+  (host.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).shadowRoot!.querySelector(
+    '[part~="button"]',
+  ) as HTMLButtonElement;
+
 it('keeps the actual refused-write demo effective after a held native pointer press', async () => {
   const initial = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
   const writes: string[] = [];
@@ -44,7 +51,7 @@ it('keeps the actual refused-write demo effective after a held native pointer pr
     const root = await fixture<HTMLElement>(html`<div>${(CopyFailure.render as () => TemplateResult)()}</div>`);
     const host = root.querySelector<LyraCopyButton>('lr-copy-button')!;
     await host.updateComplete;
-    const button = host.shadowRoot!.querySelector<HTMLButtonElement>('button')!;
+    const button = paintedControl(host);
     const outcomes: string[] = [];
     host.addEventListener('lr-copy', () => outcomes.push('success'));
     host.addEventListener('lr-copy-error', (event) => outcomes.push(event.detail.reason));
@@ -74,7 +81,7 @@ for (const cancellation of ['release outside', 'disconnect'] as const) {
       const root = await fixture<HTMLElement>(html`<div>${(CopyFailure.render as () => TemplateResult)()}<button data-outside>Outside</button></div>`);
       const host = root.querySelector<LyraCopyButton>('lr-copy-button')!;
       await host.updateComplete;
-      const button = host.shadowRoot!.querySelector<HTMLButtonElement>('button')!;
+      const button = paintedControl(host);
       const outcomes: string[] = [];
       host.addEventListener('lr-copy', () => outcomes.push('success'));
       host.addEventListener('lr-copy-error', () => outcomes.push('error'));

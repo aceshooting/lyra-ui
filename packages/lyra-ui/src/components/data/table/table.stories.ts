@@ -689,6 +689,40 @@ export const ExpandableRowsWithOptOut: Story = {
     ></lr-table>`,
 };
 
+// expansionMode mirrors selectionMode: 'single'/'multiple' let the table own expandedRowKeys behind
+// the cancelable lr-row-expand-request, so no host wiring is needed to make the chevrons work.
+export const SelfManagedExpansion: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'expansion-mode="multiple" updates expandedRowKeys itself on each accepted activation. Use "single" to keep at most one panel open, or leave it unset (the default "none") to own the set yourself from lr-row-expand-toggle. A listener calling preventDefault() on lr-row-expand-request takes one change back.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-table
+      accessible-label="Self-managed expansion"
+      expansion-mode="multiple"
+      .columns=${detailColumns}
+      .rows=${detailRows}
+      .rowKey=${(r: DetailRow) => r.id}
+      .expandedContent=${(r: DetailRow) => html`<div style="padding: 4px 8px;">${r.name} details</div>`}
+    ></lr-table>`,
+};
+
+export const SingleExpansion: Story = {
+  render: () =>
+    html`<lr-table
+      accessible-label="One panel at a time"
+      expansion-mode="single"
+      .columns=${detailColumns}
+      .rows=${detailRows}
+      .rowKey=${(r: DetailRow) => r.id}
+      .expandedContent=${(r: DetailRow) => html`<div style="padding: 4px 8px;">${r.name} details</div>`}
+    ></lr-table>`,
+};
+
 interface PivotRow {
   id: string;
   project: string;

@@ -14,6 +14,16 @@ export const styles = css`
        shape). Unset, this renders byte-identical to the previously-hardcoded value. */
     gap: var(--lr-chip-group-gap, var(--lr-space-xs));
   }
+  /* The overflow collapse writes a COMPONENT-OWNED 'hidden' on slotted children
+     (setManagedHidden()), so the UA's normal-weight '[hidden] { display: none }' is not enough:
+     CSS Cascade 5 ranks an outer-tree author rule above this shadow rule at equal weight, so a
+     consumer's own 'lr-chip-group > * { display: inline-flex }' would re-reveal exactly the
+     children the '+N' pill is standing in for. An lr-* child is already covered by its own
+     :host([hidden]) reset, but this slot documents any content. 'until-found' is carved out so a
+     find-in-page reveal still works, matching every other ::slotted([hidden]) override here. */
+  ::slotted([hidden]:not([hidden='until-found' i])) {
+    display: none !important;
+  }
   /* Local pill styling rather than a real <lr-chip> in the shadow DOM: keeps the group
      self-contained instead of depending on chip.ts's internal shape, the way this family's
      overlay-shaped components duplicate rather than nest one another. */

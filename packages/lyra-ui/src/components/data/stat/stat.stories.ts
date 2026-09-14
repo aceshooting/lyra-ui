@@ -329,3 +329,21 @@ export const ModifiedLinkAndOptionalCopy: Story = {
     </lr-stat>
   </div>`,
 };
+
+export const RestingBackgroundToken: Story = {
+  name: 'Retinting the resting tile',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-stat-bg` is the resting companion to the existing `--lr-stat-padding`/`--lr-stat-gap` levers and to a linked card\'s pressed `--lr-stat-link-active-bg`, whose default now mixes from it — so one override retints both, and a themed dashboard no longer needs a `::part(base)` rule or an app-wide `--lr-color-surface` change. `frame="plain"` still drops the fill entirely.',
+      },
+    },
+  },
+  render: () => html`
+    <div class="flex flex-wrap gap-4" style="--lr-stat-bg: var(--lr-color-brand-quiet)">
+      <lr-stat label="Revenue" value="12.4" unit="k€"></lr-stat>
+      <lr-stat label="Documents" value="42" href="https://example.com/documents"></lr-stat>
+    </div>
+  `,
+};

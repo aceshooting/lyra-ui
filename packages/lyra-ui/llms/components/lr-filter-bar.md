@@ -93,6 +93,15 @@ chips (`filter-control-tag-label` is capped by that control's own `--tag-max-siz
 expand-button/popup apply to date filters. This lets a consumer theme the composed tier from
 `lr-filter-bar::part(...)` without depending on the built-in control type selected by a filter
 definition. Custom renderers retain ownership of their own part forwarding.
+On a `'checkbox-menu'` filter, `filter-control-field` is the trigger button's own frame — the
+element inside `<lr-button>` that draws the border, background and radius, not the chrome-less
+button host, so a `::part(filter-control-field) { border-color: … }` rule works there exactly as it
+does for every other filter type. `filter-control-start` is that trigger's adornment wrapper (where
+a definition `icon` lands), `filter-control-input` is its selection summary, `filter-control-label`
+is the trigger's own label text (not a stacked label above the control), `filter-control-listbox` is
+the dropdown's popup surface, `filter-control-option` is one `role="menuitemcheckbox"` row, and
+`filter-control-error` is the revealed required message — rendered by the bar itself, because the
+composed dropdown has no error chrome of its own.
 
 `field` wraps one filter's composed control and its validation spacer inside `controls`; its
 flex-basis is themeable via `--lr-filter-bar-field-basis` (default `var(--lr-size-12rem)`).
@@ -109,8 +118,13 @@ starting with a letter); an id that doesn't (for example one containing whitespa
 alone, exactly as before this part existed, rather than risking a `part` attribute whose
 space-separated token list fabricates an unrelated second token.
 
-A `'select'`/`'combobox'` filter's required `options` entries are
-`LyraFilterBarOption { value, label, icon? }`.
+A `'select'`, `'combobox'` or `'checkbox-menu'` filter's required `options` entries are
+`LyraFilterBarOption { value, label, icon?, searchText? }`. `searchText` is extra text the option
+also matches on, forwarded verbatim to `<lr-option>`'s own `search-text`, so a row can keep a short
+visible `label` ("Urgent") while still matching a long canonical key ("SEV-1 production outage").
+It affects a `'combobox'` filter only: the attribute is written on every choice type's `<lr-option>`,
+but `<lr-select>`'s listbox type-ahead matches the option's `label` alone and never reads it, and a
+`'checkbox-menu'` has no text entry to match against.
 `icon` is optional Lit content — a status dot, a type glyph, a flag — rendered into the composed
 `<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome, so it never joins the option's
 accessible name:
@@ -134,13 +148,26 @@ to `<lr-input>` for an open-ended free-text query rather than a closed choice se
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
 text the user typed, not a truncated or normalized form.
 
-A `'text'` or `'combobox'` filter definition additionally accepts optional `clearable: boolean`,
-`size: LyraSize`, and `icon: unknown` fields, forwarded verbatim to the composed
-`<lr-input>`/`<lr-combobox>`'s own same-named properties (`icon` into that control's `start`
-slot, exactly like a choice option's own `icon`). `'text'` also accepts `inputType: LyraInputType`
-(forwarded to the composed `<lr-input>`'s own `type`, e.g. `'search'`/`'email'`/`'tel'`/`'url'`).
-Every one of these is optional and defaults to that composed control's own default, so an
-existing filter definition renders unchanged.
+Every built-in (non-`'custom'`) filter definition additionally accepts optional `size: LyraSize`,
+`icon: unknown` and `labelVisibility: 'visible' | 'hidden'` fields, and every one whose composed
+control ships a clear action also accepts `clearable: boolean`. They are forwarded verbatim to that
+control's own same-named property — `icon` into its `start` slot exactly like a choice option's own
+`icon`, rendered inert and `aria-hidden`; `clearable` reaching `<lr-date-input>` under its own
+`with-clear` spelling, since that control has no `clearable`. `'text'` also accepts
+`inputType: LyraInputType` (forwarded to the composed `<lr-input>`'s own `type`, e.g.
+`'search'`/`'email'`/`'tel'`/`'url'`), and `'combobox'` also accepts `emptyText: string` (forwarded
+to its `empty-text`, the row its listbox shows when a query matches none of the declared options). A
+`'custom'` definition deliberately accepts none of them: its renderer owns the control's markup
+outright, so a field the bar could not forward anywhere would be inert API. Every one of these is
+optional and defaults to that composed control's own default, so an existing filter definition
+renders unchanged.
+
+`labelVisibility: 'hidden'` routes the filter's `label` to the composed control's own `aria-label`
+instead of rendering it as a stacked visible label, and — when the definition declares no
+`placeholder` of its own — also uses it as the placeholder. The label is re-routed, never dropped,
+so a compact toolbar row still names every field for assistive technology; visually hiding
+`::part(filter-control-label)` in CSS, the only previous option, removed the accessible name along
+with the text.
 
 `'combobox'` also accepts the same `debounce?: number` (ms) `'text'` already had: it coalesces a
 burst of rapid selection changes (picks, a multi-select toggle, an
@@ -150,6 +177,54 @@ fully controlled: while a commit is pending it renders that pending selection ra
 last-committed `value`, so the control's own display never reverts mid-delay. A pending debounce
 is flushed by the control's own blur and cancelled by `reset()`, a chip removal, and
 disconnection — identical to `'text'`.
+
+### `'checkbox-menu'` filters
+
+A `'checkbox-menu'` filter composes `<lr-dropdown>` plus one `<lr-dropdown-item type="checkbox">`
+(`role="menuitemcheckbox"`) per option, behind a single toolbar trigger button. The menu stays open
+across toggles, so several categories can be switched in one visit. Its value is a `string[]`,
+identical to a `'combobox'` with `multiple`, so the two are interchangeable everywhere the bar's own
+bookkeeping is concerned — the same `value` record, active-filter chips, `reset()` path, `required`
+validation and single full-value `lr-input`. Choose between them on interaction, not on data shape:
+reach for `'checkbox-menu'` when the set is small and fixed and typing to filter would only be in
+the way.
+
+Rows are controlled by `value` rather than self-toggling, so a toggle the bar refuses (a `disabled`
+bar, a filter removed mid-interaction) can never leave a checkmark the bar disagrees with.
+
+It is the one built-in type that renders no stacked label above its control: the trigger button
+carries the `label` as its own text next to the selection summary, and `labelVisibility: 'hidden'`
+makes that text visually hidden — never removed — so the button keeps its accessible name. In the
+one case where the hidden label would be the *only* thing the button says (hidden routing, no
+declared `placeholder`, nothing selected) the label routes to the visible summary instead of being
+emitted twice, so the trigger's accessible name stays "Teams", never "Teams Teams".
+
+Because its trigger is a button rather than a field, a `required` `'checkbox-menu'` deliberately
+renders **no** required asterisk and sets **no** `aria-invalid`: the shared required marker has no
+selector that matches a button trigger's label, and `<lr-button>` does not forward a host
+`aria-invalid` onto the element that owns the button role, so writing one would be silently inert. A
+revealed required error still reaches assistive technology — it joins the trigger's accessible name
+as a screen-reader-only run, alongside the visible `filter-control-error` line under the field.
+
+```ts
+const filters: LyraFilterBarFilterDefinition[] = [
+  {
+    filterId: "teams",
+    label: "Teams",
+    type: "checkbox-menu",
+    placeholder: "Any team",
+    options: [
+      { value: "core", label: "Core" },
+      { value: "infra", label: "Infrastructure" },
+      { value: "design", label: "Design" },
+    ],
+  },
+];
+// bar.value -> { teams: ["core", "design"] }
+```
+
+A filter bar detached and reattached while a checkbox menu is open comes back closed, like every
+other transient state the bar owns.
 
 ### Date-range quick ranges
 

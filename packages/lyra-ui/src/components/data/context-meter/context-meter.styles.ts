@@ -46,7 +46,7 @@ export const styles = css`
       color-mix(in srgb, var(--lr-color-border) 30%, transparent)
     );
   }
-  [part='segment'] {
+  [part~='segment'] {
     display: block;
     flex: 0 0 auto;
     /* A near-zero-ratio segment's own inter-segment separator border (below) can equal or exceed
@@ -62,23 +62,23 @@ export const styles = css`
      gap spacing, so two adjacent same-tone segments (e.g. two 'neutral' entries) read as separate
      quantities instead of one block. The logical property keeps it RTL-correct without extra
      math. */
-  [part='segment']:not(:first-of-type) {
+  [part~='segment']:not(:first-of-type) {
     border-inline-start: var(--lr-border-width-thin) solid
       var(--lr-context-meter-segment-seam-color, var(--lr-color-surface));
   }
-  [part='segment'][data-tone='brand'] {
+  [part~='segment'][data-tone='brand'] {
     background: var(--lr-color-brand);
   }
-  [part='segment'][data-tone='success'] {
+  [part~='segment'][data-tone='success'] {
     background: var(--lr-color-success);
   }
-  [part='segment'][data-tone='warning'] {
+  [part~='segment'][data-tone='warning'] {
     background: var(--lr-color-warning);
   }
-  [part='segment'][data-tone='danger'] {
+  [part~='segment'][data-tone='danger'] {
     background: var(--lr-color-danger);
   }
-  [part='segment'][style*='--lr-context-meter-segment-color'] {
+  [part~='segment'][style*='--lr-context-meter-segment-color'] {
     background: var(--lr-context-meter-segment-color);
   }
 
@@ -96,7 +96,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }
-  [part='legend-item'] {
+  [part~='legend-item'] {
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-2xs);
@@ -107,7 +107,7 @@ export const styles = css`
     inline-size: var(--lr-context-meter-legend-swatch-size, var(--lr-size-0-625rem));
     block-size: var(--lr-context-meter-legend-swatch-size, var(--lr-size-0-625rem));
     border-radius: var(--lr-radius-xs);
-    /* The chip reproduces the option's data colour as [part='segment'] does -- same tone ladder,
+    /* The chip reproduces the option's data colour as [part~='segment'] does -- same tone ladder,
        same inline custom-property escape -- so a swatch can never disagree with its band. */
     background: var(--lr-color-border);
   }
@@ -130,6 +130,94 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
+  /* --- interactive mode ------------------------------------------------- */
+  /* Interactive mode swaps each band and each legend row for a real control, so the reset below only
+     undoes the native button chrome -- every colour, size and seam rule above still targets the
+     part and applies unchanged. Deliberately no background declaration in the band reset: the fill is
+     the tone ladder's, and a reset background would outrank the neutral default. */
+  button[part~='segment'] {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  /* The band's outline is drawn INSIDE it: the track clips its overflow (that is what rounds the
+     bar's ends), so a positive outline-offset would put the focus ring where nothing can paint it.
+     Outline rather than a fill change keeps the band's own colour -- which is the datum -- intact. */
+  button[part~='segment']:where(:hover) {
+    outline: var(--lr-border-width-thin) solid var(--lr-color-text-quiet);
+    outline-offset: calc(var(--lr-border-width-thin) * -1);
+  }
+  button[part~='segment']:where(:active) {
+    outline-color: var(--lr-color-text);
+  }
+  button[part~='segment']:where(:focus-visible) {
+    outline: var(--lr-focus-ring);
+    outline-offset: calc(var(--lr-focus-ring-width) * -1);
+  }
+  /* An arc has no box to outline per segment -- every arc shares the ring's bounding box -- so the
+     ring reports which arc is involved by dimming it, and keeps the shared outline for the "focus
+     is in here" half of the signal. */
+  :host([shape='ring']) [part~='segment']:where(:hover) {
+    opacity: 0.8;
+  }
+  :host([shape='ring']) [part~='segment']:where(:active) {
+    opacity: 0.6;
+  }
+  :host([shape='ring']) [part~='segment']:where(:focus-visible) {
+    opacity: 0.8;
+    outline: var(--lr-focus-ring);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  button[part~='legend-item'] {
+    appearance: none;
+    padding: var(--lr-space-2xs);
+    border: 0;
+    border-radius: var(--lr-radius-xs);
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+  button[part~='legend-item']:where(:hover) {
+    background: var(--lr-color-brand-quiet);
+  }
+  button[part~='legend-item']:where(:active) {
+    background: var(--lr-color-border);
+  }
+  button[part~='legend-item']:where(:focus-visible) {
+    outline: var(--lr-focus-ring);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* Selected bands and rows. The state lives in the part NAME because nothing but a pseudo-class
+     may follow ::part(), so a consumer cannot select on an attribute here.
+
+     An INSET RING rather than an outline, and deliberately not a specificity contest: the hover,
+     active and focus-visible rules above all write the outline shorthand, so an outline here
+     would be REPLACED by theirs exactly while the user is pointing at or keyboard-focusing the
+     band -- the one moment the filter's on/off state has to stay readable -- and winning the
+     specificity contest instead would swallow the focus ring. A separate property composes with
+     all three, so a selected, hovered, focused band shows selection AND focus at once. The ring is
+     inset for the same reason the hover outline is: the track clips its own overflow. */
+  button[part~='segment-selected'],
+  button[part~='legend-item-selected'] {
+    box-shadow: inset 0 0 0
+      var(--lr-context-meter-selected-ring-width, var(--lr-border-width-thick))
+      var(--lr-context-meter-selected-ring-color, var(--lr-color-text));
+  }
+  /* An arc owns no box: an outline or an inset ring traces the whole ring's bounding box, so every
+     selected arc would paint the same rectangle and none of them would be identifiable. The one
+     cue a single arc can carry is its own stroke, so a selected arc thickens in place. The value
+     is in SVG user units against this component's 0 0 100 100 viewBox -- a rem/px length would not
+     scale with the ring -- and an unselected arc is the template's own stroke width. */
+  :host([shape='ring']) [part~='segment-selected'] {
+    stroke-width: var(--lr-context-meter-selected-arc-stroke, 16);
+  }
+
   /* The ring is a fixed 8em square, so a legend under it would be clipped by the host's own block
      size. Only under show-legend does the host stop being square: the ring keeps its declared size
      and the key flows beneath it. */
@@ -150,7 +238,7 @@ export const styles = css`
     fill: none;
     stroke: color-mix(in srgb, var(--lr-color-border) 30%, transparent);
   }
-  :host([shape='ring']) [part='segment'] {
+  :host([shape='ring']) [part~='segment'] {
     fill: none;
     stroke: var(--lr-color-border);
     /* Butt caps: round caps on tightly-packed segmented arcs bleed past the exact boundary and
@@ -160,19 +248,19 @@ export const styles = css`
       stroke-dasharray var(--lr-transition-base),
       stroke-dashoffset var(--lr-transition-base);
   }
-  :host([shape='ring']) [part='segment'][data-tone='brand'] {
+  :host([shape='ring']) [part~='segment'][data-tone='brand'] {
     stroke: var(--lr-color-brand);
   }
-  :host([shape='ring']) [part='segment'][data-tone='success'] {
+  :host([shape='ring']) [part~='segment'][data-tone='success'] {
     stroke: var(--lr-color-success);
   }
-  :host([shape='ring']) [part='segment'][data-tone='warning'] {
+  :host([shape='ring']) [part~='segment'][data-tone='warning'] {
     stroke: var(--lr-color-warning);
   }
-  :host([shape='ring']) [part='segment'][data-tone='danger'] {
+  :host([shape='ring']) [part~='segment'][data-tone='danger'] {
     stroke: var(--lr-color-danger);
   }
-  :host([shape='ring']) [part='segment'][style*='--lr-context-meter-segment-color'] {
+  :host([shape='ring']) [part~='segment'][style*='--lr-context-meter-segment-color'] {
     stroke: var(--lr-context-meter-segment-color);
   }
   :host([shape='ring']) [part='label'] {
@@ -194,41 +282,57 @@ export const styles = css`
   }
 
   @media (forced-colors: active) {
-    [part='segment'],
+    [part~='segment'],
     [part='legend-swatch'] {
       forced-color-adjust: none;
       background: CanvasText;
       border: var(--lr-border-width-thin) solid Canvas;
     }
-    [part='segment'][data-tone='success'],
+    [part~='segment'][data-tone='success'],
     [part='legend-swatch'][data-tone='success'] {
       border-style: dashed;
     }
-    [part='segment'][data-tone='warning'],
+    [part~='segment'][data-tone='warning'],
     [part='legend-swatch'][data-tone='warning'] {
       border-style: dotted;
     }
-    [part='segment'][data-tone='danger'],
+    [part~='segment'][data-tone='danger'],
     [part='legend-swatch'][data-tone='danger'] {
       border-style: double;
     }
-    :host([shape='ring']) [part='segment'] {
+    :host([shape='ring']) [part~='segment'] {
       fill: none;
       stroke: CanvasText;
     }
-    :host([shape='ring']) [part='segment'][data-tone='success'] {
+    :host([shape='ring']) [part~='segment'][data-tone='success'] {
       stroke-dasharray: 8 3;
     }
-    :host([shape='ring']) [part='segment'][data-tone='warning'] {
+    :host([shape='ring']) [part~='segment'][data-tone='warning'] {
       stroke-dasharray: 2 3;
     }
-    :host([shape='ring']) [part='segment'][data-tone='danger'] {
+    :host([shape='ring']) [part~='segment'][data-tone='danger'] {
       stroke-dasharray: 8 2 2 2;
+    }
+    /* Selection has to survive forced colours too. The bands keep the inset ring because the rule
+       at the top of this block opts them out of forced-colour adjustment; a legend row does not,
+       and box-shadow is dropped there, so it carries an outline, which forced-colour mode paints
+       itself. A selected arc restates itself in the system highlight -- its tone is already
+       carried by the dash pattern, not by its stroke colour, in this mode. */
+    button[part~='segment-selected'] {
+      box-shadow: inset 0 0 0 var(--lr-border-width-thick) Highlight;
+    }
+    button[part~='legend-item-selected'] {
+      outline: var(--lr-border-width-thick) solid Highlight;
+      outline-offset: calc(var(--lr-border-width-thick) * -1);
+    }
+    :host([shape='ring']) [part~='segment-selected'] {
+      stroke: Highlight;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    [part='segment'] {
+    [part~='segment'],
+    button[part~='legend-item'] {
       transition: none !important;
     }
   }

@@ -244,6 +244,17 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
   commits arbitrary text on Enter without creating an option
+- `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
+  committed value that no option or async row claims to the end of the listbox as a synthetic,
+  badged, keyboard-reachable, re-selectable row. Off by default. The synthetic row is filtered by
+  the active query exactly like the `allow-create` row is, so a query it does not match neither
+  shows it nor suppresses the "no matches" copy; re-picking it re-commits the same value and
+  deliberately does **not** reclassify it as known — the badge and the row both survive, and the row
+  never appears in `selectedRows`
+- `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
+  committed value that matches no option or async row, everywhere it appears (trigger, `multiple`
+  tag, synthetic row). `getTag` cannot serve this case: it is handed a matched option and there is
+  none. A blank return falls back to the raw value
 - `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected)
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
@@ -361,8 +372,11 @@ The badge is suppressed while an async `source` fetch is still in flight, and ne
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
-`lr-after-hide`, respectively. `resetValidity()` clears consumer custom validity and restores the
-current intrinsic constraints. `getForm()` returns the owning form, including an external owner
+`lr-after-hide`, respectively. `refresh(): void` re-runs the current `source` query without changing
+the source's identity, its debounce controller, or its delay. Reassigning `source` is a provider
+change and clears the fetched rows and pending-selection cache; `refresh()` does not. It queues for
+the next open while the listbox is closed, and is a no-op without a `source`. `resetValidity()`
+clears consumer custom validity and restores the current intrinsic constraints. `getForm()` returns the owning form, including an external owner
 selected by the `form` attribute.
 `setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
 is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
@@ -439,6 +453,15 @@ The internal input's `focus` and `blur` are relayed exactly once from the host a
 native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
+`lr-source-error` is non-cancelable, `detail: { error }` carrying the raw rejection from an async
+`source` call. The rendered copy stays localized and never shows it.
+`lr-retry` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
+leaves the failure on screen. While the failure state is the only popup content, the popup swaps
+`role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
+drops `aria-activedescendant`, and the popup carries the localized failure heading as its accessible
+name). `dialog` is one of the four popup roles WAI-ARIA lets a `role="combobox"` own, so the still
+expanded `aria-controls` target keeps a valid owner while holding a retry `button` that is not a
+legal listbox child. A successful retry restores `role="listbox"`.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has
@@ -490,6 +513,9 @@ attribute when provided), plus two adornment slots:
 - `end` — content after the filter input and the built-in clear action, and before the expand icon,
   so consumer content never sits outboard of the dropdown chevron.
 - `clear-icon` and `expand-icon` replace the corresponding built-in glyphs.
+- `source-error` — replaces the built-in failed-`source` state, retry control included. Deliberately
+  named apart from the form-control `error` slot: they are different failures and a field has to be
+  able to show both.
 
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `start` and `end` (the two
@@ -506,7 +532,16 @@ aria-hidden decorative leading visual for an async row), `option-start` and `opt
 aria-hidden adornments cloned from the source option's `start`/`prefix` and `end`/`suffix` slots, or
 from an async row's `start`/`end`), `option-label`, `option-sub` (a row's
 secondary line, when `sub` is set), `option-badge` (an async row's trailing metadata),
-`option-overflow` (the "+N more" indicator from `maxRender`), `error`, `hint`
+`option-overflow` (the "+N more" indicator from `maxRender`),
+`source-error-row` (the listbox row holding the failed-`source` state), `source-error` (the shared
+failed-load state itself, with `source-error-base`, `source-error-icon`, `source-error-heading`,
+`source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
+`retry-button`, `error`, `hint`
+
+**TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
+`lr-change`/`lr-input` detail `value` narrow to `string` when `Multiple` is `false` and `string[]`
+(`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored surface are
+unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
@@ -811,6 +846,16 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `hoist: boolean = false` (reflected) — switches Floating UI from its mapped absolute strategy to
   fixed positioning, escaping clipping containers. It also switches live while open; an effective
   direction change refreshes logical left/right placement by the same path
+- `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
+  see `<lr-popover>` (`llms/components/lr-popover.md`). `hoist: boolean = false` is its retained
+  exact alias; writing either spelling updates the other
+- `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
+  committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
+  keyboard-reachable, re-selectable row. Off by default
+- `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
+  committed value that matches no option, everywhere it appears (trigger, `multiple` tag, synthetic
+  row). `getTag` cannot serve this case: it is handed a matched option and there is none. A blank
+  return falls back to the raw value
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
 - `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
@@ -933,8 +978,15 @@ following option rows; options with an empty `group` get no heading or group wra
 `option-start`/`option-end` (an option row's leading/trailing adornment, cloned from the source
 `<lr-option>`'s `start`/`prefix`/`end`/`suffix` slot — inert and `aria-hidden`, exactly like
 `lr-combobox`'s identical parts), `option-label`,
-`option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
+`option-sub` (a row's secondary line, when `sub` is set),
+`option-badge` (the localized "not in catalog" badge on a synthetic unmatched-value row, rendered
+only while `show-unknown-option` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
+
+**TypeScript:** `LyraSelect<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
+`lr-change`/`lr-input` detail `value` narrow to `string` when `Multiple` is `false` and `string[]`
+(`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored surface are
+unchanged, and an untyped `<lr-select>` keeps `string | string[]`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
@@ -1790,6 +1842,18 @@ cursor and no hover/press feedback, exactly like the disabled `<button>` path (a
 match `:disabled`, so that arm of the styling keys off `aria-disabled` instead). An
 unsafe/unparseable `href` falls back to the native `<button>`.
 
+The label does **not** grow to fill a stretched button. `[part="label"]` shrink-wraps its text and
+the whole icon+label pair centres under `--lr-button-justify`, so the icon-to-text distance is
+exactly `--lr-button-gap`. Before 16.0.0 the label was `flex: 1 1 auto`, which parked every spare
+pixel inside the label box and — because the native `<button>` UA stylesheet centres text, which the
+label wrapper inherited — floated the text in the middle of a wide empty row. A `with-caret` button,
+and one with an `end`/`suffix` adornment, keep the growing label so that trailing affordance stays
+pinned to the trailing content edge. `--lr-button-label-grow: 1` restores the old stretch and `0`
+opts a caret/end-adornment row out of pinning. The label is also `text-align: start` now, which
+fixes two side effects of the inherited centring: a label narrower than its own text centred the
+overflow so the ellipsis appeared at the end while the start of the word was clipped, and the `<a>`
+root (which never inherited the centring) disagreed with the `<button>` root across a mode switch.
+
 **Properties:**
 
 - `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
@@ -1850,7 +1914,14 @@ unsafe/unparseable `href` falls back to the native `<button>`.
   square control with the pill radius and compact inline padding. It is additive to, not a rename
   of, `pill`. Circle and automatically detected icon-only buttons retain the shared
   `--lr-icon-button-size` minimum clickable box at every `size`; the tier still scales their glyph
-  and chrome
+  and chrome. A visually hidden label does not count as content, so an icon plus an `.sr-only` name
+  still gets the square, `--lr-icon-button-size`-floored treatment. `<lr-visually-hidden>`,
+  `hidden`/`display: none`/`visibility: hidden`, and the standard absolutely-positioned
+  `clip-path: inset(50%)` algorithm are all recognised from computed style, so a consumer's own
+  utility class works whatever it is called
+- `wrap: boolean = false` (reflected) — wraps a long label onto multiple lines instead of
+  ellipsis-truncating it to one, the same opt-in `<lr-chip>` ships. Unset, `[part="label"]` keeps
+  its single-line, ellipsis-truncated rule exactly
 - `outline: boolean = false` (reflected) — Shoelace-compatible outlined treatment. It does not
   overwrite `appearance`, so removing `outline` restores the canonical Lyra appearance
 - `withCaret: boolean = false` (attribute `with-caret`, reflected) — renders a decorative trailing
@@ -2025,6 +2096,12 @@ size instead of needing a per-tier value.
 byte-identical to before this property existed — set it to add a drop shadow (e.g. an
 elevated/floating action button) without a `::part(base)` rule. `appearance="link"` always renders
 with no shadow regardless of this token — a zero-chrome inline link has no box to elevate.
+`--lr-button-justify` (default `center`) is the `justify-content` of the internal button's row. With
+the label no longer growing, this is what positions the icon+label pair inside a stretched control:
+`flex-start` packs it against the leading edge, `space-between` pushes the adornments apart.
+`--lr-button-label-grow` (default `0`) is the `flex-grow` of `[part="label"]`; `1` restores the
+pre-16.0.0 behaviour where the label absorbed every spare pixel of a stretched button, and it also
+overrides the automatic grow a `with-caret`/`end`-adornment button applies.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no
@@ -2095,11 +2172,18 @@ box no matter what tier or override is in play.
   are resolved onto the focused internal control through `ariaDescribedByElements`; external
   `aria-labelledby` is not copied across the shadow boundary.
 - Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
-  For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button.
-  Navigation can use `aria-current="page|step|location|date|time|true|false"`. Both states update
-  reactively, including native `ariaPressed`/`ariaCurrent` property assignments, attribute removal
-  and `href` changes. Empty or unsupported tokens are omitted. The native button/link role remains
-  unchanged: use pressed state for button toggles and current state for navigation links.
+  For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button —
+  BUTTONS only. A link button (`href` set) never receives it, because `role="link"` does not support
+  `aria-pressed`; remove `href` and the same host attribute starts reaching the `<button>` that
+  replaces the anchor. Navigation can use the global
+  `aria-current="page|step|location|date|time|true|false"`, which does reach the anchor. Both states
+  update reactively, including native `ariaPressed`/`ariaCurrent` property assignments, attribute
+  removal and `href` changes. Empty or unsupported tokens are omitted. The native button/link role
+  remains unchanged for an enabled control: use pressed state for button toggles and current state
+  for navigation links. A DISABLED link button drops `href` (so it genuinely cannot navigate) and
+  therefore also drops the anchor's implicit role, so it renders an explicit `role="link"` — without
+  it, the forwarded `aria-label`/`aria-haspopup`/`aria-expanded`/`aria-current` would sit on a
+  role-less generic element, which is prohibited.
   For host `aria-controls`, targets in the host's own root are resolved through the reflected
   element-reference API so a popup relationship survives the component's shadow boundary; browsers
   with that API expose the relationship through `ariaControlsElements` and intentionally serialize
@@ -2137,6 +2221,18 @@ retain their separate contracts.
 Its public `--lr-icon-button-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override the built-in fallbacks; a value set directly on the element still wins.
 
+Host `aria-labelledby` IDREFs are resolved onto the internal control through
+`ariaLabelledByElements`, so a composing component can name the button from elements in its own
+shadow root — an idref cannot cross that boundary, the reflected element reference can. Per ARIA it
+wins over `aria-label`/`label` and the localized fallback name.
+
+**Lean registration entry.** `components/forms/icon-button/icon-button.js` eagerly imports
+`<lr-icon>` so an `icon`/`src` attribute paints synchronously. A consumer who only ever slots their
+own SVG can import `components/forms/icon-button/icon-button-register.js` instead, which registers
+`<lr-icon-button>` and nothing else — no `<lr-icon>` implementation in the entry chunk and no
+unreachable sanitizer chunk. Setting `icon`/`src` on a button registered that way renders no glyph
+until `<lr-icon>` is registered by something else.
+
 **Properties:**
 
 - `icon: string = ''` — an `lr-icon` glyph name (see `llms/components/lr-icon.md`)
@@ -2161,11 +2257,15 @@ button whose purpose isn't generic.
 
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
 native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
-mute, favorite, or pin; `aria-current` (`page`, `step`, `location`, `date`, `time`, `true`, `false`)
-supports current-item icon buttons such as an active nav/pagination target. Both follow attribute
-changes, removal, and button/link replacement without changing the native role; an empty or
-unsupported token is omitted — mirroring `lr-button`'s own `aria-pressed`/`aria-current`
-forwarding. Host `aria-describedby` targets in the host's own root are resolved through
+mute, favorite, or pin, and reaches the `<button>` rendering only — a link icon-button (`href` set)
+never receives it, since `role="link"` has no pressed state; `aria-current` (`page`, `step`,
+`location`, `date`, `time`, `true`, `false`) is global and supports current-item icon buttons such
+as an active nav/pagination target in both renderings. Both follow attribute
+changes, removal, and button/link replacement without changing the native role of an enabled
+control; an empty or unsupported token is omitted — mirroring `lr-button`'s own
+`aria-pressed`/`aria-current` forwarding. A disabled link icon-button drops `href` and renders an
+explicit `role="link"` in place of the implicit role that goes with it, keeping its forwarded
+accessible name legal. Host `aria-describedby` targets in the host's own root are resolved through
 `ariaDescribedByElements`. Host `aria-controls` targets use the corresponding
 `ariaControlsElements` API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>` exposes
 the menu relationship and expanded state on the element that actually receives focus. Supporting
@@ -2175,6 +2275,13 @@ best-effort fallbacks.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native interactive root,
 activating the action button or a safe anchor through the same path as pointer/keyboard input.
+`getToolbarActions(): readonly LyraToolbarAction[]` contributes this control as one logical action
+to `<lr-message-actions>` and any other `LyraToolbarAction` toolbar. A roving-tabindex owner needs
+it: writing `tabindex` on a custom-element host neither adds nor removes its shadow-internal
+button's tab stop, so without it a slotted icon button either stays permanently tabbable or drops
+out of the toolbar's stop list. `control: HTMLButtonElement | HTMLAnchorElement | null` (read-only)
+is the internal native control that owns the role, for projecting a host IDREF relationship onto it;
+it is `null` before the first render, mirroring `<lr-virtual-list>`'s `scrollContainer`.
 
 **Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events.
@@ -2211,7 +2318,8 @@ that several other components size their icon-only controls against), so overrid
 above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-radius`) is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
-counterpart to it.
+counterpart to it. The internal control sets `font: inherit`, so an `em`-sized slotted glyph takes
+the surrounding text's font-size rather than the native button's UA default.
 
 The rest come in resting/hover/pressed triples, each falling through to the next-quieter state so
 setting only one still behaves:
@@ -3708,6 +3816,22 @@ alias, bubbling/composed `change`, then the compatibility `lr-change` alias (bot
 `detail: { checked: boolean }`). Programmatic `.checked` assignments are
 silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a
 validity check finds the checkbox invalid.
+**Refusing a toggle.** `lr-checkbox-toggle-request` is cancelable and fires *before* `checked`
+moves, on every user path (click, Space, and the host `click()` activation it forwards).
+`detail: { checked: boolean }` is the state the control **would** take; `checked` itself still holds
+the old value while the event dispatches. `preventDefault()` keeps the current state, so the box
+never flips at all rather than flipping and snapping back, and none of
+`input`/`lr-input`/`change`/`lr-change` follow. A listener can instead answer by assigning `checked`
+itself during the dispatch, which suppresses the built-in write the same way — including when it
+assigns the value the control already held, which a before/after comparison cannot detect. It does
+not fire for a programmatic `.checked` assignment, a form reset, a session-state restore, or while
+the control is disabled. Inside an `<lr-checkbox-group>` this event is consumed at the group
+boundary and republished as `lr-checkbox-group-toggle-request`, exactly as the group already
+translates the child's `input`/`change`/`lr-change`. A refused toggle also leaves the control
+pristine: it does not count as the interaction that reveals `:state(user-valid)`/`:state(user-invalid)`,
+so refusing a required checkbox's first toggle cannot flash a validation error for a change that
+never happened. Blurring the control, or a `reportValidity()` call, still marks it interacted, which
+is the native `:user-invalid` timing.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control;
 `getForm()` returns its owning form (including an external owner selected by `form`).
@@ -3900,6 +4024,19 @@ None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a validity
 check finds the switch invalid.
+**Refusing a toggle.** `lr-switch-toggle-request` is cancelable and fires *before* `checked` moves,
+on every user path (click, Space, a logical ArrowLeft/ArrowRight change, and the host `click()`
+activation it forwards). `detail: { checked: boolean }` is the state the switch **would** take;
+`checked` itself still holds the old value while the event dispatches. `preventDefault()` keeps the
+current state, so the switch never slides at all rather than sliding and snapping back, and none of
+`input`/`lr-input`/`change`/`lr-change` follow. A listener can instead answer by assigning `checked`
+itself during the dispatch, which suppresses the built-in write the same way. It does not fire for a
+programmatic `.checked` assignment, `form.reset()`, session-state restoration, while the control is
+disabled, or for an arrow key naming the state the switch already holds. A refused toggle also
+leaves the control pristine: it does not count as the interaction that reveals
+`:state(user-valid)`/`:state(user-invalid)`, so refusing a required switch's first toggle cannot
+flash a validation error for a change that never happened. Blurring the control, or a
+`reportValidity()` call, still marks it interacted, which is the native `:user-invalid` timing.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control;
 focus/click and stale keyboard/pointer activation are synchronous no-ops as soon as direct or
@@ -3951,7 +4088,13 @@ checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fil
 retint the pointer states (their defaults remain mixes from the current resting fill).
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
 renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
-look) without affecting any other switch.
+look) without affecting any other switch. `--lr-switch-checked-track-border` (default
+`var(--lr-switch-track-border)`) varies that border only while checked, so a bordered track can
+differ by state without falling back to `lr-switch:state(checked)::part(track)`. It takes a whole
+`border` shorthand value, like its resting sibling, and falls back through it to no border at all —
+setting only the resting hook keeps one border in both states. Keep both widths equal unless a size
+change between states is what you want: the track is `box-sizing: content-box`, so a border grows
+its outer footprint.
 `--lr-switch-thumb-fill` (default `--lr-color-surface`) controls the thumb while unchecked, and is
 also the checked-state fallback. `--lr-switch-checked-thumb-fill` (default
 `var(--lr-switch-thumb-fill)`) independently retints the thumb only while checked, leaving the
@@ -4810,6 +4953,17 @@ group boundary, so an ancestor does not receive a second, differently shaped seq
 Programmatic child `checked`/`value` synchronization is silent and completes synchronously, so a
 same-task `new FormData(form)` or validity query observes the same state as the child.
 `lr-invalid` (no detail) is the group's one bubbling/composed native-validity alias.
+**Refusing a toggle.** `lr-checkbox-group-toggle-request` is cancelable and fires *before* the owned
+option flips. `detail: { value: string[], previousValue: string[], option: LyraCheckbox }` carries
+the group value that **would** result, the value as it stands, and the checkbox the user acted on.
+`preventDefault()` keeps the current state, so the option never flips at all rather than flipping
+and snapping back — which is what lets a host refuse "uncheck the last remaining option"
+(`detail.value.length === 0`) with no flicker — and no `input`/`change`/`lr-change` follows.
+Assigning the group's `value` from a listener resolves the request the same way. The owned
+checkbox's own `lr-checkbox-toggle-request` is consumed at the group boundary and republished under
+this name, so an ancestor never receives two veto points for one interaction. The detail is a
+detached, frozen snapshot; `option` is kept by identity. `LyraCheckboxGroupToggleRequestDetail` is
+its exported interface — see **Exported TypeScript contracts** below for the full signature.
 **Methods:** `getForm()` returns the group's owning form, including an external owner selected by
 `form`. `setCustomValidity(message)` sets or clears a consumer-supplied error ("that
 combination of topics is not available"): a non-empty message raises `customError` and blocks
@@ -5255,6 +5409,15 @@ and:
   and its events so switching back to popup mode has a deterministic result
 - `hoist: boolean = false` (reflected) — uses fixed popup positioning to escape clipping
   ancestors; the default absolute strategy stays in the component's local scrolling context
+- `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
+  see `<lr-popover>` (`llms/components/lr-popover.md`): the one property `<lr-popover>`,
+  `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell the same way,
+  `'absolute' | 'fixed'`. `absolute` is this control's mirrored default and keeps the panel in the
+  component's local scrolling context; `fixed` escapes most clipping ancestors. An unsupported value
+  resolves back to the default, and a change applies live while the panel is open.
+  `hoist: boolean = false` is its retained exact alias (`hoist` ⇔ `positioning-strategy="fixed"`);
+  writing either spelling updates the other, so the two attributes can never disagree. Prefer
+  `positioning-strategy` in new code
 - `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
   (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
   is present before client-side slot observation
@@ -5928,6 +6091,14 @@ component's visible form label.
 ## Exported TypeScript contracts
 
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-forms-checkbox-group-checkbox-group-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/checkbox-group/checkbox-group.class.js`.
+  `LyraCheckboxGroupToggleRequestDetail {
+    readonly value: readonly string[];
+    readonly previousValue: readonly string[];
+    readonly option: LyraCheckbox;
+  }`
 
 - **`components-forms-color-picker-color-core-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/forms/color-picker/color-picker.class.js`.

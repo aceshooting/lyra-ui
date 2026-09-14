@@ -88,6 +88,14 @@ default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` m
 backdrop click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
 
+`waitUntil()` is `<lr-confirm-bar>`-only and this dialog does not carry it. The two components share
+the `lr-approve`/`lr-deny` event *names*, so the generated `HTMLElementEventMap['lr-approve']` is the
+union of both details and only the confirm bar's arm has the field: a listener bound to the shared
+name (`document.addEventListener('lr-approve', ...)`) must narrow on `event.target` before reaching
+for it, while one bound through `LyraConfirmBarEventMap`/`LyraToolApprovalDialogEventMap` already
+sees the right detail. Hold a decision open here with `preventDefault()` + `pending`, then finalize
+with `close('approve'|'deny')` or bounce back by clearing `.pending`.
+
 **Slots:** `footer` — optional supplementary content (e.g. a "remember this choice" checkbox),
 rendered before the built-in Deny/Edit/Approve buttons.
 

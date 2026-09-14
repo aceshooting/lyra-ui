@@ -7,6 +7,7 @@ import {
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { isRtl } from '../../../internal/rtl.js';
+import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
@@ -205,7 +206,11 @@ export interface LyraMultiSplitEventMap {
  * that forces `'floating'` regardless of width). Assigning the write-only
  * `'auto'` sentinel releases the pin and immediately re-derives the state
  * from the current measured width, resuming automatic tracking. `'auto'` is
- * never a value this getter returns.
+ * never a value this getter returns. `expandPane()`/`collapsePane()`/`togglePane()` drive the
+ * same two mechanisms semantically -- each picks the drawer or the pin according to the pane's
+ * current band, so a consumer-built trigger no longer has to branch on `collapseState`
+ * itself -- and `releasePinOnBreakpoint` opts a pin in to releasing itself when the band or
+ * the effective orientation moves on, instead of leaking into the next layout.
  * While `collapse="none"` or fewer than two direct panels exist, the public
  * and reflected effective state is always `'wide'`: a forced rail/floating
  * intent is retained privately for a later eligible pane but cannot emit,
@@ -242,6 +247,12 @@ export interface LyraMultiSplitEventMap {
  *   fired whenever the responsive `collapseState` actually transitions between
  *   `'wide'`/`'rail'`/`'floating'` — whether from a breakpoint crossing or an
  *   explicit `collapseState` assignment or collapse feature enable/disable.
+ *   Fired AFTER the collapsing panel is decorated for the new state: its
+ *   `data-collapse-state` marker, the `hidden` flag of the closed drawer and
+ *   its owned inline sizing are all applied first, so a listener can read the
+ *   panel synchronously inside its own handler instead of deferring past
+ *   `updateComplete`. Focus is also moved out of a pane the new state hides or
+ *   clamps before the event fires.
  *   Forced writes while no eligible collapsing pane exists are inert and do
  *   not fire. Not fired for a redundant reassignment to the state already in
  *   effect.
@@ -280,6 +291,11 @@ export interface LyraMultiSplitEventMap {
  * @cssprop [--lr-multi-split-divider-active-color=color-mix(in oklab,var(--lr-color-brand),var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   The divider hairline's color while a resize gesture is pressed (pointer capture holds this
  *   through the whole drag).
+ * @cssprop [--lr-multi-split-floating-panel-inset=0] - The `'floating'` drawer's distance from
+ *   `[part="base"]`'s edges, applied to both block insets and to whichever logical inline edge
+ *   `collapse` anchors the drawer to. Unset, the drawer stays flush with the container exactly as
+ *   before; set once, it insets on all three anchored edges (the free inline edge stays governed
+ *   by the panel's own width).
  * @cssprop --lr-multi-split-floating-panel-inline-size - Overrides the `'floating'` collapse
  *   state's overlay card `inline-size`, which otherwise mirrors its own live `sizes[i]` percent
  *   (i.e. what it renders at in the `'wide'` state). Unset, geometry is identical to today's
@@ -459,6 +475,21 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  Default: `'container'`. */
   @property({ reflect: true, attribute: 'collapse-breakpoint-basis' })
   collapseBreakpointBasis: BreakpointBasis = 'container';
+  /** Opts a pinned `collapseState` (see that accessor's force/auto contract) in to releasing
+   *  itself when the layout it was made for is gone: either the measured collapse band changes to
+   *  a different one than the pin was created in, or `effectiveOrientation` crosses
+   *  `orientationBreakpoint`. The pin is dropped exactly as if `'auto'` had been assigned, and the
+   *  state re-derives from the current measurement, firing `lr-multi-split-collapse-change` if that
+   *  is an actual transition.
+   *
+   *  Default `false`, which is the pre-existing behavior: a pin survives every band and orientation
+   *  change until a consumer assigns `'auto'`. Opt in when a pin is meant for one layout only --
+   *  e.g. a rail pinned for a wide dashboard that must not leak into the narrow, drawer-based
+   *  layout, which otherwise has to be undone by hand from an `lr-multi-split-collapse-change` or
+   *  `lr-multi-split-orientation-change` listener. Re-measuring the SAME band never releases a
+   *  pin, so an ordinary resize inside one band leaves it alone. */
+  @property({ type: Boolean, reflect: true, attribute: 'release-pin-on-breakpoint' })
+  releasePinOnBreakpoint = false;
   /** Whether the `'floating'` collapse state's drawer is shown. Only
    *  meaningful while `collapseState` is `'floating'` — the value is
    *  preserved (not reset) while another state is active, but no drawer
@@ -485,6 +516,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   // Whether ResizeObserver-driven measurement is currently ignored because a
   // consumer forced a specific collapseState -- see the accessor doc.
   private _forced = false;
+  // The band the live pin was created in, recorded only while `_forced`. `releasePinOnBreakpoint`
+  // compares against it so "the layout moved to another band" releases the pin while "the same
+  // band re-measured" (an ordinary resize) does not.
+  private pinnedBand?: LyraMultiSplitCollapseState;
   // Derived from collapseState === 'floating' && open -- tracked as its own
   // field (rather than recomputed inline everywhere) so willUpdate can detect
   // the specific false->true/true->false transition regardless of which of
@@ -757,12 +792,102 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
   set collapseState(next: LyraMultiSplitCollapseStateInput) {
     if (next === 'auto') {
-      this._forced = false;
+      this.releaseCollapsePin();
       this.updateCollapseState(this.currentMeasuredWidth());
       return;
     }
     this._forced = true;
+    this.pinnedBand = this.collapseBreakpoints.classify(this.pinMeasurementWidth());
     this.setRequestedCollapseState(next);
+  }
+
+  /**
+   * Expands the collapsing pane through whichever mechanism its CURRENT BAND provides: inside the
+   * `floatBreakpoint` band that is the overlay drawer (`open = true`, RELEASING a pin that holds
+   * another state first, since a pinned rail would otherwise swallow the request); above it the
+   * mechanism is the pin itself, so the pane is pinned to `'wide'`. A no-op while `collapse` is
+   * `'none'` or fewer than two panels exist, and a no-op when the pane already presents its
+   * content. Never renders a trigger of its own -- wire it to your own control.
+   *
+   * Pinning is skipped whenever the band already produces the requested state, and a pin that is
+   * cancelled by this call is released rather than re-pinned, so a consumer-driven expand/collapse
+   * cycle leaves automatic breakpoint tracking exactly as it found it.
+   */
+  expandPane(): void {
+    this.applyPaneIntent(true);
+  }
+
+  /**
+   * Collapses the collapsing pane through whichever mechanism its current band provides: inside the
+   * floating band that is closing the overlay drawer (`open = false`), above it a pin to `'rail'`.
+   * Same no-op rules and same pin hygiene as `expandPane()`.
+   */
+  collapsePane(): void {
+    this.applyPaneIntent(false);
+  }
+
+  /**
+   * Flips the collapsing pane between the two above, reading the pane's current presentation:
+   * `'wide'` counts as expanded, `'rail'` as collapsed, and `'floating'` as expanded exactly while
+   * `open`. So toggling a pane pinned to `'rail'` while the container is inside the floating band
+   * opens the drawer -- the band, not the pin, owns the mechanism.
+   *
+   * Named `togglePane()` (with `expandPane()`/`collapsePane()`) because `collapse` is already this
+   * component's pane-selection property, mirroring `<lr-page>`'s `showNavigation()` trio.
+   */
+  togglePane(): void {
+    this.applyPaneIntent(!this.paneExpanded);
+  }
+
+  /** Whether the collapsing pane currently presents its content. */
+  private get paneExpanded(): boolean {
+    const state = this.collapseState;
+    if (state === 'floating') return this.open;
+    return state === 'wide';
+  }
+
+  private applyPaneIntent(expanded: boolean): void {
+    if (this.collapsingIndex === -1) return;
+    const band = this.collapseBreakpoints.classify(this.pinMeasurementWidth());
+    if (band === 'floating') {
+      // Same pin hygiene as the wide/rail branch below, and for the same reason: the drawer is
+      // the mechanism here, so `'floating'` is exactly what this band already produces on its
+      // own. Assigning `collapseState` would instead PIN the pane to the band's own state
+      // (the setter always sets `_forced`), which silently converts an unpinned split into a
+      // permanently pinned one and replaces -- rather than releases -- a pin this call cancels.
+      if (this.collapseState !== 'floating') {
+        this.releaseCollapsePin();
+        this.setRequestedCollapseState('floating');
+      }
+      this.open = expanded;
+      return;
+    }
+    const target: LyraMultiSplitCollapseState = expanded ? 'wide' : 'rail';
+    if (this.collapseState === target) return;
+    if (target === band) {
+      // The measurement already produces the requested state, so drop the pin holding the pane
+      // away from it instead of replacing it with a second one -- assigning `collapseState` here
+      // would leave automatic tracking off for a state auto-tracking was about to produce anyway.
+      this.releaseCollapsePin();
+      this.setRequestedCollapseState(target);
+      return;
+    }
+    this.collapseState = target;
+  }
+
+  /** Drops a pin and the band it was created in together, so the two can never disagree. */
+  private releaseCollapsePin(): void {
+    this._forced = false;
+    this.pinnedBand = undefined;
+  }
+
+  /** The width a band classification should read outside the `ResizeObserver` callback: the live
+   *  `[part="base"]` box once it exists, else the seeded/last-observed `measuredInlineSize`. Never
+   *  the bare `0` `currentMeasuredWidth()` returns before the first render, which would classify
+   *  every pre-render pin into the floating band. */
+  private pinMeasurementWidth(): number {
+    const live = this.currentMeasuredWidth();
+    return live > 0 ? live : this.measuredInlineSize;
   }
 
   /** The live layout and resize axis after applying `orientationBreakpoint` — identical to
@@ -823,6 +948,22 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         orientation: next,
       });
     }
+    // After the axis is announced, not before: the collapse transition this may cause is a
+    // consequence of the orientation change, so it is announced second. A crossing re-lays-out
+    // both axes, which is exactly the stale-pin case `releasePinOnBreakpoint` opts out of -- the
+    // band alone cannot notice it, since an orientation crossing need not change the band.
+    //
+    // Deliberately NOT this method's own `shouldEmit`: that flag gates the *orientation* event,
+    // which a container-basis property write defers to the observer's next fresh callback. The
+    // pin release is a different, already-final transition -- the observer will not repeat it,
+    // because the axis it re-reads already matches -- so reusing the flag would swallow
+    // `lr-multi-split-collapse-change`, its pre-emit decoration and, worst of all, the focus
+    // move out of the pane the new state hides. Only the first render is excluded, matching
+    // every other emit gate here.
+    if (this._forced && this.releasePinOnBreakpoint) {
+      this.releaseCollapsePin();
+      this.updateCollapseState(width, this.hasUpdated);
+    }
   }
 
   /** The container width (px) `[part="base"]` is measured at right now --
@@ -860,6 +1001,14 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const forceClose = previous === 'floating' && next !== 'floating' && this.open;
     const forcedCloseVersion = this.forcedCloseVersion;
     if (shouldEmit) {
+      // Both steps are deliberately pre-announcement, and in this order. The focus move has to run
+      // while the pane is still rendered: hiding it first drops focus to the document body, which
+      // the shared repair reads as "focus was never in this branch" and declines. Decoration then
+      // lands before the event so a listener reading the panel synchronously inside its own
+      // handler sees the post-transition `data-collapse-state`/`hidden`/inline sizing instead of
+      // the previous render's -- `updated()` used to be the first pass that applied any of it.
+      this.relocateFocusOutOfCollapsingPanel(next);
+      this.decorateOwnedPanels();
       this.emit('lr-multi-split-collapse-change', { state: next });
     }
     if (
@@ -869,6 +1018,49 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     ) {
       this.setOpen(false, { force: true });
     }
+  }
+
+  /** Moves focus off the collapsing pane when the state it is transitioning into stops presenting
+   *  that pane's content: `'rail'` clamps it to `railWidth` and clips the overflow, and `'floating'`
+   *  while closed hides it outright. The open floating drawer is excluded -- the shared overlay
+   *  manager owns focus there (see `activateFloatingOverlay()`).
+   *
+   *  Focus anywhere else, including in a surviving pane or on a divider, is left strictly alone:
+   *  the owner passed to the shared repair is the collapsing panel itself, not the host. */
+  private relocateFocusOutOfCollapsingPanel(
+    next: LyraMultiSplitCollapseState
+  ): void {
+    if (next === 'wide' || (next === 'floating' && this.open)) return;
+    const index = this.collapsingIndex;
+    if (index === -1) return;
+    const panel = this.ownedPanels[index];
+    if (!panel) return;
+    repairComposedFocus(panel, () => this.collapseFocusFallbacks(panel));
+  }
+
+  /** Survivor first, then this component's own dividers. A surviving pane is usually a plain
+   *  container that cannot take focus at all, in which case the shared repair moves on by itself
+   *  (it verifies focus actually landed) and the divider -- a real, labelled `role="separator"` --
+   *  takes it instead. The still-enabled dividers are preferred over the one the collapse just
+   *  disabled, which stays in the list as the last resort of a two-panel split: that split has
+   *  exactly one divider, and losing focus to `<body>` is worse than landing on a separator
+   *  announced as disabled, which is still a labelled, reachable, escapable stop inside the
+   *  component. De-duplicated so an enabled divider is never attempted twice by the shared
+   *  repair. */
+  private collapseFocusFallbacks(collapsing: HTMLElement): HTMLElement[] {
+    const dividers = [
+      ...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="divider"]') ??
+        []),
+    ];
+    return [
+      ...new Set([
+        ...this.ownedPanels.filter((panel) => panel !== collapsing),
+        ...dividers.filter(
+          (divider) => divider.getAttribute('aria-disabled') !== 'true'
+        ),
+        ...dividers,
+      ]),
+    ];
   }
 
   private setOpen(next: boolean, options?: { force?: boolean }): void {
@@ -1564,11 +1756,15 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  establishes the starting state rather than transitioning to it — see `willUpdate()`. */
   private updateCollapseState(width: number, shouldEmit = true): void {
     if (this.collapse === 'none') return;
-    if (this._forced) return;
-    this.setRequestedCollapseState(
-      this.collapseBreakpoints.classify(width),
-      shouldEmit
-    );
+    const classified = this.collapseBreakpoints.classify(width);
+    if (this._forced) {
+      // A pin still wins every measurement inside its own band; `releasePinOnBreakpoint` only
+      // gives it up once the band itself moves, which is the point at which the pinned layout the
+      // consumer asked for no longer exists (see that property's doc).
+      if (!this.releasePinOnBreakpoint || classified === this.pinnedBand) return;
+      this.releaseCollapsePin();
+    }
+    this.setRequestedCollapseState(classified, shouldEmit);
   }
 
   /** Creates (idempotently) and (re-)observes `[part="base"]` with the shared collapse-state/
@@ -2186,11 +2382,6 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.constraintIssueKey = issueKey;
       if (issue) this.emit('lr-multi-split-constraints-invalid', issue);
     }
-    const panels = this.ownedPanels;
-    for (const panel of panels) {
-      const snapshot = this.panelOwnership.get(panel);
-      if (snapshot) this.adoptPanelOwnership(panel, snapshot);
-    }
     // Resolved once per pass rather than per panel: which physical index (if
     // any) is actually collapsed right now — `-1` covers both `collapse ===
     // 'none'` (the default) and a `collapse !== 'none'` pane that's still in
@@ -2200,6 +2391,44 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.syncGutterObserver(collapsingIndex === -1 && this.panelConstraints.some(
       (constraint) => finiteRange(constraint?.minPx ?? 0, 0, 0) > 0
     ));
+    this.decorateOwnedPanels(constraintResolution);
+    // Runs after this render (not willUpdate) so the floating panel's
+    // repositioned geometry above has already landed before the focus call
+    // below can rely on it -- mirrors lr-app-rail's/lr-dialog's identical
+    // ordering rationale for their own overlay's initial focus.
+    if (this.justOpened) {
+      this.justOpened = false;
+      this.overlayHandle?.focusInitial();
+    }
+  }
+
+  /**
+   * Projects the current collapse/layout state onto the owned panels: the `data-collapse-state`
+   * markers (per panel and on the host), the `hidden` flag the closed `'floating'` drawer uses,
+   * and every owned inline style. Idempotent by construction -- it re-reads the live container
+   * size, re-adopts any author mutation made since the last pass, and rewrites the same owned
+   * values -- because it runs twice whenever a collapse transition is announced:
+   * `applyEffectiveCollapseTransition()` calls it immediately BEFORE emitting
+   * `lr-multi-split-collapse-change`, so a listener reading the panel synchronously inside its
+   * own handler sees the post-transition decoration rather than the previous render's, and
+   * `updated()` calls it again for every ordinary render.
+   *
+   * `constraintResolution` defaults to a fresh resolution for the caller that has none;
+   * `updated()` passes the one it already computed for the constraint-issue key, so the ordinary
+   * render path performs one `resolveConstraintBounds()` and one forced-layout `getContainerSize()`
+   * read rather than two.
+   */
+  private decorateOwnedPanels(
+    constraintResolution: ConstraintResolution = this.resolveConstraintBounds(
+      this.getContainerSize()
+    )
+  ): void {
+    const panels = this.ownedPanels;
+    for (const panel of panels) {
+      const snapshot = this.panelOwnership.get(panel);
+      if (snapshot) this.adoptPanelOwnership(panel, snapshot);
+    }
+    const collapsingIndex = this.collapseActive ? this.collapsingIndex : -1;
     const pixelMinimumTotal = constraintResolution.usePanelConstraints
       ? this.panelConstraints.slice(0, this.panelCount).reduce((total, constraint) => total + finiteRange(constraint?.minPx ?? 0, 0, 0), 0)
       : 0;
@@ -2385,15 +2614,6 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.setAttribute('data-collapse-state', this.collapseState);
     } else {
       this.removeAttribute('data-collapse-state');
-    }
-
-    // Runs after this render (not willUpdate) so the floating panel's
-    // repositioned geometry above has already landed before the focus call
-    // below can rely on it -- mirrors lr-app-rail's/lr-dialog's identical
-    // ordering rationale for their own overlay's initial focus.
-    if (this.justOpened) {
-      this.justOpened = false;
-      this.overlayHandle?.focusInitial();
     }
   }
 

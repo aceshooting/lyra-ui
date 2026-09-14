@@ -13,6 +13,11 @@ import {
   deferredPlaceReady as place,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import type { PlaceStrategy } from '../../../internal/positioner.js';
+import type {
+  LyraPickerDetailValue,
+  LyraPickerValue,
+} from '../../../internal/picker-value.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import {
@@ -41,7 +46,10 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
-import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import {
+  omittedEmptyStringConverter,
+  optionalLiteralSetConverter,
+} from '../../../internal/converters.js';
 import {
   attachInternalsSafely,
   getFormOwner,
@@ -92,6 +100,17 @@ function normalizeSelectionValues(
   return typeof next === 'string' ? [next] : [];
 }
 
+/** Re-exported so a consumer importing only the select subpath can still name the shared
+ *  positioning vocabulary `positioningStrategy` uses. */
+export type { LyraPickerDetailValue, LyraPickerValue, PlaceStrategy };
+
+/** Unsupported values resolve to *absent* so the control's own mirrored default stays the
+ *  fallback, rather than a member baked into the converter. */
+const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>([
+  'absolute',
+  'fixed',
+]);
+
 /** Renders one selected option's chip in `multiple` mode. Whatever it returns replaces the
  *  built-in `[part='tag']` chip for that option, so a caller that wants the default styling
  *  hooks re-declares `part="tag"` on its own root node. A returned string renders as **text**,
@@ -101,7 +120,7 @@ export type LyraSelectTagRenderer = (
   index: number
 ) => unknown;
 
-export interface LyraSelectEventMap {
+export interface LyraSelectEventMap<Multiple extends boolean = boolean> {
   'lr-show': CustomEvent<null>;
   'lr-hide': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
@@ -111,15 +130,25 @@ export interface LyraSelectEventMap {
   input: InputEvent;
   change: Event;
   'lr-input': CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
   >;
   'lr-change': CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
   >;
   'lr-activate': CustomEvent<{ value: string }>;
   blur: FocusEvent;
   focus: FocusEvent;
 }
+/**
+ * Stable per-event aliases, so a host can name one event's type without restating the detail
+ * schema (or re-deriving it from `LyraSelectEventMap`). Each narrows with the same `Multiple`
+ * parameter the component does: `LyraSelectChangeEvent<false>`'s `detail.value` is a `string`.
+ */
+export type LyraSelectChangeEvent<Multiple extends boolean = boolean> =
+  LyraSelectEventMap<Multiple>['lr-change'];
+export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
+  LyraSelectEventMap<Multiple>['lr-input'];
+
 /**
  * `<lr-select>` — a plain closed-list dropdown: a direct `<lr-*>`
  * counterpart to `<wa-select>`/`<wa-option>`. Trigger is a button (not a text
@@ -219,7 +248,7 @@ export interface LyraSelectEventMap {
  * @event {InputEvent} input - Fired alongside `change` on every
  *   selection change (native `<select>` doesn't meaningfully distinguish the two either).
  * @event lr-input - Prefixed compatibility alias for `input`; `detail: { value }`.
- * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} lr-change - Prefixed compatibility alias
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>>} lr-change - Prefixed compatibility alias
  *   fired after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s
  *   `lr-change`. Not fired for a programmatic `value` assignment.
  * @event lr-activate - Fired on every activation of an available listbox row -- a click, or
@@ -298,6 +327,8 @@ export interface LyraSelectEventMap {
  *   `<lr-option>`'s `end`/`suffix` slot. Inert and aria-hidden.
  * @csspart option-label - An option row's label/sub wrapper.
  * @csspart option-sub - An option row's secondary line (when `sub` is set).
+ * @csspart option-badge - The localized "not in catalog" badge on a synthetic unmatched-value row
+ *   (`show-unknown-option` only).
  * @csspart unknown-value - Badge shown next to the trigger label or a `multiple`-mode tag when the
  *   committed value matches no current `<lr-option>` (see `isUnknownValue()`).
  * @csspart expand-icon - The dropdown indicator.
@@ -383,7 +414,9 @@ export interface LyraSelectEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraSelect extends LyraElement<LyraSelectEventMap> {
+export class LyraSelect<
+  Multiple extends boolean = boolean,
+> extends LyraElement<LyraSelectEventMap<Multiple>> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -481,9 +514,50 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    *  and the `left`/`right` component is swapped under RTL. Changes reposition an already-open
    *  listbox without closing it or changing overlay stack ownership. */
   @property({ reflect: true }) placement: Placement = 'bottom';
-  /** Uses fixed positioning when true; the mapped default (`false`) positions against the nearest
-   * containing block with Floating UI's absolute strategy. Changes apply live while open. */
-  @property({ type: Boolean, reflect: true }) hoist = false;
+  private _positioningStrategy?: PlaceStrategy;
+  /**
+   * CSS positioning scheme the listbox is laid out with -- the one property `<lr-select>`,
+   * `<lr-dropdown>` and `<lr-popover>` all spell the same way. `absolute` (this control's mirrored
+   * default) positions against the nearest containing block and scrolls with it; `fixed` positions
+   * against the viewport and escapes most clipping ancestors. An unsupported value resolves back
+   * to the default. Changes apply live while open.
+   * @default 'absolute'
+   */
+  @property({
+    attribute: 'positioning-strategy',
+    reflect: true,
+    converter: POSITIONING_STRATEGY,
+  })
+  get positioningStrategy(): PlaceStrategy {
+    return this._positioningStrategy ?? 'absolute';
+  }
+  set positioningStrategy(next: PlaceStrategy) {
+    const normalized = POSITIONING_STRATEGY.normalize(next) ?? 'absolute';
+    const old = this.positioningStrategy;
+    if (normalized === old) return;
+    this._positioningStrategy = normalized;
+    this.requestUpdate('positioningStrategy', old);
+    // Lit only writes an attribute for a property it saw change, and this write changed `hoist`'s
+    // value without going through its own setter.
+    if ((old === 'fixed') !== (normalized === 'fixed')) {
+      this.requestUpdate('hoist', old === 'fixed');
+    }
+  }
+  /**
+   * Retained boolean alias of {@link positioningStrategy}: `hoist` is exactly
+   * `positioningStrategy === 'fixed'`, and writing either spelling updates the other so the two
+   * attributes can never disagree in the DOM. It is this control's established name (and
+   * Shoelace's own spelling on `sl-select`), so it keeps working indefinitely; prefer
+   * `positioning-strategy` in new code, which reads the same on every anchored surface.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true })
+  get hoist(): boolean {
+    return this.positioningStrategy === 'fixed';
+  }
+  set hoist(next: boolean) {
+    this.positioningStrategy = next ? 'fixed' : 'absolute';
+  }
   /** Shoelace boolean alias for the filled appearance. */
   @property({ type: Boolean, reflect: true }) filled = false;
   /** Show a button that empties the selection while there is anything selected. */
@@ -494,6 +568,30 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @property({ type: Boolean }) clearable = false;
   /** Renders a selected option's chip in `multiple` mode; see `LyraSelectTagRenderer`. */
   @property({ attribute: false }) getTag?: LyraSelectTagRenderer;
+  /**
+   * Appends every committed value that no `<lr-option>` claims to the end of the listbox as a
+   * synthetic, re-selectable row badged with the localized `notInCatalog` text -- the policy
+   * `<lr-model-select>` already ships.
+   *
+   * Off by default, because it adds a row to a listbox that has always rendered only real options.
+   * Turn it on wherever a stored value can outlive its catalog entry: without it, the out-of-list
+   * value is visible on the trigger but absent from the listbox, so a user who opens the listbox
+   * has no way back to the value they arrived with.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'show-unknown-option', reflect: true })
+  showUnknownOption = false;
+  /**
+   * Renders the label for a committed value that matches no option.
+   *
+   * `getTag` cannot serve this case: it is handed a matched option, which by definition does not
+   * exist here, so the raw value string was the only thing left to render. This hook applies
+   * everywhere that value's label appears -- the trigger, a `multiple` tag, and the synthetic
+   * listbox row -- and is used only while the value is genuinely unmatched, so it can never
+   * override a real option's own label. A blank return falls back to the raw value, exactly as no
+   * hook at all would. Caller-supplied text: it is not localized here.
+   */
+  @property({ attribute: false }) getUnknownLabel?: (value: string) => string;
   /**
    * Opt-in: when `true` and exactly one `<lr-option>` is enabled, the
    * trigger commits that option directly (click/Enter/Space/ArrowDown/
@@ -759,12 +857,12 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         if (this._pendingInitialDefaultValue !== undefined) {
           const pending = this._pendingInitialDefaultValue;
           this._pendingInitialDefaultValue = undefined;
-          this.defaultValue = pending;
+          this.assignDefaultValue(pending);
         }
         if (this._pendingInitialValue !== undefined) {
           const pending = this._pendingInitialValue;
           this._pendingInitialValue = undefined;
-          this.value = pending;
+          this.assignValue(pending);
         }
         if (this._pendingInitialSelectedOptions !== undefined) {
           const pending = this._pendingInitialSelectedOptions;
@@ -943,11 +1041,18 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    *  `<lr-option>`s: an option may legitimately declare `value=""`, and assigning `''` selects it
    *  when present (mirroring what clicking that row already did). A `''`/non-array assignment that
    *  matches no option still commits, exactly like any other unmatched string -- see
-   *  `isUnknownValue()`. */
-  get value(): string | string[] {
-    return this.multiple ? [...this._selected] : this._selected[0] ?? '';
+   *  `isUnknownValue()`.
+   *
+   *  `LyraPickerValue<Multiple>` narrows to `string` on a `LyraSelect<false>` and `string[]` on a
+   *  `LyraSelect<true>`; the unnarrowed default resolves to the published union below, which is
+   *  why the manifest type is pinned here rather than left to the inferred alias name.
+   *  @type {string | string[]} */
+  get value(): LyraPickerValue<Multiple> {
+    return (
+      this.multiple ? [...this._selected] : this._selected[0] ?? ''
+    ) as LyraPickerValue<Multiple>;
   }
-  set value(next: string | string[] | null | undefined) {
+  set value(next: LyraPickerValue<Multiple> | null | undefined) {
     if (!this.hasUpdated && !this._resolvingPendingInitialSelection) this._pendingInitialValue = next;
     this._restoredStateActive = false;
     this._valueDirty = true;
@@ -965,13 +1070,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    * mode. Changing the default updates the live value only while it is still pristine.
    * `undefined`/`null` clear the default; `''` is a candidate value like any other -- see the
    * `value` setter's doc for the full contract.
-   * @default '' */
-  get defaultValue(): string | string[] {
-    return this.multiple
-      ? [...this._defaultSelected]
-      : this._defaultSelected[0] ?? '';
+   * @default ''
+   * @type {string | string[]} */
+  get defaultValue(): LyraPickerValue<Multiple> {
+    return (
+      this.multiple ? [...this._defaultSelected] : this._defaultSelected[0] ?? ''
+    ) as LyraPickerValue<Multiple>;
   }
-  set defaultValue(next: string | string[] | null | undefined) {
+  set defaultValue(next: LyraPickerValue<Multiple> | null | undefined) {
     if (!this.hasUpdated && !this._resolvingPendingInitialSelection) this._pendingInitialDefaultValue = next;
     this._defaultValueDirty = true;
     const old = this.multiple
@@ -1175,7 +1281,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (!this.multiple) {
       // No persisted state (`null`) means "nothing was ever submitted" -- an explicit clear, not
       // an attempt to select an option whose value happens to be `''`.
-      this.value = typeof state === 'string' ? state : undefined;
+      this.assignValue(typeof state === 'string' ? state : undefined);
     } else {
       let restored: string[] = [];
       if (typeof state === 'string') {
@@ -1190,7 +1296,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           // Malformed persisted state restores an empty selection.
         }
       }
-      this.value = restored;
+      this.assignValue(restored);
     }
     this._restoredStateActive = true;
     this._valueDirty = true;
@@ -1434,6 +1540,30 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     }
   }
 
+  /**
+   * Commits (or, in `multiple` mode, toggles off) a value that no option claims, from its own
+   * synthetic listbox row. In single mode the value is already the selection, so this is the
+   * documented re-pick case: `lr-activate` fires, `change`/`input` deliberately do not.
+   */
+  private selectUnknownValue(value: string): void {
+    this.hasInteracted = true;
+    this._restoredStateActive = false;
+    this._valueDirty = true;
+    if (this.multiple) {
+      const index = this._selected.indexOf(value);
+      const values =
+        index >= 0
+          ? this._selected.filter((_, position) => position !== index)
+          : [...this._selected, value];
+      this.setSelection(values, this.resolveOccurrences(values, this._selectedOptions));
+      this.emitValueEvents();
+      this.emit('lr-activate', { value });
+      return;
+    }
+    void this.hide();
+    this.emit('lr-activate', { value });
+  }
+
   /** The matched label for one committed value, or `undefined` when no live option currently
    *  declares it -- the shared lookup behind both `labelFor()` and `isUnknownValue()`. */
   private resolvedLabelFor(value: string, occurrenceIndex = 0): string | undefined {
@@ -1449,7 +1579,12 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   /** The label to show for one committed value: the selected occurrence's own label, else any
    *  option sharing that value, else the raw value (a programmatic write with no matching row). */
   private labelFor(value: string, occurrenceIndex = 0): string {
-    return this.resolvedLabelFor(value, occurrenceIndex) ?? value;
+    const resolved = this.resolvedLabelFor(value, occurrenceIndex);
+    if (resolved !== undefined) return resolved;
+    // Unmatched only, so the hook can never override a real option's own label. `getTag` cannot
+    // serve this case -- it is handed a matched option, which by definition does not exist here.
+    const override = this.getUnknownLabel?.(value);
+    return override !== undefined && override.trim().length > 0 ? override : value;
   }
 
   /** Whether a committed value matches no currently-slotted `<lr-option>` -- a stale value from
@@ -1476,7 +1611,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    */
   private get onlyOption(): LyraOption | undefined {
     if (!this.autoCommitSingleOption) return undefined;
-    const navigable = this.navigableOptions();
+    // Authored options only: a synthetic unmatched-value row is not a choice the author offered,
+    // so it must never turn a one-option select into a two-option one (or vice versa).
+    const navigable = this.navigableOptions(this.options);
     return navigable.length === 1 ? navigable[0] : undefined;
   }
 
@@ -1494,8 +1631,58 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return !option.disabled && !option.inert && !option.closest('[inert]');
   }
 
-  private navigableOptions(options: LyraOption[] = this.options): LyraOption[] {
+  private navigableOptions(options: LyraOption[] = this.listboxOptions): LyraOption[] {
     return options.filter((option) => this.isOptionAvailable(option));
+  }
+
+  /**
+   * Detached `<lr-option>` instances standing in for committed values no slotted option claims,
+   * keyed by value and rebuilt only when that set changes.
+   *
+   * Real elements rather than a parallel row shape, because everything that drives this listbox --
+   * `navigableOptions()`, the roving `activeIndex`, type-ahead, `renderRows()` and the delegated
+   * click path -- is written against `LyraOption`. Giving the synthetic row the same type is what
+   * makes it keyboard-reachable for free instead of a pointer-only decoration.
+   *
+   * They are deliberately NOT in `this.options`: that array is the authored option set, and
+   * `resolveOccurrences()` resolves `selectedOptions` out of it. Adding them there would make the
+   * unmatched value resolve to an option, which is precisely the condition this feature exists to
+   * report, and would leak a component-owned element through the public `selectedOptions`.
+   */
+  private unknownOptionCache = new Map<string, LyraOption>();
+
+  private get unknownValues(): string[] {
+    if (!this.showUnknownOption) return [];
+    return this._selected.filter((value, index) => this.isUnknownValue(value, index));
+  }
+
+  private get unknownOptions(): LyraOption[] {
+    const values = this.unknownValues;
+    if (values.length === 0) {
+      this.unknownOptionCache.clear();
+      return [];
+    }
+    for (const key of [...this.unknownOptionCache.keys()]) {
+      if (!values.includes(key)) this.unknownOptionCache.delete(key);
+    }
+    return values.map((value) => {
+      let option = this.unknownOptionCache.get(value);
+      if (!option) {
+        // createElement (never createElementNS): a namespaced custom element never upgrades.
+        option = this.ownerDocument.createElement(tag('option')) as LyraOption;
+        this.unknownOptionCache.set(value, option);
+      }
+      option.value = value;
+      option.label = this.labelFor(value);
+      return option;
+    });
+  }
+
+  /** The option set the listbox renders and navigates: the authored options plus any synthetic
+   *  unmatched-value rows. */
+  private get listboxOptions(): LyraOption[] {
+    const unknown = this.unknownOptions;
+    return unknown.length === 0 ? this.options : [...this.options, ...unknown];
   }
 
   /** Updates the numeric active-descendant cursor and its stable option identity together. */
@@ -1538,7 +1725,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     let nearestDistance = Number.POSITIVE_INFINITY;
     let nearestRawIndex = -1;
     navigable.forEach((option, index) => {
-      const rawIndex = this.options.indexOf(option);
+      const rawIndex = this.listboxOptions.indexOf(option);
       const distance = Math.abs(rawIndex - pivot);
       if (
         distance < nearestDistance ||
@@ -1662,7 +1849,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (!anchor || !listbox) return;
     this.cleanup = place(anchor, listbox, {
       placement: rtlAwarePlacement(this.placement, this),
-      strategy: this.hoist ? 'fixed' : 'absolute',
+      strategy: this.positioningStrategy,
     });
     this.positioningReady = this.cleanup.ready;
   }
@@ -1749,7 +1936,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       this.open &&
       this.isConnected &&
       (changed.has('placement') ||
-        changed.has('hoist') ||
+        changed.has('positioningStrategy') ||
         this.positionedDirection !== this.effectiveDirection);
     // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
     // while nothing about the state actually moved: tearing down and rebuilding the popup
@@ -1863,14 +2050,42 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    *  naming instead of the `lr-` prefix `<lr-slider>` uses for its analogous rename. See the class
    *  doc's `change` entry for the full rule. The prefixed aliases carry `detail: { value }`. */
   private emitValueEvents(): void {
+    // Pinned to the un-narrowed class. Inside the class body `Multiple` is an unresolved type
+    // parameter, which leaves the detail type an unresolved conditional that no concrete argument
+    // list can be checked against -- the same reason `<lr-popover>`'s own lifecycle emits resolve
+    // against its base event map. The constraint already guarantees the payload's shape.
+    const self = this as unknown as LyraSelect<boolean>;
     dispatchNativeInputEvent(this);
-    this.emit('lr-input', { value: this.value });
+    self.emit('lr-input', { value: self.value });
     dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: this.value });
+    self.emit('lr-change', { value: self.value });
+  }
+
+  /**
+   * This component's own channel for writing `value`.
+   *
+   * The public accessor is narrowed by `Multiple`, and inside the class body that parameter is
+   * unresolved -- so no concrete `string` or `string[]` is assignable to it, even though every
+   * value written here is one of the two. One documented cast in one place, rather than a dozen at
+   * the call sites; the runtime path is the public setter, unchanged.
+   */
+  private assignValue(next: string | string[] | null | undefined): void {
+    this.value = next as LyraPickerValue<Multiple> | null | undefined;
+  }
+
+  private assignDefaultValue(next: string | string[] | null | undefined): void {
+    this.defaultValue = next as LyraPickerValue<Multiple> | null | undefined;
   }
 
   private selectOption(option: LyraOption): void {
     if (this.effectiveDisabled || !this.isOptionAvailable(option)) return;
+    // A synthetic unmatched-value row never resolves through `resolveOccurrences()`, so the
+    // ordinary multi-select path would read it as "not currently selected" and append a DUPLICATE
+    // copy of a value that is already committed. Route it by value instead.
+    if (this.unknownOptionCache.get(option.value) === option) {
+      this.selectUnknownValue(option.value);
+      return;
+    }
     this.hasInteracted = true;
     this._restoredStateActive = false;
     this._valueDirty = true;
@@ -2131,7 +2346,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     ) as HTMLElement | null;
     const index = Number(optionEl?.dataset['index']);
     if (!Number.isInteger(index)) return;
-    const option = this.options[index];
+    const option = this.listboxOptions[index];
     if (option) this.selectOption(option);
   };
 
@@ -2198,7 +2413,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         currentGroup = o.group;
       }
       const id = `${this.listId}-opt-${i}`;
-      const selected = chosen.has(o);
+      const unknown = this.unknownOptionCache.get(o.value) === o;
+      // A synthetic row IS the committed value, so it announces as selected even though
+      // `selectedOptions` deliberately never resolves to it -- see `unknownOptions`.
+      const selected = unknown || chosen.has(o);
       const adornments = this.adornmentsFor(o);
       groupRows.push(
         html`<div
@@ -2207,6 +2425,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           role="option"
           data-index=${i}
           data-value=${o.value}
+          ?data-unknown-value=${unknown}
           aria-selected=${selected ? 'true' : 'false'}
           aria-disabled=${this.isOptionAvailable(o) ? 'false' : 'true'}
           ?data-active=${id === activeId}
@@ -2226,6 +2445,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
             <span>${o.label}</span>
             ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ''}
           </span>
+          ${unknown
+            ? html`<span part="option-badge">${this.localize('notInCatalog')}</span>`
+            : ''}
           ${adornments.end
             ? renderInertPresentation(adornments.end, { part: 'option-end' })
             : ''}
@@ -2268,7 +2490,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   }
 
   override render(): TemplateResult {
-    const options = this.options;
+    const options = this.listboxOptions;
     const navigable = this.navigableOptions(options);
     const active =
       this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;

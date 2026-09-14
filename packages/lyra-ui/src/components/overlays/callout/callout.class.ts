@@ -150,10 +150,15 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  * @csspart content - The message content.
  * @csspart heading - The heading wrapper (`role="heading"` at the configured level unless opted out).
  * @csspart message - The message content wrapper.
- * @csspart close-button - The close button's interactive hit target, sized to the shared minimum
- *   tappable size (`--lr-icon-button-size`) in both the default panel and the compact `inline`
- *   variant.
- * @csspart close-icon - The close button's visible "×" glyph, independent of `close-button`'s hit
+ * @csspart close-button - The close button, sized to the shared minimum tappable size
+ *   (`--lr-icon-button-size`) in both the default panel and the compact `inline` variant. As of
+ *   16.0.0 this is a composed `<lr-icon-button>` host, not a native `<button>`: it still owns the
+ *   grid placement, but the painted surface moved one shadow boundary deeper -- style it through
+ *   `close-button__control` or the `--lr-icon-button-*` tokens.
+ * @csspart close-button__control - The composed `<lr-icon-button>`'s own native control, forwarded
+ *   because the painted surface (background, radius, hover/press fill, focus ring and hit-area
+ *   floor) now sits one shadow boundary deeper than `close-button`.
+ * @csspart close-icon - The close button's visible "×" glyph, independent of the control's hit
  *   target size -- shrinks in the `inline` variant while the hit target stays full-size.
  * @cssprop [--lr-callout-background=var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))] -
  *   The host surface's background: an inherited semantic quiet fill, with brand as the standalone
@@ -598,15 +603,15 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         </div>
         <div part="message"><slot></slot></div>
       </div>
-      <button
-        type="button"
+      <lr-icon-button
         part="close-button"
+        exportparts="button:close-button__control"
         ?hidden=${!this.closable}
         aria-label=${this.localize('close')}
         @click=${this.close}
       >
         <span part="close-icon" aria-hidden="true" inert>×</span>
-      </button>
+      </lr-icon-button>
     </div>`;
   }
 }

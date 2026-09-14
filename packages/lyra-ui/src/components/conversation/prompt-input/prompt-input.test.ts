@@ -413,7 +413,10 @@ it('closes a textarea mention instead of treating another prompt control as focu
   const textarea = composer.input!;
   const attachment = el.shadowRoot!.querySelector('lr-attachment-trigger') as LyraAttachmentTrigger;
   await attachment.updateComplete;
-  const attachmentButton = attachment.shadowRoot!.querySelector('[part="menu-trigger"]') as HTMLButtonElement;
+  // The attach control is a composed <lr-icon-button>; focusing the host lands on its own native
+  // control, one shadow boundary deeper, so that is the node the focus assertion below names.
+  const attachmentTrigger = attachment.shadowRoot!.querySelector('[part="menu-trigger"]') as HTMLElement;
+  const attachmentButton = attachmentTrigger.shadowRoot!.querySelector('[part~="button"]') as HTMLButtonElement;
   textarea.value = '@a';
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
   textarea.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
@@ -434,7 +437,7 @@ it('closes a textarea mention instead of treating another prompt control as focu
     cancelable: true,
   }));
   attachmentButton.focus();
-  expect(deepActiveElementIn(document)?.getAttribute('part')).to.equal('menu-trigger');
+  expect(deepActiveElementIn(document)?.getAttribute('part')).to.equal('base button');
   await waitUntil(() => !popover.open, 'the prompt did not close its mention session after attachment focus');
   await el.updateComplete;
   await popover.updateComplete;

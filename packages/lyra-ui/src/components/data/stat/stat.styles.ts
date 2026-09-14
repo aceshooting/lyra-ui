@@ -13,7 +13,11 @@ export const styles = css`
     padding: var(--lr-stat-padding, var(--lr-space-m));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    /* The RESTING tile's own hook, alongside the padding/gap levers above and the pressed state's
+       existing --lr-stat-link-active-bg -- the tier a dashboard actually sits at all day was the
+       only one with no lever, so retinting one board meant a ::part(base) rule or an app-wide
+       --lr-color-surface change. frame='plain' still wins below: it opts out of chrome entirely. */
+    background: var(--lr-stat-bg, var(--lr-color-surface));
     block-size: 100%;
     box-sizing: border-box;
     color: inherit;
@@ -75,7 +79,7 @@ export const styles = css`
       --lr-stat-link-active-bg,
       color-mix(
         in oklab,
-        var(--lr-color-surface),
+        var(--lr-stat-bg, var(--lr-color-surface)),
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );

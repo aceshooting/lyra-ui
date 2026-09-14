@@ -58,6 +58,9 @@ passthrough). Not a subclass of `LyraChart`.
 - `formatter?: LyraChartFormatter` (attribute: false) — family-wide context-object formatter used
   by visual/tooltips, spoken text, legends, tables, and CSV export. It takes precedence over the
   older surface-specific hooks, which remain available as compatibility fallbacks.
+  Every surface names this chart's single value scale as `axis: 'y'`, and the `visual` surface now
+  carries the category `index` as well as the series, so one formatter written against
+  `lr-chart`'s dual-axis context serves both components unchanged.
 - `tableCellFormatter?: LyraLiteChartTableCellFormatter` (attribute: false) — formats each finite
   numeric cell in the built-in multi-series accessible table. The callback receives `(value,
   context)`, where `context` is `{ kind: 'value' | 'total'; datasetIndex: number | null; index:
@@ -120,6 +123,17 @@ passthrough). Not a subclass of `LyraChart`.
   formatter-supplied text (e.g. a value or percentage share) after each series' label in the
   built-in legend row, mirroring `pointText`/`tickFormat`'s opt-in-hook convention. Falls back to
   the label alone when unset; no-op while `legend` is `false`.
+- `axisLabelText?: (label: string, index: number) => string | null` (attribute: false) — a
+  display-only override for one category-axis tick's text; returning `null` renders no tick there at
+  all. `labels` stays the single authoritative source for the generated accessible table's row
+  headers, the per-mark `<title>`/accessible name, the live announcement and CSV export, so blanking
+  a tick never blanks the same category where a reader or a spreadsheet needs it. Complements
+  `maxLabels` rather than replacing it: that even decimation is applied FIRST, so a category it
+  already dropped never reaches this callback — use this one for ticks that must line up with an
+  external grouping boundary (a month, a release, a shift change) and leave `maxLabels` unset there.
+  The returned string is ellipsized to the tick's own slot exactly like a source label, with the
+  full text kept as the tick's accessible name; a return value that is neither a string nor `null`
+  falls back to the source label rather than reaching the DOM.
 - `roundedBars: boolean = false` (attribute `rounded-bars`, bar type only) — draws each bar as a
   rounded-top-corner shape instead of a square-cornered `<rect>`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no

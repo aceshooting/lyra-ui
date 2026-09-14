@@ -2078,3 +2078,247 @@ it('keeps compact custom-box labels clear of the centered visual box in every si
     }
   }
 });
+
+/** Records every write that reaches `checked`'s own setter on one instance, then restores the
+ *  prototype accessor. A veto that lets the control flip and then writes it back does so inside
+ *  the same task, so Lit coalesces both writes into one render and neither the property nor the
+ *  rendered `aria-checked` can tell "never flipped" from "flipped and snapped back" afterwards.
+ *  The write log can. */
+function recordCheckedWrites(box: LyraCheckbox): {
+  writes: boolean[];
+  release: () => void;
+} {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    Object.getPrototypeOf(box) as object,
+    'checked'
+  )!;
+  const writes: boolean[] = [];
+  Object.defineProperty(box, 'checked', {
+    configurable: true,
+    get: () => descriptor.get!.call(box) as boolean,
+    set: (next: boolean) => {
+      writes.push(Boolean(next));
+      descriptor.set!.call(box, next);
+    },
+  });
+  return {
+    writes,
+    release: () => {
+      delete (box as unknown as Record<string, unknown>)['checked'];
+    },
+  };
+}
+
+describe('lr-checkbox-toggle-request', () => {
+  it('proposes the next checked state before anything is written, then commits in the shipped event order', async () => {
+    const el = (await fixture(
+      html`<lr-checkbox>Label</lr-checkbox>`
+    )) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const seen: Array<{
+      proposed: boolean;
+      liveChecked: boolean;
+      liveAria: string | null;
+      cancelable: boolean;
+    }> = [];
+    const order: string[] = [];
+    el.addEventListener('lr-checkbox-toggle-request', (event) => {
+      seen.push({
+        proposed: (event as CustomEvent<{ checked: boolean }>).detail.checked,
+        liveChecked: el.checked,
+        liveAria: base.getAttribute('aria-checked'),
+        cancelable: event.cancelable,
+      });
+      order.push(event.type);
+    });
+    for (const name of ['input', 'change', 'lr-input', 'lr-change'] as const) {
+      el.addEventListener(name, (event) => order.push(event.type));
+    }
+
+    base.click();
+
+    expect(seen).to.deep.equal([
+      { proposed: true, liveChecked: false, liveAria: 'false', cancelable: true },
+    ]);
+    expect(order).to.deep.equal([
+      'lr-checkbox-toggle-request',
+      'input',
+      'lr-input',
+      'change',
+      'lr-change',
+    ]);
+    expect(el.checked).to.be.true;
+  });
+
+  it('never flips checked or aria-checked when a listener vetoes the request', async () => {
+    const el = (await fixture(
+      html`<lr-checkbox checked>Label</lr-checkbox>`
+    )) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const spy = recordCheckedWrites(el);
+    let requests = 0;
+    const changes: string[] = [];
+    el.addEventListener('lr-checkbox-toggle-request', (event) => {
+      requests += 1;
+      event.preventDefault();
+    });
+    for (const name of ['input', 'change', 'lr-input', 'lr-change'] as const) {
+      el.addEventListener(name, (event) => changes.push(event.type));
+    }
+
+    try {
+      base.click();
+      await el.updateComplete;
+
+      expect(requests, 'the veto point fired once').to.equal(1);
+      expect(spy.writes, 'checked is never written at all').to.deep.equal([]);
+      expect(el.checked).to.be.true;
+      expect(base.getAttribute('aria-checked')).to.equal('true');
+      expect(changes).to.deep.equal([]);
+    } finally {
+      spy.release();
+    }
+  });
+
+  it('takes the same request and veto path for Space on the focused checkbox', async () => {
+    const el = (await fixture(
+      html`<lr-checkbox>Label</lr-checkbox>`
+    )) as LyraCheckbox;
+    el.focus();
+    const focusedPart = (
+      el.shadowRoot!.activeElement as HTMLElement | null
+    )?.getAttribute('part');
+    expect(focusedPart, 'the semantic checkbox owner holds focus').to.equal(
+      'base checkbox'
+    );
+
+    const spy = recordCheckedWrites(el);
+    let requests = 0;
+    el.addEventListener('lr-checkbox-toggle-request', (event) => {
+      requests += 1;
+      event.preventDefault();
+    });
+    try {
+      (el.shadowRoot!.activeElement as HTMLElement).dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: ' ',
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      await el.updateComplete;
+
+      expect(requests).to.equal(1);
+      expect(spy.writes).to.deep.equal([]);
+      expect(el.checked).to.be.false;
+    } finally {
+      spy.release();
+    }
+  });
+
+  it('fires no toggle request at all while disabled', async () => {
+    const el = (await fixture(
+      html`<lr-checkbox disabled>Label</lr-checkbox>`
+    )) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    let requests = 0;
+    el.addEventListener('lr-checkbox-toggle-request', () => (requests += 1));
+
+    base.click();
+    base.dispatchEvent(
+      new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })
+    );
+    el.click();
+
+    expect(requests).to.equal(0);
+    expect(el.checked).to.be.false;
+  });
+
+  it('leaves the commit to a listener that resolves the request by writing checked itself', async () => {
+    const el = (await fixture(
+      html`<lr-checkbox indeterminate>Label</lr-checkbox>`
+    )) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    el.addEventListener('lr-checkbox-toggle-request', () => {
+      // No preventDefault(): the listener answers by writing the value it wants, which is the
+      // value the control already holds. A before/after value compare cannot see this write.
+      el.checked = false;
+    });
+
+    base.click();
+    await el.updateComplete;
+
+    expect(el.checked, "the listener's own write survives").to.be.false;
+    expect(
+      el.indeterminate,
+      'the vetoed commit never clears the mixed state either'
+    ).to.be.true;
+  });
+
+  it('behaves exactly as before when nothing listens for the request', async () => {
+    const el = (await fixture(
+      html`<lr-checkbox indeterminate>Label</lr-checkbox>`
+    )) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const order: string[] = [];
+    for (const name of ['input', 'change', 'lr-input', 'lr-change'] as const) {
+      el.addEventListener(name, (event) => order.push(event.type));
+    }
+
+    base.click();
+    await el.updateComplete;
+
+    expect(el.checked).to.be.true;
+    expect(el.indeterminate).to.be.false;
+    expect(base.getAttribute('aria-checked')).to.equal('true');
+    expect(order).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  });
+
+  it('does not mark a required checkbox interacted when the toggle is refused', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-checkbox required>Terms</lr-checkbox>`
+    )) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    el.addEventListener('lr-checkbox-toggle-request', (event) =>
+      event.preventDefault()
+    );
+    await el.updateComplete;
+
+    base.click();
+    await el.updateComplete;
+    // The silent query, not reportValidity(): it re-runs the reflect without itself counting as
+    // interaction, which is exactly the "next reflect" that used to reveal the refused toggle.
+    expect(el.checkValidity(), 'still intrinsically invalid').to.be.false;
+    await el.updateComplete;
+
+    expect(el.checked, 'the refused toggle never happened').to.be.false;
+    expect(el.matches(':state(invalid)')).to.be.true;
+    expect(
+      el.matches(':state(user-invalid)'),
+      'a refused toggle is not an interaction the user can be shown an error for'
+    ).to.be.false;
+    expect(el.matches(':state(user-valid)')).to.be.false;
+  });
+
+  it('marks the control interacted as soon as an allowed toggle commits', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(
+      html`<lr-checkbox required>Terms</lr-checkbox>`
+    )) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    let requests = 0;
+    el.addEventListener('lr-checkbox-toggle-request', () => (requests += 1));
+    await el.updateComplete;
+
+    base.click();
+    await el.updateComplete;
+
+    expect(requests, 'the request still fires on the allowed path').to.equal(1);
+    expect(el.checked).to.be.true;
+    expect(
+      el.matches(':state(user-valid)'),
+      'an allowed toggle still reveals validity, exactly as before'
+    ).to.be.true;
+  });
+});

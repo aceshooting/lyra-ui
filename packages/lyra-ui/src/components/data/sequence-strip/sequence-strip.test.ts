@@ -100,7 +100,7 @@ it('renders one cell per item, colored by its category', async () => {
   expect(cells[0]!.style.backgroundColor).to.not.equal(cells[1]!.style.backgroundColor);
 });
 
-it('bounds the DOM window for 200 and 500 items at 320px without sacrificing full roving focus', async () => {
+it('fills 320px with the whole span in both directions, one item per cell at the cap and ranges past it', async () => {
   for (const count of [200, 500] as const) {
     for (const direction of ['ltr', 'rtl'] as const) {
       const wrapper = (await fixture(html`
@@ -119,32 +119,51 @@ it('bounds the DOM window for 200 and 500 items at 320px without sacrificing ful
       const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
       let cells = [...base.querySelectorAll<HTMLElement>('[part="cell"]')];
 
-      expect(cells.length, `${count} ${direction} cell count`).to.equal(Math.min(count, 200));
+      expect(cells.length, `${count} ${direction} cell count`).to.equal(200);
       expect(wrapper.scrollWidth, `${count} ${direction} wrapper`).to.be.at.most(wrapper.clientWidth + 1);
       expect(base.scrollWidth, `${count} ${direction} strip`).to.be.at.most(base.clientWidth + 1);
       expect(
         Math.min(...cells.map((cell) => cell.getBoundingClientRect().width)),
         `${count} ${direction} visible cell width`,
       ).to.be.greaterThan(0);
+      // Span preserved regardless of cardinality: the rendered cells tile [0, count) exactly once.
+      expect(cells[0]!.dataset['rangeStart'], `${count} ${direction} first range`).to.equal('0');
+      expect(cells.at(-1)!.dataset['rangeEnd'], `${count} ${direction} last range`).to.equal(
+        String(count - 1),
+      );
 
       cells[0]!.focus();
       cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
       await el.updateComplete;
       cells = [...base.querySelectorAll<HTMLElement>('[part="cell"]')];
-      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['itemId']).to.equal(`item-${count}`);
-      expect(cells.filter((cell) => cell.tabIndex === 0).map((cell) => cell.dataset['itemId'])).to.deep.equal([
-        `item-${count}`,
+      // Absolute literals, not a value re-read off the element under test: at the cap cell 199 is
+      // item index 199, and at 500 items `ceil(199 * 500 / 200)` puts its range at [498, 499], so
+      // End must land on item index 498 -- id `item-499`, since ids are 1-based here.
+      const expectedLastRange = count === 200 ? { start: '199', id: 'item-200' } : { start: '498', id: 'item-499' };
+      expect(cells.at(-1)!.dataset['rangeStart'], `${count} ${direction} last range start`).to.equal(
+        expectedLastRange.start,
+      );
+      expect(
+        (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['itemId'],
+        `${count} ${direction} End focus`,
+      ).to.equal(expectedLastRange.id);
+      expect(cells.filter((cell) => cell.tabIndex === 0).map((cell) => cell.dataset['index'])).to.deep.equal([
+        '199',
       ]);
-      expect(cells.at(-1)?.getAttribute('aria-posinset')).to.equal(String(count));
-      expect(cells.at(-1)?.getAttribute('aria-setsize')).to.equal(String(count));
+      expect(cells.at(-1)?.getAttribute('aria-posinset')).to.equal('200');
+      expect(cells.at(-1)?.getAttribute('aria-setsize')).to.equal('200');
+      const summary = el.shadowRoot!.querySelector('[part="bucket-summary"]')?.textContent?.trim();
       if (count > 200) {
-        expect(el.shadowRoot!.querySelector('[part="window-range"]')?.textContent).to.contain('500');
+        expect(summary, `${count} ${direction} summary`).to.contain('500');
+        expect(summary, `${count} ${direction} summary`).to.contain('200');
+      } else {
+        expect(summary, `${count} ${direction} has nothing to summarise`).to.equal(undefined);
       }
     }
   }
 });
 
-it('anchors a bounded window on a valid controlled selection before focus enters the strip', async () => {
+it('anchors the sole keyboard entry stop on the cell that owns a valid controlled selection', async () => {
   const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   el.categories = categories;
   el.items = Array.from({ length: 500 }, (_, index) => ({
@@ -156,10 +175,12 @@ it('anchors a bounded window on a valid controlled selection before focus enters
   await el.updateComplete;
 
   const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-selected]');
-  expect(selected, 'the controlled item is mounted inside the bounded window').to.not.equal(null);
-  expect(selected!.dataset['index']).to.equal('499');
+  expect(selected === null, 'the controlled item has an owning cell').to.equal(false);
+  expect(selected!.dataset['index'], 'the last of the 200 ranges owns item 499').to.equal('199');
+  expect(Number(selected!.dataset['rangeStart'])).to.be.at.most(499);
+  expect(Number(selected!.dataset['rangeEnd'])).to.equal(499);
   expect(selected!.getAttribute('aria-current')).to.equal('true');
-  expect(selected!.tabIndex, 'the mounted window retains one keyboard entry stop').to.equal(0);
+  expect(selected!.tabIndex, 'the strip retains one keyboard entry stop').to.equal(0);
   expect(el.shadowRoot!.querySelectorAll('[part="cell"]')).to.have.length(200);
 });
 
@@ -1122,5 +1143,333 @@ it('leaves the selection ring in place while a selected cell is merely hovered',
     expect(getComputedStyle(selected).outlineColor).to.equal(selectionRing);
   } finally {
     await resetMouse();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Span-preserving bucketed overview past the render cap (16.0.0).
+// ---------------------------------------------------------------------------
+
+/** Builds `count` items split into two equal, contiguous category halves. */
+function halvedItems(count: number): SequenceStripItem[] {
+  return Array.from({ length: count }, (_unused, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: index < count / 2 ? 'text' : 'tool',
+  }));
+}
+
+it('summarises past the render cap as span-preserving ranges rather than a stretched window', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = halvedItems(600);
+  await el.updateComplete;
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+
+  expect(cells.length, 'the rendered cell count stays at the 200 cap').to.equal(200);
+  const colors = new Set(cells.map((cell) => cell.style.backgroundColor));
+  expect(
+    colors.size,
+    'the strip paints both halves of the 600-item sequence, not a stretched leading window',
+  ).to.equal(2);
+  expect(cells[0]!.dataset['rangeStart'], 'the first cell starts at the first item').to.equal('0');
+  expect(cells.at(-1)!.dataset['rangeEnd'], 'the last cell ends at the last item').to.equal('599');
+});
+
+it('paints each range by its dominant category, breaking a tie toward the earliest one', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = [
+    { id: 'text', color: 'rgb(1, 2, 3)', label: 'Text' },
+    { id: 'tool', color: 'rgb(4, 5, 6)', label: 'Tool' },
+  ];
+  // 600 over 200 cells is exactly three items per range. Range 0 is a strict tool majority whose
+  // FIRST item is text, so a cell that merely copied its range's first item would read 'text'.
+  // Range 1 is a 2-1 text majority. Ranges 2+ are uniform text.
+  el.items = Array.from({ length: 600 }, (_, index) => {
+    const dominantToolIndexes = new Set([0, 1, 2, 4]);
+    return {
+      id: `item-${index + 1}`,
+      categoryId: index === 0 ? 'text' : dominantToolIndexes.has(index) ? 'tool' : 'text',
+    };
+  });
+  await el.updateComplete;
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+  expect(cells[0]!.dataset['rangeEnd'], 'three items land in the first range').to.equal('2');
+  expect(cells[0]!.style.backgroundColor, 'a 2-1 tool majority paints the first range').to.equal(
+    'rgb(4, 5, 6)',
+  );
+  expect(cells[1]!.style.backgroundColor, 'a 2-1 text majority paints the second range').to.equal(
+    'rgb(1, 2, 3)',
+  );
+
+  // A 1-1 tie inside one range resolves to the category that appears earliest in it.
+  el.items = Array.from({ length: 400 }, (_, index) => ({
+    id: `tie-${index + 1}`,
+    categoryId: index % 2 === 0 ? 'text' : 'tool',
+  }));
+  await el.updateComplete;
+  const tied = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-index="0"]')!;
+  expect(tied.dataset['rangeEnd'], 'two items land in each range').to.equal('1');
+  expect(tied.style.backgroundColor, 'the earliest category in the range wins the tie').to.equal(
+    'rgb(1, 2, 3)',
+  );
+});
+
+it('reports a range as marked when any single item inside it is marked', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = Array.from({ length: 600 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: 'text',
+    ...(index === 2 ? { marker: true } : {}),
+  }));
+  await el.updateComplete;
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+  expect(cells[0]!.dataset['rangeEnd'], 'the marked item is the third of the first range').to.equal('2');
+  expect(
+    cells[0]!.querySelector('[part="marker"]') !== null,
+    'the range containing the marked item reports the marker',
+  ).to.equal(true);
+  expect(
+    cells[1]!.querySelector('[part="marker"]') !== null,
+    'an unmarked range reports nothing',
+  ).to.equal(false);
+});
+
+it('roves and activates over ranges, emitting the focused range first item', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = Array.from({ length: 600 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: index % 2 === 0 ? 'text' : 'tool',
+  }));
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  base.querySelector<HTMLElement>('[part="cell"][data-index="0"]')!.focus();
+  el.shadowRoot!.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(
+    (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['index'],
+    'ArrowRight advances one range, not one item',
+  ).to.equal('1');
+
+  // Activation reads the range the user is actually focused on, not a remembered index.
+  const focused = el.shadowRoot!.activeElement as HTMLElement;
+  const expectedStart = Number(focused.dataset['rangeStart']);
+  const activated = oneEvent(el, 'lr-item-activate');
+  focused.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  const event = await activated;
+  expect(event.detail.index, 'the range reports its first item').to.equal(expectedStart);
+  expect(event.detail.id).to.equal(`item-${expectedStart + 1}`);
+  expect(el.selectedIndex, 'activation stays controlled').to.equal(-1);
+});
+
+it('reverses range order and arrow direction under RTL', async () => {
+  const wrapper = (await fixture(html`
+    <div dir="rtl"><lr-sequence-strip></lr-sequence-strip></div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-sequence-strip') as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = Array.from({ length: 600 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: 'text',
+  }));
+  await el.updateComplete;
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+  expect(
+    cells[0]!.getBoundingClientRect().left > cells.at(-1)!.getBoundingClientRect().left,
+    'the first range sits at the physical end under RTL',
+  ).to.equal(true);
+
+  cells[0]!.focus();
+  cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  expect(
+    (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['index'],
+    'ArrowLeft advances forward under RTL',
+  ).to.equal('1');
+});
+
+it('clamps the roving range when the item list shrinks below the focused range', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = Array.from({ length: 600 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: 'text',
+  }));
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  base.querySelector<HTMLElement>('[part="cell"][data-index="0"]')!.focus();
+  el.shadowRoot!.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await el.updateComplete;
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['index']).to.equal('199');
+
+  // Every id the old ranges referenced disappears, and there are now far fewer cells than the
+  // range index that owned focus.
+  el.items = [
+    { id: 'fresh-1', categoryId: 'text' },
+    { id: 'fresh-2', categoryId: 'tool' },
+    { id: 'fresh-3', categoryId: 'text' },
+  ];
+  await el.updateComplete;
+  await waitUntil(
+    () => (el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part') === 'cell',
+    'focus never returned to a surviving cell',
+  );
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+  expect(cells.length).to.equal(3);
+  expect(
+    (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['index'],
+    'the roving stop clamps to the last surviving cell',
+  ).to.equal('2');
+  expect(cells.filter((cell) => cell.tabIndex === 0).length, 'exactly one entry stop remains').to.equal(1);
+});
+
+it('buckets unsorted input by position, never by category order', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  // Deliberately interleaved: a sorting projection would group the categories and destroy the
+  // sequence the strip exists to show.
+  el.items = Array.from({ length: 600 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: index % 7 === 0 ? 'tool' : 'text',
+  }));
+  await el.updateComplete;
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+  const starts = cells.map((cell) => Number(cell.dataset['rangeStart']));
+  const ends = cells.map((cell) => Number(cell.dataset['rangeEnd']));
+  expect(starts[0]).to.equal(0);
+  expect(ends.at(-1)).to.equal(599);
+  const contiguous = starts.every((start, index) => (index === 0 ? start === 0 : start === ends[index - 1]! + 1));
+  expect(contiguous, 'the ranges tile the sequence in order with no gap or overlap').to.equal(true);
+  expect(
+    ends.every((end, index) => end >= starts[index]!),
+    'every range holds at least one item',
+  ).to.equal(true);
+});
+
+it('honors .strings overrides for the range name and the overview disclosure', async () => {
+  const el = (await fixture(html`
+    <lr-sequence-strip
+      .strings=${{
+        sequenceStripBucketLabel: '{label} — de {start} à {end}',
+        sequenceStripBucketSummary: '{items} éléments en {ranges} plages',
+      }}
+    ></lr-sequence-strip>
+  `)) as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = Array.from({ length: 600 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: 'text',
+  }));
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="cell"]')!.getAttribute('aria-label'),
+  ).to.equal('Text — de 1 à 3');
+  expect(el.shadowRoot!.querySelector('[part="bucket-summary"]')!.textContent?.trim()).to.equal(
+    '600 éléments en 200 plages',
+  );
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label'),
+    'the overview clause reaches the list name too',
+  ).to.contain('600 éléments en 200 plages');
+});
+
+it('selects nothing for a non-integer or out-of-range selectedIndex past the cap', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = Array.from({ length: 600 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: 'text',
+  }));
+  for (const value of [Number.NaN, Number.POSITIVE_INFINITY, 12.5, -3, 600]) {
+    el.selectedIndex = value;
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="cell"][data-selected]').length,
+      `selectedIndex ${String(value)} selects nothing`,
+    ).to.equal(0);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="cell"][aria-current="true"]').length,
+      `selectedIndex ${String(value)} marks nothing current`,
+    ).to.equal(0);
+  }
+  el.selectedIndex = 300;
+  await el.updateComplete;
+  const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-selected]');
+  expect(selected === null, 'a valid index still resolves to its owning range').to.equal(false);
+  expect(Number(selected!.dataset['rangeStart'])).to.be.at.most(300);
+  expect(Number(selected!.dataset['rangeEnd'])).to.be.at.least(300);
+});
+
+it('is accessible while showing a bucketed overview with a legend and a selection', async () => {
+  const el = (await fixture(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = Array.from({ length: 600 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: index % 3 === 0 ? 'tool' : 'text',
+    ...(index % 50 === 0 ? { marker: true } : {}),
+  }));
+  el.selectedIndex = 120;
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
+it('rebuilds a bucketed overview after a disconnect and reconnect', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = Array.from({ length: 600 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: 'text',
+  }));
+  await el.updateComplete;
+  const parent = el.parentNode!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+  expect(cells.length).to.equal(200);
+  expect(cells.at(-1)!.dataset['rangeEnd']).to.equal('599');
+  expect(cells.filter((cell) => cell.tabIndex === 0).length, 'one entry stop survives reconnect').to.equal(1);
+});
+
+it('tiles awkward totals exactly and maps every selectable item into its own range', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  // 201 leaves a single two-item range among 199 singletons; 333 and 601 leave uneven remainders.
+  // These are the totals where a floor/floor pairing of the range boundary and the item->range
+  // lookup disagreed about which range owns an item near a boundary.
+  for (const total of [201, 333, 601] as const) {
+    el.items = Array.from({ length: total }, (_unused, index) => ({
+      id: `n${total}-${index}`,
+      categoryId: 'text',
+    }));
+    await el.updateComplete;
+    const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+    expect(cells.length, `${total} cell count`).to.equal(200);
+    let expectedStart = 0;
+    for (const cell of cells) {
+      expect(Number(cell.dataset['rangeStart']), `${total} contiguity`).to.equal(expectedStart);
+      expect(Number(cell.dataset['rangeEnd']), `${total} non-empty range`).to.be.at.least(expectedStart);
+      expectedStart = Number(cell.dataset['rangeEnd']) + 1;
+    }
+    expect(expectedStart, `${total} ranges cover every item exactly once`).to.equal(total);
+
+    // Sample both sides of several range boundaries: the owning cell must actually contain the
+    // selected item, never the neighbour that merely rounds to it.
+    const probes = new Set<number>([0, 1, total - 2, total - 1]);
+    for (const cell of cells.slice(0, 6)) {
+      probes.add(Number(cell.dataset['rangeStart']));
+      probes.add(Number(cell.dataset['rangeEnd']));
+    }
+    for (const probe of probes) {
+      el.selectedIndex = probe;
+      await el.updateComplete;
+      const owner = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-selected]');
+      expect(owner === null, `${total} item ${probe} has an owning range`).to.equal(false);
+      expect(Number(owner!.dataset['rangeStart']), `${total} item ${probe} lower bound`).to.be.at.most(probe);
+      expect(Number(owner!.dataset['rangeEnd']), `${total} item ${probe} upper bound`).to.be.at.least(probe);
+    }
+    el.selectedIndex = -1;
+    await el.updateComplete;
   }
 });

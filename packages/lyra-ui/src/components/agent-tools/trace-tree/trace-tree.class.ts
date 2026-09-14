@@ -4,7 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -33,6 +33,8 @@ interface SpanHierarchy {
   parentOf: Map<string, string>;
   roots: LyraSpan[];
   truncated: boolean;
+  /** Trace extent measured before the projection cap — see `traceExtent()`. */
+  extentEndMs: number;
 }
 
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -101,6 +103,9 @@ export interface LyraTraceTreeEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
+ * Duration bars always scale to the whole trace, including spans the 500-row ceiling drops, so a
+ * truncated tail never stretches the surviving bars across their tracks.
  *
  * @customElement lr-trace-tree
  * @event lr-span-select - `detail: { spanId }` — a row was activated (click, Enter, Space).
@@ -250,7 +255,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private buildHierarchy(): SpanHierarchy {
-    const { spans, byId, truncated } = normalizeLyraSpans(this.spans, this.activeSpanId);
+    const { spans, byId, truncated, extentEndMs } = normalizeLyraSpans(this.spans, this.activeSpanId);
 
     const childrenOf = new Map<string, LyraSpan[]>();
     const parentOf = new Map<string, string>();
@@ -282,7 +287,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     roots.sort(byStart);
     for (const list of childrenOf.values()) list.sort(byStart);
 
-    return { spans, byId, childrenOf, parentOf, roots, truncated };
+    return { spans, byId, childrenOf, parentOf, roots, truncated, extentEndMs };
   }
 
   private buildRows(hierarchy = this.buildHierarchy()): SpanRow[] {
@@ -318,10 +323,16 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     return rows;
   }
 
-  private traceExtent(spans = this.buildHierarchy().spans): number {
-    let max = 0;
-    for (const s of spans) max = Math.max(max, s.endMs ?? s.startMs, s.startMs);
-    return max || 1;
+  /**
+   * Trace-relative end used to scale every duration bar.
+   *
+   * It reads the projection's PRE-CAP extent rather than reducing over the rendered rows: past
+   * MAX_RENDERED_LYRA_SPANS the surviving rows are the earliest ones, so a truncated tail shrank
+   * the denominator and stretched every bar to fill its track -- a 1s span in a 10s trace drew at
+   * 100% width. Capping the ROWS is a resource bound; rescaling the axis under them is a misreport.
+   */
+  private traceExtent(hierarchy = this.buildHierarchy()): number {
+    return finiteNumber(hierarchy.extentEndMs, 0) || 1;
   }
 
   private formatDuration(ms: number | undefined): string {
@@ -672,7 +683,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     this.renderedProjectionTruncated = hierarchy.truncated;
     const rows = this.buildRows(hierarchy);
     const firstId = rows[0]?.span.id;
-    const extent = this.traceExtent(hierarchy.spans);
+    const extent = this.traceExtent(hierarchy);
     return html`
       <div
         part="base"

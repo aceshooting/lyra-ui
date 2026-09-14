@@ -740,3 +740,37 @@ export const MountedOptionSelection: Story = {
     `;
   },
 };
+
+export const OutOfListValue: Story = {
+  parameters: { docs: { description: { story: 'A committed value that matches no option and no async row already renders with a dashed "not in catalog" badge. `show-unknown-option` additionally appends it to the end of the listbox as a synthetic, re-selectable row, so it stays reachable once the listbox is open. `getUnknownLabel` renders that value’s label wherever it appears.' } } },
+  render: () => html`
+    <lr-combobox label="Model" value="gpt-legacy-2023" show-unknown-option
+      .getUnknownLabel=${(value: string) => `Saved model (${value})`}>
+      <lr-option value="fast">Fast</lr-option>
+      <lr-option value="balanced">Balanced</lr-option>
+    </lr-combobox>
+  `,
+};
+
+export const SourceFailureAndRefresh: Story = {
+  parameters: { docs: { description: { story: 'A rejected `source` renders the library’s shared failed-load state inside the listbox — the same `<lr-empty>` shape `<lr-table>` uses — with a `retry-button`, instead of a silently empty list. It also emits a non-cancelable `lr-source-error` carrying the raw rejection, while the rendered copy stays localized and never leaks it. Retry goes through the cancelable `lr-retry` and then calls the public `refresh()`, which re-runs the current query without changing the source’s identity; called while the listbox is closed it queues for the next open.' } } },
+  render: () => {
+    let failNext = true;
+    return html`
+      <lr-combobox
+        label="Remote options"
+        source-delay="0"
+        .source=${async (query: string) => {
+          if (failNext) {
+            failNext = false;
+            throw new Error('the provider is unavailable');
+          }
+          return [
+            { value: 'alpha', label: `Alpha ${query}`.trim() },
+            { value: 'beta', label: `Beta ${query}`.trim() },
+          ];
+        }}
+      ></lr-combobox>
+    `;
+  },
+};

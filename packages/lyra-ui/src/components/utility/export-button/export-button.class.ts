@@ -119,9 +119,18 @@ export interface LyraExportButtonEventMap {
  * Format ids are unique, nonempty occurrence identities. Malformed options and later duplicate
  * ids are omitted before menu state, focus reconciliation, or export events; the first wins.
  *
+ * Data reaches a built-in CSV/JSON download two ways, both resolved at download time rather than
+ * at assignment time: the eager `rows` property (read after the cancelable `lr-export` event, so a
+ * listener may assign it from inside its own handler) and the lazy `getRows` callback, which
+ * replaces `rows` for that download and lets a consumer export a collection it already holds --
+ * an `<lr-table>`'s `viewRows`, for instance -- without materializing a second copy here.
+ *
  * @customElement lr-export-button
  * @event lr-export - `detail: { format }`, cancelable — call `preventDefault()`
- *   to substitute the built-in client-side download with a server-generated one.
+ *   to substitute the built-in client-side download with a server-generated one. A listener that
+ *   lets the built-in download proceed may still supply its data from inside the handler: the rows
+ *   are read *after* this dispatch, so assigning `.rows` here is honoured, and a `getRows`
+ *   callback is consulted at the same point.
  * @event lr-export-complete - Fired after a non-cancelled download completes.
  * @event lr-export-error - Fired when a built-in CSV/JSON export cannot be serialized or
  *   downloaded. `detail: { format, error }`. The same failure is also announced through the
@@ -171,7 +180,13 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   private _rows: readonly Readonly<Record<string, unknown>>[] = Object.freeze([]);
 
-  /** Shallow frozen row snapshots. Nested cell values remain caller-owned opaque data. */
+  /** Shallow frozen row snapshots. Nested cell values remain caller-owned opaque data.
+   *
+   *  Read late, not early: the built-in download serializes whatever this holds *after* the
+   *  cancelable `lr-export` event has been dispatched, so a listener may assign `.rows`
+   *  synchronously inside its own handler and that assignment is the data that gets downloaded.
+   *  A consumer that would rather not keep an eagerly-materialized copy in the element at all
+   *  sets {@link getRows} instead, which is consulted at the same point. */
   get rows(): readonly Readonly<Record<string, unknown>>[] {
     return this._rows;
   }
@@ -199,6 +214,24 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this._columns = Object.freeze(source.map((column) => Object.freeze({ ...column })));
     this.requestUpdate('columns', previous);
   }
+
+  /** Lazy row source, consulted only when a built-in CSV/JSON download is actually about to be
+   *  built -- after the cancelable `lr-export` event was not prevented, and never for a custom
+   *  format this component does not serialize itself. When set, it fully replaces {@link rows}
+   *  for that download (the eager property is not merged into or read alongside it), so a
+   *  consumer holding a large or derived collection elsewhere -- an `<lr-table>`'s `viewRows`,
+   *  say -- can export exactly what is on screen without copying it into this element first and
+   *  keeping it live there:
+   *
+   *  ```ts
+   *  exportButton.getRows = () => table.viewRows as readonly Record<string, unknown>[];
+   *  ```
+   *
+   *  A non-array return is treated as no rows, matching how `rows` normalizes one. A callback
+   *  that throws is reported through `lr-export-error` and the shared failure announcement, the
+   *  same as any other export that could not be produced -- an export whose data could not be
+   *  collected has failed, and silently downloading an empty file would hide that. */
+  @property({ attribute: false }) getRows?: () => readonly Record<string, unknown>[];
 
   @property() filename = 'export';
   /** Prepends a UTF-8 byte-order mark (U+FEFF) to the built-in CSV download only. Excel on
@@ -600,20 +633,32 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  its default empty array, so an unconfigured export still produces a
    *  proper header + data file instead of blank lines. Both `rowsForExport()`
    *  and the CSV branch of `doExport()` share this same fallback, rather than
-   *  only the JSON path having one. */
-  private effectiveColumns(): readonly Readonly<LyraCsvColumn>[] {
+   *  only the JSON path having one. Takes the rows the current download resolved rather than
+   *  reading `this.rows`, so a lazy `getRows` source derives its own header row instead of one
+   *  built from a stale eager property. */
+  private effectiveColumns(rows: readonly Readonly<Record<string, unknown>>[]): readonly Readonly<LyraCsvColumn>[] {
     if (this.columns.length > 0) return this.columns;
     const keys = new Set<string>();
-    for (const row of this.rows) {
+    for (const row of rows) {
       for (const key of Object.keys(row)) keys.add(key);
     }
     return Array.from(keys, (key) => ({ key, label: key }));
   }
 
+  /** The rows one download serializes: the lazy {@link getRows} source when set, otherwise the
+   *  eagerly-assigned {@link rows}. Called from inside `doExport()`'s try block, so a throwing
+   *  callback lands on the existing `lr-export-error` path rather than escaping the click
+   *  handler. A non-array return normalizes to no rows exactly as the `rows` setter does. */
+  private rowsToExport(): readonly Readonly<Record<string, unknown>>[] {
+    if (this.getRows === undefined) return this.rows;
+    const supplied = this.getRows();
+    return Array.isArray(supplied) ? supplied : [];
+  }
+
   /** Applies the same `columns` allow-list CSV exports use, so JSON can't leak fields CSV hides. */
-  private rowsForExport(): Record<string, unknown>[] {
-    const keys = this.effectiveColumns().map((c) => c.key);
-    return this.rows.map((row) => {
+  private rowsForExport(rows: readonly Readonly<Record<string, unknown>>[]): Record<string, unknown>[] {
+    const keys = this.effectiveColumns(rows).map((c) => c.key);
+    return rows.map((row) => {
       const picked = Object.create(null) as Record<string, unknown>;
       for (const key of keys) picked[key] = row[key];
       return picked;
@@ -645,16 +690,20 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       return;
     }
     try {
+      // Resolved inside the try, and only here: the rows a built-in download serializes are read
+      // after the veto point, so both a late `.rows` assignment from an `lr-export` listener and a
+      // `getRows` callback see the same "collected at download time" contract.
+      const rows = this.rowsToExport();
       if (format === 'csv') {
         downloadBlob(
-          buildCsv(this.rows, this.effectiveColumns(), { bom: this.bom }),
+          buildCsv(rows, this.effectiveColumns(rows), { bom: this.bom }),
           `${this.filename}.csv`,
           'text/csv;charset=utf-8;',
           this.ownerDocument,
         );
       } else {
         downloadBlob(
-          JSON.stringify(this.rowsForExport(), null, 2),
+          JSON.stringify(this.rowsForExport(rows), null, 2),
           `${this.filename}.json`,
           'application/json',
           this.ownerDocument,

@@ -100,6 +100,16 @@ export const styles = css`
       --lr-switch-checked-track-fill,
       var(--lr-color-brand)
     );
+    /* Falls back through the same chain the unchecked track reads (--lr-switch-track-border, then
+       the undeclared-equivalent 'none'), so an unset consumer renders byte-identical to today,
+       where the border never varies by checked state at all. Redeclaring the whole shorthand --
+       rather than a border-color longhand -- is what keeps that fallback honest: a longhand whose
+       custom property is unset is invalid at computed-value time and would reset the colour of an
+       author's --lr-switch-track-border to currentColor while checked. */
+    border: var(
+      --lr-switch-checked-track-border,
+      var(--lr-switch-track-border, none)
+    );
   }
 
   [part="thumb"] {

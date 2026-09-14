@@ -2998,14 +2998,6 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
-        "name": "--lr-interactive-transition",
-        "type": "string",
-        "scope": "shared",
-        "values": {
-          "light": "background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast)"
-        }
-      },
-      {
         "name": "--lr-theme-duration-fast",
         "type": "duration",
         "scope": "theme-input",
@@ -3110,6 +3102,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "values": {
           "light": "var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard))",
           "reducedMotion": "0.001ms linear"
+        }
+      },
+      {
+        "name": "--lr-transition-interactive",
+        "type": "string",
+        "scope": "shared",
+        "values": {
+          "light": "background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast)"
         }
       }
     ]

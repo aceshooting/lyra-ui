@@ -140,3 +140,81 @@ export const WithLegend: Story = {
     }
   },
 };
+
+export const LegendQuantities: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The legend can carry the numbers it stands for. `legend-display` accepts `label` (the ' +
+          'default), `label-value`, `label-percent` and `label-value-percent`; the share is the ' +
+          'same clamped ratio the bar paints, so the key can never disagree with the band.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1.5rem; max-inline-size: 28rem;">
+      <lr-context-meter
+        show-legend
+        legend-display="label-value"
+        total="131072"
+        label="Value"
+      ></lr-context-meter>
+      <lr-context-meter
+        show-legend
+        legend-display="label-percent"
+        total="131072"
+        label="Share"
+      ></lr-context-meter>
+      <lr-context-meter
+        show-legend
+        legend-display="label-value-percent"
+        total="131072"
+        label="Both"
+      ></lr-context-meter>
+    </div>
+  `,
+  play: async ({ canvasElement }) => {
+    for (const meter of canvasElement.querySelectorAll('lr-context-meter')) {
+      withSegments(meter, CONTEXT_SEGMENTS);
+    }
+  },
+};
+
+export const InteractiveFilter: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Opt into `interactive` and every band, plus every legend row, becomes a real button ' +
+          'emitting the cancelable `lr-segment-activate`. Selection is toggled by the component ' +
+          'itself unless a listener calls `preventDefault()`, and both surfaces carry explicit ' +
+          '`aria-pressed`, so a filter toggle can be reported as on or off.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-inline-size: 28rem;">
+      <lr-context-meter
+        interactive
+        show-legend
+        legend-display="label-value-percent"
+        total="131072"
+        label="Click a band or a legend row"
+      ></lr-context-meter>
+      <output id="context-meter-activation" style="font-size: var(--lr-font-size-sm); font-family: var(--lr-font);"
+        >No band selected.</output
+      >
+    </div>
+  `,
+  play: async ({ canvasElement }) => {
+    const meter = canvasElement.querySelector('lr-context-meter')!;
+    const output = canvasElement.querySelector('#context-meter-activation')!;
+    withSegments(meter, CONTEXT_SEGMENTS);
+    meter.addEventListener('lr-segment-activate', (event) => {
+      const { label, value } = (event as CustomEvent<{ label: string; value: number }>).detail;
+      output.textContent = `Activated ${label} (${value.toLocaleString()}).`;
+    });
+  },
+};
+

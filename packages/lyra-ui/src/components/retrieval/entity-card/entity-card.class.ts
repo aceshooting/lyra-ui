@@ -92,6 +92,8 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * @csspart actions - The wrapper around the `actions` slot and the built-in focus button.
  * @csspart focus-button - The built-in "Focus in graph" button.
  * @csspart empty - The empty state shown when `entity` is `null`.
+ * @cssprop [--lr-entity-card-bg=var(--lr-color-surface)] - Resting background of `[part="base"]`.
+ *   `frame="plain"` still paints transparent.
  * @cssprop [--lr-entity-card-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
  *   `compact`.
  * @cssprop [--lr-entity-card-compact-gap=var(--lr-space-xs)] - Gap between `[part="base"]`'s rows

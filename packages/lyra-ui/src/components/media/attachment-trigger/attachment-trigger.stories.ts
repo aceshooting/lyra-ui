@@ -148,3 +148,40 @@ export const InChatComposer: Story = {
     `;
   },
 };
+
+export const AppearanceAndSize: Story = {
+  name: 'Appearance and size',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The trigger composes a real `<lr-icon-button>`, so `appearance` retunes it through the shared `--lr-icon-button-*` contract and `size` scales the glyph on the library ladder. The tappable box stays on the shared `--lr-icon-button-size` floor at every tier: the ladder\'s tightest steps sit below WCAG 2.5.8\'s minimum, so a size tier must never shrink the target. `appearance="plain"` / `size="m"` are the defaults and reproduce the pre-16.0.0 treatment exactly.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; flex-direction:column; gap:1rem;">
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        ${(['plain', 'filled', 'filled-outlined', 'outlined', 'accent'] as const).map(
+          (appearance) => html`
+            <lr-attachment-trigger
+              appearance=${appearance}
+              .capabilities=${['files']}
+            ></lr-attachment-trigger>
+          `
+        )}
+      </div>
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+          (size) => html`
+            <lr-attachment-trigger
+              size=${size}
+              appearance="filled"
+              .capabilities=${['files', 'image']}
+            ></lr-attachment-trigger>
+          `
+        )}
+      </div>
+    </div>
+  `,
+};

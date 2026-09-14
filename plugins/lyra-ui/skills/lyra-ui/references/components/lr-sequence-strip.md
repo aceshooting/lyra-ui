@@ -16,7 +16,8 @@
 
 ## `lr-sequence-strip`
 
-A compact, one-thin-cell-per-item strip visualizing a sequence of categorical states, with an
+A compact, one-thin-cell-per-item (or per item range) strip visualizing a sequence of categorical
+states, with an
 optional secondary per-cell marker. Pure CSS/flex — no chart.js, no SVG, no canvas — sized/named
 consistently with the sparkline/heatmap family, and read as a glanceable aggregate. `[part="base"]`
 is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`, `aria-posinset`,
@@ -42,13 +43,20 @@ identity and connection generation, so a same-turn replacement or disconnect/rec
 focus an unrelated cell that merely inherited the old numeric index.
 
 High-cardinality strips retain at most the first 10,000 assigned items and categories as detached,
-frozen canonical snapshots; reassign either collection after changing it. They mount a bounded
-window of at most 200 cells around the roving stop rather than creating one DOM node per retained
-item. `aria-posinset`/`aria-setsize` retain positions and the total count from that bounded model;
-Home/End and arrows shift the window before moving focus, so every retained item remains keyboard
-reachable. `[part="window-range"]` visibly discloses the currently projected numeric range and
-total. The optional legend likewise mounts at most 200 categories and exposes
-`[part="legend-limit"]` as a rendered/total numeric disclosure.
+frozen canonical snapshots; reassign either collection after changing it. At most 200 cells are
+rendered. **At or below that cap each cell is one item. Past it the strip becomes a span-preserving
+overview rather than a window:** the retained items are distributed over exactly 200 contiguous
+ranges, each cell painted by its range's dominant category (a tie goes to the category appearing
+earliest in the range) and carrying `[part="marker"]` when any item inside it sets `marker`. The 200
+cells tile the sequence exactly once, so the strip always covers the full span at full width and
+never needs horizontal scrolling. Roving focus, `aria-posinset`/`aria-setsize`, `aria-current` and
+activation all address cells rather than items: ArrowLeft/ArrowRight and Home/End step one range at
+a time, and each cell exposes `data-range-start` / `data-range-end` (zero-based, inclusive item
+indices) alongside its `data-index` range position. `[part="bucket-summary"]` visibly discloses the
+item total and range count, and the same localized text is appended as a trailing clause to the
+generated `aria-label` so assistive technology learns the cells are ranges. The optional legend
+likewise mounts at most 200 categories and exposes `[part="legend-limit"]` as a rendered/total
+numeric disclosure.
 
 **Properties:**
 
@@ -94,14 +102,19 @@ readonly color, readonly label? }`; `color`
   shape `lr-lite-chart`'s `selectedIndices` and `lr-heatmap`'s `selectedCell` already establish. An
   out-of-range or non-integer value selects nothing. The selected cell carries `aria-current="true"`
   and `data-selected`; the selection is drawn as a ring rather than a background change, because a
-  cell's background is data (its category colour) and tinting it would misreport the category
+  cell's background is data (its category colour) and tinting it would misreport the category. Past
+  the 200-cell cap the whole range that contains `selectedIndex` reads as selected, since that range
+  is the only thing the strip draws for it
 
 The single-member `orientation: 'horizontal'` property was **removed in 9.0.0**: nothing read it and
 the stylesheet never mentioned it, so the reflected attribute styled nothing. Delete the attribute;
 the strip has always laid out horizontally.
 
 **Events:** `lr-item-activate` — `detail: { index: number; id: string; item: SequenceStripItem }`,
-fired when a cell is clicked or activated with Enter/Space on the roving-tabindex focus. Not
+fired when a cell is clicked or activated with Enter/Space on the roving-tabindex focus. Past the
+200-cell cap a cell stands for a range, and the event reports that range's **first** item — a real
+sequence index a playback consumer can scrub from, not a synthesized midpoint. The `detail` shape is
+unchanged. Not
 cancelable: nothing in the component branches on `defaultPrevented`. Bubbles and composed, like every
 library event.
 
@@ -119,7 +132,9 @@ as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label p
 color chip, matching that category's cell color), `legend-marker-swatch` (the marker row's chip
 instead: a neutral chip carrying the same bottom bar a `marker: true` cell paints, in the same
 `--lr-sequence-strip-marker-color`), `legend-label` (the category's nonblank `label`, or localized
-`sequenceStripUnnamedCategory`), `window-range` (bounded item projection/total), and `legend-limit`
+`sequenceStripUnnamedCategory`), `bucket-summary` (the item-total/range-count disclosure, rendered
+only while the strip is past its 200-cell cap; it replaced 15.x's `window-range`, which disclosed a
+projection window this component no longer has), and `legend-limit`
 (bounded legend/total).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
@@ -156,9 +171,16 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 - the activation event is `lr-item-activate`, not `lr-cell-click`. Click and Enter/Space emit the
   activated item's `index`/`id`, but do not mutate the controlled `selectedIndex`; listen for the
   event and update that property when the application accepts the activation.
-- an `items` entry whose `categoryId` has no matching `categories` entry still renders its own cell
-  (background `transparent`) rather than being dropped, so a strip stays the same length as `items`
-  regardless of `categories` coverage.
+- an `items` entry whose `categoryId` has no matching `categories` entry still contributes to the
+  strip (its cell's background is `transparent`) rather than being dropped, so a strip renders one
+  cell per item — or, above the 200-cell cap, one cell per range — regardless of `categories`
+  coverage.
+- **16.0 migration:** above 200 items the strip renders item RANGES, not a 200-item window. Rename
+  any `::part(window-range)` selector to `::part(bucket-summary)`. Code that read a cell's
+  `data-index` as an item index must read `data-range-start` / `data-range-end` instead — above the
+  cap `data-index` is the range's position in the strip, not an item's position in the sequence. Two
+  localization keys are new: `sequenceStripBucketLabel` (`"{label}, items {start} to {end}"`) and
+  `sequenceStripBucketSummary` (`"{items} items in {ranges} ranges"`).
 - **9.0 migration:** rename category `{ key }` to `{ id }` and item `{ category }` to
   `{ categoryId }`. Reassign after changes; caller mutation no longer changes the installed
   snapshot. Category clauses use effective-locale `Intl.ListFormat` punctuation.

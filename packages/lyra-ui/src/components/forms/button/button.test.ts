@@ -1465,6 +1465,29 @@ describe("lr-button", () => {
       });
     });
 
+    // `aria-pressed` is not in `role="link"`'s supported set -- only a button can be a toggle --
+    // so forwarding a host `aria-pressed` onto the anchor fails axe's `aria-allowed-attr`.
+    it('never forwards aria-pressed onto the anchor, while aria-current (global) still reaches it', async () => {
+      const el = (await fixture(
+        html`<lr-button href="https://example.com" aria-pressed="true" aria-current="page">Go</lr-button>`
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+      expect(anchor.hasAttribute('aria-pressed'), 'role="link" does not support aria-pressed').to.equal(false);
+      expect(anchor.getAttribute('aria-current')).to.equal('page');
+      await expect(el).to.be.accessible();
+    });
+
+    it('still forwards aria-pressed once the same button loses its href and renders a <button>', async () => {
+      const el = (await fixture(
+        html`<lr-button href="https://example.com" aria-pressed="true">Go</lr-button>`
+      )) as LyraButton;
+      expect(el.shadowRoot!.querySelector('a[part~="base"]')!.hasAttribute('aria-pressed')).to.equal(false);
+      el.removeAttribute('href');
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
+      expect(button.getAttribute('aria-pressed')).to.equal('true');
+    });
+
     describe("a disabled link button omits href and cannot navigate", () => {
       it("renders an <a> with NO href attribute when disabled", async () => {
         const el = (await fixture(
@@ -1479,6 +1502,28 @@ describe("lr-button", () => {
           "a disabled link button must not carry href"
         ).to.be.false;
         expect(anchor.getAttribute("aria-disabled")).to.equal("true");
+      });
+
+      // Dropping href also drops the anchor's implicit role, and aria-label/aria-haspopup/
+      // aria-expanded/aria-current are prohibited on the generic element that leaves behind
+      // (axe aria-prohibited-attr). The explicit role is what keeps them legal.
+      it('replaces the dropped implicit role with an explicit role="link" while disabled', async () => {
+        const el = (await fixture(
+          html`<lr-button disabled href="https://example.com" aria-label="Go to the report">Go</lr-button>`
+        )) as LyraButton;
+        const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+        expect(anchor.getAttribute('role')).to.equal('link');
+        expect(anchor.getAttribute('aria-label')).to.equal('Go to the report');
+        await expect(el).to.be.accessible();
+      });
+
+      it('carries no explicit role while enabled, leaving the native link role in place', async () => {
+        const el = (await fixture(
+          html`<lr-button href="https://example.com" aria-label="Go to the report">Go</lr-button>`
+        )) as LyraButton;
+        const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+        expect(anchor.hasAttribute('role')).to.equal(false);
+        expect(anchor.getAttribute('href')).to.equal('https://example.com');
       });
 
       it("does not navigate on click while disabled (an anchor with no href is not activatable)", async () => {

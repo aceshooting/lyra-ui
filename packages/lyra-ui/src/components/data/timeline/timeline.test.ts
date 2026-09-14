@@ -1373,3 +1373,53 @@ describe('collision="cluster"', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('slotted item allocation in scale="time"', () => {
+  // box-sizing does not inherit across the slot boundary, so a slotted node keeps the outer tree's
+  // value -- the UA's content-box for anything the author did not set. Every definite size the
+  // time scale hands a slotted item would then allocate 100% to its CONTENT box and let its own
+  // padding/border escape the host, with nothing to absorb the overshoot (these items are
+  // absolutely positioned, so no flex or grid shrink applies).
+  it('keeps a padded slotted item inside the host allocation', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time" style="inline-size: 400px; --lr-timeline-time-extent: 200px">
+        <div id="raw-item" style="padding: 16px; border: 2px solid">Raw</div>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const item = el.querySelector<HTMLElement>('#raw-item')!;
+
+    expect(
+      item.getBoundingClientRect().width,
+      'the item fills its allocation instead of overflowing it by its own padding and border',
+    ).to.be.closeTo(base.clientWidth, 0.5);
+  });
+
+  it('keeps a padded stacked item inside the host allocation minus its lane indent', async () => {
+    const el = (await fixture(html`
+      <lr-timeline
+        scale="time"
+        collision="stack"
+        style="inline-size: 400px; --lr-timeline-time-extent: 200px; --lr-timeline-collision-offset: 20px"
+      >
+        <div id="stacked-item" style="padding: 16px; border: 2px solid; --_lr-timeline-item-lane: 1">
+          Raw
+        </div>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const item = el.querySelector<HTMLElement>('#stacked-item')!;
+    const rect = item.getBoundingClientRect();
+
+    expect(rect.width, 'calc(100% - indent) is a border-box allocation').to.be.closeTo(
+      base.clientWidth - 20,
+      0.5,
+    );
+    expect(
+      rect.right - base.getBoundingClientRect().left,
+      'the stack stays inside the host, as the rule promises',
+    ).to.be.at.most(base.clientWidth + 0.5);
+  });
+});

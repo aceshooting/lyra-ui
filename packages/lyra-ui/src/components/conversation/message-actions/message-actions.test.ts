@@ -70,6 +70,16 @@ if (!customElements.get("test-closed-toolbar-provider")) {
   customElements.define("test-closed-toolbar-provider", ClosedToolbarProvider);
 }
 
+/** The native control inside a composed `<lr-icon-button>`: the node that actually paints and that
+ *  the toolbar leases the roving tab stop of. `[part~="...-button"]` is the icon-button HOST, which
+ *  owns the part names, the accessible name and the activation API but no tab stop of its own. */
+const composedControl = (host: Element): HTMLButtonElement =>
+  host.shadowRoot!.querySelector('[part~="button"]') as HTMLButtonElement;
+
+/** `<lr-copy-button>`'s built-in trigger is likewise a composed `<lr-icon-button>`. */
+const copyControl = (copy: Element): HTMLButtonElement =>
+  composedControl(copy.shadowRoot!.querySelector('[part~="base"]') as Element);
+
 it("does not apply inline-size containment that collapses intrinsic inline layout", async () => {
   const el = (await fixture(
     html`<lr-message-actions
@@ -123,7 +133,7 @@ it("renders built-ins in the order controls lists them", async () => {
   expect(order).to.deep.equal([
     "lr-message-feedback",
     "lr-copy-button",
-    "button",
+    "lr-icon-button",
     "slot",
   ]);
 });
@@ -151,9 +161,7 @@ it("lr-copy bubbles from the embedded copy button, exactly once", async () => {
   });
   try {
     const copied = oneEvent(el, "lr-copy");
-    (el.shadowRoot!.querySelector("lr-copy-button") as HTMLElement)
-      .shadowRoot!.querySelector("button")!
-      .click();
+    copyControl(el.shadowRoot!.querySelector("lr-copy-button")!).click();
     await copied;
     expect(count).to.equal(1);
     expect(detail).to.deep.equal({ ok: true, text: "hi there" });
@@ -186,9 +194,7 @@ it("surfaces the embedded copy button's complete clipboard failure contract", as
   try {
     const genericFailure = oneEvent(el, "lr-error");
     const detailedFailure = oneEvent(el, "lr-copy-error");
-    (el.shadowRoot!.querySelector("lr-copy-button") as HTMLElement)
-      .shadowRoot!.querySelector("button")!
-      .click();
+    copyControl(el.shadowRoot!.querySelector("lr-copy-button")!).click();
     const [genericEvent, detailedEvent] = await Promise.all([
       genericFailure,
       detailedFailure,
@@ -479,8 +485,8 @@ it("roving tabindex: only the active plain-button stop is tabbable, and ArrowRig
   const edit = el.shadowRoot!.querySelector(
     '[part~="edit-button"]'
   ) as HTMLButtonElement;
-  expect(regenerate.tabIndex).to.equal(0);
-  expect(edit.tabIndex).to.equal(-1);
+  expect(composedControl(regenerate).tabIndex).to.equal(0);
+  expect(composedControl(edit).tabIndex).to.equal(-1);
 
   el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -490,8 +496,8 @@ it("roving tabindex: only the active plain-button stop is tabbable, and ArrowRig
     })
   );
   await el.updateComplete;
-  expect(regenerate.tabIndex).to.equal(-1);
-  expect(edit.tabIndex).to.equal(0);
+  expect(composedControl(regenerate).tabIndex).to.equal(-1);
+  expect(composedControl(edit).tabIndex).to.equal(0);
   expect(el.shadowRoot!.activeElement === edit).to.equal(true);
 });
 
@@ -511,8 +517,8 @@ it("reconciles the roving stop when a non-active action receives direct focus wi
   edit.focus();
   await el.updateComplete;
 
-  expect(edit.tabIndex).to.equal(0);
-  expect(regenerate.tabIndex).to.equal(-1);
+  expect(composedControl(edit).tabIndex).to.equal(0);
+  expect(composedControl(regenerate).tabIndex).to.equal(-1);
   el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "ArrowRight",
@@ -542,13 +548,13 @@ it("keeps one sequential Tab stop after composite children finish their own upda
   await Promise.resolve();
 
   const controls = [
-    copy.shadowRoot!.querySelector("button") as HTMLButtonElement,
+    copyControl(copy),
     ...(feedback.shadowRoot!.querySelectorAll(
       "button"
     ) as NodeListOf<HTMLButtonElement>),
-    el.shadowRoot!.querySelector(
-      '[part~="regenerate-button"]'
-    ) as HTMLButtonElement,
+    composedControl(
+      el.shadowRoot!.querySelector('[part~="regenerate-button"]') as Element
+    ),
   ];
   expect(controls.filter((control) => control.tabIndex === 0).length).to.equal(
     1
@@ -575,9 +581,11 @@ it("treats every nested feedback action as its own toolbar stop", async () => {
     '[part~="regenerate-button"]'
   )!;
 
-  expect([up!.tabIndex, down!.tabIndex, regenerate.tabIndex]).to.deep.equal([
-    0, -1, -1,
-  ]);
+  expect([
+    up!.tabIndex,
+    down!.tabIndex,
+    composedControl(regenerate).tabIndex,
+  ]).to.deep.equal([0, -1, -1]);
   up!.focus();
   up!.dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -587,9 +595,11 @@ it("treats every nested feedback action as its own toolbar stop", async () => {
     })
   );
   expect(feedback.shadowRoot!.activeElement === down).to.equal(true);
-  expect([up!.tabIndex, down!.tabIndex, regenerate.tabIndex]).to.deep.equal([
-    -1, 0, -1,
-  ]);
+  expect([
+    up!.tabIndex,
+    down!.tabIndex,
+    composedControl(regenerate).tabIndex,
+  ]).to.deep.equal([-1, 0, -1]);
 
   down!.dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -599,9 +609,11 @@ it("treats every nested feedback action as its own toolbar stop", async () => {
     })
   );
   expect(el.shadowRoot!.activeElement === regenerate).to.equal(true);
-  expect([up!.tabIndex, down!.tabIndex, regenerate.tabIndex]).to.deep.equal([
-    -1, -1, 0,
-  ]);
+  expect([
+    up!.tabIndex,
+    down!.tabIndex,
+    composedControl(regenerate).tabIndex,
+  ]).to.deep.equal([-1, -1, 0]);
 });
 
 it("treats both enabled controls inside a slotted composite as distinct toolbar stops", async () => {
@@ -654,7 +666,7 @@ it("navigates a closed-shadow custom composite only through the logical-action p
     '[part~="regenerate-button"]'
   )!;
   await waitUntil(
-    () => regenerate.tabIndex === 0 && provider.actionTabIndex === -1
+    () => composedControl(regenerate).tabIndex === 0 && provider.actionTabIndex === -1
   );
 
   regenerate.dispatchEvent(
@@ -668,7 +680,7 @@ it("navigates a closed-shadow custom composite only through the logical-action p
   expect(provider.actionTabIndex).to.equal(0);
 
   provider.setUnavailable(true);
-  await waitUntil(() => regenerate.tabIndex === 0);
+  await waitUntil(() => composedControl(regenerate).tabIndex === 0);
   expect(provider.actionTabIndex).to.equal(0);
 });
 
@@ -711,8 +723,8 @@ it("ArrowLeft/ArrowRight swap under RTL", async () => {
     })
   );
   await el.updateComplete;
-  expect(regenerate.tabIndex).to.equal(-1);
-  expect(edit.tabIndex).to.equal(0);
+  expect(composedControl(regenerate).tabIndex).to.equal(-1);
+  expect(composedControl(edit).tabIndex).to.equal(0);
 });
 
 it("Home/End jump roving tabindex to the first/last stop", async () => {
@@ -729,8 +741,7 @@ it("Home/End jump roving tabindex to the first/last stop", async () => {
   );
   await el.updateComplete;
   expect(
-    (el.shadowRoot!.querySelector('[part~="edit-button"]') as HTMLButtonElement)
-      .tabIndex
+    composedControl(el.shadowRoot!.querySelector('[part~="edit-button"]')!).tabIndex
   ).to.equal(0);
 
   base.dispatchEvent(
@@ -738,15 +749,9 @@ it("Home/End jump roving tabindex to the first/last stop", async () => {
   );
   await el.updateComplete;
   const copy = el.shadowRoot!.querySelector("lr-copy-button") as HTMLElement;
+  expect(copyControl(copy).tabIndex).to.equal(0);
   expect(
-    (copy.shadowRoot!.querySelector("button") as HTMLButtonElement).tabIndex
-  ).to.equal(0);
-  expect(
-    (
-      el.shadowRoot!.querySelector(
-        '[part~="regenerate-button"]'
-      ) as HTMLButtonElement
-    ).tabIndex
+    composedControl(el.shadowRoot!.querySelector('[part~="regenerate-button"]')!).tabIndex
   ).to.equal(-1);
 });
 
@@ -981,10 +986,10 @@ it("gives the regenerate/edit built-in buttons the shared minimum hit area", asy
     '[part~="edit-button"]'
   ) as HTMLElement;
 
-  expect(getComputedStyle(regenerate).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(regenerate).minBlockSize).to.equal("40px");
-  expect(getComputedStyle(edit).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(edit).minBlockSize).to.equal("40px");
+  for (const control of [composedControl(regenerate), composedControl(edit)]) {
+    expect(getComputedStyle(control).minInlineSize).to.equal("40px");
+    expect(getComputedStyle(control).minBlockSize).to.equal("40px");
+  }
 });
 
 it("is accessible with every built-in enabled", async () => {

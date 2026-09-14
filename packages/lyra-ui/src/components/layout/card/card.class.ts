@@ -105,6 +105,14 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @csspart body - Wrapper around the default slot.
  * @csspart footer - Wrapper around the `footer` and `footer-actions` slots. Hidden entirely when
  *   both are empty.
+ * @attr aria-pressed - Toggle state forwarded reactively onto the native `activation-button`:
+ *   `true`, `false` or `mixed`. Anything else is ignored rather than passed through, so a typo
+ *   never reaches the accessibility tree. A LINKED card does not receive it -- `link` has no
+ *   pressed state, and asserting one there is an ARIA conformance failure, not a nicety.
+ * @attr aria-current - Current-item state forwarded reactively onto whichever control the card
+ *   renders, the activation button OR the stretched link (`aria-current` is global, and a
+ *   current-page link is its commonest use): `page`, `step`, `location`, `date`, `time`, `true`
+ *   or `false`.
  * @event lr-card-activate - The whole card was activated (click, or Enter/Space on the native
  * `activation-button`). No detail. Only fired while `actionable` is set **without** `href`
  * -- with `href` the stretched native `<a>` is the activation. Never fired for an interaction that
@@ -115,6 +123,11 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @cssprop [--border-color=var(--lr-color-border)] - Shoelace-compatible border color.
  * @cssprop [--border-radius=var(--lr-radius)] - Shoelace-compatible corner radius.
  * @cssprop [--border-width=var(--lr-border-width-thin)] - Shoelace-compatible border width.
+ * @cssprop [--lr-card-outlined-bg=var(--lr-color-surface)] - Background of the DEFAULT
+ *   (`outlined`) appearance, and of `accent`, which adds a stripe without restating a surface.
+ *   The filled tiers below already had their own hook; this one closes the gap for the tier most
+ *   cards actually render, so retinting one themed card no longer needs a `::part(base)` rule or
+ *   an app-wide `--lr-color-surface` change. Mirrors `<lr-details>`'s `--lr-details-outlined-bg`.
  * @cssprop [--lr-card-filled-bg=var(--lr-color-brand-quiet)] - Filled appearance background.
  * @cssprop [--lr-card-filled-outlined-bg=var(--lr-color-brand-quiet)] - Filled-outlined background.
  * @cssprop [--lr-card-accent-border-color=var(--lr-color-brand)] - Accent stripe color.
@@ -175,10 +188,35 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    *  output: no button, no listeners, no events. */
   @property({ type: Boolean, reflect: true }) actionable = false;
 
+  /** Turns the card's OWN activation off: the native `activation-button` renders `disabled`, a
+   *  linked card's stretched `<a>` loses its `href` (so it genuinely cannot navigate rather than
+   *  merely claiming `aria-disabled` on a live link, matching `<lr-button>`/`<lr-icon-button>`)
+   *  and leaves the tab order, `lr-card-activate` stops firing from every path including
+   *  `click()`, and the card paints at `--lr-opacity-disabled` with a `not-allowed` cursor.
+   *
+   *  Scoped to the card's own action: a passive card (no `actionable`, no `href`) has nothing to
+   *  turn off, so `disabled` leaves it byte-identical rather than dimming inert content into a
+   *  claim the card cannot back with behavior. Slotted controls stay the consumer's own to
+   *  disable -- a card is a container, and silently disabling somebody else's buttons is not a
+   *  state this component can honestly own.
+   *
+   *  Like `<lr-icon-button>`, a card is deliberately NOT form-associated (it is a layout
+   *  container, not a form control, and enrolling every card in `form.elements` would be a far
+   *  larger change than the state it buys), so an ancestor `<fieldset disabled>` does not cascade
+   *  here -- disable each card explicitly. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
   /** Accessible name forwarded to the native activation owner. The `aria-label` attribute/property
    *  applies by presence to the interactive button or linked anchor, including an explicitly empty
    *  value. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
+  // Host-attribute forwarding onto whichever native control actually carries the card's role,
+  // identical in shape to `<lr-button>`/`<lr-icon-button>`: a `role`-less host cannot express a
+  // toggle or current-item state itself, and an idref-free ARIA attribute does not cross the
+  // shadow boundary, so a selectable card tile had no way to announce its selection at all.
+  @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
+  @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
 
   /** When set, a real stretched `<a href=...>` renders behind the card's consumer slots for a
    *  whole-card link (e.g. a wide CTA tile). Slotted controls remain independent actions; clicks
@@ -350,6 +388,10 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   }
 
   private onBaseClick = (e: Event): void => {
+    // The activation button is `pointer-events: none`, so a pointer press lands on the card
+    // content and reaches this listener instead -- native `disabled` alone therefore closes only
+    // the keyboard path, and this guard is what closes the pointer one.
+    if (this.disabled) return;
     const origin = e.composedPath()[0];
     if (
       isElementNode(origin) &&
@@ -363,6 +405,9 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   };
 
   private onLinkedContentClick = (e: Event): void => {
+    // Returning BEFORE the stopPropagation() below is deliberate: a disabled card swallows its own
+    // navigation proxy, not the consumer's click event.
+    if (this.disabled) return;
     if (e.defaultPrevented || this.originatesInNestedControl(e, e.currentTarget)) return;
     // Replace the proxy source click with the native anchor click. Without containment, both
     // composed events escape the card and one physical activation looks like two application
@@ -429,8 +474,10 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   }
 
   /** Activates the native whole-card owner: the linked anchor when `href` is safe, or the
-   *  activation button while `actionable` is set without a link. Passive cards remain inert. */
+   *  activation button while `actionable` is set without a link. Passive and `disabled` cards
+   *  remain inert. */
   override click(): void {
+    if (this.disabled) return;
     this.renderRoot
       .querySelector<HTMLAnchorElement | HTMLButtonElement>(
         'a[part~="base"], button[part~="activation-button"]'
@@ -447,6 +494,15 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     const hasFooter = this.withFooter || this.hasFooterSlot || hasFooterActions;
     const href = safeLinkHref(this.href);
     const activatable = this.actionable && !href;
+    // Only an activation owner can be disabled; a passive card has nothing to turn off, so the
+    // no-opt-in default renders exactly as it did before this property existed.
+    const disabled = this.disabled && (activatable || Boolean(href));
+    // Same closed vocabularies `<lr-button>` validates against, for the same reason: an
+    // unrecognized token on a real control is worse than no token at all.
+    const pressed = ['true', 'false', 'mixed'].includes(this.triggerPressed ?? '')
+      ? this.triggerPressed : nothing;
+    const current = ['page', 'step', 'location', 'date', 'time', 'true', 'false'].includes(this.triggerCurrent ?? '')
+      ? this.triggerCurrent : nothing;
     const accessibleLabel = hostAriaLabel(this) ?? this.accessibleLabel;
     // Non-text content (an image-only or chart tile with no `alt`) leaves `accessibleContentText`
     // empty -- an activation control must still get a non-empty accessible name (axe `button-name`/
@@ -460,6 +516,9 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
             type="button"
             tabindex="0"
             aria-label=${accessibleLabel ?? fallbackAccessibleLabel}
+            aria-pressed=${pressed}
+            aria-current=${current}
+            ?disabled=${disabled}
           ></button>`
         : nothing}
       <div part="media image" ?hidden=${!hasMedia}>
@@ -491,24 +550,44 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     // synthetic activation on top would double-fire. Everything below binds to `nothing` when the
     // card has not opted in, so the passive default renders byte-identically to before (mirrors
     // `<lr-chip>`'s `toggleable` gating).
+    // Two deliberate departures from a literal copy of `<lr-button>`'s forwarding, both because an
+    // anchor is not a button:
+    //   1. `aria-pressed` reaches the activation BUTTON only. `link` does not support it (only a
+    //      button can be a toggle), so forwarding it onto the anchor makes axe's
+    //      `aria-allowed-attr` fail the card outright. `aria-current` is global, so it forwards to
+    //      both -- and a current-page link is its single most common use.
+    //   2. A disabled link gets an explicit `role="link"`. Dropping `href` is the only way a link
+    //      genuinely stops navigating, but it also drops the implicit role, and `aria-label`/
+    //      `aria-current` are prohibited on the resulting generic element.
     return href
       ? html`<div class="linked-shell">
           <a
             part="base"
-            href=${href}
+            href=${disabled ? nothing : href}
             target=${this.target || nothing}
             rel=${this.resolvedRel ?? nothing}
             data-actionable="true"
+            ?data-disabled=${disabled}
+            role=${disabled ? 'link' : nothing}
             aria-label=${accessibleLabel ?? nothing}
             aria-labelledby=${accessibleLabel === null ? 'linked-content' : nothing}
+            aria-current=${current}
+            aria-disabled=${disabled ? 'true' : 'false'}
+            tabindex=${disabled ? '-1' : nothing}
           ></a>
-          <div id="linked-content" class="linked-content" @click=${this.onLinkedContentClick}>
+          <div
+            id="linked-content"
+            class="linked-content"
+            ?data-disabled=${disabled}
+            @click=${this.onLinkedContentClick}
+          >
             ${body}
           </div>
         </div>`
       : html`<div
           part="base"
           data-actionable=${activatable ? 'true' : nothing}
+          ?data-disabled=${disabled}
           tabindex=${!activatable && this.semanticFocusOrigin ? '-1' : nothing}
           @click=${activatable ? this.onBaseClick : nothing}
         >

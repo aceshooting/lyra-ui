@@ -171,3 +171,57 @@ export const HoverHighlight: Story = {
     },
   },
 };
+
+export const ContainerFit: Story = {
+  name: 'Fits its container (fit-to="container")',
+  render: () => html`
+    <div
+      style="inline-size: 44rem; max-inline-size: 100%; block-size: 26rem; resize: both; overflow: hidden;"
+    >
+      <lr-knowledge-graph-explorer
+        fit-to="container"
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+        style="block-size: 100%"
+      ></lr-knowledge-graph-explorer>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`fit-to="container"` is forwarded to the composed `lr-graph`, which then draws at exactly the pane this component\'s own layout gave it -- the allocation left over after the toolbar, search results, pinned row and path strip -- and follows it live as the explorer is resized. Without it the graph draws in the numeric `width`/`height` space and letterboxes inside that pane.',
+      },
+    },
+  },
+};
+
+export const NamedByAccessibleLabel: Story = {
+  name: 'Machine ids named by accessibleLabel',
+  render: () => html`
+    <lr-knowledge-graph-explorer
+      search-query="curie"
+      node-labels="none"
+      .nodes=${[
+        { id: 'people/fr/1867-0007', accessibleLabel: 'Marie Curie', type: 'person' },
+        { id: 'people/fr/1859-0015', accessibleLabel: 'Pierre Curie', type: 'person' },
+        { id: 'elements/z084', accessibleLabel: 'Polonium', type: 'element' },
+      ] satisfies LyraGraphNode[]}
+      .links=${[
+        { source: 'people/fr/1867-0007', target: 'people/fr/1859-0015', label: 'married_to' },
+        { source: 'people/fr/1867-0007', target: 'elements/z084', label: 'discovered' },
+      ] satisfies LyraGraphLink[]}
+      .nodeTypes=${nodeTypes}
+      style="height: 32rem;"
+    ></lr-knowledge-graph-explorer>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'These nodes carry no visible `label` at all -- only machine ids and an `accessibleLabel`. The human name is what the search results, pinned chips and details popover show, and typing it finds the node: the filter matches `id`, `label` and `accessibleLabel` alike. `node-labels="none"` keeps the dense layout free of drawn text.',
+      },
+    },
+  },
+};

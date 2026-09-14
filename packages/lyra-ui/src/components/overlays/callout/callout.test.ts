@@ -4,6 +4,13 @@ import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './callout.js';
 import type { LyraCallout } from './callout.js';
 
+/** The close control's own native button, one shadow boundary deeper than `[part="close-button"]`
+ *  since 16.0.0 composed it from `<lr-icon-button>`. Every painted surface lives here. */
+function closeControl(el: LyraCallout): HTMLButtonElement {
+  const host = el.shadowRoot!.querySelector<HTMLElement>('[part="close-button"]')!;
+  return host.shadowRoot!.querySelector<HTMLButtonElement>('[part~="button"]')!;
+}
+
 class CalloutLiveTextForwardWrapper extends HTMLElement {
   constructor() {
     super();
@@ -847,17 +854,23 @@ it('localizes the complete context-and-content announcement order and punctuatio
 
 it('gives the close button the shared minimum hit area in both the default and inline variants, shrinking only the visible glyph', async () => {
   const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
-  const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
-  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+  // The floor moved one shadow boundary deeper with the lr-icon-button composition; the rendered
+  // box is what the contract is about, so both the declared floor and the laid-out size are read.
+  const control = closeControl(el);
+  expect(getComputedStyle(control).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(control).minBlockSize).to.equal('40px');
+  expect(control.getBoundingClientRect().width).to.be.at.least(40);
+  expect(control.getBoundingClientRect().height).to.be.at.least(40);
 
   const inlineEl = (await fixture(
     html`<lr-callout inline closable>Message</lr-callout>`,
   )) as LyraCallout;
-  const inlineButton = inlineEl.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
+  const inlineControl = closeControl(inlineEl);
   const inlineIcon = inlineEl.shadowRoot!.querySelector('[part="close-icon"]') as HTMLElement;
-  expect(getComputedStyle(inlineButton).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(inlineButton).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(inlineControl).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(inlineControl).minBlockSize).to.equal('40px');
+  expect(inlineControl.getBoundingClientRect().width).to.be.at.least(40);
+  expect(inlineControl.getBoundingClientRect().height).to.be.at.least(40);
   // The visible "×" glyph shrinks to the compact inline size, not the button's own hit target.
   expect(getComputedStyle(inlineIcon).inlineSize).to.equal('24px');
   expect(getComputedStyle(inlineIcon).blockSize).to.equal('24px');
@@ -1047,14 +1060,16 @@ it('maps explicit neutral to its semantic quiet/loud palette', async () => {
 it('gives close-button a rendered hover state', async () => {
   const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
-  const resting = getComputedStyle(button).backgroundColor;
+  // The pointer lands on the part node, but the fill is painted by the composed control inside it.
+  const control = closeControl(el);
+  const resting = getComputedStyle(control).backgroundColor;
   try {
     // The pointer has to actually land (a synthesized move resolving is not the browser having
     // processed it) and the fill eases out of `transparent`, so both halves are polled rather
     // than read once straight after the move.
     await hoverUntilMatched(button, 'the close button receives the pointer');
     await waitUntil(
-      () => getComputedStyle(button).backgroundColor !== resting,
+      () => getComputedStyle(control).backgroundColor !== resting,
       'the close button paints a hover background',
     );
   } finally {

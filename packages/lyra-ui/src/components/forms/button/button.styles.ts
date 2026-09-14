@@ -170,7 +170,7 @@ export const styles = css`
     );
     block-size: var(--lr-button-height, auto);
     align-items: center;
-    justify-content: center;
+    justify-content: var(--lr-button-justify, center);
     gap: var(--lr-button-gap, var(--_lr-button-gap));
     padding-inline: var(
       --lr-button-padding-inline,
@@ -301,12 +301,45 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* The label does NOT grow by default. It used to (flex: 1 1 auto), which made a stretched
+     button's icon+label hug the leading edge with every pixel of slack parked invisibly inside
+     the label box -- the wrapper reached the trailing content edge while the glyphs stayed at the
+     leading one, so the row read as a large asymmetric gap rather than a centred pair.
+     Shrink stays at 1 and min-inline-size at 0 so the ellipsis rule below still fires in a
+     too-narrow row. --lr-button-label-grow is the restore hook: set it to 1 for the old stretch.
+  */
   [part="label"] {
-    flex: 1 1 auto;
+    flex: var(--lr-button-label-grow, 0) 1 auto;
     min-inline-size: 0;
     overflow: hidden;
+    /* The UA stylesheet centres text inside a native <button>, and the label wrapper inherits it.
+       Harmless while the label shrink-wraps its text, wrong the moment it does not: a grown label
+       floated its text in the middle of its own box (so a stretched dropdown trigger's caret was
+       pinned but its label was not), and a label narrower than its text centred the overflow, so
+       the ellipsis appeared at the end while the START of the word was silently clipped. An <a>
+       root never inherited the centring at all, so the two roots also disagreed. The logical start
+       keyword, not left, so RTL is right by construction. */
+    text-align: start;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  /* Conditional grow. A caret or an end adornment is a trailing-edge affordance -- a dropdown
+     chevron that floats next to the label instead of sitting at the edge reads as a detached
+     glyph -- so exactly those cases put the slack back in the label and pin the trailing item.
+     button.class.ts stamps data-grow-label when withCaret, the end slot, or the with-end SSR hint
+     is present; --lr-button-label-grow still wins, so a consumer can opt even these rows out. */
+  [part~="base"][data-grow-label] [part="label"] {
+    flex-grow: var(--lr-button-label-grow, 1);
+  }
+  /* Opt-in multi-line label, the same shape (and the same four declarations) as lr-chip's own
+     wrap attribute. Unset, [part="label"] keeps the single-line, ellipsis-truncated rule above
+     byte for byte. overflow-wrap: anywhere keeps one unbroken long token from overflowing the
+     control instead of wrapping. */
+  :host([wrap]) [part="label"] {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   /* button.class.ts stamps hidden on the wrapper when the slot has no assigned content (a bare slot
      is an element child, so :empty never matched). This higher-specificity rule beats the display:

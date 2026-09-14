@@ -489,3 +489,26 @@ export const MountedOptionSelection: Story = {
     </form>
   `,
 };
+
+export const OutOfListValue: Story = {
+  parameters: { docs: { description: { story: 'A committed value no `<lr-option>` claims — a stale id saved before its catalog entry disappeared — already renders with a dashed "not in catalog" badge on the trigger. `show-unknown-option` additionally appends it to the end of the listbox as a synthetic, keyboard-reachable, re-selectable row, so a user who opens the listbox still has a way back to the value they arrived with. `getUnknownLabel` renders that value’s label wherever it appears; the existing `getTag` hook cannot serve this case, because it is handed a matched option and there is none.' } } },
+  render: () => html`
+    <lr-select label="Model" value="gpt-legacy-2023" show-unknown-option
+      .getUnknownLabel=${(value: string) => `Saved model (${value})`}>
+      <lr-option value="fast">Fast</lr-option>
+      <lr-option value="balanced">Balanced</lr-option>
+    </lr-select>
+  `,
+};
+
+export const PositioningStrategy: Story = {
+  parameters: { docs: { description: { story: '`positioning-strategy` is the one property `<lr-select>`, `<lr-dropdown>` and `<lr-popover>` all spell the same way. `<lr-select>` keeps its mirrored `absolute` default; the retained `hoist` boolean is the exact alias of `positioning-strategy="fixed"`, and writing either spelling updates the other so the two attributes can never disagree.' } } },
+  render: () => html`
+    <div style="overflow: hidden; padding: 1rem; border: 1px solid currentColor;">
+      <lr-select label="Escapes the clipping ancestor" positioning-strategy="fixed">
+        <lr-option value="a">Alpha</lr-option>
+        <lr-option value="b">Bravo</lr-option>
+      </lr-select>
+    </div>
+  `,
+};

@@ -73,3 +73,23 @@ export const DensityAndChrome: Story = {
     </div>
   `,
 };
+
+export const RestingBackgroundToken: Story = {
+  name: 'Retinting the resting frame',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-entity-card-bg` is the resting companion to the `compact` tier\'s existing padding/gap levers, so a themed dossier list no longer needs a `::part(base)` rule or an app-wide `--lr-color-surface` change. `frame="plain"` still drops the fill entirely.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-entity-card
+      .entity=${entity}
+      .types=${types()}
+      community-label="Nobel laureates"
+      style="max-width: 28rem; --lr-entity-card-bg: var(--lr-color-brand-quiet)"
+    ></lr-entity-card>
+  `,
+};

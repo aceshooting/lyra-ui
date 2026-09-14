@@ -14,7 +14,7 @@ import {
 } from './popover.class.js';
 import { styles } from './dropdown.styles.js';
 
-export type { PlaceSync };
+export type { PlaceStrategy, PlaceSync };
 
 const menuTag = unsafeStatic(tag('menu'));
 
@@ -104,8 +104,21 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   @property({ type: Boolean, attribute: 'stay-open-on-select', reflect: true })
   stayOpenOnSelect = false;
 
-  /** Uses viewport-fixed positioning instead of the default containing-block strategy. */
-  @property({ type: Boolean, reflect: true }) hoist = false;
+  /**
+   * Retained boolean alias of {@link positioningStrategy}: `hoist` is exactly
+   * `positioningStrategy === 'fixed'`, and writing either spelling updates the other so the two
+   * attributes can never disagree in the DOM. It is the established name here (and Shoelace's own
+   * spelling on `sl-dropdown`), so it keeps working indefinitely; prefer `positioning-strategy` in
+   * new code, which reads the same on every anchored surface in the library.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true })
+  get hoist(): boolean {
+    return this.positioningStrategy === 'fixed';
+  }
+  set hoist(next: boolean) {
+    this.positioningStrategy = next ? 'fixed' : 'absolute';
+  }
 
   /** Copies the trigger's width, height, or both onto the popup. */
   @property({ reflect: true }) sync?: PlaceSync;
@@ -149,8 +162,21 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     return 0;
   }
 
-  protected override get positioningStrategy(): PlaceStrategy {
-    return this.hoist ? 'fixed' : 'absolute';
+  /** Action menus stay in their containing block unless the consumer opts out, which is both this
+   *  component's shipped default and the one its mirrored `hoist=false` has always meant. */
+  protected override get defaultPositioningStrategy(): PlaceStrategy {
+    return 'absolute';
+  }
+
+  /** Keeps the `hoist` half of the alias reflecting: Lit only writes an attribute for a property
+   *  it saw change, and a `positioningStrategy` write changes `hoist`'s value without going
+   *  through its own setter. */
+  protected override onPositioningStrategyChanged(
+    previous: PlaceStrategy,
+    next: PlaceStrategy,
+  ): void {
+    const wasHoisted = previous === 'fixed';
+    if (wasHoisted !== (next === 'fixed')) this.requestUpdate('hoist', wasHoisted);
   }
 
   protected override get positioningSync(): PlaceSync | undefined {
@@ -181,6 +207,9 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   protected override onPopupPositioned(): void {
     super.onPopupPositioned();
+    // Same rule as the base class's autofocus: a surface a hover/focus interaction opened must not
+    // pull the caret into its menu.
+    if (this.openedByInteraction) return;
     const menu = this.menuEngine;
     if (!menu?.dropdownOpen) return;
     // The contained engine establishes the correct roving tabindex synchronously while the outer
@@ -294,7 +323,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     // Re-resolve every update so inherited locale/.strings and host aria-label changes reach a
     // consumer-supplied menu even when no dropdown-owned property changed in that cycle.
     this.configureMenu(this.menuEngine);
-    if (this.open && (changed.has('hoist') || changed.has('sync'))) this.reposition();
+    if (this.open && changed.has('sync')) this.reposition();
   }
 
   override disconnectedCallback(): void {

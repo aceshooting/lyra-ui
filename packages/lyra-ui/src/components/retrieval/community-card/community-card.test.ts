@@ -22,7 +22,7 @@ it('renders the noData empty state when community is null (the default)', async 
     html`<lr-community-card></lr-community-card>`
   )) as LyraCommunityCard;
   expect(el.community).to.equal(null);
-  expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-empty') != null).to.equal(true);
 });
 
 it('falls back to untitledCommunity when label is missing', async () => {
@@ -196,6 +196,34 @@ it('defaults to frame="card", keeping the bordered chrome', async () => {
   const chrome = getComputedStyle(base);
   expect(chrome.borderTopWidth).to.not.equal('0px');
   expect(chrome.paddingTop).to.not.equal('0px');
+});
+
+it('retints the resting card frame through --lr-community-card-bg', async () => {
+  const el = (await fixture(
+    html`<lr-community-card .community=${community} style="--lr-community-card-bg: rgb(1, 2, 3)"></lr-community-card>`
+  )) as LyraCommunityCard;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgb(1, 2, 3)');
+});
+
+it('leaves the resting frame on the shared surface token when --lr-community-card-bg is unset', async () => {
+  const el = (await fixture(
+    html`<lr-community-card .community=${community} style="--lr-color-surface: rgb(4, 5, 6)"></lr-community-card>`
+  )) as LyraCommunityCard;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
+it('keeps frame="plain" transparent regardless of --lr-community-card-bg', async () => {
+  const el = (await fixture(
+    html`<lr-community-card
+      frame="plain"
+      .community=${community}
+      style="--lr-community-card-bg: rgb(1, 2, 3)"
+    ></lr-community-card>`
+  )) as LyraCommunityCard;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
 });
 
 it('drops border, background, and padding under frame="plain" -- the same nested-card escape hatch as its sibling lr-entity-card', async () => {

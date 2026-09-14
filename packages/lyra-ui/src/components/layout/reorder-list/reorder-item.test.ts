@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './reorder-item.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('<lr-reorder-item>', () => {
   it('renders slotted content with role="listitem"', async () => {
@@ -136,9 +136,25 @@ it('contains a long reorder-item label in exact 320px LTR and RTL allocations', 
 });
 
 describe('move-button state cssprops', () => {
-  function centreOf(target: HTMLElement): [number, number] {
-    const rect = target.getBoundingClientRect();
-    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  /** The node that actually PAINTS. `[part="move-*-button"]` is the composed `<lr-icon-button>`
+   *  host, which owns placement, rotation and the tokens; the background, colour, focus ring and
+   *  disabled dimming all live on the native control inside it. */
+  function painted(host: HTMLElement): HTMLElement {
+    return host.shadowRoot!.querySelector<HTMLElement>('[part~="button"]')!;
+  }
+
+  /** The composed control eases its paint over --lr-transition-fast, so a synchronous read right
+   *  after the pointer lands catches an intermediate blend. Poll for the exact value. */
+  async function settlesOn(
+    host: HTMLElement,
+    property: 'background-color' | 'color',
+    expected: string,
+    message: string,
+  ): Promise<void> {
+    await waitUntil(
+      () => getComputedStyle(painted(host)).getPropertyValue(property) === expected,
+      `${message} (expected ${expected})`,
+    );
   }
 
   function resolvedInShadow(
@@ -163,25 +179,40 @@ describe('move-button state cssprops', () => {
     expect(up.getBoundingClientRect().width, 'the move button has pointer geometry').to.be.greaterThan(0);
 
     try {
-      await sendMouse({ type: 'move', position: centreOf(up) });
-      expect(getComputedStyle(up).backgroundColor).to.equal(
+      await hoverUntilMatched(painted(up), 'the move button is hovered');
+      await settlesOn(
+        up,
+        'background-color',
         resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+        'the hovered move button paints the quiet brand fill',
       );
-      expect(getComputedStyle(up).color).to.equal(
+      await settlesOn(
+        up,
+        'color',
         resolvedInShadow(el, 'color: var(--lr-color-brand)', 'color'),
+        'the hovered move button paints the brand glyph colour',
       );
 
       await sendMouse({ type: 'down' });
-      await waitUntil(() => up.matches(':active'), 'the physical pointer activates the move button');
-      expect(getComputedStyle(up).backgroundColor).to.equal(
+      await waitUntil(
+        () => painted(up).matches(':active'),
+        'the physical pointer activates the move button',
+      );
+      await settlesOn(
+        up,
+        'background-color',
         resolvedInShadow(
           el,
           'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
           'background-color',
         ),
+        'the pressed move button paints the stronger mix',
       );
-      expect(getComputedStyle(up).color).to.equal(
+      await settlesOn(
+        up,
+        'color',
         resolvedInShadow(el, 'color: var(--lr-color-brand)', 'color'),
+        'the pressed move button keeps the brand glyph colour',
       );
     } finally {
       await resetMouse();
@@ -209,18 +240,21 @@ describe('move-button state cssprops', () => {
     const contentColor = getComputedStyle(content).color;
 
     try {
-      await sendMouse({ type: 'move', position: centreOf(up) });
-      expect(getComputedStyle(up).backgroundColor).to.equal('rgb(0, 51, 102)');
-      expect(getComputedStyle(up).color).to.equal('rgb(255, 255, 255)');
+      await hoverUntilMatched(painted(up), 'the first move button is hovered');
+      await settlesOn(up, 'background-color', 'rgb(0, 51, 102)', 'the inherited hover fill applies');
+      await settlesOn(up, 'color', 'rgb(255, 255, 255)', 'the inherited hover colour applies');
       expect(getComputedStyle(content).color, 'the move-button props do not recolor row content').to.equal(
         contentColor,
       );
 
-      await sendMouse({ type: 'move', position: centreOf(down) });
+      await hoverUntilMatched(painted(down), 'the second move button is hovered');
       await sendMouse({ type: 'down' });
-      await waitUntil(() => down.matches(':active'), 'the physical pointer activates the second move button');
-      expect(getComputedStyle(down).backgroundColor).to.equal('rgb(0, 30, 60)');
-      expect(getComputedStyle(down).color).to.equal('rgb(255, 255, 0)');
+      await waitUntil(
+        () => painted(down).matches(':active'),
+        'the physical pointer activates the second move button',
+      );
+      await settlesOn(down, 'background-color', 'rgb(0, 30, 60)', 'the inherited press fill applies');
+      await settlesOn(down, 'color', 'rgb(255, 255, 0)', 'the inherited press colour applies');
     } finally {
       await resetMouse();
     }
@@ -241,8 +275,8 @@ describe('move-button state cssprops', () => {
     const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;
     const up = el.shadowRoot!.querySelector<HTMLElement>('[part="move-up-button"]')!;
 
-    expect(getComputedStyle(up).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
-    expect(getComputedStyle(up).color).to.equal(
+    expect(getComputedStyle(painted(up)).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(painted(up)).color).to.equal(
       resolvedInShadow(el, 'color: var(--lr-color-text-quiet)', 'color'),
     );
     await expect(el).to.be.accessible();

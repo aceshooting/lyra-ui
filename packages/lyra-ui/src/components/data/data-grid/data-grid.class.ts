@@ -47,6 +47,8 @@ import {
   searchRows,
   sortRows,
 } from './data-grid-processing.js';
+import '../../overlays/overlay/dropdown.class.js';
+import '../../layout/menu/dropdown-item.class.js';
 import { styles } from './data-grid.styles.js';
 import type {
   DataGridAppearance,
@@ -626,7 +628,11 @@ function normalizedGroupBy(
  * @csspart cell - A data cell.
  * @csspart column-menu - A per-column menu.
  * @csspart column-menu-button - A per-column menu trigger.
- * @csspart columns-menu - The all-columns visibility menu.
+ * @csspart columns-menu - The all-columns visibility menu: the composed `<lr-dropdown>` itself,
+ *   whose trigger and `role="menuitemcheckbox"` rows are its own children. It replaced a
+ *   hand-rolled toggle button plus an inline `role="group"` checkbox panel, so a rule written
+ *   against that former structure (`::part(columns-menu) > button`, a descendant
+ *   `input[type=checkbox]`) no longer matches.
  * @csspart data-grid - The outer data-grid container.
  * @csspart drag-ghost - Preview shown while a column is dragged.
  * @csspart ellipsis - Omitted-page indicator in the pager.
@@ -1082,7 +1088,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Shows a menu on each column. */
   @property({ type: Boolean, attribute: 'with-column-menu', reflect: true })
   withColumnMenu = false;
-  /** Shows the all-columns visibility menu. */
+  /** Shows the all-columns visibility menu -- the library's own checkbox menu (`<lr-dropdown>`
+   *  plus a `role="menuitemcheckbox"` row per column), which stays open across successive toggles
+   *  so several columns can be shown or hidden in one visit. */
   @property({ type: Boolean, attribute: 'with-columns-menu', reflect: true })
   withColumnsMenu = false;
   /** Keeps a sorted column in ascending/descending states instead of removing its sort. */
@@ -1187,6 +1195,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.syncRowMeasurementObserver();
       this.correctMeasurementAnchor();
       this.measureRenderedItems();
+      this.closeComposedColumnsMenu();
     }
     if (this.dataSource) this.scheduleServerRequest(false);
   }
@@ -1208,6 +1217,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.activeFilterColumn = null;
     this.activeColumnMenu = null;
     this.columnsMenuOpen = false;
+    this.closeComposedColumnsMenu();
     this.dragGhost = '';
     this.columnDragSession = undefined;
     this.pendingVirtualScroll = undefined;
@@ -1374,8 +1384,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.isMounting = false;
   }
 
+  /** The all-columns menu is deliberately absent: it composes `<lr-dropdown>`, which owns its own
+   *  Escape, light dismiss and focus return through the shared overlay manager. Routing it through
+   *  this helper as well would activate two overlays over the same panel. */
   private get currentManagedOverlayOwner(): string | null {
-    if (this.columnsMenuOpen) return 'columns';
     if (this.activeFilterColumn !== null) return `filter:${this.activeFilterColumn}`;
     if (this.activeColumnMenu !== null) return `column:${this.activeColumnMenu}`;
     return null;
@@ -1385,13 +1397,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     readonly panel: HTMLElement | null;
     readonly trigger: HTMLElement | null;
   } {
-    if (owner === 'columns') {
-      const container = this.renderRoot.querySelector<HTMLElement>('[part="columns-menu"]');
-      return {
-        panel: container?.querySelector<HTMLElement>('[role="group"]') ?? null,
-        trigger: container?.querySelector<HTMLElement>('button') ?? null,
-      };
-    }
     const separator = owner.indexOf(':');
     const kind = owner.slice(0, separator);
     const columnIdValue = owner.slice(separator + 1);
@@ -1412,8 +1417,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private dismissManagedOverlay(owner: string): void {
-    if (owner === 'columns' && this.columnsMenuOpen) this.columnsMenuOpen = false;
-    else if (owner.startsWith('filter:') && this.activeFilterColumn === owner.slice(7)) {
+    if (owner.startsWith('filter:') && this.activeFilterColumn === owner.slice(7)) {
       this.activeFilterColumn = null;
     } else if (owner.startsWith('column:') && this.activeColumnMenu === owner.slice(7)) {
       this.activeColumnMenu = null;
@@ -1443,13 +1447,26 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     });
   }
 
-  private toggleColumnsPanel(): void {
-    const next = !this.columnsMenuOpen;
-    this.columnsMenuOpen = next;
-    if (next) {
-      this.activeFilterColumn = null;
-      this.activeColumnMenu = null;
-    }
+  /** Closes the composed all-columns dropdown outright. `<lr-popover>` deliberately *suspends*
+   *  rather than closes on disconnect, so a detached-and-reattached grid would otherwise come back
+   *  with its menu still open -- and the mirrored `columnsMenuOpen` flag, already reset, would have
+   *  committed its `.open` binding while detached, leaving Lit's dirty check with nothing to
+   *  re-commit. Every transient menu on this grid closes across a reconnect; this keeps the one
+   *  whose state now lives in a child element honouring that. */
+  private closeComposedColumnsMenu(): void {
+    const menu = this.renderRoot?.querySelector<HTMLElement & { open: boolean }>(
+      '[part="columns-menu"]'
+    );
+    if (menu?.open) menu.open = false;
+  }
+
+  /** Mirrors the composed dropdown's own open state and keeps the three panels mutually
+   *  exclusive. Opening is the dropdown's to decide (pointer, keyboard, light dismiss); this only
+   *  records it and closes whatever else was open. */
+  private openColumnsPanel(): void {
+    this.columnsMenuOpen = true;
+    this.activeFilterColumn = null;
+    this.activeColumnMenu = null;
   }
 
   private toggleFilterPanel(id: string): void {
@@ -4101,51 +4118,56 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               />
             `
           : nothing}
-        ${this.withColumnsMenu
-          ? html`
-              <div part="columns-menu">
-                <button
-                  type="button"
-                  aria-expanded=${this.columnsMenuOpen ? 'true' : 'false'}
-                  @click=${() => this.toggleColumnsPanel()}
-                >
-                  ${this.localize('showAllColumns')}
-                </button>
-                ${this.columnsMenuOpen
-                  ? html`
-                      <div
-                        role="group"
-                        aria-label=${this.localize('showAllColumns')}
-                      >
-                        ${this.orderedColumns.map(({ column, id }) => {
-                          const visible =
-                            this.columnVisibility.get(id) ??
-                            column.hidden !== true;
-                          return html`
-                            <label>
-                              <input
-                                type="checkbox"
-                                .checked=${visible}
-                                ?disabled=${column.hideable === false}
-                                @change=${(event: Event) => {
-                                  const control = checkableControl(
-                                    event.currentTarget
-                                  );
-                                  if (control)
-                                    this.userToggleColumn(id, control.checked);
-                                }}
-                              />
-                              ${this.columnLabel(column, id)}
-                            </label>
-                          `;
-                        })}
-                      </div>
-                    `
-                  : nothing}
-              </div>
-            `
-          : nothing}
+        ${this.withColumnsMenu ? this.renderColumnsMenu() : nothing}
       </div>
+    `;
+  }
+
+  /** The all-columns visibility panel: the library's own checkbox menu (`<lr-dropdown>` plus one
+   *  `<lr-dropdown-item type="checkbox">` per column), the same composition `<lr-filter-bar>`'s
+   *  `'checkbox-menu'` filter type uses. It replaced a hand-rolled `<button>` + `role="group"` +
+   *  native `<input type="checkbox">` panel, which had to be routed through this component's own
+   *  managed-overlay helper for Escape and focus return; the dropdown owns all of that, plus
+   *  `role="menuitemcheckbox"` rows, roving focus and type-ahead, so `columnsMenuOpen` is now only
+   *  mirrored state used to keep the per-column panels mutually exclusive with this one.
+   *
+   *  Rows are controlled, never self-toggling: the cancelable `lr-menu-item-change` is always
+   *  prevented and the next visibility comes back out of `columnVisibility` on the next render, so
+   *  a refused toggle (a `hideable: false` column) can never leave a checkmark the grid disagrees
+   *  with. */
+  private renderColumnsMenu(): TemplateResult {
+    const label = this.localize('showAllColumns');
+    return html`
+      <lr-dropdown
+        part="columns-menu"
+        aria-label=${label}
+        stay-open-on-select
+        .open=${this.columnsMenuOpen}
+        @lr-show=${() => this.openColumnsPanel()}
+        @lr-after-hide=${() => {
+          this.columnsMenuOpen = false;
+        }}
+      >
+        <lr-button slot="trigger" appearance="outlined">${label}</lr-button>
+        ${this.orderedColumns.map(({ column, id }) => {
+          const visible = this.columnVisibility.get(id) ?? column.hidden !== true;
+          return html`<lr-dropdown-item
+            type="checkbox"
+            value=${id}
+            ?checked=${visible}
+            ?disabled=${column.hideable === false}
+            @lr-menu-item-change=${(event: Event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              const { value, checked } = (
+                event as CustomEvent<{ value: string; checked: boolean }>
+              ).detail;
+              this.userToggleColumn(value, checked);
+            }}
+            >${this.columnLabel(column, id)}</lr-dropdown-item
+          >`;
+        })}
+      </lr-dropdown>
     `;
   }
 

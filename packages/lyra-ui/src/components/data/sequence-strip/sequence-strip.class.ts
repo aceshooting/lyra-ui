@@ -5,11 +5,12 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -34,11 +35,85 @@ export interface SequenceStripCategory {
   readonly label?: string;
 }
 
-/** A bounded DOM window keeps high-cardinality strips responsive while the bounded canonical item
- * model remains available to roving keyboard navigation and `aria-setsize`. */
-const MAX_RENDERED_ITEMS = 200;
+/** A bounded cell count keeps high-cardinality strips responsive. Past it the strip does NOT drop
+ * the surplus: it distributes every retained item over exactly this many cells, so the rendered
+ * width always spans the whole sequence. */
+const MAX_RENDERED_CELLS = 200;
 const MAX_RENDERED_CATEGORIES = 200;
 const MAX_SEQUENCE_COLLECTION_ENTRIES = 10_000;
+
+/**
+ * One rendered strip cell. At or below `MAX_RENDERED_CELLS` a cell is exactly one item
+ * (`start === end`). Past it a cell is a contiguous RANGE of items painted by that range's
+ * dominant category — the strip keeps representing the full span at full width instead of
+ * stretching a leading window across it, which is what the pre-16.0.0 projection did.
+ */
+interface SequenceStripCell {
+  /** Index of this cell's first item in the canonical sequence. */
+  readonly start: number;
+  /** Index of this cell's last item, inclusive — equal to `start` for a one-item cell. */
+  readonly end: number;
+  /** The category painting the cell: the item's own, or the range's dominant one. */
+  readonly categoryId: string;
+  /** Whether ANY item in the range sets `marker` — the marker is a presence annotation, so a
+   *  range that contains one still reports it rather than averaging it away. */
+  readonly marker: boolean;
+}
+
+/**
+ * First item index of bucket `cell` when `total` items are spread over `cellCount` cells.
+ *
+ * `ceil(cell * total / cellCount)` is the exact inverse of the `floor(item * cellCount / total)`
+ * lookup in `cellIndexForItem()`, so the two can never disagree about which cell owns an item —
+ * the `floor`/`floor` pairing an earlier draft used put items 495-497 in different cells depending
+ * on which direction the question was asked from. Every bucket holds at least
+ * `floor(total / cellCount) >= 1` items while `cellCount <= total`, so no cell is ever empty.
+ */
+function bucketStartIndex(cell: number, total: number, cellCount: number): number {
+  return Math.ceil((cell * total) / cellCount);
+}
+
+/** Projects `items` into at most `MAX_RENDERED_CELLS` span-preserving cells. */
+function buildSequenceStripCells(items: readonly SequenceStripItem[]): SequenceStripCell[] {
+  const total = finiteCount(items.length);
+  if (total === 0) return [];
+  const cellCount = Math.min(total, MAX_RENDERED_CELLS);
+  if (cellCount === total) {
+    return items.map((item, index) => ({
+      start: index,
+      end: index,
+      categoryId: item.categoryId,
+      marker: item.marker === true,
+    }));
+  }
+  const cells: SequenceStripCell[] = [];
+  for (let cell = 0; cell < cellCount; cell++) {
+    const start = bucketStartIndex(cell, total, cellCount);
+    const end = bucketStartIndex(cell + 1, total, cellCount) - 1;
+    const counts = new Map<string, number>();
+    let marker = false;
+    for (let index = start; index <= end; index++) {
+      const item = items[index];
+      if (!item) continue;
+      if (item.marker === true) marker = true;
+      counts.set(item.categoryId, (counts.get(item.categoryId) ?? 0) + 1);
+    }
+    // A Map iterates in insertion order, which here is first-occurrence order, so the strict `>`
+    // resolves a tie to the category that appears EARLIEST in the range. Comparing as the counts
+    // were accumulated instead would hand a tie to whichever category reached the shared maximum
+    // last, which reads as an arbitrary flicker when one item is appended.
+    let categoryId = '';
+    let dominantCount = 0;
+    for (const [id, count] of counts) {
+      if (count > dominantCount) {
+        dominantCount = count;
+        categoryId = id;
+      }
+    }
+    cells.push({ start, end, categoryId, marker });
+  }
+  return cells;
+}
 
 /** Detail of `lr-item-activate`: which strip item the user picked. */
 export interface LyraSequenceStripActivateDetail {
@@ -56,7 +131,7 @@ export interface LyraSequenceStripEventMap {
  * categorical states, with an optional secondary per-cell marker. Pure CSS/flex, no chart.js/SVG/
  * canvas — sized/named consistently with the sparkline/heatmap family, but a glanceable aggregate
  * visualization. The strip is a labeled `role="list"` and each cell is a named list item.
- * Exactly one cell is tabbable; Left/Right and Home/End rove through the items and show the same
+ * Exactly one cell is tabbable; Left/Right and Home/End rove through the cells and show the same
  * detail tooltip as pointer hover. Clicking a cell, or pressing Enter/Space on the roving cell,
  * emits the controlled `lr-item-activate` event without moving selection. A host `aria-label`
  * names the host itself without being duplicated on the internal list; `accessible-label` names
@@ -67,22 +142,26 @@ export interface LyraSequenceStripEventMap {
  * item by id, clamp to the nearest survivor, and focus the stable list when the strip becomes empty.
  * A queued arrow/Home/End focus is generation- and identity-bound: replacing `items`, disconnecting,
  * or reconnecting before that update settles cannot focus the same numeric index in a new model.
- * At most 200 items around the roving stop are mounted at once; before focus enters, a valid
- * controlled `selectedIndex` anchors that stop/window so its `aria-current` cell is present.
- * `aria-posinset`/`aria-setsize` retain positions in the bounded canonical sequence and navigation
- * shifts the window. Assignment
+ * At most 200 cells are rendered. Past that cap the strip becomes a span-preserving OVERVIEW rather
+ * than a window: the retained items are distributed over exactly 200 contiguous ranges, each cell
+ * painted by its range's dominant category and marked when any item in it is, so the strip still
+ * represents the whole sequence at full width. Roving focus, `aria-posinset`/`aria-setsize`,
+ * `aria-current` and activation all address those cells; activating a range emits its FIRST item.
+ * Assignment
  * retains at most the first 10,000 items and categories as detached frozen snapshots; reassign a
  * collection after changing it.
  *
  * @customElement lr-sequence-strip
  * @event lr-item-activate - Fired when a cell is clicked, or activated with Enter/Space on the
- *   roving-tabindex focus. `detail: { index, id, item }` identifies the picked item. Not
+ *   roving-tabindex focus. `detail: { index, id, item }` identifies the picked item — the range's
+ *   FIRST item once the strip is past its cell cap. Not
  *   cancelable, and it does not move `selectedIndex` on its own -- the selection is controlled,
  *   so the consumer stays the single source of truth for a playback index this strip does not own.
  * @csspart base - The root strip wrapper (`role="list"`).
- * @csspart cell - Each named, roving-focus item cell, background-colored by its category.
- * @csspart marker - The small bottom marker on a cell whose item sets `marker: true`.
- * @csspart tooltip - The hover/focus tooltip showing the active item's label, positioned from that
+ * @csspart cell - Each named, roving-focus cell, background-colored by its category — one item
+ * below the render cap, one dominant-coloured item range above it.
+ * @csspart marker - The small bottom marker on a cell any of whose items sets `marker: true`.
+ * @csspart tooltip - The hover/focus tooltip showing the active cell's label, positioned from that
  * active cell.
  * @csspart legend - The static category key rendered below the strip when `showLegend` is set
  * (`aria-hidden` — it repeats the strip's own `aria-label` visually).
@@ -93,7 +172,9 @@ export interface LyraSequenceStripEventMap {
  * the same bottom bar a `marker: true` cell paints, in the same `--lr-sequence-strip-marker-color`.
  * @csspart legend-label - The text of a legend item (the category's `label`, or the localized
  * unnamed-category label).
- * @csspart window-range - Visible numeric range/total disclosure when item projection is windowed.
+ * @csspart bucket-summary - Visible item-total/range-count disclosure, rendered only while the
+ * strip is past its cell cap and therefore showing ranges rather than individual items. It replaces
+ * 15.x's `window-range`, which disclosed a projection window this component no longer has.
  * @csspart legend-limit - Visible rendered/total category count when the legend is bounded.
  * @cssprop [--lr-sequence-strip-height=var(--lr-size-1-5rem)] - Block size of the strip.
  * @cssprop [--lr-sequence-strip-marker-color=var(--lr-color-text)] - Color of the bottom marker on a `marker: true` cell, and of the marker legend row's bar.
@@ -107,6 +188,8 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    sequenceStripBucketLabel: LYRA_DEFAULT_sequenceStripBucketLabel,
+    sequenceStripBucketSummary: LYRA_DEFAULT_sequenceStripBucketSummary,
     sequenceStripCategoryCount: LYRA_DEFAULT_sequenceStripCategoryCount,
     sequenceStripEmpty: LYRA_DEFAULT_sequenceStripEmpty,
     sequenceStripUnnamedCategory: LYRA_DEFAULT_sequenceStripUnnamedCategory,
@@ -185,23 +268,42 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
    * Controlled, not self-managing: activating a cell emits `lr-item-activate` and does **not**
    * move the selection on its own, so the consumer stays the single source of truth and the
    * component cannot drift from a playback index it does not own. Before focus enters, a valid
-   * selection anchors the bounded render window and its sole keyboard entry stop; keyboard roving
-   * remains authoritative after focus. An out-of-range or non-integer value selects nothing rather
-   * than throwing.
+   * selection anchors the strip's sole keyboard entry stop; keyboard roving remains authoritative
+   * after focus. Past the 200-cell cap it is the whole range containing the index that reads as
+   * selected, since that range is the only thing the strip draws for it. An out-of-range or
+   * non-integer value selects nothing rather than throwing.
    */
-  // numeric-guard-exempt: isSelected() below rejects anything that is not an in-range integer
-  // before this value is used, so a non-finite or fractional write selects nothing rather than
-  // reaching layout, Intl, canvas or timer math.
+  // numeric-guard-exempt: selectedCellIndex() below rejects anything that is not an in-range
+  // integer, and cellIndexForItem() re-clamps through finiteInteger() before the bucket division,
+  // so a non-finite or fractional write selects nothing rather than reaching layout, Intl, canvas
+  // or timer math.
   @property({ type: Number, attribute: 'selected-index' }) selectedIndex = -1;
 
-  /** Whether `index` is the selected one, guarding a non-integer or out-of-range value. */
-  private isSelected(index: number): boolean {
-    return (
-      Number.isInteger(this.selectedIndex) &&
-      this.selectedIndex >= 0 &&
-      this.selectedIndex < this.items.length &&
-      this.selectedIndex === index
-    );
+  /** Index of the cell that owns `itemIndex`, or `-1` for an unusable index. Below the cell cap
+   *  this is the identity mapping; past it, the bucket whose range contains the item. */
+  private cellIndexForItem(itemIndex: number): number {
+    const total = finiteCount(this.items.length);
+    if (total === 0) return -1;
+    const index = finiteInteger(itemIndex, -1, -1, total - 1);
+    if (index < 0) return -1;
+    const cellCount = Math.min(total, MAX_RENDERED_CELLS);
+    if (cellCount === total) return index;
+    return Math.min(cellCount - 1, Math.floor((index * cellCount) / total));
+  }
+
+  /** The cell carrying the controlled selection, or `null` when `selectedIndex` is not an in-range
+   *  integer. Past the cell cap the selected item's whole RANGE reads as selected, since that range
+   *  is the only thing the strip still draws for it. */
+  private selectedCellIndex(): number | null {
+    if (
+      !Number.isInteger(this.selectedIndex) ||
+      this.selectedIndex < 0 ||
+      this.selectedIndex >= this.items.length
+    ) {
+      return null;
+    }
+    const cellIndex = this.cellIndexForItem(this.selectedIndex);
+    return cellIndex >= 0 ? cellIndex : null;
   }
 
   /**
@@ -214,6 +316,15 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     const item = this.items[index];
     if (!item) return;
     this.emit('lr-item-activate', { index, id: item.id, item });
+  }
+
+  /** Activates the item a cell stands for — itself below the cap, its range's first item above it.
+   *  Reporting the first item keeps a playback consumer's `selectedIndex` on a real sequence
+   *  position it can scrub from, which a synthesized range midpoint would not be. */
+  private activateCell(cellIndex: number): void {
+    const cell = this.cells()[cellIndex];
+    if (!cell) return;
+    this.activateItem(cell.start);
   }
   /** Renders a static `[part="legend"]` key of every `categories` entry below the strip, so the
    *  color-to-category mapping is readable without hovering each cell. Deliberately
@@ -229,10 +340,14 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
    *  and no extra summary clause. */
   @property({ attribute: 'marker-label' }) markerLabel?: string;
 
-  /** The item index currently under the pointer (`null` when not hovering any cell). */
+  /** The CELL index currently under the pointer (`null` when not hovering any cell). */
   @state() private hoverIndex: number | null = null;
-  /** The roving keyboard-focus index (`null` while focus is outside the strip). */
+  /** The roving keyboard-focus CELL index (`null` while focus is outside the strip). */
   @state() private keyboardIndex: number | null = null;
+  /** Identity-keyed projection cache. Hover and focus re-render on every pointer move, so the
+   *  O(items) bucket pass must not run again while the same frozen `items` snapshot is installed. */
+  private cellCacheSource: readonly SequenceStripItem[] | undefined;
+  private cellCache: readonly SequenceStripCell[] = [];
   private pendingFocusTarget: number | 'base' | undefined;
   private restoringOwnedFocus = false;
   private focusRestoreGeneration = 0;
@@ -243,18 +358,25 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
       this.focusRestoreGeneration++;
       this.hoverIndex = null;
       const focusedCell = activeElementIn(this.shadowRoot) as HTMLElement | null;
-      const focusedIndex = Number(focusedCell?.dataset?.['index']);
-      if (!Number.isInteger(focusedIndex) || focusedIndex < 0) {
+      const focusedCellIndex = Number(focusedCell?.dataset?.['index']);
+      if (!Number.isInteger(focusedCellIndex) || focusedCellIndex < 0) {
         this.keyboardIndex = null;
         return;
       }
-      const previousItems = (changed.get('items') as readonly SequenceStripItem[] | undefined) ?? [];
-      const focusedId = previousItems[focusedIndex]?.id;
-      const retainedIndex = focusedId == null ? -1 : this.items.findIndex((item) => item.id === focusedId);
-      const nextIndex = retainedIndex >= 0
-        ? retainedIndex
-        : this.items.length
-          ? Math.min(focusedIndex, this.items.length - 1)
+      // The focused cell already carries the id of the item it stands for, so retention reads it
+      // straight off the DOM rather than indexing the previous array by the focused position --
+      // past the cell cap that position is a RANGE index, and indexing `items` with it would
+      // retain an unrelated item (or none) every time.
+      const focusedId = focusedCell?.dataset?.['itemId'];
+      const retainedItemIndex =
+        focusedId === undefined || focusedId === ''
+          ? -1
+          : this.items.findIndex((item) => item.id === focusedId);
+      const cells = this.cells();
+      const nextIndex = retainedItemIndex >= 0
+        ? this.cellIndexForItem(retainedItemIndex)
+        : cells.length
+          ? Math.min(focusedCellIndex, cells.length - 1)
           : -1;
       this.keyboardIndex = nextIndex >= 0 ? nextIndex : null;
       this.pendingFocusTarget = nextIndex >= 0 ? nextIndex : 'base';
@@ -289,6 +411,15 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     this.hoverIndex = null;
     this.keyboardIndex = null;
     super.disconnectedCallback();
+  }
+
+  /** The current cell projection, rebuilt only when a new `items` snapshot is installed. */
+  private cells(): readonly SequenceStripCell[] {
+    const items = this._items;
+    if (this.cellCacheSource === items) return this.cellCache;
+    this.cellCacheSource = items;
+    this.cellCache = Object.freeze(buildSequenceStripCells(items));
+    return this.cellCache;
   }
 
   private categoryMap(): ReadonlyMap<string, SequenceStripCategory> {
@@ -335,7 +466,42 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
         pluralCount: markerCount,
       }));
     }
+    // Past the cell cap the list itself only exposes 200 positions for a far longer sequence, so
+    // the label is the only place a screen-reader user can learn that each position is a range.
+    // It is a clause of the same summary rather than a second live region: `[part="bucket-summary"]`
+    // repeats it visually and is `aria-hidden` for exactly that reason.
+    const overview = this.bucketSummary();
+    if (overview !== undefined) clauses.push(overview);
     return getListFormat(this.effectiveLocale, { style: 'long', type: 'unit' }).format(clauses);
+  }
+
+  /** The localized "N items in M ranges" disclosure, or `undefined` while every item has its own
+   *  cell and there is nothing to disclose. */
+  private bucketSummary(): string | undefined {
+    const cells = this.cells();
+    if (cells.length === 0 || cells.length >= this.items.length) return undefined;
+    const number = getNumberFormat(this.effectiveLocale);
+    return this.localize('sequenceStripBucketSummary', undefined, {
+      items: number.format(this.items.length),
+      ranges: number.format(cells.length),
+      pluralCount: this.items.length,
+    });
+  }
+
+  /** A cell's accessible name and tooltip text: the item's own label for a one-item cell, and a
+   *  "dominant category, items X to Y" range name once the cell stands for several. */
+  private cellLabel(cell: SequenceStripCell, categories = this.categoryMap()): string {
+    if (cell.end <= cell.start) {
+      const item = this.items[cell.start];
+      return item ? this.itemLabel(item, categories) : this.categoryLabel(cell.categoryId, categories);
+    }
+    const number = getNumberFormat(this.effectiveLocale);
+    return this.localize('sequenceStripBucketLabel', undefined, {
+      label: this.categoryLabel(cell.categoryId, categories),
+      start: number.format(cell.start + 1),
+      end: number.format(cell.end + 1),
+      pluralCount: cell.end - cell.start + 1,
+    });
   }
 
   private itemLabel(item: SequenceStripItem, categories = this.categoryMap()): string {
@@ -366,20 +532,22 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     // already carry a roving tabindex, so without this they were reachable but inert.
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
-      this.activateItem(index);
+      this.activateCell(index);
       return;
     }
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) || this.items.length === 0) return;
+    const cells = this.cells();
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) || cells.length === 0) return;
     e.preventDefault();
     const forwardKey = isRtl(this) ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = isRtl(this) ? 'ArrowRight' : 'ArrowLeft';
     let next = index;
     if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = this.items.length - 1;
-    else if (e.key === forwardKey) next = Math.min(this.items.length - 1, index + 1);
+    else if (e.key === 'End') next = cells.length - 1;
+    else if (e.key === forwardKey) next = Math.min(cells.length - 1, index + 1);
     else if (e.key === backwardKey) next = Math.max(0, index - 1);
     const items = this.items;
-    const targetId = items[next]?.id;
+    const targetStart = cells[next]?.start;
+    const targetId = targetStart === undefined ? undefined : items[targetStart]?.id;
     if (targetId === undefined) return;
     const generation = this.focusRestoreGeneration;
     this.keyboardIndex = next;
@@ -436,66 +604,59 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   override render(): TemplateResult {
     const categoryMap = this.categoryMap();
     const ariaLabel = this.accessibleLabel == null ? this.autoSummary() : this.accessibleLabel;
+    const cells = this.cells();
     const activeIndex = this.hoverIndex ?? this.keyboardIndex;
-    const active = activeIndex !== null ? this.items[activeIndex] : undefined;
-    const selectedIndex =
-      Number.isInteger(this.selectedIndex) &&
-      this.selectedIndex >= 0 &&
-      this.selectedIndex < this.items.length
-        ? this.selectedIndex
-        : null;
-    const tabStop = this.keyboardIndex ?? selectedIndex ?? 0;
+    const active = activeIndex !== null ? cells[activeIndex] : undefined;
+    const selectedCell = this.selectedCellIndex();
+    const tabStop = this.keyboardIndex ?? selectedCell ?? 0;
     const tooltipIndex = activeIndex ?? tabStop;
-    const maxStart = Math.max(0, this.items.length - MAX_RENDERED_ITEMS);
-    const windowStart = Math.min(maxStart, Math.max(0, tabStop - Math.floor(MAX_RENDERED_ITEMS / 2)));
-    const renderedItems = this.items.slice(windowStart, windowStart + MAX_RENDERED_ITEMS);
-    const number = getNumberFormat(this.effectiveLocale);
+    const overview = this.bucketSummary();
     return html`
       <div
         part="base"
         role="list"
         aria-label=${ariaLabel}
         tabindex="-1"
-        ?data-dense=${renderedItems.length >= MAX_RENDERED_ITEMS}
+        ?data-dense=${cells.length >= MAX_RENDERED_CELLS}
         @focusout=${this.onStripFocusOut}
       >
-        ${renderedItems.map(
-          (item, localIndex) => {
-            const index = windowStart + localIndex;
-            return html`
+        ${cells.map(
+          (cell, index) => html`
             <span
               part="cell"
-              data-item-id=${item.id}
+              data-item-id=${this.items[cell.start]?.id ?? ''}
               data-index=${index}
+              data-range-start=${cell.start}
+              data-range-end=${cell.end}
               role="listitem"
-              aria-label=${this.itemLabel(item, categoryMap)}
+              aria-label=${this.cellLabel(cell, categoryMap)}
               aria-posinset=${index + 1}
-              aria-setsize=${this.items.length}
+              aria-setsize=${cells.length}
               tabindex=${index === tabStop ? '0' : '-1'}
-              style=${styleMap({ backgroundColor: this.categoryColor(item.categoryId, categoryMap) })}
+              style=${styleMap({ backgroundColor: this.categoryColor(cell.categoryId, categoryMap) })}
               @pointerenter=${() => this.onCellEnter(index)}
               @pointerleave=${() => this.onCellLeave()}
               @focus=${() => this.onCellFocus(index)}
               @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, index)}
-              @click=${() => this.activateItem(index)}
-              aria-current=${this.isSelected(index) ? 'true' : 'false'}
-              ?data-selected=${this.isSelected(index)}
+              @click=${() => this.activateCell(index)}
+              aria-current=${selectedCell === index ? 'true' : 'false'}
+              ?data-selected=${selectedCell === index}
             >
-              ${item.marker ? html`<span part="marker"></span>` : nothing}
+              ${cell.marker ? html`<span part="marker"></span>` : nothing}
               ${index === tooltipIndex
                 ? html`
                     <span id="sequence-strip-tooltip" part="tooltip" ?hidden=${!active}>
-                      ${active ? this.itemLabel(active, categoryMap) : ''}
+                      ${active ? this.cellLabel(active, categoryMap) : ''}
                     </span>
                   `
                 : nothing}
-            </span>`;
-          },
+            </span>
+          `,
         )}
       </div>
-      ${this.items.length > renderedItems.length
-        ? html`<div part="window-range" aria-hidden="true">${number.format(windowStart + 1)}–${number.format(windowStart + renderedItems.length)} / ${number.format(this.items.length)}</div>`
-        : nothing}
+      ${overview === undefined
+        ? nothing
+        : html`<div part="bucket-summary" aria-hidden="true">${overview}</div>`}
       ${this.showLegend ? this.renderLegend() : nothing}
     `;
   }

@@ -198,3 +198,12 @@ export const RightToLeft: StoryObj = {
     </div>
   `,
 };
+
+export const PositioningStrategy: Story = {
+  parameters: { docs: { description: { story: '`positioning-strategy` is the one property every anchored surface in the library spells the same way. `<lr-color-picker>` keeps its mirrored `absolute` default; the retained `hoist` boolean is the exact alias of `positioning-strategy="fixed"`, and writing either spelling updates the other so the two attributes can never disagree.' } } },
+  render: () => html`
+    <div style="overflow: hidden; padding: 1rem; border: 1px solid currentColor;">
+      <lr-color-picker label="Accent" value=${ACCENT} positioning-strategy="fixed"></lr-color-picker>
+    </div>
+  `,
+};

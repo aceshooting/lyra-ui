@@ -78,7 +78,14 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
+  /* box-sizing does not cross the slot boundary, so a slotted tile keeps the outer tree's value
+     (the UA's content-box unless the author set otherwise) and every definite size here would
+     allocate 100% to its CONTENT box. The flex cell plus min-inline-size:0 already shrinks a
+     padded tile back inside, so this changes nothing for a shrinkable tile -- it is what keeps
+     the guarantee for one the author pinned with its own flex-shrink: 0, and states the
+     allocation the three percentages here were written to mean. */
   [part="cell"] ::slotted(*) {
+    box-sizing: border-box;
     min-inline-size: 0;
     max-inline-size: 100%;
     min-block-size: 0;

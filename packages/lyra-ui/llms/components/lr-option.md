@@ -140,6 +140,17 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
   commits arbitrary text on Enter without creating an option
+- `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
+  committed value that no option or async row claims to the end of the listbox as a synthetic,
+  badged, keyboard-reachable, re-selectable row. Off by default. The synthetic row is filtered by
+  the active query exactly like the `allow-create` row is, so a query it does not match neither
+  shows it nor suppresses the "no matches" copy; re-picking it re-commits the same value and
+  deliberately does **not** reclassify it as known — the badge and the row both survive, and the row
+  never appears in `selectedRows`
+- `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
+  committed value that matches no option or async row, everywhere it appears (trigger, `multiple`
+  tag, synthetic row). `getTag` cannot serve this case: it is handed a matched option and there is
+  none. A blank return falls back to the raw value
 - `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected)
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
@@ -257,8 +268,11 @@ The badge is suppressed while an async `source` fetch is still in flight, and ne
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
-`lr-after-hide`, respectively. `resetValidity()` clears consumer custom validity and restores the
-current intrinsic constraints. `getForm()` returns the owning form, including an external owner
+`lr-after-hide`, respectively. `refresh(): void` re-runs the current `source` query without changing
+the source's identity, its debounce controller, or its delay. Reassigning `source` is a provider
+change and clears the fetched rows and pending-selection cache; `refresh()` does not. It queues for
+the next open while the listbox is closed, and is a no-op without a `source`. `resetValidity()`
+clears consumer custom validity and restores the current intrinsic constraints. `getForm()` returns the owning form, including an external owner
 selected by the `form` attribute.
 `setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
 is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
@@ -335,6 +349,15 @@ The internal input's `focus` and `blur` are relayed exactly once from the host a
 native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
+`lr-source-error` is non-cancelable, `detail: { error }` carrying the raw rejection from an async
+`source` call. The rendered copy stays localized and never shows it.
+`lr-retry` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
+leaves the failure on screen. While the failure state is the only popup content, the popup swaps
+`role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
+drops `aria-activedescendant`, and the popup carries the localized failure heading as its accessible
+name). `dialog` is one of the four popup roles WAI-ARIA lets a `role="combobox"` own, so the still
+expanded `aria-controls` target keeps a valid owner while holding a retry `button` that is not a
+legal listbox child. A successful retry restores `role="listbox"`.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has
@@ -386,6 +409,9 @@ attribute when provided), plus two adornment slots:
 - `end` — content after the filter input and the built-in clear action, and before the expand icon,
   so consumer content never sits outboard of the dropdown chevron.
 - `clear-icon` and `expand-icon` replace the corresponding built-in glyphs.
+- `source-error` — replaces the built-in failed-`source` state, retry control included. Deliberately
+  named apart from the form-control `error` slot: they are different failures and a field has to be
+  able to show both.
 
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `start` and `end` (the two
@@ -402,7 +428,16 @@ aria-hidden decorative leading visual for an async row), `option-start` and `opt
 aria-hidden adornments cloned from the source option's `start`/`prefix` and `end`/`suffix` slots, or
 from an async row's `start`/`end`), `option-label`, `option-sub` (a row's
 secondary line, when `sub` is set), `option-badge` (an async row's trailing metadata),
-`option-overflow` (the "+N more" indicator from `maxRender`), `error`, `hint`
+`option-overflow` (the "+N more" indicator from `maxRender`),
+`source-error-row` (the listbox row holding the failed-`source` state), `source-error` (the shared
+failed-load state itself, with `source-error-base`, `source-error-icon`, `source-error-heading`,
+`source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
+`retry-button`, `error`, `hint`
+
+**TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
+`lr-change`/`lr-input` detail `value` narrow to `string` when `Multiple` is `false` and `string[]`
+(`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored surface are
+unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so

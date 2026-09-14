@@ -62,15 +62,25 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
-- `searchQuery: string = ''` (attribute `search-query`) — the id/label filter applied to the node
-  set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`.
-  Presettable, so a host can deep-link straight into a filtered view; the toolbar's search box keeps
-  it up to date afterwards. A missing or nonstring label is ignored for label matching while the
-  node's valid string id remains searchable
+- `searchQuery: string = ''` (attribute `search-query`) — the filter applied to the visible node
+  set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`. A node
+  matches when the query appears in **any** name it can be known by — its `id`, its `label` or its
+  `accessibleLabel` — each folded with the active locale, so a node named only through
+  `accessibleLabel` is findable by the very name the search results, pinned chips and details
+  popover already display for it, and a node carrying both a `label` and an `accessibleLabel` matches
+  either. Presettable, so a host can deep-link straight into a filtered view; the toolbar's search
+  box keeps it up to date afterwards. A missing or nonstring `label`/`accessibleLabel` is skipped
+  while the node's valid string id remains searchable
 
 (presentation)
 
 - `renderer: 'svg' | 'canvas' = 'svg'` — forwarded to `lr-graph.renderer`
+- `fitTo: 'none' | 'container' = 'none'` (attribute `fit-to`) — forwarded to `lr-graph.fitTo`.
+  `'container'` makes the composed graph draw at exactly the pane this component's own layout gave
+  it — the reservation minus whatever the toolbar, search results, pinned row and path strip take,
+  which is not derivable from `height` — and follow it live as the explorer is resized. `'none'`
+  keeps forwarding the numeric `width`/`height` below unchanged. See that property's own entry in
+  this file's `lr-graph` section
 - `width: number = 800`, `height: number = 600` — `height` also sizes the composed graph's own
   rendered box (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback
   chain `lr-graph.height` uses on its own host

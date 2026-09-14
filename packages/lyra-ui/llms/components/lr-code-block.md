@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -84,6 +84,11 @@ highlighted markup.
   `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
   second near-identical grammar) still highlights under that key.
 
+- `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — how the
+  header's copy control presents itself. `'text'` is the labelled button this component has always
+  rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
+  Copy/Copied/failure string to the control's accessible name
+
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
@@ -100,9 +105,20 @@ fails), `lr-copy-error` (frozen `detail: { ok: false, text, reason, error }`, wh
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;
 `anchor` is a `line-range` anchor covering the selected lines)
 
-**Slots:** none.
+**Slots:** `header-actions` — extra controls for the header row, rendered after the copy control.
+Their presence alone is enough to render the header, and appending or removing such a child at any
+time brings the header into existence or retires it (the host's own light DOM is observed; no
+property write is needed).
 
-**CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `toggle`, `body`, `pre`,
+**CSS parts:** `base`, `header`, `filename`, `language`,
+`copy-button` (the copy control, a composed `<lr-icon-button>` as of 16.0.0; it also carries
+`copy-button-text` or `copy-button-icon` for the active `copyAppearance`, so match it by token —
+`[part~="copy-button"]` — not by exact value), `copy-button-text` / `copy-button-icon` (the copy
+control in each appearance), `copy-button__control` (the copy control's own native `<button>`),
+`header-actions` (the wrapper around the `header-actions` slot; it carries the `hidden` attribute
+and computes to `display: none` whenever nothing is assigned, so an empty slot contributes no
+header gap — a rule that sets `display` on it must qualify itself with `:not([hidden])`),
+`toggle`, `body`, `pre`,
 `code`, `line-highlight` (a line marked by `highlightLines` or a `line-range` entry in `highlights`),
 `line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)

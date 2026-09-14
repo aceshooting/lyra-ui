@@ -12,7 +12,11 @@ export const styles = css`
     padding: var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    /* The RESTING frame's own hook, alongside the compact tier's existing padding/gap levers --
+       the default tier every citation list actually renders was the only one with no card-specific
+       override, so retinting one themed list meant a ::part(base) rule or an app-wide
+       --lr-color-surface change. frame='plain' still wins below: it opts out of chrome entirely. */
+    background: var(--lr-source-card-bg, var(--lr-color-surface));
   }
   /* Density escape, as lr-empty's compact. Cards render in lists, so the tuned values sit behind
      inline var() fallbacks rather than a :host declaration every instance would re-declare,
@@ -51,13 +55,13 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
-  [part='title']:hover {
+  [part='title']:not(:disabled):hover {
     text-decoration: underline;
   }
   /* Both affordances are transparent-backed brand-colored text (see the frame='plain' note above),
      so the pressed signal is a wash mixed from that transparent base; the label keeps its brand
      color to stay readable as a link. */
-  [part='title']:active {
+  [part='title']:not(:disabled):active {
     text-decoration: underline;
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
@@ -92,10 +96,10 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
-  [part='toggle']:hover {
+  [part='toggle']:not(:disabled):hover {
     text-decoration: underline;
   }
-  [part='toggle']:active {
+  [part='toggle']:not(:disabled):active {
     text-decoration: underline;
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
@@ -110,5 +114,30 @@ export const styles = css`
   }
   [part='full'][hidden] {
     display: none;
+  }
+  /* Every branch adds one qualifier over the resting rule it overrides, so the not-allowed cursor
+     wins on specificity rather than on source order; the hover/pressed rules above instead carry
+     their own negation, because a hover rule is already one step more specific than this block and
+     could not be outranked from here.
+     title and toggle are rendered <button>s, so their branches read the native :disabled they
+     already carry -- which is also the only form a consumer can reach from outside, since just a
+     pseudo-class may follow ::part(). base is a plain <div> with no native state of its own, so its
+     dim keeps an explicit [data-disabled] hook; encoding the state in the attribute is the one
+     option left there, and a consumer restyles the affordances through ::part(title):disabled /
+     ::part(toggle):disabled instead.
+     :host(:disabled), never :host([disabled]): only :disabled tracks a fieldset-cascaded
+     disablement. A citation card is not a form control and so is not form-associated, which
+     leaves that branch inert today -- exactly as it is in lr-icon-button's identical group. The dim
+     sits on [part='base'] because a disabled card is dim as a whole, while the cursor sits on the
+     two controls that would otherwise still claim to be clickable. */
+  :host(:disabled) [part='base'],
+  [part='base'][data-disabled] {
+    opacity: var(--lr-opacity-disabled);
+  }
+  :host(:disabled) [part='title'],
+  :host(:disabled) [part='toggle'],
+  [part='title']:disabled,
+  [part='toggle']:disabled {
+    cursor: not-allowed;
   }
 `;

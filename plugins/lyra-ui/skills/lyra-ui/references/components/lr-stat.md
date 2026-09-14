@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -111,7 +111,11 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
-**Themeable custom properties:** `--lr-stat-padding` (default `var(--lr-space-m)`) and
+**Themeable custom properties:** `--lr-stat-bg` (default `var(--lr-color-surface)`) is
+`[part="base"]`'s RESTING background — the tier a dashboard sits at all day, and the companion to
+the linked card's existing pressed `--lr-stat-link-active-bg` (whose own default now mixes from
+`--lr-stat-bg`, so one override retints both); `frame="plain"` still drops the fill entirely.
+`--lr-stat-padding` (default `var(--lr-space-m)`) and
 `--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
 rendering path — the default card, `compact` (own defaults `var(--lr-space-s)` /
 `var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal

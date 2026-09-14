@@ -2,7 +2,13 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    display: block;
+    /* A row, so [part="meta"]/[part="end"] can sit BESIDE the item's own link/button rather than
+       inside it (see the class doc). Both wrappers are display:none while empty, and a flex
+       container creates no gap around a display:none child, so an item with neither slot filled
+       lays out exactly as it did when :host was a block. */
+    display: flex;
+    align-items: center;
+    gap: var(--lr-app-rail-item-gap, var(--lr-space-s));
     inline-size: 100%;
   }
   [part="base"] {
@@ -12,6 +18,10 @@ export const styles = css`
     align-items: center;
     justify-content: flex-start;
     gap: var(--lr-app-rail-item-gap, var(--lr-space-s));
+    /* Grows to the whole row on its own and absorbs every bit of shrinkage once an adornment is
+       slotted, so the trailing wrappers keep their intrinsic width instead of squeezing. */
+    flex: 1 1 auto;
+    min-inline-size: 0;
     inline-size: 100%;
     /* max() floors the row's own hit target at the shared WCAG 2.5.8 minimum regardless of the
        override -- a consumer can grow the row but never shrink it below the accessible floor.
@@ -94,6 +104,20 @@ export const styles = css`
     inline-size: var(--lr-app-rail-item-icon-size, var(--lr-icon-button-size));
     min-inline-size: var(--lr-app-rail-item-icon-size, var(--lr-icon-button-size));
   }
+  [part="meta"],
+  [part="end"] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+  }
+  [part="meta"][hidden],
+  [part="end"][hidden] {
+    display: none;
+  }
+  [part="meta"] {
+    color: var(--lr-app-rail-item-meta-color, var(--lr-color-text-quiet));
+    font-size: var(--lr-app-rail-item-meta-font-size, var(--lr-font-size-sm));
+  }
   [part="label"] {
     min-inline-size: 0;
     overflow: hidden;
@@ -114,6 +138,20 @@ export const styles = css`
   :host([icon-only]) [part="base"] {
     justify-content: center;
     padding-inline: 0;
+  }
+  /* Secondary text follows the label: clipped out of the narrow rail's layout while staying in the
+     accessibility tree. clip-path (rather than [part="label"]'s position:absolute + clip) keeps the
+     wrapper a flex item with no containing-block dependency of its own -- this element has no
+     positioned ancestor inside the item. [part="end"] deliberately does NOT collapse: a badge or
+     overflow trigger is the reason a consumer reaches for that slot at all. */
+  :host([icon-only]) [part="meta"] {
+    inline-size: var(--lr-size-1px);
+    block-size: var(--lr-size-1px);
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   [part="tooltip"] {
     position: fixed;

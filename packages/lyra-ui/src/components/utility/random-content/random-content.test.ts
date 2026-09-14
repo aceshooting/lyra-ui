@@ -1504,3 +1504,30 @@ it('reacts to prefers-reduced-motion changing after mount', async () => {
     window.matchMedia = originalMatchMedia;
   }
 });
+
+it('keeps a rotated-out candidate hidden against an author display rule', async () => {
+  const authorRule = document.createElement('style');
+  authorRule.textContent = '.rc-candidate { display: block; }';
+  document.head.append(authorRule);
+  try {
+    const el = (await fixture(html`<lr-random-content>
+      <span class="rc-candidate">A</span>
+      <span class="rc-candidate">B</span>
+    </lr-random-content>`)) as LyraRandomContent;
+    await el.updateComplete;
+    const candidates = [...el.children] as HTMLElement[];
+    const rotatedOut = candidates.filter((candidate) => candidate.hasAttribute('hidden'));
+    expect(rotatedOut.length, 'exactly one candidate is rotated out').to.equal(1);
+    // The component OWNS this `hidden`: it is rotation state, not an author declaration, so a
+    // light-DOM rule of the author's own must not be able to re-show it. Without `!important` the
+    // outer tree's rule wins the encapsulation-context ordering and the rotation goes visually
+    // inert while only assistive technology follows it.
+    expect(getComputedStyle(rotatedOut[0]!).display).to.equal('none');
+    const shown = candidates.filter((candidate) => !candidate.hasAttribute('hidden'));
+    expect(getComputedStyle(shown[0]!).display, 'the selected candidate still paints').to.not.equal(
+      'none'
+    );
+  } finally {
+    authorRule.remove();
+  }
+});

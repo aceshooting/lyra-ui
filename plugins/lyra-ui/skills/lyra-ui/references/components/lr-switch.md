@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -67,6 +67,19 @@ None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a validity
 check finds the switch invalid.
+**Refusing a toggle.** `lr-switch-toggle-request` is cancelable and fires *before* `checked` moves,
+on every user path (click, Space, a logical ArrowLeft/ArrowRight change, and the host `click()`
+activation it forwards). `detail: { checked: boolean }` is the state the switch **would** take;
+`checked` itself still holds the old value while the event dispatches. `preventDefault()` keeps the
+current state, so the switch never slides at all rather than sliding and snapping back, and none of
+`input`/`lr-input`/`change`/`lr-change` follow. A listener can instead answer by assigning `checked`
+itself during the dispatch, which suppresses the built-in write the same way. It does not fire for a
+programmatic `.checked` assignment, `form.reset()`, session-state restoration, while the control is
+disabled, or for an arrow key naming the state the switch already holds. A refused toggle also
+leaves the control pristine: it does not count as the interaction that reveals
+`:state(user-valid)`/`:state(user-invalid)`, so refusing a required switch's first toggle cannot
+flash a validation error for a change that never happened. Blurring the control, or a
+`reportValidity()` call, still marks it interacted, which is the native `:user-invalid` timing.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control;
 focus/click and stale keyboard/pointer activation are synchronous no-ops as soon as direct or
@@ -118,7 +131,13 @@ checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fil
 retint the pointer states (their defaults remain mixes from the current resting fill).
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
 renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
-look) without affecting any other switch.
+look) without affecting any other switch. `--lr-switch-checked-track-border` (default
+`var(--lr-switch-track-border)`) varies that border only while checked, so a bordered track can
+differ by state without falling back to `lr-switch:state(checked)::part(track)`. It takes a whole
+`border` shorthand value, like its resting sibling, and falls back through it to no border at all —
+setting only the resting hook keeps one border in both states. Keep both widths equal unless a size
+change between states is what you want: the track is `box-sizing: content-box`, so a border grows
+its outer footprint.
 `--lr-switch-thumb-fill` (default `--lr-color-surface`) controls the thumb while unchecked, and is
 also the checked-state fallback. `--lr-switch-checked-thumb-fill` (default
 `var(--lr-switch-thumb-fill)`) independently retints the thumb only while checked, leaving the

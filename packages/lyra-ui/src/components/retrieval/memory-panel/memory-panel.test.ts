@@ -1643,3 +1643,80 @@ it('uses the cached prior memory projection during controlled focus recovery', a
       ?.getAttribute('data-id')
   ).to.equal('first');
 });
+
+it('never lets the inline confirm bar\'s own lr-decision-settled notification escape the panel', async () => {
+  // The bar is composed internal machinery here, exactly like the nested lr-details/lr-json-viewer
+  // events lr-confirm-bar itself already stops. lr-memory-panel documents lr-add/lr-remove/lr-forget
+  // and nothing else, so a settled notification surfacing on this host would look like an
+  // lr-memory-panel event that does not exist.
+  const el = await populated();
+  const leaked: string[] = [];
+  el.addEventListener('lr-decision-settled', (event) => {
+    leaked.push(event.type);
+  });
+
+  const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
+  (row.querySelector('[part="add-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  const confirmBar = await readyConfirmBar(row);
+  const added = oneEvent(el, 'lr-add');
+  (
+    confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement
+  ).click();
+  await added;
+  await el.updateComplete;
+  await confirmBar.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  expect(leaked).to.deep.equal([]);
+});
+
+it('never lets the forget-all confirm bar\'s lr-decision-settled notification escape the panel', async () => {
+  const el = await populated();
+  const leaked: string[] = [];
+  el.addEventListener('lr-decision-settled', (event) => {
+    leaked.push(event.type);
+  });
+
+  (
+    el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement
+  ).click();
+  await el.updateComplete;
+  const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
+  const confirmBar = await readyConfirmBar(section);
+  const forgotten = oneEvent(el, 'lr-forget');
+  (
+    confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement
+  ).click();
+  await forgotten;
+  await el.updateComplete;
+  await confirmBar.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  expect(leaked).to.deep.equal([]);
+});
+
+it('contains lr-decision-settled even when the confirm bar settles while still mounted', async () => {
+  // The two tests above exercise the panel's own resolve path, where the panel's synchronous
+  // re-render happens to unmount the bar before it can announce -- containment by accident of
+  // update ordering, not by contract. lr-confirm-bar documents three paths to a settled decision,
+  // and one of them is a host writing `.decision` directly, which leaves the bar mounted inside
+  // this panel's shadow root. Without an explicit stop handler the notification escapes here.
+  const el = await populated();
+  const leaked: string[] = [];
+  el.addEventListener('lr-decision-settled', (event) => {
+    leaked.push(event.type);
+  });
+
+  const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
+  (row.querySelector('[part="add-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  const confirmBar = await readyConfirmBar(row);
+
+  confirmBar.decision = 'approved';
+  await confirmBar.updateComplete;
+
+  expect(confirmBar.isConnected).to.equal(true);
+  expect(confirmBar.decision).to.equal('approved');
+  expect(leaked).to.deep.equal([]);
+});

@@ -32,11 +32,11 @@ import { css } from 'lit';
  * token, readable and overridable by consumers like any other, and being derived there from
  * `--lr-transition-fast` is what makes the reduced-motion collapse reach it with no extra block.
  * A component that only needs the transition on one or two parts should skip this sheet entirely
- * and write `transition: var(--lr-interactive-transition);` on those rules; that spelling is the
+ * and write `transition: var(--lr-transition-interactive);` on those rules; that spelling is the
  * canonical one and the one the interaction-state gate names in its findings.
  */
 export const interactiveTransition = css`
   :where([part]) {
-    transition: var(--lr-interactive-transition);
+    transition: var(--lr-transition-interactive);
   }
 `;

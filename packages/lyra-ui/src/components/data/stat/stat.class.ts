@@ -95,6 +95,9 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @csspart row-value - The value text of a breakdown row. Shows the row's `exactValue` (if any) as
  *   a hover/focus tooltip, same as the headline `value`, and is accessibly labelled by its
  *   `row-label` (via `aria-labelledby`) the same way the headline `value` is.
+ * @cssprop [--lr-stat-bg=var(--lr-color-surface)] - Resting background of the card. The pressed
+ *   fill of a linked card mixes from this value too, so one override retints both. `frame="plain"`
+ *   still paints transparent.
  * @cssprop [--lr-stat-padding=var(--lr-space-m)] - Padding of the card, read by both `[part="base"]`
  *   and the linked-card content wrapper so a linked and unlinked stat never drift. The `compact`
  *   and `frame="plain"` variants read the same property with their own current default as its

@@ -15,6 +15,8 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
@@ -41,6 +43,10 @@ export interface LyraSwitchEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
   'lr-invalid': CustomEvent<null>;
+  // The proposal, not the outcome: `checked` still holds the old value while this dispatches, so
+  // `detail.checked` is what the control would become. Same request/commit shape `<lr-details>`
+  // uses, with the direction in the detail rather than in two direction-named events.
+  'lr-switch-toggle-request': CustomEvent<{ checked: boolean }>;
 }
 /**
  * `<lr-switch>` — a boolean toggle-switch form control. Structurally the
@@ -83,7 +89,17 @@ export interface LyraSwitchEventMap {
  * @event lr-change - Compatibility alias fired after `input` and `change` (click, Space, logical
  * ArrowLeft/ArrowRight, or
  * the programmatic `click()` activation path). `detail: { checked }`. Not fired for a plain
- * `.checked` property assignment, `form.reset()`, or session-state restoration.
+ * `.checked` property assignment, `form.reset()`, session-state restoration, or a user toggle a
+ * listener refused through `lr-switch-toggle-request`.
+ * @event lr-switch-toggle-request - A user toggle (click, Space, the logical arrow keys, or the
+ * programmatic `click()` activation path) is about to change `checked`; `detail: { checked }`
+ * carries the state the control *would* take, and `checked` itself still holds the old value while
+ * this dispatches. Cancelable: calling `preventDefault()` keeps the current state, so the switch
+ * never slides at all rather than sliding and snapping back, and none of
+ * `input`/`lr-input`/`change`/`lr-change` fire. A listener may instead resolve the request by
+ * assigning `checked` itself during the dispatch, which suppresses the built-in write the same
+ * way. Not fired for a programmatic `.checked` assignment, while the control is disabled, or for
+ * an arrow key that names the state the switch already holds.
  * @event focus - The internal switch control received focus. Bridges the internal element's
  * non-bubbling native `focus`, re-dispatched as bubbling and composed.
  * @event blur - The internal switch control lost focus. Bridges the internal element's
@@ -97,8 +113,10 @@ export interface LyraSwitchEventMap {
  * `setCustomValidity()` error.
  * @cssstate invalid - Matches while it does not — from the very first render, before the user has
  * touched anything.
- * @cssstate user-valid - `valid`, but only after the user has interacted: a toggle, a blur, or a
- * `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-valid - `valid`, but only after the user has interacted: a toggle the host
+ * allowed, a blur, or a `reportValidity()` call (which is what a submit attempt runs). A toggle
+ * refused through `lr-switch-toggle-request` is deliberately not one of them -- nothing changed,
+ * so nothing is revealed until the user interacts again.
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required switch is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
@@ -133,8 +151,15 @@ export interface LyraSwitchEventMap {
  * @cssprop [--lr-switch-checked-track-fill=var(--lr-color-brand)] - Track fill while checked.
  * @cssprop [--lr-switch-track-hover-fill=color-mix(...)] - Track fill while hovered.
  * @cssprop [--lr-switch-track-active-fill=color-mix(...)] - Track fill while pressed.
- * @cssprop --lr-switch-track-border - Border of `[part='track']`. Undeclared by default (no
- *   border renders at all), matching today's chrome.
+ * @cssprop --lr-switch-track-border - Border of `[part='track']`, and the checked-state fallback
+ *   when `--lr-switch-checked-track-border` is unset. Undeclared by default (no border renders at
+ *   all), matching today's chrome.
+ * @cssprop [--lr-switch-checked-track-border=var(--lr-switch-track-border)] - Border of
+ *   `[part='track']` while checked, independently themeable from the unchecked border, so a
+ *   bordered track can differ by state without reaching for `::part(track)` plus the `checked`
+ *   custom state. Takes a whole `border` shorthand value, like `--lr-switch-track-border`; give
+ *   both states the same border *width* unless a size change between them is what you want, since
+ *   the track is `box-sizing: content-box` and a border grows its outer footprint.
  * @cssprop [--lr-switch-thumb-fill=var(--lr-color-surface)] - Thumb fill while unchecked, and the
  *   checked-state fallback when `--lr-switch-checked-thumb-fill` is unset.
  * @cssprop [--lr-switch-checked-thumb-fill=var(--lr-switch-thumb-fill)] - Thumb fill while
@@ -249,6 +274,11 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   private _disabled = false;
   private _required = false;
   private _value = 'on';
+  // Shared with every other veto point in this library: `emit()` is synchronous, so a listener
+  // that answers `lr-switch-toggle-request` by writing `checked` itself finishes before the
+  // built-in commit runs, and a before/after value compare reads "unchanged" whenever it wrote
+  // back the value the control already held. The guard records that a write happened.
+  private toggleGuard = new VetoWriteGuard();
 
   /** Whether the control is disabled explicitly or by an ancestor fieldset. */
   get effectiveDisabled(): boolean {
@@ -262,6 +292,9 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     const old = this._checked;
     if (!this.settingDefaultChecked) this._checkedDirty = true;
     this._checked = Boolean(next);
+    // Unconditional, including a write of the value already held: the guard tracks that a write
+    // happened, not that a value differs. See {@link toggleGuard}.
+    markVetoGuardWrite(this.toggleGuard);
     this.syncFormState();
     this.requestUpdate('checked', old);
   }
@@ -561,17 +594,34 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   private setFromUser(next: boolean): void {
     if (this.liveDisabled) return;
     if (this.checked === next) return;
-    this.hasInteracted = true;
-    this.checked = next;
-    // Native `input` then `change`, then the library alias -- the same order (and the same
-    // rationale) as `<lr-checkbox>`'s `toggle()`. A boolean control that emitted only the
-    // `lr-`-prefixed alias is invisible to every form library, validation helper, and
-    // `<form>`-level `change` listener that binds the native names, which is the ordinary way a
-    // consumer observes a control they did not write.
-    dispatchNativeInputEvent(this);
-    this.emit('lr-input', { checked: this.checked });
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { checked: this.checked });
+    // The veto point sits BEFORE the write, not after it: a host that refuses this toggle leaves
+    // the switch exactly as the user found it, instead of letting it slide across and snapping it
+    // back a frame later. `requestThenCommit()` also suppresses the commit when a listener
+    // resolved the request by writing `checked` itself. Mirrors `<lr-checkbox>`'s `toggle()`.
+    requestThenCommit({
+      requestDetail: { checked: next },
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-switch-toggle-request', detail, init),
+      guard: this.toggleGuard,
+      commit: () => {
+        // Set inside the commit, for `<lr-checkbox>`'s `toggle()` reason: `reflectValidityStates()`
+        // feeds this flag to `syncValidityStates()`, so marking it before the veto would let a
+        // REFUSED first toggle start matching `:state(user-invalid)` for a change that never
+        // happened. `onBlur` still marks a real user interacted when focus leaves,
+        // which is the native `:user-invalid` timing.
+        this.hasInteracted = true;
+        this.checked = next;
+        // Native `input` then `change`, then the library alias -- the same order (and the same
+        // rationale) as `<lr-checkbox>`'s `toggle()`. A boolean control that emitted only the
+        // `lr-`-prefixed alias is invisible to every form library, validation helper, and
+        // `<form>`-level `change` listener that binds the native names, which is the ordinary way
+        // a consumer observes a control they did not write.
+        dispatchNativeInputEvent(this);
+        this.emit('lr-input', { checked: this.checked });
+        dispatchNativeEvent(this, 'change');
+        this.emit('lr-change', { checked: this.checked });
+      },
+    });
   }
 
   private onClick = (event: MouseEvent): void => {

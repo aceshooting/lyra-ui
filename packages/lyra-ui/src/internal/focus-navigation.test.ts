@@ -4,6 +4,7 @@ import {
   captureComposedFocusRepair,
   collectComposedAutofocusElements,
   collectComposedFocusTargets,
+  focusFirstAvailable,
   isActionableElement,
   isComposedFocusAvailable,
   isSemanticActionElement,
@@ -1113,4 +1114,59 @@ it('treats a host slotted light-DOM child as focus inside the owner', async () =
   // decline. Passing the host instead makes composed containment reach it.
   expect(repairComposedFocus(host, fallback)).to.equal(true);
   expect(shadow.activeElement?.id).to.equal('shadow-fallback');
+});
+
+it('focuses the first available target regardless of where focus currently is', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="elsewhere">Elsewhere</button>
+      <section id="owner"><button id="inside">Inside</button></section>
+      <button id="landing">Landing</button>
+    </div>
+  `);
+  const elsewhere = root.querySelector<HTMLButtonElement>('#elsewhere')!;
+  const landing = root.querySelector<HTMLButtonElement>('#landing')!;
+
+  // The difference from repairComposedFocus(): no judgement is made about the current holder, so a
+  // component handing focus over on its own terminal action does not have to prove that the control
+  // the user just activated was the focused one.
+  elsewhere.focus();
+  expect(focusFirstAvailable(landing)).to.equal(true);
+  expect(root.ownerDocument.activeElement?.id).to.equal('landing');
+});
+
+it('skips inert, detached and non-focusable targets before settling on a usable one', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="inert-target">Inert</button>
+      <button id="detached">Detached</button>
+      <div id="plain">Not focusable</div>
+      <div id="landing" tabindex="-1">Landing</div>
+    </div>
+  `);
+  const inertTarget = root.querySelector<HTMLButtonElement>('#inert-target')!;
+  const detached = root.querySelector<HTMLButtonElement>('#detached')!;
+  const plain = root.querySelector<HTMLDivElement>('#plain')!;
+  const landing = root.querySelector<HTMLDivElement>('#landing')!;
+
+  inertTarget.inert = true;
+  detached.remove();
+
+  // `plain` passes the availability predicate -- it is rendered, not inert, not disabled -- and
+  // still refuses focus, which is why the read-back after each attempt is load-bearing.
+  expect(focusFirstAvailable([inertTarget, detached, plain, landing])).to.equal(true);
+  expect(root.ownerDocument.activeElement?.id).to.equal('landing');
+});
+
+it('is a safe no-op for an empty, all-nullish or nullish target list', async () => {
+  const root = await fixture<HTMLDivElement>(html`<div><button id="held">Held</button></div>`);
+  const held = root.querySelector<HTMLButtonElement>('#held')!;
+
+  held.focus();
+  expect(focusFirstAvailable([])).to.equal(false);
+  expect(focusFirstAvailable([null, undefined])).to.equal(false);
+  expect(focusFirstAvailable(null)).to.equal(false);
+  expect(focusFirstAvailable(undefined)).to.equal(false);
+  expect(focusFirstAvailable(() => [])).to.equal(false);
+  expect(root.ownerDocument.activeElement?.id, 'focus is left exactly where it was').to.equal('held');
 });

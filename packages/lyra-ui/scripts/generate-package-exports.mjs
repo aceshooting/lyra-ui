@@ -32,6 +32,11 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   // build error. (The types are also re-exported by `flow-canvas.class.js`, so this adds no new
   // surface -- only the route the docs already name.) Found by `check:doc-specifiers`.
   'src/components/data/flow-canvas/flow-types.ts',
+  // The lean `<lr-icon-button>` registration entry. `./icon-button.js` eagerly imports `<lr-icon>`
+  // so an `icon` attribute paints synchronously; a slot-only consumer then ships that icon code in
+  // the entry chunk plus an unreachable dompurify chunk. This is their documented opt-out, so it
+  // needs a real route -- an exports map blocks everything it does not list.
+  'src/components/forms/icon-button/icon-button-register.ts',
   'src/components/media/attachment-chip/file-size.ts',
   'src/components/media/flag/flag-peer.ts',
   'src/components/media/flag/flag-peer-bulk.ts',

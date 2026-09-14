@@ -42,3 +42,22 @@ export const Empty: Story = {
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;"><lr-community-card .community=${community} .members=${members}></lr-community-card></div>`,
 };
+
+export const RestingBackgroundToken: Story = {
+  name: 'Retinting the resting frame',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-community-card-bg` matches the sibling `lr-entity-card`/`lr-source-card` hooks, so a GraphRAG panel retints every card it renders with one rule instead of stopping at the two that happened to own a token. `frame="plain"` still drops the fill entirely.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-community-card
+      .community=${community}
+      .members=${members}
+      style="max-width: 28rem; --lr-community-card-bg: var(--lr-color-brand-quiet)"
+    ></lr-community-card>
+  `,
+};

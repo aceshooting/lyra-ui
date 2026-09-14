@@ -67,6 +67,15 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * @csspart excerpt - The wrapper around the `excerpt` slot, `hidden` when the slot has no assigned content.
  * @csspart full - The wrapper around the `full` slot, `hidden` while collapsed.
  * @csspart toggle - The "Show more"/"Show less" button. Only rendered when the `full` slot has content.
+ * @attr aria-pressed - Toggle state forwarded reactively onto the `title` button: `true`, `false`
+ * or `mixed`. Anything else is ignored rather than passed through, so a typo never reaches the
+ * accessibility tree. The `toggle` button never receives it -- it already owns `aria-expanded`
+ * for its own disclosure state, and two conflicting state claims on one control is worse than one.
+ * @attr aria-current - Current-item state forwarded reactively onto the `title` button: `page`,
+ * `step`, `location`, `date`, `time`, `true` or `false`.
+ * @cssprop [--lr-source-card-bg=var(--lr-color-surface)] - Background of the RESTING
+ * `frame="card"` chrome, the companion to the `compact` tier's existing padding/gap levers.
+ * `frame="plain"` still drops the fill entirely.
  * @cssprop [--lr-source-card-compact-padding=var(--lr-space-xs)] - `[part="base"]` padding while
  * `compact`.
  * @cssprop [--lr-source-card-compact-gap=var(--lr-space-2xs)] - Gap between `[part="base"]`'s rows
@@ -134,6 +143,30 @@ export class LyraSourceCard extends StripHostTitleAttribute(
    *  padding. Purely a density knob: the border and background stay, so use `frame="plain"`
    *  to drop the chrome entirely. */
   @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Turns off this card's OWN controls: the `title` button and the "Show more"/"Show less"
+   *  `toggle` both render `disabled`, so neither one can emit `lr-open` or `lr-expand` and neither
+   *  remains in the tab order, and the card paints at `--lr-opacity-disabled` with a
+   *  `not-allowed` cursor on both. The one `lr-expand` a disabled card can still emit is the
+   *  automatic collapse when the `full` slot empties while expanded -- that reports a state change
+   *  the card genuinely made, exactly as it does when enabled, and swallowing it would desync a
+   *  host tracking expansion off the event stream.
+   *
+   *  Every self-rendered sub-control is gated, not just the primary one: a card whose title is
+   *  inert but whose disclosure toggle still expands reads as half-broken rather than disabled.
+   *  Slotted `excerpt`/`full` content stays the consumer's own -- a card is a container, and
+   *  silently disabling somebody else's controls is not a state this component can honestly own.
+   *
+   *  Like `<lr-icon-button>`, this component is not form-associated, so an ancestor
+   *  `<fieldset disabled>` does not cascade here -- disable each card explicitly. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
+  // Host-attribute forwarding onto the one native control that carries this card's action,
+  // identical in shape to `<lr-button>`/`<lr-icon-button>`: a `role`-less host cannot express a
+  // toggle or current-item state itself, which is what left a single-select citation list unable
+  // to announce which source is the active one.
+  @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
+  @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
 
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
@@ -221,11 +254,20 @@ export class LyraSourceCard extends StripHostTitleAttribute(
   };
 
   override render(): TemplateResult {
+    // Same closed vocabularies `<lr-button>` validates against, for the same reason: an
+    // unrecognized token on a real control is worse than no token at all.
+    const pressed = ['true', 'false', 'mixed'].includes(this.triggerPressed ?? '')
+      ? this.triggerPressed : nothing;
+    const current = ['page', 'step', 'location', 'date', 'time', 'true', 'false'].includes(this.triggerCurrent ?? '')
+      ? this.triggerCurrent : nothing;
     return html`
-      <div part="base">
+      <div part="base" ?data-disabled=${this.disabled}>
         <button
           part="title"
           type="button"
+          aria-pressed=${pressed}
+          aria-current=${current}
+          ?disabled=${this.disabled}
           @click=${this.onTitleClick}
         >
           ${this.titleText}
@@ -239,6 +281,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(
               type="button"
               aria-expanded=${this.fullExpanded ? 'true' : 'false'}
               aria-controls=${this.fullId}
+              ?disabled=${this.disabled}
               @click=${this.toggleFull}
             >
               ${this.localize(this.fullExpanded ? 'showLess' : 'showMore')}

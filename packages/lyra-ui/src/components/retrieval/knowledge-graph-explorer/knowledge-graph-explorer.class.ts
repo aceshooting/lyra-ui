@@ -14,6 +14,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 import type {
   LyraGraphCommunity,
+  LyraGraphFit,
   LyraGraphNodeLabelsMode,
   LyraGraphRenderer,
   LyraGraph,
@@ -312,7 +313,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   /** Forwarded to `lr-graph.nodeLabels`. Unset (the default) leaves the composed `lr-graph` to
    *  apply its own per-renderer default -- see that property's own doc. */
   @property({ attribute: 'node-labels' }) nodeLabels?: LyraGraphNodeLabelsMode;
-  /** Requested width of the composed graph viewport in CSS pixels. */
+  /** Forwarded to `lr-graph.fitTo`. `'container'` makes the composed graph draw at exactly the
+   *  pane this component's own layout gave it -- the reservation minus whatever the toolbar,
+   *  search results, pinned row and path strip take, which is not derivable from `height` -- and
+   *  follow it live as the explorer is resized. `'none'` (the default) keeps forwarding the
+   *  numeric `width`/`height` below unchanged. */
+  @property({ attribute: 'fit-to' }) fitTo: LyraGraphFit = 'none';
+  /** Requested width of the composed graph viewport in CSS pixels. Ignored by the composed graph
+   *  while `fitTo === 'container'`. */
   @property({ type: Number }) width = 800;
   /** Requested height of the composed graph viewport in CSS pixels. Also sizes the rendered
    *  `[part="graph"]`/host (see `--lr-canvas-reserved-height`'s doc) whenever neither that nor an
@@ -326,10 +334,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  always-active search-match dimming -- see the class doc's dedicated paragraph. */
   @property() highlight: KnowledgeGraphHighlight = 'selection';
 
-  /** The search filter applied to node labels/types. Presettable (e.g. to restore a query from a
-   *  URL on load) as well as self-managed on every keystroke in the toolbar's search box. `''`
-   *  (the default) renders no search-result list at all and applies no search dimming. Removing
-   *  the attribute uses this empty-filter behavior while retaining null property readback. */
+  /** The search filter applied to the visible node set. A node matches when the query appears in
+   *  any name it can be known by -- its `id`, its `label` or its `accessibleLabel` -- each folded
+   *  with the active locale, so a node named only through `accessibleLabel` is findable by the
+   *  very name the results, chips and popover display for it. Presettable (e.g. to restore a query
+   *  from a URL on load) as well as self-managed on every keystroke in the toolbar's search box.
+   *  `''` (the default) renders no search-result list at all and applies no search dimming.
+   *  Removing the attribute uses this empty-filter behavior while retaining null property
+   *  readback. */
   @property({ attribute: 'search-query' }) searchQuery = '';
   @state() private pinLiveText = '';
   /** Currently pointer-hovered node id, set only while `highlight === 'hover'` (see
@@ -719,17 +731,31 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     return rows;
   }
 
+  /** Every name a node can be known by, ordered to match `nodeLabel()`'s own precedence
+   *  (`label`, then `accessibleLabel`, then `id`) so `[0]` is the displayed name for any future
+   *  caller that wants one -- this caller only asks whether ANY of them matches, and the order is
+   *  irrelevant to that. `id` is included even when it is not what gets rendered (it has always
+   *  been searchable), and so is `accessibleLabel`: a node named only through it renders that name
+   *  in the search results, the pinned chips and the popover, so typing that same name has to find
+   *  it. A node carrying both matches either -- `accessibleLabel` is documented as the richer
+   *  spoken form of the very same node, not a different one, so matching it can never surface
+   *  something unrelated. */
+  private searchableNamesOf(node: LyraGraphNode): string[] {
+    return [node.label, node.accessibleLabel, node.id].filter(
+      (name): name is string => typeof name === 'string' && name !== ''
+    );
+  }
+
   private matchingNodes(): LyraGraphNode[] | undefined {
     const q = (this.searchQuery ?? '').trim().toLocaleLowerCase(this.effectiveLocale);
     if (!q) return undefined;
-    return this.graphModel.nodes.filter((node) => {
-      const label = typeof node.label === 'string' ? node.label : '';
-      return (
+    return this.graphModel.nodes.filter(
+      (node) =>
         this.isVisibleNode(node.id) &&
-        (node.id.toLocaleLowerCase(this.effectiveLocale).includes(q) ||
-          label.toLocaleLowerCase(this.effectiveLocale).includes(q))
-      );
-    });
+        this.searchableNamesOf(node).some((name) =>
+          name.toLocaleLowerCase(this.effectiveLocale).includes(q)
+        )
+    );
   }
 
   private searchResultAnnouncement(matches = this.matchingNodes()): string {
@@ -1114,6 +1140,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           .dimmedNodeIds=${this.computedDimmedNodeIds}
           .dimmedLinkIds=${this.computedDimmedLinkIds}
           renderer=${this.renderer}
+          fit-to=${this.fitTo}
           node-labels=${this.nodeLabels ?? nothing}
           width=${finiteRange(this.width, 800, 1)}
           height=${finiteRange(this.height, 600, 1)}

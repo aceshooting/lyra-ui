@@ -31,12 +31,25 @@ import { styles } from './app-rail-item.styles.js';
  * @slot - The visible navigation label.
  * @slot icon - The leading decorative icon. Its flattened subtree is inert and hidden from
  *   assistive technology; the default slot or host `aria-label` names the internal control.
+ * @slot meta - Secondary trailing text -- an unread count, a keyboard shortcut. Rendered as a
+ *   SIBLING of the internal link/button, never inside it, so it is not part of the item's
+ *   accessible name and a pointer landing on it does not activate the item. Visually clipped in
+ *   `icon-only` mode exactly as `[part="label"]` is, staying available to assistive technology.
+ * @slot end - Trailing controls or adornments -- an overflow menu trigger, a status badge. Also a
+ *   sibling of the internal link/button (the same shape `<lr-details>` uses for its
+ *   `header-actions`), so a slotted control keeps its own click, keyboard activation and focus
+ *   order instead of being swallowed by the item's own activation target. Unlike `meta` it stays
+ *   visible in `icon-only` mode, where it shares the narrow rail's width with the icon.
  * @csspart base - The link or button receiving focus and activation.
  * @csspart icon - The icon wrapper.
  * @csspart label - The label wrapper; visually clipped in icon-only mode.
  * @csspart current-indicator - A decorative inline indicator rendered only while the item is
  *   `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s shipped
  *   `active-indicator` part.
+ * @csspart meta - The wrapper around the `meta` slot. Hidden while nothing is slotted into it, so
+ *   an item without secondary text renders exactly as before the slot existed.
+ * @csspart end - The wrapper around the `end` slot, following `[part="meta"]`. Hidden while empty
+ *   for the same reason.
  * @csspart tooltip - The hover/focus label flyout, only rendered while `tooltip` is set, the item
  *   is `icon-only`, and it is hovered or focused.
  * @cssprop [--lr-app-rail-item-current-bg=var(--lr-color-brand-quiet)] - Background of the
@@ -61,7 +74,12 @@ import { styles } from './app-rail-item.styles.js';
  *   WCAG 2.5.8 hit-area minimum.
  * @cssprop [--lr-app-rail-item-padding=var(--lr-space-s)] - `[part="base"]`'s padding.
  * @cssprop [--lr-app-rail-item-gap=var(--lr-space-s)] - Gap between `[part="icon"]` and
- *   `[part="label"]`.
+ *   `[part="label"]`, and between the item's own control and its `[part="meta"]`/`[part="end"]`
+ *   adornments.
+ * @cssprop [--lr-app-rail-item-meta-color=var(--lr-color-text-quiet)] - `[part="meta"]`'s text
+ *   color; quiet by default so a count reads as secondary to the label beside it.
+ * @cssprop [--lr-app-rail-item-meta-font-size=var(--lr-font-size-sm)] - `[part="meta"]`'s
+ *   font size.
  * @cssprop [--lr-app-rail-item-icon-size=var(--lr-icon-button-size)] - `[part="icon"]`'s inline
  *   size. Not floor-clamped -- the icon is decorative, not itself a pointer target.
  * @status stable
@@ -116,6 +134,11 @@ export class LyraAppRailItem extends LyraElement {
   @property({ type: Boolean, reflect: true }) tooltip = false;
 
   @state() private showTooltip = false;
+  /** `:empty` cannot see slotted light-DOM content (the wrapper always holds a `<slot>` element),
+   *  so emptiness is tracked from `slotchange` the same way `<lr-details>` tracks its own
+   *  `header-actions` wrapper. */
+  @state() private hasEndSlot = false;
+  @state() private hasMetaSlot = false;
   private stopPositioning?: () => void;
   private labelObserver?: MutationObserver;
   private semanticFocusRepair?: ComposedFocusRepairSnapshot;
@@ -166,6 +189,18 @@ export class LyraAppRailItem extends LyraElement {
 
   private onBlurHide = (): void => {
     this.showTooltip = false;
+  };
+
+  private onEndSlotChange = (event: Event): void => {
+    this.hasEndSlot = (event.target as HTMLSlotElement).assignedNodes({ flatten: true }).some(
+      (node) => node.nodeType !== 3 || (node.textContent ?? '').trim() !== ''
+    );
+  };
+
+  private onMetaSlotChange = (event: Event): void => {
+    this.hasMetaSlot = (event.target as HTMLSlotElement).assignedNodes({ flatten: true }).some(
+      (node) => node.nodeType !== 3 || (node.textContent ?? '').trim() !== ''
+    );
   };
 
   override attributeChangedCallback(
@@ -269,6 +304,14 @@ export class LyraAppRailItem extends LyraElement {
     const tooltip = this.showTooltip && this.tooltip && this.hasAttribute('icon-only')
       ? html`<span part="tooltip" role="tooltip" aria-hidden="true">${this.tooltipText}</span>`
       : nothing;
+    // Siblings of the activation target, never children of it: a control slotted here keeps its
+    // own click/keyboard activation and focus order, and its text never joins the item's own
+    // accessible name. Mirrors <lr-details>'s header-actions placement beside its native summary.
+    const adornments = html`<span part="meta" ?hidden=${!this.hasMetaSlot}
+        ><slot name="meta" @slotchange=${this.onMetaSlotChange}></slot></span
+      ><span part="end" ?hidden=${!this.hasEndSlot}
+        ><slot name="end" @slotchange=${this.onEndSlotChange}></slot></span
+      >`;
     if (href && !this.disabled) {
       return html`
         <a
@@ -283,8 +326,7 @@ export class LyraAppRailItem extends LyraElement {
           @mouseleave=${this.onBlurHide}
           @focus=${this.onFocusShow}
           @blur=${this.onBlurHide}
-        >${content}</a>
-        ${tooltip}
+        >${content}</a>${adornments}${tooltip}
       `;
     }
     return html`
@@ -299,8 +341,7 @@ export class LyraAppRailItem extends LyraElement {
         @mouseleave=${this.onBlurHide}
         @focus=${this.onFocusShow}
         @blur=${this.onBlurHide}
-      >${content}</button>
-      ${tooltip}
+      >${content}</button>${adornments}${tooltip}
     `;
   }
 }

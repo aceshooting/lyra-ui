@@ -4167,12 +4167,16 @@ describe('localization', () => {
       html`<lr-table loading .strings=${strings}></lr-table>`
     )) as LyraTable<Row>;
     Object.assign(loading, overrides);
-    loading.columns = columns;
+    // `priorityColumns`, not `columns`: these fixtures carry the reveal/hide label overrides, and
+    // those labels are inert (and warn) unless at least one column declares `priority`. A stray
+    // console.warn here is not cosmetic -- the strict-console runner trips once per file, so one
+    // leaked warning disarms the detection for every later test in this file.
+    loading.columns = priorityColumns;
     await loading.updateComplete;
 
     const empty = (await fixture(html`<lr-table .strings=${strings}></lr-table>`)) as LyraTable<Row>;
     Object.assign(empty, overrides);
-    empty.columns = columns;
+    empty.columns = priorityColumns;
     await empty.updateComplete;
 
     const noColumns = (await fixture(html`<lr-table .strings=${strings}></lr-table>`)) as LyraTable<Row>;

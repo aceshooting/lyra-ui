@@ -1610,3 +1610,133 @@ it('keeps a live adopted menu open until Escape in its new owner document dismis
     frame.remove();
   }
 });
+
+describe('lazy row source', () => {
+  /** Captures the Blob the built-in download hands to `URL.createObjectURL`. */
+  async function captureDownload(el: LyraExportButton, act: () => void): Promise<string> {
+    const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+    let capturedBlob: Blob | undefined;
+    URL.createObjectURL = (blob: Blob) => {
+      capturedBlob = blob;
+      return originalCreateObjectURL(blob);
+    };
+    const complete = oneEvent(el, 'lr-export-complete');
+    try {
+      act();
+      await complete;
+    } finally {
+      URL.createObjectURL = originalCreateObjectURL;
+    }
+    return capturedBlob ? capturedBlob.text() : '';
+  }
+
+  it('reads getRows at export time and exports its result instead of rows', async () => {
+    const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+    el.rows = [{ id: 'stale', name: 'Stale' }];
+    el.columns = columns;
+    await el.updateComplete;
+
+    const callsBeforeExport: string[] = [];
+    el.addEventListener('lr-export', () => callsBeforeExport.push('export-event'));
+    let calls = 0;
+    el.getRows = () => {
+      calls += 1;
+      callsBeforeExport.push('get-rows');
+      return [{ id: 'fresh', name: 'Fresh' }];
+    };
+    await el.updateComplete;
+    expect(calls, 'getRows is not called before an export runs').to.equal(0);
+
+    const text = await captureDownload(el, () =>
+      (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click(),
+    );
+    expect(calls).to.equal(1);
+    expect(callsBeforeExport).to.deep.equal(['export-event', 'get-rows']);
+    expect(text).to.equal('ID,Name\r\nfresh,Fresh');
+  });
+
+  it('derives the column fallback from the lazily supplied rows when columns is unset', async () => {
+    const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+    el.getRows = () => [{ lazyKey: 'value' }];
+    await el.updateComplete;
+
+    const text = await captureDownload(el, () =>
+      (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click(),
+    );
+    expect(text).to.equal('lazyKey\r\nvalue');
+  });
+
+  it('keeps exporting rows unchanged when getRows is left unset', async () => {
+    const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+    el.rows = rows;
+    el.columns = columns;
+    await el.updateComplete;
+    expect(el.getRows).to.equal(undefined);
+
+    const text = await captureDownload(el, () =>
+      (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click(),
+    );
+    expect(text).to.equal('ID,Name\r\na,Alpha');
+  });
+
+  it('honours rows assigned late, from inside the cancelable lr-export listener', async () => {
+    const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+    el.columns = columns;
+    await el.updateComplete;
+    el.addEventListener('lr-export', () => {
+      el.rows = [{ id: 'late', name: 'Late' }];
+    });
+
+    const text = await captureDownload(el, () =>
+      (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click(),
+    );
+    expect(text).to.equal('ID,Name\r\nlate,Late');
+  });
+
+  it('never calls getRows for a vetoed export', async () => {
+    const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+    let calls = 0;
+    el.getRows = () => {
+      calls += 1;
+      return rows;
+    };
+    el.addEventListener('lr-export', (event) => event.preventDefault());
+    await el.updateComplete;
+
+    (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(calls).to.equal(0);
+  });
+
+  it('reports a throwing getRows through lr-export-error without completing', async () => {
+    const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+    el.getRows = () => {
+      throw new Error('no rows available');
+    };
+    await el.updateComplete;
+
+    let completed = false;
+    el.addEventListener('lr-export-complete', () => (completed = true));
+    const errorEvent = oneEvent(el, 'lr-export-error');
+    (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+    const event = await errorEvent;
+
+    expect(event.detail.format).to.equal('csv');
+    expect((event.detail.error as Error).message).to.equal('no rows available');
+    expect(completed).to.equal(false);
+    await el.updateComplete;
+    expect(sinkTexts('polite').length).to.be.greaterThan(0);
+  });
+
+  it('treats a non-array getRows result as no rows rather than throwing', async () => {
+    const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+    el.columns = columns;
+    (el as unknown as { getRows: () => unknown }).getRows = () => 'not-an-array';
+    await el.updateComplete;
+
+    const text = await captureDownload(el, () =>
+      (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click(),
+    );
+    expect(text).to.equal('ID,Name');
+  });
+});

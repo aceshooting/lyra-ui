@@ -22,7 +22,7 @@ it('renders the noData empty state when entity is null (the default)', async () 
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
   expect(el.entity).to.equal(null);
-  expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-empty') != null).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="header"]') == null).to.be.true;
 });
 
@@ -257,6 +257,31 @@ it('lets a consumer retune the compact values through --lr-entity-card-compact-*
   const chrome = baseChrome(el);
   expect(chrome.paddingTop).to.equal('3px');
   expect(chrome.rowGap).to.equal('5px');
+});
+
+it('retints the resting card frame through --lr-entity-card-bg', async () => {
+  const el = (await fixture(
+    html`<lr-entity-card .entity=${entity} style="--lr-entity-card-bg: rgb(1, 2, 3)"></lr-entity-card>`
+  )) as LyraEntityCard;
+  expect(baseChrome(el).backgroundColor).to.equal('rgb(1, 2, 3)');
+});
+
+it('leaves the resting frame on the shared surface token when --lr-entity-card-bg is unset', async () => {
+  const el = (await fixture(
+    html`<lr-entity-card .entity=${entity} style="--lr-color-surface: rgb(4, 5, 6)"></lr-entity-card>`
+  )) as LyraEntityCard;
+  expect(baseChrome(el).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
+it('keeps frame="plain" transparent regardless of --lr-entity-card-bg', async () => {
+  const el = (await fixture(
+    html`<lr-entity-card
+      frame="plain"
+      .entity=${entity}
+      style="--lr-entity-card-bg: rgb(1, 2, 3)"
+    ></lr-entity-card>`
+  )) as LyraEntityCard;
+  expect(baseChrome(el).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
 });
 
 it('drops border, background, padding and radius under frame="plain"', async () => {

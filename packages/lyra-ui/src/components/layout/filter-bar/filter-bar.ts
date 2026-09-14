@@ -6,6 +6,8 @@ import '../../forms/combobox/combobox.js';
 import '../../forms/combobox/option.js';
 import '../../forms/date-picker/date-input.js';
 import '../../forms/input/input.js';
+import '../../overlays/overlay/dropdown.js';
+import '../menu/dropdown-item.js';
 import '../../overlays/chip/chip.js';
 import '../../overlays/chip/chip-group.js';
 import '../../forms/button/button.js';

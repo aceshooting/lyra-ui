@@ -3414,3 +3414,20 @@ it("restores the declared numeric and orientation defaults when attributes are r
   expect(el.slidesPerPage).to.equal(1);
   expect(el.slidesPerMove).to.equal(1);
 });
+
+it("fits a padded slide inside its own flex basis", async () => {
+  const el = await carousel(html`
+    <lr-carousel style="inline-size:480px">
+      <div id="padded" style="padding:20px">One</div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  const track = el.shadowRoot!.querySelector<HTMLElement>('[part="track"]')!;
+  const slide = el.querySelector<HTMLElement>("#padded")!;
+  // Each slide is given a definite percentage flex-basis; resolved against a content box, the
+  // slide's own padding is added on top and the slide overruns the track it must scroll-snap in.
+  expect(slide.getBoundingClientRect().width).to.be.closeTo(
+    track.clientWidth,
+    0.5
+  );
+});

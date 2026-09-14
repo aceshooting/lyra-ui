@@ -191,3 +191,29 @@ export const NarrowLongContent: Story = {
     </div>
   `,
 };
+
+export const VetoedEmptyingToggle: Story = {
+  name: 'Keeping at least one option checked',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`lr-checkbox-group-toggle-request` is cancelable and fires *before* the option flips, carrying the group value that would result (`value`), the value as it stands (`previousValue`), and the `<lr-checkbox>` the user acted on (`option`). Refusing it when `value` would be empty keeps the last remaining option checked with no flip and no snap-back, and no `input`/`change`/`lr-change` follows.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-checkbox-group
+      label="Notification channels"
+      hint="At least one channel must stay on."
+      @lr-checkbox-group-toggle-request=${(
+        event: CustomEvent<{ value: readonly string[] }>,
+      ) => {
+        if (event.detail.value.length === 0) event.preventDefault();
+      }}
+    >
+      <lr-checkbox value="email" checked>Email</lr-checkbox>
+      <lr-checkbox value="sms" checked>SMS</lr-checkbox>
+    </lr-checkbox-group>
+  `,
+};

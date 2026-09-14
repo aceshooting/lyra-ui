@@ -13,7 +13,7 @@ import '../components/forms/locale-picker/locale-picker.js';
 import '../components/utility/mention-popover/mention-popover.js';
 
 /**
- * Decision 1's contract: ONE overlay token family every floating surface reads.
+ * The overlay-surface contract: ONE overlay token family every floating surface reads.
  *
  * Every assertion here reads a RENDERED result through `getComputedStyle`, never stylesheet text —
  * a `var()` chain that never resolves is silently inert, and inert CSS is invisible to every other
@@ -228,7 +228,7 @@ async function mountLocalePicker(wrapperStyle = ''): Promise<Surface> {
   };
 }
 
-/** Every floating surface decision 1 names, each in its own fixture. */
+/** Every floating surface the one overlay-surface family covers, each in its own fixture. */
 const OVERLAY_BUILDERS: ReadonlyArray<(wrapperStyle?: string) => Promise<Surface>> = [
   mountPopover,
   mountDropdown,
@@ -295,7 +295,7 @@ it('scopes an overlay-family override to the ancestor it is declared on', async 
 });
 
 it('routes anchored popups onto the overlay surface in dark mode', async () => {
-  // The visible dark-mode change decision 1 accepts. Before it, an anchored popup painted
+  // The one visible dark-mode change the overlay-surface family accepts. Before it, an anchored popup painted
   // `--lr-color-surface` — in dark mode the same near-black as the page behind it, so the popup
   // read as a hole rather than a raised object. Asserted against the two tokens read off the host
   // rather than against literal hex values, so a palette retune cannot silently invert the test.
@@ -356,7 +356,7 @@ it('lets a component-scoped radius outrank the shared overlay radius', async () 
   );
 });
 
-it('reaches an anchored surface outside the six components decision 1 names', async () => {
+it('reaches an anchored surface outside the six components the family enumerates', async () => {
   // The sweep half of the contract. `lr-mention-popover`'s listbox carries the library's own
   // "Anchored overlay: a positioner-placed listbox" marker and had the identical rule — a family
   // that stops at the six named components is not "one place every popup reads".
@@ -440,7 +440,7 @@ it('is accessible with every overlay surface open and populated in dark mode', a
   await expect(dialog.host).to.be.accessible();
 });
 
-// --- lr-menu-item row-chrome hooks (the sibling gap filed alongside decision 1) ---------------
+// --- lr-menu-item row-chrome hooks (the sibling gap the overlay-surface sweep turned up) ------
 
 async function mountMenuItem(itemStyle = ''): Promise<{ host: HTMLElement; base: HTMLElement; icon: HTMLElement }> {
   const wrapper = await mountIn(

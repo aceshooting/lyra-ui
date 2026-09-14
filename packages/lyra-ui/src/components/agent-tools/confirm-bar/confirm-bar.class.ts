@@ -3,7 +3,12 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import { hasRealContent, hostAriaLabel, nextId } from '../../../internal/a11y.js';
-import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
+import {
+  focusFirstAvailable,
+  isComposedFocusAvailable,
+  repairComposedFocus,
+} from '../../../internal/focus-navigation.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import '../../layout/details/details.class.js';
@@ -31,9 +36,26 @@ export type ConfirmBarDecision = ApprovalDecision | null;
  *  the two can never drift apart. */
 export type ConfirmBarVariant = Extract<LyraVariant, 'neutral' | 'danger'>;
 
+/**
+ * Where the bar hands focus once a decision lands. An element, `null` for "no preference", or a
+ * thunk resolved at that moment -- a host that swaps a focused control out for this bar often
+ * re-creates that control on the way back, so the element it wants focus returned to does not
+ * necessarily exist yet when the bar is mounted.
+ */
+export type ConfirmBarReturnFocusTarget = HTMLElement | null | (() => HTMLElement | null);
+
+/**
+ * The ExtendableEvent-style resolver carried by `lr-approve`/`lr-deny`'s detail. Calling it during
+ * the dispatch holds the bar in its `pending` presentation until the promise settles: a resolution
+ * finalizes the decision, a rejection restores the undecided state. Calling it more than once (from
+ * one listener or several) waits for all of them.
+ */
+export type ConfirmBarWaitUntil = (promise: Promise<unknown>) => void;
+
 export interface LyraConfirmBarEventMap {
-  'lr-approve': CustomEvent<{ args: unknown }>;
-  'lr-deny': CustomEvent<null>;
+  'lr-approve': CustomEvent<{ args: unknown; waitUntil: ConfirmBarWaitUntil }>;
+  'lr-deny': CustomEvent<{ waitUntil: ConfirmBarWaitUntil }>;
+  'lr-decision-settled': CustomEvent<{ decision: ApprovalDecision }>;
 }
 
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -70,9 +92,16 @@ function deniedIcon(): SVGTemplateResult {
  *
  * Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop semantics, and it never
  * steals focus when it appears in the transcript. DOM and tab order put Deny before Approve (the
- * dialog's safe-action-first rationale). On activation, focus moves synchronously to `[part="status"]`
- * (an always-rendered, `tabindex="-1"` element) *before* the Deny/Approve buttons unmount, so focus
- * never has a gap where it would otherwise fall back to `<body>`.
+ * dialog's safe-action-first rationale). On activation, focus moves synchronously to the first
+ * available of `returnFocusTo` and `[part="status"]` (an always-rendered, `tabindex="-1"` element)
+ * *before* the Deny/Approve buttons unmount, so focus never has a gap where it would otherwise fall
+ * back to `<body>`. `returnFocusTo` is the opt-in half: unset, the handoff lands on `[part="status"]`
+ * exactly as it always has, which keeps the decided status reachable but is a dead end for a host
+ * that is about to unmount the bar. Set it to the control the bar replaced (or a thunk resolving to
+ * it) and the same handoff returns focus there instead, falling back to `[part="status"]` whenever
+ * the named element is missing, detached, `inert` or otherwise refuses focus -- an `inert` element
+ * refuses `focus()` silently, so an unchecked handoff would strand the user on `<body>` at exactly
+ * the moment a decision was announced.
  *
  * "Never steals focus" and "no Escape semantics" describe the bar's behavior when `autofocus` and
  * `escape-denies` are both left unset (the default). A host that swaps a focused control out for
@@ -101,17 +130,29 @@ function deniedIcon(): SVGTemplateResult {
  * `variant="brand"` (`"danger"` under `variant="danger"`) at lr-button's default `appearance="accent"`,
  * so the destructive-or-primary action is the loud one and the safe action recedes. Both appearances
  * are stated rather than inherited: a bar whose look depends on another component's default changes
- * silently when that default does.
+ * silently when that default does. Both are composed children rendered by this component, each
  * re-exporting `lr-button`'s own `base`/`label`/`start`/`end`/`spinner` parts under
  * `{deny,approve}-button-{base,label,start,end,spinner}` so `--lr-button-*` theming and a consumer's
- * existing `lr-button` style fragments reach them like every other button in an app. An
- * `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its own
- * async work (e.g. a network call) is in flight: `pending` is set to the action being persisted, showing
- * `loading` on that button and `disabled` on the other, until the host finalizes by setting `.decision`
- * or bounces back by clearing `.pending` to `null`. A listener that instead resolves the decision
- * itself synchronously (setting `.decision` or `.pending` directly before returning from the
- * `preventDefault()`ed handler) wins outright: `decide()` only falls back to its own `pending`
- * bookkeeping when the listener left both untouched.
+ * existing `lr-button` style fragments reach them like every other button in an app.
+ *
+ * Async decisions have two entry points, and the declarative one is preferred. `lr-approve`/
+ * `lr-deny`'s detail carries `waitUntil(promise)`, ExtendableEvent-style: calling it during the
+ * dispatch puts the bar into `pending` (showing `loading` on the activated button and `disabled` on
+ * the other) and the promise's settlement finalizes the decision or bounces it back for a retry, so
+ * the component owns the whole state machine and no listener has to cast its `currentTarget`, write
+ * `pending`, and remember to await `updateComplete` before unmounting. Several `waitUntil()` calls
+ * from several listeners are awaited together. The imperative path it replaces still works and is
+ * unchanged: `preventDefault()` alone sets `pending` to the action being persisted until the host
+ * finalizes by setting `.decision` or bounces back by clearing `.pending` to `null`. A listener that
+ * instead resolves the decision itself synchronously (setting `.decision` or `.pending` directly
+ * during the dispatch) wins outright over both -- `decide()` only applies its own `pending`
+ * bookkeeping, `waitUntil()`'s included, when the listener left both untouched, because `emit()` is
+ * synchronous and a write that lands during it would otherwise be silently clobbered.
+ *
+ * `lr-decision-settled` fires after the decided status has rendered and been announced, on every
+ * path that reaches a decision -- the bar's own, a `waitUntil()` settlement, and a host writing
+ * `.decision` directly. It exists so a host can unmount the bar on that signal instead of guessing
+ * whether the announcement has already happened.
  *
  * The host-writable `disabled` independently blocks both Deny and Approve and makes `decide()` a
  * no-op, without discarding any in-flight `decision`/`pending` state.
@@ -121,12 +162,19 @@ function deniedIcon(): SVGTemplateResult {
  *   the proposed change).
  * @slot footer - Extra content at the start of the action row (e.g. a "remember this choice"
  *   checkbox), mirroring `lr-tool-approval-dialog`'s own `footer` slot.
- * @event lr-approve - `detail: { args }` (the `args` prop as-is; no editing in the bar) — identical
- *   shape to `lr-tool-approval-dialog`. Cancelable: a listener calling `preventDefault()` sets
- *   `pending` to `'approve'` instead of finalizing synchronously; set `.decision` (or clear
- *   `.pending` back to `null`) once your async work settles.
- * @event lr-deny - No detail, identical to the dialog. Cancelable, same `pending` mechanism as
- *   `lr-approve`.
+ * @event lr-approve - `detail: { args, waitUntil }` — `args` is the `args` prop as-is (no editing in
+ *   the bar), matching `lr-tool-approval-dialog`'s own `args` detail. Cancelable: a listener calling
+ *   `preventDefault()` sets `pending` to `'approve'` instead of finalizing synchronously; set
+ *   `.decision` (or clear `.pending` back to `null`) once your async work settles. `waitUntil(promise)`
+ *   does the same thing declaratively and needs no `preventDefault()`: the bar stays pending until
+ *   the promise settles, then finalizes on resolution or bounces back on rejection.
+ * @event lr-deny - `detail: { waitUntil }`, the same resolver `lr-approve` carries and no other data,
+ *   matching the dialog's detail-free `lr-deny`. Cancelable, same `pending` mechanism as `lr-approve`.
+ * @event lr-decision-settled - `detail: { decision }`. Emitted after the decided `[part="status"]`
+ *   has rendered and its live-region announcement has been made, on every path that reaches a
+ *   decision, including a host writing `.decision` directly. Non-cancelable: the decision is already
+ *   final. A host that replaces the bar with its own result UI can do it on this event without
+ *   awaiting `updateComplete` itself.
  * @csspart base - The root (`role="group"`).
  * @csspart heading - The heading.
  * @csspart tool-name - The tool-name span within the heading. Only rendered when `heading` is unset.
@@ -155,6 +203,8 @@ function deniedIcon(): SVGTemplateResult {
  *   `spinner` part, present only while `pending` is `'approve'`.
  * @csspart status - The decided-state text. Always present in the DOM (`tabindex="-1"`) so focus has
  *   a stable, synchronous landing spot on activation.
+ * @cssprop [--lr-confirm-bar-bg=var(--lr-color-surface)] - Resting background of `[part='base']`.
+ * `frame="plain"` still paints transparent.
  * @cssprop [--lr-confirm-bar-compact-padding=var(--lr-space-s)] - Padding of `[part='base']` while
  * `compact`. Accepts any padding shorthand. Overridden entirely by `frame="plain"`.
  * @cssprop [--lr-confirm-bar-compact-gap=var(--lr-space-s)] - Gap between the row's items while
@@ -221,7 +271,8 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   private readonly dispatchWriteGuard = new VetoWriteGuard();
 
   /** Decided state. Set by the component on activation *and* host-writable (an externally-resolved
-   *  decision -- timeout, another reviewer -- renders identically but emits nothing). */
+   *  decision -- timeout, another reviewer -- renders identically and emits no `lr-approve`/`lr-deny`
+   *  of its own; the settled notification still fires, because the status really did render). */
   @property({ reflect: true })
   get decision(): ConfirmBarDecision { return this._decision; }
   set decision(value: ConfirmBarDecision) {
@@ -289,6 +340,16 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
    *  choose explicitly. */
   @property({ type: Boolean, reflect: true, attribute: 'escape-denies' }) escapeDenies = false;
 
+  /** Where focus goes once a decision lands, instead of parking on `[part="status"]`. Property-only
+   *  (an element reference has no attribute form), and a thunk is accepted so the lookup happens at
+   *  handoff time rather than at assignment time. The motivating case is the one the class doc
+   *  opens with: a host swaps a focused control out for this bar, and once the decision is made
+   *  focus belongs back on that control (or on whatever replaced it), not on a status line the host
+   *  is about to unmount. Unset (`null`) keeps the shipped behavior exactly. A named target that is
+   *  missing, detached, `inert` or otherwise refuses focus falls back to `[part="status"]` rather
+   *  than to `<body>`. */
+  @property({ attribute: false }) returnFocusTo: ConfirmBarReturnFocusTarget = null;
+
   @query('[part="status"]') private statusEl?: HTMLElement;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
@@ -298,6 +359,11 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   @state() private hasBodySlot = false;
 
   private readonly headingId = nextId('confirm-bar-heading');
+
+  /** Bumped by every `decide()` that starts awaiting a `waitUntil()` promise, so a settlement that
+   *  arrives after a newer decision began (a bounce, then a second activation) is discarded instead
+   *  of resolving the wrong one. */
+  private deferralGeneration = 0;
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -313,7 +379,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
       this.decision != null &&
       this.pending != null
     ) {
-      this.statusEl?.focus();
+      this.handOffDecidedFocus();
       this.pending = null;
     }
   }
@@ -368,8 +434,26 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   private decide(next: 'approved' | 'denied'): void {
     if (this.disabled || this.decision != null || this.pending != null) return;
-    const eventName = next === 'approved' ? 'lr-approve' : 'lr-deny';
-    const detail = next === 'approved' ? { args: this.args } : undefined;
+    // ExtendableEvent's own rule, for the same reason: `waitUntil()` extends *this dispatch*, so it
+    // is only meaningful while listeners are running. A reference captured and called later cannot
+    // retroactively reopen a decision that already finalized, and silently pretending otherwise
+    // would leave a bar stuck pending with nothing watching the promise.
+    const deferrals: Promise<unknown>[] = [];
+    let dispatching = true;
+    const waitUntil: ConfirmBarWaitUntil = (promise) => {
+      if (!dispatching) {
+        devWarnOnce(
+          'lyra-confirm-bar-wait-until-after-dispatch',
+          '<lr-confirm-bar>: waitUntil() was called after its lr-approve/lr-deny dispatch had ' +
+            'finished, so it did nothing. Call it synchronously from the listener; the promise it ' +
+            'receives may settle whenever it likes.',
+        );
+        return;
+      }
+      // Promise.resolve() rather than the argument as-is: a plain JS caller can hand over a
+      // thenable, or nothing at all, and neither may throw inside the component's own dispatch.
+      deferrals.push(Promise.resolve(promise));
+    };
     // The guard above proves both are null right up to this point -- but `emit()` below dispatches
     // synchronously, so a listener can still write either one from inside it (e.g. it calls
     // preventDefault() and resolves the decision itself out of band, or bounces `pending` back to
@@ -379,35 +463,119 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     // then marked by the `decision`/`pending` setters if a listener assigns either one during the
     // synchronous `emit()` below. Only when it stays untouched did the listener leave both alone,
     // and the built-in "awaiting the host" pending state applies; otherwise it would silently
-    // clobber whatever the listener just did.
+    // clobber whatever the listener just did. `waitUntil()` composes with that rule rather than
+    // bypassing it: a listener that both defers and resolves the state itself has resolved it, and
+    // the promise is then nobody's business but its own.
     this.dispatchWriteGuard.open();
-    const event = this.emit(eventName, detail, { cancelable: true });
-    if (event.defaultPrevented) {
+    const event =
+      next === 'approved'
+        ? this.emit('lr-approve', { args: this.args, waitUntil }, { cancelable: true })
+        : this.emit('lr-deny', { waitUntil }, { cancelable: true });
+    dispatching = false;
+    const listenerResolvedItself = this.dispatchWriteGuard.touched;
+    // `waitUntil()` is a veto in its own right -- it says "not yet" as plainly as preventDefault()
+    // does -- so it takes the same branch without the listener having to call both.
+    if (deferrals.length > 0 || event.defaultPrevented) {
       // Same handoff as the synchronous path below, and for the same reason: `?loading` on the
       // just-activated button makes `lr-button`'s internal native `<button>` genuinely `disabled`,
       // and a browser blurs a focused element the instant it becomes disabled. Without moving
       // focus first, a keyboard user who activated Approve/Deny would be silently dropped to
       // <body> for the whole duration of the host's async work. Ordered before the `pending` write
-      // so the button is still focusable when focus leaves it.
+      // so the button is still focusable when focus leaves it. `[part="status"]` and not
+      // `returnFocusTo`: the decision is not settled yet, so this is not the return journey.
       this.statusEl?.focus();
-      if (!this.dispatchWriteGuard.touched) {
-        this.pending = approvalAction(next);
+      if (listenerResolvedItself) {
+        // The listener resolved the decision itself, so its own promises are nobody's business but
+        // its own -- but the bar did accept them, and an accepted promise with nothing attached
+        // surfaces its rejection as an unhandled rejection in the host page. Absorb them rather
+        // than acting on them: this branch deliberately applies no bookkeeping.
+        for (const deferral of deferrals) void deferral.catch(() => undefined);
+        return;
       }
+      this.pending = approvalAction(next);
+      if (deferrals.length > 0) this.awaitDeferredDecision(Promise.all(deferrals), next);
       return;
     }
     // Synchronous, before the property set below triggers the re-render that removes the
     // Deny/Approve buttons -- [part="status"] is always present in the DOM, so this never leaves a
     // gap where focus would otherwise fall back to <body>. Only reached on the synchronous
     // (non-pending) path -- an externally-set `decision` already skips this too, unchanged.
-    this.statusEl?.focus();
+    this.handOffDecidedFocus();
     this.decision = next;
+  }
+
+  /**
+   * The settlement half of `waitUntil()`. Every write it performs is re-checked against the state
+   * it left behind rather than applied blind: the promise settles in a later task, and by then the
+   * host may have finalized the decision out of band, bounced `pending` itself, or started a whole
+   * new decision. `generation` covers that last case, which the property checks alone cannot -- a
+   * second pending decision for the same action is state-identical to the first.
+   */
+  private awaitDeferredDecision(promise: Promise<unknown>, next: 'approved' | 'denied'): void {
+    const action = approvalAction(next);
+    this.deferralGeneration += 1;
+    const generation = this.deferralGeneration;
+    const stillOurs = (): boolean =>
+      generation === this.deferralGeneration && this.decision == null && this.pending === action;
+    void promise.then(
+      () => {
+        // `willUpdate()` owns the rest: it clears `pending` and performs the decided-state focus
+        // handoff for every externally-finalized decision, this one included.
+        if (stillOurs()) this.decision = next;
+      },
+      () => {
+        if (!stillOurs()) return;
+        this.pending = null;
+        this.returnFocusAfterBounce(action);
+      },
+    );
+  }
+
+  /**
+   * A rejection restores the bar, and focus is part of it: the handoff into the pending state
+   * parked focus on `[part="status"]` because the activated button was about to become `disabled`,
+   * so leaving it there would hand a retryable bar back to a keyboard user with focus on a static
+   * line of text. `repairComposedFocus()` rather than an unconditional move: if focus has since
+   * gone somewhere else entirely, it belongs to whatever the user is doing now. The button is only
+   * focusable again once `loading`/`disabled` have actually come off it, hence the awaited update.
+   */
+  private returnFocusAfterBounce(action: ApprovalAction): void {
+    void this.updateComplete.then(() => {
+      if (!this.isConnected || this.decision != null || this.pending != null) return;
+      repairComposedFocus(this, () =>
+        this.renderRoot.querySelector<HTMLElement>(`[part="${action}-button"]`),
+      );
+    });
+  }
+
+  /** Resolves `returnFocusTo`, which may be a thunk, at the moment focus is actually handed over. */
+  private resolvedReturnFocusTarget(): HTMLElement | null {
+    const target = this.returnFocusTo;
+    return typeof target === 'function' ? target() : target;
+  }
+
+  /**
+   * The terminal focus handoff: the host's named return target when it names one that can really
+   * take focus, else the always-present `[part="status"]`. Unconditional, exactly as the
+   * `[part="status"]` move it replaces always was -- the control the user just activated is about
+   * to unmount, so the handoff cannot wait to be sure that control held focus.
+   */
+  private handOffDecidedFocus(): void {
+    focusFirstAvailable([this.resolvedReturnFocusTarget(), this.statusEl]);
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('decision') && changed.get('decision') !== undefined && this.decision != null) {
-      const key = this.decision === 'approved' ? 'confirmApprovedAnnounce' : 'confirmDeniedAnnounce';
+    const decision = this.decision;
+    if (changed.has('decision') && changed.get('decision') !== undefined && decision != null) {
+      const key = decision === 'approved' ? 'confirmApprovedAnnounce' : 'confirmDeniedAnnounce';
       this.liveRegion?.announce(this.localize(key), { force: true });
+      // Ordered after the announcement, and in `updated()` so the decided `[part="status"]` is
+      // already in the DOM: the whole point is that a host can unmount the bar on this signal
+      // without first having to know that both of those already happened. The same
+      // `changed.get('decision') !== undefined` guard the announcement uses keeps a decision
+      // supplied in the initial markup silent -- nothing settled, it simply started decided.
+      this.emit('lr-decision-settled', { decision });
     }
   }
 

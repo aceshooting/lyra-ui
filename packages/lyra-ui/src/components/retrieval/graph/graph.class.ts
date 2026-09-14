@@ -95,6 +95,10 @@ export type LyraGraphPickKind = 'node' | 'link';
 /** See `nodeLabels`'s own doc for the per-renderer default when unset. */
 export type LyraGraphNodeLabelsMode = 'always' | 'zoom' | 'none';
 
+/** See `fitTo`'s own doc. `'none'` keeps the numeric `width`/`height` as the drawing space;
+ *  `'container'` measures the host's own content box instead. */
+export type LyraGraphFit = 'none' | 'container';
+
 type BrowserWindow = Window & typeof globalThis;
 
 /** Shared score-tier thresholds for retrieval relevance and grounding confidence. */
@@ -537,11 +541,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  props otherwise behave identically across renderers. Runtime changes tear down and rebuild
    *  the surface; positions survive via `prevById`/`lastPositionById`. */
   @property() renderer: LyraGraphRenderer = 'svg';
-  /** Requested graph viewport width in CSS pixels. */
+  /** Where the drawing space comes from. `'none'` (the default) uses the numeric `width`/`height`
+   *  below, unchanged. `'container'` measures the host's own content box -- through the same
+   *  `ResizeObserver` the canvas renderer already owns -- and feeds that measurement to the SVG
+   *  `viewBox`, the layout's centering force, `focusNode()`/`fit()`'s camera math and the loading
+   *  skeleton, so the drawing always matches the box it is rendered into and no host-side observer
+   *  is needed. A resize re-centers the running layout in place (`forceCenter` plus a low-alpha
+   *  restart); it never rebuilds the simulation, so settled positions survive. While
+   *  `'container'` is in effect the measured box wins over `width`/`height`, which stay the
+   *  explicit override path under the `'none'` default. This does not change how the host itself
+   *  is sized -- an outer `block-size`, `--lr-canvas-reserved-height` and `height` still do that,
+   *  and `'container'` simply follows whichever of them won. Falls back to `width`/`height` when
+   *  the box is unmeasurable (detached, `display: none`, or a realm with no `ResizeObserver`). */
+  @property({ attribute: 'fit-to' }) fitTo: LyraGraphFit = 'none';
+  /** Requested graph viewport width in CSS pixels. Ignored while `fitTo === 'container'`. */
   @property({ type: Number }) width = 800;
   /** Requested graph viewport height in CSS pixels. Also sizes the rendered host itself (see
    *  `--lr-canvas-reserved-height`'s doc) whenever neither that nor an explicit outer `block-size`
-   *  overrides it. */
+   *  overrides it. Only the drawing space is ignored while `fitTo === 'container'`; the host
+   *  sizing above still applies. */
   @property({ type: Number }) height = 600;
   /** Many-body force strength used by the force layout. Negative values repel nodes. */
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength =
@@ -626,6 +644,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   // must not rebuild a freshly reconnected graph from the previous mount's lifecycle.
   private loadGeneration = 0;
 
+  /** The host's own content box, in whole CSS pixels, as last measured under
+   *  `fitTo === 'container'`; `null` before any usable measurement (and whenever `fitTo` leaves
+   *  `'container'`, so a later opt-in re-measures instead of reusing a stale box). Reactive
+   *  because the SVG `viewBox` renders straight from it. */
+  @state() private containerSize: { width: number; height: number } | null =
+    null;
   @state() private simNodes: SimNode[] = [];
   @state() private simLinks: SimLink[] = [];
   private danglingLinks: SimLink[] = [];
@@ -712,7 +736,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  `redrawPickCanvas()`/`hitTest()`) -- never attached to the DOM or painted to the screen. */
   private pickCanvas?: HTMLCanvasElement;
   private pickCtx?: CanvasRenderingContext2D | null;
-  private canvasResizeObserver?: ResizeObserver;
+  /** One `ResizeObserver` on the host, shared by its two consumers: `renderer="canvas"`'s
+   *  backing-store invalidation and `fitTo="container"`'s box measurement. Named for the host it
+   *  watches rather than either consumer, since it outlives a renderer switch whenever
+   *  `fitTo === 'container'` still needs it. */
+  private hostResizeObserver?: ResizeObserver;
+  /** The document the live `hostResizeObserver` was created in -- lets `watchHostResize()` keep an
+   *  already-correct instance instead of replacing it (and losing its pending measurement) on
+   *  every call, while still rebuilding after an adoption into another realm. */
+  private hostResizeObserverDocument?: Document;
   private canvasDprQuery?: MediaQueryList;
   private canvasDrawRafId?: number;
   private canvasDrawRafOwner?: BrowserWindow;
@@ -873,6 +905,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       });
       this.intersectionObserver.observe(this);
     }
+    // Also unconditional, and for the same reason: fitTo="container" measures through the host
+    // resize observer in either renderer and whether or not d3 has loaded yet. A reparent both
+    // drops the previous instance (disconnectedCallback) and can land the host in a
+    // differently-sized container, and produces no property change for updated() to react to --
+    // so re-arm and re-measure right here. A changed measurement is reactive state, so the
+    // re-center/redraw still runs from updated() exactly as it does for an observer-delivered
+    // resize; there is nothing extra to do here. On a FIRST mount this runs before willUpdate()
+    // has written --_lr-graph-requested-height, which is why measureHostBox() writes it itself.
+    if (this.fitTo === 'container') {
+      this.syncHostResizeObserver();
+      this.measureHostBox();
+    }
     // A reconnect (e.g. a drag-and-drop reparent that keeps this same
     // element instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between — this.d3 is already set from
@@ -895,7 +939,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         this.canvasEl === this.zoomedEl
       ) {
         this.ensureCanvasOwnerRealm();
-        this.watchCanvasResize();
+        this.syncHostResizeObserver();
         this.watchCanvasDpr();
         this.markCanvasDirty();
       }
@@ -947,8 +991,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.cancelCameraTween();
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
-    this.canvasResizeObserver?.disconnect();
-    this.canvasResizeObserver = undefined;
+    this.hostResizeObserver?.disconnect();
+    this.hostResizeObserver = undefined;
+    this.hostResizeObserverDocument = undefined;
     this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
     this.canvasDprQuery = undefined;
     if (this.canvasDrawRafId != null) {
@@ -1138,12 +1183,73 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** `width`/`height` normalized to a finite, positive viewport size — an invalid attribute value
    *  would otherwise flow straight into `forceCenter`, the SVG `viewBox`, and the canvas backing
    *  store's `width`/`height`, producing `NaN` geometry/transforms that silently render nothing
-   *  instead of erroring. */
+   *  instead of erroring. Under `fitTo === 'container'` the measured host content box replaces
+   *  them, with the normalized numeric value still the fallback for every frame before a usable
+   *  measurement exists (see `measureHostBox()`). */
   private get safeWidth(): number {
-    return finiteRange(this.width, 800, 1);
+    const requested = finiteRange(this.width, 800, 1);
+    const measured = this.fitTo === 'container' && this.containerSize;
+    return measured ? finiteRange(measured.width, requested, 1) : requested;
   }
   private get safeHeight(): number {
-    return finiteRange(this.height, 600, 1);
+    const requested = finiteRange(this.height, 600, 1);
+    const measured = this.fitTo === 'container' && this.containerSize;
+    return measured ? finiteRange(measured.height, requested, 1) : requested;
+  }
+
+  /** Records a freshly measured host content box, returning whether it actually changed.
+   *
+   *  Rounding to whole CSS pixels is the jitter damper: a fractional layout, a browser zoom level
+   *  or a scrollbar appearing for one frame otherwise re-renders every node and re-centers the
+   *  layout for a difference nobody can see. No extra `requestAnimationFrame` coalescing is
+   *  layered on top -- `ResizeObserver` already delivers at most once per frame, so a second
+   *  frame of delay would only add latency plus another cancellation path to leak. A zero or
+   *  negative box (detached, `display: none`) is rejected rather than collapsing the drawing space
+   *  to nothing; `safeWidth`/`safeHeight`'s numeric fallback keeps applying. */
+  private recordContainerSize(width: number, height: number): boolean {
+    const w = Math.round(finiteRange(width, 0, 0));
+    const h = Math.round(finiteRange(height, 0, 0));
+    if (w <= 0 || h <= 0) return false;
+    if (this.containerSize?.width === w && this.containerSize?.height === h)
+      return false;
+    this.containerSize = { width: w, height: h };
+    return true;
+  }
+
+  /** Measures the host synchronously, so the very first painted frame already uses the real box
+   *  instead of the 800x600 numeric fallback -- waiting for the observer's first callback is
+   *  exactly the "hard-coded fallback size for the frames before the first measurement" a consumer
+   *  otherwise hand-rolls. `clientWidth`/`clientHeight` are the content box (already integral, and
+   *  scrollbars excluded), matching what `ResizeObserver`'s `contentRect` reports afterwards for
+   *  this component's own unpadded, unbordered host; a consumer who adds padding to the host gets
+   *  that first frame padding-inclusive and the observer's own content-box reading from then on. */
+  private measureHostBox(): boolean {
+    // A detached host has no box to read, and `clientWidth` on one is a layout flush that can only
+    // ever return 0 -- skip it rather than paying for the same rejected measurement every update.
+    if (!this.isConnected) return false;
+    // Size the host before reading it: `:host`'s block-size resolves through
+    // --_lr-graph-requested-height, and until that property is written the cascade falls through to
+    // its --lr-size-24rem last resort. Measuring there records 384px and then suppresses every
+    // later synchronous measurement (they only run while no box is on record), so the first painted
+    // frame draws a 384-tall drawing space inside a host that is `height` tall -- the exact
+    // letterbox this mode removes. The write is idempotent and derives only from the numeric
+    // `height`, so it can never feed a measurement back into the box it measures.
+    this.syncRequestedHeightVar();
+    return this.recordContainerSize(this.clientWidth, this.clientHeight);
+  }
+
+  /** Writes the private `--_lr-graph-requested-height` fallback that `:host`'s block-size resolves
+   *  through (see graph.styles.ts), from the normalized numeric `height`. Kept private and beneath
+   *  the author-facing `--lr-canvas-reserved-height` so an ancestor's reservation always still
+   *  wins. Always finite (the fallback is 600), so there is no unset branch to handle.
+   *  Deliberately normalizes `height` directly rather than reading `safeHeight`: under
+   *  `fitTo === 'container'` safeHeight IS the measured box, and writing that back into the
+   *  property that sizes the host would close a measure -> resize -> measure loop. */
+  private syncRequestedHeightVar(): void {
+    this.style.setProperty(
+      '--_lr-graph-requested-height',
+      `${finiteRange(this.height, 600, 1)}px`
+    );
   }
 
   /** `minZoom`/`maxZoom` normalized to finite, positive scale bounds before ever reaching
@@ -1561,7 +1667,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private setUpCanvasSurface(): void {
     this.canvasCtx = this.canvasEl!.getContext('2d') ?? undefined;
     this.ensureCanvasOwnerRealm();
-    this.watchCanvasResize();
+    // Routed through syncHostResizeObserver(), never watchHostResize() directly: updated() already
+    // arms this observer on the first pass (both `renderer` and `fitTo` count as changed there), and
+    // a second unconditional observe() re-pays the initial callback -- which in canvas mode is a
+    // second markCanvasDirty(). Chromium happened to deliver both before the first update settled;
+    // Firefox delivered the duplicate a beat later, where it read as a spurious scene invalidation.
+    this.syncHostResizeObserver();
     this.watchCanvasDpr();
     this.canvasTooltipEl =
       (this.renderRoot.querySelector('[part="tooltip"]') as HTMLDivElement) ??
@@ -1592,20 +1703,56 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.pickDirty = true;
   }
 
-  private watchCanvasResize(): void {
+  /** Arms the host observer when either consumer needs it, and disconnects it when neither does --
+   *  the single place that decides, so `fitTo="container"` keeps its measurement across a renderer
+   *  switch that used to unconditionally tear the observer down. */
+  private syncHostResizeObserver(): void {
+    if (this.renderer !== 'canvas' && this.fitTo !== 'container') {
+      this.hostResizeObserver?.disconnect();
+      this.hostResizeObserver = undefined;
+      this.hostResizeObserverDocument = undefined;
+      return;
+    }
+    // Keep an already-correct instance: this runs from routine updates and from every canvas
+    // surface setup, and rebuilding would drop the measurement the live observer has already
+    // delivered while re-paying its initial callback (an extra markCanvasDirty() in canvas mode).
+    if (
+      this.hostResizeObserver &&
+      this.hostResizeObserverDocument === this.ownerDocument
+    )
+      return;
+    this.watchHostResize();
+  }
+
+  /** The raw arm. Only `syncHostResizeObserver()` may call this -- every other caller must go
+   *  through that gate so an already-correct instance is kept instead of rebuilt. */
+  private watchHostResize(): void {
     // Re-arming replaces the observer instance -- disconnect the previous one first, or a
     // canvas -> svg -> canvas renderer round trip leaves an orphaned observer still watching the
     // host (disconnectedCallback only ever cleans up whichever instance is current).
-    this.canvasResizeObserver?.disconnect();
+    this.hostResizeObserver?.disconnect();
     const ResizeObserverCtor = this.ownerWindow?.ResizeObserver;
     if (!ResizeObserverCtor) {
-      this.canvasResizeObserver = undefined;
+      this.hostResizeObserver = undefined;
+      this.hostResizeObserverDocument = undefined;
       return;
     }
-    this.canvasResizeObserver = new ResizeObserverCtor(() =>
-      this.markCanvasDirty()
-    );
-    this.canvasResizeObserver.observe(this);
+    this.hostResizeObserver = new ResizeObserverCtor((entries) => {
+      // Exactly one element is observed, so a callback carries exactly one entry; indexing from
+      // the end (rather than [0]) is only defensive, and both reach the same single box.
+      const box = entries[entries.length - 1]?.contentRect;
+      if (this.fitTo === 'container' && box)
+        this.recordContainerSize(box.width, box.height);
+      // Gated, not unconditional: this observer is now armed in svg mode too, and from the first
+      // update in canvas mode -- before the lazily imported d3 has resolved there is no <canvas>
+      // in the tree at all. Marking a canvas that isn't rendered dirty would schedule pointless
+      // frames forever in the first case and, in the second, discard the cached scene for a
+      // surface that does not exist; `applyCanvasInteractions()` marks it dirty the moment it
+      // does. `canvasEl` is a live @query, so this tracks the rendered tree rather than a flag.
+      if (this.renderer === 'canvas' && this.canvasEl) this.markCanvasDirty();
+    });
+    this.hostResizeObserverDocument = this.ownerDocument;
+    this.hostResizeObserver.observe(this);
   }
 
   private watchCanvasDpr(): void {
@@ -2424,16 +2571,21 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but a future shared mixin under LyraElement must still run
-    // Keep the author-facing --lr-canvas-reserved-height hook entirely consumer-owned (see
-    // graph.styles.ts's :host rule): this only supplies the private fallback beneath it, resolved
-    // from the normalized height, so an ancestor's --lr-canvas-reserved-height always still wins.
-    // Always finite (safeHeight falls back to 600), so there is no unset branch to handle.
-    if (changed.has('height')) {
-      this.style.setProperty(
-        '--_lr-graph-requested-height',
-        `${this.safeHeight}px`
-      );
-    }
+    // Keeps the rendered host height following the `height` property -- see syncRequestedHeightVar()
+    // for why the property it writes is private and why it normalizes `height` itself.
+    // measureHostBox() writes it too, so a connect-time measurement never reads an unsized host.
+    if (changed.has('height')) this.syncRequestedHeightVar();
+    // Leaving container mode drops the stale box, so re-opting-in later measures afresh rather
+    // than drawing one frame at the size some previous container happened to be. Assigning null
+    // over an existing box is itself a reactive change, so updated()'s branch below re-centers
+    // back onto the numeric width/height in the same pass.
+    if (changed.has('fitTo') && this.fitTo !== 'container')
+      this.containerSize = null;
+    // Measure synchronously while no usable box is on record -- from willUpdate() rather than
+    // updated(), so the very first render already draws at the real size instead of painting the
+    // 800x600 fallback and correcting it a frame later (the same reason rebuildSimulation() runs
+    // here; see its own note). The observer owns every measurement after this one.
+    if (this.fitTo === 'container' && !this.containerSize) this.measureHostBox();
     this.resolvedCssColorCache.clear();
     // Every update gets a fresh navigableLinks() result computed at most once (see that cache
     // field's own doc comment for why this can't be gated on graphItemsChanged like the sibling
@@ -2553,6 +2705,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       );
     }
 
+    // Before the `!this.d3` bail below: the observer is what delivers the measurements
+    // fitTo="container" needs, and a consumer can flip `fitTo`/`renderer` while the optional d3
+    // peer is still loading (or missing entirely).
+    if (changed.has('fitTo') || changed.has('renderer'))
+      this.syncHostResizeObserver();
+
     if (!this.d3) return;
     if (
       !changed.has('nodes') &&
@@ -2563,7 +2721,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // width/height and chargeStrength/linkDistance in the same reactive
       // update batch, and both retunes must apply — not just whichever branch
       // happens to come first.
-      if (changed.has('width') || changed.has('height')) {
+      // `containerSize` joins width/height here as the third input to the same drawing space:
+      // under fitTo="container" a resize must move the centering force exactly as an explicit
+      // width/height assignment does -- and, just as deliberately, must NOT rebuild the
+      // simulation, so every settled position survives the resize.
+      if (
+        changed.has('width') ||
+        changed.has('height') ||
+        changed.has('containerSize') ||
+        changed.has('fitTo')
+      ) {
         this.simulation?.force(
           'center',
           this.d3.forceCenter(this.safeWidth / 2, this.safeHeight / 2)
@@ -2652,9 +2819,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (svgEl && svgEl !== this.zoomedEl) {
       // Binding a fresh svg means any previous renderer="canvas" surface is gone -- stop its
       // resize watcher now (it observes the host, not the removed <canvas>, so it would keep
-      // firing markCanvasDirty() for as long as the element lives in svg mode).
-      this.canvasResizeObserver?.disconnect();
-      this.canvasResizeObserver = undefined;
+      // firing markCanvasDirty() for as long as the element lives in svg mode). Routed through
+      // syncHostResizeObserver() rather than disconnecting outright, because fitTo="container"
+      // measures through that same observer and still needs it in svg mode.
+      this.syncHostResizeObserver();
       this.canvasHover = undefined;
       this.zoomedEl = svgEl;
       // Both queries always find a match here: the outer <g> and the focus-halo <circle> are

@@ -17,69 +17,136 @@ export const styles = css`
     display: none;
   }
 
-  /* Shared visual treatment for the single-capability button ([part='trigger']) and the
-     multi-capability one ([part='menu-trigger']) slotted into lr-dropdown's trigger slot. The
-     latter cannot reuse part='trigger' -- reserved for the single-capability case so a consumer's
-     ::part(trigger) targets exactly one button -- so both share this plain class for the identical
-     declarations, on top of their own distinct part names. */
+  /* Captured on the HOST, where this component declares no --lr-icon-button-* of its own, so each
+     var() reads whatever an ancestor theme wrapper set and falls back to this component's own
+     treatment only when nothing did. The appearance tiers below re-point the fallback arm, never
+     the capture, so an ancestor override still wins in every tier.
+     The neutral row of the semantic grid is named directly rather than importing
+     internal/variants.styles.ts: that sheet is ~45 declarations per shadow root and exists to swap
+     the generic slots per the variant attribute, which this component deliberately does not take. */
+  :host {
+    --_lr-attachment-trigger-fill: transparent;
+    --_lr-attachment-trigger-on-fill: var(--lr-color-text-quiet);
+    --_lr-attachment-trigger-edge: 0;
+    --_lr-attachment-trigger-bg: var(
+      --lr-icon-button-background,
+      var(--_lr-attachment-trigger-fill)
+    );
+    --_lr-attachment-trigger-bg-hover: var(
+      --lr-icon-button-background-hover,
+      color-mix(
+        in oklab,
+        var(--_lr-attachment-trigger-fill),
+        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+      )
+    );
+    --_lr-attachment-trigger-bg-active: var(
+      --lr-icon-button-background-active,
+      color-mix(
+        in oklab,
+        var(--_lr-attachment-trigger-fill),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    --_lr-attachment-trigger-color: var(
+      --lr-icon-button-color,
+      var(--_lr-attachment-trigger-on-fill)
+    );
+    --_lr-attachment-trigger-color-hover: var(
+      --lr-icon-button-color-hover,
+      var(--_lr-attachment-trigger-on-fill)
+    );
+    --_lr-attachment-trigger-color-active: var(
+      --lr-icon-button-color-active,
+      var(--lr-icon-button-color-hover, var(--_lr-attachment-trigger-on-fill))
+    );
+    --_lr-attachment-trigger-border: var(
+      --lr-icon-button-border,
+      var(--_lr-attachment-trigger-edge)
+    );
+    --_lr-attachment-trigger-radius: var(
+      --lr-icon-button-radius,
+      calc(var(--lr-radius) * 0.6)
+    );
+    /* The default tier. Unset, this is byte-identical to the --lr-font-size-lg this control painted
+       before it had a size property. */
+    --_lr-attachment-trigger-font-size: var(--lr-font-size-lg);
+  }
+  /* The appearance tiers move only the three fill/foreground/edge inputs the captures above read,
+     so an ancestor's own --lr-icon-button-* still out-ranks every one of them. "plain" needs no
+     rule: the :host defaults ARE that tier, byte-identical to the pre-property treatment. */
+  :host([appearance='filled']) {
+    --_lr-attachment-trigger-fill: var(--lr-color-neutral-fill-quiet);
+    --_lr-attachment-trigger-on-fill: var(--lr-color-neutral-on-quiet);
+  }
+  :host([appearance='accent']) {
+    --_lr-attachment-trigger-fill: var(--lr-color-neutral-fill-loud);
+    --_lr-attachment-trigger-on-fill: var(--lr-color-neutral-on-loud);
+  }
+  :host([appearance='outlined']) {
+    --_lr-attachment-trigger-edge: var(--lr-border-width-thin) solid
+      var(--lr-color-neutral-border-loud);
+  }
+  :host([appearance='filled-outlined']) {
+    --_lr-attachment-trigger-fill: var(--lr-color-neutral-fill-quiet);
+    --_lr-attachment-trigger-on-fill: var(--lr-color-neutral-on-quiet);
+    --_lr-attachment-trigger-edge: var(--lr-border-width-thin) solid
+      var(--lr-color-neutral-border-loud);
+  }
+  /* The glyph tier, taken from the shared ladder (internal/sizes.styles.ts, loaded ahead of this
+     sheet by attachment-trigger.class.ts) so this control scales with every same-tier neighbour
+     instead of maintaining a second scale. Both spellings of each aliased tier match, as the
+     ladder does. The tappable box is NOT wired to the ladder -- see the size property's own doc. */
+  :host([size='2xs']),
+  :host([size='xs']),
+  :host([size='s']),
+  :host([size='small']),
+  :host([size='m']),
+  :host([size='medium']),
+  :host([size='l']),
+  :host([size='large']),
+  :host([size='xl']) {
+    --_lr-attachment-trigger-font-size: var(--lr-form-control-font-size);
+  }
+  /* The default tier has to restate the pre-property value: the ladder's own m tier resolves to
+     --lr-font-size-m, which is smaller than the --lr-font-size-lg this control has always painted,
+     so keying m off the ladder would silently shrink every existing consumer's glyph. */
+  :host([size='m']),
+  :host([size='medium']) {
+    --_lr-attachment-trigger-font-size: var(--lr-font-size-lg);
+  }
+
+  /* Shared placement for the single-capability control ([part='trigger']) and the multi-capability
+     one ([part='menu-trigger']) slotted into lr-dropdown's trigger slot. The latter cannot reuse
+     part='trigger' -- reserved for the single-capability case so a consumer's ::part(trigger)
+     targets exactly one control -- so both share this plain class for the identical declarations,
+     on top of their own distinct part names.
+     Both ARE lr-icon-buttons now, so the tappable floor, the radius, the hover/press mixes, the
+     focus ring, the disabled dimming and the transition all come from that one component; the
+     appearance and size tiers below only re-point its public tokens. */
   .trigger-button {
-    display: inline-flex;
     flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    /* Compact per the class doc: capped well below the general
-       --lr-icon-button-size (meant for a standalone icon-only button) so this
-       sits inside a composer's start slot alongside a textarea, matching
-       lr-combobox's clear-button / lr-select's toggle sizing convention. */
-    min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
-    min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
-    padding: 0;
-    border: none;
-    border-radius: calc(var(--lr-radius) * 0.6);
-    background: transparent;
-    color: var(--lr-color-text-quiet);
-    font: inherit;
-    font-size: var(--lr-font-size-lg);
     line-height: var(--lr-line-height-none);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition:
-      background-color var(--lr-transition-fast),
-      color var(--lr-transition-fast);
-  }
-  /* Internal state qualifiers stay low-specificity so sibling rules in this sheet compose easily;
-     consumer ::part() authority follows the shadow cascade independently. */
-  :where(.trigger-button):hover:where(:not(:disabled)) {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
-    color: var(--lr-color-text);
-  }
-  .trigger-button:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
-  .trigger-button:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    --lr-icon-button-background: var(--_lr-attachment-trigger-bg);
+    --lr-icon-button-background-hover: var(--_lr-attachment-trigger-bg-hover);
+    --lr-icon-button-background-active: var(--_lr-attachment-trigger-bg-active);
+    --lr-icon-button-color: var(--_lr-attachment-trigger-color);
+    --lr-icon-button-color-hover: var(--_lr-attachment-trigger-color-hover);
+    --lr-icon-button-color-active: var(--_lr-attachment-trigger-color-active);
+    --lr-icon-button-border: var(--_lr-attachment-trigger-border);
+    --lr-icon-button-radius: var(--_lr-attachment-trigger-radius);
+    /* The size tier scales the GLYPH. The tappable box stays on the shared
+       --lr-icon-button-size floor, which lr-icon-button applies for us. */
+    font-size: var(--_lr-attachment-trigger-font-size);
   }
   .trigger-button svg {
     display: block;
   }
 
-  /* Both trigger buttons must independently meet the shared --lr-icon-button-size tappable
-     minimum, overriding .trigger-button's own more compact min-inline-size/min-block-size above:
-     both are (0,1,0), so this later rule wins on source order, the same tie-break as every other
-     single-attribute-selector override in this file. */
-  [part='trigger'],
-  [part='menu-trigger'] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-  }
-
-  /* [part='menu-trigger'] carries a second glyph -- the paperclip plus this
-     disclosure chevron -- where the single-capability [part='trigger'] has
-     one, so it alone needs a gap. */
-  [part='menu-trigger'] {
+  /* [part='menu-trigger'] carries a second glyph -- the paperclip plus the disclosure chevron --
+     where the single-capability [part='trigger'] has one, so it alone needs a gap. The gap belongs
+     on the composed control's own flex row, which is one shadow boundary deeper. */
+  [part='menu-trigger']::part(button) {
     gap: var(--lr-space-xs);
   }
 
@@ -98,7 +165,7 @@ export const styles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .trigger-button {
+    .trigger-button::part(button) {
       transition: none !important;
     }
   }

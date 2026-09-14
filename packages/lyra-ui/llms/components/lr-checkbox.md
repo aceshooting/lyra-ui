@@ -53,6 +53,22 @@ alias, bubbling/composed `change`, then the compatibility `lr-change` alias (bot
 `detail: { checked: boolean }`). Programmatic `.checked` assignments are
 silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a
 validity check finds the checkbox invalid.
+**Refusing a toggle.** `lr-checkbox-toggle-request` is cancelable and fires *before* `checked`
+moves, on every user path (click, Space, and the host `click()` activation it forwards).
+`detail: { checked: boolean }` is the state the control **would** take; `checked` itself still holds
+the old value while the event dispatches. `preventDefault()` keeps the current state, so the box
+never flips at all rather than flipping and snapping back, and none of
+`input`/`lr-input`/`change`/`lr-change` follow. A listener can instead answer by assigning `checked`
+itself during the dispatch, which suppresses the built-in write the same way — including when it
+assigns the value the control already held, which a before/after comparison cannot detect. It does
+not fire for a programmatic `.checked` assignment, a form reset, a session-state restore, or while
+the control is disabled. Inside an `<lr-checkbox-group>` this event is consumed at the group
+boundary and republished as `lr-checkbox-group-toggle-request`, exactly as the group already
+translates the child's `input`/`change`/`lr-change`. A refused toggle also leaves the control
+pristine: it does not count as the interaction that reveals `:state(user-valid)`/`:state(user-invalid)`,
+so refusing a required checkbox's first toggle cannot flash a validation error for a change that
+never happened. Blurring the control, or a `reportValidity()` call, still marks it interacted, which
+is the native `:user-invalid` timing.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control;
 `getForm()` returns its owning form (including an external owner selected by `form`).

@@ -175,6 +175,16 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
 - `valueLabel?: string` (attribute `value-label`) — absence uses the localized default. Every
   supplied string is literal, including `"value"` and `""`; unset the property/attribute to resume
   localization.
+- `withoutLegend: boolean = false` (attribute `without-legend`, reflected) — hides the colour
+  legend, under the same name and the same polarity `lr-chart` has always used rather than a third
+  spelling for one idea. The whole row leaves the DOM — the gradient bar or `legendStops` swatches,
+  the `legend-lo`/`legend-hi` endpoint labels, the `valueLabel` caption, the labelled `annotations`
+  entries and the `legend` slot go with it — so it contributes no layout box and assigns no slotted
+  content, rather than being painted and then hidden. The legend's own preparation stops with it:
+  `--lr-heatmap-color-steps-gradient`, which this component writes onto the host for the legend bar
+  and for nothing else, is not written while the legend is hidden, and is removed again if it had
+  been. Cells, tooltips, keyboard interaction, selection and the generated accessible summary are
+  unaffected — the summary already names the value label independently of the legend.
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
@@ -366,7 +376,8 @@ in calendar mode)
 **Slots:** `legend` — custom content rendered inside the built-in `[part="legend"]` row, after the
 gradient/`legendStops` swatches, the trailing `valueLabel` caption, and any labeled `annotations`
 entries. Presentation-only, like `legendStops`: slotted content is never consulted by the color
-ramp, the bucket math, the tooltip, or the generated accessible name.
+ramp, the bucket math, the tooltip, or the generated accessible name. Nothing is rendered, and the
+slot itself is absent from the shadow root, while `withoutLegend` is set.
 
 **CSS parts:** `base`, `canvas`, `grid` (the scrollport wrapping the canvas while `stickyLabels`
 freezes an axis — absent entirely otherwise), `row-labels`/`col-labels` (the frozen label bands,
@@ -400,8 +411,9 @@ also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay 
 `--lr-heatmap-color-steps-gradient` (default
 `linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))` — the gradient
 painted on the continuous legend bar; the component writes it onto the host itself while
-`colorSteps` is supplied and removes it again when it isn't, so it is a read-out rather than a knob
-you set). `--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
+`colorSteps` is supplied and the legend is rendered, and removes it again when either stops being
+true — `withoutLegend` takes the legend row, this property's only reader, out of the DOM — so it is
+a read-out rather than a knob you set). `--lr-heatmap-annotation-color` (default `var(--lr-color-danger)` — the canvas-drawn ring
 stroked around an annotated cell, deliberately not one of the sequential ramp colors so it stays
 visible regardless of what it's drawn over). `--lr-heatmap-selected-color` (default
 `var(--lr-color-success)` — the canvas-drawn ring stroked around the persistent `selectedCell`, a

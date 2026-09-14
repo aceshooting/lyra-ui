@@ -2550,7 +2550,7 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'Lyra snapshots each input/change event\'s value into a frozen readonly value at dispatch time; migrated handlers that mutate the event detail in place must be reviewed.',
+        'Lyra snapshots each input/change event\'s value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed.',
       expectedDrift: [
         {
           code: 'event-type-mismatch',
@@ -2558,7 +2558,7 @@ const DECISION_OVERRIDES = new Map([
           member: 'change',
           expected: 'CustomEvent<{ value: string | string[] }>',
           actual:
-            'CustomEvent< LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }> >',
+            'CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >',
         },
         {
           code: 'event-constructor-mismatch',
@@ -2566,7 +2566,7 @@ const DECISION_OVERRIDES = new Map([
           member: 'input',
           expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
           actual:
-            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }> >',
+            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >',
         },
         {
           code: 'event-type-mismatch',
@@ -2574,7 +2574,7 @@ const DECISION_OVERRIDES = new Map([
           member: 'input',
           expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
           actual:
-            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }> >',
+            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >',
         },
       ],
     },

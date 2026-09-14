@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, aTimeout } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
 import "./filter-bar.js";
 import "../../forms/checkbox/checkbox.js";
 import "../../forms/time-range/time-range.js";
@@ -3432,4 +3432,869 @@ describe("lr-filter-bar contains its composed controls' lr-activate", () => {
   it("swallows lr-activate from the composed lr-combobox, like lr-input/lr-change", async () => {
     await containmentCase("tags", "urgent", 1);
   });
+});
+
+describe('definition passthrough completeness (select/date adornment, empty-text, search-text)', () => {
+  it('forwards emptyText to the composed lr-combobox, and leaves it unset otherwise (unset-regression)', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'tags',
+          label: 'Tags',
+          type: 'combobox',
+          emptyText: 'No matching tags',
+          options: [{ value: 'urgent', label: 'Urgent' }],
+        },
+        {
+          filterId: 'plain',
+          label: 'Plain',
+          type: 'combobox',
+          options: [{ value: 'a', label: 'A' }],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    const combo = control(el, 'tags') as HTMLElement & { emptyText?: string };
+    expect(combo.emptyText).to.equal('No matching tags');
+
+    const plain = control(el, 'plain') as HTMLElement & { emptyText?: string };
+    expect(plain.emptyText, 'an undeclared emptyText stays the control default').to.equal(
+      undefined
+    );
+  });
+
+  it("forwards an option's searchText to <lr-option search-text> for select and combobox", async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'status',
+          label: 'Status',
+          type: 'select',
+          options: [
+            { value: 'open', label: 'Open', searchText: 'open unresolved active' },
+            { value: 'closed', label: 'Closed' },
+          ],
+        },
+        {
+          filterId: 'tags',
+          label: 'Tags',
+          type: 'combobox',
+          options: [{ value: 'urgent', label: 'Urgent', searchText: 'urgent p1 sev1' }],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    const selectOptions = [...control(el, 'status').querySelectorAll('lr-option')];
+    expect(selectOptions[0]!.getAttribute('search-text')).to.equal('open unresolved active');
+    expect(
+      selectOptions[1]!.hasAttribute('search-text'),
+      'an option with no searchText gets no attribute (unset-regression)'
+    ).to.equal(false);
+
+    const comboOption = control(el, 'tags').querySelector('lr-option')!;
+    expect(comboOption.getAttribute('search-text')).to.equal('urgent p1 sev1');
+  });
+
+  it("matches a 'combobox' filter's option on its searchText, which a 'select' filter ignores", async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'tags',
+          label: 'Tags',
+          type: 'combobox',
+          options: [
+            { value: 'urgent', label: 'Urgent', searchText: 'sev1 production outage' },
+            { value: 'billing', label: 'Billing' },
+          ],
+        },
+        // Two identical selects, because a select's type-ahead buffer accumulates across
+        // keystrokes until its own reset timer fires -- typing the negative case and then the
+        // positive case into ONE control would search for "zecl".
+        {
+          filterId: 'status',
+          label: 'Status',
+          type: 'select',
+          options: [
+            { value: 'open', label: 'Open', searchText: 'zebra' },
+            { value: 'closed', label: 'Closed' },
+          ],
+        },
+        {
+          filterId: 'status2',
+          label: 'Status again',
+          type: 'select',
+          options: [
+            { value: 'open', label: 'Open', searchText: 'zebra' },
+            { value: 'closed', label: 'Closed' },
+          ],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    // Behavioural, not attribute-presence: typing a token that appears in no label still narrows
+    // the combobox to the row whose searchText carries it.
+    const combo = control(el, 'tags') as HTMLElement & {
+      open: boolean;
+      updateComplete: Promise<unknown>;
+    };
+    combo.open = true;
+    await combo.updateComplete;
+    const query = combo.shadowRoot!.querySelector(
+      '[part="combobox-input"]'
+    ) as HTMLInputElement;
+    query.value = 'sev1';
+    query.dispatchEvent(
+      new InputEvent('input', {
+        bubbles: true,
+        composed: true,
+        data: 'sev1',
+        inputType: 'insertText',
+      })
+    );
+    await combo.updateComplete;
+    expect(
+      [...combo.shadowRoot!.querySelectorAll('[part="option"]')].map((row) =>
+        row.textContent!.trim()
+      ),
+      'searchText alone matched the row'
+    ).to.deep.equal(['Urgent']);
+
+    // The select does NOT read it -- its listbox type-ahead matches the option label alone. Typing
+    // the searchText commits nothing; typing the label prefix commits. This is the behaviour
+    // LyraFilterBarOption.searchText's own doc now scopes the property to.
+    const press = (filterId: string, keys: readonly string[]): void => {
+      const trigger = control(el, filterId).shadowRoot!.querySelector(
+        '[part~="trigger"]'
+      ) as HTMLElement;
+      for (const key of keys) {
+        trigger.dispatchEvent(
+          new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true })
+        );
+      }
+    };
+
+    press('status', ['z', 'e']);
+    await el.updateComplete;
+    expect(
+      Object.prototype.hasOwnProperty.call(el.value, 'status'),
+      "the select's closed type-ahead never consulted search-text"
+    ).to.equal(false);
+
+    press('status2', ['c', 'l']);
+    await el.updateComplete;
+    expect(el.value['status2'], 'the same type-ahead does match on the label').to.equal('closed');
+  });
+
+  it('forwards clearable/size/icon to the composed lr-select', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'status',
+          label: 'Status',
+          type: 'select',
+          clearable: true,
+          size: 'l',
+          icon: html`<span id="select-icon">*</span>`,
+          options: [{ value: 'open', label: 'Open' }],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+    const select = control(el, 'status') as HTMLElement & {
+      clearable: boolean;
+      size: string;
+    };
+
+    expect(select.clearable).to.equal(true);
+    expect(select.size).to.equal('l');
+    const wrapper = select.querySelector('[slot="start"]') as HTMLElement | null;
+    expect(wrapper !== null, 'icon renders into the start slot').to.be.true;
+    expect(wrapper!.getAttribute('aria-hidden')).to.equal('true');
+    expect(wrapper!.hasAttribute('inert'), 'inert, so it cannot take focus').to.equal(true);
+    expect(
+      wrapper!.querySelector('#select-icon') !== null,
+      'the icon content itself is present'
+    ).to.be.true;
+  });
+
+  it("forwards clearable (as lr-date-input's with-clear)/size/icon to the composed lr-date-input", async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'created',
+          label: 'Created',
+          type: 'date',
+          clearable: true,
+          size: 's',
+          icon: html`<span id="date-icon">*</span>`,
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+    const dateInput = control(el, 'created') as HTMLElement & {
+      withClear: boolean;
+      size: string;
+    };
+
+    expect(dateInput.withClear).to.equal(true);
+    expect(dateInput.size).to.equal('s');
+    const wrapper = dateInput.querySelector('[slot="start"]') as HTMLElement | null;
+    expect(wrapper !== null, 'icon renders into the start slot').to.be.true;
+    expect(wrapper!.hasAttribute('inert')).to.equal(true);
+    expect(
+      wrapper!.querySelector('#date-icon') !== null,
+      'the icon content itself is present'
+    ).to.be.true;
+  });
+
+  it('leaves select/date at their own defaults when the new passthrough fields are unset (unset-regression)', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+    );
+    const select = control(el, 'status') as HTMLElement & {
+      clearable: boolean;
+      size: string;
+    };
+    expect(select.clearable).to.equal(false);
+    expect(select.size).to.equal('m');
+    expect(select.querySelector('[slot="start"]') === null, 'no adornment').to.be.true;
+
+    const dateInput = control(el, 'created') as HTMLElement & {
+      withClear: boolean;
+      size: string;
+    };
+    expect(dateInput.withClear).to.equal(false);
+    expect(dateInput.size).to.equal('m');
+    expect(dateInput.querySelector('[slot="start"]') === null, 'no adornment').to.be.true;
+  });
+});
+
+describe('labelVisibility', () => {
+  const labelRoutedFilters = (
+    labelVisibility: 'visible' | 'hidden' | undefined
+  ): LyraFilterBarFilterDefinition[] =>
+    [
+      {
+        filterId: 'q',
+        label: 'Search issues',
+        type: 'text',
+        ...(labelVisibility ? { labelVisibility } : {}),
+      },
+      {
+        filterId: 'tags',
+        label: 'Tags',
+        type: 'combobox',
+        options: [{ value: 'urgent', label: 'Urgent' }],
+        ...(labelVisibility ? { labelVisibility } : {}),
+      },
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        options: [{ value: 'open', label: 'Open' }],
+        ...(labelVisibility ? { labelVisibility } : {}),
+      },
+      {
+        filterId: 'created',
+        label: 'Created',
+        type: 'date',
+        ...(labelVisibility ? { labelVisibility } : {}),
+      },
+    ] as LyraFilterBarFilterDefinition[];
+
+  it("routes label to the composed control's own aria-label and placeholder when hidden", async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${labelRoutedFilters('hidden')}></lr-filter-bar>`
+    );
+
+    for (const [filterId, label] of [
+      ['q', 'Search issues'],
+      ['tags', 'Tags'],
+      ['status', 'Status'],
+      ['created', 'Created'],
+    ] as const) {
+      const composed = control(el, filterId) as HTMLElement & { label: string };
+      expect(composed.label, `${filterId} renders no visible label`).to.equal('');
+      expect(
+        composed.getAttribute('aria-label'),
+        `${filterId} keeps its accessible name`
+      ).to.equal(label);
+      expect(
+        composed.getAttribute('placeholder'),
+        `${filterId} falls back to the label as placeholder`
+      ).to.equal(label);
+    }
+  });
+
+  it('keeps a declared placeholder instead of the label fallback while hidden', async () => {
+    const filters = [
+      {
+        filterId: 'q',
+        label: 'Search issues',
+        placeholder: 'Type to search…',
+        type: 'text',
+        labelVisibility: 'hidden',
+      },
+    ] as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    );
+    const input = control(el, 'q') as HTMLElement & { label: string };
+    expect(input.getAttribute('placeholder')).to.equal('Type to search…');
+    expect(input.getAttribute('aria-label')).to.equal('Search issues');
+  });
+
+  it('keeps the visible label and adds no aria-label when unset or "visible" (unset-regression)', async () => {
+    for (const visibility of [undefined, 'visible'] as const) {
+      const el = await fixture<LyraFilterBar>(
+        html`<lr-filter-bar .filters=${labelRoutedFilters(visibility)}></lr-filter-bar>`
+      );
+      for (const [filterId, label] of [
+        ['q', 'Search issues'],
+        ['tags', 'Tags'],
+        ['status', 'Status'],
+        ['created', 'Created'],
+      ] as const) {
+        const composed = control(el, filterId) as HTMLElement & { label: string };
+        expect(composed.label, `${filterId} keeps its visible label`).to.equal(label);
+        expect(
+          composed.hasAttribute('aria-label'),
+          `${filterId} adds no aria-label`
+        ).to.equal(false);
+        expect(composed.getAttribute('placeholder'), `${filterId} placeholder`).to.equal('');
+      }
+    }
+  });
+
+  // 'checkbox-menu' is the one type whose labelVisibility routing is hand-rolled rather than
+  // delegated to a composed control -- its trigger is an <lr-button>, not a field -- so it gets its
+  // own set case AND its own unset-regression case here.
+  const teamMenu = (extra: Record<string, unknown>): LyraFilterBarFilterDefinition[] =>
+    [
+      {
+        filterId: 'teams',
+        label: 'Teams',
+        type: 'checkbox-menu',
+        options: [
+          { value: 'core', label: 'Core' },
+          { value: 'design', label: 'Design' },
+        ],
+        ...extra,
+      },
+    ] as LyraFilterBarFilterDefinition[];
+
+  /** Every text run the trigger slots, in order. Kept as separate entries rather than one
+   *  whitespace-normalised string: lr-button sets no `aria-label` of its own, so the internal
+   *  button's accessible name is computed from exactly this sequence, and a duplicated run is only
+   *  visible before the sequence is joined. */
+  const triggerRuns = async (
+    filters: LyraFilterBarFilterDefinition[],
+    value: Record<string, readonly string[]> = {}
+  ): Promise<string[]> => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters} .value=${value}></lr-filter-bar>`
+    );
+    const trigger = control(el, 'teams').querySelector('lr-button') as HTMLElement;
+    return [...trigger.children]
+      .filter((child) => child.getAttribute('slot') === null)
+      .map((child) => child.textContent!.trim());
+  };
+
+  it("names a hidden-label 'checkbox-menu' trigger exactly once", async () => {
+    // Hidden with no declared placeholder: labelRouting falls the label through to the summary, so
+    // the screen-reader-only label run is dropped rather than making the name read "Teams Teams".
+    expect(await triggerRuns(teamMenu({ labelVisibility: 'hidden' }))).to.deep.equal(['Teams']);
+    // A declared placeholder brings the label run back -- it now adds a name the summary lacks.
+    expect(
+      await triggerRuns(teamMenu({ labelVisibility: 'hidden', placeholder: 'Any team' }))
+    ).to.deep.equal(['Teams', 'Any team']);
+    // So does a selection, for the same reason.
+    expect(
+      await triggerRuns(teamMenu({ labelVisibility: 'hidden' }), { teams: ['core', 'design'] })
+    ).to.deep.equal(['Teams', 'Core and Design']);
+  });
+
+  it("visually hides, never removes, a hidden 'checkbox-menu' label run", async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar
+        .filters=${teamMenu({ labelVisibility: 'hidden', placeholder: 'Any team' })}
+      ></lr-filter-bar>`
+    );
+    const label = el.shadowRoot!.querySelector('[part="filter-control-label"]') as HTMLElement;
+    expect(label.textContent!.trim(), 'the name survives').to.equal('Teams');
+    // Rendered result, not stylesheet text: clipped to the sr-only 1px box, not display: none.
+    expect(Math.round(label.getBoundingClientRect().width)).to.equal(1);
+    const summary = el.shadowRoot!.querySelector('[part="filter-control-input"]') as HTMLElement;
+    expect(summary.getBoundingClientRect().width).to.be.greaterThan(1);
+  });
+
+  it("keeps a visible 'checkbox-menu' label and adds no duplicate run when unset (unset-regression)", async () => {
+    for (const visibility of [undefined, 'visible'] as const) {
+      const extra = visibility ? { labelVisibility: visibility } : {};
+      expect(await triggerRuns(teamMenu(extra))).to.deep.equal(['Teams']);
+      expect(await triggerRuns(teamMenu(extra), { teams: ['core'] })).to.deep.equal([
+        'Teams',
+        'Core',
+      ]);
+      const el = await fixture<LyraFilterBar>(
+        html`<lr-filter-bar .filters=${teamMenu(extra)}></lr-filter-bar>`
+      );
+      const label = el.shadowRoot!.querySelector('[part="filter-control-label"]') as HTMLElement;
+      expect(
+        label.getBoundingClientRect().width,
+        'the label is a real visible run, not the sr-only box'
+      ).to.be.greaterThan(1);
+    }
+  });
+});
+
+describe("'checkbox-menu' filter type", () => {
+  const teamFilters: LyraFilterBarFilterDefinition[] = [
+    {
+      filterId: 'teams',
+      label: 'Teams',
+      type: 'checkbox-menu',
+      options: [
+        { value: 'core', label: 'Core' },
+        { value: 'infra', label: 'Infra' },
+        { value: 'design', label: 'Design' },
+      ],
+    },
+  ];
+
+  const menu = (
+    el: LyraFilterBar
+  ): HTMLElement & { open: boolean; size: string; updateComplete: Promise<unknown> } =>
+    control(el, 'teams') as HTMLElement & {
+      open: boolean;
+      size: string;
+      updateComplete: Promise<unknown>;
+    };
+
+  /** The genuinely focused node, following every shadow root -- the checklist's "activate from the
+   *  element that actually has focus" requirement, not a node the test merely believes is focused. */
+  const deepActive = (): HTMLElement => {
+    let node: Element | null = document.activeElement;
+    while (node?.shadowRoot?.activeElement) node = node.shadowRoot.activeElement;
+    return node as HTMLElement;
+  };
+
+  const items = (
+    el: LyraFilterBar
+  ): (HTMLElement & { value: string; checked: boolean; select: () => void })[] =>
+    [
+      ...menu(el).querySelectorAll('lr-dropdown-item'),
+    ] as unknown as (HTMLElement & {
+      value: string;
+      checked: boolean;
+      select: () => void;
+    })[];
+
+  it('composes lr-dropdown with one role="menuitemcheckbox" row per option', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamFilters}></lr-filter-bar>`
+    );
+    expect(menu(el).localName).to.equal('lr-dropdown');
+    const rows = items(el);
+    expect(rows.map((row) => row.value)).to.deep.equal(['core', 'infra', 'design']);
+    expect(rows.map((row) => row.getAttribute('type'))).to.deep.equal([
+      'checkbox',
+      'checkbox',
+      'checkbox',
+    ]);
+    expect(rows.map((row) => row.getAttribute('role'))).to.deep.equal([
+      'menuitemcheckbox',
+      'menuitemcheckbox',
+      'menuitemcheckbox',
+    ]);
+    expect(rows.map((row) => row.textContent!.trim())).to.deep.equal([
+      'Core',
+      'Infra',
+      'Design',
+    ]);
+  });
+
+  it('commits a string[] and emits one lr-input carrying the whole value', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamFilters}></lr-filter-bar>`
+    );
+    const listener = oneEvent(el, 'lr-input');
+    items(el)[1]!.select();
+    const event = (await listener) as CustomEvent<LyraFilterBarInputDetail>;
+
+    expect(event.detail.filterId).to.equal('teams');
+    expect(event.detail.value['teams']).to.deep.equal(['infra']);
+    expect(el.value['teams']).to.deep.equal(['infra']);
+  });
+
+  it('accumulates and removes selections, staying controlled by value rather than self-toggling', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamFilters}></lr-filter-bar>`
+    );
+    items(el)[0]!.select();
+    await el.updateComplete;
+    items(el)[2]!.select();
+    await el.updateComplete;
+    expect(el.value['teams']).to.deep.equal(['core', 'design']);
+    expect(items(el).map((row) => row.checked)).to.deep.equal([true, false, true]);
+
+    items(el)[0]!.select();
+    await el.updateComplete;
+    expect(el.value['teams']).to.deep.equal(['design']);
+    expect(items(el).map((row) => row.checked)).to.deep.equal([false, false, true]);
+  });
+
+  it('ignores a toggle while disabled and leaves the rows unchecked', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar disabled .filters=${teamFilters}></lr-filter-bar>`
+    );
+    items(el)[0]!.select();
+    await el.updateComplete;
+    expect(Object.prototype.hasOwnProperty.call(el.value, 'teams')).to.equal(false);
+    expect(items(el).map((row) => row.checked)).to.deep.equal([false, false, false]);
+    expect(menu(el).hasAttribute('disabled'), 'the dropdown itself refuses to open').to.equal(
+      true
+    );
+  });
+
+  it('activates from the actually-focused row via the menu keyboard contract', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamFilters}></lr-filter-bar>`
+    );
+    const trigger = menu(el).querySelector('lr-button') as HTMLElement;
+    // ArrowDown, not click: the dropdown's documented keyboard contract is what opens the menu
+    // *and* moves focus onto its first enabled row. A pointer open deliberately leaves focus put.
+    trigger.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true })
+    );
+    await el.updateComplete;
+    await menu(el).updateComplete;
+    await aTimeout(0);
+
+    const press = (key: string): void => {
+      const focused = deepActive();
+      focused.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key,
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        })
+      );
+    };
+
+    press('ArrowDown');
+    await el.updateComplete;
+    const focused = deepActive() as HTMLElement & { value?: string };
+    expect(focused.localName, 'roving focus lands on a menu row').to.equal('lr-dropdown-item');
+    const focusedValue = focused.value;
+
+    press('Enter');
+    await el.updateComplete;
+    expect(
+      el.value['teams'],
+      'the row that actually had focus is the one that toggled'
+    ).to.deep.equal([focusedValue]);
+    expect(focusedValue, 'ArrowDown moved off the initially focused first row').to.equal('infra');
+  });
+
+  it('summarises the selection as chips and clears to an empty array on chip removal', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamFilters} .value=${{ teams: ['core', 'design'] }}></lr-filter-bar>`
+    );
+    const chip = el.shadowRoot!.querySelector('[part="chip"]')!;
+    expect(chip.textContent!.replace(/\s+/g, ' ').trim()).to.equal('Teams: Core and Design');
+
+    chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(Object.prototype.hasOwnProperty.call(el.value, 'teams')).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[part="chip"]').length).to.equal(0);
+  });
+
+  it('restores its defaultValue on reset()', async () => {
+    const filters = [
+      { ...(teamFilters[0] as object), defaultValue: ['core'] },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters} .value=${{ teams: ['infra'] }}></lr-filter-bar>`
+    );
+    el.reset();
+    await el.updateComplete;
+    expect(el.value['teams']).to.deep.equal(['core']);
+    expect(items(el).map((row) => row.checked)).to.deep.equal([true, false, false]);
+  });
+
+  it('participates in required validation and localizes its own error text', async () => {
+    const filters = [
+      { ...(teamFilters[0] as object), required: true },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar
+        .filters=${filters}
+        .strings=${{ fieldRequired: 'Pick at least one team.' }}
+      ></lr-filter-bar>`
+    );
+    expect(el.checkValidity()).to.equal(false);
+    el.reportValidity();
+    await el.updateComplete;
+
+    const error = el.shadowRoot!.querySelector('[part="filter-control-error"]');
+    expect(error !== null, 'the inline error renders').to.be.true;
+    expect(error!.textContent!.trim()).to.equal('Pick at least one team.');
+  });
+
+  it('renders a value that matches no declared option verbatim in its chip', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamFilters} .value=${{ teams: ['retired-team'] }}></lr-filter-bar>`
+    );
+    const chip = el.shadowRoot!.querySelector('[part="chip"]')!;
+    expect(chip.textContent!.replace(/\s+/g, ' ').trim()).to.equal('Teams: retired-team');
+  });
+
+  it('drops a checkbox-menu definition whose options are not an array', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar></lr-filter-bar>`);
+    el.filters = [
+      { filterId: 'teams', label: 'Teams', type: 'checkbox-menu' },
+      { filterId: 'ok', label: 'Ok', type: 'checkbox-menu', options: [] },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    await el.updateComplete;
+    expect(el.filters.map((definition) => definition.filterId)).to.deep.equal(['ok']);
+  });
+
+  it('renders under dir="rtl" with logical layout and keeps activation working', async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl">
+        <lr-filter-bar .filters=${teamFilters}></lr-filter-bar>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+    expect(
+      (el as unknown as { readonly effectiveDirection: string }).effectiveDirection
+    ).to.equal('rtl');
+    items(el)[0]!.select();
+    await el.updateComplete;
+    expect(el.value['teams']).to.deep.equal(['core']);
+  });
+
+  it('is accessible with the menu open and a selection applied', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamFilters} .value=${{ teams: ['core'] }}></lr-filter-bar>`
+    );
+    const trigger = menu(el).querySelector('lr-button') as HTMLElement;
+    trigger.click();
+    await el.updateComplete;
+    await menu(el).updateComplete;
+    expect(menu(el).open, 'the menu is open for the audit').to.equal(true);
+    await expect(el).to.be.accessible();
+  });
+
+  it('forwards size and the inert adornment, and names the menu after the filter label', async () => {
+    const filters = [
+      {
+        ...(teamFilters[0] as object),
+        size: 's',
+        icon: html`<span id="menu-icon">*</span>`,
+      },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    );
+    const dropdown = menu(el) as HTMLElement & { size: string };
+    expect(dropdown.size).to.equal('s');
+    expect(dropdown.getAttribute('aria-label')).to.equal('Teams');
+    const trigger = dropdown.querySelector('lr-button') as HTMLElement & { size: string };
+    expect(trigger.size).to.equal('s');
+    const wrapper = trigger.querySelector('[slot="start"]') as HTMLElement | null;
+    expect(wrapper !== null, 'icon renders into the trigger start slot').to.be.true;
+    expect(wrapper!.hasAttribute('inert')).to.equal(true);
+  });
+
+  it('never lets the composed menu events escape as the bar\'s own surface', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamFilters}></lr-filter-bar>`
+    );
+    let escaped = 0;
+    const listener = (): void => {
+      escaped += 1;
+    };
+    el.addEventListener('lr-select', listener);
+    el.addEventListener('lr-menu-item-change', listener);
+    try {
+      items(el)[0]!.select();
+      await el.updateComplete;
+    } finally {
+      el.removeEventListener('lr-select', listener);
+      el.removeEventListener('lr-menu-item-change', listener);
+    }
+    expect(escaped).to.equal(0);
+    expect(el.value['teams']).to.deep.equal(['core']);
+  });
+
+  /** The trigger button, with its own render settled -- its label wrapper is what the two slotted
+   *  runs are laid out inside. */
+  const trigger = async (el: LyraFilterBar): Promise<HTMLElement> => {
+    const button = menu(el).querySelector('lr-button') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await button.updateComplete;
+    return button;
+  };
+
+  it('separates the label and the selection summary with a real rendered gap', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar
+        .filters=${teamFilters}
+        .value=${{ teams: ['core', 'design'] }}
+      ></lr-filter-bar>`
+    );
+    const button = await trigger(el);
+    // Rendered result, not stylesheet text. lr-button's own gap sits BETWEEN its start/label/end
+    // wrappers, not inside the label, so without this the two runs paint as "TeamsCore and Design".
+    const wrapper = getComputedStyle(
+      button.shadowRoot!.querySelector('[part="label"]') as HTMLElement
+    );
+    expect(wrapper.display).to.equal('flex');
+    expect(parseFloat(wrapper.columnGap)).to.be.greaterThan(0);
+
+    const label = el.shadowRoot!.querySelector('[part="filter-control-label"]') as HTMLElement;
+    const summary = el.shadowRoot!.querySelector('[part="filter-control-input"]') as HTMLElement;
+    expect(label.textContent!.trim()).to.equal('Teams');
+    expect(summary.textContent!.trim()).to.equal('Core and Design');
+    expect(
+      Math.round(summary.getBoundingClientRect().left - label.getBoundingClientRect().right),
+      'the summary starts strictly after the label, never flush against it'
+    ).to.be.greaterThan(0);
+  });
+
+  it('ellipsis-truncates an over-long selection summary instead of overflowing the trigger', async () => {
+    const filters = [
+      {
+        ...(teamFilters[0] as object),
+        options: [
+          { value: 'core', label: 'Core platform and developer experience group' },
+          { value: 'infra', label: 'Infrastructure reliability and capacity planning group' },
+        ],
+      },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar
+        style="max-width: 12rem"
+        .filters=${filters}
+        .value=${{ teams: ['core', 'infra'] }}
+      ></lr-filter-bar>`
+    );
+    await trigger(el);
+    const summary = el.shadowRoot!.querySelector('[part="filter-control-input"]') as HTMLElement;
+    // overflow, text-overflow and min-inline-size are ALL ignored on a non-replaced inline box, so
+    // the blockified computed display is the evidence that those declarations are not inert.
+    expect(getComputedStyle(summary).display, 'blockified as a flex item').to.equal('block');
+    expect(getComputedStyle(summary).textOverflow).to.equal('ellipsis');
+    await waitUntil(
+      () => summary.scrollWidth > summary.clientWidth,
+      'the summary overflows its own box, so the ellipsis has something to hide'
+    );
+  });
+
+  it('maps filter-control-field onto the frame that paints, not the chrome-less button host', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamFilters}></lr-filter-bar>`
+    );
+    const button = await trigger(el);
+    expect(
+      button.hasAttribute('part'),
+      'no part name on the lr-button host -- it is inline-block and paints no chrome'
+    ).to.equal(false);
+
+    // The contract a consumer actually writes. Rendered result, not attribute text: the outer
+    // ::part() rule has to reach the element inside lr-button that draws the field frame, the way
+    // it reaches a select's trigger and an input's input-wrapper for every other filter type.
+    const probe = document.createElement('style');
+    probe.textContent =
+      'lr-filter-bar::part(filter-control-field) { border-block-start: 7px dashed rgb(1, 2, 3); }';
+    document.head.append(probe);
+    try {
+      const frame = button.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+      expect(getComputedStyle(frame).borderBlockStartWidth).to.equal('7px');
+    } finally {
+      probe.remove();
+    }
+  });
+
+  it("forwards the trigger's own start adornment wrapper as filter-control-start", async () => {
+    const filters = [
+      { ...(teamFilters[0] as object), icon: html`<span>*</span>` },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    );
+    const button = await trigger(el);
+    const probe = document.createElement('style');
+    probe.textContent = 'lr-filter-bar::part(filter-control-start) { padding-inline-start: 9px; }';
+    document.head.append(probe);
+    try {
+      const wrapper = button.shadowRoot!.querySelector('[part~="start"]') as HTMLElement;
+      expect(getComputedStyle(wrapper).paddingInlineStart).to.equal('9px');
+    } finally {
+      probe.remove();
+    }
+  });
+
+  it('routes a revealed required error into the trigger name and sets no inert aria-invalid', async () => {
+    const filters = [
+      { ...(teamFilters[0] as object), required: true },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar
+        .filters=${filters}
+        .strings=${{ fieldRequired: 'Pick at least one team.' }}
+      ></lr-filter-bar>`
+    );
+    el.reportValidity();
+    await el.updateComplete;
+    const button = await trigger(el);
+    const runs = [...button.children]
+      .filter((child) => child.getAttribute('slot') === null)
+      .map((child) => child.textContent!.trim());
+    expect(runs, 'the error joins the trigger name as its own run').to.deep.equal([
+      'Teams',
+      'Pick at least one team.',
+    ]);
+    // Deliberate omission, documented on the class: lr-button forwards aria-label/haspopup/
+    // expanded/pressed/current/describedby onto the element that owns the button role, and NOT
+    // aria-invalid -- so writing one here would sit on a role-less host and reach nothing.
+    expect(button.hasAttribute('aria-invalid')).to.equal(false);
+  });
+});
+
+it('closes an open checkbox-menu across a disconnect and reconnect', async () => {
+  const filters: LyraFilterBarFilterDefinition[] = [
+    {
+      filterId: 'teams',
+      label: 'Teams',
+      type: 'checkbox-menu',
+      options: [{ value: 'core', label: 'Core' }],
+    },
+  ];
+  const el = await fixture<LyraFilterBar>(
+    html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+  );
+  const menu = control(el, 'teams') as HTMLElement & {
+    open: boolean;
+    updateComplete: Promise<unknown>;
+  };
+  (menu.querySelector('lr-button') as HTMLElement).click();
+  await el.updateComplete;
+  await menu.updateComplete;
+  expect(menu.open, 'the menu opened').to.equal(true);
+
+  // lr-popover suspends rather than closes on disconnect, so this bar closes the composed menu
+  // itself -- a reparented filter bar must not come back with a menu the user never reopened.
+  const parent = el.parentElement!;
+  el.remove();
+  await aTimeout(0);
+  parent.append(el);
+  await el.updateComplete;
+  await waitUntil(
+    () => (control(el, 'teams') as HTMLElement & { open: boolean }).open === false,
+    'the composed checkbox menu reopens closed'
+  );
 });

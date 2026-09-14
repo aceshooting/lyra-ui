@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,12 +45,44 @@ number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: s
   subtree is `aria-hidden`, since `segment-list` already exposes the same names. Under
   `shape="ring"` the host stops being a fixed square so the key flows below the ring instead of
   being clipped.
+- `legendDisplay: ContextMeterLegendDisplay = 'label'` (attribute `legend-display`) — what each
+  legend row shows beside its swatch: `'label'` (the default, byte-identical to before this
+  property existed), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding
+  `[part="legend-value"]` and `[part="legend-percent"]` spans. The share is the same clamped ratio
+  the bar or ring paints, so the key can never disagree with the band it stands for, and both
+  numbers are formatted through `effectiveLocale`. Combinable rather than mutually exclusive,
+  unlike `lr-chart`'s `label | value | percentage` legend vocabulary, because a part-to-whole key is
+  ordinarily read as "count AND share". A foreign attribute value normalizes to `'label'`. No
+  effect while `showLegend` is unset.
+- `interactive: boolean = false` (reflected) — opt-in filter mode. Every band, and every legend row,
+  becomes a real `<button>` emitting the cancelable `lr-segment-activate`; the ring's arcs carry
+  `role="button"` with their own tab stop and Enter/Space handling, since an SVG shape cannot be a
+  native button. In this mode, and only in this mode, `[part="legend"]` drops `aria-hidden` so the
+  rows are reachable, and the visually-hidden `[part="segment-list"]` steps aside because the
+  buttons already expose the same label/count pairs with their pressed state attached. A band's
+  inline size IS its share, so a small band is a small pointer target: pair `interactive` with
+  `showLegend` where that matters, since the legend row is the same action at full row height. The
+  ring's arcs share one bounding box, so a focused arc reports itself by dimming as well as by the
+  shared focus outline — an outline alone cannot say *which* arc.
+- `selectedIndices: readonly number[] = []` (attribute: false) — indexes rendered as
+  `aria-pressed="true"` plus a `segment-selected`/`legend-item-selected` part token on both the band
+  and its legend row; every other control renders `aria-pressed="false"`. Meaningful only while
+  `interactive` is set. Uncontrolled by default: an activation nobody vetoes toggles the index here
+  itself. `preventDefault()` on `lr-segment-activate` suppresses that write, which is how a consumer
+  that owns the selection takes control; assigning the property directly always wins either way. A
+  non-integer or out-of-range entry selects nothing rather than throwing.
 
 Accessible summaries, segment tooltips, and ring titles format normalized nonnegative quantities
 using `effectiveLocale`. A host `aria-label` names the host without being duplicated on the nested
 meter owner, which retains its generated aggregate summary.
 
-**Events:** none.
+**Events:** `lr-segment-activate` — a band or its legend row was activated while `interactive` is
+set. `detail: { index: number; label: string; value: number }`, bubbling and composed like every
+library event. **Cancelable, and a real veto point**: the default action is this component toggling
+`index` in its own `selectedIndices`, so `preventDefault()` keeps the current selection and hands
+that state entirely to the consumer. Never emitted in the default presentational mode. Because the
+event dispatches synchronously *before* the write, a listener reading `selectedIndices` inside its
+own handler sees the pre-activation value.
 
 **Slots:** none.
 
@@ -59,7 +91,11 @@ meter semantics), `track` (the unfilled/empty capacity), `segment` (one occupied
 `data-tone` and, for custom colors, `--lr-context-meter-segment-color`), `segment-list` (the hidden
 category list), `segment-item` (one hidden category/value entry), `label`, and — only under
 `showLegend` — `legend`, `legend-item`, `legend-swatch` (carrying the same `data-tone` and custom
-color hook as `segment`) and `legend-label`
+color hook as `segment`) and `legend-label`, plus `legend-value` and `legend-percent` under the
+matching `legendDisplay` settings. While `interactive` is set, `segment` and `legend-item` are
+`<button>`s (a `role="button"` arc under `shape="ring"`) and a selected one carries a second part
+token — `segment-selected` / `legend-item-selected` — because nothing but a pseudo-class may follow
+`::part()`, so the state has to live in the part name
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the
@@ -70,7 +106,17 @@ block size of its filled segments), `--lr-context-meter-track-radius` (default
 `calc(var(--lr-radius) * 0.5)`) its corner radius, `--lr-context-meter-track-bg` (default
 `color-mix(in srgb, var(--lr-color-border) 30%, transparent)`) the background of its unfilled
 remainder, and `--lr-context-meter-segment-seam-color` (default `var(--lr-color-surface)`) the
-hairline seam painted between adjacent segments. Otherwise the component consumes shared tokens
+hairline seam painted between adjacent segments.
+`--lr-context-meter-selected-ring-color` (default `var(--lr-color-text)`) and
+`--lr-context-meter-selected-ring-width` (default `var(--lr-border-width-thick)`) paint the inset
+ring marking a selected `bar`-shape band or legend row. It is drawn inward, because the track clips
+its own overflow and an outward ring would be invisible, and it is a ring rather than an outline so
+that it composes with the hover, press and focus outlines instead of being replaced by them — a
+selected band stays visibly selected exactly while it is being pointed at or focused, and its focus
+ring stays intact. `--lr-context-meter-selected-arc-stroke` (default `16`, in this component's
+`0 0 100 100` viewBox units) is the stroke width of a selected `ring`-shape arc: every arc shares
+one bounding box, so a selected arc reports itself by thickening in place rather than by an outline
+that would trace the whole ring identically for every selection. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
 `--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,
 `--lr-transition-base`.

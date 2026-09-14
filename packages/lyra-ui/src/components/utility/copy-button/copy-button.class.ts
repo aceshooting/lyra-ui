@@ -11,6 +11,7 @@ import {
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
+import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 import { styles } from './copy-button.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -160,10 +161,17 @@ export interface LyraCopyButtonEventMap {
  *   richer Lyra compatibility alias for `lr-error`.
  * @event lr-toolbar-actions-change - The logical action exposed to a parent toolbar changed its
  *   disabled state or backing trigger. Bubbling, composed, and non-cancelable.
- * @csspart base - The button itself.
- * @csspart button - Mapped alias for `base` on the same built-in button.
- * @csspart base-success - The button while the copied confirmation is showing.
- * @csspart base-error - The button while the failure state is showing.
+ * @csspart base - The built-in trigger, which is a composed `<lr-icon-button>` rather than this
+ *   component's own `<button>` as of 16.0.0. It still owns the accessible name, the activation and
+ *   every part token below; its paint (background, radius, hover/press mixes, focus ring, hit-area
+ *   floor) now comes from `<lr-icon-button>`'s own `--lr-icon-button-*` contract, so a rule that
+ *   set `background`/`border`/`padding` through `::part(base)` must move to `base__control` or to
+ *   the token.
+ * @csspart button - Mapped alias for `base` on the same composed trigger.
+ * @csspart base__control - The composed `<lr-icon-button>`'s own native control, forwarded so the
+ *   painted surface stays reachable across the extra shadow boundary.
+ * @csspart base-success - The trigger while the copied confirmation is showing.
+ * @csspart base-error - The trigger while the failure state is showing.
  * @csspart copy-icon - The resting copy glyph.
  * @csspart success-icon - The confirmation glyph.
  * @csspart error-icon - The failure glyph.
@@ -245,7 +253,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   @state() private hasCustomTrigger = false;
 
-  @query('[part~="base"]') private buttonEl?: HTMLButtonElement;
+  @query('[part~="base"]') private buttonEl?: LyraIconButton;
 
   @query('slot:not([name])') private defaultSlot?: HTMLSlotElement;
 
@@ -339,13 +347,32 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     return this.hasCustomTrigger ? this.customTrigger() : this.buttonEl;
   }
 
+  /** The built-in trigger's OWN logical action. A roving toolbar has to lease the tab stop of the
+   *  native control inside the composed `<lr-icon-button>`: writing `tabindex` on that custom
+   *  element host neither adds nor removes its shadow-internal button's stop, so a host-level lease
+   *  would leave every copy button permanently tabbable. `undefined` while a consumer's own custom
+   *  trigger is in use -- that element IS the native control, and the lease below applies to it
+   *  directly. */
+  private composedTriggerAction(): LyraToolbarAction | undefined {
+    if (this.hasCustomTrigger) return undefined;
+    const [action] = this.buttonEl?.getToolbarActions() ?? [];
+    return action;
+  }
+
   private createToolbarAction(): LyraToolbarAction {
     const host = this;
     let leasedTrigger: HTMLElement | undefined;
     let authoredTabIndex: string | null = null;
     let lastManagedTabIndex: string | null = null;
     let consumerOwnsTabIndex = false;
+    let delegated: LyraToolbarAction | undefined;
+    const releaseDelegated = (): void => {
+      const previous = delegated;
+      delegated = undefined;
+      previous?.releaseTabIndex?.();
+    };
     const releaseTabIndex = (): void => {
+      releaseDelegated();
       const target = leasedTrigger;
       if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
         if (authoredTabIndex === null) target.removeAttribute('tabindex');
@@ -366,6 +393,16 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
         host.activeTrigger()?.focus(options);
       },
       setTabIndex(tabIndex) {
+        const composed = host.composedTriggerAction();
+        if (composed) {
+          if (delegated !== composed) {
+            releaseTabIndex();
+            delegated = composed;
+          }
+          composed.setTabIndex(tabIndex);
+          return;
+        }
+        releaseDelegated();
         const trigger = host.activeTrigger();
         if (!trigger) {
           releaseTabIndex();
@@ -389,8 +426,11 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
       },
       releaseTabIndex,
       matchesEventPath(path) {
+        // `!= null`, not `!== undefined`: `activeTrigger()` can hand back the `buttonEl` @query,
+        // whose Lit getter is `this.renderRoot?.querySelector(selector) ?? null` -- so before the
+        // first render this is NULL and an `!== undefined` guard would guard nothing.
         const trigger = host.activeTrigger();
-        return trigger !== undefined && path.includes(trigger);
+        return trigger != null && path.includes(trigger);
       },
     };
   }
@@ -601,15 +641,15 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
         ${this.hasCustomTrigger
           ? nothing
           : html`
-              <button
+              <lr-icon-button
                 part=${part}
-                type="button"
+                exportparts="button:base__control"
                 ?disabled=${this.disabled}
                 aria-label=${buttonLabel}
                 @click=${this.onClick}
               >
                 ${this.renderIcon()}
-              </button>
+              </lr-icon-button>
             `}
         <slot @slotchange=${this.onDefaultSlotChange} @click=${this.onCustomTriggerClick}></slot>
       </lr-tooltip>

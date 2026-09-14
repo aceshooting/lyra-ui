@@ -3916,8 +3916,8 @@ describe('canvas renderer — static draw', () => {
   it('switching renderer back to svg tears down the canvas resize watcher (no observer stacking across round trips, regression)', async () => {
     const el = await mountCanvas();
     expect(
-      (el as unknown as { canvasResizeObserver?: ResizeObserver })
-        .canvasResizeObserver
+      (el as unknown as { hostResizeObserver?: ResizeObserver })
+        .hostResizeObserver
     ).to.exist;
     el.renderer = 'svg';
     await el.updateComplete;
@@ -3927,8 +3927,8 @@ describe('canvas renderer — static draw', () => {
     // Re-entering canvas mode re-arms a fresh observer; leaving it must disconnect the old one,
     // or every canvas -> svg -> canvas round trip would stack another live observer on the host.
     expect(
-      (el as unknown as { canvasResizeObserver?: ResizeObserver })
-        .canvasResizeObserver
+      (el as unknown as { hostResizeObserver?: ResizeObserver })
+        .hostResizeObserver
     ).to.be.undefined;
   });
 
@@ -5765,19 +5765,19 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
     });
     await aTimeout(50);
     type Internals = {
-      canvasResizeObserver?: ResizeObserver;
+      hostResizeObserver?: ResizeObserver;
       canvasScene?: unknown;
     };
-    const observerBefore = (el as unknown as Internals).canvasResizeObserver;
+    const observerBefore = (el as unknown as Internals).hostResizeObserver;
     expect(observerBefore).to.exist;
 
     const otherContainer = document.createElement('div');
     document.body.appendChild(otherContainer);
     otherContainer.appendChild(el); // fires disconnectedCallback then connectedCallback synchronously
 
-    expect((el as unknown as Internals).canvasResizeObserver).to.exist;
-    // Re-armed, not merely reused -- watchCanvasResize() always builds a fresh observer.
-    expect((el as unknown as Internals).canvasResizeObserver).to.not.equal(
+    expect((el as unknown as Internals).hostResizeObserver).to.exist;
+    // Re-armed, not merely reused -- watchHostResize() always builds a fresh observer.
+    expect((el as unknown as Internals).hostResizeObserver).to.not.equal(
       observerBefore
     );
     expect((el as unknown as Internals).canvasScene).to.be.undefined; // markCanvasDirty() cleared the cache
@@ -7745,7 +7745,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
 });
 
 describe('coverage: canvas surface setup edge cases', () => {
-  it('watchCanvasResize disconnects an existing observer and falls back gracefully when ResizeObserver is unavailable', async () => {
+  it('watchHostResize disconnects an existing observer and falls back gracefully when ResizeObserver is unavailable', async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
@@ -7756,17 +7756,17 @@ describe('coverage: canvas surface setup edge cases', () => {
       timeout: NODE_COUNT_TIMEOUT,
     });
     type Internals = {
-      watchCanvasResize: () => void;
-      canvasResizeObserver?: { disconnect: () => void };
+      watchHostResize: () => void;
+      hostResizeObserver?: { disconnect: () => void };
     };
     const internal = el as unknown as Internals;
-    expect(internal.canvasResizeObserver).to.exist; // precondition: a real observer is already armed
+    expect(internal.hostResizeObserver).to.exist; // precondition: a real observer is already armed
     const original = window.ResizeObserver;
     (window as unknown as { ResizeObserver?: unknown }).ResizeObserver =
       undefined;
     try {
-      expect(() => internal.watchCanvasResize()).to.not.throw();
-      expect(internal.canvasResizeObserver).to.be.undefined;
+      expect(() => internal.watchHostResize()).to.not.throw();
+      expect(internal.hostResizeObserver).to.be.undefined;
     } finally {
       window.ResizeObserver = original;
     }
@@ -9286,5 +9286,385 @@ describe('optional d3 peer failure', () => {
     } finally {
       el.remove();
     }
+  });
+});
+
+it('does not invalidate a canvas scene that has not been rendered yet (regression: the host observer arms from the first update, before the lazily imported d3 has resolved)', async () => {
+  const owner = window as unknown as { ResizeObserver: typeof ResizeObserver };
+  const originalCtor = owner.ResizeObserver;
+  let hostCallback: ResizeObserverCallback | undefined;
+  class CapturingResizeObserver extends originalCtor {
+    constructor(callback: ResizeObserverCallback) {
+      super(callback);
+      hostCallback = callback;
+    }
+  }
+  owner.ResizeObserver = CapturingResizeObserver;
+  // Deliberately not using fixture(): loadLibrary must be overridden *before* the element ever
+  // connects. A promise that never settles pins the component in its loading state, so the
+  // <canvas> is deterministically absent while the host observer is already armed.
+  const el = document.createElement('lr-graph') as unknown as LyraGraph;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+    new Promise<unknown>(() => {});
+  el.renderer = 'canvas';
+  el.nodes = nodes;
+  el.links = links;
+  document.body.appendChild(el);
+  try {
+    await el.updateComplete;
+    let invalidations = 0;
+    (el as unknown as { markCanvasDirty: () => void }).markCanvasDirty = () => {
+      invalidations += 1;
+    };
+    expect(
+      el.shadowRoot!.querySelectorAll('canvas').length,
+      'the loading state should not have rendered a canvas'
+    ).to.equal(0);
+    expect(
+      hostCallback === undefined,
+      'canvas mode never armed the host resize observer'
+    ).to.be.false;
+    hostCallback!(
+      [{ contentRect: { width: 200, height: 200 } } as ResizeObserverEntry],
+      {} as ResizeObserver
+    );
+    expect(
+      invalidations,
+      'a canvas that has not been rendered yet was invalidated'
+    ).to.equal(0);
+  } finally {
+    el.remove();
+    owner.ResizeObserver = originalCtor;
+  }
+});
+
+it('observes the host exactly once for a canvas mount (regression: the surface setup re-armed the observer updated() had already armed, re-paying its initial callback as a second scene invalidation)', async () => {
+  const owner = window as unknown as { ResizeObserver: typeof ResizeObserver };
+  const original = owner.ResizeObserver;
+  let hostObservations = 0;
+  class CountingResizeObserver extends original {
+    override observe(target: Element, options?: ResizeObserverOptions): void {
+      if (target.localName === 'lr-graph') hostObservations += 1;
+      super.observe(target, options);
+    }
+  }
+  owner.ResizeObserver = CountingResizeObserver;
+  try {
+    const el = (await fixture(html`
+      <lr-graph
+        renderer="canvas"
+        width="200"
+        height="200"
+        .nodes=${nodes}
+        .links=${links}
+      ></lr-graph>
+    `)) as LyraGraph;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('canvas') != null,
+      'canvas renderer never mounted',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    expect(hostObservations).to.equal(1);
+  } finally {
+    owner.ResizeObserver = original;
+  }
+});
+
+describe('fit-to="container"', () => {
+  /** The d3 peer loads lazily, so the svg renderer replaces the skeleton a few frames after mount. */
+  async function svgViewBox(el: LyraGraph): Promise<string> {
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('svg') != null,
+      'svg renderer never replaced the loading skeleton',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    return el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox') ?? '';
+  }
+
+  async function waitForViewBox(el: LyraGraph, expected: string): Promise<void> {
+    await waitUntil(
+      () =>
+        el.shadowRoot!.querySelector('svg')?.getAttribute('viewBox') ===
+        expected,
+      `viewBox never became ${expected}`,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+  }
+
+  it('keeps the numeric width/height as the drawing space by default (unset regression)', async () => {
+    const holder = (await fixture(html`
+      <div style="inline-size: 300px">
+        <lr-graph
+          .nodes=${nodes}
+          .links=${links}
+          style="--lr-canvas-reserved-height: 200px"
+        ></lr-graph>
+      </div>
+    `)) as HTMLDivElement;
+    const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+    expect(el.fitTo).to.equal('none');
+    expect(await svgViewBox(el)).to.equal('0 0 800 600');
+  });
+
+  it('derives the drawing space from the host content box when fit-to="container"', async () => {
+    const holder = (await fixture(html`
+      <div style="inline-size: 300px">
+        <lr-graph
+          fit-to="container"
+          .nodes=${nodes}
+          .links=${links}
+          style="--lr-canvas-reserved-height: 200px"
+        ></lr-graph>
+      </div>
+    `)) as HTMLDivElement;
+    const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+    await waitForViewBox(el, '0 0 300 200');
+  });
+
+  it('measures the height the host really has when no --lr-canvas-reserved-height is set (regression: the connect-time measurement read the 24rem cascade fallback)', async () => {
+    // No ResizeObserver, so the ONLY box on record is the synchronous measurement -- nothing can
+    // quietly correct a wrong first reading a frame later, which is exactly what a realm without
+    // one does to a consumer. 24rem (the last fallback in :host's block-size cascade) is 384px, so
+    // a height of 420 makes a mis-measured frame unmistakable.
+    const owner = window as unknown as {
+      ResizeObserver?: typeof ResizeObserver;
+    };
+    const original = owner.ResizeObserver;
+    owner.ResizeObserver = undefined;
+    try {
+      const holder = (await fixture(html`
+        <div style="inline-size: 360px">
+          <lr-graph
+            fit-to="container"
+            height="420"
+            .nodes=${nodes}
+            .links=${links}
+          ></lr-graph>
+        </div>
+      `)) as HTMLDivElement;
+      const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+      expect(
+        (el as unknown as HTMLElement).clientHeight,
+        'host was not sized from height, so the drawing space cannot be judged'
+      ).to.equal(420);
+      expect(await svgViewBox(el)).to.equal('0 0 360 420');
+    } finally {
+      owner.ResizeObserver = original;
+    }
+  });
+
+  it('keeps the measured container box winning over a numeric width assigned later', async () => {
+    const holder = (await fixture(html`
+      <div style="inline-size: 300px">
+        <lr-graph
+          fit-to="container"
+          .nodes=${nodes}
+          .links=${links}
+          style="--lr-canvas-reserved-height: 200px"
+        ></lr-graph>
+      </div>
+    `)) as HTMLDivElement;
+    const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+    await waitForViewBox(el, '0 0 300 200');
+    el.width = 900;
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox')
+    ).to.equal('0 0 300 200');
+  });
+
+  it('re-centres the same running simulation on a container resize instead of rebuilding it', async () => {
+    const holder = (await fixture(html`
+      <div style="inline-size: 300px">
+        <lr-graph
+          fit-to="container"
+          seed="7"
+          .nodes=${nodes}
+          .links=${links}
+          style="--lr-canvas-reserved-height: 200px"
+        ></lr-graph>
+      </div>
+    `)) as HTMLDivElement;
+    const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+      'nodes never rendered',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    await waitForViewBox(el, '0 0 300 200');
+    const privates = el as unknown as {
+      simulation?: {
+        force(name: string): { x(): number; y(): number } | undefined;
+        alpha(): number;
+        alphaMin(): number;
+      };
+    };
+    const before = privates.simulation;
+    expect(before !== undefined, 'simulation was never created').to.be.true;
+    expect(before!.force('center')!.x()).to.equal(150);
+    holder.style.inlineSize = '500px';
+    await waitUntil(
+      () => privates.simulation?.force('center')?.x() === 250,
+      'forceCenter never followed the resized container',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    expect(
+      privates.simulation === before,
+      'resize rebuilt the simulation instead of re-centring it'
+    ).to.be.true;
+    expect(
+      privates.simulation!.alpha() > privates.simulation!.alphaMin(),
+      'resize did not restart the settled simulation at a low alpha'
+    ).to.be.true;
+    await waitForViewBox(el, '0 0 500 200');
+  });
+
+  it('follows the host content box under dir="rtl" exactly as under ltr', async () => {
+    const holder = (await fixture(html`
+      <div dir="rtl" style="inline-size: 320px">
+        <lr-graph
+          fit-to="container"
+          .nodes=${nodes}
+          .links=${links}
+          style="--lr-canvas-reserved-height: 180px"
+        ></lr-graph>
+      </div>
+    `)) as HTMLDivElement;
+    const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+    await waitForViewBox(el, '0 0 320 180');
+  });
+
+  it('re-measures after a reparent into a differently sized container (reconnect)', async () => {
+    const holder = (await fixture(html`
+      <div>
+        <div id="narrow" style="inline-size: 300px">
+          <lr-graph
+            fit-to="container"
+            .nodes=${nodes}
+            .links=${links}
+            style="--lr-canvas-reserved-height: 200px"
+          ></lr-graph>
+        </div>
+        <div id="wide" style="inline-size: 520px"></div>
+      </div>
+    `)) as HTMLDivElement;
+    const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+    await waitForViewBox(el, '0 0 300 200');
+    holder
+      .querySelector('#wide')!
+      .appendChild(el as unknown as HTMLElement);
+    await waitForViewBox(el, '0 0 520 200');
+  });
+
+  it('still measures the host box once when the realm has no ResizeObserver', async () => {
+    const owner = window as unknown as {
+      ResizeObserver?: typeof ResizeObserver;
+    };
+    const original = owner.ResizeObserver;
+    owner.ResizeObserver = undefined;
+    try {
+      const holder = (await fixture(html`
+        <div style="inline-size: 240px">
+          <lr-graph
+            fit-to="container"
+            .nodes=${nodes}
+            .links=${links}
+            style="--lr-canvas-reserved-height: 160px"
+          ></lr-graph>
+        </div>
+      `)) as HTMLDivElement;
+      const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+      expect(await svgViewBox(el)).to.equal('0 0 240 160');
+      expect(
+        (el as unknown as { hostResizeObserver?: ResizeObserver })
+          .hostResizeObserver,
+        'no observer should exist, so the box can only have come from the synchronous measurement'
+      ).to.be.undefined;
+    } finally {
+      owner.ResizeObserver = original;
+    }
+  });
+
+  it('fits the canvas renderer to the container and follows a resize there too', async () => {
+    const holder = (await fixture(html`
+      <div style="inline-size: 300px">
+        <lr-graph
+          renderer="canvas"
+          fit-to="container"
+          seed="7"
+          .nodes=${nodes}
+          .links=${links}
+          style="--lr-canvas-reserved-height: 200px"
+        ></lr-graph>
+      </div>
+    `)) as HTMLDivElement;
+    const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('canvas') != null,
+      'canvas renderer never mounted',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    const privates = el as unknown as {
+      simulation?: { force(name: string): { x(): number } | undefined };
+    };
+    await waitUntil(
+      () => privates.simulation?.force('center')?.x() === 150,
+      'canvas layout never centred on the measured container',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    holder.style.inlineSize = '500px';
+    await waitUntil(
+      () => privates.simulation?.force('center')?.x() === 250,
+      'canvas layout never followed the resized container',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+  });
+
+  it('keeps measuring across a canvas -> svg renderer switch (the resize watcher used to be torn down on entering svg mode)', async () => {
+    const holder = (await fixture(html`
+      <div style="inline-size: 300px">
+        <lr-graph
+          renderer="canvas"
+          fit-to="container"
+          .nodes=${nodes}
+          .links=${links}
+          style="--lr-canvas-reserved-height: 200px"
+        ></lr-graph>
+      </div>
+    `)) as HTMLDivElement;
+    const el = holder.querySelector('lr-graph') as unknown as LyraGraph;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('canvas') != null,
+      'canvas renderer never mounted',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    el.renderer = 'svg';
+    await el.updateComplete;
+    await waitForViewBox(el, '0 0 300 200');
+    holder.style.inlineSize = '460px';
+    await waitForViewBox(el, '0 0 460 200');
+  });
+
+  it('stops watching the host again when fit-to leaves "container" in svg mode', async () => {
+    const el = (await fixture(html`
+      <lr-graph
+        fit-to="container"
+        .nodes=${nodes}
+        .links=${links}
+      ></lr-graph>
+    `)) as LyraGraph;
+    const privates = el as unknown as {
+      hostResizeObserver?: ResizeObserver;
+    };
+    await waitUntil(
+      () => privates.hostResizeObserver != null,
+      'container mode never armed the host observer',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    el.fitTo = 'none';
+    await el.updateComplete;
+    expect(privates.hostResizeObserver).to.be.undefined;
+    // ...and the drawing space falls back to the numeric width/height it was ignoring.
+    await waitForViewBox(el, '0 0 800 600');
   });
 });

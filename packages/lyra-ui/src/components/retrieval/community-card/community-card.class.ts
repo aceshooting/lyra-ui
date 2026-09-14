@@ -59,6 +59,8 @@ export interface LyraCommunityCardEventMap {
  * @csspart drill-button - The built-in "Explore community" button.
  * @csspart actions - The wrapper around the `actions` slot and the drill button.
  * @csspart empty - The empty state shown when `community` is `null`.
+ * @cssprop [--lr-community-card-bg=var(--lr-color-surface)] - Resting background of `[part="base"]`.
+ *   `frame="plain"` still paints transparent.
  * @status stable
  * @since 4.0.0
  */

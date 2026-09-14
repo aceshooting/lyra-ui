@@ -177,12 +177,26 @@ structured points retain their y-value formatting.
   x-axis's own labels (line/bar's `labels` strings) — Chart.js's category scale passes the tick
   index to `ticks.callback`, not the label text
 - `formatter?: LyraChartFormatter` (attribute: false) — the family-wide context-object formatter:
-  `({ value, surface, datasetIndex?, index?, label?, seriesLabel?, statistic? }) => string`.
+  `({ value, surface, datasetIndex?, index?, label?, seriesLabel?, statistic?, axis? }) => string`.
   `surface` identifies `visual`, `spoken`, `export`, `tick`, `tooltip`, `legend`, or `table`.
   `statistic`, when present for a structured datum or stack total, is one of `x`, `y`, `r`,
   `min`, `q1`, `median`, `q3`, `max`, or `total`. It takes precedence over the legacy positional
   `valueFormatter` where both are supplied. The legacy callback remains a visual/table compatibility
   hook; use `formatter` when a generated spoken value or CSV cell must use the same unit text.
+  `axis` names the scale the number is plotted on — `'x'` wherever it carries numbers rather than
+  categories (scatter/bubble, and a horizontal bar/line), `'y'`/`'y2'` for the two cartesian value
+  axes, `'r'` for a radar/polar-area ring, and `undefined` where there is no axis at all (a
+  pie/doughnut slice). Two value axes usually exist precisely because they carry different units,
+  so without it one formatter cannot render a secondary axis correctly. `datasetIndex`, `index`,
+  `label` and `seriesLabel` now reach the `tick`, `tooltip`, `legend` and `visual` surfaces as well
+  as the `table`, `export` and `spoken` ones they always reached, and indexes are reported in
+  source space — the same space the data table, the CSV export and `lr-point-click` use. Every one
+  of these fields was `undefined` before, so no existing formatter changes behaviour. A
+  `stackTotals`/`tableTotals` stack total is the exception in the other direction: it is a sum
+  *across* the stack's datasets, so it carries `statistic: 'total'`, the category `index`/`label`
+  and the stack's own `axis`, but no `datasetIndex` and no `seriesLabel` — naming the topmost
+  series would make a unit-switching formatter render that one series' unit for a cross-series
+  number. `lr-lite-chart`'s total cells drop the same two fields.
 - `area: boolean = false` — chart-wide default for whether line-type series fill the region under
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
@@ -587,6 +601,9 @@ passthrough). Not a subclass of `LyraChart`.
 - `formatter?: LyraChartFormatter` (attribute: false) — family-wide context-object formatter used
   by visual/tooltips, spoken text, legends, tables, and CSV export. It takes precedence over the
   older surface-specific hooks, which remain available as compatibility fallbacks.
+  Every surface names this chart's single value scale as `axis: 'y'`, and the `visual` surface now
+  carries the category `index` as well as the series, so one formatter written against
+  `lr-chart`'s dual-axis context serves both components unchanged.
 - `tableCellFormatter?: LyraLiteChartTableCellFormatter` (attribute: false) — formats each finite
   numeric cell in the built-in multi-series accessible table. The callback receives `(value,
   context)`, where `context` is `{ kind: 'value' | 'total'; datasetIndex: number | null; index:
@@ -649,6 +666,17 @@ passthrough). Not a subclass of `LyraChart`.
   formatter-supplied text (e.g. a value or percentage share) after each series' label in the
   built-in legend row, mirroring `pointText`/`tickFormat`'s opt-in-hook convention. Falls back to
   the label alone when unset; no-op while `legend` is `false`.
+- `axisLabelText?: (label: string, index: number) => string | null` (attribute: false) — a
+  display-only override for one category-axis tick's text; returning `null` renders no tick there at
+  all. `labels` stays the single authoritative source for the generated accessible table's row
+  headers, the per-mark `<title>`/accessible name, the live announcement and CSV export, so blanking
+  a tick never blanks the same category where a reader or a spreadsheet needs it. Complements
+  `maxLabels` rather than replacing it: that even decimation is applied FIRST, so a category it
+  already dropped never reaches this callback — use this one for ticks that must line up with an
+  external grouping boundary (a month, a release, a shift change) and leave `maxLabels` unset there.
+  The returned string is ellipsized to the tick's own slot exactly like a source label, with the
+  full text kept as the tick's accessible name; a return value that is neither a string nor `null`
+  falls back to the source label rather than reaching the DOM.
 - `roundedBars: boolean = false` (attribute `rounded-bars`, bar type only) — draws each bar as a
   rounded-top-corner shape instead of a square-cornered `<rect>`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no
@@ -1055,7 +1083,9 @@ apply when the component reconnects.
   family-wide `spoken` surface for the generated summary and `export` for CSV cells; the legacy
   positional formatter receives `table` for the spoken/export compatibility paths, its normal
   surface name for axis, tooltip, and table work, and no fallback for a `visual` context. The
-  context-object formatter takes precedence.
+  context-object formatter takes precedence. Tick calls name `axis: 'y'`, and a tooltip value now
+  carries the hovered datum's `datasetIndex`, `index`, `label`, `seriesLabel` and
+  `statistic: 'median'` instead of discarding what the callback was handed.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
@@ -1421,7 +1451,10 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label?: string;
     readonly seriesLabel?: string;
     readonly statistic?: LyraChartStatistic;
+    readonly axis?: LyraChartFormatterAxis;
   }`
+  Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
+  `LyraChartFormatterAxis = 'x' | 'y' | 'y2' | 'r'`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartInstance extends RuntimeChart {
     // Inherited from RuntimeChart.

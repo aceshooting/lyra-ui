@@ -2,6 +2,31 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
+    /* Captured on the HOST, where this component declares no --lr-icon-button-* of its own, so each
+       var() reads whatever an ancestor theme wrapper set and falls back to this header's own copy
+       treatment only when nothing did. The copy-button rule below re-declares the public tokens
+       from these captures; declaring the treatment directly there would shadow the inherited value
+       instead of falling back to it. */
+    --_lr-code-block-copy-bg: var(--lr-icon-button-background, transparent);
+    --_lr-code-block-copy-bg-hover: var(
+      --lr-icon-button-background-hover,
+      var(--lr-color-brand-quiet)
+    );
+    --_lr-code-block-copy-bg-active: var(
+      --lr-icon-button-background-active,
+      color-mix(
+        in oklab,
+        var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    --_lr-code-block-copy-color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
+    --_lr-code-block-copy-color-hover: var(--lr-icon-button-color-hover, var(--lr-color-brand));
+    --_lr-code-block-copy-color-active: var(
+      --lr-icon-button-color-active,
+      var(--lr-icon-button-color-hover, var(--lr-color-brand))
+    );
+    --_lr-code-block-copy-radius: var(--lr-icon-button-radius, var(--lr-radius));
     display: block;
     /* A percentage block-size against an auto-height ancestor resolves to auto, so this is a
        no-op for the content-sized default; it bites only once an ancestor gives this host a
@@ -117,37 +142,49 @@ export const styles = css`
   }
   /* Pushed to the end of the header whether or not filename/language precede it --
      margin-inline-start: auto works as the first flex child or the last of several. */
-  [part='copy-button'] {
+  /* The copy control IS an lr-icon-button now, so the hit-area floor, the radius, the hover/press
+     mixes, the focus ring and the transition all come from that one component. What stays here is
+     placement, the header's own compact type scale, and this block's two paint opinions expressed
+     through the composed control's public token contract. The capture pattern on :host is what
+     lets an ancestor theme wrapper's --lr-icon-button-* still win. */
+  [part~='copy-button'] {
     flex: 0 0 auto;
     margin-inline-start: auto;
-    border: none;
-    background: none;
-    color: var(--lr-color-text-quiet);
-    font: inherit;
     font-size: var(--lr-font-size-xs);
     line-height: var(--lr-line-height-none);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    --lr-icon-button-background: var(--_lr-code-block-copy-bg);
+    --lr-icon-button-background-hover: var(--_lr-code-block-copy-bg-hover);
+    --lr-icon-button-background-active: var(--_lr-code-block-copy-bg-active);
+    --lr-icon-button-color: var(--_lr-code-block-copy-color);
+    --lr-icon-button-color-hover: var(--_lr-code-block-copy-color-hover);
+    --lr-icon-button-color-active: var(--_lr-code-block-copy-color-active);
+    --lr-icon-button-radius: var(--_lr-code-block-copy-radius);
+  }
+  /* The text appearance needs inline padding around its label; the icon appearance is a square
+     glyph in a floor-sized box and takes the composed control's own zero padding. The padding
+     belongs on the native control, which is one shadow boundary deeper. */
+  [part~='copy-button-text']::part(button) {
     padding: var(--lr-size-0-1875rem) var(--lr-space-xs);
-    border-radius: var(--lr-radius);
-    cursor: pointer;
   }
-  [part='copy-button']:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
-  }
-  [part='copy-button']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-    color: var(--lr-color-brand);
-  }
-  [part='toggle']:focus-visible,
-  [part='copy-button']:focus-visible {
+  [part='toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* Trailing header slot. It follows the copy control, which already claimed the auto margin, so
+     this only needs its own gap. */
+  [part='header-actions'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--lr-space-2xs);
+  }
+  /* code-block-shared.ts stamps hidden on the wrapper when the slot has no assigned content (a
+     bare slot is an element child, so :empty never matched). This higher-specificity rule beats
+     the display: inline-flex above, collapsing the wrapper so it stops contributing a dead header
+     gap between the copy control and the padding edge -- mirrors button.styles.ts's
+     [part~="start"][hidden] / [part~="end"][hidden]. */
+  [part='header-actions'][hidden] {
+    display: none;
   }
   [part='body'] {
     display: block;

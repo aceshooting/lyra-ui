@@ -3,7 +3,8 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
-import { closeIcon } from '../../../internal/icons.js';
+import { acquireAriaOwnership, type AriaOwnershipLease } from '../../../internal/aria-ownership.js';
+import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -17,7 +18,7 @@ import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_appRailCollapse, LYRA_DEFAULT_appRailExpand, LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -150,7 +151,10 @@ export interface LyraAppRailEventMap {
  *
  * @customElement lr-app-rail
  * @slot - Nav items. Use `<lr-app-rail-item>` for the explicit icon/label
- *   contract that automatically hides labels in `'icon-only'` mode. Generic
+ *   contract that automatically hides labels in `'icon-only'` mode, and
+ *   `<lr-app-rail-group>` to title and optionally collapse a section of them --
+ *   a slotted group is marked `icon-only` exactly like a slotted item, and
+ *   forwards that state to the items it owns. Generic
  *   links and buttons remain supported, but their compact presentation is the
  *   consumer's responsibility. While the mobile overlay is open, clicking
  *   anywhere inside this slot closes it.
@@ -200,6 +204,20 @@ export interface LyraAppRailEventMap {
  *   trigger, redundant once a consumer wires an external `trigger`/`for`); it stays visible once
  *   reparented inside the open panel, since it is then the only in-panel dismiss control.
  * @csspart backdrop - The mobile overlay's scrim. Only rendered while open.
+ * @csspart collapse-toggle - The opt-in desktop collapse control, rendered inside
+ *   `[part="header"]` only while `collapsible` is set and `mode` is not `'mobile'`. Carries the
+ *   localized expand/collapse accessible name and renders `aria-expanded` in both states, so a
+ *   screen reader announces the rail's current presentation rather than only its label.
+ *   `aria-expanded` is deliberate even though collapsing removes nothing from the accessibility
+ *   tree: `'icon-only'` only clips each item's `[part="label"]`/`[part="meta"]` visually, so a
+ *   screen-reader user reads the same nav either way, and the attribute is what tells a magnifier
+ *   or braille user which of the two presentations they are currently in. Its `aria-controls`
+ *   names `[part="nav"]` — the item list whose presentation actually changes — never the
+ *   `[part="base"]`/`[part="panel"]` element, which CONTAINS this button and would make the
+ *   control claim to expand its own ancestor.
+ * @csspart collapse-icon - The wrapper around `[part="collapse-toggle"]`'s chevron. The glyph is
+ *   direction-aware through this wrapper's own `transform` (never a second, mirrored icon), so it
+ *   always points toward the edge the rail is about to move to, under both `dir` values.
  * @csspart panel - The mobile overlay's floating panel — see the class doc
  *   for why it's the same element as `base`, never both at once.
  * @csspart resizer - The `resizable` opt-in's drag handle -- its interactive hit target, sized to
@@ -244,6 +262,14 @@ export interface LyraAppRailEventMap {
  *   is deliberately themed as a modal surface, not the docked rail chrome.
  * @cssprop [--lr-app-rail-header-padding=var(--lr-space-m)] - `[part="header"]`'s padding.
  * @cssprop [--lr-app-rail-footer-padding=var(--lr-space-m)] - `[part="footer"]`'s padding.
+ * @cssprop [--lr-app-rail-collapse-toggle-hover-bg=var(--lr-color-brand-quiet)] - Collapse-control
+ *   hover background.
+ * @cssprop [--lr-app-rail-collapse-toggle-hover-color=var(--lr-color-brand)] - Collapse-control
+ *   hover foreground.
+ * @cssprop --lr-app-rail-collapse-toggle-active-bg - Collapse-control pressed background; defaults
+ *   to the same brand-quiet active mix `[part="toggle"]` uses.
+ * @cssprop [--lr-app-rail-collapse-toggle-active-color=var(--lr-color-brand)] - Collapse-control
+ *   pressed foreground.
  * @cssprop [--lr-app-rail-toggle-hover-bg=var(--lr-color-brand-quiet)] - Toggle hover background.
  * @cssprop [--lr-app-rail-toggle-hover-color=var(--lr-color-brand)] - Toggle hover foreground.
  * @cssprop --lr-app-rail-toggle-active-bg - Toggle pressed background; defaults to the former
@@ -271,6 +297,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    appRailCollapse: LYRA_DEFAULT_appRailCollapse,
+    appRailExpand: LYRA_DEFAULT_appRailExpand,
     closeNavigation: LYRA_DEFAULT_closeNavigation,
     navigation: LYRA_DEFAULT_navigation,
     openNavigation: LYRA_DEFAULT_openNavigation,
@@ -380,6 +408,18 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  `toggle` csspart doc) as the panel's only in-panel dismiss control, and hiding it there too
    *  would leave the open panel with no in-panel way to close it at all -- only Escape/backdrop. */
   @property({ type: Boolean, reflect: true, attribute: 'hide-toggle' }) hideToggle = false;
+
+  /** Opts in the desktop collapse control: a `[part="collapse-toggle"]` button rendered inside
+   *  `[part="header"]` that flips the rail between its `'full'` and `'icon-only'` presentations,
+   *  the same flip `toggleCollapse()` performs. It writes `preferredMode`, so the collapse survives
+   *  a reload whenever `storage-key` is set and `persist` includes `preferred-mode`, and it still
+   *  yields to a viewport too narrow for any inline rail (see `preferredMode`'s own doc).
+   *
+   *  Not rendered at all while `mode` is `'mobile'` -- there is no inline rail to collapse there,
+   *  and rendering it would add a second, meaningless control to the focus-trapped overlay next to
+   *  the `[part="toggle"]` dismiss button. `false` (the default) reproduces today's exact output:
+   *  no extra element, and `[part="header"]`'s own block layout unchanged. */
+  @property({ type: Boolean, reflect: true }) collapsible = false;
 
   /** Direct reference to an external element that opens this rail's mobile overlay -- e.g. a
    *  hamburger button living in application chrome rather than this component's own built-in
@@ -527,8 +567,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private justOpened = false;
   private overlayHandle?: OverlayHandle;
   private explicitTrigger?: HTMLElement;
+  private triggerAria?: AriaOwnershipLease;
   private recoverInlineFocusAfterResponsiveClose = false;
   private readonly navId = nextId('app-rail-nav');
+  /** `[part="nav"]`'s own id, distinct from `navId`. `[part="collapse-toggle"]` lives inside the
+   *  element carrying `navId`, so pointing its `aria-controls` there claimed the button expands its
+   *  own ancestor; the item list it actually re-presents is `[part="nav"]`. */
+  private readonly navRegionId = nextId('app-rail-nav-region');
 
   @query('[part="base"], [part="panel"]') private baseEl?: HTMLElement;
   @query('[part="toggle"]') private toggleEl?: HTMLButtonElement;
@@ -542,10 +587,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private syncSlottedItems(): void {
     const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('[part="nav"] > slot');
     const itemTag = tag('app-rail-item');
+    const groupTag = tag('app-rail-group');
     const railTag = tag('app-rail');
+    // Groups are marked exactly like items and forward the state to the items THEY own. The rail
+    // deliberately does not reach through a group: `assignedElements({ flatten: true })` expands
+    // nested `<slot>` elements, not element children, so a group's items are never in this list --
+    // and having two owners write the same attribute on the same node is how the ownership bugs in
+    // this file started. Referenced by tag name only, so no import edge (and no cycle) is created.
     const next = new Set(
       (slot?.assignedElements({ flatten: true }) ?? []).filter(
-        (item): item is HTMLElement => item.localName === itemTag,
+        (item): item is HTMLElement =>
+          item.localName === itemTag || item.localName === groupTag,
       ),
     );
     for (const item of this.managedItems) {
@@ -812,6 +864,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // already-matching mobile breakpoint) -- this is what actually reparents the toggle in that
     // case.
     this.placeToggle(this.overlayActive);
+    // After the render that owns [part="panel"]'s identity, so the lease projects the element the
+    // trigger really controls rather than the previous pass's [part="base"].
+    this.syncExternalTriggerA11y();
     if (this.recoverInlineFocusAfterResponsiveClose) {
       this.recoverInlineFocusAfterResponsiveClose = false;
       const active = deepActiveElement(this.ownerDocument);
@@ -869,7 +924,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
     if (this.hasUpdated) {
       queueMicrotask(() => {
-        if (this.isConnected) this.syncSlottedItems();
+        if (!this.isConnected) return;
+        this.syncSlottedItems();
+        // disconnectedCallback() hands the trigger lease back (see releaseExternalTriggerA11y),
+        // and only `updated()` ever re-acquires it -- but a reconnect that lands on the SAME mode
+        // schedules no update at all (`setEffectiveMode()` early-returns on an unchanged mode),
+        // so without this the consumer's own hamburger button would permanently lose
+        // `aria-expanded`/`aria-controls` after a reparent.
+        this.syncExternalTriggerA11y();
       });
     }
   }
@@ -879,6 +941,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.teardownMediaQueries();
     this.overlayHandle?.suspend();
     this.endResizerGesture();
+    // The lease writes onto a consumer-owned element outside this shadow root, so it has to be
+    // handed back here: a disconnected rail that left `aria-expanded` behind would announce a
+    // disclosure nothing can open, and Lit's own teardown never reaches an element it does not own.
+    this.releaseExternalTriggerA11y();
   }
 
   override adoptedCallback(): void {
@@ -1112,6 +1178,64 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private onBackdropClick = (): void => {
     this.overlayHandle?.dismissBackdrop();
   };
+  /**
+   * Flips the rail between its `'full'` and `'icon-only'` presentations by writing
+   * `preferredMode` -- the same action `[part="collapse-toggle"]` performs, exposed for a consumer
+   * that renders its own collapse control (in app chrome, a command palette, a keyboard shortcut)
+   * instead of, or alongside, opting into `collapsible`.
+   *
+   * Writes `preferredMode`, never `forceMode`: the collapse is a *preference* on the
+   * full/icon-only axis, so the `mobile-breakpoint` keeps being tracked automatically and a
+   * genuinely too-narrow viewport still wins. It therefore persists exactly like any other
+   * `preferredMode` write -- whenever `storage-key` is set and `persist` includes
+   * `preferred-mode` -- and announces itself through the existing `lr-mode-change` event.
+   *
+   * A no-op while `mode` is `'mobile'`: there is no inline rail to collapse, and flipping the
+   * preference from there would silently arm a presentation the user never chose for whenever the
+   * viewport widened again. While `forceMode` pins the mode the preference is still recorded, and
+   * takes effect the moment the pin is released -- `preferredMode`'s own documented priority.
+   */
+  toggleCollapse(): void {
+    if (this._mode === 'mobile') return;
+    this.preferredMode = this._mode === 'icon-only' ? 'full' : 'icon-only';
+  }
+
+  private onCollapseToggleClick = (): void => {
+    this.toggleCollapse();
+  };
+
+  /** Projects the disclosure state of the mobile overlay onto whatever external element
+   *  `trigger`/`for` resolves to, through the shared ARIA-ownership lease `<lr-popover>` uses for
+   *  the same job. An external trigger lives in the consumer's light DOM while `[part="panel"]`
+   *  lives in this shadow root, so a plain `aria-controls` idref cannot connect them -- the lease
+   *  falls back to the `ariaControlsElements` element-reference form, which crosses the boundary,
+   *  and restores whatever the consumer had written itself once released.
+   *
+   *  Applied only while `mode` is `'mobile'`. Outside it there is no overlay for the trigger to
+   *  expand, and a permanent `aria-expanded="false"` on a control that can never expand anything
+   *  announces a disclosure that does not exist. Unlike the focus-return association (resolved
+   *  once, when the overlay opens), this tracks live: reassigning `trigger` moves the state to the
+   *  new element and clears it from the old one on the next update. */
+  private syncExternalTriggerA11y(): void {
+    const trigger = this._mode === 'mobile' ? this.resolveExternalTrigger() : null;
+    if (!trigger) {
+      this.releaseExternalTriggerA11y();
+      return;
+    }
+    const panel = this.baseEl ?? null;
+    const contribution = {
+      attributes: { 'aria-expanded': this.open ? 'true' : 'false' },
+      controls: panel ? [panel] : [],
+    };
+    if (this.triggerAria) this.triggerAria.update(trigger, contribution);
+    else this.triggerAria = acquireAriaOwnership(trigger, contribution);
+  }
+
+  private releaseExternalTriggerA11y(): void {
+    this.triggerAria?.release();
+    this.triggerAria = undefined;
+  }
+
 
   // See the default-slot @slot doc -- any click inside the nav items while
   // the overlay is open closes it, without trying to distinguish a real
@@ -1229,6 +1353,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   override render(): TemplateResult {
     const mobile = this._mode === 'mobile';
     const railWidthPx = this.effectiveRailWidthPx;
+    const showCollapse = this.collapsible && !mobile;
+    const expanded = this._mode !== 'icon-only';
     return html`
       <button
         part="toggle"
@@ -1252,10 +1378,22 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         tabindex=${this.overlayActive || !mobile ? '-1' : nothing}
         ?inert=${mobile && !this.open}
       >
-        <div part="header" ?hidden=${!this.hasHeaderSlot}>
+        <div part="header" ?hidden=${!this.hasHeaderSlot && !showCollapse}>
           <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
+          ${showCollapse
+            ? html`<button
+                part="collapse-toggle"
+                type="button"
+                aria-expanded=${expanded ? 'true' : 'false'}
+                aria-controls=${this.navRegionId}
+                aria-label=${expanded
+                  ? this.localize('appRailCollapse')
+                  : this.localize('appRailExpand')}
+                @click=${this.onCollapseToggleClick}
+              ><span part="collapse-icon" aria-hidden="true">${chevronIcon()}</span></button>`
+            : nothing}
         </div>
-        <div part="nav">
+        <div part="nav" id=${this.navRegionId}>
           <slot @slotchange=${this.onNavSlotChange} @click=${this.onNavItemClick}></slot>
         </div>
         <div part="footer" ?hidden=${!this.hasFooterSlot}>

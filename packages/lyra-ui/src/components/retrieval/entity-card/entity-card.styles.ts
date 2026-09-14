@@ -11,7 +11,11 @@ export const styles = css`
     padding: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    /* The RESTING frame's own hook, alongside the compact tier's existing padding/gap levers --
+       the default tier every dossier list actually renders was the only one with no card-specific
+       override, so retinting one themed list meant a ::part(base) rule or an app-wide
+       --lr-color-surface change. frame='plain' still wins below: it opts out of chrome entirely. */
+    background: var(--lr-entity-card-bg, var(--lr-color-surface));
     color: var(--lr-color-text);
     min-inline-size: 0;
   }

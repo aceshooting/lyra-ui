@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -57,6 +57,27 @@ and later MIME values restore detection.
   `[part="base"]`'s border, background, padding, and corner radius, so a card inside a dense chat
   transcript (or any container already drawing its own separation between attachments) doesn't
   double the frame.
+- `disabled: boolean = false` (reflected) — turns off this card's OWN action. The `kind="image"`
+  button and the `kind="video"` `open-button` render `disabled`; a safe file chip's anchor loses
+  its `href` and `download`, so it genuinely cannot fetch, and gains an explicit `role="link"` so
+  its accessible name and `aria-current` stay valid on an element that no longer has an implicit
+  role. `lr-media-open` and `lr-before-media-download` stop firing from every path, `click()`
+  included, the action leaves the tab order, and it paints at `--lr-opacity-disabled` with a
+  `not-allowed` cursor. Deliberately does NOT reach into the `kind="video"` player: `<video
+  controls>` is media content with its own native transport, not this card's action. An
+  unsafe-`src` file chip has no action at all, so `disabled` leaves it unchanged. Not
+  form-associated, so an ancestor `<fieldset disabled>` does not cascade here. The disabled paint
+  keys off the state each element already carries — `::part(base):disabled` and
+  `::part(open-button):disabled` restyle the two buttons from outside; the file chip's anchor has no
+  such pseudo-class, so target it through the reflected host attribute
+  (`lr-media-card[disabled]::part(base)`).
+- `aria-pressed` and `aria-current` (attributes only) — forwarded reactively onto whichever native
+  control carries this card's action, the same mechanism `<lr-button>`/`<lr-icon-button>` use.
+  `aria-pressed` accepts `'true' | 'false' | 'mixed'` and reaches BUTTONS only (`kind="image"`'s
+  `base` and `kind="video"`'s `open-button`) — the file chip's anchor never receives it, because
+  `link` has no pressed state. The global `aria-current` accepts `'page' | 'step' | 'location' |
+  'date' | 'time' | 'true' | 'false'` and reaches every kind, anchor included. Anything outside
+  those sets is dropped rather than passed through.
 
 **Renamed in 8.0.0 — breaking:** this was `appearance`. Library-wide, `appearance` now means only
 "how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
@@ -97,11 +118,15 @@ below).
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
 `<lr-document-preview>`'s identical `--lr-document-preview-max-height`; override per-instance via
 the `max-height` attribute instead of this property directly).
+`--lr-media-card-bg` (default `var(--lr-color-surface)`) retints the RESTING `frame="card"`
+chrome — the companion to the pressed state's `--lr-media-card-active-bg` below, and the tier a
+card sits at all day; `frame="plain"` still drops the fill entirely.
 `--lr-media-card-active-border-color` (default
 `color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
 and `--lr-media-card-active-bg` (default
-`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
-independently retint only a pressed image/file action. Both are inline `var()` fallbacks in the
+`color-mix(in oklab, var(--lr-media-card-bg, var(--lr-color-surface)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+independently retint only a pressed image/file action; the pressed default mixes from
+`--lr-media-card-bg`, so retinting the resting card carries the pressed state with it. Both are inline `var()` fallbacks in the
 pressed state, so values on a chat or attachment-list ancestor inherit into every card rather than
 being shadowed by host defaults. Plus shared tokens
 `--lr-space-xs`/`-s`, `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`/`-text-quiet`,

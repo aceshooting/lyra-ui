@@ -11,9 +11,9 @@ export const styles = css`
     gap: var(--lr-size-1px);
     block-size: var(--lr-sequence-strip-height, var(--lr-size-1-5rem));
   }
-  /* Above the documented 320-item dense threshold, a 1px gap per item would make the gaps alone
-     wider than the 320px responsive baseline. Only that decorative spacing collapses; every
-     semantic cell stays rendered, colored, named, and keyboard reachable. */
+  /* At the 200-cell cap a 1px gap per cell would make the gaps alone more than half the 320px
+     responsive baseline. Only that decorative spacing collapses; every semantic cell stays
+     rendered, colored, named, and keyboard reachable. */
   [part='base'][data-dense] {
     gap: 0;
   }
@@ -109,13 +109,13 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }
-  [part='window-range'],
+  [part='bucket-summary'],
   [part='legend-limit'] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
     font-variant-numeric: tabular-nums;
   }
-  [part='window-range'] {
+  [part='bucket-summary'] {
     margin-block-start: var(--lr-space-2xs);
     text-align: end;
   }

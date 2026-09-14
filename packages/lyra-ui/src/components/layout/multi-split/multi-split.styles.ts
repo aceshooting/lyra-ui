@@ -256,12 +256,15 @@ export const styles = css`
      live percent as its fallback -- that fallback keeps it byte-identical when unset, while the
      custom property itself is a durable seam a consumer can set (e.g. on an ancestor) to override
      the geometry at normal specificity, without !important, and without it being undone by the
-     next live-sync render. position, inset-block and the inset-inline-* edge below are fixed
-     defaults, so consumer CSS overrides them at normal specificity without !important. z-index
+     next live-sync render. position is a fixed default a consumer overrides at normal specificity
+     without !important; the block insets and the inset-inline-* edge below read
+     --lr-multi-split-floating-panel-inset, whose 0 fallback keeps an unset drawer flush with
+     [part="base"] exactly as before, so one declaration insets the drawer on all three of its
+     anchored edges instead of restating the two logical properties per direction. z-index
      above [part="backdrop"] covers the drawer's scrim. */
   ::slotted([data-collapse-state="floating"]) {
     position: absolute;
-    inset-block: 0;
+    inset-block: var(--lr-multi-split-floating-panel-inset, 0);
     z-index: var(--lr-layer-content);
     background: var(--lr-color-surface);
     border-radius: var(--lr-radius);
@@ -272,10 +275,10 @@ export const styles = css`
      already reflected on the host, so no per-panel marker is needed; collapse is never both, so
      exactly one rule matches. */
   :host([collapse="start"]) ::slotted([data-collapse-state="floating"]) {
-    inset-inline-start: 0;
+    inset-inline-start: var(--lr-multi-split-floating-panel-inset, 0);
   }
   :host([collapse="end"]) ::slotted([data-collapse-state="floating"]) {
-    inset-inline-end: 0;
+    inset-inline-end: var(--lr-multi-split-floating-panel-inset, 0);
   }
   /* The 'floating' drawer's scrim, rendered only while collapseState is 'floating' and open (see
      render()). Absolute against [part="base"], not viewport-fixed like lr-app-rail's mobile

@@ -90,6 +90,10 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
     object-fit: contain;
+    /* box-sizing does not inherit across the slot boundary, so a consumer-supplied surface with
+       its own padding or border would resolve the 100% above as its CONTENT box and overflow
+       [part='viewport'] (which is not a flex container, so nothing shrinks it back). */
+    box-sizing: border-box;
   }
   /* The display above is author-origin and outranks the UA stylesheet's own
      '[hidden] { display: none }', so a consumer-supplied viewport surface (a live canvas or iframe

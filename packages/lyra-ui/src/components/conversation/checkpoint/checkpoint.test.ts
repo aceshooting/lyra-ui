@@ -226,6 +226,34 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('restore-button');
   });
 
+  it('still refocuses the restore control when a host starts restoring in the same turn', async () => {
+    // The confirm group is destroyed by the render this terminal action triggers, so the focused
+    // Confirm button disappears with it. The restore button is still rendered while `restoring` --
+    // it is `aria-disabled`, not `disabled`, so it is still focusable -- and it is the only stop
+    // left in the component. Declining to refocus it because a restore is now in flight drops a
+    // keyboard user onto <body> at the exact moment the operation they just authorised begins.
+    const el = (await fixture(html`<lr-checkpoint checkpoint-id="ck_1"></lr-checkpoint>`)) as LyraCheckpoint;
+    el.addEventListener('lr-restore', () => {
+      el.restoring = true;
+    });
+    const restoreButton = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;
+    restoreButton.focus();
+    restoreButton.click();
+    await el.updateComplete;
+    const confirmButton = el.shadowRoot!.querySelector('[part="confirm-button"]') as HTMLButtonElement;
+    confirmButton.focus();
+    confirmButton.click();
+    await el.updateComplete;
+    await new Promise((r) => requestAnimationFrame(r));
+
+    expect(el.restoring, 'sanity: the host really did start restoring').to.equal(true);
+    expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part'),
+      'focus stays inside the component instead of falling back to <body>',
+    ).to.equal('restore-button');
+  });
+
   it('reverts to the restore button and refocuses it on Cancel click', async () => {
     const el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
     const restoreButton = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;

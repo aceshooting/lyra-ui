@@ -1443,16 +1443,6 @@
       "themeInput": "--lr-theme-icon-button-size"
     },
     {
-      "name": "--lr-interactive-transition",
-      "type": "string",
-      "group": "motion",
-      "scope": "shared",
-      "description": "Shared pointer-interaction transition: fill, text and border colour move together on hover and press, derived from the fast transition token so reduced motion flattens it.",
-      "values": {
-        "light": "background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast)"
-      }
-    },
-    {
       "name": "--lr-layer-base",
       "type": "number",
       "group": "layer",
@@ -3212,7 +3202,6 @@
       "evidence": [
         "src/components/agent-tools/agent-run/agent-run.styles.ts",
         "src/components/agent-tools/span-waterfall/span-waterfall.styles.ts",
-        "src/components/conversation/message-actions/message-actions.styles.ts",
         "src/components/conversation/message-feedback/message-feedback.styles.ts",
         "src/components/conversation/model-select/model-select.class.ts",
         "src/components/conversation/model-select/model-select.styles.ts",
@@ -3225,7 +3214,6 @@
         "src/components/forms/swatch-picker/swatch-picker.styles.ts",
         "src/components/media/attachment-chip/attachment-chip.class.ts",
         "src/components/media/attachment-chip/attachment-chip.styles.ts",
-        "src/components/media/attachment-trigger/attachment-trigger.styles.ts",
         "src/components/overlays/badge/badge.styles.ts",
         "src/components/overlays/chip/chip.styles.ts"
       ]
@@ -7860,6 +7848,16 @@
         "reducedMotion": "0.001ms linear"
       },
       "themeInput": "--lr-theme-transition-fast"
+    },
+    {
+      "name": "--lr-transition-interactive",
+      "type": "string",
+      "group": "motion",
+      "scope": "shared",
+      "description": "Shared pointer-interaction transition: fill, text and border colour move together on hover and press, derived from the fast transition token so reduced motion flattens it.",
+      "values": {
+        "light": "background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast)"
+      }
     }
   ]
 }

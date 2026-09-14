@@ -29,7 +29,11 @@ export const styles = css`
     padding: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    /* The RESTING frame's own hook, alongside the compact tier's existing padding/gap levers --
+       the default tier every approval prompt actually renders was the only one with no
+       component-specific override, so retinting one embedded bar meant a ::part(base) rule or an
+       app-wide --lr-color-surface change. */
+    background: var(--lr-confirm-bar-bg, var(--lr-color-surface));
   }
   :host([variant='danger']) [part='base'] {
     border-color: var(--lr-color-danger);

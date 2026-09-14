@@ -32,8 +32,10 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import {
   omittedEmptyStringConverter,
+  optionalLiteralSetConverter,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
+import type { PlaceStrategy } from '../../../internal/positioner.js';
 import {
   activateNonmodalOverlay,
   composedContains,
@@ -84,7 +86,14 @@ function safelyComposedContains(container: Element, candidate: unknown): boolean
 /** One keyword of the space-separated `trigger` list. */
 export type LyraTooltipTrigger = 'hover' | 'focus' | 'click' | 'manual';
 
-export type { LyraArrowPlacement, OverlayVirtualRect };
+export type { LyraArrowPlacement, OverlayVirtualRect, PlaceStrategy };
+
+/** Unsupported values resolve to *absent* so this component's own mirrored default stays the
+ *  fallback, rather than a member baked into the converter. */
+const TOOLTIP_POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>([
+  'absolute',
+  'fixed',
+]);
 
 /** The `showAt()` rectangle, shared verbatim with `<lr-popover>` (see `./overlay-shared.ts`). */
 
@@ -265,8 +274,50 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @property({ attribute: false }) anchor: Element | null = null;
   /** Prevents interaction/programmatic opening and closes an open tooltip. */
   @property({ type: Boolean, reflect: true }) disabled = false;
-  /** Uses viewport-fixed positioning instead of the containing-block default. */
-  @property({ type: Boolean, reflect: true }) hoist = false;
+  private _positioningStrategy?: PlaceStrategy;
+  /**
+   * CSS positioning scheme the popup is laid out with -- the same property, spelled the same way,
+   * as on `<lr-popover>`, `<lr-dropdown>` and `<lr-select>`. `absolute` (this component's mirrored
+   * default) positions against the nearest containing block and scrolls with it; `fixed` positions
+   * against the viewport and escapes most clipping ancestors. An unsupported value resolves back
+   * to the default. Changes apply live while open.
+   * @default 'absolute'
+   */
+  @property({
+    attribute: 'positioning-strategy',
+    reflect: true,
+    converter: TOOLTIP_POSITIONING_STRATEGY,
+  })
+  get positioningStrategy(): PlaceStrategy {
+    return this._positioningStrategy ?? 'absolute';
+  }
+  set positioningStrategy(next: PlaceStrategy) {
+    const normalized = TOOLTIP_POSITIONING_STRATEGY.normalize(next) ?? 'absolute';
+    const old = this.positioningStrategy;
+    if (normalized === old) return;
+    this._positioningStrategy = normalized;
+    this.requestUpdate('positioningStrategy', old);
+    // Lit only writes an attribute for a property it saw change, and this write changed `hoist`'s
+    // value without going through its own setter.
+    if ((old === 'fixed') !== (normalized === 'fixed')) {
+      this.requestUpdate('hoist', old === 'fixed');
+    }
+  }
+  /**
+   * Retained boolean alias of {@link positioningStrategy}: `hoist` is exactly
+   * `positioningStrategy === 'fixed'`, and writing either spelling updates the other so the two
+   * attributes can never disagree in the DOM. It is this component's established name (and
+   * Shoelace's own spelling on `sl-tooltip`), so it keeps working indefinitely; prefer
+   * `positioning-strategy` in new code, which reads the same on every anchored surface.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true })
+  get hoist(): boolean {
+    return this.positioningStrategy === 'fixed';
+  }
+  set hoist(next: boolean) {
+    this.positioningStrategy = next ? 'fixed' : 'absolute';
+  }
   /** Render an arrow that points at the anchor. Defaults on for mapped tooltip markup. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) arrow = true;
   /** Positive mapped spelling for suppressing the default arrow. */
@@ -426,7 +477,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       changed.has('skidding') ||
       changed.has('for') ||
       changed.has('anchor') ||
-      changed.has('hoist') ||
+      changed.has('positioningStrategy') ||
       changed.has('arrow') ||
       changed.has('withoutArrow') ||
       changed.has('arrowPlacement') ||
@@ -833,7 +884,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       this.placementPending = true;
       this.cleanup = place(anchor, popup, {
         placement: rtlAwarePlacement(this.placement, this),
-        strategy: this.hoist ? 'fixed' : 'absolute',
+        strategy: this.positioningStrategy,
         offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
         skidding: finiteNumber(this.skidding, 0),
         arrow: this.rendersArrow && arrowElement ? arrowElement : undefined,

@@ -142,7 +142,7 @@ it('reveals a toggle reactively when full-slot content is added after initial mo
   await slotChanged;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="toggle"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="toggle"]') != null).to.equal(true);
 });
 
 it('collapses the full wrapper and removes the toggle when its only slotted content is removed while expanded', async () => {
@@ -513,4 +513,188 @@ it('wraps long unbroken excerpt content inside the card allocation', async () =>
   const excerpt = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
   expect(getComputedStyle(excerpt).minInlineSize).to.equal('0px');
   expect(getComputedStyle(excerpt).overflowWrap).to.equal('anywhere');
+});
+
+describe('lr-source-card parity pass: resting background token, disabled, pressed/current forwarding', () => {
+  const partOf = (el: LyraSourceCard, name: string): HTMLElement =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('retints the resting card frame through --lr-source-card-bg', async () => {
+    const el = (await fixture(
+      html`<lr-source-card title="a.pdf" style="--lr-source-card-bg: rgb(1, 2, 3)"></lr-source-card>`
+    )) as LyraSourceCard;
+    expect(getComputedStyle(partOf(el, 'base')).backgroundColor).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('leaves the resting frame on the shared surface token when --lr-source-card-bg is unset', async () => {
+    const el = (await fixture(
+      html`<lr-source-card title="a.pdf" style="--lr-color-surface: rgb(4, 5, 6)"></lr-source-card>`
+    )) as LyraSourceCard;
+    expect(getComputedStyle(partOf(el, 'base')).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('keeps frame="plain" transparent regardless of the new token', async () => {
+    const el = (await fixture(
+      html`<lr-source-card
+        title="a.pdf"
+        frame="plain"
+        style="--lr-source-card-bg: rgb(1, 2, 3)"
+      ></lr-source-card>`
+    )) as LyraSourceCard;
+    expect(getComputedStyle(partOf(el, 'base')).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('defaults disabled to false and leaves both controls operable', async () => {
+    const el = (await fixture(html`
+      <lr-source-card title="a.pdf"><span slot="full">Full text</span></lr-source-card>
+    `)) as LyraSourceCard;
+    expect(el.disabled).to.equal(false);
+    expect(el.hasAttribute('disabled')).to.equal(false);
+    expect((partOf(el, 'title') as HTMLButtonElement).disabled).to.equal(false);
+    expect((partOf(el, 'toggle') as HTMLButtonElement).disabled).to.equal(false);
+  });
+
+  it('disables every self-rendered control, not just the title', async () => {
+    const el = (await fixture(html`
+      <lr-source-card title="a.pdf" disabled><span slot="full">Full text</span></lr-source-card>
+    `)) as LyraSourceCard;
+    expect(el.hasAttribute('disabled')).to.equal(true);
+    expect((partOf(el, 'title') as HTMLButtonElement).disabled).to.equal(true);
+    expect(
+      (partOf(el, 'toggle') as HTMLButtonElement).disabled,
+      'the show-more toggle is a self-rendered sub-control too',
+    ).to.equal(true);
+  });
+
+  it('stops lr-open and lr-expand while disabled and removes both controls from the tab order', async () => {
+    const el = (await fixture(html`
+      <lr-source-card source-id="s1" title="a.pdf" disabled>
+        <span slot="full">Full text</span>
+      </lr-source-card>
+    `)) as LyraSourceCard;
+    let opens = 0;
+    let expands = 0;
+    el.addEventListener('lr-open', () => (opens += 1));
+    el.addEventListener('lr-expand', () => (expands += 1));
+
+    const titleButton = partOf(el, 'title') as HTMLButtonElement;
+    const toggleButton = partOf(el, 'toggle') as HTMLButtonElement;
+    titleButton.click();
+    toggleButton.click();
+    await el.updateComplete;
+    expect(opens).to.equal(0);
+    expect(expands).to.equal(0);
+
+    titleButton.focus();
+    expect(
+      el.shadowRoot!.activeElement === titleButton,
+      'a disabled title button must not take focus',
+    ).to.equal(false);
+  });
+
+  // title/toggle are rendered <button>s, so their disabled paint keys off the native :disabled they
+  // already carry -- which is also the only form that survives after ::part(), where an invented
+  // ::part(title)[data-disabled] would never parse.
+  it('lets an outside rule reach the disabled title and toggle through ::part(x):disabled', async () => {
+    const el = (await fixture(html`
+      <lr-source-card title="a.pdf" disabled><span slot="full">Full text</span></lr-source-card>
+    `)) as LyraSourceCard;
+    const sheet = document.createElement('style');
+    sheet.textContent =
+      'lr-source-card::part(title):disabled, lr-source-card::part(toggle):disabled { outline-color: rgb(9, 9, 9); }';
+    document.head.append(sheet);
+    try {
+      expect(getComputedStyle(partOf(el, 'title')).outlineColor).to.equal('rgb(9, 9, 9)');
+      expect(getComputedStyle(partOf(el, 'toggle')).outlineColor).to.equal('rgb(9, 9, 9)');
+      expect(
+        partOf(el, 'title').hasAttribute('data-disabled'),
+        'the native :disabled already carries this state on a <button>',
+      ).to.equal(false);
+      expect(partOf(el, 'toggle').hasAttribute('data-disabled')).to.equal(false);
+    } finally {
+      sheet.remove();
+    }
+  });
+
+  it('leaves an enabled title and toggle untouched by that same ::part(x):disabled rule', async () => {
+    const el = (await fixture(html`
+      <lr-source-card title="a.pdf"><span slot="full">Full text</span></lr-source-card>
+    `)) as LyraSourceCard;
+    const sheet = document.createElement('style');
+    sheet.textContent =
+      'lr-source-card::part(title):disabled, lr-source-card::part(toggle):disabled { outline-color: rgb(9, 9, 9); }';
+    document.head.append(sheet);
+    try {
+      expect(getComputedStyle(partOf(el, 'title')).outlineColor).to.not.equal('rgb(9, 9, 9)');
+      expect(getComputedStyle(partOf(el, 'toggle')).outlineColor).to.not.equal('rgb(9, 9, 9)');
+    } finally {
+      sheet.remove();
+    }
+  });
+
+  it('applies the disabled opacity and the not-allowed cursor', async () => {
+    const el = (await fixture(
+      html`<lr-source-card title="a.pdf" disabled style="--lr-opacity-disabled: 0.42"></lr-source-card>`
+    )) as LyraSourceCard;
+    expect(getComputedStyle(partOf(el, 'base')).opacity).to.equal('0.42');
+    expect(getComputedStyle(partOf(el, 'title')).cursor).to.equal('not-allowed');
+  });
+
+  it('resumes emitting once disabled is cleared', async () => {
+    const el = (await fixture(
+      html`<lr-source-card source-id="s1" title="a.pdf" disabled></lr-source-card>`
+    )) as LyraSourceCard;
+    el.disabled = false;
+    await el.updateComplete;
+    const fired = oneEvent(el, 'lr-open');
+    (partOf(el, 'title') as HTMLButtonElement).click();
+    expect((await fired).detail.sourceId).to.equal('s1');
+  });
+
+  it('forwards host aria-pressed and aria-current reactively onto the title button', async () => {
+    const el = (await fixture(
+      html`<lr-source-card title="a.pdf" aria-pressed="true" aria-current="page"></lr-source-card>`
+    )) as LyraSourceCard;
+    const title = () => partOf(el, 'title');
+    expect(title().getAttribute('aria-pressed')).to.equal('true');
+    expect(title().getAttribute('aria-current')).to.equal('page');
+
+    el.setAttribute('aria-pressed', 'false');
+    await el.updateComplete;
+    expect(title().getAttribute('aria-pressed')).to.equal('false');
+
+    el.removeAttribute('aria-pressed');
+    el.removeAttribute('aria-current');
+    await el.updateComplete;
+    expect(title().hasAttribute('aria-pressed')).to.equal(false);
+    expect(title().hasAttribute('aria-current')).to.equal(false);
+  });
+
+  it('ignores values outside the aria-pressed/aria-current vocabularies', async () => {
+    const el = (await fixture(
+      html`<lr-source-card title="a.pdf" aria-pressed="yes" aria-current="maybe"></lr-source-card>`
+    )) as LyraSourceCard;
+    expect(partOf(el, 'title').hasAttribute('aria-pressed')).to.equal(false);
+    expect(partOf(el, 'title').hasAttribute('aria-current')).to.equal(false);
+  });
+
+  it('never puts aria-pressed on the expand toggle, which already owns aria-expanded', async () => {
+    const el = (await fixture(html`
+      <lr-source-card title="a.pdf" aria-pressed="true">
+        <span slot="full">Full text</span>
+      </lr-source-card>
+    `)) as LyraSourceCard;
+    expect(partOf(el, 'toggle').hasAttribute('aria-pressed')).to.equal(false);
+    expect(partOf(el, 'toggle').getAttribute('aria-expanded')).to.equal('false');
+  });
+
+  it('stays accessible as a selected, right-to-left card', async () => {
+    const el = (await fixture(html`
+      <lr-source-card dir="rtl" source-id="s1" title="تقرير.pdf" page="12" aria-pressed="true">
+        <span slot="excerpt">مقتطف</span>
+        <span slot="full">النص الكامل</span>
+      </lr-source-card>
+    `)) as LyraSourceCard;
+    await expect(el).to.be.accessible();
+  });
 });

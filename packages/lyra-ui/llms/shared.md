@@ -758,7 +758,7 @@ inside a Lyra UI without looking foreign:
 | Geometry              | `--lr-radius-xs`, `--lr-radius`, `--lr-radius-pill`, `--lr-border-width-thin`, `--lr-border-width-medium`, `--lr-border-width-thick`                                                                                       |
 | Elevation             | `--lr-shadow-color`, `--lr-shadow-xs`, `--lr-shadow-s`, `--lr-shadow-m`, `--lr-shadow-l`, `--lr-shadow-xl`, `--lr-shadow`                                                                                                  |
 | Typography            | `--lr-font`, `--lr-font-mono`, the ten `--lr-font-size-*` steps, the four `--lr-font-weight-*` steps                                                                                                                        |
-| State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base`, `--lr-interactive-transition` |
+| State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base`, `--lr-transition-interactive` |
 
 The grid ships whole because its contrast guarantee is **per tier** — a `fill-quiet` background is
 only guaranteed legible under the matching `on-quiet` foreground — so shipping the flat aliases
@@ -2763,6 +2763,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-animated-image": unknown;
   "lr-animation": unknown;
   "lr-app-rail": unknown;
+  "lr-app-rail-group": unknown;
   "lr-app-rail-item": unknown;
   "lr-approval-queue": unknown;
   "lr-archive-viewer": unknown;
@@ -3149,6 +3150,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-animated-image": unknown;
   "lr-animation": unknown;
   "lr-app-rail": unknown;
+  "lr-app-rail-group": unknown;
   "lr-app-rail-item": unknown;
   "lr-approval-queue": unknown;
   "lr-archive-viewer": unknown;
@@ -3436,6 +3438,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-animated-image": unknown;
   "lr-animation": unknown;
   "lr-app-rail": unknown;
+  "lr-app-rail-group": unknown;
   "lr-app-rail-item": unknown;
   "lr-approval-queue": unknown;
   "lr-archive-viewer": unknown;
@@ -3763,6 +3766,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-animated-image": unknown;
   "lr-animation": unknown;
   "lr-app-rail": unknown;
+  "lr-app-rail-group": unknown;
   "lr-app-rail-item": unknown;
   "lr-approval-queue": unknown;
   "lr-archive-viewer": unknown;

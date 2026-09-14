@@ -677,7 +677,8 @@ export interface LyraHeatmapEventMap {
  * extends a rectangle, Shift+Space toggles a row and Ctrl/Meta+Space toggles a column. Pointer drag
  * paints or erases with a transient preview and emits once on release; cancellation discards it.
  * Assign the proposed array to `selectedCells` to accept. Programmatic assignments are silent.
- * @slot legend - Custom legend content rendered inside the built-in legend row.
+ * @slot legend - Custom legend content rendered inside the built-in legend row. Nothing is
+ *   rendered, and the slot itself is absent, while `withoutLegend` is set.
  * @csspart base - The heatmap wrapper.
  * @csspart canvas - The heatmap canvas.
  * @csspart grid - The scrollport wrapping the canvas while `stickyLabels` freezes an axis; absent otherwise.
@@ -691,7 +692,8 @@ export interface LyraHeatmapEventMap {
  * @csspart live-region - An aria-hidden shadow mirror of the keyboard announcement; the actual
  *   announcement uses the shared light-DOM polite sink.
  * @csspart projection-limit - Localized assistive disclosure for bounded projections.
- * @csspart legend - The color legend.
+ * @csspart legend - The color legend. The whole row, its slot included, is absent from the DOM
+ *   while `withoutLegend` is set.
  * @csspart legend-lo - The low legend endpoint (omitted when `legendStops` is supplied).
  * @csspart legend-hi - The high legend endpoint (omitted when `legendStops` is supplied).
  * @csspart legend-stop - One discrete `legendStops` entry — swatch plus label.
@@ -710,7 +712,7 @@ export interface LyraHeatmapEventMap {
  * @cssprop [--lr-heatmap-selected-color=var(--lr-color-success)] - Border color for the selected cell.
  * @cssprop [--lr-heatmap-sticky-label-bg=var(--lr-color-surface)] - Backdrop painted under a frozen `stickyLabels` band. Must be opaque: it covers the same labels the scrolling canvas painted underneath it.
  * @cssprop [--lr-heatmap-grid-max-block-size=none] - Block-size ceiling of the `stickyLabels` scrollport. A frozen column band only stays behind once the grid actually scrolls vertically.
- * @cssprop [--lr-heatmap-color-steps-gradient=linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))] - Gradient painted on the continuous legend bar. Set on the host by the component itself while `colorSteps` is supplied, and removed again when it is not; the fallback is the two-endpoint scale ramp.
+ * @cssprop [--lr-heatmap-color-steps-gradient=linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))] - Gradient painted on the continuous legend bar. Set on the host by the component itself while `colorSteps` is supplied AND the legend is rendered, and removed again when either stops being true -- `withoutLegend` takes the whole legend row out of the DOM, and the legend bar is this property's only reader; the fallback is the two-endpoint scale ramp.
  * @status stable
  * @since 4.0.0
  */
@@ -1099,6 +1101,22 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
   /** Legend caption. Unset uses the localized default; every supplied string is literal. */
   @property({ attribute: 'value-label' }) valueLabel?: string;
+  /**
+   * Hides the legend. Same name and same polarity as `<lr-chart>`'s `withoutLegend`, so the two
+   * chart-adjacent surfaces a dashboard puts side by side are turned off the same way rather than
+   * through a third spelling.
+   *
+   * The row is removed from the DOM outright -- swatches, endpoint labels, the `valueLabel`
+   * caption, the annotation entries and the `legend` slot all go with it -- rather than being
+   * visually hidden, so it contributes no layout box and assigns no slotted content. The legend's
+   * own preparation stops too: the `--lr-heatmap-color-steps-gradient` custom property this
+   * component writes onto the host for the legend bar (and for nothing else) is not written while
+   * the legend is hidden, and is removed again if it had been.
+   *
+   * Cells, tooltips, keyboard interaction and the generated accessible summary are unaffected: the
+   * summary already names the value label independently of the legend.
+   */
+  @property({ type: Boolean, attribute: 'without-legend', reflect: true }) withoutLegend = false;
   /**
    * `"linear"` (default) maps values linearly to the color ramp in matrix
    * mode, and buckets calendar-mode values via `quartileBucket()` — both
@@ -1829,8 +1847,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         (_, index) => isoDateAtOffset(firstWeekStart, index)
       );
     }
-    if (changed.has('colorSteps') || !this.hasUpdated) {
-      const colorSteps = this.cachedColorSteps.map(sanitizeCssColor);
+    // The gradient is read by `[part="legend"]`'s bar and by nothing else, so a hidden legend
+    // skips the write entirely (and clears a previous one when it is turned off at runtime).
+    if (changed.has('colorSteps') || changed.has('withoutLegend') || !this.hasUpdated) {
+      const colorSteps = this.withoutLegend
+        ? []
+        : this.cachedColorSteps.map(sanitizeCssColor);
       if (
         colorSteps.length >= 2 &&
         colorSteps.every((color): color is string => color !== undefined)
@@ -4809,9 +4831,31 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     >`;
   }
 
+  /**
+   * The legend row. Called only while the legend is shown, so the scale markup, the annotation
+   * scan and the caption's `localize()` call are work a `withoutLegend` heatmap never does -- and
+   * the row contributes no layout box, unlike a visually-hidden one.
+   */
+  private renderLegend(range: [number, number] | null): TemplateResult {
+    const labeledAnnotations = this.cachedAnnotations.filter((a) => a.label);
+    // The indentation below is load-bearing, not formatting: `[part="legend"]`'s emitted innerHTML
+    // is asserted verbatim by a markup-identity test, so the row keeps the exact leading whitespace
+    // it had while this template was still written inline in `render()`.
+    return html`<div part="legend">
+          ${this.renderLegendScale(range)}
+          <span part="legend-value-label">${this.localizedValueLabel()}</span>
+          ${labeledAnnotations.map(
+            (a) =>
+              html`<span part="legend-annotation"
+                ><span class="ring-swatch"></span>${a.label}</span
+              >`
+          )}
+          <slot name="legend"></slot>
+        </div>`;
+  }
+
   override render(): TemplateResult {
     const range = this.cachedValueRange;
-    const labeledAnnotations = this.cachedAnnotations.filter((a) => a.label);
     const projectionDescription = this.projectionDescription();
     return html`
       <div
@@ -4841,17 +4885,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           aria-hidden="true"
           >${this.liveText}</div
         >
-        <div part="legend">
-          ${this.renderLegendScale(range)}
-          <span part="legend-value-label">${this.localizedValueLabel()}</span>
-          ${labeledAnnotations.map(
-            (a) =>
-              html`<span part="legend-annotation"
-                ><span class="ring-swatch"></span>${a.label}</span
-              >`
-          )}
-          <slot name="legend"></slot>
-        </div>
+        ${this.withoutLegend ? nothing : this.renderLegend(range)}
       </div>
     `;
   }

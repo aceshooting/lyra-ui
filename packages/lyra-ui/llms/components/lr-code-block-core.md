@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -83,6 +83,9 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   TypeScript annotation, use `import type { ShikiLanguageInput } from
 '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
   granular import emits no registration side effect.
+- `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — identical to
+  `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
+  for a compact glyph and promotes the same localized string to the control's accessible name
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
@@ -95,9 +98,10 @@ Identical behavior to `<lr-code-block>`'s own method.
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code
 body ended; `anchor` is a `line-range` anchor covering the selected lines).
 
-**Slots:** none.
+**Slots:** `header-actions` — identical to `<lr-code-block>`'s own slot.
 
-**CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `toggle`, `body`, `pre`,
+**CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `copy-button-text`,
+`copy-button-icon`, `copy-button__control`, `header-actions`, `toggle`, `body`, `pre`,
 `code`, `line-highlight`, `line-button` — identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`
