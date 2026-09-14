@@ -672,8 +672,12 @@ it('forwards every documented table part and renders the actual nested action tr
     expect(getComputedStyle(glyph).width).to.equal('20px');
     expect(getComputedStyle(glyph).height).to.equal('20px');
 
-    const restingBackground = style.backgroundColor;
-    expect(style.color).to.equal('rgb(4, 5, 6)');
+    await waitUntil(
+      () => getComputedStyle(trigger).color === 'rgb(4, 5, 6)',
+      'the real nested action trigger never settled to its resting quiet colour'
+    );
+    const restingBackground = getComputedStyle(trigger).backgroundColor;
+    expect(getComputedStyle(trigger).color).to.equal('rgb(4, 5, 6)');
     let pointerDown = false;
     try {
       await hoverUntilMatched(

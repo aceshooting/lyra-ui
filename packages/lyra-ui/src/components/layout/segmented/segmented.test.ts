@@ -5,7 +5,7 @@ import type { LyraSegmented, LyraSegmentedItem } from "./segmented.js";
 import { styles } from "./segmented.styles.js";
 import "../../forms/select/select.js";
 import type { LyraSelect } from "../../forms/select/select.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const items = (): LyraSegmentedItem[] => [
@@ -1152,15 +1152,6 @@ describe("active-state cssprops", () => {
     return el;
   }
 
-  function pointerPosition(target: HTMLElement): [number, number] {
-    target.scrollIntoView();
-    const rect = target.getBoundingClientRect();
-    return [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
-  }
-
   it("keeps the pre-hook active treatment when its props are unset", async () => {
     const el = await themed();
     const target = segmentButtons(el)[0]!;
@@ -1176,9 +1167,13 @@ describe("active-state cssprops", () => {
     );
 
     try {
-      await sendMouse({ type: "move", position: pointerPosition(target) });
+      await hoverUntilMatched(target, "segment never received the pointer hover state");
       expect(getComputedStyle(target).backgroundColor).to.equal(
         "rgba(0, 0, 0, 0)"
+      );
+      await waitUntil(
+        () => getComputedStyle(target).color === expectedColor,
+        "hover text colour never rendered"
       );
       expect(getComputedStyle(target).color).to.equal(expectedColor);
 
@@ -1213,14 +1208,22 @@ describe("active-state cssprops", () => {
     );
 
     try {
-      await sendMouse({ type: "move", position: pointerPosition(target!) });
+      await hoverUntilMatched(target!, "segment never received the pointer hover state");
       expect(getComputedStyle(target!).backgroundColor).to.equal(
         "rgba(0, 0, 0, 0)"
+      );
+      await waitUntil(
+        () => getComputedStyle(target!).color === expectedHoverColor,
+        "hover text colour never rendered"
       );
       expect(getComputedStyle(target!).color).to.equal(expectedHoverColor);
 
       await sendMouse({ type: "down" });
       await waitUntil(() => getComputedStyle(target!).backgroundColor === "rgb(12, 34, 56)", 'target background color never reached "rgb(12, 34, 56)"');
+      await waitUntil(
+        () => getComputedStyle(target!).color === "rgb(78, 90, 123)",
+        'target text colour never reached "rgb(78, 90, 123)"'
+      );
       expect(getComputedStyle(target!).color).to.equal("rgb(78, 90, 123)");
       expect(getComputedStyle(checked!).backgroundColor).to.equal(
         expectedCheckedBackground

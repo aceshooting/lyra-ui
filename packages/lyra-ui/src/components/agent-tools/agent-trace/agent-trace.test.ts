@@ -412,7 +412,11 @@ describe('lr-agent-trace', () => {
   describe('--lr-agent-trace-handoff-active-bg', () => {
     const activeFixture = async (): Promise<LyraAgentTrace> => {
       const el = (await fixture(
-        html`<lr-agent-trace .spans=${SPANS} .activeSpanId=${'sub-agent'}></lr-agent-trace>`,
+        html`<lr-agent-trace
+          style="--lr-transition-fast: 0s;"
+          .spans=${SPANS}
+          .activeSpanId=${'sub-agent'}
+        ></lr-agent-trace>`,
       )) as LyraAgentTrace;
       await el.updateComplete;
       return el;

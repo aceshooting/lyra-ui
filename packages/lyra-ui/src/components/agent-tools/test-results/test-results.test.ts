@@ -1,5 +1,5 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './test-results.js';
 import { testResultDetailSlotName, type LyraTestResults, type TestSuiteResult } from './test-results.js';
 import type { LyraEmpty } from '../../overlays/empty/empty.js';
@@ -925,10 +925,6 @@ describe('lr-test-results', () => {
     )!;
     const testName = el.shadowRoot!.querySelector<HTMLElement>('[part="test-name"]')!;
     const expandToggle = el.shadowRoot!.querySelector<HTMLElement>('[part="test-expand-toggle"]')!;
-    const centre = (element: HTMLElement): [number, number] => {
-      const rect = element.getBoundingClientRect();
-      return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
-    };
     await resetMouse();
     const targets = [
       ['selected filter toggle', selected, getComputedStyle(selected).backgroundColor],
@@ -939,7 +935,11 @@ describe('lr-test-results', () => {
 
     try {
       for (const [name, target, rest] of targets) {
-        await sendMouse({ type: 'move', position: centre(target) });
+        await hoverUntilMatched(target, `${name} never received the pointer hover state`);
+        await waitUntil(
+          () => getComputedStyle(target).backgroundColor !== rest,
+          `${name} hover background never rendered`,
+        );
         expect(getComputedStyle(target).backgroundColor, `${name} hover background`).not.to.equal(rest);
       }
     } finally {

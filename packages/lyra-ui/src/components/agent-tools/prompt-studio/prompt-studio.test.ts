@@ -7,7 +7,7 @@ import type {
   PromptStudioMessageReorderDetail,
   PromptStudioVersion,
 } from './prompt-studio.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const messages: PromptStudioMessage[] = [
   { id: 'system', role: 'system', content: 'Answer for {{audience}}.' },
@@ -446,17 +446,11 @@ it('paints the variable field hover hook over its resting border', async () => {
     ></lr-prompt-studio>
   `);
   const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="variable"] input')!;
-  const rest = getComputedStyle(input).borderTopColor;
-  const rect = input.getBoundingClientRect();
 
-  await resetMouse();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    await hoverUntilMatched(input, 'variable input never received the pointer hover state');
     await waitUntil(
-      () => getComputedStyle(input).borderTopColor !== rest,
+      () => getComputedStyle(input).borderTopColor === 'rgb(1, 2, 3)',
       'variable input hover paint did not settle',
     );
     expect(getComputedStyle(input).borderTopColor).to.equal('rgb(1, 2, 3)');
@@ -518,20 +512,19 @@ it('uses a visibly distinct selected-version hover fallback in light and dark th
 it('retains the explicit selected-version hover background override', async () => {
   const el = (await fixture(html`
     <lr-prompt-studio
-      style="--lr-prompt-studio-version-selected-hover-bg: rgb(1, 2, 3)"
+      style="--lr-transition-fast: 0s; --lr-prompt-studio-version-selected-hover-bg: rgb(1, 2, 3)"
       selected-version-id="v1"
       .versions=${versions}
     ></lr-prompt-studio>
   `)) as LyraPromptStudio;
   const version = el.shadowRoot!.querySelector<HTMLElement>('[part="version"]')!;
-  const rect = version.getBoundingClientRect();
 
-  await resetMouse();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    await hoverUntilMatched(version, 'selected version never received the pointer hover state');
+    await waitUntil(
+      () => getComputedStyle(version).backgroundColor === 'rgb(1, 2, 3)',
+      'selected-version hover background override never rendered',
+    );
     expect(getComputedStyle(version).backgroundColor).to.equal('rgb(1, 2, 3)');
   } finally {
     await resetMouse();
