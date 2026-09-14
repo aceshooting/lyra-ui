@@ -2870,3 +2870,269 @@ describe('value/filters assignment order (regression)', () => {
     expect(el.value['status']).to.equal('open');
   });
 });
+
+describe('field wrapper part and design tokens', () => {
+  it(
+    'renders part="field" with the previous flex-basis and the previous controls-row gap when unset (unset-regression)',
+    async () => {
+      const el = await fixture<LyraFilterBar>(
+        html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+      );
+
+      expect(
+        el.shadowRoot!.querySelector('.filter-field'),
+        'the former private class name is gone'
+      ).to.equal(null);
+      const fields = el.shadowRoot!.querySelectorAll('[part="field"]');
+      expect(fields.length, 'one field wrapper per filter').to.equal(basicFilters.length);
+
+      const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const field = fields[0] as HTMLElement;
+      expect(getComputedStyle(field).flexBasis).to.equal(`${rootFontSize * 12}px`);
+
+      const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
+      expect(getComputedStyle(controls).gap).to.equal(`${rootFontSize * 0.5}px`);
+    }
+  );
+
+  it('themes the field flex-basis through --lr-filter-bar-field-basis', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        style="--lr-filter-bar-field-basis: 40px"
+        .filters=${basicFilters}
+      ></lr-filter-bar>
+    `);
+    const field = el.shadowRoot!.querySelector('[part="field"]') as HTMLElement;
+    expect(getComputedStyle(field).flexBasis).to.equal('40px');
+  });
+
+  it('themes the controls row gap through --lr-filter-bar-gap', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        style="--lr-filter-bar-gap: 37px"
+        .filters=${basicFilters}
+      ></lr-filter-bar>
+    `);
+    const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
+    expect(getComputedStyle(controls).gap).to.equal('37px');
+  });
+});
+
+describe('end slot', () => {
+  it('hides the end wrapper part, claiming no layout space, while nothing is slotted (unset-regression)', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+    );
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+    expect(end, 'the end wrapper always renders').to.exist;
+    expect(end.hidden, 'hidden while unused').to.equal(true);
+  });
+
+  it('renders host-supplied end content inside the controls row, next to the reset button', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${basicFilters}>
+        <button slot="end" id="save-search" type="button">Save search</button>
+      </lr-filter-bar>
+    `);
+    await el.updateComplete;
+
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+    expect(end.hidden, 'unhidden once real content is slotted').to.equal(false);
+    const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
+    expect(controls.contains(end), 'the end part renders inside the controls row').to.equal(true);
+
+    const slot = end.querySelector('slot[name="end"]') as HTMLSlotElement;
+    const assigned = slot.assignedElements();
+    expect(assigned).to.have.lengthOf(1);
+    expect((assigned[0] as HTMLElement).id).to.equal('save-search');
+  });
+});
+
+describe("'text'/'combobox' control passthrough (clearable/size/icon/inputType)", () => {
+  const passthroughFilters: LyraFilterBarFilterDefinition[] = [
+    { filterId: 'q', label: 'Search', type: 'text' },
+    {
+      filterId: 'tags',
+      label: 'Tags',
+      type: 'combobox',
+      multiple: true,
+      options: [{ value: 'urgent', label: 'Urgent' }],
+    },
+  ];
+
+  it(
+    'defaults to clearable=false, size="m", type="text", and no start-slot content when unset (unset-regression)',
+    async () => {
+      const el = await fixture<LyraFilterBar>(
+        html`<lr-filter-bar .filters=${passthroughFilters}></lr-filter-bar>`
+      );
+
+      const input = control(el, 'q') as HTMLElement & { clearable: boolean; size: string; type: string };
+      expect(input.hasAttribute('clearable')).to.equal(false);
+      expect(input.size).to.equal('m');
+      expect(input.type).to.equal('text');
+      expect(input.querySelector('[slot="start"]'), 'no icon adornment').to.equal(null);
+
+      const combo = control(el, 'tags') as HTMLElement & { clearable: boolean; size: string };
+      expect(combo.hasAttribute('clearable')).to.equal(false);
+      expect(combo.size).to.equal('m');
+      expect(combo.querySelector('[slot="start"]'), 'no icon adornment').to.equal(null);
+    }
+  );
+
+  it('forwards clearable/size/inputType/icon to the composed lr-input for a text filter', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'q',
+        label: 'Search',
+        type: 'text',
+        clearable: true,
+        size: 'l',
+        inputType: 'search',
+        icon: html`<span id="icon-content">*</span>`,
+      },
+    ];
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`);
+    const input = control(el, 'q') as HTMLElement & { clearable: boolean; size: string; type: string };
+
+    expect(input.clearable).to.equal(true);
+    expect(input.size).to.equal('l');
+    expect(input.type).to.equal('search');
+
+    const wrapper = input.querySelector('[slot="start"]') as HTMLElement;
+    expect(wrapper, 'icon renders into the start slot').to.exist;
+    expect(wrapper.getAttribute('aria-hidden')).to.equal('true');
+    expect(wrapper.hasAttribute('inert'), 'inert, so it cannot take focus').to.equal(true);
+    expect(wrapper.querySelector('#icon-content'), 'the icon content itself is present').to.exist;
+  });
+
+  it('forwards clearable/size/icon to the composed lr-combobox for a combobox filter', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'tags',
+        label: 'Tags',
+        type: 'combobox',
+        clearable: true,
+        size: 's',
+        icon: html`<span id="combo-icon">*</span>`,
+        options: [{ value: 'urgent', label: 'Urgent' }],
+      },
+    ];
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`);
+    const combo = control(el, 'tags') as HTMLElement & { clearable: boolean; size: string };
+
+    expect(combo.clearable).to.equal(true);
+    expect(combo.size).to.equal('s');
+
+    const wrapper = combo.querySelector('[slot="start"]') as HTMLElement;
+    expect(wrapper, 'icon renders into the start slot').to.exist;
+    expect(wrapper.getAttribute('aria-hidden')).to.equal('true');
+    expect(wrapper.hasAttribute('inert'), 'inert, so it cannot take focus').to.equal(true);
+    expect(wrapper.querySelector('#combo-icon'), 'the icon content itself is present').to.exist;
+  });
+});
+
+describe("'combobox' debounce", () => {
+  const debouncedCombobox: LyraFilterBarFilterDefinition[] = [
+    {
+      filterId: 'tags',
+      label: 'Tags',
+      type: 'combobox',
+      multiple: true,
+      debounce: 60,
+      options: [
+        { value: 'urgent', label: 'Urgent' },
+        { value: 'billing', label: 'Billing' },
+      ],
+    },
+  ];
+
+  function comboControl(el: LyraFilterBar): HTMLElement & { value: string[] } {
+    return control(el, 'tags') as HTMLElement & { value: string[] };
+  }
+
+  it('coalesces rapid selection changes into a single delayed lr-input carrying the final value', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCombobox}></lr-filter-bar>`
+    );
+    const collected: string[][] = [];
+    el.addEventListener('lr-input', (e) =>
+      collected.push([...((e as CustomEvent<LyraFilterBarInputDetail>).detail.value['tags'] as string[])])
+    );
+
+    const combo = comboControl(el);
+    combo.value = ['urgent'];
+    combo.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(collected, 'nothing committed while the debounce is still in flight').to.deep.equal([]);
+    expect(el.value).to.deep.equal({});
+
+    combo.value = ['urgent', 'billing'];
+    combo.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(collected).to.deep.equal([]);
+
+    await aTimeout(120);
+    expect(collected).to.deep.equal([['urgent', 'billing']]);
+    expect(el.value).to.deep.equal({ tags: ['urgent', 'billing'] });
+  });
+
+  it(
+    'renders the pending selection instead of the stale committed value across an unrelated re-render',
+    async () => {
+      const el = await fixture<LyraFilterBar>(
+        html`<lr-filter-bar .filters=${debouncedCombobox}></lr-filter-bar>`
+      );
+      const combo = comboControl(el);
+      combo.value = ['urgent'];
+      combo.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect(el.value).to.deep.equal({});
+
+      // Any unrelated state change re-renders the whole bar while the debounce is still pending; a
+      // naively controlled `.value=` binding would push the stale (empty) committed value back into
+      // the composed control, wiping out the user's own in-progress pick.
+      el.loading = true;
+      await el.updateComplete;
+
+      expect(
+        comboControl(el).value,
+        "the pending pick must not be reverted to the stale committed value"
+      ).to.deep.equal(['urgent']);
+    }
+  );
+
+  it("flushes a pending combobox debounce on the control's own focusout", async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCombobox}></lr-filter-bar>`
+    );
+    const combo = comboControl(el);
+    combo.value = ['urgent'];
+    combo.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({});
+
+    const promise = oneEvent(el, 'lr-input');
+    combo.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
+    expect(ev.detail.value['tags']).to.deep.equal(['urgent']);
+  });
+
+  it("cancels a pending combobox debounce on reset(), so the stale pick never overwrites the reset", async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCombobox}></lr-filter-bar>`
+    );
+    const combo = comboControl(el);
+    combo.value = ['urgent'];
+    combo.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    let inputs = 0;
+    el.addEventListener('lr-input', () => (inputs += 1));
+    el.reset();
+    await aTimeout(120);
+
+    expect(el.value).to.deep.equal({});
+    expect(inputs, 'only the reset itself emitted').to.equal(1);
+  });
+});

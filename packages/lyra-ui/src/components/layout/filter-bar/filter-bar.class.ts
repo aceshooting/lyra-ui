@@ -1,5 +1,7 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import type { LyraDateRangePreset } from '../../forms/date-picker/date-picker.class.js';
+import type { LyraInputType } from '../../forms/input/input.class.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -12,6 +14,7 @@ import {
   getDateTimeFormat,
   getListFormat,
 } from '../../../internal/intl-cache.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './filter-bar.styles.js';
 import '../../forms/select/select.class.js';
 import '../../forms/combobox/combobox.class.js';
@@ -142,6 +145,27 @@ export interface LyraFilterBarComboboxDefinition extends LyraFilterBarDefinition
   readonly type: 'combobox';
   readonly options: readonly LyraFilterBarOption[];
   readonly multiple?: boolean;
+  /** `'combobox'` only -- how long (ms) to wait after the last selection change (a pick, a
+   *  multi-select toggle, an `allowCustomValue`/`allowCreate` commit, or the clear action) before
+   *  committing it to `value` and emitting a single `lr-input`, coalescing a burst of rapid picks
+   *  into one commit the same way `'text'`'s own `debounce` coalesces keystrokes. Omitted, `0`, or
+   *  a non-finite value means no debounce at all: every change commits immediately. Unlike
+   *  `'text'`, the composed `<lr-combobox>`'s `.value=` binding stays fully controlled throughout:
+   *  while a commit is pending, it renders that pending selection rather than the last-committed
+   *  `value`, so the control's own display never reverts mid-delay. A pending debounce is flushed
+   *  by the control's own blur/focusout and cancelled outright by `reset()`, a chip removal, and
+   *  disconnection -- identical to `'text'`. */
+  readonly debounce?: number;
+  /** Forwarded to the composed `<lr-combobox>`'s own `clearable`, adding its built-in clear
+   *  action. Defaults to `false`, matching that control's own default. */
+  readonly clearable?: boolean;
+  /** Forwarded to the composed `<lr-combobox>`'s own `size`. Defaults to `'m'`, matching that
+   *  control's own default. */
+  readonly size?: LyraSize;
+  /** Optional decorative leading visual rendered into the composed `<lr-combobox>`'s own `start`
+   *  slot, exactly like `LyraFilterBarOption.icon`: inert and `aria-hidden`, so it never
+   *  contributes to the field's accessible name. */
+  readonly icon?: unknown;
 }
 
 export interface LyraFilterBarTextDefinition extends LyraFilterBarDefinitionBase {
@@ -154,6 +178,19 @@ export interface LyraFilterBarTextDefinition extends LyraFilterBarDefinitionBase
    *  `reset()`, a chip removal, and disconnection. Ignored for every other `type`, whose commits
    *  are discrete choices with nothing to debounce. */
   readonly debounce?: number;
+  /** Forwarded verbatim to the composed `<lr-input>`'s own `type`, so a `'text'` filter can render
+   *  as `search`/`email`/`tel`/`url`/etc. instead of the default `text`. `'text'` only. */
+  readonly inputType?: LyraInputType;
+  /** Forwarded to the composed `<lr-input>`'s own `clearable`, adding its built-in clear action.
+   *  Defaults to `false`, matching that control's own default. */
+  readonly clearable?: boolean;
+  /** Forwarded to the composed `<lr-input>`'s own `size`. Defaults to `'m'`, matching that
+   *  control's own default. */
+  readonly size?: LyraSize;
+  /** Optional decorative leading visual rendered into the composed `<lr-input>`'s own `start`
+   *  slot, exactly like `LyraFilterBarOption.icon`: inert and `aria-hidden`, so it never
+   *  contributes to the field's accessible name. */
+  readonly icon?: unknown;
 }
 
 interface LyraFilterBarDateDefinitionBase extends LyraFilterBarDefinitionBase {
@@ -525,7 +562,14 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * optional per-filter `debounce` (ms) is the only behaviour this component adds on top of the
  * composed control itself -- flushed by that field's own `change`/blur, cancelled by `reset()`, a
  * chip removal, and `disconnectedCallback`, so a stale keystroke can never overwrite a reset or
- * fire after teardown.
+ * fire after teardown. A `'combobox'` filter may declare the same `debounce`, coalescing a burst
+ * of rapid picks into one delayed commit; unlike `'text'` its `.value=` binding stays fully
+ * controlled, rendering the pending selection in place of the last-committed `value` for as long
+ * as the commit is delayed. `'text'`/`'combobox'` also accept optional `clearable`/`size`/`icon`
+ * (and, `'text'`-only, `inputType`), forwarded verbatim to the composed `<lr-input>`/
+ * `<lr-combobox>`'s own same-named properties (`icon` into that control's `start` slot, exactly
+ * like `LyraFilterBarOption.icon`); every one of these is optional and defaults to that composed
+ * control's own default, so an existing filter definition renders unchanged.
  *
  * Controlled, like every other Lyra data component: `value` is a plain, JSON-serializable object
  * (`LyraFilterBarValue`) the host reads/writes directly -- this component never touches
@@ -570,8 +614,15 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  *   else (another filter type, or a range picked/typed by hand).
  * @event lr-validity-change - The computed `{ valid, invalidFilterIds }` changed.
  * @event lr-reset - `reset()` ran (via the reset button or a direct call). `detail: { value }`.
+ * @slot end - Extra host-supplied controls rendered inside `controls`, next to the reset button
+ *   (for example, a "Save search" or "Export" action) -- this component renders no default
+ *   content into it.
  * @csspart base - The root `role="group"` wrapper.
- * @csspart controls - The row holding every filter control, the reset button, and the loading status.
+ * @csspart controls - The row holding every filter control, the `end` slot, the reset button, and
+ *   the loading status.
+ * @csspart field - The wrapper around one filter's composed control and its validation spacer;
+ *   its flex-basis is `--lr-filter-bar-field-basis`.
+ * @csspart end - Wrapper around the `end` slot; hidden while nothing is slotted.
  * @csspart filter-control - One filter's composed built-in control, or the wrapper around a
  *   custom renderer's control.
  * @csspart filter-control-label - A built-in control's label element.
@@ -593,6 +644,10 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * @csspart active-filters - The `role="group"` wrapper around the active-filter chip row, only rendered while any filter is set.
  * @csspart chips - The `<lr-chip-group>` inside `active-filters`.
  * @csspart chip - One active-filter `<lr-chip>`.
+ * @cssprop [--lr-filter-bar-field-basis=var(--lr-size-12rem)] - Flex-basis of each filter's
+ *   `field` wrapper, controlling how many fields fit per row before the row wraps.
+ * @cssprop [--lr-filter-bar-gap=var(--lr-space-s)] - Gap between filter fields, the `end` slot,
+ *   the reset button, and the loading status in the `controls` row.
  * @status stable
  * @since 4.1.0
  */
@@ -638,6 +693,10 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
    *  the user has touched anything). */
   @state() private touchedFilters = new Set<string>();
 
+  /** Tracks whether the host-supplied `end` slot carries real content, so its wrapper part can
+   *  stay `hidden` (and claim no layout space) while unused. */
+  private readonly slotPresence = new SlotPresenceController(this);
+
   private _filters: readonly LyraFilterBarFilterDefinition[] = EMPTY_FILTERS;
   private _value: LyraFilterBarValue = EMPTY_VALUE;
   /** The last value passed to the `value` setter, cloned but NOT yet filtered down to the filter
@@ -646,11 +705,13 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
    *  assignment -- same microtask/script order, or the same Lit template's binding order -- never
    *  permanently drops fields for filters that simply hadn't been declared yet. */
   private rawValue: LyraFilterBarValue = EMPTY_VALUE;
-  // One in-flight `debounce` timer per `'text'` filter id, plus the keystroke it will commit.
-  // Presence in `debounceTimers` is also what marks that field as "the user is mid-edit", which
-  // suppresses the external-value sync in `syncTextControls()`.
+  // One in-flight `debounce` timer per `'text'`/`'combobox'` filter id, plus the pending value it
+  // will commit. Presence in `debounceTimers` is also what marks that field as "the user is
+  // mid-edit", which suppresses the external-value sync in `syncTextControls()` (for `'text'`)
+  // and substitutes the pending value into the composed `<lr-combobox>`'s `.value=` binding (for
+  // `'combobox'`).
   private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private pendingText = new Map<string, string>();
+  private pendingValue = new Map<string, LyraFilterBarFieldValue>();
   private chipFocusGeneration = 0;
   // Guards lr-validity-change so it only fires on an actual change, not on every render --
   // `undefined` guarantees the first computed state always "changes" from it, mirroring
@@ -887,7 +948,23 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     this.touchedFilters = new Set(this.touchedFilters).add(id);
   }
 
-  private onControlChange = (id: string, e: Event): void => {
+  /** Whether `delay` is a real, positive debounce -- non-finite/zero/negative means "no debounce"
+   *  rather than scheduling a timer that would never behave sensibly. Shared by `'text'` and
+   *  `'combobox'`. */
+  private isDebounced(delay: number | undefined): delay is number {
+    return typeof delay === 'number' && Number.isFinite(delay) && delay > 0;
+  }
+
+  /** Parks `value` under `id` and (re)starts its commit timer -- the shared mechanics behind both
+   *  `'text'`'s per-keystroke debounce and `'combobox'`'s per-selection-change debounce. */
+  private scheduleDebounce(id: string, value: LyraFilterBarFieldValue, delay: number): void {
+    this.pendingValue.set(id, value);
+    const existing = this.debounceTimers.get(id);
+    if (existing !== undefined) clearTimeout(existing);
+    this.debounceTimers.set(id, setTimeout(() => this.flushDebounce(id), delay));
+  }
+
+  private onControlChange = (def: LyraFilterBarFilterDefinition, e: Event): void => {
     // `appliedPreset` exists only on `<lr-date-input>`, and only while its own quick-range row
     // produced the commit -- it reads `undefined` on every other composed control, which is
     // exactly what the detail should then carry.
@@ -895,7 +972,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       value: LyraFilterBarFieldValue;
       appliedPreset?: LyraDateRangePreset;
     };
-    this.setFilterValue(id, control.value, control.appliedPreset);
+    if (def.type === 'combobox' && this.isDebounced(def.debounce)) {
+      this.scheduleDebounce(def.filterId, control.value, def.debounce);
+      return;
+    }
+    this.setFilterValue(def.filterId, control.value, control.appliedPreset);
   };
 
   /** Built-in controls keep their native-style `input`/`change` compatibility path, but their
@@ -915,51 +996,45 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   };
 
   /** A `'text'` filter's keystroke: commits immediately, or (with a positive `debounce`) parks the
-   *  value until the user pauses. Non-finite/zero/negative delays mean "no debounce" rather than
-   *  scheduling a timer that would never behave sensibly. */
+   *  value until the user pauses. */
   private onTextInput(def: LyraFilterBarTextDefinition, e: Event): void {
     if (this.disabled) return;
     const next = (e.target as HTMLElement & { value: string }).value ?? '';
-    const delay = def.debounce;
-    if (typeof delay !== 'number' || !Number.isFinite(delay) || delay <= 0) {
+    if (!this.isDebounced(def.debounce)) {
       this.cancelDebounce(def.filterId);
       this.setFilterValue(def.filterId, next);
       return;
     }
-    this.pendingText.set(def.filterId, next);
-    const existing = this.debounceTimers.get(def.filterId);
-    if (existing !== undefined) clearTimeout(existing);
-    this.debounceTimers.set(
-      def.filterId,
-      setTimeout(() => this.flushDebounce(def.filterId), delay)
-    );
+    this.scheduleDebounce(def.filterId, next, def.debounce);
   }
 
-  /** Commits an in-flight keystroke right now (the field's own `change`/blur, or the timer
-   *  itself). A no-op when nothing is pending, so it is safe to call on every blur. */
+  /** Commits an in-flight keystroke/selection right now (the field's own `change`/blur, or the
+   *  timer itself). A no-op when nothing is pending, so it is safe to call on every blur. */
   private flushDebounce(id: string): void {
     const timer = this.debounceTimers.get(id);
     if (timer === undefined) return;
     clearTimeout(timer);
     this.debounceTimers.delete(id);
-    const pending = this.pendingText.get(id);
-    this.pendingText.delete(id);
+    const pending = this.pendingValue.get(id);
+    this.pendingValue.delete(id);
     if (pending !== undefined) this.setFilterValue(id, pending);
   }
 
-  /** Discards an in-flight keystroke without committing it -- one filter's, or (with no argument)
-   *  every filter's. `syncTextControls()` then pushes the authoritative value back into the field
-   *  on the next render, so the discarded draft does not linger on screen either. */
+  /** Discards an in-flight keystroke/selection without committing it -- one filter's, or (with no
+   *  argument) every filter's. `syncTextControls()` then pushes the authoritative value back into
+   *  an uncontrolled `'text'` field on the next render (a `'combobox'` field's own `.value=`
+   *  binding reverts on its own, being fully controlled), so the discarded draft does not linger
+   *  on screen either. */
   private cancelDebounce(id?: string): void {
     for (const [key, timer] of this.debounceTimers) {
       if (id !== undefined && key !== id) continue;
       clearTimeout(timer);
       this.debounceTimers.delete(key);
-      this.pendingText.delete(key);
+      this.pendingValue.delete(key);
     }
   }
 
-  private onTextFocusout(id: string): void {
+  private onFieldFocusout(id: string): void {
     // Flush before marking touched: `errorText` is recomputed from `_value` on the very next
     // render, so an unflushed debounce would flash "required" at a field the user *has* filled in.
     this.flushDebounce(id);
@@ -1174,14 +1249,21 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     }
   }
 
+  /** Optional decorative leading visual, rendered into a composed control's own `start` slot as
+   *  inert, aria-hidden chrome so it can neither take focus nor join that control's accessible
+   *  name. Shared by `<lr-option>`'s own `icon` (select/combobox rows) and a `'text'`/`'combobox'`
+   *  filter definition's own `icon` (the composed field itself). */
+  private renderStartAdornment(icon: unknown): TemplateResult | typeof nothing {
+    return icon === undefined || icon === null
+      ? nothing
+      : html`<span slot="start" aria-hidden="true" inert>${icon}</span>`;
+  }
+
   /** One `<lr-option>`, shared by the select and combobox branches so an option's optional `icon`
-   *  reaches both. The adornment goes into `<lr-option>`'s own `start` slot as inert, aria-hidden
-   *  chrome, so it can neither take focus nor join the option's accessible name. */
+   *  reaches both. */
   private renderOption(option: LyraFilterBarOption): TemplateResult {
     return html`<lr-option value=${option.value}
-      >${option.icon === undefined || option.icon === null
-        ? nothing
-        : html`<span slot="start" aria-hidden="true" inert>${option.icon}</span>`}${option.label}</lr-option
+      >${this.renderStartAdornment(option.icon)}${option.label}</lr-option
     >`;
   }
 
@@ -1192,7 +1274,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       this.touchedFilters.has(def.filterId) && missing
         ? this.localize('fieldRequired')
         : '';
-    const onChange = (e: Event) => this.onControlChange(def.filterId, e);
+    const onChange = (e: Event) => this.onControlChange(def, e);
     const onFocusout = () => this.markTouched(def.filterId);
 
     if (def.type === 'custom') {
@@ -1232,12 +1314,21 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
 
     if (def.type === 'combobox') {
       const multiple = Boolean(def.multiple);
+      // While a debounce is in flight, render the pending (not-yet-committed) selection instead
+      // of the last-committed `value` -- this control's `.value=` binding stays fully controlled,
+      // unlike `'text'`'s uncontrolled-with-sync field, so without this substitution a render
+      // triggered by anything else (another filter's edit, `disabled`/`loading` toggling) would
+      // push the stale committed value back over the user's own pending pick.
+      const pending = this.debounceTimers.has(def.filterId)
+        ? this.pendingValue.get(def.filterId)
+        : undefined;
+      const effectiveValue = pending !== undefined ? pending : value;
       const comboValue = multiple
-        ? Array.isArray(value)
-          ? value
+        ? Array.isArray(effectiveValue)
+          ? effectiveValue
           : []
-        : typeof value === 'string'
-        ? value
+        : typeof effectiveValue === 'string'
+        ? effectiveValue
         : '';
       return html`<lr-combobox
         part="filter-control"
@@ -1247,14 +1338,16 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         placeholder=${def.placeholder || ''}
         ?multiple=${multiple}
         ?required=${Boolean(def.required)}
+        ?clearable=${Boolean(def.clearable)}
+        .size=${def.size ?? 'm'}
         .errorText=${errorText}
         .value=${comboValue}
         ?disabled=${this.disabled}
         @change=${onChange}
         @lr-input=${this.stopControlAlias}
         @lr-change=${this.stopControlAlias}
-        @focusout=${onFocusout}
-        >${(def.options ?? []).map((o) => this.renderOption(o))}</lr-combobox
+        @focusout=${() => this.onFieldFocusout(def.filterId)}
+        >${this.renderStartAdornment(def.icon)}${(def.options ?? []).map((o) => this.renderOption(o))}</lr-combobox
       >`;
     }
 
@@ -1276,10 +1369,12 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         part="filter-control"
         exportparts=${INPUT_EXPORT_PARTS}
         data-filter-id=${def.filterId}
-        type="text"
+        type=${def.inputType ?? 'text'}
         .label=${def.label}
         placeholder=${def.placeholder || ''}
         ?required=${Boolean(def.required)}
+        ?clearable=${Boolean(def.clearable)}
+        .size=${def.size ?? 'm'}
         .errorText=${errorText}
         ?disabled=${this.disabled}
         @lr-input=${(e: Event) => {
@@ -1290,8 +1385,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
           e.stopPropagation();
           this.flushDebounce(def.filterId);
         }}
-        @focusout=${() => this.onTextFocusout(def.filterId)}
-      ></lr-input>`;
+        @focusout=${() => this.onFieldFocusout(def.filterId)}
+        >${this.renderStartAdornment(def.icon)}</lr-input
+      >`;
     }
 
     if (def.type === 'date' || def.type === 'date-range') {
@@ -1352,7 +1448,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     return html`
       <div part="base" role="group" aria-label=${accessibleLabel}>
         <div part="controls">
-          ${this._filters.map((def) => html`<div class="filter-field">
+          ${this._filters.map((def) => html`<div part="field">
             ${this.renderControl(def)}
             <span
               class="validation-spacer"
@@ -1371,6 +1467,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
             </lr-button>
             <span class="validation-spacer" aria-hidden="true"></span>
           </div>
+          <span part="end" ?hidden=${!this.slotPresence.has('end')}>
+            <slot name="end"></slot>
+          </span>
           ${this.loading
             ? html`<lr-spinner part="status"></lr-spinner>`
             : nothing}

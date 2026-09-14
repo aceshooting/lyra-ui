@@ -20,14 +20,17 @@ export const styles = css`
        lr-input) draws its own label above its own field, so aligning on the field row keeps the
        label-less reset button flush with them. */
     align-items: flex-end;
-    gap: var(--lr-space-s);
+    gap: var(--lr-filter-bar-gap, var(--lr-space-s));
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  .filter-field {
-    flex: 1 1 var(--lr-size-12rem);
+  [part='field'] {
+    flex: 1 1 var(--lr-filter-bar-field-basis, var(--lr-size-12rem));
     min-inline-size: 0;
     max-inline-size: 100%;
+  }
+  [part='end'] {
+    flex: 0 0 auto;
   }
   [part='filter-control'] {
     inline-size: 100%;

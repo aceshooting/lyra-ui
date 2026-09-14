@@ -495,3 +495,56 @@ export const DateRangePresets: Story = {
     `;
   },
 };
+
+/** `--lr-filter-bar-field-basis`/`--lr-filter-bar-gap` retheme the `field` wrapper's flex-basis
+ *  and the `controls` row's gap; both are byte-identical to the built-in default when unset. The
+ *  `end` slot renders a host-supplied action (here, "Save search") next to the reset button and
+ *  stays hidden, claiming no layout space, when nothing is slotted -- see the second bar below. */
+export const FieldTokensAndEndSlot: Story = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-l);max-inline-size:48rem">
+      <lr-filter-bar
+        style="--lr-filter-bar-field-basis: 16rem; --lr-filter-bar-gap: var(--lr-space-l);"
+        .filters=${dashboardFilters}
+      >
+        <lr-button slot="end" size="m">Save search</lr-button>
+      </lr-filter-bar>
+      <lr-filter-bar .filters=${dashboardFilters}></lr-filter-bar>
+    </div>
+  `,
+};
+
+/** `'text'`/`'combobox'` filters accept the same optional `clearable`/`size`/`icon` passthrough
+ *  (forwarded to the composed `<lr-input>`/`<lr-combobox>`'s own same-named properties), plus a
+ *  `'text'`-only `inputType`. All four default to that composed control's own default, so an
+ *  existing filter definition with none of them set renders exactly as before. */
+export const TextAndComboboxPassthrough: Story = {
+  render: () => {
+    const searchIcon = html`<span aria-hidden="true">🔍</span>`;
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'q',
+        label: 'Search',
+        type: 'text',
+        inputType: 'search',
+        clearable: true,
+        size: 'l',
+        icon: searchIcon,
+        placeholder: 'Search logs',
+      },
+      {
+        filterId: 'owners',
+        label: 'Owners',
+        type: 'combobox',
+        multiple: true,
+        clearable: true,
+        size: 'l',
+        options: [
+          { value: 'ada', label: 'Ada Lovelace' },
+          { value: 'grace', label: 'Grace Hopper' },
+        ],
+      },
+    ];
+    return html`<lr-filter-bar style="max-width: 40rem" .filters=${filters} .value=${{ q: 'timeout', owners: ['ada'] }}></lr-filter-bar>`;
+  },
+};
