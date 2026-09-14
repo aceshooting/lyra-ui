@@ -187,6 +187,30 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* A committed value with no matching option/row (a stale value, or a programmatic assignment
+     that never matched anything): render distinguishably rather than leaking a bare, unexplained
+     label -- mirrors lr-model-select's dashed/italic stale-value treatment. Never shown while a
+     source fetch is still loading or for an allowCustomValue commit -- see isUnknownValue(). */
+  [part="combobox-input"][data-unknown-value] {
+    font-style: italic;
+  }
+  [part="tag"][data-unknown-value] [part="tag__content"] {
+    font-style: italic;
+  }
+  [part="tag"][data-unknown-value] {
+    border: var(--lr-border-width-thin)
+      var(--lr-combobox-unknown-value-border-style, dashed)
+      var(--lr-combobox-unknown-value-border-color, var(--lr-color-border));
+  }
+  [part="unknown-value"] {
+    flex: 0 0 auto;
+    margin-inline-start: var(--lr-space-2xs);
+    font-size: var(--lr-size-0-6875rem);
+    font-style: normal;
+    font-weight: var(--lr-font-weight-normal);
+    color: var(--lr-color-text-quiet);
+    white-space: nowrap;
+  }
   /* Same compact-chip-remove pattern as lr-chip's [part='remove-button']: the hit target meets the
      --lr-icon-button-size floor while the visible glyph stays a compact 1rem close icon (font-size:
      var(--lr-font-size-m), independent of --lr-combobox-tag-font-size, which shrinks below that at

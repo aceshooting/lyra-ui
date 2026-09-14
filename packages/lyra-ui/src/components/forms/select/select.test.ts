@@ -5340,7 +5340,11 @@ describe("lr-select mapped Select parity surface", () => {
     const display = el.shadowRoot!.querySelector(
       '[part="display-input"]'
     ) as HTMLElement;
-    expect(display.textContent!.trim()).to.equal("ghost");
+    // fr_j78P1f--O__WYl1AIDwRvA: the raw value stays reachable in the visible text, but the trigger
+    // now also flags it as unknown (a trailing "not in catalog" badge) rather than rendering it as
+    // an ordinary, unexplained label -- see the dedicated describe block below for the full contract.
+    expect(display.textContent).to.contain("ghost");
+    expect(display.hasAttribute("data-unknown-value")).to.be.true;
   });
 
   it("commits live selectedOptions occurrences silently and keeps returned arrays detached", async () => {
@@ -5637,4 +5641,300 @@ it("contains the internal lr-option-change notification instead of leaking it pa
     groupLabels,
     "the contained notification still refreshes the rendered rows"
   ).to.deep.equal(["Fruit"]);
+});
+
+// fr_bdEBpfRnxOyltgEOif44sA: an empty-valued <lr-option> must be a stable controlled selection.
+// Contract: assigning `undefined`/`null` to `value`/`defaultValue` clears the selection; every
+// string, INCLUDING `''`, is a candidate value resolved against the current options instead.
+describe('empty-valued option as a stable controlled selection (fr_bdEBpfRnxOyltgEOif44sA)', () => {
+  const withEmptyOption = () => html`
+    <lr-select>
+      <lr-option value="">None</lr-option>
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
+  `;
+
+  it('selects the empty-valued option when assigned programmatically', async () => {
+    const el = (await fixture(withEmptyOption())) as LyraSelect;
+    el.value = 'a';
+    await el.updateComplete;
+    el.value = '';
+    await el.updateComplete;
+    expect(el.value, 'the empty-valued option is selected, not cleared').to.equal('');
+    expect(el.selectedOptions.length, 'an option actually matched').to.equal(1);
+    expect(el.selectedOptions[0]!.value).to.equal('');
+    expect(el.matches(':state(blank)'), 'a real selection is not the blank state').to.be.false;
+  });
+
+  it('selects the empty-valued option when its row is clicked (pointer path)', async () => {
+    const el = (await fixture(withEmptyOption())) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    setTimeout(() => requiredItem(rows(el), 0, 'empty-valued option row').click());
+    await oneEvent(el, 'change');
+    expect(el.value).to.equal('');
+    expect(el.selectedOptions.length, 'the pointer path already worked; the fix must not regress it').to.equal(1);
+  });
+
+  it('undefined clears an existing selection, distinct from selecting the empty-valued option', async () => {
+    const el = (await fixture(withEmptyOption())) as LyraSelect;
+    el.value = 'a';
+    await el.updateComplete;
+    el.value = undefined;
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(el.selectedOptions.length, 'no option matched -- this really is a clear').to.equal(0);
+    expect(el.matches(':state(blank)')).to.be.true;
+  });
+
+  it('null clears an existing selection, distinct from selecting the empty-valued option', async () => {
+    const el = (await fixture(withEmptyOption())) as LyraSelect;
+    el.value = 'a';
+    await el.updateComplete;
+    el.value = null;
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(el.selectedOptions.length).to.equal(0);
+    expect(el.matches(':state(blank)')).to.be.true;
+  });
+
+  it('multiple mode: an empty string in the array selects the empty-valued occurrence alongside others', async () => {
+    const el = (await fixture(html`
+      <lr-select multiple>
+        <lr-option value="">None</lr-option>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.value = ['', 'a'];
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['', 'a']);
+    expect(el.selectedOptions.map((option) => option.value)).to.deep.equal(['', 'a']);
+  });
+
+  it('multiple mode: an empty array still clears, distinct from selecting the empty-valued option', async () => {
+    const el = (await fixture(html`
+      <lr-select multiple>
+        <lr-option value="">None</lr-option>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.value = ['', 'a'];
+    await el.updateComplete;
+    el.value = [];
+    await el.updateComplete;
+    expect(el.value).to.deep.equal([]);
+    expect(el.matches(':state(blank)')).to.be.true;
+  });
+
+  it('default-value="" targets the empty-valued option too, and a form reset restores it', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-select name="choice" default-value="">
+          <lr-option value="">None</lr-option>
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    expect(el.value, 'the declared default-value="" selects the empty-valued option').to.equal('');
+    expect(el.selectedOptions.length).to.equal(1);
+
+    el.value = 'a';
+    await el.updateComplete;
+    form.reset();
+    expect(el.value).to.equal('');
+    expect(
+      el.selectedOptions.length,
+      'reset restores the matched empty-valued option, not a bare clear'
+    ).to.equal(1);
+  });
+});
+
+// fr_j78P1f--O__WYl1AIDwRvA: a committed value matching no option must not leak its raw string to
+// the trigger with no explanation. Mirrors lr-model-select's dashed/italic "not in catalog"
+// treatment (see model-select.class.ts's effectiveEntries), adapted to this component's own
+// trigger label and multiple-mode tags. The raw value itself stays fully reachable through
+// `value`/`selectedOptions` -- only the presentation changes.
+describe('unknown committed value presentation (fr_j78P1f--O__WYl1AIDwRvA)', () => {
+  it('flags the trigger label as unknown when the committed value matches no option', async () => {
+    const el = (await fixture(html`
+      <lr-select value="ghost">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+
+    expect(el.value, 'the raw value is still reachable').to.equal('ghost');
+    const displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    expect(displayInput.hasAttribute('data-unknown-value')).to.be.true;
+    expect(displayInput.textContent).to.contain('ghost');
+    const badge = displayInput.querySelector('[part="unknown-value"]');
+    expect(badge, 'a distinguishing badge renders next to the raw value').to.exist;
+  });
+
+  it('does not flag a value that matches an option', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.value = 'a';
+    await el.updateComplete;
+    const displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    expect(displayInput.hasAttribute('data-unknown-value')).to.be.false;
+    expect(displayInput.querySelector('[part="unknown-value"]')).to.equal(null);
+  });
+
+  it('flags only the unmatched tag in multiple mode, not every selected tag', async () => {
+    const el = (await fixture(html`
+      <lr-select multiple>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.value = ['a', 'ghost'];
+    await el.updateComplete;
+
+    const tags = el.shadowRoot!.querySelectorAll('[part~="tag"]');
+    expect(tags).to.have.length(2);
+    expect(
+      requiredItem(tags, 0, 'matched tag').hasAttribute('data-unknown-value'),
+      'the matched value is not flagged'
+    ).to.be.false;
+    expect(
+      requiredItem(tags, 1, 'unmatched tag').hasAttribute('data-unknown-value'),
+      'the unmatched value is flagged'
+    ).to.be.true;
+    expect(
+      requiredItem(tags, 1, 'unmatched tag').querySelector('[part="unknown-value"]'),
+      'the unmatched chip carries the badge'
+    ).to.exist;
+  });
+});
+
+// fr_JdccfkynRjnbGPuSsmLLtQ: lr-option documents start/end (and the prefix/suffix aliases)
+// adornment slots and matching CSS parts, but lr-select's listbox is built from its own
+// [part='option'] rows rather than by exposing the option elements, so none of them rendered at
+// all -- mirrors lr-combobox's identical popup-adornment contract (cloneSlot/adornmentsFor,
+// renderInertPresentation).
+describe('lr-option start/end adornments in the select listbox (fr_JdccfkynRjnbGPuSsmLLtQ)', () => {
+  async function openWith(markup: unknown): Promise<LyraSelect> {
+    const el = (await fixture(markup as never)) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  }
+
+  const rowFor = (el: LyraSelect, value: string): HTMLElement =>
+    el.shadowRoot!.querySelector<HTMLElement>(`[part="option"][data-value="${value}"]`)!;
+
+  it('renders a start adornment inside the popup row', async () => {
+    const el = await openWith(html`
+      <lr-select>
+        <lr-option value="fr"><span slot="start" id="fr-mark">FR</span>France</lr-option>
+      </lr-select>
+    `);
+    const adornment = rowFor(el, 'fr').querySelector('[part~="option-start"]');
+
+    expect(adornment, 'the documented start slot now renders').to.exist;
+    expect(adornment!.textContent).to.contain('FR');
+    expect(adornment!.getAttribute('aria-hidden'), 'decorative').to.equal('true');
+    expect((adornment as HTMLElement).inert, 'not reachable').to.be.true;
+  });
+
+  it('renders an end adornment inside the popup row', async () => {
+    const el = await openWith(html`
+      <lr-select>
+        <lr-option value="fr">France<span slot="end">€</span></lr-option>
+      </lr-select>
+    `);
+    const adornment = rowFor(el, 'fr').querySelector('[part~="option-end"]');
+
+    expect(adornment, 'the documented end slot now renders').to.exist;
+    expect(adornment!.textContent).to.contain('€');
+  });
+
+  it('treats the Shoelace prefix/suffix aliases identically', async () => {
+    const el = await openWith(html`
+      <lr-select>
+        <lr-option value="fr"><span slot="prefix">P</span>France<span slot="suffix">S</span></lr-option>
+      </lr-select>
+    `);
+    const row = rowFor(el, 'fr');
+
+    expect(row.querySelector('[part~="option-start"]')!.textContent).to.contain('P');
+    expect(row.querySelector('[part~="option-end"]')!.textContent).to.contain('S');
+  });
+
+  it('emits no adornment wrapper for a plain option', async () => {
+    const el = await openWith(html`
+      <lr-select><lr-option value="fr">France</lr-option></lr-select>
+    `);
+    const row = rowFor(el, 'fr');
+
+    expect(row.querySelector('[part~="option-start"]'), 'no empty start wrapper').to.equal(null);
+    expect(row.querySelector('[part~="option-end"]'), 'no empty end wrapper').to.equal(null);
+  });
+
+  it('leaves the author light-DOM option subtree untouched', async () => {
+    const el = await openWith(html`
+      <lr-select>
+        <lr-option value="fr"><span slot="start" id="original">FR</span>France</lr-option>
+      </lr-select>
+    `);
+    const original = el.querySelector('#original');
+
+    expect(original, 'the author node is still where they put it').to.exist;
+    expect(original!.parentElement!.tagName.toLowerCase()).to.equal('lr-option');
+    expect(
+      rowFor(el, 'fr').querySelector('[part~="option-start"]')!.contains(original!),
+      'the popup renders a clone, not the original node'
+    ).to.be.false;
+  });
+
+  it('upgrades a custom element used as an adornment in the clone', async () => {
+    // Lit forbids a binding in a tag name, so the tag is written literally below and only the
+    // definition is guarded.
+    if (!customElements.get('test-select-adornment')) {
+      customElements.define(
+        'test-select-adornment',
+        class extends HTMLElement {
+          connectedCallback(): void {
+            this.setAttribute('data-upgraded', 'yes');
+          }
+        }
+      );
+    }
+    const el = await openWith(html`
+      <lr-select>
+        <lr-option value="fr"
+          ><test-select-adornment slot="start"></test-select-adornment>France</lr-option
+        >
+      </lr-select>
+    `);
+    const clone = rowFor(el, 'fr').querySelector('test-select-adornment')!;
+
+    expect(clone, 'the custom element reached the row').to.exist;
+    expect(
+      clone.getAttribute('data-upgraded'),
+      'cloneNode keeps it upgradeable, unlike createElementNS'
+    ).to.equal('yes');
+  });
+
+  it('places the start adornment before the end adornment under dir="rtl"', async () => {
+    const root = await fixture(html`
+      <div dir="rtl">
+        <lr-select open>
+          <lr-option value="fr"><span slot="start">FR</span>France<span slot="end">€</span></lr-option>
+        </lr-select>
+      </div>
+    `);
+    const el = root.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    await aTimeout(0);
+    const row = rowFor(el, 'fr');
+    const start = row.querySelector('[part~="option-start"]')!.getBoundingClientRect();
+    const end = row.querySelector('[part~="option-end"]')!.getBoundingClientRect();
+    expect(
+      start.left,
+      'DOM-first "start" renders on the visual right under RTL, matching a plain flex row'
+    ).to.be.greaterThan(end.left);
+  });
 });

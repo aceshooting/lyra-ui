@@ -531,6 +531,17 @@ export const styles = css`
     border-radius: 50%;
     flex: 0 0 auto;
   }
+  /* Cloned <lr-option> start/end adornments -- same shape as lr-combobox's identical parts, capped
+     so one oversized adornment cannot take over the row. */
+  [part="option-start"],
+  [part="option-end"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    max-inline-size: 40%;
+    overflow: hidden;
+  }
   [part="option-label"] {
     display: flex;
     flex-direction: column;
@@ -538,6 +549,25 @@ export const styles = css`
   }
   [part="option-sub"] {
     font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
+  }
+  /* A committed value with no matching option (a stale value, or a programmatic assignment that
+     never matched anything): render distinguishably rather than leaking a bare, unexplained label
+     -- mirrors lr-model-select's dashed/italic stale-value treatment. */
+  .trigger-label[data-unknown-value],
+  [part~="tag"][data-unknown-value] [part="tag__content"] {
+    font-style: italic;
+  }
+  [part~="tag"][data-unknown-value] {
+    border: var(--lr-border-width-thin)
+      var(--lr-select-unknown-value-border-style, dashed)
+      var(--lr-select-unknown-value-border-color, var(--lr-color-border));
+  }
+  [part="unknown-value"] {
+    margin-inline-start: var(--lr-space-2xs);
+    font-size: var(--lr-size-0-6875rem);
+    font-style: normal;
+    font-weight: var(--lr-font-weight-normal);
     color: var(--lr-color-text-quiet);
   }
 

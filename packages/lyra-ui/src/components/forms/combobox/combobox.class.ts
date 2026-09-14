@@ -65,13 +65,28 @@ import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
 
 function isLyraOptionElement(value: unknown): value is LyraOption {
   return isHtmlElement(value) && value.localName === tag('option');
+}
+
+/**
+ * Normalizes a `value` assignment to the committed array form. `undefined` and `null` mean
+ * "clear" -- the documented contract for an unset assignment -- while every string, INCLUDING
+ * `''`, is a candidate value: `<lr-option value="">` is a legitimate row, so an empty string must
+ * round-trip as a real selection rather than being silently folded into "clear" the way a falsy
+ * check would. A caller that means "clear" explicitly passes `[]`, never `''`.
+ */
+function normalizeSelectionValues(
+  next: string | string[] | null | undefined
+): string[] {
+  if (Array.isArray(next))
+    return next.filter((value): value is string => typeof value === 'string');
+  return typeof next === 'string' ? [next] : [];
 }
 export type LyraComboboxPlacement = 'top' | 'bottom';
 export type LyraComboboxTagRenderer = (
@@ -347,6 +362,15 @@ export interface LyraComboboxEventMap {
  * unavailable through popup rows; named option adornment mutations refresh their presentation.
  * Single mode exposes one selected occurrence while retaining backing multiple-selection history.
  *
+ * Assigning `undefined`/`null` to `value` clears the selection; every string, including `''`, is
+ * instead a candidate value resolved against the current local options/async rows -- an
+ * `<lr-option value="">` (or a matching row) is legitimate and now round-trips like any other. A
+ * committed value matching no current option/row (a stale value, or a programmatic assignment with
+ * a typo) still commits rather than being dropped, but renders with a dashed/italic
+ * `[part='unknown-value']` badge instead of silently passing the raw string off as an ordinary
+ * label -- see `isUnknownValue()`. Suppressed while a `source` fetch is still in flight, and never
+ * shown for an `allowCustomValue` commit, which is a sanctioned unmatched value, not a stale one.
+ *
  * @customElement lr-combobox
  * @slot - `<lr-option>` elements.
  * @slot label - Custom label content.
@@ -416,6 +440,8 @@ export interface LyraComboboxEventMap {
  * @csspart option-sub - An option row's secondary line (when `sub` is set).
  * @csspart option-badge - An async option row's optional trailing metadata badge.
  * @csspart option-overflow - The "+N more" indicator shown when rows are capped by `maxRender`.
+ * @csspart unknown-value - Badge shown next to the closed single-select input, or a `multiple`-mode
+ *   tag, when the committed value matches no current option/row (see `isUnknownValue()`).
  * @csspart tags - The multi-select tag container.
  * @csspart tag - An individual selected tag.
  * @csspart tag-label - The wrapping/ellipsis-safe selected-tag label.
@@ -442,6 +468,10 @@ export interface LyraComboboxEventMap {
  *   shared form-control size ladder.
  * @cssprop --lr-combobox-tag-padding - Selected-tag padding.
  * @cssprop --lr-combobox-tag-font-size - Selected-tag text size.
+ * @cssprop [--lr-combobox-unknown-value-border-style=dashed] - Border style of a `multiple`-mode
+ *   tag whose committed value matches no current option/row.
+ * @cssprop [--lr-combobox-unknown-value-border-color=var(--lr-color-border)] - Border color of the
+ *   same unknown-value tag.
  * @cssprop --lr-combobox-expand-size - Decorative expand-icon box size, scaled by `size`.
  * @cssprop [--lr-combobox-gap=var(--lr-space-xs)] - Gap between the start/end adornments, tags,
  *   and filter input inside the trigger row. Unlike the size knobs above it does not vary by
@@ -504,6 +534,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     noMatches: LYRA_DEFAULT_noMatches,
+    notInCatalog: LYRA_DEFAULT_notInCatalog,
     open: LYRA_DEFAULT_open,
     popover: LYRA_DEFAULT_popover,
     progress: LYRA_DEFAULT_progress,
@@ -1149,22 +1180,28 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.requestUpdate('required', old);
   }
 
-  /** The selected value(s): a string in single mode, a string[] in `multiple` mode. */
+  /** The selected value(s): a string in single mode, a string[] in `multiple` mode.
+   *
+   *  Assigning `undefined` or `null` clears the selection -- the documented "unset" contract.
+   *  Every string, including `''`, is instead a candidate value: `<lr-option value="">` (or a
+   *  matching async row) is a legitimate row, and assigning `''` selects it when present,
+   *  mirroring what picking that row already did. A `''`/string assignment that matches nothing
+   *  still commits, exactly like any other unmatched string -- see `isUnknownValue()`. */
   get value(): string | string[] {
     return this.multiple ? [...this._selected] : this._selected[0] ?? '';
   }
-  set value(next: string | string[]) {
+  set value(next: string | string[] | null | undefined) {
     this.setValue(next, true);
   }
 
-  private setValue(next: string | string[], dirty: boolean, preferred?: LyraOption): void {
+  private setValue(next: string | string[] | null | undefined, dirty: boolean, preferred?: LyraOption): void {
     const old = this._selected;
     this.singleSelectedOption = preferred;
     if (dirty) {
       this._restoredStateActive = false;
       this._valueDirty = true;
     }
-    this._selected = Array.isArray(next) ? [...next] : next ? [next] : [];
+    this._selected = normalizeSelectionValues(next);
     const selected = new Set(this._selected);
     for (const value of selected) {
       const row =
@@ -1517,8 +1554,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     for (const option of this.options) {
       option[RESET_OPTION_SELECTED_FROM_OWNER](defaults.has(option.value));
     }
+    // `.slice(0, 1)` -- not `resetValues[0] ?? ''` -- so an empty reset target stays an empty
+    // array rather than the sentinel `''`, which setValue()/normalizeSelectionValues() now treats
+    // as a real candidate value rather than "clear".
     this.setValue(
-      this.multiple ? [...resetValues] : resetValues[0] ?? '',
+      this.multiple ? [...resetValues] : resetValues.slice(0, 1),
       false
     );
     this.query = '';
@@ -1542,7 +1582,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         // Malformed persisted state restores an empty selection.
       }
     }
-    this.value = this.multiple ? selected : selected[0] ?? '';
+    // `.slice(0, 1)` -- not `selected[0] ?? ''` -- so "nothing was ever submitted" stays an empty
+    // array (clear) rather than the sentinel `''`, which is now a real candidate value.
+    this.value = this.multiple ? selected : selected.slice(0, 1);
     this._restoredStateActive = true;
   }
   /**
@@ -1721,12 +1763,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       .map((option) => option.value);
     this._defaultSelected = this.multiple ? declared : declared.slice(0, 1);
     if (!this._valueDirty && !this._restoredStateActive) {
-      this.setValue(
-        this.multiple
-          ? [...this._defaultSelected]
-          : this._defaultSelected[0] ?? '',
-        false
-      );
+      // `_defaultSelected` is already capped to at most one entry in single mode, so spreading it
+      // (rather than `this._defaultSelected[0] ?? ''`) commits an empty array -- not the sentinel
+      // `''` -- when there is no default.
+      this.setValue([...this._defaultSelected], false);
     }
   }
 
@@ -1753,7 +1793,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         this._restoredStateActive = false;
         // An unselected source option does not own a custom/unmatched committed value.
         if (!option.selected && this.singleSelectedOption !== option) return;
-        this.setValue(option.selected ? option.value : '', true, option.selected ? option : undefined);
+        // `[]`, not `''`, for the deselected branch: `''` is now a real candidate value (an option
+        // may declare it), so only an explicit empty array unambiguously means "clear".
+        this.setValue(option.selected ? option.value : [], true, option.selected ? option : undefined);
       }
       return;
     }
@@ -1804,6 +1846,32 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       nonBlank(this.options.find((o) => o.value === value)?.label) ??
       nonBlank(this.asyncRows.find((r) => r.value === value)?.label) ??
       value
+    );
+  }
+
+  /**
+   * Whether a committed value matches no currently-known row -- a stale value from before its
+   * option/row disappeared, or a programmatic `value` assignment that never matched anything.
+   * Drives the dashed/italic "not in catalog" presentation in `render()`, so a genuinely
+   * unresolved value never leaks its raw string with no explanation, while `labelFor()` keeps the
+   * raw value itself fully reachable.
+   *
+   * Suppressed entirely while `loading`: an async `source` fetch still in flight simply hasn't had
+   * a chance to populate `asyncRows` yet, which is "not yet known", not "genuinely unknown".
+   *
+   * Checked against the same four sources as `labelFor()`, but as a plain existence test rather
+   * than a label lookup, so a real match with a deliberately blank label is never misreported as
+   * unknown. `_selectedLabelCache` also covers `allowCustomValue`'s committed text (cached against
+   * itself in `commitCustomValue()`) -- a sanctioned "not from the option list" value, not a stale
+   * one, so it must never show this badge.
+   */
+  private isUnknownValue(value: string): boolean {
+    if (this.loading) return false;
+    return !(
+      (!this.source && !this.multiple && this.singleSelectedOption?.value === value) ||
+      this._selectedLabelCache.has(value) ||
+      this.options.some((option) => option.value === value) ||
+      this.asyncRows.some((row) => row.value === value)
     );
   }
 
@@ -1881,10 +1949,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const rows = values
       .map((value) => rowsByValue.get(value))
       .filter((row): row is ComboboxSourceRow => row !== undefined);
+    // `limited` is already capped to at most one row in single mode, so mapping it directly --
+    // rather than `limited[0]?.value ?? ''` -- commits an empty array, not the sentinel `''`, when
+    // nothing matched.
     const limited = this.multiple ? rows : rows.slice(0, 1);
-    this.value = this.multiple
-      ? limited.map((row) => row.value)
-      : limited[0]?.value ?? '';
+    this.value = limited.map((row) => row.value);
     for (const row of limited) this._selectedRowCache.set(row.value, row);
   }
 
@@ -2834,8 +2903,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const option = this.options.find((candidate) => candidate.value === value);
     if (this.getTag && option) return this.getTag(option, index);
     const label = this.labelFor(value);
-    return html`<span part="tag">
-      <span part="tag-label"><span part="tag__content">${label}</span></span>
+    const unknown = this.isUnknownValue(value);
+    return html`<span part="tag" ?data-unknown-value=${unknown}>
+      <span part="tag-label"
+        ><span part="tag__content">${label}</span
+        >${unknown
+          ? html`<span part="unknown-value">${this.localize('notInCatalog')}</span>`
+          : ''}</span
+      >
       <button
         part="tag__remove-button"
         type="button"
@@ -2877,6 +2952,16 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       : [];
     const extra = this.multiple ? this._selected.length - shownTags.length : 0;
     const hasValue = this._selected.length > 0;
+    // Only when displayValue actually renders the resolved label: while open, in multiple mode, or
+    // after an explicit inputValue/setRangeText() write, the input shows the query/text instead
+    // (see displayValue below), and a multi-mode unknown value is flagged per chip by renderTag()
+    // instead.
+    const singleValueUnknown =
+      !this.multiple &&
+      !this.open &&
+      !this.explicitInputValue &&
+      hasValue &&
+      this.isUnknownValue(this._selected[0]!);
     // The clear button covers both axes, so it also has to render for a filter-only state.
     // `displayValue` only surfaces `query` while the listbox is open (single-select) or in
     // `multiple` mode -- outside those, a closed single-select shows the *selected label*, so a
@@ -2950,11 +3035,15 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
               .value=${this.displayValue}
               placeholder=${hasValue && !this.multiple ? '' : this.placeholder}
               ?disabled=${this.effectiveDisabled}
+              ?data-unknown-value=${singleValueUnknown}
               @input=${this.onInput}
               @keydown=${this.onKeyDown}
               @focus=${this.onInputFocus}
               @blur=${this.onInputBlur}
             />
+            ${singleValueUnknown
+              ? html`<span part="unknown-value">${this.localize('notInCatalog')}</span>`
+              : ''}
             ${(this.clearable || this.withClear) &&
             (hasValue || hasVisibleQuery)
               ? html`<button

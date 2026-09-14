@@ -7444,3 +7444,231 @@ describe('visible-options cap', () => {
     }
   });
 });
+
+// fr_bdEBpfRnxOyltgEOif44sA: an empty-valued <lr-option> must be a stable controlled selection.
+// Contract: assigning `undefined`/`null` to `value` clears the selection; every string, INCLUDING
+// `''`, is a candidate value resolved against the current local options/async rows instead.
+describe('empty-valued option as a stable controlled selection (fr_bdEBpfRnxOyltgEOif44sA)', () => {
+  const withEmptyOption = () => html`
+    <lr-combobox>
+      <lr-option value="">None</lr-option>
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `;
+
+  it('selects the empty-valued option when assigned programmatically', async () => {
+    const el = (await fixture(withEmptyOption())) as LyraCombobox;
+    el.value = 'a';
+    await el.updateComplete;
+    el.value = '';
+    await el.updateComplete;
+    expect(el.value, 'the empty-valued option is selected, not cleared').to.equal('');
+    expect(el.selectedRows.length, 'a row actually matched').to.equal(1);
+    expect(el.selectedRows[0]!.value).to.equal('');
+  });
+
+  it('selects the empty-valued option when its row is clicked (pointer path)', async () => {
+    const el = (await fixture(withEmptyOption())) as LyraCombobox;
+    el.open = true;
+    await el.updateComplete;
+    const row = el.shadowRoot!.querySelector('[part="option"][data-value=""]') as HTMLElement;
+    setTimeout(() => row.click());
+    await oneEvent(el, 'change');
+    expect(el.value).to.equal('');
+    expect(el.selectedRows.length).to.equal(1);
+  });
+
+  it('undefined clears an existing selection, distinct from selecting the empty-valued option', async () => {
+    const el = (await fixture(withEmptyOption())) as LyraCombobox;
+    el.value = 'a';
+    await el.updateComplete;
+    el.value = undefined;
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(el.selectedRows.length, 'no row matched -- this really is a clear').to.equal(0);
+  });
+
+  it('null clears an existing selection, distinct from selecting the empty-valued option', async () => {
+    const el = (await fixture(withEmptyOption())) as LyraCombobox;
+    el.value = 'a';
+    await el.updateComplete;
+    el.value = null;
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(el.selectedRows.length).to.equal(0);
+  });
+
+  it('multiple mode: an empty string in the array selects the empty-valued occurrence alongside others', async () => {
+    const el = (await fixture(html`
+      <lr-combobox multiple>
+        <lr-option value="">None</lr-option>
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.value = ['', 'a'];
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['', 'a']);
+  });
+
+  it('multiple mode: an empty array still clears, distinct from selecting the empty-valued option', async () => {
+    const el = (await fixture(html`
+      <lr-combobox multiple>
+        <lr-option value="">None</lr-option>
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.value = ['', 'a'];
+    await el.updateComplete;
+    el.value = [];
+    await el.updateComplete;
+    expect(el.value).to.deep.equal([]);
+  });
+
+  it('restores the empty-valued option on form.reset() when it is the declared default', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-combobox name="choice">
+          <lr-option value="" selected>None</lr-option>
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    expect(el.value, 'the declared selected="" default selects the empty-valued option').to.equal('');
+    expect(el.selectedRows.length).to.equal(1);
+
+    el.value = 'a';
+    await el.updateComplete;
+    form.reset();
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(
+      el.selectedRows.length,
+      'reset restores the matched empty-valued option, not a bare clear'
+    ).to.equal(1);
+  });
+});
+
+// fr_j78P1f--O__WYl1AIDwRvA: a committed value matching no option/row must not leak its raw string
+// to the trigger with no explanation. Mirrors lr-model-select's dashed/italic "not in catalog"
+// treatment (see model-select.class.ts's effectiveEntries), adapted to this component's closed
+// single-select input and multiple-mode tags. The raw value stays fully reachable through `value`
+// -- only the presentation changes.
+describe('unknown committed value presentation (fr_j78P1f--O__WYl1AIDwRvA)', () => {
+  it('flags the closed single-select input as unknown when the committed value matches no option', async () => {
+    const el = (await fixture(html`
+      <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    el.value = 'ghost';
+    await el.updateComplete;
+
+    expect(el.value, 'the raw value is still reachable').to.equal('ghost');
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    expect(input.value, 'the native input value carries only the raw text, never markup').to.equal(
+      'ghost',
+    );
+    expect(input.hasAttribute('data-unknown-value')).to.be.true;
+    const badge = el.shadowRoot!.querySelector('[part="unknown-value"]');
+    expect(badge, 'a distinguishing badge renders next to the input').to.exist;
+  });
+
+  it('does not flag a value that matches an option', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.value = 'a';
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    expect(input.hasAttribute('data-unknown-value')).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="unknown-value"]')).to.equal(null);
+  });
+
+  it('does not flag while the listbox is open and the input shows the live query instead', async () => {
+    const el = (await fixture(html`
+      <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    el.value = 'ghost';
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    expect(input.hasAttribute('data-unknown-value')).to.be.false;
+  });
+
+  it('flags only the unmatched tag in multiple mode, not every selected tag', async () => {
+    const el = (await fixture(html`
+      <lr-combobox multiple>
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.value = ['a', 'ghost'];
+    await el.updateComplete;
+
+    const tags = el.shadowRoot!.querySelectorAll('[part="tag"]');
+    expect(tags).to.have.length(2);
+    expect(
+      requiredItem(tags, 0, 'matched tag').hasAttribute('data-unknown-value'),
+      'the matched value is not flagged',
+    ).to.be.false;
+    expect(
+      requiredItem(tags, 1, 'unmatched tag').hasAttribute('data-unknown-value'),
+      'the unmatched value is flagged',
+    ).to.be.true;
+    expect(
+      requiredItem(tags, 1, 'unmatched tag').querySelector('[part="unknown-value"]'),
+      'the unmatched chip carries the badge',
+    ).to.exist;
+  });
+
+  it('never flags an allowCustomValue commit -- a sanctioned unmatched value, not a stale one', async () => {
+    const el = (await fixture(html`
+      <lr-combobox allow-custom-value>
+        <lr-option value="red">Red</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    const input = await typeQuery(el, 'Cerulean');
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+    await el.updateComplete;
+
+    expect(el.value).to.equal('Cerulean');
+    expect(input.hasAttribute('data-unknown-value'), 'a custom value is not "unknown"').to.be
+      .false;
+    expect(el.shadowRoot!.querySelector('[part="unknown-value"]')).to.equal(null);
+  });
+
+  it('suppresses the badge while an in-flight source call has not resolved yet', async () => {
+    const el = (await fixture(
+      html`<lr-combobox source-delay="0"></lr-combobox>`,
+    )) as LyraCombobox;
+    let resolve!: (rows: { value: string; label: string }[]) => void;
+    el.source = () => new Promise((r) => (resolve = r));
+    el.value = 'ghost';
+    await el.updateComplete;
+    await waitUntil(
+      () => (el as unknown as { loading: boolean }).loading,
+      'the proactive warm-up fetch never started',
+    );
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    expect(
+      input.hasAttribute('data-unknown-value'),
+      'still loading -- not yet known to be unknown',
+    ).to.be.false;
+
+    resolve([]);
+    await waitUntil(
+      () => !(el as unknown as { loading: boolean }).loading,
+      'the source call never settled',
+    );
+    await el.updateComplete;
+    expect(
+      input.hasAttribute('data-unknown-value'),
+      'resolved with no match -- genuinely unknown',
+    ).to.be.true;
+  });
+});
