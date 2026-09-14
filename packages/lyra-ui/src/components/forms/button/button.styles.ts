@@ -270,7 +270,7 @@ export const styles = css`
        the active appearance already paints at rest (see the :host block above) -- so exposing the
        two hooks changes no appearance's current hover paint. appearance="link" sets its own hover
        color at higher specificity (its color-mix formula), so this never touches it; its border is
-       already zeroed by `border: 0`, so a resolved border-colour here stays invisible there too. */
+       already zeroed to 0, so a resolved border-colour here stays invisible there too. */
     color: var(--lr-button-hover-color, var(--_lr-button-resolved-color));
     border-color: var(--lr-button-hover-border, var(--_lr-button-resolved-border));
   }

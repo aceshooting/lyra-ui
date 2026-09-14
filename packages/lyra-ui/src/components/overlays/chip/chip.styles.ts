@@ -197,8 +197,8 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* Opt-in via the `wrap` property -- unset, [part='label'] stays byte-identical to the
-     single-line, ellipsis-truncated rule above. `overflow-wrap: anywhere` keeps a single
+  /* Opt-in via the wrap property -- unset, [part='label'] stays byte-identical to the
+     single-line, ellipsis-truncated rule above. Setting overflow-wrap to anywhere keeps a single
      unbroken long token (a URL, an id) from overflowing the pill instead of wrapping. */
   :host([wrap]) [part='label'] {
     overflow: visible;
