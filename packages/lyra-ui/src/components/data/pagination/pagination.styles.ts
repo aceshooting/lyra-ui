@@ -121,6 +121,9 @@ export const styles = css`
     font: inherit;
     text-decoration: none;
     cursor: pointer;
+    /* Hover/active below repaint both background and border-color, so both channels need to
+       ease; without this these controls' paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   /* A numbered page grows with its digits instead of clipping a four-digit page number; icon-only
      controls keep their square footprint. */
@@ -134,6 +137,9 @@ export const styles = css`
     background: var(--lr-pagination-current-bg, var(--lr-color-brand));
     color: var(--lr-pagination-current-color, var(--lr-color-on-brand));
     font-weight: var(--lr-font-weight-bold);
+    /* Hover/active below repaint both background and border-color, so both channels need to
+       ease; without this this chip's paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   [part~="ellipsis"] {
     color: var(--lr-color-text-quiet);
@@ -309,6 +315,9 @@ export const styles = css`
     color: var(--lr-pagination-control-color, var(--lr-color-text));
     font: inherit;
     text-align: center;
+    /* Hover/active below repaint both background and border-color, so both channels need to
+       ease; without this this field's paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   [part="page-input"] {
     appearance: textfield;

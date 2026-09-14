@@ -91,6 +91,9 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    /* Hover below only repaints border-color, so that is all this needs; without it this field's
+       edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   [part='search']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -187,6 +190,9 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-emoji-picker-glyph-size, var(--_lr-emoji-picker-glyph-size-default));
     cursor: pointer;
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       cell's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   /* State hooks are inline fallbacks, not :host declarations, so an ancestor theme customizing one
      state is not shadowed. The former active-bg hook stays a compatibility fallback for hover and

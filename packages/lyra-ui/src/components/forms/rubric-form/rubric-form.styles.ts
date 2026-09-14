@@ -95,11 +95,17 @@ export const styles = css`
     background: var(--lr-rubric-form-submit-bg, var(--lr-color-brand));
     border-color: var(--lr-rubric-form-submit-border-color, var(--lr-color-brand));
     color: var(--lr-rubric-form-submit-color, var(--lr-color-on-brand));
+    /* Hover/active below repaint both background and border-color, so both channels need to
+       ease; without this this button's paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   [part='skip'] {
     background: var(--lr-rubric-form-skip-bg, var(--lr-color-surface));
     border-color: var(--lr-rubric-form-skip-border-color, var(--lr-color-border));
     color: var(--lr-rubric-form-skip-color, var(--lr-color-text));
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       button's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   /* A colour mix, not filter: brightness(). The filter multiplied every channel, so it moved a
      mid-brand fill but did nothing to a pure white or pure black one, and applied to the whole

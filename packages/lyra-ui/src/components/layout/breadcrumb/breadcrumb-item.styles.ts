@@ -28,6 +28,9 @@ export const styles = css`
     border-radius: var(--lr-radius);
     min-inline-size: 0;
     max-inline-size: 100%;
+    /* :active below only repaints background, so that is all this needs; without it this
+       crumb's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   button[part="base"] {
     padding: 0;

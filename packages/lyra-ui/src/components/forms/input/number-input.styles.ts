@@ -26,6 +26,9 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
+    /* Hover/active below repaint color, and active also fills a background, so both channels
+       need to ease; without this these buttons' paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part~='stepper-down']:not(:disabled):hover,
   [part~='stepper-up']:not(:disabled):hover {

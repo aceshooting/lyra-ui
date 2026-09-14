@@ -142,6 +142,9 @@ export const styles = css`
     border-radius: var(--lr-radius);
     font: inherit;
     cursor: pointer;
+    /* Hover/active below repaint both background and color, so both channels need to ease;
+       without this this button's paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   /* Once header-actions has claimed the auto margin, a second one on the close button would push
      it away from the group it belongs beside. */

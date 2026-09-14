@@ -17,7 +17,10 @@ export const styles = css`
      bites when there IS slack. */
   [part~='nav'] { display: flex; justify-content: center; align-items: center; gap: var(--lr-space-xs); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
   /* Both navigation buttons expose the shared nav part plus a purpose-specific part. */
-  button[part~='nav'], [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; font: inherit; }
+  /* Hover/active below (on both this compound selector's parts) only ever repaint background, so
+     background-color is all this needs; without it the nav button's and day cell's fill snaps
+     while lr-button/lr-icon-button ease. */
+  button[part~='nav'], [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; font: inherit; transition: background-color var(--lr-transition-fast); }
   button[part~='nav'] { padding-inline: var(--lr-space-s); border-radius: var(--lr-radius); }
   [part='nav-glyph'] { font-size: var(--lr-size-1em); }
   button[part~='nav']:hover { background: var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)); }
@@ -88,7 +91,9 @@ export const styles = css`
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
   [part='agenda'] { display: grid; gap: var(--lr-space-s); }
-  [part='agenda-event'] { padding: var(--lr-space-s); border: 0; border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--_lr-calendar-agenda-event-background, var(--lr-color-surface)); color: var(--_lr-calendar-agenda-event-foreground, var(--lr-color-text)); font: inherit; text-align: start; cursor: pointer; }
+  /* Hover/active below only repaint background, so that is all this needs; without it this
+     event's fill snaps while lr-button/lr-icon-button ease. */
+  [part='agenda-event'] { padding: var(--lr-space-s); border: 0; border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--_lr-calendar-agenda-event-background, var(--lr-color-surface)); color: var(--_lr-calendar-agenda-event-foreground, var(--lr-color-text)); font: inherit; text-align: start; cursor: pointer; transition: background-color var(--lr-transition-fast); }
   @container (max-inline-size: 28rem) { [part='day'] { min-block-size: var(--lr-calendar-day-min-block-size-narrow, var(--lr-size-4rem)); } [part='event'] { font-size: var(--lr-font-size-xs); } }
   :host(:dir(rtl)) [part='nav-glyph'] { transform: scaleX(-1); }
 

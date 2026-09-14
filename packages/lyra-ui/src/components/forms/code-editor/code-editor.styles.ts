@@ -83,6 +83,9 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
+    /* Hover below only repaints border-color, so that is all this needs; without it this frame's
+       edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   [part='gutter'] {
     box-sizing: border-box;

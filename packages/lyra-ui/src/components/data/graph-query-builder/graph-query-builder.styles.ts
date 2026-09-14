@@ -83,11 +83,17 @@ export const styles = css`
     background: var(--lr-graph-query-builder-run-bg, var(--lr-color-brand));
     border-color: var(--lr-graph-query-builder-run-border-color, var(--lr-color-brand));
     color: var(--lr-graph-query-builder-run-color, var(--lr-color-on-brand));
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       button's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   [part='save-button'] {
     background: var(--lr-graph-query-builder-save-bg, var(--lr-color-surface));
     border-color: var(--lr-graph-query-builder-save-border-color, var(--lr-color-border));
     color: var(--lr-graph-query-builder-save-color, var(--lr-color-text));
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       button's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   /* The resting fill mixed toward --lr-color-mix-partner (which follows the text colour) rather
      than multiplied channel-wise by filter: brightness(): a filter lightens a dark brand and
@@ -186,6 +192,10 @@ export const styles = css`
     cursor: pointer;
     border-radius: var(--lr-radius-xs);
     min-block-size: var(--lr-icon-button-size);
+    /* :active below only repaints background (the hover below is text-decoration only), so that
+       is all this needs; without it this button's fill snaps while lr-button/lr-icon-button
+       ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   [part='saved-load-button']:hover {
     text-decoration: underline;
@@ -216,6 +226,9 @@ export const styles = css`
     border: none;
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
+    /* Hover below repaints color, and active also fills a background, so both channels need to
+       ease; without this this button's paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='saved-delete-button'] svg {
     inline-size: var(--lr-size-1em);

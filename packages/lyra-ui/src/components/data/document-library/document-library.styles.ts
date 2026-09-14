@@ -47,6 +47,9 @@ export const styles = css`
     color: var(--lr-color-brand);
     font: inherit;
     cursor: pointer;
+    /* :active below only repaints color, so that is all this needs; without it this link's text
+       snaps while lr-button/lr-icon-button ease. */
+    transition: color var(--lr-transition-fast);
   }
   [part='clear-selection']:hover {
     text-decoration: underline;
@@ -74,6 +77,9 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
+    /* :active below only repaints color, so that is all this needs; without it this link's text
+       snaps while lr-button/lr-icon-button ease. */
+    transition: color var(--lr-transition-fast);
   }
   [part='document-name']:hover {
     text-decoration: underline;

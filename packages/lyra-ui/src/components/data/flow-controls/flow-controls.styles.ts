@@ -63,6 +63,9 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text);
     cursor: pointer;
+    /* Hover/active below only repaint background, so that is all this needs; without it these
+       buttons' fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   /* Keep the internal state selector low-specificity so sibling shadow-tree rules remain easy to
      order. Consumer ::part() rules win at the shadow boundary through cascade encapsulation, not
@@ -114,6 +117,9 @@ export const styles = css`
     white-space: normal;
     overflow-wrap: anywhere;
     cursor: pointer;
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       slotted button's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   /* The display above is author-origin, so it outranks the UA stylesheet's own
      '[hidden] { display: none }' and a consumer hiding one of its own action buttons would still

@@ -136,6 +136,9 @@ export const styles = css`
     background-color: transparent;
     outline: var(--lr-focus-ring-width) solid transparent;
     outline-offset: var(--lr-focus-ring-offset);
+    /* Hover/active below only repaint background-color, so that is all this needs; without it
+       this indicator's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   [part='input'][type='time']:not(:disabled):hover::-webkit-calendar-picker-indicator {
     background-color: var(--lr-input-time-picker-hover-bg, var(--lr-color-brand-quiet));
@@ -195,6 +198,9 @@ export const styles = css`
     min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-font-size-m);
+    /* Hover/active below repaint color, and active also fills a background, so both channels
+       need to ease; without this these buttons' paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='password-toggle']:not(:disabled):hover {
     color: var(--lr-input-action-hover-color, var(--lr-color-text));

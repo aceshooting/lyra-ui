@@ -240,6 +240,9 @@ export const styles = css`
     cursor: pointer;
     padding: var(--lr-space-2xs);
     border-radius: var(--lr-radius);
+    /* Hover/active below repaint both background and color, so both channels need to ease;
+       without this this step's paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="step"][aria-disabled="true"] {
     opacity: var(--lr-opacity-disabled);

@@ -56,6 +56,9 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
     cursor: pointer;
+    /* Hover/active below only repaint background, so that is all this needs; without it these
+       buttons' fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   [part='reveal-button']:hover,
   [part='copy-button']:hover {

@@ -42,6 +42,10 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     cursor: pointer;
+    /* Hover/active below repaint border-color and color, and active also fills a background, so
+       all three channels need to ease; without this this button's paint snaps while
+       lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='pause-button']:hover {
     border-color: var(--lr-color-brand);

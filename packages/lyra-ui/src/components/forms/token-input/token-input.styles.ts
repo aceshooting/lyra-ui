@@ -200,6 +200,9 @@ export const styles = css`
     color: inherit;
     font: inherit;
     cursor: pointer;
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       button's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   [part="remove"]:hover {
     background: var(
@@ -232,6 +235,9 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     border-radius: var(--lr-token-input-radius, var(--_lr-token-input-radius));
     cursor: pointer;
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       token's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   :host(:where(:not(:disabled))) [part="token-label"]:hover {
     background: var(

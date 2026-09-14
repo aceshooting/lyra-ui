@@ -140,6 +140,9 @@ export const styles = css`
       var(--_lr-known-date-field-font-size)
     );
     text-align: center;
+    /* Hover below only repaints border-color, so that is all this needs; without it this field's
+       edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   [part~="field"][data-field="day"] [part="field-input"] {
     inline-size: var(

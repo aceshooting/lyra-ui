@@ -89,6 +89,9 @@ export const styles = css`
     font: inherit;
     font-weight: var(--lr-font-weight-semibold);
     font-size: var(--lr-size-0-9375rem);
+    /* Hover below repaints color, and active also fills a background, so both channels need to
+       ease; without this this control's paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   :where([part="title"]):hover:not(:disabled) {
     color: var(--lr-date-picker-title-hover-color, var(--lr-color-brand));
@@ -123,6 +126,9 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
     padding: var(--lr-space-xs);
     border-radius: var(--lr-date-picker-radius, var(--_lr-date-picker-radius));
+    /* Hover/active below only repaint background, so that is all this needs; without it these
+       buttons' fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   /* :where() ties this with the pressed rule at (0,1,0), so source order hands that one the press
      while the arrow is held. The scoped cssprop retints this hover alone, not the shared
@@ -312,6 +318,9 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     border-radius: var(--lr-date-picker-radius, var(--_lr-date-picker-radius));
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       cell's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   :where([part~="day"]):hover:not(:disabled) {
     background: var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet));
@@ -360,6 +369,10 @@ export const styles = css`
   [part~="day-range-end"] {
     background: var(--lr-date-picker-selected-bg, var(--lr-color-brand));
     color: var(--lr-date-picker-selected-color, var(--lr-color-on-brand));
+    /* Hover/active below only repaint background-color (the re-asserted color value below is
+       unchanged), so that is all this needs; without it this cell's fill snaps while
+       lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):hover:not(:disabled),
   :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):active:not(:disabled) {
@@ -407,6 +420,9 @@ export const styles = css`
     cursor: pointer;
     font: inherit;
     padding: var(--lr-space-s);
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       item's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   :where([part~="view-item"]):hover:not(:disabled) {
     background: var(
@@ -464,6 +480,9 @@ export const styles = css`
     overflow-wrap: anywhere;
     min-inline-size: 0;
     max-inline-size: 100%;
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       button's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   [part~="preset-button"]:hover:not(:disabled) {
     background: var(--lr-date-picker-preset-hover-bg, var(--lr-color-brand-quiet));

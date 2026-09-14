@@ -80,6 +80,9 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-textarea-font-size, var(--_lr-textarea-font-size));
     line-height: var(--lr-line-height-normal);
+    /* Hover below only repaints border-color, so that is all this needs; without it this field's
+       edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   [part="textarea"][data-auto-resize] {
     max-block-size: var(

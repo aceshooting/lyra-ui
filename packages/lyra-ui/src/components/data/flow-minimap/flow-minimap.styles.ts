@@ -28,6 +28,9 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
     cursor: pointer;
+    /* Hover/active below only repaint background, so that is all this needs; without it this
+       map's fill snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast);
   }
   /* Mouse-hover cue matching the cursor: pointer affordance above -- the reveal-button/copy-button/
      sources-summary brand-quiet tint the library uses for a clickable surface with no dedicated

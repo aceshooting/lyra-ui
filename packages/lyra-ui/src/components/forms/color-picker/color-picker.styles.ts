@@ -135,6 +135,9 @@ export const styles = css`
     );
     background: transparent;
     cursor: pointer;
+    /* Hover/active below only repaint border-color, so that is all this needs; without it this
+       swatch's edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   [part~="trigger"]::before {
     content: "";
@@ -177,6 +180,9 @@ export const styles = css`
       var(--lr-color-picker-checker-size, var(--_lr-color-picker-checker-size));
     transform: translate(-50%, -50%);
     pointer-events: none;
+    /* Hover/active below only repaint border-color, so that is all this needs; without it this
+       pseudo-element's edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   [part~="trigger"]::after {
     content: "";
@@ -335,6 +341,9 @@ export const styles = css`
     box-shadow: var(--lr-shadow-s);
     transform: translate(-50%, -50%);
     cursor: grab;
+    /* Hover/active below only repaint border-color, so that is all this needs; without it this
+       knob's edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   :host(:dir(rtl)) [part~="grid-handle"] {
     transform: translate(50%, -50%);
@@ -445,6 +454,9 @@ export const styles = css`
     );
     transform: translate(-50%, -50%);
     cursor: grab;
+    /* Hover/active below only repaint border-color, so that is all this needs; without it this
+       knob's edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   :host(:dir(rtl)) [part~="slider-handle"] {
     transform: translate(50%, -50%);
@@ -501,6 +513,9 @@ export const styles = css`
     color: var(--lr-color-text);
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
+    /* Hover below only repaints border-color, so that is all this needs; without it this field's
+       edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   /* no-pressed-state: pressing a text field places a caret rather than activating a target, and
      the engaged state is already drawn by :focus-visible below. Native text inputs have no
@@ -534,6 +549,9 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
+    /* Hover below repaints border-color, and active also fills a background, so both channels
+       need to ease; without this these buttons' paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   [part~="format-button"]:where(:hover),
   [part~="eyedropper-button"]:where(:hover) {
@@ -587,6 +605,9 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: 50%;
     cursor: pointer;
+    /* Hover/active below only repaint border-color, so that is all this needs; without it this
+       swatch's edge snaps while lr-button/lr-icon-button ease. */
+    transition: border-color var(--lr-transition-fast);
   }
   [part~="swatch"]:where(:hover) {
     border-color: var(

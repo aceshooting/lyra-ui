@@ -94,6 +94,9 @@ export const styles = css`
     );
     font-size: var(--lr-rating-size, var(--_lr-rating-size));
     line-height: var(--lr-line-height-none);
+    /* Hover/active below (via the base row ancestor) only repaint color, so that is all this
+       needs; without it this star's colour snaps while lr-button/lr-icon-button ease. */
+    transition: color var(--lr-transition-fast);
   }
   [part="star"] svg {
     display: block;

@@ -163,6 +163,9 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    /* Hover/active below repaint both background and border-color, so both channels need to
+       ease; without this this button's paint snaps while lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
 
   [part~="navigation-button"]:not(:disabled):hover {
@@ -223,6 +226,10 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface);
+    /* Hover/active below (via the pagination-item ancestor) repaint both background and
+       border-color, so both channels need to ease; without this this dot's paint snaps while
+       lr-button/lr-icon-button ease. */
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
 
   [part~="pagination-item-active"] [part="indicator-dot"] {
