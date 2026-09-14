@@ -52,6 +52,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
 
   [part='playlist-item']:hover {

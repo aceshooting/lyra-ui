@@ -24,6 +24,7 @@ export const styles = css`
   [part='node-trigger'] {
     display: flex; flex-wrap: wrap; gap: var(--lr-space-xs); align-items: center; inline-size: 100%; min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs); border: 0; border-radius: var(--lr-radius); background: transparent; color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='node-trigger']:hover { background: var(--lr-color-surface-raised); }
   /* Pressed pushes the hovered tint a further --lr-color-mix-active toward

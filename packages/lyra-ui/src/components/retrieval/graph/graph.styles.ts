@@ -20,6 +20,7 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
     touch-action: none;
+    transition: background-color var(--lr-transition-fast);
   }
   [part="canvas"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

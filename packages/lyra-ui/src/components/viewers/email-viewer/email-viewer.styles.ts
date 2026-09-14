@@ -104,6 +104,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part="attachment-button"]:hover {
     background: color-mix(
@@ -143,6 +144,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part="quote-toggle"]:hover {
     background: var(--lr-color-brand-quiet);

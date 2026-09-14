@@ -112,6 +112,7 @@ export const styles = css`
     border-radius: inherit;
     pointer-events: none;
     background: transparent;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="bar"]:hover::after {
     background: color-mix(

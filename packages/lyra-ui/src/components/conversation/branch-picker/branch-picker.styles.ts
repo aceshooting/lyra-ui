@@ -27,6 +27,7 @@ export const styles = css`
     background: transparent;
     color: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   /* Keep state qualifiers low-specificity so sibling rules remain easy to compose. */
   :where([part='previous-button']):hover:where(:not(:disabled)),

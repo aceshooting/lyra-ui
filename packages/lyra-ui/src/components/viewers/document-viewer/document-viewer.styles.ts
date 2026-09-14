@@ -48,6 +48,7 @@ export const styles = css`
     font: inherit;
     font-weight: var(--lr-font-weight-semibold);
     text-decoration: none;
+    transition: background-color var(--lr-transition-fast);
   }
 
   [part="download-link"]:hover {

@@ -28,6 +28,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-medium);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    transition: background-color var(--lr-transition-fast);
   }
   /* A chip with no entity-id renders its button disabled -- the component's own nothing-to-select
      state, reachable by any consumer since entity-id is public. Untreated it was pixel-identical

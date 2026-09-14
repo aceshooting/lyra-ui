@@ -46,6 +46,7 @@ export const styles = css`
     color: inherit;
     cursor: pointer;
     border-radius: var(--lr-radius-xs);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   /* The handoff button has no fill of its own, so both states tint the transparent surface toward
      --lr-color-mix-partner, which follows the text colour: darker in a light theme, lighter in a

@@ -111,6 +111,7 @@ export const styles = css`
     color: var(--lr-color-brand);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
 
   [part="highlight-action"]:hover {
@@ -188,6 +189,7 @@ export const styles = css`
     color: inherit;
     border-radius: calc(var(--lr-radius) * 0.5);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   /* A mark wraps document TEXT and brightness() applies to the whole subtree, so it recoloured the
      quoted words with their highlight; as a channel multiply it also did nothing to a pure white or

@@ -100,6 +100,7 @@ export const styles = css`
     background: var(--lr-lightbox-control-bg, var(--_lr-lightbox-control-bg));
     color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="close-button"] {
     margin-inline-start: var(--lr-space-xs);

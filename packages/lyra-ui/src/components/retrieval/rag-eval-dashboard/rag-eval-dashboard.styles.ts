@@ -34,6 +34,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part~='slice'] {
     min-inline-size: var(--lr-icon-button-size);

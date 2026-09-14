@@ -26,6 +26,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='header']:hover {
     background: var(--lr-color-brand-quiet);

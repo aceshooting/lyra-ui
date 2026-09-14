@@ -18,6 +18,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
     outline: none;
+    transition: border-color var(--lr-transition-fast);
   }
   [part='viewport']:focus-visible {
     outline: var(--lr-focus-ring);
@@ -63,6 +64,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='reset'] {
     max-inline-size: 100%;

@@ -11,6 +11,7 @@ export const styles = css`
   [part='run-trigger'] {
     display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--lr-space-xs); min-inline-size: 0; min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-s); border: 0; background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='run-trigger']:hover, [part='cancel']:hover, [part='retry']:hover { background: var(--lr-color-surface-raised); }
   /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
@@ -34,7 +35,7 @@ export const styles = css`
     background: var(--lr-subagent-panel-progress-fill, var(--lr-color-brand));
   }
   [part='actions'] { display: flex; }
-  [part='cancel'], [part='retry'] { min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size); padding: var(--lr-space-xs); border: 0; border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; cursor: pointer; }
+  [part='cancel'], [part='retry'] { min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size); padding: var(--lr-space-xs); border: 0; border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; cursor: pointer; transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast); }
   /* Density escape -- same convention as lr-task-list/lr-stack-trace/lr-thinking-panel/
      lr-terminal's compact. Values sit behind inline var() fallbacks, not :host declarations that
      every instance re-declares and so shadows an ancestor value, so a transcript can retune every

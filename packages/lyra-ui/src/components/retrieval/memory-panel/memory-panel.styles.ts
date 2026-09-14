@@ -95,6 +95,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='expand-toggle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -138,6 +139,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='add-button']:focus-visible,
   [part='remove-button']:focus-visible,

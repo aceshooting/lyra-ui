@@ -46,6 +46,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
 
   [part='sources-summary']:hover {

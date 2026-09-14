@@ -35,6 +35,7 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
     min-block-size: var(--lr-size-2-5rem);
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   .content {
     display: flex;

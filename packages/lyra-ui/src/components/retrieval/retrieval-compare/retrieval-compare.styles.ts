@@ -54,6 +54,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part~='chunk']:hover {
     background: var(--lr-color-surface-raised);

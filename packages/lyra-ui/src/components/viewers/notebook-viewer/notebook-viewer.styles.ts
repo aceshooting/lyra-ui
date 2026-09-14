@@ -98,6 +98,7 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     overflow: auto;
+    transition: background-color var(--lr-transition-fast);
   }
   /* no-pressed-state: raw-source is a <pre tabindex="0"> horizontal scroll surface, not a control
      -- the tint tells the pointer which cell it is about to scroll, and mousedown there starts a
@@ -144,6 +145,7 @@ export const styles = css`
     cursor: pointer;
     padding: 0;
     font: inherit;
+    transition: color var(--lr-transition-fast);
   }
   lr-virtual-list::part(output-toggle):hover {
     text-decoration: underline;

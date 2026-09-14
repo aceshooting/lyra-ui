@@ -60,6 +60,7 @@ export const styles = css`
     font: inherit;
     overflow-wrap: anywhere;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='search-result'] button:hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);

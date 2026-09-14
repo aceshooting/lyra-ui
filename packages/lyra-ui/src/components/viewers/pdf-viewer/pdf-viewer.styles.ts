@@ -35,6 +35,7 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part="toolbar"] button:hover {
     background: var(

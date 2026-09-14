@@ -49,6 +49,7 @@ export const styles = css`
     );
     overflow-x: hidden;
     overflow-y: auto;
+    transition: border-color var(--lr-transition-fast);
   }
   [part="pane-old"]:focus-visible,
   [part="pane-new"]:focus-visible {

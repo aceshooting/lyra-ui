@@ -62,6 +62,7 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
+    transition: color var(--lr-transition-fast);
   }
 
   [part~='action']::part(base) {

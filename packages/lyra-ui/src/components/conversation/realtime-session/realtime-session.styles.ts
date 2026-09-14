@@ -10,6 +10,7 @@ export const styles = css`
   [part='controls'] button {
     min-block-size: var(--lr-icon-button-size); padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius); background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='controls'] button:hover { background: var(--lr-color-surface-raised); }
   [part='controls'] button:active { background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }

@@ -77,6 +77,7 @@ export const styles = css`
     color: var(--lr-color-brand);
     cursor: pointer;
     padding: var(--lr-space-xs) 0;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   /* Pressed, here and on [part='file'] / [part='copy-button'] below, pushes the hovered tint a
      further --lr-color-mix-active toward --lr-color-mix-partner, which follows the text colour, so
@@ -107,6 +108,7 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
     padding: var(--lr-space-2xs) 0;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='file-path'] {
     min-inline-size: 0;
@@ -135,6 +137,7 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='copy-button']:hover {
     background: var(--lr-color-brand-quiet);

@@ -90,6 +90,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-medium);
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part~='open-button']:hover,
   lr-virtual-list::part(open-button):hover {
@@ -149,6 +150,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part~='toggle']:hover,
   lr-virtual-list::part(toggle):hover {

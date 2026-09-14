@@ -37,6 +37,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
 
   [part='tab']:hover {

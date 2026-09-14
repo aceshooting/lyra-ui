@@ -56,6 +56,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='claim-trigger']:hover {
     background: var(--lr-color-surface-raised);

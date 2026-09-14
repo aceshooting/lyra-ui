@@ -34,6 +34,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     white-space: nowrap;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='relation'] {
     color: var(--lr-color-text-quiet);

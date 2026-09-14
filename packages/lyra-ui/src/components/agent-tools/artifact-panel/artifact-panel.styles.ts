@@ -57,6 +57,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     padding: var(--lr-space-2xs) var(--lr-space-s);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='view-button'][aria-pressed='true'] {
     background: var(--lr-artifact-panel-view-active-bg, var(--lr-color-brand-quiet));
@@ -67,6 +68,7 @@ export const styles = css`
     font: inherit; font-size: var(--lr-font-size-xs); background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius);
     padding: var(--lr-space-2xs) var(--lr-space-s); cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='restore-button']:hover, [part='copy-button']:hover, [part='download-button']:hover,
   [part='view-button']:hover:not([aria-pressed='true']) {
@@ -110,6 +112,7 @@ export const styles = css`
     font-size: var(--lr-font-size-m);
     cursor: pointer;
     border-radius: var(--lr-radius);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='version-previous']:hover:not(:disabled),
   [part='version-next']:hover:not(:disabled) {

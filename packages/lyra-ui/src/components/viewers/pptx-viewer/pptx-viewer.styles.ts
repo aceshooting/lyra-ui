@@ -57,6 +57,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part="previous-button"]:hover,
   [part="next-button"]:hover {

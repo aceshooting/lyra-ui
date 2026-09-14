@@ -32,6 +32,7 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
     box-sizing: border-box;
+    transition: background-color var(--lr-transition-fast);
   }
   lr-virtual-list::part(page):hover {
     background: var(--lr-color-surface-raised);

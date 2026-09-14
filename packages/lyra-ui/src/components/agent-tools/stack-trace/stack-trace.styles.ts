@@ -68,6 +68,7 @@ export const styles = css`
     background: none;
     border: none;
     padding: var(--lr-space-2xs) 0;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   button[part="frame"] {
     cursor: pointer;
@@ -117,6 +118,7 @@ export const styles = css`
     border: none;
     cursor: pointer;
     padding: var(--lr-space-2xs) 0;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="internal-toggle"]:hover {
     background: var(--lr-color-brand-quiet);
@@ -154,6 +156,7 @@ export const styles = css`
     padding: var(--lr-space-2xs) var(--lr-space-s);
     cursor: pointer;
     margin-block-end: var(--lr-space-s);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   [part="copy-button"]:hover {
     border-color: var(

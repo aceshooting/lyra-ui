@@ -82,6 +82,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     font: inherit;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='table']::part(actions-trigger):hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);

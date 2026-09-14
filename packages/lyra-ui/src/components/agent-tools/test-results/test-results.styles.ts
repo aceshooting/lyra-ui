@@ -33,6 +33,7 @@ export const styles = css`
     color: var(--lr-color-text);
     padding: var(--lr-space-2xs) var(--lr-space-s);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='filter-toggle']:hover {
     background: var(--lr-color-brand-quiet);
@@ -112,6 +113,7 @@ export const styles = css`
     cursor: pointer;
     text-align: start;
     padding: 0;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='test-duration'] {
     flex: 0 0 auto;
@@ -129,6 +131,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     padding: var(--lr-space-2xs) var(--lr-space-xs);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='failure'] {
     flex-basis: 100%;

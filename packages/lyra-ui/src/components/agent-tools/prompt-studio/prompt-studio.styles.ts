@@ -16,6 +16,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   [part='message-content'] { min-block-size: var(--lr-size-6rem); padding: var(--lr-space-s); resize: vertical; }
   .message-role-wrapper { position: relative; display: inline-flex; align-items: center; }
@@ -61,6 +62,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   /* The state pseudo-class stays outside :where(), matching each resting [part] selector's
      specificity, while the toolbar descendant keeps its own type specificity. */

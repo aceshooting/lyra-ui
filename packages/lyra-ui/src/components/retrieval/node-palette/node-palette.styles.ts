@@ -29,6 +29,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    transition: border-color var(--lr-transition-fast);
   }
   [part='search']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -67,6 +68,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-m);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='search-clear']:hover {
     color: var(--lr-color-text);
@@ -109,6 +111,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius);
     cursor: grab;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='item'][aria-disabled='true'] {
     cursor: not-allowed;

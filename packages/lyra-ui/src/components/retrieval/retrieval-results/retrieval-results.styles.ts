@@ -109,6 +109,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     padding: var(--lr-space-2xs) var(--lr-space-m);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='load-more']:hover {
     background: var(--lr-color-brand-quiet);

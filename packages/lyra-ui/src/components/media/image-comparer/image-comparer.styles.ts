@@ -82,6 +82,7 @@ export const styles = css`
        imagery on both sides -- a wider blur reads as a smudge along the seam. */
     box-shadow: var(--lr-shadow-s);
     pointer-events: none;
+    transition: background-color var(--lr-transition-fast);
   }
   [part~="base"][data-orientation="vertical"] [part="divider"] {
     inset-block: auto;

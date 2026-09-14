@@ -47,6 +47,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='title'] button:hover {
     text-decoration: underline;
@@ -98,6 +99,7 @@ export const styles = css`
     background: transparent;
     padding: 0;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='member']:hover,
   [part='overflow']:hover {

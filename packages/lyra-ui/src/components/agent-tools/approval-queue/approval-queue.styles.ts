@@ -64,6 +64,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
 
   /* A row whose request is no longer pending renders its button disabled; without this an approved

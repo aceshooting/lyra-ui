@@ -49,6 +49,7 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='title']:hover {
     text-decoration: underline;
@@ -89,6 +90,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-semibold);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='toggle']:hover {
     text-decoration: underline;

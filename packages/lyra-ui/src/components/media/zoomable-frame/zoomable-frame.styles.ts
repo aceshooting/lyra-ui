@@ -72,6 +72,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
 
   [part='zoom-in-button']:not(:disabled):hover,

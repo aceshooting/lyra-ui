@@ -36,6 +36,7 @@ export const styles = css`
       --lr-sequence-playback-icon-size,
       var(--_lr-sequence-playback-icon-size)
     );
+    transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
   [part="play-button"]:hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);

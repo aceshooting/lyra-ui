@@ -49,6 +49,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='evidence-toggle']:hover {
     background: var(--lr-color-surface-raised);

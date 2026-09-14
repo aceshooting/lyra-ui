@@ -89,6 +89,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   /* Replaces the native ::-webkit-search-cancel-button suppressed below -- same "opt-out chrome
      needs a rendered replacement" contract lr-input's own [part='clear-button'] documents. */
@@ -106,6 +107,7 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text-quiet);
     padding: var(--lr-space-xs);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="search-clear"]:hover {
     color: var(--lr-color-text);
@@ -211,6 +213,7 @@ export const styles = css`
     font: inherit;
     overflow-wrap: anywhere;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   [part="load-more"]:hover {
     border-color: var(--lr-color-brand);

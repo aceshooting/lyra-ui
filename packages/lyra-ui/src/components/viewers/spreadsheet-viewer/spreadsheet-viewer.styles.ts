@@ -99,6 +99,7 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='cell-highlight-action']:hover,
   lr-virtual-list::part(cell-highlight-action):hover {

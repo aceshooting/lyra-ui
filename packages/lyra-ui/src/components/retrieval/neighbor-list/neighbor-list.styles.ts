@@ -38,6 +38,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='node-label']:focus-visible,
   lr-virtual-list::part(node-label):focus-visible {
@@ -96,6 +97,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part='expand-button']:hover,
   lr-virtual-list::part(expand-button):hover {

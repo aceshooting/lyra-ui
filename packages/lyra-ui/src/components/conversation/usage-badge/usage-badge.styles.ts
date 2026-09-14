@@ -9,6 +9,7 @@ export const styles = css`
   }
   [part='base']:where([tabindex]) {
     cursor: help;
+    transition: background-color var(--lr-transition-fast);
   }
   /* no-pressed-state: with a tabindex, [part='base'] is a focusable role="group" that reveals a
      tooltip -- not activatable, no click handler, nothing on mousedown -- so a pressed tint would

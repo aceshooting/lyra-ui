@@ -28,6 +28,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   /* Hover changes the border while the distinct pressed step below changes the surface fill. */
   :where([part='add-button']):hover:where(:not(:disabled)),
@@ -73,6 +74,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   /* Replaces the native ::-webkit-search-cancel-button suppressed below -- same "opt-out chrome
      needs a rendered replacement" contract lr-input's own [part='clear-button'] documents. */
@@ -90,6 +92,7 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text-quiet);
     padding: var(--lr-space-xs);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='search-clear']:not(:disabled):hover {
     color: var(--lr-color-text);

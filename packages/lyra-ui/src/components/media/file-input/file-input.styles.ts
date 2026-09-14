@@ -99,6 +99,7 @@ export const styles = css`
       --lr-file-input-dropzone-font-size,
       var(--_lr-file-input-dropzone-font-size)
     );
+    transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
   .dropzone-content {
     grid-area: 1 / 1;
@@ -315,6 +316,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="remove-button"]:hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);

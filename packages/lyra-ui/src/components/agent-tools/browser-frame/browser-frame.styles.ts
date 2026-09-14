@@ -56,6 +56,7 @@ export const styles = css`
     min-inline-size: 0;
     white-space: normal;
     overflow-wrap: anywhere;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='take-over-button']:hover,
   [part='stop-button']:hover {

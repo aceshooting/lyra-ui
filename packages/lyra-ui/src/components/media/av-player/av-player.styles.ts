@@ -56,6 +56,7 @@ export const styles = css`
     overflow: hidden;
     white-space: nowrap;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   @container (max-inline-size: 20rem) {
     [part='rate-select'] {
@@ -101,6 +102,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
     cursor: pointer;
+    transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
   [part='timeline']:hover:where(:not([aria-disabled='true'])) {
     border-color: var(--lr-color-brand);
@@ -142,6 +144,7 @@ export const styles = css`
     cursor: pointer;
     --_lr-av-player-marker-fill: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
     background: var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill));
+    transition: background-color var(--lr-transition-fast);
   }
   .timeline-markers {
     position: absolute;
@@ -198,6 +201,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
+    transition: background-color var(--lr-transition-fast);
   }
   /* Before ::part(cue-current) below, so the current cue's own background wins the specificity tie
      on source order even while hovered. */

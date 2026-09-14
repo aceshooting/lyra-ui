@@ -57,6 +57,7 @@ export const styles = css`
     color: inherit;
     font: inherit;
     font-size: var(--lr-font-size-m);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   input.control:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

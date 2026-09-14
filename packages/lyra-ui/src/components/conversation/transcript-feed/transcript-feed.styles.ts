@@ -102,6 +102,7 @@ export const styles = [
       cursor: pointer;
       /* Overlay step, matching lr-chat-viewport's jump pill: it floats over the feed, not in it. */
       box-shadow: var(--lr-shadow-m);
+      transition: background-color var(--lr-transition-fast);
     }
     [part='jump-button']:focus-visible {
       outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

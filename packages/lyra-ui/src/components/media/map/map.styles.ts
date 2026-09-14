@@ -190,6 +190,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   .maplibregl-popup-close-button:where(:hover) {
     background: var(--lr-map-popup-close-button-hover-bg, var(--lr-color-brand-quiet));
@@ -403,6 +404,7 @@ export const styles = css`
     color: inherit;
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   .maplibregl-ctrl-group button:where(:not(:first-child)) {
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -489,6 +491,7 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
     place-items: center;
+    transition: background-color var(--lr-transition-fast);
   }
   .maplibregl-ctrl-attrib-button::before {
     content: '';

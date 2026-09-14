@@ -59,6 +59,7 @@ export const styles = css`
     );
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part="disclosure"] {
     display: inline-grid;
@@ -73,6 +74,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   [part="disclosure"]:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);

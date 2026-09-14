@@ -102,6 +102,7 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
   /* Mouse users get the interactive feedback keyboard users already get from the focus-visible
      ring below -- matching dataset-viewer's cell-highlight-action hover treatment. */
