@@ -7,6 +7,7 @@ import {
   isActionableElement,
   isComposedFocusAvailable,
   isSemanticActionElement,
+  repairComposedFocus,
 } from './focus-navigation.js';
 
 it('repairs focus after an owned focused branch disappears without overriding newer focus', async () => {
@@ -929,6 +930,10 @@ it('repairs focus through a candidate whose focus method delegates into its shad
   inside.focus();
   const repair = captureComposedFocusRepair(owner, candidate)!;
   expect(applyComposedFocusRepair(repair, null)).to.equal(false);
+  // An explicitly passed `undefined` means "no target", exactly like `null` -- only an omitted
+  // second argument falls back to the captured candidate.
+  expect(applyComposedFocusRepair(repair, undefined)).to.equal(false);
+  expect(root.ownerDocument.activeElement?.id).to.equal('inside');
   owner.remove();
   expect(applyComposedFocusRepair(repair)).to.equal(true);
   expect(shadow.activeElement === delegated).to.equal(true);
@@ -956,4 +961,156 @@ it('retains the first already-checked radio as its group tab stop', async () => 
   expect(collectComposedFocusTargets(root).elements.map((element) => element.id)).to.deep.equal([
     'first-checked',
   ]);
+});
+
+it('leaves focus outside the owner untouched when a fallback repair is requested', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <section id="owner">
+        <button id="row">Row</button>
+        <button id="header">Header</button>
+      </section>
+      <button id="outside">Outside</button>
+    </div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const header = root.querySelector<HTMLButtonElement>('#header')!;
+  const outside = root.querySelector<HTMLButtonElement>('#outside')!;
+
+  outside.focus();
+  expect(repairComposedFocus(owner, header)).to.equal(false);
+  expect(root.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
+it('repairs to the first focusable non-inert fallback when the focus holder is about to go', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <section id="owner">
+        <button id="row">Row</button>
+        <button id="inert-fallback" inert>Inert</button>
+        <span id="inert-branch" inert><button id="nested-fallback">Nested</button></span>
+        <button id="disabled-fallback" disabled>Disabled</button>
+        <button id="header">Header</button>
+      </section>
+    </div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const row = root.querySelector<HTMLButtonElement>('#row')!;
+  const inertFallback = root.querySelector<HTMLButtonElement>('#inert-fallback')!;
+  const nestedFallback = root.querySelector<HTMLButtonElement>('#nested-fallback')!;
+  const disabledFallback = root.querySelector<HTMLButtonElement>('#disabled-fallback')!;
+  const header = root.querySelector<HTMLButtonElement>('#header')!;
+
+  row.focus();
+  expect(
+    repairComposedFocus(owner, [inertFallback, nestedFallback, disabledFallback, header]),
+  ).to.equal(true);
+  expect(root.ownerDocument.activeElement?.id).to.equal('header');
+});
+
+it('declines a one-shot repair once focus has already fallen back to the body', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <section id="owner">
+        <button id="row">Row</button>
+        <button id="header">Header</button>
+      </section>
+    </div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const row = root.querySelector<HTMLButtonElement>('#row')!;
+  const header = root.querySelector<HTMLButtonElement>('#header')!;
+
+  header.focus();
+  // Removing the focused node hands focus back to the body, which is outside the owner. Crossing
+  // that boundary belongs to the capture-then-apply pair, which recorded where focus was before
+  // the removal; the one-shot form has nothing to distinguish it from focus that was never here.
+  header.remove();
+  expect(repairComposedFocus(owner, row)).to.equal(false);
+  expect(root.ownerDocument.activeElement?.id ?? '').to.not.equal('row');
+});
+
+it('no-ops without throwing when every fallback target is absent', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div><section id="owner"><button id="inside">Inside</button></section></div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const inside = root.querySelector<HTMLButtonElement>('#inside')!;
+
+  inside.focus();
+  expect(repairComposedFocus(owner, [])).to.equal(false);
+  expect(repairComposedFocus(owner, [null, undefined])).to.equal(false);
+  expect(repairComposedFocus(owner, null)).to.equal(false);
+  expect(repairComposedFocus(owner, undefined)).to.equal(false);
+  expect(repairComposedFocus(owner, () => [])).to.equal(false);
+  expect(repairComposedFocus(owner, () => undefined)).to.equal(false);
+  expect(root.ownerDocument.activeElement?.id).to.equal('inside');
+});
+
+it('skips a detached fallback target and prefers it again once it reconnects', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <section id="owner"><button id="inside">Inside</button></section>
+      <button id="primary">Primary</button>
+      <button id="secondary">Secondary</button>
+    </div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const inside = root.querySelector<HTMLButtonElement>('#inside')!;
+  const primary = root.querySelector<HTMLButtonElement>('#primary')!;
+  const secondary = root.querySelector<HTMLButtonElement>('#secondary')!;
+
+  primary.remove();
+  inside.focus();
+  expect(repairComposedFocus(owner, [primary, secondary])).to.equal(true);
+  expect(root.ownerDocument.activeElement?.id).to.equal('secondary');
+
+  root.append(primary);
+  inside.focus();
+  expect(repairComposedFocus(owner, [primary, secondary])).to.equal(true);
+  expect(root.ownerDocument.activeElement?.id).to.equal('primary');
+});
+
+it('applies a captured repair to the first available target of a lazily resolved list', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <section id="owner"><button id="inside">Inside</button></section>
+      <button id="toolbar">Toolbar</button>
+    </div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const inside = root.querySelector<HTMLButtonElement>('#inside')!;
+  const toolbar = root.querySelector<HTMLButtonElement>('#toolbar')!;
+
+  inside.focus();
+  const repair = captureComposedFocusRepair(owner, toolbar)!;
+  owner.remove();
+  // The survivor only exists after the render that removed the focus holder committed, which is
+  // what the thunk form defers for.
+  const survivor = document.createElement('button');
+  survivor.id = 'survivor';
+  survivor.inert = true;
+  root.prepend(survivor);
+
+  expect(applyComposedFocusRepair(repair, () => [survivor, toolbar])).to.equal(true);
+  expect(root.ownerDocument.activeElement?.id).to.equal('toolbar');
+});
+
+it('treats a host slotted light-DOM child as focus inside the owner', async () => {
+  const host = await fixture<HTMLDivElement>(html`
+    <div><button id="slotted">Slotted</button></div>
+  `);
+  const shadow = host.attachShadow({ mode: 'open' });
+  shadow.innerHTML = '<slot></slot>';
+  const slotted = host.querySelector<HTMLButtonElement>('#slotted')!;
+  const fallback = document.createElement('button');
+  fallback.id = 'shadow-fallback';
+  shadow.append(fallback);
+
+  slotted.focus();
+  // The slotted child lives in the host's light DOM, so it is not a node-tree descendant of the
+  // shadow root -- a `ShadowRoot`-rooted containment test would report focus as elsewhere and
+  // decline. Passing the host instead makes composed containment reach it.
+  expect(repairComposedFocus(host, fallback)).to.equal(true);
+  expect(shadow.activeElement?.id).to.equal('shadow-fallback');
 });

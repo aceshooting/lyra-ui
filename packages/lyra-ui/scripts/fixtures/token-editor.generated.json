@@ -826,6 +826,11 @@
       ]
     },
     {
+      "name": "--lr-interactive-transition",
+      "description": "Shared pointer-interaction transition: fill, text and border colour move together on hover and press, derived from the fast transition token so reduced motion flattens it.",
+      "references": []
+    },
+    {
       "name": "--lr-layer-base",
       "description": "Canonical shared component token for layer base.",
       "references": [

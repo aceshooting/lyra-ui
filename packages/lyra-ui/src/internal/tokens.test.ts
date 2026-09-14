@@ -171,6 +171,21 @@ it('defines the new motion tokens with the documented fallback values', async ()
   expect(await probeVar('--lr-transition-base')).to.equal('180ms ease-out');
 });
 
+it('derives the shared interactive transition from the fast transition token', async () => {
+  // The three properties a control repaints under the pointer, resolved rather than quoted: the
+  // token substitutes --lr-transition-fast at computed-value time, which is precisely why the
+  // reduced-motion block below needs no entry of its own to flatten it.
+  expect(squash(await probeVar('--lr-interactive-transition'))).to.equal(
+    'background-color 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out',
+  );
+});
+
+it('retunes the interactive transition through the same --lr-theme-transition-fast input', async () => {
+  expect(squash(await probeNestedVar('--lr-interactive-transition', '--lr-theme-transition-fast: 5ms linear'))).to.equal(
+    'background-color 5ms linear, color 5ms linear, border-color 5ms linear',
+  );
+});
+
 it('maps logical safe-area insets to the mirrored physical edges in RTL', () => {
   const cssText = tokens.cssText.replace(/\s+/g, ' ');
   expect(cssText).to.include(

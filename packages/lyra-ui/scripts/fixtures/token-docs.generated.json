@@ -1443,6 +1443,16 @@
       "themeInput": "--lr-theme-icon-button-size"
     },
     {
+      "name": "--lr-interactive-transition",
+      "type": "string",
+      "group": "motion",
+      "scope": "shared",
+      "description": "Shared pointer-interaction transition: fill, text and border colour move together on hover and press, derived from the fast transition token so reduced motion flattens it.",
+      "values": {
+        "light": "background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast)"
+      }
+    },
+    {
       "name": "--lr-layer-base",
       "type": "number",
       "group": "layer",

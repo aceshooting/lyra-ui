@@ -135,6 +135,31 @@ export interface ComposedFocusRepairSnapshot {
   readonly owner: Element;
 }
 
+/**
+ * Where focus should land when the node holding it is about to disappear: a single target, or an
+ * ordered fallback list tried in order until one is actually focusable. Ordering is the caller's
+ * policy -- `[survivingSibling, stableToolbar]` expresses "nearest survivor, else the toolbar",
+ * `[header]` expresses "always this fixed target".
+ *
+ * `null`, `undefined`, an empty list and an all-nullish list all mean the same thing -- no target,
+ * so leave focus alone -- which is what lets a caller pass `rows[index]` or an optional query
+ * result straight through without pre-checking it.
+ */
+export type ComposedFocusRepairTargets =
+  | HTMLElement
+  | null
+  | undefined
+  | readonly (HTMLElement | null | undefined)[];
+
+/**
+ * Repair targets, or a thunk producing them. A thunk defers the lookup to the moment the repair is
+ * applied, so a caller can name nodes that only exist after the render which removed the focus
+ * holder has committed.
+ */
+export type ComposedFocusRepairTargetSource =
+  | ComposedFocusRepairTargets
+  | (() => ComposedFocusRepairTargets);
+
 interface RenderedElementState {
   display: string | undefined;
   subtreeUnavailable: boolean;
@@ -442,6 +467,26 @@ function composedContains(
   return false;
 }
 
+function isComposedFocusRepairTargetList(
+  value: HTMLElement | readonly (HTMLElement | null | undefined)[],
+): value is readonly (HTMLElement | null | undefined)[] {
+  return Array.isArray(value);
+}
+
+/** Flattens a target source to the present, non-nullish elements, in the caller's own order. */
+function resolveComposedFocusRepairTargets(
+  source: ComposedFocusRepairTargetSource,
+): readonly HTMLElement[] {
+  const resolved = typeof source === 'function' ? source() : source;
+  if (!resolved) return [];
+  if (!isComposedFocusRepairTargetList(resolved)) return [resolved];
+  const targets: HTMLElement[] = [];
+  for (const target of resolved) {
+    if (target) targets.push(target);
+  }
+  return targets;
+}
+
 /** Captures a repair only when deep focus is currently inside the branch about to disappear. */
 export function captureComposedFocusRepair(
   owner: Element,
@@ -456,21 +501,74 @@ export function captureComposedFocusRepair(
 /**
  * Applies a captured repair unless focus moved to a newer external target. Body/document fallback
  * after removal is treated as the captured focus disappearing, not as an intentional new target.
+ *
+ * `candidateOverride` accepts an ordered fallback list (or a thunk producing one), tried in order
+ * until one both passes `isComposedFocusAvailable()` -- the single predicate that already excludes
+ * `inert`, an `inert` composed ancestor, `hidden`, `aria-hidden`, `:disabled` and unrendered
+ * branches -- and actually takes focus. An empty, all-nullish or nullish list is a safe no-op that
+ * returns false without touching focus, so a caller never has to pre-check its own fallback list.
+ * That includes an explicitly passed `undefined`: only an *omitted* second argument means "use the
+ * captured candidate". Hence the `arguments.length` read rather than a default parameter -- a
+ * default also fires on an explicit `undefined`, so `applyComposedFocusRepair(repair, rows[index])`
+ * under `noUncheckedIndexedAccess` would typecheck and then silently focus the captured candidate
+ * for a caller who meant "no surviving row, leave focus alone".
  */
 export function applyComposedFocusRepair(
   snapshot: ComposedFocusRepairSnapshot,
-  candidateOverride: HTMLElement | null = snapshot.candidate,
+  candidateOverride?: ComposedFocusRepairTargetSource,
 ): boolean {
   const { document: ownerDocument, owner } = snapshot;
-  const candidate = candidateOverride;
-  if (!candidate) return false;
-  if (candidate.ownerDocument !== ownerDocument || !isComposedFocusAvailable(candidate)) return false;
+  const targetSource = arguments.length < 2 ? snapshot.candidate : candidateOverride;
+  const candidates = resolveComposedFocusRepairTargets(targetSource);
+  if (candidates.length === 0) return false;
   const current = deepActiveElementIn(ownerDocument);
   const lostWithBranch = current === null || current === ownerDocument.body || current === ownerDocument.documentElement;
   if (current !== snapshot.activeElement && !composedContains(owner, current) && !lostWithBranch) return false;
-  candidate.focus();
-  const repaired = deepActiveElementIn(ownerDocument);
-  return repaired === candidate || composedContains(candidate, repaired);
+  for (const candidate of candidates) {
+    if (candidate.ownerDocument !== ownerDocument || !isComposedFocusAvailable(candidate)) continue;
+    candidate.focus();
+    const repaired = deepActiveElementIn(ownerDocument);
+    if (repaired === candidate || composedContains(candidate, repaired)) return true;
+  }
+  return false;
+}
+
+/**
+ * Capture-then-apply in one synchronous call, for the case where the branch that holds focus is
+ * about to be removed or hidden by the render this call precedes (a collapsing disclosure, a
+ * closing panel, a row leaving a controlled list).
+ *
+ * Focus outside `owner`'s composed subtree is left strictly alone -- the return is false and no
+ * target is touched -- so appending or reordering content never steals focus from an unrelated
+ * control. `owner` is the host element rather than its `ShadowRoot` deliberately: composed
+ * containment also covers the host's slotted light-DOM children, which a `ShadowRoot`-rooted
+ * search would miss.
+ *
+ * Call this *before* the branch goes, not after. Focus that has already fallen back to the body is
+ * outside `owner` and is therefore declined -- unlike `applyComposedFocusRepair()`, which reads a
+ * body fallback as the captured focus disappearing because its snapshot recorded where focus was
+ * beforehand. This one has no such snapshot, so it cannot tell that case apart from focus that was
+ * never inside `owner` at all.
+ *
+ * When the outcome depends on whether a *specific* node survives a render that has not committed
+ * yet, use `captureComposedFocusRepair()` now and `applyComposedFocusRepair()` once the render has
+ * settled instead; this helper resolves both halves immediately.
+ *
+ * @returns true only when focus actually moved to one of the fallback targets.
+ */
+export function repairComposedFocus(
+  owner: Element,
+  fallbackTargets: ComposedFocusRepairTargetSource,
+): boolean {
+  const activeElement = deepActiveElementIn(owner.ownerDocument);
+  if (!activeElement || !composedContains(owner, activeElement)) return false;
+  const candidates = resolveComposedFocusRepairTargets(fallbackTargets);
+  const [candidate] = candidates;
+  if (!candidate) return false;
+  return applyComposedFocusRepair(
+    { activeElement, candidate, document: owner.ownerDocument, owner },
+    candidates,
+  );
 }
 
 function traverseComposedElements(

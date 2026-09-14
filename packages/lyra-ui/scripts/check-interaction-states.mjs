@@ -24,7 +24,7 @@ import { isMainModule } from './is-main-module.mjs';
 // hover twin) — yet until now nothing machine-checked that direction at all. Keyboard users get a
 // focus ring; mouse users get no "this is interactive" signal whatsoever.
 //
-// Two rules, each pitched at the precision its signal actually supports:
+// Three rules, each pitched at the precision its signal actually supports:
 //
 //   1. Pointer-target rule (per part). A rule that targets a part and declares `cursor: pointer`
 //      is the author's own explicit claim that this box is a click target, so it owes a hover
@@ -47,9 +47,38 @@ import { isMainModule } from './is-main-module.mjs';
 //      per-part version of this rule is ~95% false positives — and noise is how a gate gets
 //      suppressed wholesale.
 //
-// Both record a deliberate omission the same way :active does, with a marker comment:
+//   3. Transition rule (per part, hung off rule 1's pointer targets). A part that claims to be a
+//      click target AND repaints under the pointer owes that repaint a transition, or the fill
+//      jumps between two colours in one frame and reads as a flicker rather than as feedback.
+//      Ninety-odd rules reached that conclusion one at a time and each re-typed the same
+//      three-property list; `--lr-interactive-transition` (tokens.styles.ts) is now the one place
+//      that list lives, so the declaration a rule owes is exactly:
+//          transition: var(--lr-interactive-transition);
+//      Coverage is read NARROWLY, and every narrowing is a correction of a way the first version of
+//      this rule could be silenced without animating anything. `transition` is not an inherited
+//      property and applies only to the element whose own value changes, so: a rule on the part
+//      itself counts; a tree-wide `[part]`/`*` rule counts (that is
+//      `interactive-transition.styles.ts`'s shape, and adopting that sheet in `static styles` counts
+//      for the whole shadow tree, which is what it is for); a rule on a part that merely CONTAINS
+//      this one does not, and neither does a `:host`-subject rule, which animates the host box and
+//      nothing below it. The declaration's VALUE is read too -- it has to name a property this part
+//      actually repaints (or `all`), so a `transition: transform` does not answer a background
+//      change -- and a declaration inside `@media (prefers-reduced-motion: reduce)` is skipped,
+//      because that block is where `transition: none` lives.
+//      "Repaints" is deliberately a closed property list: background/border/text colour and
+//      box-shadow. An opacity-only, outline-only, filter, SVG fill/stroke or accent-color hover
+//      never triggers this rule at all -- those are the exclusions the library already recognises,
+//      and a gate that argued with them would be arguing with itself. What is left is a judgement
+//      call, and a judgement call is recorded the same way the other two are, except that this one
+//      insists on the sentence:
+//          /* no-transition-needed: the press must land in the same frame as the drag it starts */
+//      A bare `no-transition-needed:` with nothing after it is itself a finding. The other two
+//      markers predate that rule and keep their looser form; new markers do not get to be silent.
+//
+// Rules 1 and 2 record a deliberate omission the same way :active does, with a marker comment:
 //     /* no-hover-state: a transparent hit target with nothing of its own to paint */
 // on or immediately above the rule for rule 1, anywhere in the file for rule 2.
+//
 // Run: node scripts/check-interaction-states.mjs
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -70,6 +99,121 @@ function styleFiles(directory) {
 
 const OPT_OUT = /no-pressed-state:/;
 const HOVER_OPT_OUT = /no-hover-state:/;
+const TRANSITION_OPT_OUT = /no-transition-needed:/;
+
+/**
+ * Every `transition`/`transition-property` declaration in a rule body, as `[property, value]` --
+ * the property so `transition-property` is read as a bare list, the VALUE because a declaration
+ * that names no property this rule repaints (or names `none`) is not coverage. The leading
+ * boundary keeps a `transition` inside a var() name from matching.
+ */
+const TRANSITION_DECLARATION = /(?:^|[;{\s])(transition(?:-property)?)\s*:([^;}]*)/g;
+
+/**
+ * The properties whose change under the pointer reads as a flicker when it lands in one frame.
+ * Everything absent from this list is absent on purpose: `opacity`, `outline`, `filter`, SVG
+ * `fill`/`stroke` and `accent-color` hovers are the library's recognised instant treatments. The
+ * leading boundary keeps `color` from matching the tail of `background-color`, `accent-color` or
+ * `caret-color`, each of which would otherwise widen the rule by accident.
+ */
+const PAINT_DECLARATION =
+  /(?:^|[;{\s])(background|background-color|background-image|border|border-color|border-[a-z-]+color|box-shadow|color)\s*:/g;
+
+/**
+ * The paint FAMILY a property belongs to, which is the unit coverage is matched on. A repaint and
+ * the transition that covers it are routinely written at different levels of the shorthand ladder
+ * -- `background: var(--x)` answered by `transition: background-color`, `border: 1px solid` by
+ * `transition: border-color` -- and matching the literal property names would call each of those
+ * pairs a miss. Anything outside the four families (`opacity`, `transform`, ...) maps to itself and
+ * therefore never matches a repaint, which is exactly the point of reading the value at all.
+ */
+function paintFamily(property) {
+  if (property.startsWith('background')) return 'background';
+  if (property.startsWith('border')) return 'border';
+  return property;
+}
+
+/** Longhand/shorthand-tolerant paint families this rule body changes. */
+export function paintedFamilies(body) {
+  const families = new Set();
+  for (const [, property] of body.matchAll(PAINT_DECLARATION)) families.add(paintFamily(property));
+  return families;
+}
+
+/** Components of a transition value that are a duration/delay, an easing, or a behavior keyword. */
+const NOT_A_PROPERTY =
+  /^(?:\d|\.\d|-?\d*\.?\d+m?s$|ease(?:-in)?(?:-out)?$|linear$|step-(?:start|end)$|steps\(|cubic-bezier\(|normal$|allow-discrete$)/;
+
+/** The transition property named by one comma-separated segment of a transition value. */
+const namedProperty = (segment) =>
+  splitTopLevel(segment, /\s/).find((token) => !NOT_A_PROPERTY.test(token));
+
+/**
+ * The paint families `--lr-interactive-transition` itself animates, READ from the token rather than
+ * re-typed here. The token is the one place that property list lives (that is the whole argument
+ * for it), so a checker carrying a second copy would be the exact duplication rule 3 exists to
+ * end -- and widening the token later, say to cover `box-shadow`, would silently leave the gate
+ * prescribing a declaration that does not animate what changed.
+ */
+const INTERACTIVE_TRANSITION_FAMILIES = (() => {
+  const tokens = readFileSync(join(internalRoot, 'tokens.styles.ts'), 'utf8');
+  const declaration = /--lr-interactive-transition\s*:([^;]*);/.exec(tokens);
+  if (!declaration) {
+    throw new Error(
+      '--lr-interactive-transition is not declared in src/internal/tokens.styles.ts -- rule 3 of ' +
+        'the interaction-state contract reads its property list from there.',
+    );
+  }
+  const families = new Set();
+  for (const segment of splitTopLevel(declaration[1], /,/)) {
+    const named = namedProperty(segment);
+    if (named !== undefined && named !== 'none' && !named.startsWith('var(')) {
+      families.add(paintFamily(named));
+    }
+  }
+  return families;
+})();
+
+/**
+ * The paint families a `transition`/`transition-property` VALUE actually animates.
+ *
+ * `all` comes back as the literal `'all'`, which covers every family -- and it is also what an
+ * omitted property means, so `transition: var(--lr-transition-fast)` (a duration/easing pair, no
+ * property named) is tree-wide coverage rather than none. `none` covers nothing, which is the
+ * whole reason this function exists: the library writes `transition: none` inside its
+ * reduced-motion blocks, and reading only the property NAME counted that as an answer.
+ */
+export function transitionedFamilies(value) {
+  const families = new Set();
+  for (const segment of splitTopLevel(value.replace(/!important/g, ''), /,/)) {
+    if (/var\(\s*--lr-interactive-transition/.test(segment)) {
+      for (const family of INTERACTIVE_TRANSITION_FAMILIES) families.add(family);
+      continue;
+    }
+    const named = namedProperty(segment);
+    // No property named at all -> the shorthand's initial `all`. An unresolvable `var()` is read
+    // the same way: the checker cannot expand it, and a false miss is worse than a false pass.
+    if (named === undefined || named.startsWith('var(')) families.add('all');
+    else if (named !== 'none') families.add(paintFamily(named));
+  }
+  return families;
+}
+
+/**
+ * The reason text on a `no-transition-needed:` marker, read to the END of its comment block rather
+ * than to the end of its line: `readStyleRules` deliberately accepts a marker several lines above
+ * the rule so the reason can be the multi-line paragraph these stylesheets favour, and a
+ * line-scoped reader would call every one of those "records no reason".
+ */
+export function transitionMarkerReason(comment) {
+  const match = /no-transition-needed:([\s\S]*)/.exec(comment);
+  if (!match) return null;
+  return match[1]
+    .replace(/\*\/[\s\S]*$/, '')
+    .replace(/^[\s*]+/gm, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 /**
  * Splits a stylesheet into `{ selector, line, precededByOptOut }` records. A regex rather than a CSS
@@ -138,15 +282,20 @@ const blankComments = (source) =>
 
 /**
  * Every leaf rule (a block with declarations rather than nested rules) as
- * `{ selector, body, line, optedOut }`. `readHoverRules` above only ever needed selector text; the
- * hover contract also has to read declarations (`cursor: pointer` is a declaration, not a
- * selector), so this walks braces directly instead of buffering lines. At-rule preludes
- * (`@media ... {`) come back as ordinary "selectors" that simply never match a part.
+ * `{ selector, body, line, optedOut, transitionOptedOut, enclosing }`. `readHoverRules` above only
+ * ever needed selector text; the hover contract also has to read declarations (`cursor: pointer` is
+ * a declaration, not a selector), so this walks braces directly instead of buffering lines.
+ * At-rule preludes (`@media ... {`) come back as ordinary "selectors" that simply never match a
+ * part, and each leaf also carries its `enclosing` preludes outermost-first -- the transition rule
+ * has to know that a declaration sits inside a reduced-motion query, where the library's answer to
+ * "should this move" is deliberately "no".
  */
 export function readStyleRules(source) {
   const optOutLines = new Set();
+  const transitionOptOutLines = new Set();
   source.split('\n').forEach((line, index) => {
     if (HOVER_OPT_OUT.test(line)) optOutLines.add(index + 1);
+    if (TRANSITION_OPT_OUT.test(line)) transitionOptOutLines.add(index + 1);
   });
   const stripped = blankComments(source);
   const rules = [];
@@ -157,11 +306,13 @@ export function readStyleRules(source) {
   // opts this one out, so the reason can be the multi-line paragraph these stylesheets favour
   // rather than a squeezed single line.
   let pendingOptOut = false;
+  let pendingTransitionOptOut = false;
   for (let index = 0; index < stripped.length; index += 1) {
     const char = stripped[index];
     if (char === '\n') {
       line += 1;
       if (optOutLines.has(line)) pendingOptOut = true;
+      if (transitionOptOutLines.has(line)) pendingTransitionOptOut = true;
     }
     if (char === '{') {
       stack.push({ selector: stripped.slice(cursor, index), bodyStart: index + 1, line });
@@ -177,8 +328,16 @@ export function readStyleRules(source) {
           // newlines *inside* the trimmed selector count -- the ones separating it from the
           // previous rule are not part of it.
           const selectorLine = frame.line - (frame.selector.trim().match(/\n/g)?.length ?? 0);
-          rules.push({ selector, body, line: selectorLine, optedOut: pendingOptOut });
+          rules.push({
+            selector,
+            body,
+            line: selectorLine,
+            optedOut: pendingOptOut,
+            transitionOptedOut: pendingTransitionOptOut,
+            enclosing: stack.map((outer) => outer.selector.replace(/\s+/g, ' ').trim()),
+          });
           pendingOptOut = false;
+          pendingTransitionOptOut = false;
         }
       }
       cursor = index + 1;
@@ -323,22 +482,143 @@ export function partContainment(templateSource) {
   return contains;
 }
 
-/** Is `part`'s pointer affordance expressed anywhere in this stylesheet? */
-export function hasHoverAffordance(part, coverage, containment) {
-  if (coverage.hostWide || coverage.parts.has(part)) return true;
-  for (const hovered of coverage.parts) {
-    if (containment.get(hovered)?.has(part)) return true;
+/** A `@media` query that is the reduced-motion branch, where `transition: none` is the answer. */
+const REDUCED_MOTION_QUERY = (prelude) =>
+  /prefers-reduced-motion/.test(prelude) && !/no-preference/.test(prelude);
+
+/**
+ * What the stylesheet's `transition` declarations actually cover: `Map<part, Set<paintFamily>>`,
+ * plus a `treeWide` family set for the rules that reach every part at once.
+ *
+ * Three things this deliberately does NOT count, each of which it used to:
+ *
+ * - **A `:host`-subject transition.** `transition` is not an inherited property, so a declaration
+ *   on `:host` animates the host box and nothing else in the shadow tree. Counting it tree-wide
+ *   meant one `:host([reveal-on-interaction]) { transition: opacity ... }` exempted every
+ *   repainting part in the file. `:host(:hover) [part='base']` still counts for `base`, because
+ *   there the SUBJECT is the part.
+ * - **A `transition: none`, or any transition naming no property this rule repaints.** Reading only
+ *   the property name counted `transition: none` -- the exact declaration that says "do not move" --
+ *   as proof that something moves.
+ * - **A rule inside `@media (prefers-reduced-motion: reduce)`.** That block is where the library
+ *   PUTS `transition: none`; a resting transition declared only there covers nothing in the state
+ *   the rule is about.
+ *
+ * `treeWide` is a bare `[part]`/`:where([part])` presence selector or `*`, which is
+ * `interactive-transition.styles.ts`'s own shape -- a component that interpolates that sheet, or
+ * writes the same selector itself, has covered everything it can name.
+ */
+export function transitionCoverage(rules) {
+  const parts = new Map();
+  const treeWide = new Set();
+  const add = (into, families) => {
+    for (const family of families) into.add(family);
+  };
+  for (const rule of rules) {
+    if ((rule.enclosing ?? []).some(REDUCED_MOTION_QUERY)) continue;
+    const families = new Set();
+    for (const [, , value] of rule.body.matchAll(TRANSITION_DECLARATION)) {
+      add(families, transitionedFamilies(value));
+    }
+    if (families.size === 0) continue;
+    for (const complex of selectorList(rule.selector)) {
+      const chain = compounds(complex);
+      const subject = chain[chain.length - 1] ?? '';
+      // `[part]` with no `=` addresses every part at once; `[part='x']` addresses one.
+      if (subject === '*' || /\[part\](?![~*^$|]?=)/.test(subject)) add(treeWide, families);
+      for (const name of partsInSelector(subject)) {
+        if (!parts.has(name)) parts.set(name, new Set());
+        add(parts.get(name), families);
+      }
+    }
   }
+  return { treeWide, parts };
+}
+
+/**
+ * `Map<part, Set<paintFamily>>` -- what this stylesheet repaints under the pointer, per
+ * `PAINT_DECLARATION`, and which families each repaint touches. The families matter because the
+ * covering transition has to name one of them: a `transition: transform` on a part whose hover
+ * changes its `background` leaves that background change landing in one frame, which is the very
+ * defect this rule exists to catch.
+ */
+export function repaintedParts(rules) {
+  const parts = new Map();
+  for (const rule of rules) {
+    if (!/:hover|:active/.test(rule.selector)) continue;
+    const families = paintedFamilies(rule.body);
+    if (families.size === 0) continue;
+    for (const name of styledParts(rule.selector)) {
+      if (!parts.has(name)) parts.set(name, new Set());
+      for (const family of families) parts.get(name).add(family);
+    }
+  }
+  return parts;
+}
+
+/**
+ * Does `coverage` animate at least one of the families that repaint?
+ *
+ * "At least one", not "every one", on purpose: a part that eases its fill and snaps its shadow has
+ * a transition, a designer's judgement behind it and no flicker worth the name, while a part with
+ * NO transition at all is the defect. The gate is pitched at the defect.
+ *
+ * Containment is deliberately absent here, and that is the difference between this rule and the
+ * hover one. Hover propagates up the tree, so an ancestor's `:hover` rule genuinely fires when the
+ * pointer is over a descendant; `transition` is not inherited and applies only to the element whose
+ * own property changes, so an ancestor's transition animates nothing about a nested part.
+ */
+export function transitionCovers(part, repainted, coverage) {
+  const covered = new Set(coverage.treeWide);
+  for (const family of coverage.parts.get(part) ?? []) covered.add(family);
+  if (covered.has('all')) return true;
+  for (const family of repainted) if (covered.has(family)) return true;
   return false;
 }
 
 /**
- * The hover half of the contract for one stylesheet.
+ * Is `part` covered by `coverage` -- on its own compound, tree-wide, or through a part that
+ * contains it in the component's template? The containment arm is what makes this a HOVER question
+ * specifically: the pointer that is over a part is also over every ancestor of it, so an ancestor's
+ * `:hover` rule is a real affordance for the descendant. Nothing about `transition` propagates that
+ * way, which is why `transitionCovers` asks a narrower question.
+ */
+export function coversPart(part, coverage, containment) {
+  if (coverage.hostWide || coverage.parts.has(part)) return true;
+  for (const covered of coverage.parts) {
+    if (containment.get(covered)?.has(part)) return true;
+  }
+  return false;
+}
+
+/** Is `part`'s pointer affordance expressed anywhere in this stylesheet? */
+export function hasHoverAffordance(part, coverage, containment) {
+  return coversPart(part, coverage, containment);
+}
+
+/**
+ * Does this module actually adopt `interactive-transition.styles.ts`? The import alone is not
+ * adoption and neither is a mention of the path -- the symbol has to reach a `styles` array (the
+ * class-module shape) or be interpolated into a `css` template (the stylesheet shape).
+ */
+export function adoptsSharedTransition(text) {
+  const imported =
+    /import\s*\{[^}]*\binteractiveTransition\b[^}]*\}\s*from\s*['"][^'"]*interactive-transition\.styles(?:\.js)?['"]/.test(
+      text,
+    );
+  const used =
+    /styles\s*=\s*\[[^\]]*\binteractiveTransition\b/.test(text) ||
+    /\$\{\s*interactiveTransition\s*\}/.test(text);
+  return imported && used;
+}
+
+/**
+ * The pointer half of the contract for one stylesheet: rules 1, 2 and 3.
  *
  * @param {string} styleSource the `*.styles.ts` text
  * @param {string[]} templateSources the component modules whose Lit templates establish part nesting
- * @returns {{findings: Array<{line: number, message: string}>, pointerParts: number,
- *   focusVisible: boolean}}
+ * @returns {{findings: Array<{line: number, part?: string, message: string}>, pointerParts: number,
+ *   repaintedPointerParts: number, focusVisible: boolean}}
  */
 export function hoverContract(styleSource, templateSources = []) {
   const rules = readStyleRules(styleSource);
@@ -350,9 +630,19 @@ export function hoverContract(styleSource, templateSources = []) {
       for (const descendant of descendants) containment.get(ancestor).add(descendant);
     }
   }
+  const transitions = transitionCoverage(rules);
+  // Adopting the shared sheet covers the whole shadow tree, and it is composed in the class module
+  // (`static styles`) as often as it is interpolated into the stylesheet, so both are read. The
+  // symbol has to be IMPORTED and then USED: a bare mention of the module path would let a comment
+  // saying "deliberately not adopted here" exempt the component's entire stylesheet.
+  if ([styleSource, ...templateSources].some(adoptsSharedTransition)) {
+    for (const family of INTERACTIVE_TRANSITION_FAMILIES) transitions.treeWide.add(family);
+  }
+  const repainted = repaintedParts(rules);
 
   const findings = [];
   let pointerParts = 0;
+  let repaintedPointerParts = 0;
   let focusVisible = null;
   for (const rule of rules) {
     if (!targetsPart(rule.selector)) continue;
@@ -363,18 +653,61 @@ export function hoverContract(styleSource, templateSources = []) {
     if (!/(?:^|[;{\s])cursor\s*:\s*pointer/.test(rule.body)) continue;
     for (const part of styledParts(rule.selector)) {
       pointerParts += 1;
-      if (rule.optedOut) continue;
-      if (hasHoverAffordance(part, coverage, containment)) continue;
+      if (!rule.optedOut && !hasHoverAffordance(part, coverage, containment)) {
+        findings.push({
+          rule: 'hover',
+          line: rule.line,
+          part,
+          message:
+            `\`${rule.selector}\` declares cursor: pointer on [part='${part}'] but nothing gives it ` +
+            'a :hover affordance -- a mouse user gets no "this is interactive" signal',
+        });
+      }
+      // The transition rule, on the same pointer targets: only a part that actually repaints has
+      // a state change that can flicker.
+      const repaints = repainted.get(part);
+      if (!repaints) continue;
+      repaintedPointerParts += 1;
+      if (rule.transitionOptedOut) continue;
+      if (transitionCovers(part, repaints, transitions)) continue;
+      // The shared token answers the three families it names and no others, so a part whose only
+      // pointer repaint is outside them (a `box-shadow`-only press) is told what to write instead
+      // of being handed a declaration that would silence the gate without animating anything.
+      const outside = [...repaints].filter((family) => !INTERACTIVE_TRANSITION_FAMILIES.has(family));
+      const remedy =
+        outside.length === repaints.size
+          ? `Declare a transition naming ${outside.join('/')} on the resting rule ` +
+            `(\`var(--lr-interactive-transition)\` covers only ${[...INTERACTIVE_TRANSITION_FAMILIES].join('/')})`
+          : 'Declare `transition: var(--lr-interactive-transition);` on the resting rule';
       findings.push({
+        rule: 'transition',
         line: rule.line,
+        part,
         message:
-          `\`${rule.selector}\` declares cursor: pointer on [part='${part}'] but nothing gives it ` +
-          'a :hover affordance -- a mouse user gets no "this is interactive" signal',
+          `\`${rule.selector}\` declares cursor: pointer on [part='${part}'] and the stylesheet ` +
+          `repaints its ${[...repaints].join('/')} under the pointer, but nothing transitions it -- ` +
+          'the change lands in one frame and reads as a flicker. ' +
+          `${remedy}, or record the omission with a \`no-transition-needed: <reason>\` comment`,
       });
     }
   }
+  // Read to the end of the comment block, not to the end of the line: the marker's reason is
+  // routinely the multi-line paragraph these stylesheets favour.
+  for (const comment of styleSource.matchAll(/\/\*[\s\S]*?\*\//g)) {
+    const reason = transitionMarkerReason(comment[0]);
+    if (reason === null || reason !== '') continue;
+    const marker = comment.index + comment[0].indexOf('no-transition-needed:');
+    findings.push({
+      rule: 'marker',
+      line: styleSource.slice(0, marker).split('\n').length,
+      message:
+        'a `no-transition-needed:` marker records no reason -- the whole point of the marker is the ' +
+        'sentence after the colon',
+    });
+  }
   if (focusVisible && !HOVER_OPT_OUT.test(styleSource) && !/:hover/.test(blankComments(styleSource))) {
     findings.push({
+      rule: 'focus',
       line: focusVisible.line,
       message:
         `\`${focusVisible.selector}\` styles the keyboard path but this stylesheet has no :hover ` +
@@ -382,7 +715,7 @@ export function hoverContract(styleSource, templateSources = []) {
     });
   }
   findings.sort((a, b) => a.line - b.line);
-  return { findings, pointerParts, focusVisible: focusVisible !== null };
+  return { findings, pointerParts, repaintedPointerParts, focusVisible: focusVisible !== null };
 }
 
 /** The template modules a stylesheet's own component renders from, nearest sibling first. */
@@ -395,11 +728,151 @@ function templateSourcesFor(styleFile) {
     .map((file) => readFileSync(file, 'utf8'));
 }
 
+/**
+ * Pointer parts that repaint with no transition covering that repaint, and PREDATE
+ * `--lr-interactive-transition`.
+ *
+ * This list exists so rule 3 could land at full strength without a source sweep attached to it.
+ * Adding a transition to a part that never had one changes what a test reading a hovered colour
+ * sees -- the library has already had to repair five such tests, four of which only reproduced on
+ * a non-Chromium engine -- so each of these is owed a fix plus a look at its component's own hover
+ * assertions, which is a per-component job, not a one-line edit made in bulk.
+ *
+ * WHAT DISCHARGES AN ENTRY, since a grandfather list with no named owner is just a nicer silence:
+ * the component's own next substantive change. Add `transition: var(--lr-interactive-transition);`
+ * to the resting rule, re-read that component's pointer-state assertions for the
+ * read-a-hovered-colour pattern docs/agents/testing.md describes, run its test file on all three
+ * engines, and delete the line here in the same commit. Nothing else retires these; in particular
+ * no bulk rename pass does, because every entry names a part with no covering transition to rename.
+ *
+ * Two properties keep it from becoming a permanent silence: it may only ever SHRINK (a size above
+ * the ceiling below fails), and an entry that no longer names a real finding fails too, so a fixed
+ * part cannot leave its line behind. Delete the line in the same change that adds the transition.
+ */
+const PRE_TOKEN_TRANSITION_GAPS = new Set([
+  'src/components/agent-tools/activity-feed/activity-feed.styles.ts:header',
+  'src/components/agent-tools/task-list/task-list.styles.ts:header',
+  'src/components/agent-tools/terminal/terminal.styles.ts:copy-button',
+  'src/components/agent-tools/terminal/terminal.styles.ts:download-button',
+  'src/components/agent-tools/thinking-panel/thinking-panel.styles.ts:header',
+  'src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.styles.ts:edit-button',
+  'src/components/agent-tools/trace-tree/trace-tree.styles.ts:row',
+  'src/components/agent-tools/trace-tree/trace-tree.styles.ts:toggle',
+  'src/components/charts/chart/box-plot.styles.ts:legend-item',
+  'src/components/charts/chart/box-plot.styles.ts:data-table-toggle',
+  'src/components/charts/chart/chart.styles.ts:legend-item',
+  'src/components/charts/chart/chart.styles.ts:reset-zoom-button',
+  'src/components/charts/chart/chart.styles.ts:data-table-toggle',
+  'src/components/charts/chart/lite-chart.styles.ts:data-table-toggle',
+  'src/components/conversation/chat-message/chat-message.styles.ts:collapse-button',
+  'src/components/conversation/chat-message/chat-message.styles.ts:retry-button',
+  'src/components/conversation/checkpoint/checkpoint.styles.ts:confirm-button',
+  'src/components/conversation/checkpoint/checkpoint.styles.ts:cancel-button',
+  'src/components/conversation/code-block/code-block.styles.ts:toggle',
+  'src/components/conversation/code-block/code-block.styles.ts:copy-button',
+  'src/components/conversation/message-feedback/message-feedback.styles.ts:up-button',
+  'src/components/conversation/message-feedback/message-feedback.styles.ts:down-button',
+  'src/components/conversation/model-select/model-select.styles.ts:trigger',
+  'src/components/conversation/model-select/model-select.styles.ts:option',
+  'src/components/conversation/push-to-talk/push-to-talk.styles.ts:trigger',
+  'src/components/conversation/thread-list/thread-list.styles.ts:clear-button',
+  'src/components/conversation/thread-list/thread-list.styles.ts:group-toggle',
+  'src/components/conversation/thread-list/thread-list.styles.ts:row-action',
+  'src/components/conversation/voice-picker/voice-picker.styles.ts:trigger',
+  'src/components/conversation/voice-picker/voice-picker.styles.ts:preview-button',
+  'src/components/conversation/voice-picker/voice-picker.styles.ts:option',
+  'src/components/conversation/voice-picker/voice-picker.styles.ts:option-preview',
+  'src/components/data/data-grid/data-grid.styles.ts:header-cell',
+  'src/components/data/data-grid/data-grid.styles.ts:page-size',
+  'src/components/data/table/table.styles.ts:header-cell',
+  'src/components/data/table/table.styles.ts:cell-editor',
+  'src/components/data/table/table.styles.ts:row-expand-toggle',
+  'src/components/data/table/table.styles.ts:more-button',
+  'src/components/data/table/table.styles.ts:reveal-columns-button',
+  'src/components/data/table/table.styles.ts:retry-button',
+  'src/components/forms/color-picker/color-picker.styles.ts:slider',
+  'src/components/forms/combobox/combobox.styles.ts:tag__remove-button',
+  'src/components/forms/combobox/combobox.styles.ts:clear-button',
+  'src/components/forms/combobox/combobox.styles.ts:option',
+  'src/components/forms/date-picker/date-input.styles.ts:clear-button',
+  'src/components/forms/date-picker/date-input.styles.ts:expand-button',
+  'src/components/forms/input/time-input.styles.ts:clear-button',
+  'src/components/forms/input/time-input.styles.ts:expand-button',
+  'src/components/forms/input/time-input.styles.ts:column-item',
+  'src/components/forms/select/select.styles.ts:trigger',
+  'src/components/forms/select/select.styles.ts:tag__remove-button',
+  'src/components/forms/select/select.styles.ts:clear-button',
+  'src/components/forms/select/select.styles.ts:option',
+  'src/components/layout/app-rail/app-rail.styles.ts:toggle',
+  'src/components/layout/details/accordion-item.styles.ts:button',
+  'src/components/layout/details/details.styles.ts:summary',
+  'src/components/layout/menu/menu-item.styles.ts:base',
+  'src/components/layout/widget/widget.styles.ts:view-toggle',
+  'src/components/media/image-viewer/image-viewer.styles.ts:fit-control',
+  'src/components/media/image-viewer/image-viewer.styles.ts:rotate-button',
+  'src/components/media/image-viewer/image-viewer.styles.ts:annotate-toggle',
+  'src/components/media/image-viewer/image-viewer.styles.ts:highlight',
+  'src/components/retrieval/source-list/source-list.styles.ts:header',
+  'src/components/utility/diff-view/diff-view.styles.ts:copy-button',
+  'src/components/utility/export-button/export-button.styles.ts:trigger',
+  'src/components/utility/json-viewer/json-viewer.styles.ts:toggle',
+  'src/components/utility/json-viewer/json-viewer.styles.ts:copy-button',
+  'src/components/utility/mention-popover/mention-popover.styles.ts:option',
+  'src/components/utility/poll-status/poll-status.styles.ts:pause-button',
+  'src/components/utility/tour/tour.styles.ts:previous-button',
+  'src/components/utility/tour/tour.styles.ts:skip-button',
+  'src/components/utility/tour/tour.styles.ts:next-button',
+  'src/components/viewers/document-preview/document-preview.styles.ts:region-highlight-action',
+  'src/components/viewers/highlight-layer/highlight-layer.styles.ts:highlight-action',
+  'src/components/viewers/xml-viewer/xml-viewer.styles.ts:highlight-action',
+  'src/components/viewers/xml-viewer/xml-viewer.styles.ts:toggle',
+  'src/components/viewers/xml-viewer/xml-viewer.styles.ts:copy-button',
+
+  // Second block, same class of defect, found only once rule 3 learned to read a transition's
+  // VALUE and stopped counting an ancestor's transition or a `:host` one. Each of these carries a
+  // transition that animates something OTHER than what changes under the pointer -- `opacity`,
+  // `transform`, `inline-size`, the container's own fade -- or carries one only inside
+  // `@media (prefers-reduced-motion: reduce)`, where it is `none`. To the eye they are identical
+  // to the block above: a fill that jumps in one frame. They are listed rather than repaired for
+  // the same reason, and they discharge the same way.
+  'src/components/agent-tools/terminal/terminal.styles.ts:jump-to-latest',
+  'src/components/agent-tools/tool-result-dialog/tool-result-dialog.styles.ts:maximize-button',
+  'src/components/agent-tools/tool-result-dialog/tool-result-dialog.styles.ts:close-button',
+  'src/components/conversation/chat-viewport/chat-viewport.styles.ts:jump-pill',
+  'src/components/conversation/message-actions/message-actions.styles.ts:regenerate-button',
+  'src/components/conversation/message-actions/message-actions.styles.ts:edit-button',
+  'src/components/conversation/message-feedback/message-feedback.styles.ts:submit-button',
+  'src/components/data/calendar/calendar.styles.ts:event',
+  'src/components/forms/input/time-input.styles.ts:now-button',
+  'src/components/layout/page/page.styles.ts:navigation-toggle',
+  'src/components/layout/reorder-list/reorder-item.styles.ts:move-up-button',
+  'src/components/layout/reorder-list/reorder-item.styles.ts:move-down-button',
+  'src/components/layout/widget/widget.styles.ts:collapse-button',
+  'src/components/layout/widget/widget.styles.ts:fullscreen-button',
+  'src/components/media/video/video.styles.ts:poster-play-button',
+  'src/components/overlays/alert/alert.styles.ts:close-button',
+  'src/components/overlays/toast/toast-item.styles.ts:close-button',
+  'src/components/retrieval/graph-legend/graph-legend.styles.ts:item',
+  'src/components/utility/export-button/export-button.styles.ts:menu-item',
+]);
+/**
+ * The list may only shrink. A new part with no transition is a finding, never a new entry.
+ *
+ * This number has moved UP exactly once, from 77 to 96, in the change that taught rule 3 to read a
+ * transition's value and to stop believing a `:host` or ancestor declaration. That is the only
+ * reason it may ever move up: the DETECTOR got stricter and named nineteen more instances of the
+ * defect it already knew about. It may not move up because a component regressed, and it may not
+ * move up to admit a newly written part -- new code writes the declaration.
+ */
+const PRE_TOKEN_TRANSITION_GAP_CEILING = 96;
+
 if (isMainModule(import.meta.url)) {
   const findings = [];
   let checked = 0;
   let pointerParts = 0;
+  let repaintedPointerParts = 0;
   let focusVisibleSheets = 0;
+  const grandfatheredHits = new Set();
   const files = [...styleFiles(componentsRoot), ...styleFiles(internalRoot)].sort();
 
   for (const file of files) {
@@ -432,17 +905,39 @@ if (isMainModule(import.meta.url)) {
       }
     }
 
-    // ----- hover contract -------------------------------------------------
+    // ----- hover and transition contracts ---------------------------------
     const hover = hoverContract(raw, templateSourcesFor(file));
     pointerParts += hover.pointerParts;
+    repaintedPointerParts += hover.repaintedPointerParts;
     if (hover.focusVisible) focusVisibleSheets += 1;
-    for (const finding of hover.findings) findings.push(`${where}:${finding.line}: ${finding.message}`);
+    for (const finding of hover.findings) {
+      const key = `${where}:${finding.part}`;
+      if (finding.rule === 'transition' && PRE_TOKEN_TRANSITION_GAPS.has(key)) {
+        grandfatheredHits.add(key);
+        continue;
+      }
+      findings.push(`${where}:${finding.line}: ${finding.message}`);
+    }
   }
 
-  if (checked === 0 || pointerParts === 0 || focusVisibleSheets === 0) {
+  for (const entry of PRE_TOKEN_TRANSITION_GAPS) {
+    if (grandfatheredHits.has(entry)) continue;
+    findings.push(
+      `${entry}: is recorded as a pre-token transition gap but no longer is one -- delete the ` +
+        'entry from PRE_TOKEN_TRANSITION_GAPS',
+    );
+  }
+  if (PRE_TOKEN_TRANSITION_GAPS.size > PRE_TOKEN_TRANSITION_GAP_CEILING) {
+    findings.push(
+      `PRE_TOKEN_TRANSITION_GAPS holds ${PRE_TOKEN_TRANSITION_GAPS.size} entries, above its ` +
+        `ceiling of ${PRE_TOKEN_TRANSITION_GAP_CEILING} -- the list may only shrink`,
+    );
+  }
+
+  if (checked === 0 || pointerParts === 0 || repaintedPointerParts === 0 || focusVisibleSheets === 0) {
     console.error(
-      'Interaction-state contract matched ZERO hover rules, cursor: pointer parts or focus-visible ' +
-        'stylesheets -- the file shape changed.',
+      'Interaction-state contract matched ZERO hover rules, cursor: pointer parts, repainted ' +
+        'pointer parts or focus-visible stylesheets -- the file shape changed.',
     );
     process.exitCode = 1;
   } else if (findings.length) {
@@ -450,13 +945,17 @@ if (isMainModule(import.meta.url)) {
     for (const finding of findings) console.error(`- ${finding}`);
     console.error(
       '\nAdd the matching :active rule, or record the omission with a `no-pressed-state: <reason>` comment.' +
-        '\nAdd the matching :hover rule, or record the omission with a `no-hover-state: <reason>` comment.',
+        '\nAdd the matching :hover rule, or record the omission with a `no-hover-state: <reason>` comment.' +
+        '\nAdd `transition: var(--lr-interactive-transition);` to the resting rule, or record the ' +
+        'omission with a `no-transition-needed: <reason>` comment.',
     );
     process.exitCode = 1;
   } else {
     console.log(
       `Interaction-state contract passed: ${checked} hovered part(s) all have a pressed state, ` +
-        `${pointerParts} cursor: pointer part(s) all have a hover affordance, and all ` +
+        `${pointerParts} cursor: pointer part(s) all have a hover affordance, ` +
+        `${repaintedPointerParts} repainting pointer part(s) all transition that repaint ` +
+        `(${PRE_TOKEN_TRANSITION_GAPS.size} still on the pre-token list), and all ` +
         `${focusVisibleSheets} focus-visible stylesheet(s) style the pointer path too ` +
         `(${files.length} stylesheets).`,
     );

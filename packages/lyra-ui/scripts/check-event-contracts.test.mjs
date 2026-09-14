@@ -227,6 +227,69 @@ assert.throws(
   'an opaque EventInit cannot silently disappear from runtime cancelability checks',
 );
 
+// `requestThenCommit()` (src/internal/request-commit.ts) dispatches through a caller-supplied
+// adapter, so a migrated component's `this.emit()` moves inside an arrow function passed as an
+// object-literal property. The inline `init: { cancelable: true }` annotation that module
+// mandates is exactly what keeps that shape resolvable here; the three fixtures below pin the
+// passing form and both failing forms so the contract cannot rot silently.
+assert.deepEqual(
+  [...runtimeEventCancelabilityFromSource(`
+    class Fixture {
+      toggle(next: boolean) {
+        requestThenCommit({
+          requestDetail: { collapsed: next },
+          emitRequest: (detail, init: { cancelable: true }) =>
+            this.emit('lr-adapter-request', detail, init),
+          guard: this.collapseGuard,
+          commit: () => {
+            this.collapsed = next;
+            this.emit('lr-adapter-settled', { collapsed: next });
+          },
+        });
+      }
+    }
+  `)],
+  [
+    ['lr-adapter-request', 'always'],
+    ['lr-adapter-settled', 'never'],
+  ],
+  'a request/commit adapter with an inline EventInit annotation resolves like a direct literal emit',
+);
+
+assert.throws(
+  () => runtimeEventCancelabilityFromSource(`
+    class Fixture {
+      toggle(next: boolean) {
+        requestThenCommit({
+          requestDetail: { collapsed: next },
+          emitRequest: (detail, init) => this.emit('lr-adapter-request', detail, init),
+          commit: () => {},
+        });
+      }
+    }
+  `),
+  /unresolved EventInit.*lr-adapter-request/u,
+  'a contextually typed adapter parameter is invisible here, so dropping the annotation must fail',
+);
+
+assert.throws(
+  () => runtimeEventCancelabilityFromSource(`
+    type RequestEventInit = { cancelable: true };
+    class Fixture {
+      toggle(next: boolean) {
+        requestThenCommit({
+          requestDetail: { collapsed: next },
+          emitRequest: (detail, init: RequestEventInit) =>
+            this.emit('lr-adapter-request', detail, init),
+          commit: () => {},
+        });
+      }
+    }
+  `),
+  /unresolved EventInit.*lr-adapter-request/u,
+  'a named EventInit alias does not resolve either -- the annotation must be an inline object type',
+);
+
 assert.throws(
   () => runtimeEventCancelabilityFromSource(`
     class Fixture {

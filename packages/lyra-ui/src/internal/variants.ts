@@ -1,3 +1,5 @@
+import { optionalLiteralSetConverter } from './converters.js';
+
 /**
  * The library's shared styling vocabulary.
  *
@@ -53,4 +55,42 @@ export function normalizeSize(size: LyraSize): LyraSizeStep {
   if (size === 'medium') return 'm';
   if (size === 'large') return 'l';
   return size;
+}
+
+/**
+ * Attribute converter for an OPT-IN `size` — the shape a component adopts when the ladder reaches
+ * it after release. An unsupported value must resolve to *absent*, not to a tier: the component
+ * renders its original pre-ladder geometry while `size` is unset, so snapping `size="huge"` to `m`
+ * would silently restyle markup whose author asked for nothing of the sort. Contrast
+ * `literalSetConverter`, which is right for a property that always resolves to a tier.
+ *
+ * The value list is also the runtime parse guard, so it cannot drift from `LyraSize` above.
+ */
+export const optionalSizeConverter = optionalLiteralSetConverter<LyraSize>([
+  '2xs',
+  'xs',
+  's',
+  'm',
+  'l',
+  'xl',
+  'small',
+  'medium',
+  'large',
+]);
+
+/** Parses either spelling of a size; anything else reads as no size at all. */
+export const parseOptionalSize = optionalSizeConverter.normalize;
+
+/**
+ * Normalizes a write to an opt-in `size` and keeps an already-present attribute in step with it,
+ * so an unsupported value leaves neither a stale attribute for the tier selectors to match nor a
+ * bogus property readback. An absent attribute stays absent — reflection is Lit's job, not this
+ * helper's. Named for the one attribute it serves so call sites read as a ladder concern; the
+ * generic form for any opt-in closed set is `optionalLiteralSetConverter().normalizeReflected`.
+ */
+export function normalizeReflectedOptionalSize(
+  host: Element,
+  value: unknown,
+): LyraSize | undefined {
+  return optionalSizeConverter.normalizeReflected(host, 'size', value);
 }

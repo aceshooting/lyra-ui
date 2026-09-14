@@ -54,6 +54,70 @@ export function literalSetConverter<const T extends string>(
   });
 }
 
+/**
+ * A closed-string-set converter whose UNSET state is a real state rather than a fallback value.
+ */
+export interface OptionalLiteralSetConverter<T extends string>
+  extends ComplexAttributeConverter<T | undefined> {
+  /** Returns `value` when it belongs to the declared set, otherwise `undefined`. */
+  readonly normalize: (value: unknown) => T | undefined;
+  /**
+   * Normalizes a reflected write and repairs a foreign raw attribute value, REMOVING the attribute
+   * when the write resolves to unset. An absent attribute stays absent -- adding it is Lit's job.
+   */
+  readonly normalizeReflected: (
+    host: Element,
+    attribute: string,
+    value: unknown
+  ) => T | undefined;
+}
+
+/**
+ * Creates one fail-safe contract for a reflected OPT-IN closed string property -- the shape a
+ * component adopts when a shared vocabulary reaches it after release.
+ *
+ * The difference from {@linkcode literalSetConverter} is where an unsupported value lands. That one
+ * is right whenever the property always resolves to a member, so a typo falls back to the declared
+ * default. This one is right whenever the component has a distinct pre-vocabulary rendering it must
+ * keep: snapping `size="huge"` to `m` would silently restyle markup whose author asked for nothing
+ * of the sort, so an unsupported value resolves to *absent* and the stale attribute is removed with
+ * it, leaving no tier selector matching.
+ */
+export function optionalLiteralSetConverter<const T extends string>(
+  values: readonly T[]
+): OptionalLiteralSetConverter<T> {
+  const allowed = new Set<T>(values);
+  if (allowed.size !== values.length) {
+    throw new TypeError('optionalLiteralSetConverter requires unique values');
+  }
+
+  const normalize = (value: unknown): T | undefined =>
+    typeof value === 'string' && allowed.has(value as T) ? (value as T) : undefined;
+
+  const normalizeReflected = (
+    host: Element,
+    attribute: string,
+    value: unknown
+  ): T | undefined => {
+    const normalized = normalize(value);
+    if (
+      host.hasAttribute(attribute) &&
+      host.getAttribute(attribute) !== normalized
+    ) {
+      if (normalized === undefined) host.removeAttribute(attribute);
+      else host.setAttribute(attribute, normalized);
+    }
+    return normalized;
+  };
+
+  return Object.freeze({
+    fromAttribute: normalize,
+    toAttribute: (value: T | undefined): string | null => normalize(value) ?? null,
+    normalize,
+    normalizeReflected,
+  });
+}
+
 const trueUnlessLiteralFalse = (value: string | null): boolean => value !== 'false';
 
 /** Reflects non-empty strings while keeping the empty/default value absent from markup. */

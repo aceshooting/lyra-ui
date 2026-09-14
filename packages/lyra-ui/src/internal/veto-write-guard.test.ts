@@ -1,4 +1,5 @@
-import { expect } from '@open-wc/testing';
+import { expect, fixture, html } from '@open-wc/testing';
+import { LyraElement } from './lyra-element.js';
 import { markVetoGuardWrite, VetoWriteGuard } from './veto-write-guard.js';
 
 describe('VetoWriteGuard', () => {
@@ -141,5 +142,124 @@ describe('VetoWriteGuard', () => {
 
     expect(first.touched).to.equal(true);
     expect(second.touched).to.equal(false);
+  });
+});
+
+/**
+ * The smallest host that uses the guard the way a component does: one accessor-backed property
+ * that marks every write, and a `decide()` that opens the guard immediately before a synchronous
+ * cancelable `emit()` and reads it back immediately after.
+ *
+ * Deliberately no `disconnectedCallback()` reset. The guard carries no mount-scoped state that a
+ * disconnect could strand: `open()` immediately before each dispatch is the whole contract, and a
+ * host that clears the flag on the way out would be testing its own extra code rather than the
+ * primitive's.
+ */
+class VetoWriteGuardProbe extends LyraElement {
+  readonly guard = new VetoWriteGuard();
+
+  private _value: string | null = null;
+
+  get value(): string | null {
+    return this._value;
+  }
+
+  set value(next: string | null) {
+    this._value = next;
+    markVetoGuardWrite(this.guard);
+  }
+
+  /** Mirrors confirm-bar's `decide()`: self-resolve only when the vetoing listener wrote nothing. */
+  decide(next: string): void {
+    this.guard.open();
+    const event = this.emit('x-probe-decide', { next }, { cancelable: true });
+    if (event.defaultPrevented) {
+      if (!this.guard.touched) this.value = `pending:${next}`;
+      return;
+    }
+    this.value = next;
+  }
+}
+
+if (!customElements.get('x-veto-write-guard-probe')) {
+  customElements.define('x-veto-write-guard-probe', VetoWriteGuardProbe);
+}
+
+describe('VetoWriteGuard inside an element', () => {
+  const probeFixture = async (): Promise<VetoWriteGuardProbe> =>
+    fixture<VetoWriteGuardProbe>(html`<x-veto-write-guard-probe></x-veto-write-guard-probe>`);
+
+  it('lets a vetoing listener that wrote during dispatch keep its own resolution', async () => {
+    const probe = await probeFixture();
+    probe.addEventListener(
+      'x-probe-decide',
+      (event) => {
+        event.preventDefault();
+        probe.value = 'resolved-out-of-band';
+      },
+      { once: true },
+    );
+
+    probe.decide('approve');
+
+    expect(probe.value).to.equal('resolved-out-of-band');
+    expect(probe.guard.touched).to.equal(true);
+  });
+
+  it('applies its own pending bookkeeping when the vetoing listener writes nothing', async () => {
+    const probe = await probeFixture();
+    probe.addEventListener(
+      'x-probe-decide',
+      (event) => {
+        event.preventDefault();
+      },
+      { once: true },
+    );
+
+    probe.decide('approve');
+
+    expect(probe.value).to.equal('pending:approve');
+  });
+
+  it('settles a decision made after a reconnect from this mount alone, not the previous one', async () => {
+    const probe = await probeFixture();
+    const parent = probe.parentNode;
+    if (parent === null) throw new Error('the fixture did not mount the probe inside a parent');
+
+    // A decision whose vetoing listener wrote out of band.
+    probe.addEventListener(
+      'x-probe-decide',
+      (event) => {
+        event.preventDefault();
+        probe.value = 'resolved-out-of-band';
+      },
+      { once: true },
+    );
+    probe.decide('approve');
+    expect(probe.value).to.equal('resolved-out-of-band');
+
+    probe.remove();
+    parent.append(probe);
+    await probe.updateComplete;
+
+    // The recorded write outlives the decision, the disconnect and the remount: `open()` is the
+    // only thing that ever clears it, and nothing in the primitive hooks a lifecycle callback.
+    // Asserting that explicitly is what makes the next assertion load-bearing rather than vacuous.
+    expect(probe.guard.touched, 'the previous write survives the remount').to.equal(true);
+
+    // Which is safe only because `decide()` opens the guard before every dispatch. This mount's
+    // listener vetoes and writes nothing, so the host's own pending bookkeeping must still run.
+    // Drop `decide()`'s leading `open()` and the stale `true` above reads as this listener's
+    // write, leaving the value at 'resolved-out-of-band'.
+    probe.addEventListener(
+      'x-probe-decide',
+      (event) => {
+        event.preventDefault();
+      },
+      { once: true },
+    );
+    probe.decide('deny');
+
+    expect(probe.value).to.equal('pending:deny');
   });
 });
