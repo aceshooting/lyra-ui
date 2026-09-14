@@ -1831,3 +1831,99 @@ describe('fine-grained Shiki immutable snapshot reuse', () => {
     cacheExpect(await load(first!.languages) === shared).to.equal(true);
   });
 });
+
+describe("fill chain (block-size)", () => {
+  it("fills a bounded parent through the base and body chain with no header", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="block-size: 240px; inline-size: 320px">
+        <lr-code-block-core
+          copyable="false"
+          .code=${"const answer = 42;"}
+        ></lr-code-block-core>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-code-block-core") as LyraCodeBlockCore;
+    await el2Ready(el);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const expected = wrapper.getBoundingClientRect().height;
+
+    expect(el.shadowRoot!.querySelector('[part="header"]')).to.equal(null);
+    expect(el.getBoundingClientRect().height, "host").to.be.closeTo(
+      expected,
+      1
+    );
+    expect(base.getBoundingClientRect().height, "base").to.be.closeTo(
+      expected,
+      1
+    );
+    expect(body.getBoundingClientRect().height, "body").to.be.closeTo(
+      expected,
+      1
+    );
+  });
+
+  it("keeps a header inside a definite-height host instead of overflowing it, with body filling what's left", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="block-size: 240px; inline-size: 320px">
+        <lr-code-block-core
+          filename="answer.ts"
+          .code=${"const answer = 42;"}
+        ></lr-code-block-core>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-code-block-core") as LyraCodeBlockCore;
+    await el2Ready(el);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const expected = wrapper.getBoundingClientRect().height;
+
+    expect(base.getBoundingClientRect().height, "base").to.be.closeTo(
+      expected,
+      1
+    );
+    expect(
+      header.getBoundingClientRect().height + body.getBoundingClientRect().height,
+      "header + body stay within the host instead of overflowing it"
+    ).to.be.closeTo(expected, 2);
+  });
+
+  it("leaves an ordinary auto-height host content-sized, so the fill chain is a no-op by default", async () => {
+    const el = (await fixture(
+      html`<lr-code-block-core
+        copyable="false"
+        .code=${"const answer = 42;"}
+      ></lr-code-block-core>`
+    )) as LyraCodeBlockCore;
+    await el2Ready(el);
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    expect(
+      body.getBoundingClientRect().height,
+      "still the intrinsic content height, not stretched to the viewport"
+    ).to.be.lessThan(200);
+  });
+
+  it("keeps max-height capping the body inside a definite-height host", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="block-size: 400px; inline-size: 320px">
+        <lr-code-block-core
+          copyable="false"
+          max-height="3rem"
+          .code=${Array.from({ length: 20 }, (_, index) => `line ${index}`).join(
+            "\n"
+          )}
+        ></lr-code-block-core>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-code-block-core") as LyraCodeBlockCore;
+    await el2Ready(el);
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const max = parseFloat(getComputedStyle(body).maxBlockSize);
+    expect(
+      body.getBoundingClientRect().height,
+      "the max-height attribute still caps the body, not the host's own 400px"
+    ).to.be.at.most(max + 0.5);
+    expect(getComputedStyle(body).overflowY).to.equal("auto");
+  });
+});

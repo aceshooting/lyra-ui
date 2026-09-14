@@ -1918,3 +1918,76 @@ it('keeps the z-index fallback usable when browser top-layer methods reject', as
     (el as unknown as { enterTopLayer(): void }).enterTopLayer();
   }).to.not.throw();
 });
+
+it('leaves the panel content-sized when --lr-dialog-height is unset, so the fill chain is a no-op by default', async () => {
+  const el = (await fixture(html`
+    <lr-dialog open label="Untitled" style="--lr-duration-base: 0ms">Short body</lr-dialog>
+  `)) as LyraDialog;
+  try {
+    await el.updateComplete;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(
+      body.getBoundingClientRect().height,
+      'still the intrinsic content height, not stretched to fill the flex column'
+    ).to.be.lessThan(100);
+  } finally {
+    await el.close('api');
+  }
+});
+
+it('gives the body a definite, fillable block size via --lr-dialog-height while header and footer keep their natural size', async () => {
+  const el = (await fixture(html`
+    <lr-dialog
+      open
+      label="Untitled"
+      style="--lr-dialog-height: 300px; --lr-duration-base: 0ms"
+    >
+      <p>Line</p>
+      <div slot="footer"><button type="button">Close</button></div>
+    </lr-dialog>
+  `)) as LyraDialog;
+  try {
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+    const panelHeight = parseFloat(getComputedStyle(panel).blockSize);
+    expect(panelHeight, 'panel resolves --lr-dialog-height').to.be.closeTo(300, 1);
+
+    const sum =
+      header.getBoundingClientRect().height +
+      body.getBoundingClientRect().height +
+      footer.getBoundingClientRect().height;
+    expect(
+      sum,
+      'header + body + footer stay within the panel instead of overflowing it'
+    ).to.be.closeTo(panelHeight, 2);
+    expect(
+      body.getBoundingClientRect().height,
+      'body is smaller than the full panel once header/footer take their own share'
+    ).to.be.lessThan(panelHeight);
+  } finally {
+    await el.close('api');
+  }
+});
+
+it('still caps --lr-dialog-height at the viewport via max-block-size: 100%', async () => {
+  const el = (await fixture(html`
+    <lr-dialog
+      open
+      label="Untitled"
+      style="--lr-dialog-height: 999999px; --lr-duration-base: 0ms"
+      >Body</lr-dialog
+    >
+  `)) as LyraDialog;
+  try {
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    expect(panel.getBoundingClientRect().height).to.be.at.most(
+      window.innerHeight + 1
+    );
+  } finally {
+    await el.close('api');
+  }
+});

@@ -72,6 +72,13 @@ export const styles = css`
       ),
       100%
     );
+    /* --lr-dialog-height is an assertive height (unset/auto by default -- the panel shrink-wraps
+       to content, unchanged), always capped by max-block-size below and by the viewport, mirroring
+       --lr-dialog-width's own pairing with --lr-dialog-max-width. With it set, [part="body"]'s own
+       flex: 1 1 auto below is what actually gives slotted content a resolvable, fillable block
+       size: [part="header"] and [part="footer"] keep their natural size and only the body grows or
+       shrinks to the remaining space. */
+    block-size: var(--lr-dialog-height, auto);
     max-block-size: 100%;
     /* The modal-panel surface, NOT the page surface: in dark mode --lr-color-surface is the same
        near-black as the page behind the scrim, so a dialog painted with it reads as a scrim with
@@ -175,6 +182,10 @@ export const styles = css`
     display: block;
   }
   [part="body"] {
+    /* Grows into whatever block space [part~="panel"] has left once header/footer take their own
+       natural size -- a no-op while the panel itself is content-sized (today's default), and what
+       gives slotted content a definite, fillable block size once --lr-dialog-height is set. */
+    flex: 1 1 auto;
     min-inline-size: 0;
     max-inline-size: 100%;
     padding: var(

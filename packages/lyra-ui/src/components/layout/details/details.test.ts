@@ -1699,3 +1699,90 @@ describe("Web Awesome disclosure surface", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe("fill chain (block-size)", () => {
+  it("fills a bounded, open host through the base and content-gate chain", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="block-size: 240px; inline-size: 320px">
+        <lr-details summary="More" open>Panel content</lr-details>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-details") as LyraDetails;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    const gate = contentGateOf(el);
+    const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+    const expected = wrapper.getBoundingClientRect().height;
+
+    expect(el.getBoundingClientRect().height, "host").to.be.closeTo(expected, 1);
+    expect(base.getBoundingClientRect().height, "base").to.be.closeTo(expected, 1);
+    expect(
+      header.getBoundingClientRect().height + gate.getBoundingClientRect().height,
+      "header + content gate stay within the host instead of overflowing it"
+    ).to.be.closeTo(expected, 2);
+    expect(
+      content.getBoundingClientRect().height,
+      "content fills the gate it sits inside"
+    ).to.be.closeTo(gate.getBoundingClientRect().height, 1);
+  });
+
+  it("lets long panel content scroll inside the content gate instead of overflowing a bounded host", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="block-size: 160px; inline-size: 320px">
+        <lr-details summary="More" open
+          >${Array.from({ length: 40 }, (_, i) => html`<p>Line ${i}</p>`)}</lr-details
+        >
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-details") as LyraDetails;
+    await el.updateComplete;
+    const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+    expect(
+      content.scrollHeight,
+      "content overflows its own bounded box"
+    ).to.be.greaterThan(content.clientHeight);
+    expect(
+      content.getBoundingClientRect().bottom,
+      "content stays within the bounded host instead of pushing past it"
+    ).to.be.at.most(wrapper.getBoundingClientRect().bottom + 1);
+  });
+
+  it("leaves an ordinary auto-height host content-sized, so the fill chain is a no-op by default", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More" open>Short content</lr-details>`
+    )) as LyraDetails;
+    await el.updateComplete;
+    const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+    expect(
+      content.getBoundingClientRect().height,
+      "still the intrinsic content height, not stretched to the viewport"
+    ).to.be.lessThan(100);
+  });
+
+  it("still animates open and closed with the fill chain in place", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    const gate = contentGateOf(el);
+    expect(gate.getAttribute("hidden")).to.equal("until-found");
+
+    const openEvents: string[] = [];
+    for (const name of ["lr-show", "lr-toggle", "lr-after-show"]) {
+      el.addEventListener(name, () => openEvents.push(name));
+    }
+    await el.show();
+    expect(openEvents).to.deep.equal(["lr-show", "lr-toggle", "lr-after-show"]);
+    expect(el.open).to.equal(true);
+    expect(gate.hasAttribute("hidden")).to.equal(false);
+
+    const closeEvents: string[] = [];
+    for (const name of ["lr-hide", "lr-toggle", "lr-after-hide"]) {
+      el.addEventListener(name, () => closeEvents.push(name));
+    }
+    await el.hide();
+    expect(closeEvents).to.deep.equal(["lr-hide", "lr-toggle", "lr-after-hide"]);
+    expect(el.open).to.equal(false);
+    expect(gate.getAttribute("hidden")).to.equal("until-found");
+  });
+});

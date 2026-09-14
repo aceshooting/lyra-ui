@@ -3,9 +3,22 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    /* A percentage block-size against an auto-height ancestor resolves to auto, so this is a
+       no-op for the content-sized default; it bites only once an ancestor gives this host a
+       definite block size. The chain must continue through [part='base'] and [part='body']
+       below or the fill breaks at whichever one is missing it. */
+    block-size: 100%;
     font-size: var(--lr-font-size-sm);
   }
   [part='base'] {
+    display: flex;
+    flex-direction: column;
+    /* Chain continued from :host -- flex-direction: column keeps [part='header'] at its natural
+       size while [part='body'] below grows to fill whatever is left. box-sizing: border-box keeps
+       this element's own border from pushing its rendered size past exactly 100% of :host, the
+       same reasoning file-input.styles.ts's own bordered [part~="base"] documents. */
+    box-sizing: border-box;
+    block-size: 100%;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -138,6 +151,11 @@ export const styles = css`
   }
   [part='body'] {
     display: block;
+    /* Continues the chain from [part='base'] -- a no-op default (see :host's comment); the
+       max-block-size cap and overflow below are unaffected either way, and still apply on top of
+       whatever height this resolves to. */
+    flex: 1 1 auto;
+    block-size: 100%;
     max-block-size: var(--lr-code-block-max-height, none);
     overflow: auto;
   }

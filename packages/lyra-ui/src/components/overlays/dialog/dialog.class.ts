@@ -192,7 +192,10 @@ export interface LyraDialogEventMap {
  * @csspart panel - The dialog panel itself (`role="dialog"` while open); also carries `dialog`.
  *   Shrink-wraps to its
  *   content by default, capped at `--lr-dialog-max-width` (default `32rem`); set
- *   `--lr-dialog-width` for an assertive width instead of only a cap.
+ *   `--lr-dialog-width` for an assertive width instead of only a cap. `--lr-dialog-height` is the
+ *   same idea on the block axis: left unset the panel stays content-sized (capped at the
+ *   viewport), and set it gives `body` a definite size to fill and scroll within while `header`/
+ *   `footer` keep their natural size.
  * @csspart dialog - Web Awesome alias on the panel.
  * @csspart header - The header row, rendered when the `label` slot is filled, `label`/`heading`
  *   is set (and no heading is slotted into the default slot), `header-actions` is filled, and/or
@@ -224,6 +227,12 @@ export interface LyraDialogEventMap {
  * @cssprop [--lr-dialog-max-width=var(--lr-dialog-width, var(--lr-size-32rem))] - Cap on the
  *   panel's inline size. Falls back to `--lr-dialog-width` when that is set, so an assertive width
  *   is not clipped by the 32rem default; the viewport (`100%`) is always a hard limit on top.
+ * @cssprop [--lr-dialog-height=auto] - Assertive block size for the panel, mirroring
+ *   `--lr-dialog-width` on the other axis. Left at `auto` the panel shrink-wraps to its content,
+ *   unchanged from before this property existed; always capped at `100%` (the viewport) like
+ *   every other panel dimension. With it set, `body`'s own `flex: 1 1 auto` is what actually gives
+ *   slotted content a definite, fillable block size -- `header` and `footer` keep their natural
+ *   size and only `body` grows or shrinks into the remaining space.
  * @cssprop [--lr-dialog-spacing=var(--lr-space-l)] - Padding inside the body, and the inline
  *   padding of the header and footer rows.
  * @cssprop [--lr-dialog-spacing-block=var(--lr-space-m)] - Block padding of the header and footer

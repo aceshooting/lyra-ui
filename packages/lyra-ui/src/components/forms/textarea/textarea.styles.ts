@@ -4,6 +4,12 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 export const styles = css`
   :host {
     display: block;
+    /* A percentage block-size against an auto-height ancestor resolves to auto, so this is a
+       no-op for the content-sized default; it bites only once an ancestor gives this host a
+       definite block size. The chain must continue through [part="form-control"],
+       [part~="textarea-wrapper"] and [part="textarea"] below or the fill breaks at whichever one
+       is missing it. */
+    block-size: 100%;
     --_lr-textarea-max-block-size: none;
     /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, loaded ahead of this
        sheet by textarea.class.ts), so this field and lr-input share one scale. Its INLINE gutter
@@ -49,6 +55,15 @@ export const styles = css`
     --_lr-textarea-fill: var(--lr-color-brand-quiet);
     --_lr-textarea-border-color: var(--lr-color-brand);
   }
+  [part="form-control"] {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    /* Chain continued from :host -- a no-op until :host has a definite block size (see its own
+       comment above). flex-direction: column keeps the label/error/hint/footer at their natural
+       size while [part~="textarea-wrapper"] below grows to fill whatever is left. */
+    block-size: 100%;
+  }
   [part="form-control-label"] {
     display: block;
     margin-block-end: var(--lr-space-xs);
@@ -62,14 +77,25 @@ export const styles = css`
   }
   ${formControlRequiredMarker}
   /* A plain block box: the native resize grip writes inline width/height onto the <textarea>
-     itself, so the wrapper imposes no size and lets the field drive it. */
+     itself, so the wrapper imposes no size and lets the field drive it -- except for the block
+     axis, continued unconditionally from [part="form-control"] below so a definite-height host
+     can reach the textarea itself. flex/min-block-size: 0 let this item shrink inside the
+     form-control column instead of being floored at the textarea's own intrinsic content size. */
   [part~='textarea-wrapper'] {
     display: block;
+    flex: 1 1 auto;
     min-inline-size: 0;
+    min-block-size: 0;
+    block-size: 100%;
   }
   [part="textarea"] {
     display: block;
     inline-size: 100%;
+    /* Continues the chain from [part~="textarea-wrapper"] -- a no-op default (see :host's
+       comment), and superseded by fitToContent()'s own inline style whenever resize="auto" is
+       actively managing this element's height. The [data-auto-resize] max-block-size cap below is
+       unaffected either way. */
+    block-size: 100%;
     box-sizing: border-box;
     padding: var(--lr-textarea-padding, var(--_lr-textarea-padding));
     border: var(--lr-border-width-thin) solid

@@ -1893,3 +1893,94 @@ it("mirrors the lowercase IDL aliases of the native input hints", async () => {
   expect(el.inputmode).to.equal("");
   expect(el.enterkeyhint).to.equal("");
 });
+
+it("fills a bounded parent through the form-control, textarea-wrapper, and textarea chain", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="block-size: 320px; inline-size: 320px">
+      <lr-textarea label="Notes" hint="Keep it brief"></lr-textarea>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-textarea") as LyraTextarea;
+  await el.updateComplete;
+  const formControl = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part="form-control"]'
+  )!;
+  const wrapperPart = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part~="textarea-wrapper"]'
+  )!;
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>(
+    '[part="textarea"]'
+  )!;
+  const expected = wrapper.getBoundingClientRect().height;
+
+  for (const [name, node] of [
+    ["host", el],
+    ["form control", formControl],
+  ] as const) {
+    expect(
+      node.getBoundingClientRect().height,
+      `${name} participates in the full-height chain`
+    ).to.be.closeTo(expected, 1);
+  }
+  // The label above the field takes its own natural height first, so the wrapper only fills
+  // whatever the form-control has left -- not the full host height.
+  expect(
+    wrapperPart.getBoundingClientRect().height,
+    "textarea-wrapper fills the remaining space, not the whole host"
+  ).to.be.lessThan(expected);
+  expect(
+    textarea.getBoundingClientRect().height,
+    "the native textarea fills its wrapper"
+  ).to.be.closeTo(wrapperPart.getBoundingClientRect().height, 1);
+});
+
+it("leaves an ordinary auto-height host content-sized, so the fill chain is a no-op by default", async () => {
+  // Explicit no-regression guard for the unconditional block-size: 100% chain: a percentage
+  // block size against an auto-height ancestor must resolve to auto, leaving the default
+  // rows-sized field exactly as it was.
+  const el = await fixture<LyraTextarea>(html`<lr-textarea></lr-textarea>`);
+  await el.updateComplete;
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>(
+    '[part="textarea"]'
+  )!;
+  expect(
+    textarea.getBoundingClientRect().height,
+    "still the intrinsic rows-sized field, not stretched to the viewport"
+  ).to.be.lessThan(200);
+});
+
+it('keeps resize="auto" growing and capping correctly inside a definite-height host', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="block-size: 400px; inline-size: 320px">
+      <lr-textarea
+        resize="auto"
+        rows="1"
+        style="--lr-textarea-max-block-size: 3rem"
+      ></lr-textarea>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-textarea") as LyraTextarea;
+  const ta = el.shadowRoot!.querySelector(
+    '[part="textarea"]'
+  ) as HTMLTextAreaElement;
+  const initialHeight = ta.getBoundingClientRect().height;
+  ta.value = "line one\nline two\nline three";
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+  await el.updateComplete;
+  expect(
+    ta.getBoundingClientRect().height,
+    "still grows past its initial single-row height"
+  ).to.be.greaterThan(initialHeight);
+
+  ta.value = Array.from({ length: 20 }, (_, index) => `line ${index}`).join(
+    "\n"
+  );
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+  await el.updateComplete;
+  const max = parseFloat(getComputedStyle(ta).maxBlockSize);
+  expect(
+    ta.getBoundingClientRect().height,
+    "still respects --lr-textarea-max-block-size, not the host's own 400px"
+  ).to.be.at.most(max + 0.5);
+  expect(getComputedStyle(ta).overflowY).to.equal("auto");
+});
