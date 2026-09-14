@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -166,6 +166,15 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   combobox, and option children. Default: `var(--lr-space-xs)`.
 - `--lr-voice-picker-radius` — Trigger, combobox, listbox, option, and preview-action corner radius.
   Default: `var(--lr-form-control-radius)`.
+- `--lr-overlay-surface` — Shared floating-surface fill, on the listbox. Default:
+  `var(--lr-color-surface-overlay)`.
+- `--lr-overlay-border` — Shared floating-surface edge colour, on the listbox. Default:
+  `var(--lr-color-border)`.
+- `--lr-overlay-radius` — Shared floating-surface corner radius, reached only as the middle arm of
+  `--lr-voice-picker-radius`, which still wins when set. Default: `var(--lr-radius)`.
+- `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
+  None of the four is declared on `:host`, so one declaration on `:root` — or on any ancestor, to
+  scope it — retints this listbox together with every other floating surface in the library.
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.

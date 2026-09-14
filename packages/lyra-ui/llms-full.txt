@@ -810,7 +810,7 @@ inside a Lyra UI without looking foreign:
 | Geometry              | `--lr-radius-xs`, `--lr-radius`, `--lr-radius-pill`, `--lr-border-width-thin`, `--lr-border-width-medium`, `--lr-border-width-thick`                                                                                       |
 | Elevation             | `--lr-shadow-color`, `--lr-shadow-xs`, `--lr-shadow-s`, `--lr-shadow-m`, `--lr-shadow-l`, `--lr-shadow-xl`, `--lr-shadow`                                                                                                  |
 | Typography            | `--lr-font`, `--lr-font-mono`, the ten `--lr-font-size-*` steps, the four `--lr-font-weight-*` steps                                                                                                                        |
-| State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base` |
+| State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base`, `--lr-interactive-transition` |
 
 The grid ships whole because its contrast guarantee is **per tier** — a `fill-quiet` background is
 only guaranteed legible under the matching `on-quiet` foreground — so shipping the flat aliases
@@ -4607,6 +4607,22 @@ standard size supplies an aligned default), plus shared tokens. `--lr-combobox-g
 `--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
 the properties above, do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
 
+The trigger row's own surface became public in 16.0.0, having been a private pair until then:
+`--lr-combobox-fill` (default `var(--lr-color-surface)`) and `--lr-combobox-border-color` (default
+`var(--lr-color-border)`). The `filled`/`filled-outlined` treatments default the fill to
+`var(--lr-color-surface-raised)` and `filled` defaults the border to `transparent`; a value set
+here wins over every treatment. `--lr-combobox-open-border-color` (default
+`var(--lr-color-brand)`) recolors the row's edge while it holds focus, which was a hardcoded brand
+border before. Read the name as the state the listbox opens in rather than as a synonym for `open`:
+it is bound to `:focus-within`, so it also paints on a focused row whose listbox is closed — after
+an Escape dismissal, say. It is named for symmetry with `lr-select`'s
+`--lr-select-open-border-color`, which really is gated on `open`.
+
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
+while this control is focused — one name for every field-shaped control in the library, so a
+halo is configured once instead of per component. It is additive: the focus outline and
+border cue are the accessibility answer to focus and are never replaced by it.
+
 `--lr-combobox-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of
 a hovered or keyboard-active `[part='option']` row — the same per-component indirection
 `lr-select`'s identical `--lr-select-option-active-bg` uses, so a consumer can retheme just this
@@ -4619,6 +4635,14 @@ and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`)
 four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
 Like the active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer
 can retheme the selected row without hijacking `--lr-color-brand` library-wide.
+
+The listbox popup itself is a floating surface and paints from the **shared overlay-surface family**
+(16.0.0), not from the page surface every card and input reads: `--lr-overlay-surface` (default
+`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
+`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
+ancestor, to scope it — retints this popup together with every other floating surface, and none of
+it touches the trigger row the popup drops from.
 
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
@@ -5006,6 +5030,27 @@ default to `--lr-radius-pill`. `--lr-select-tag-padding`
 **not** vary by `size` tier, and inherited or direct public values win.
 Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
 `--hide-duration` cap one tag and independently retime the two popup directions.
+
+The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
+declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
+other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+
+The trigger's own resting surface has hooks as of 16.0.0: `--lr-select-trigger-fill` (default
+`var(--lr-color-surface)`) and `--lr-select-trigger-border-color` (default
+`var(--lr-color-border)`). Both are read by **every** appearance, each falling back to that
+appearance's own default (`var(--lr-color-surface-raised)` for `filled`/`filled-outlined`,
+`transparent` for `plain`, `var(--lr-color-brand)` for `accent`), so one value retints the trigger
+whichever treatment it is wearing. `--lr-select-trigger-hover-border-color` (default: the resting
+`--lr-select-trigger-border-color`) moves the edge under the pointer; unset, the hovered border
+stays exactly where the resting state left it, as it always has.
+
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
+while this control is focused — one name for every field-shaped control in the library, so a
+halo is configured once instead of per component. It is additive: the focus outline and
+border cue are the accessibility answer to focus and are never replaced by it.
 
 The trigger's pointer/open states have component-scoped hooks too:
 `--lr-select-trigger-hover-bg` (default `var(--lr-color-brand-quiet)` for the quiet appearances),
@@ -5554,6 +5599,13 @@ and `dateTimeFormat(locale, options)`.
 - `--lr-date-input-gap` — Gap between input-row children. Default: `var(--lr-space-xs)`.
 - `--lr-date-input-radius` — Input-row corner radius. Default: `var(--lr-radius)`.
 - `--lr-date-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-date-input-fill` — Resting input-row background, public since 16.0.0 (the radius beside it
+  always was). Default: `var(--lr-color-surface)`, or `var(--lr-color-surface-raised)` under the
+  `filled`/`filled-outlined` treatments; a value set here wins over every treatment.
+- `--lr-date-input-border-color` — Resting input-row border color. Default:
+  `var(--lr-color-border)`, or `transparent` under `filled`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the row
+  holds focus. Default: `none`. Additive — the focused brand border is never replaced by it.
 
 ---
 
@@ -5767,6 +5819,10 @@ With no label text the part is hidden and no glyph is painted.
 - `--lr-textarea-hover-border-color` (default `var(--lr-color-brand)`) — the field border while the
   native textarea is hovered, independent of its resting border and every other brand-colored
   component state.
+- `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
+  `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
+  so a halo is configured once instead of per component; additive, so the `:focus-visible` outline
+  is untouched.
 
 `<lr-textarea>` now fills a definite-height host: place it inside a container with a resolved
 block size (a flex/grid item stretched to a track, or an ancestor with an explicit height) and
@@ -6476,7 +6532,10 @@ their private fallback roles rather than the public hooks, and the documented de
 `appearance="outlined"`'s values. Ancestor theme wrappers therefore still win. Setting either
 directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
-`--lr-input-focus-border-color` independently retunes the focused row. Built-in clear/password
+`--lr-input-focus-border-color` independently retunes the focused row, and the shared field halo
+`--lr-form-control-focus-shadow` (default `none`) adds a `box-shadow` layer while the row holds
+focus — one name for every field-shaped control in the library, additive rather than a replacement
+for the focused border. Built-in clear/password
 actions and `lr-number-input` steppers share `--lr-input-action-color`,
 `--lr-input-action-hover-color`, `--lr-input-action-active-color`, and
 `--lr-input-action-active-bg`; all fall back to the previous text/surface semantic tokens.
@@ -6920,6 +6979,26 @@ undeclared on the host so ancestor themes work. The upstream-compatible `--colum
 Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
 duration-token fallbacks.
 
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while
+this control is focused or open — one name for every field-shaped control in the library, so a halo
+is configured once instead of per component. It is additive: the focus outline and the
+`--lr-time-input-focus-border-color` edge are the accessibility answer to focus and are never
+replaced by it.
+
+The `popup` panel is a floating surface and paints from the **shared overlay-surface family**
+(16.0.0): `--lr-overlay-surface`, `--lr-overlay-border` (default `var(--lr-color-border)`),
+`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
+ancestor, to scope it — retints this panel together with every other floating surface in the
+library. One deliberate difference from the rest of the family: `--lr-overlay-surface` defaults here
+to `var(--lr-color-surface-raised)` rather than the family's own
+`var(--lr-color-surface-overlay)`. The picker is a dense grid of time cells dropped from a field,
+and the raised tone is what separates it from the field's fill — `--lr-color-surface-overlay`
+resolves to the plain page surface in light mode and would erase that separation, while in dark
+mode the raised tone is already distinct from the page, so this panel never had the
+reads-as-a-hole problem the family exists to fix. Setting `--lr-overlay-surface` still repaints it
+along with every other popup.
+
 ```html
 <lr-time-input
   label="Start time"
@@ -7250,6 +7329,14 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - `--lr-phone-input-gap` — Country-trigger child gap. Default: `var(--lr-space-xs)`.
 - `--lr-phone-input-radius` — Input-wrapper corner radius. Default: `var(--lr-radius)`.
 - `--lr-phone-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-phone-input-fill` — Resting input-row background, public since 16.0.0. Default:
+  `var(--lr-color-surface)`.
+- `--lr-phone-input-border-color` — Resting input-row border color. Default:
+  `var(--lr-color-border)`. The invalid and focused states keep their own hooks and still win
+  over it.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  row holds focus. Default: `none`. Additive — the focus outline and the focused border are
+  never replaced by it.
 - `--lr-phone-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
 - `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 
@@ -8995,6 +9082,14 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-remove-hover-bg` / `--lr-token-input-remove-pressed-bg` — Remove-action hover
   and pressed backgrounds, with the same aggregate-hover and active-state fallbacks.
 - `--lr-token-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-token-input-fill` — Resting input-row background, public since 16.0.0. Default:
+  `var(--lr-color-surface)`.
+- `--lr-token-input-border-color` — Resting input-row border color. Default:
+  `var(--lr-color-border)`. The invalid and focused states keep their own hooks and still win
+  over it.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  row holds focus. Default: `none`. Additive — the focus outline and the focused border are
+  never replaced by it.
 - `--lr-token-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
 
 ## `lr-code-editor`
@@ -9349,6 +9444,13 @@ colour painted on the trigger, preview, slider handles and palette swatches),
 `--lr-color-picker-grid-hue` (the grid's fully-saturated base hue), and
 `--lr-color-picker-opacity-gradient` (the opacity ramp's transparent-to-opaque gradient, built from
 the current colour and text direction). Read them if you need the resolved colour; don't assign them.
+
+The popup panel is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
+`--lr-color-picker-radius`, which still wins when set.
 
 **Additional API surface:**
 
@@ -9797,6 +9899,14 @@ floor-only escape hatch — set a length to both floor and cap the trigger),
 `--lr-locale-picker-option-selected-font-weight`. The state hooks fall back to the previous brand,
 quiet-brand, and semibold semantic tokens.
 
+The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`), none of
+them declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints
+this listbox together with every other floating surface. `--lr-overlay-radius` reaches the listbox
+only as the middle arm of this component's own `--lr-locale-picker-radius`, which still wins when
+set: a component-scoped override outranks the shared family, never the other way round.
+
 **Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
 peer warning duplication; `lr-flag` itself already logs one) when the optional
 `@aceshooting/lyra-flags` package isn't installed and `showFlags` is left on.
@@ -9835,6 +9945,15 @@ resolver. Menu labels stay visible; a per-entry `country` override also reaches 
 - `--lr-locale-picker-radius` — Trigger/listbox/option corner radius. Default: `var(--lr-radius)`.
 - `--lr-locale-picker-trigger-hover-bg` — Trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-locale-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
+- `--lr-locale-picker-trigger-fill` — Resting trigger background. Default: `var(--lr-color-surface)`.
+- `--lr-locale-picker-trigger-border-color` — Resting trigger border color. Default:
+  `var(--lr-color-border)`.
+- `--lr-locale-picker-trigger-hover-border-color` — Trigger border color under the pointer. Default:
+  the resting `--lr-locale-picker-trigger-border-color`, so an unset hook leaves the hovered border
+  exactly where it has always been.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  trigger is focused or open. Default: `none`. Additive — the focus outline and the open border are
+  never replaced by it.
 - `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
 
@@ -10972,7 +11091,10 @@ the width committed at drag-end (and only when that width actually differs from 
 A keyboard step (Arrow/Shift+Arrow/Home/End) is already one discrete action, so it fires that single
 cancelable commit directly, with no live-feedback stream. Calling `preventDefault()` on a cancelable
 emission reverts the column to its pre-gesture width (or removes the override entirely if the column
-had never been resized); calling it on a mid-drag step does nothing, by design — a veto is a decision
+had never been resized) — unless the listener also applied a width of its own during that same
+synchronous dispatch, which stands rather than being rolled back over, so a listener may refuse the
+proposed width and resolve the resize its own way in one step. Calling `preventDefault()` on a
+mid-drag step does nothing, by design — a veto is a decision
 about the final width, not about every pixel the pointer passes through.
 The internal filter input's composed native `input`/`change` events are contained; only
 `lr-filter-change` crosses the host boundary. Cell-editor `input`/`change` events are likewise
@@ -11501,6 +11623,14 @@ explicitly empty labels remain empty and later labels render normally.
 - `shape: GaugeShape = 'radial'`, where `GaugeShape = 'radial'|'ring'|'linear'` (reflected —
   `radial` is a 270° sweep; `ring` is a
   full circle that begins at 12 o'clock)
+- `size?: LyraSize` (reflected, unset by default) — density tier on the library's one size ladder:
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'`, or the Web Awesome / Shoelace spellings `'small'|'medium'|'large'`,
+  which are accepted as authored rather than rewritten to the short form. A tier pins the host font
+  size, and because the whole gauge box is expressed in `em` the frame, the stroke geometry and both
+  SVG captions scale together — `8em` square for `radial`/`ring`, `12em` by `1.5em` for `linear`,
+  each multiplied by that tier's font size. Leaving it unset keeps the inherited ambient text size
+  and the exact geometry the gauge rendered before the ladder reached it, so existing markup is
+  untouched. An unsupported value normalizes to the omitted state and removes the attribute.
 - `label: string = ''`
 - `valueText?: string` (attribute `value-text` — overrides both the visible text and the host's
   `aria-valuetext`; an empty string is treated the same as unset and falls back to the numeric
@@ -11578,9 +11708,10 @@ entirely and falls back to the effective variant's shared semantic token —
   reflected attribute; the resolved color is tracked separately so a component reading back
   `variant` always sees the value it set. `--lr-gauge-fill` still overrides both `variant` and
   `thresholds` unconditionally, for a color outside the shared semantic-tone vocabulary.
-- no documented component-specific sizing custom property; host size is fixed em values
-  (`8em` radial/ring, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
-  element instead.
+- no documented component-specific sizing custom property. The host box is fixed em values
+  (`8em` radial/ring, `12em`/`1.5em` linear) against the host font size, so `size` is the supported
+  way to step it; for a dimension off the ladder, set plain CSS `width`/`height` (or `font-size`)
+  on the element instead.
 - Divide-by-zero guarded, and radial/linear share one component via the `shape`
   attribute.
 - non-finite `value` text remains blank unless `valueText` supplies a truthful fallback; that
@@ -17158,8 +17289,17 @@ menu item.
 **CSS parts:** `header`, `list`, and `footer`. Root `trigger` and `popup` parts do not exist;
 style those on `<lr-dropdown>` when using the overlay composition.
 
-**Themeable custom properties:** shared surface, border, radius, spacing, and motion tokens. Row
-chrome is controlled through the menu-item properties listed below.
+**Themeable custom properties:** the standalone menu surface and a submenu's own surface paint from
+the **shared overlay-surface family** (16.0.0) — `--lr-overlay-surface` (default
+`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
+`--lr-overlay-radius` (default `var(--lr-radius)`) and, on the submenu only,
+`--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
+declaration on `:root` (or on any ancestor, to scope it) retints this menu together with every other
+floating surface. A menu contained by `<lr-dropdown>` paints no surface of its own, so the family has
+no effect there — the dropdown's popup carries it. The header/footer dividing rules and a slotted
+`<hr>` deliberately stay on `--lr-color-border`: they separate content rather than draw the
+surface's edge. Otherwise shared spacing and motion tokens. Row chrome is controlled through the
+menu-item properties listed below.
 
 **Methods:** no menu-specific public overlay methods. Use `<lr-dropdown>`'s `show()`/`hide()` and
 `open` state for an overlay. Menu-item submenu methods remain public because they drive a row's
@@ -17255,6 +17395,17 @@ apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked
 hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
 a checked row paints identically to an unchecked one.
 
+Three more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
+byte-identical: `--lr-menu-item-hover-bg` (default `var(--lr-color-brand-quiet)`) is the enabled
+row's fill under the pointer, and the pressed state mixes from that same value, so a retuned hover
+fill keeps its pressed step instead of snapping back to the brand default;
+`--lr-menu-item-icon-color` (default `inherit`) recolours `[part="icon"]` without touching the
+label beside it, so it still follows the row while the row is disabled or `variant="danger"` unless
+you say otherwise; and `--lr-menu-item-min-height` (default
+`max(var(--lr-form-control-height), var(--lr-size-24px))`) sets the row's minimum block size for a
+denser or roomier menu, replacing a `::part(base)` rule per item. A value below the 24px floor is
+your call, exactly as it is when overriding the shared ladder itself.
+
 ### Nested submenus
 
 Both supported authoring shapes use the `submenu` slot:
@@ -17306,6 +17457,13 @@ while a link opening a new context can never lose the guard.
 
 **Events:** native, non-bubbling, composed, non-cancelable `focus` and `blur` (`FocusEvent`) when
 the focusable host gains or loses focus, plus the shared menu-item events above.
+
+**Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
+`--lr-menu-item-hover-bg`, `--lr-menu-item-icon-color` and `--lr-menu-item-min-height`.
+`--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
+because it shares a stylesheet directory with `<lr-menu>`, whose surface reads them; a dropdown item
+is a row **inside** that surface and paints no surface of its own, so setting them here is a no-op —
+set them on the menu or on any ancestor instead. The row's own corner stays `--lr-menu-item-radius`.
 
 `submenuOpen` reflects to canonical `submenu-open`. HTML normalizes Web Awesome's documented
 mixed-case spelling to `submenuopen`, so that lowercase token is a permanent compatibility alias.
@@ -19738,7 +19896,12 @@ explicitly flipped under `:dir(rtl)` since `translateX` is physical. Override to
 the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
 `--lr-dialog-backdrop-filter`, `--lr-dialog-width`, `--lr-dialog-max-width`, `--lr-dialog-spacing`,
 `--lr-dialog-spacing-block`, `--lr-dialog-panel-duration` and `--lr-dialog-backdrop-duration` —
-since `LyraDrawer` extends `LyraDialog`. `--lr-dialog-height` is deliberately **not** among the
+since `LyraDrawer` extends `LyraDialog`, including the shared overlay-surface family the panel
+paints from: `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius` and
+`--lr-overlay-shadow-modal`. The drawer's own `[part~="panel"]` rule squares the corners and steps
+the elevation down to `var(--lr-shadow-l)` — three of its edges are flush with the viewport — so on
+this tag `--lr-overlay-radius` and `--lr-overlay-shadow-modal` are overridden and only the fill and
+edge colour take effect. `--lr-dialog-height` is deliberately **not** among the
 inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
 `block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
 for `top`/`bottom`), which always wins the cascade over `<lr-dialog>`'s `--lr-dialog-height`-driven
@@ -19959,8 +20122,30 @@ the padding inside `[part="body"]` and the _inline_ padding of the header and fo
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default
 `var(--lr-duration-base)` — the panel's enter/exit animation duration) and
 `--lr-dialog-backdrop-duration` (default `var(--lr-duration-fast)` — the backdrop's fade duration).
-Otherwise shared tokens include `--lr-space-l/-m/-s`, `--lr-color-surface/-border`, `--lr-radius`,
-`--lr-shadow`, and `--lr-easing-standard`.
+The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
+tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
+— the panel fill), `--lr-overlay-border` (default `var(--lr-color-border)` — the panel edge and the
+header's and footer's dividing rules), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
+corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
+panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
+to scope it) retints the dialog together with every popup opened from it. The modal tier is a
+separate name from `--lr-overlay-shadow-anchored`, which anchored popups read, so raising popups
+never raises dialogs.
+
+Otherwise the shared tokens the panel and its chrome read include the `--lr-size-20rem` /
+`-24rem` / `-28rem` / `-32rem` / `-38rem` / `-48rem` width ladder behind `size`, `--lr-space-l`,
+`--lr-space-m`, `--lr-space-s` and `--lr-space-xs` (spacing defaults), the `--lr-safe-area-*` insets
+on the fixed frame, `--lr-color-overlay` (the scrim default), `--lr-color-text-quiet`,
+`--lr-color-brand` and `--lr-color-brand-quiet` with `--lr-color-mix-partner`/`--lr-color-mix-active`
+(the close button's foreground and its hover/pressed fills), `--lr-border-width-thin`,
+`--lr-icon-button-size` (the close button's hit-area floor), `--lr-focus-ring-width`,
+`--lr-focus-ring-color`, `--lr-focus-ring-offset`, `--lr-font-weight-semibold`,
+`--lr-transition-fast`, and `--lr-layer-modal` behind `--lr-overlay-stack-index`. Earlier revisions
+of this entry instead named `--lr-color-surface`, a bare `--lr-shadow` and `--lr-easing-standard`:
+none of the three has ever been part of a declaration in `dialog.styles.ts`, and the panel's real
+fill and elevation are the overlay-family tokens above, eased through `--lr-transition-fast` (itself
+derived from `--lr-duration-fast` and `--lr-easing-standard`, which is where that last name came
+from).
 
 **Optional peer deps:** none.
 
@@ -20755,6 +20940,17 @@ match; the state is in the part name.
 fallbacks. Arrow size is half the square's width. Rendering the arrow switches `[part~="popup"]` to
 `overflow: visible` so it is not clipped, moving the scroll container onto `[part~="content"]`.
 
+The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). The arrow takes the fill and the
+edge but never the radius — its corners are already cut by its clip path. None of the four is
+declared on `:host`, so a single declaration on `:root` retints every floating surface in the
+application, and the same declaration on one component's own ancestor scopes the retint to that
+subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from the modal tier
+`--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
+dialogs.
+
 ```html
 <lr-popover
   arrow
@@ -20873,6 +21069,12 @@ and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the
 `--lr-tooltip-color`, and `--lr-tooltip-arrow-size` remain fallbacks. A tooltip popup has no inner
 scroll wrapper to move overflow onto, so its default arrow trades internal scrolling for a visible
 arrow — use `<lr-popover>` when a floating surface needs both.
+
+`--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
+because its rules live in the stylesheet module `lr-popover` also composes, but a tooltip bubble is
+a **deliberate exclusion** from the overlay-surface family: it is a high-contrast label, not a
+panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`, draws no border,
+and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
 
 ```html
 <lr-tooltip
@@ -21060,7 +21262,9 @@ popup, preserving the popover, Web Awesome and Shoelace wrapper names on the sam
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
-`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks.
+`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
+`lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
+`--lr-overlay-border`, `--lr-overlay-radius` and `--lr-overlay-shadow-anchored`.
 
 ```html
 <lr-dropdown aria-label="File actions" size="small">
@@ -21391,8 +21595,9 @@ the remove button's `:hover` fill).
 
 ## `lr-alert`
 
-A closed-by-default alert that exactly carries the pinned Shoelace alert surface under the `lr-`
-prefix. Use `lr-callout` for Lyra/Web Awesome's always-open inline callout contract; use `lr-alert`
+A closed-by-default alert that carries the pinned Shoelace alert surface under the `lr-` prefix,
+plus one additive Lyra property (`size`) that is inert until you set it.
+Use `lr-callout` for Lyra/Web Awesome's always-open inline callout contract; use `lr-alert`
 when migrated markup relies on `open`, timed dismissal, countdown, or identity-preserving
 `toast()` behavior.
 
@@ -21402,6 +21607,24 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
   state without a transition event; later property or attribute changes run the full lifecycle
   below.
 - `closable: boolean = false` (reflected) — renders a localized close action.
+- `size?: LyraSize` (reflected, unset by default) — density tier on the library's one size ladder:
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'`, or the Web Awesome / Shoelace spellings `'small'|'medium'|'large'`,
+  which are accepted as authored rather than rewritten to the short form. This is the one Lyra
+  addition on top of the pinned Shoelace surface, and it is opt-in for that reason: unset, the panel
+  keeps the padding it always had and the text size it inherits, so migrated markup renders
+  unchanged. A tier scales the panel padding and text together and takes `lr-callout`'s values for
+  both, so a tiered alert and a tiered callout of the same size line up in one column. Their
+  **untiered** states are not interchangeable, deliberately: with no `size` this panel keeps a fixed
+  gutter and inherits the ambient text size (its exact pre-ladder rendering), while an untiered
+  `lr-callout` reads the ambient form-control slots and falls back to the shared `m` padding and
+  `--lr-font-size-m`. Pinning a default tier here would resize every alert that shipped before this
+  property existed. Two things deliberately do not vary by tier, also matching `lr-callout`: the gap
+  separating icon, message and close action (it separates three boxes rather than setting density)
+  and the leading icon glyph size (a status affordance bounded by the shared tappable-target token).
+  The close action also keeps the shared tappable-target floor at every tier — a WCAG 2.5.8 minimum
+  rather than a density knob — and its optical pull-out toward the panel edge is clamped to the
+  tier's own gutter, so the two smallest tiers cannot push it through the panel's clipped border. An
+  unsupported value normalizes to the omitted state and removes the attribute.
 - `variant: 'primary' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
   `primary` resolves through Lyra's shared brand semantic tokens. Unsupported attributes and
   untyped property writes normalize to reflected `primary`.
@@ -21939,6 +22162,12 @@ attempt regardless of outcome — style with `::part(trigger-error)`), `menu`, `
 (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
 against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
 shared-clamp note.
+
+The menu popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 **Optional peer deps:** none.
 
@@ -22773,13 +23002,20 @@ renders `open="false"` on first paint)
 `--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
 repainting every other component that reuses the same shared token. Plus shared tokens —
 `--lr-space-xs`/`-s`/`-m` (popup padding,
-row padding/gap), `--lr-color-surface`/`-border` (popup background/border), `--lr-radius`
-(popup and row corners), `--lr-shadow` (popup elevation), `--lr-transition-fast` (open/close
+row padding/gap), `--lr-radius`
+(row corners — the popup's own corner is the overlay family's, below),
+`--lr-transition-fast` (open/close
 transition), `--lr-color-brand` (selected-row
 text), `--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
 row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the
 popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's
 available space. See `lr-tour` for the shared-clamp note.
+
+The popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 **Optional peer deps:** none.
 
@@ -25034,7 +25270,16 @@ for the drag-accept state; `--lr-file-input-reject-border-color` (default `var(-
 and `--lr-file-input-reject-bg` (default `color-mix(in srgb, var(--lr-color-danger) 8%,
 transparent)`) for drag-reject. All four are inline `var()` fallbacks at the point of use, settable
 on the element or any ancestor, so a consumer can retint just this dropzone's drag highlight without
-hijacking the shared `--lr-color-success`/`--lr-color-danger` tokens used elsewhere. Plus shared
+hijacking the shared `--lr-color-success`/`--lr-color-danger` tokens used elsewhere.
+
+The **resting** dropzone — the state it spends most of its life in — has the same three hooks as of
+16.0.0: `--lr-file-input-dropzone-fill` (default `var(--lr-color-surface)`),
+`--lr-file-input-dropzone-border-color` (default `var(--lr-color-border)`; the dashed border style
+itself is unchanged), and `--lr-file-input-dropzone-hover-border-color` (default
+`var(--lr-color-brand)`), which recolours the edge whether the pointer is over the button or over
+the content stacked on it. The shared field halo `--lr-form-control-focus-shadow` (default `none`)
+paints a `box-shadow` while the dropzone holds focus; it is additive, so the
+`[part='base']:focus-visible` outline is untouched. Plus shared
 tokens — `--lr-space-xs`, `--lr-space-l`,
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
@@ -32785,6 +33030,13 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 `--lr-radius`, `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.
 
+The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
+`--lr-model-select-radius`, which still wins when set.
+
 **Optional peer deps:** none.
 
 ```html
@@ -34283,6 +34535,13 @@ is mirrored into the trigger description. Details without a visible summary rema
 **CSS parts:** `base` (a focusable non-button `role="group"` only when content is both visible and
 describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`.
 
+The anchored breakdown tooltip is a floating surface and paints from the **shared overlay-surface
+family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`),
+`--lr-overlay-border` (default `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default
+`var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
+ancestor, to scope it — retints this surface together with every other floating surface in the
+library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+
 ```html
 <lr-chat-message message-role="assistant" status="sent">
   <lr-usage-badge
@@ -34649,6 +34908,15 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   combobox, and option children. Default: `var(--lr-space-xs)`.
 - `--lr-voice-picker-radius` — Trigger, combobox, listbox, option, and preview-action corner radius.
   Default: `var(--lr-form-control-radius)`.
+- `--lr-overlay-surface` — Shared floating-surface fill, on the listbox. Default:
+  `var(--lr-color-surface-overlay)`.
+- `--lr-overlay-border` — Shared floating-surface edge colour, on the listbox. Default:
+  `var(--lr-color-border)`.
+- `--lr-overlay-radius` — Shared floating-surface corner radius, reached only as the middle arm of
+  `--lr-voice-picker-radius`, which still wins when set. Default: `var(--lr-radius)`.
+- `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
+  None of the four is declared on `:host`, so one declaration on `:root` — or on any ancestor, to
+  scope it — retints this listbox together with every other floating surface in the library.
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
@@ -35056,6 +35324,12 @@ private so controlled rect updates cannot be silently overridden by stale author
 the toolbar avoids collisions. It accepts unitless pixel values and `px`, `rem`, and `em` values; unsupported
 values fall back to the default and negative values clamp to `0`. Collision math uses the active
 `visualViewport` bounds and offsets when available, including after visual-viewport changes.
+
+The toolbar is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 **Slots:** `actions` — extra actions rendered after the built-in ask/quote/cite/copy buttons,
 inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.
@@ -35581,6 +35855,12 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 > Retheming a group of chips from outside `<lr-tool-call-chip>` (e.g. per-tool or per-status
 > colors)? Set the component hooks above on their ancestor wrapper. Use `--lr-theme-*` instead only
 > when changing a shared semantic palette input for the entire subtree.
+
+The anchored detail tooltip is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 **Optional peer deps:** none.
 
@@ -39837,6 +40117,12 @@ floating popover on hover/focus. No content means no popover and no hover afford
 text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-entity-chip-border` (default `transparent`, the chip's `--lr-border-width-thin` outline).
 
+The anchored detail popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+
 **Optional peer deps:** none.
 
 ```html
@@ -40448,6 +40734,12 @@ public value remains authoritative in every status. Shared tokens include
 > Retheming a group of badges from outside `<lr-citation-badge>` (e.g. per-source or
 > per-confidence colors)? Set the component hooks above on their ancestor wrapper. Use
 > `--lr-theme-*` instead only when changing a shared semantic palette input for the entire subtree.
+
+The anchored source-preview popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 **Optional peer deps:** none.
 

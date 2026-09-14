@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 30 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 30 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -408,6 +408,22 @@ standard size supplies an aligned default), plus shared tokens. `--lr-combobox-g
 `--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
 the properties above, do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
 
+The trigger row's own surface became public in 16.0.0, having been a private pair until then:
+`--lr-combobox-fill` (default `var(--lr-color-surface)`) and `--lr-combobox-border-color` (default
+`var(--lr-color-border)`). The `filled`/`filled-outlined` treatments default the fill to
+`var(--lr-color-surface-raised)` and `filled` defaults the border to `transparent`; a value set
+here wins over every treatment. `--lr-combobox-open-border-color` (default
+`var(--lr-color-brand)`) recolors the row's edge while it holds focus, which was a hardcoded brand
+border before. Read the name as the state the listbox opens in rather than as a synonym for `open`:
+it is bound to `:focus-within`, so it also paints on a focused row whose listbox is closed — after
+an Escape dismissal, say. It is named for symmetry with `lr-select`'s
+`--lr-select-open-border-color`, which really is gated on `open`.
+
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
+while this control is focused — one name for every field-shaped control in the library, so a
+halo is configured once instead of per component. It is additive: the focus outline and
+border cue are the accessibility answer to focus and are never replaced by it.
+
 `--lr-combobox-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of
 a hovered or keyboard-active `[part='option']` row — the same per-component indirection
 `lr-select`'s identical `--lr-select-option-active-bg` uses, so a consumer can retheme just this
@@ -420,6 +436,14 @@ and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`)
 four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
 Like the active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer
 can retheme the selected row without hijacking `--lr-color-brand` library-wide.
+
+The listbox popup itself is a floating surface and paints from the **shared overlay-surface family**
+(16.0.0), not from the page surface every card and input reads: `--lr-overlay-surface` (default
+`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
+`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
+ancestor, to scope it — retints this popup together with every other floating surface, and none of
+it touches the trigger row the popup drops from.
 
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the

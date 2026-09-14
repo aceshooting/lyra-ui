@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -167,4 +167,12 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-remove-hover-bg` / `--lr-token-input-remove-pressed-bg` — Remove-action hover
   and pressed backgrounds, with the same aggregate-hover and active-state fallbacks.
 - `--lr-token-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-token-input-fill` — Resting input-row background, public since 16.0.0. Default:
+  `var(--lr-color-surface)`.
+- `--lr-token-input-border-color` — Resting input-row border color. Default:
+  `var(--lr-color-border)`. The invalid and focused states keep their own hooks and still win
+  over it.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  row holds focus. Default: `none`. Additive — the focus outline and the focused border are
+  never replaced by it.
 - `--lr-token-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.

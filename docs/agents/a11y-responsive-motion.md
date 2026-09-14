@@ -180,6 +180,33 @@ component and a release blocker for a new one.
   would obscure the interaction, but it should not add nonessential easing or repeated motion.
 - Test the reduced-motion branch for animation-heavy components, and that documented motion
   custom properties actually reach the rendered animation declarations.
+- **A pointer target that repaints owes that repaint one shared transition.** A part that declares
+  `cursor: pointer` and changes its background, text or border colour under `:hover`/`:active`
+  writes `transition: var(--lr-interactive-transition);` on its *resting* rule — one token
+  (`internal/tokens.styles.ts`, next to `--lr-transition-fast`) holding the three-property list
+  that ninety-odd rules used to re-type one at a time. A component that wants it on every part it
+  renders composes `internal/interactive-transition.styles.ts` into `static styles` instead; that
+  sheet is `:where([part])`, so zero specificity, and any rule the component writes itself wins.
+  Never hand-roll the property list again, and never reach for a duration/easing pair here —
+  deriving from `--lr-transition-fast` is what makes the central reduced-motion collapse reach it
+  with no new `@media` block.
+  `check-interaction-states.mjs` enforces this as its third rule, per part, and it reads coverage
+  far more narrowly than the hover rule beside it — because `transition` is not an inherited
+  property and applies only to the element whose own value changes. A transition on the part itself
+  counts, and so does a tree-wide `[part]`/`*` rule (the shared sheet's shape). A transition on a
+  part that merely CONTAINS this one does not, and neither does a `:host`-subject one: both animate
+  a different box while the nested part still jumps. The declaration's value is read too, so
+  `transition: transform …` is no answer to a background change and `transition: none` is no answer
+  to anything, including — especially — inside a `@media (prefers-reduced-motion: reduce)` block,
+  which is where the library puts it. Properties the library treats as instant by convention —
+  `opacity`, `outline`, `filter`, SVG `fill`/`stroke`, `accent-color` — never trigger the rule at
+  all. A part that repaints and still should not move records the judgement in a sentence,
+  `/* no-transition-needed: <reason> */`, on or above the rule; a marker with nothing after the
+  colon is itself a finding. The checker also carries a shrink-only list of parts that predate the
+  token: adding a transition where none existed changes what a test reading a hovered colour sees
+  (see [testing.md](testing.md)'s pointer-state section), so those are migrated component by
+  component — add the declaration, re-read that component's pointer assertions, run its test file on
+  all three engines, delete the entry in the same commit. Nothing else retires one.
 
 ## Public API documentation — one change, one synchronized surface
 

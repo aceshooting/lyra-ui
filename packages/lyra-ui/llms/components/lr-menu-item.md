@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu`, `lr-dropdown-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -72,8 +72,17 @@ menu item.
 **CSS parts:** `header`, `list`, and `footer`. Root `trigger` and `popup` parts do not exist;
 style those on `<lr-dropdown>` when using the overlay composition.
 
-**Themeable custom properties:** shared surface, border, radius, spacing, and motion tokens. Row
-chrome is controlled through the menu-item properties listed below.
+**Themeable custom properties:** the standalone menu surface and a submenu's own surface paint from
+the **shared overlay-surface family** (16.0.0) — `--lr-overlay-surface` (default
+`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
+`--lr-overlay-radius` (default `var(--lr-radius)`) and, on the submenu only,
+`--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
+declaration on `:root` (or on any ancestor, to scope it) retints this menu together with every other
+floating surface. A menu contained by `<lr-dropdown>` paints no surface of its own, so the family has
+no effect there — the dropdown's popup carries it. The header/footer dividing rules and a slotted
+`<hr>` deliberately stay on `--lr-color-border`: they separate content rather than draw the
+surface's edge. Otherwise shared spacing and motion tokens. Row chrome is controlled through the
+menu-item properties listed below.
 
 **Methods:** no menu-specific public overlay methods. Use `<lr-dropdown>`'s `show()`/`hide()` and
 `open` state for an overlay. Menu-item submenu methods remain public because they drive a row's
@@ -169,6 +178,17 @@ apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked
 hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
 a checked row paints identically to an unchecked one.
 
+Three more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
+byte-identical: `--lr-menu-item-hover-bg` (default `var(--lr-color-brand-quiet)`) is the enabled
+row's fill under the pointer, and the pressed state mixes from that same value, so a retuned hover
+fill keeps its pressed step instead of snapping back to the brand default;
+`--lr-menu-item-icon-color` (default `inherit`) recolours `[part="icon"]` without touching the
+label beside it, so it still follows the row while the row is disabled or `variant="danger"` unless
+you say otherwise; and `--lr-menu-item-min-height` (default
+`max(var(--lr-form-control-height), var(--lr-size-24px))`) sets the row's minimum block size for a
+denser or roomier menu, replacing a `::part(base)` rule per item. A value below the 24px floor is
+your call, exactly as it is when overriding the shared ladder itself.
+
 ### Nested submenus
 
 Both supported authoring shapes use the `submenu` slot:
@@ -220,6 +240,13 @@ while a link opening a new context can never lose the guard.
 
 **Events:** native, non-bubbling, composed, non-cancelable `focus` and `blur` (`FocusEvent`) when
 the focusable host gains or loses focus, plus the shared menu-item events above.
+
+**Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
+`--lr-menu-item-hover-bg`, `--lr-menu-item-icon-color` and `--lr-menu-item-min-height`.
+`--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
+because it shares a stylesheet directory with `<lr-menu>`, whose surface reads them; a dropdown item
+is a row **inside** that surface and paints no surface of its own, so setting them here is a no-op —
+set them on the menu or on any ancestor instead. The row's own corner stays `--lr-menu-item-radius`.
 
 `submenuOpen` reflects to canonical `submenu-open`. HTML normalizes Web Awesome's documented
 mixed-case spelling to `submenuopen`, so that lowercase token is a permanent compatibility alias.

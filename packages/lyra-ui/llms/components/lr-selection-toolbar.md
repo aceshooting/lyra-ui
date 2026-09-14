@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,6 +61,12 @@ private so controlled rect updates cannot be silently overridden by stale author
 the toolbar avoids collisions. It accepts unitless pixel values and `px`, `rem`, and `em` values; unsupported
 values fall back to the default and negative values clamp to `0`. Collision math uses the active
 `visualViewport` bounds and offsets when available, including after visual-viewport changes.
+
+The toolbar is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 **Slots:** `actions` — extra actions rendered after the built-in ask/quote/cite/copy buttons,
 inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.

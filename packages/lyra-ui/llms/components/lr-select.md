@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -252,6 +252,27 @@ default to `--lr-radius-pill`. `--lr-select-tag-padding`
 **not** vary by `size` tier, and inherited or direct public values win.
 Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
 `--hide-duration` cap one tag and independently retime the two popup directions.
+
+The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
+declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
+other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+
+The trigger's own resting surface has hooks as of 16.0.0: `--lr-select-trigger-fill` (default
+`var(--lr-color-surface)`) and `--lr-select-trigger-border-color` (default
+`var(--lr-color-border)`). Both are read by **every** appearance, each falling back to that
+appearance's own default (`var(--lr-color-surface-raised)` for `filled`/`filled-outlined`,
+`transparent` for `plain`, `var(--lr-color-brand)` for `accent`), so one value retints the trigger
+whichever treatment it is wearing. `--lr-select-trigger-hover-border-color` (default: the resting
+`--lr-select-trigger-border-color`) moves the edge under the pointer; unset, the hovered border
+stays exactly where the resting state left it, as it always has.
+
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
+while this control is focused — one name for every field-shaped control in the library, so a
+halo is configured once instead of per component. It is additive: the focus outline and
+border cue are the accessibility answer to focus and are never replaced by it.
 
 The trigger's pointer/open states have component-scoped hooks too:
 `--lr-select-trigger-hover-bg` (default `var(--lr-color-brand-quiet)` for the quiet appearances),

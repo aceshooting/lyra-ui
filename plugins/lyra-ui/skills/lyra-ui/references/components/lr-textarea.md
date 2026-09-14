@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -224,6 +224,10 @@ With no label text the part is hidden and no glyph is painted.
 - `--lr-textarea-hover-border-color` (default `var(--lr-color-brand)`) — the field border while the
   native textarea is hovered, independent of its resting border and every other brand-colored
   component state.
+- `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
+  `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
+  so a halo is configured once instead of per component; additive, so the `:focus-visible` outline
+  is untouched.
 
 `<lr-textarea>` now fills a definite-height host: place it inside a container with a resolved
 block size (a flex/grid item stretched to a track, or an ancestor with an explicit height) and

@@ -16,8 +16,9 @@
 
 ## `lr-alert`
 
-A closed-by-default alert that exactly carries the pinned Shoelace alert surface under the `lr-`
-prefix. Use `lr-callout` for Lyra/Web Awesome's always-open inline callout contract; use `lr-alert`
+A closed-by-default alert that carries the pinned Shoelace alert surface under the `lr-` prefix,
+plus one additive Lyra property (`size`) that is inert until you set it.
+Use `lr-callout` for Lyra/Web Awesome's always-open inline callout contract; use `lr-alert`
 when migrated markup relies on `open`, timed dismissal, countdown, or identity-preserving
 `toast()` behavior.
 
@@ -27,6 +28,24 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
   state without a transition event; later property or attribute changes run the full lifecycle
   below.
 - `closable: boolean = false` (reflected) — renders a localized close action.
+- `size?: LyraSize` (reflected, unset by default) — density tier on the library's one size ladder:
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'`, or the Web Awesome / Shoelace spellings `'small'|'medium'|'large'`,
+  which are accepted as authored rather than rewritten to the short form. This is the one Lyra
+  addition on top of the pinned Shoelace surface, and it is opt-in for that reason: unset, the panel
+  keeps the padding it always had and the text size it inherits, so migrated markup renders
+  unchanged. A tier scales the panel padding and text together and takes `lr-callout`'s values for
+  both, so a tiered alert and a tiered callout of the same size line up in one column. Their
+  **untiered** states are not interchangeable, deliberately: with no `size` this panel keeps a fixed
+  gutter and inherits the ambient text size (its exact pre-ladder rendering), while an untiered
+  `lr-callout` reads the ambient form-control slots and falls back to the shared `m` padding and
+  `--lr-font-size-m`. Pinning a default tier here would resize every alert that shipped before this
+  property existed. Two things deliberately do not vary by tier, also matching `lr-callout`: the gap
+  separating icon, message and close action (it separates three boxes rather than setting density)
+  and the leading icon glyph size (a status affordance bounded by the shared tappable-target token).
+  The close action also keeps the shared tappable-target floor at every tier — a WCAG 2.5.8 minimum
+  rather than a density knob — and its optical pull-out toward the panel edge is clamped to the
+  tier's own gutter, so the two smallest tiers cannot push it through the panel's clipped border. An
+  unsupported value normalizes to the omitted state and removes the attribute.
 - `variant: 'primary' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
   `primary` resolves through Lyra's shared brand semantic tokens. Unsupported attributes and
   untyped property writes normalize to reflected `primary`.

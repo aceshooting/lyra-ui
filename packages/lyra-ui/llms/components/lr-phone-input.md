@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -283,6 +283,14 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - `--lr-phone-input-gap` — Country-trigger child gap. Default: `var(--lr-space-xs)`.
 - `--lr-phone-input-radius` — Input-wrapper corner radius. Default: `var(--lr-radius)`.
 - `--lr-phone-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-phone-input-fill` — Resting input-row background, public since 16.0.0. Default:
+  `var(--lr-color-surface)`.
+- `--lr-phone-input-border-color` — Resting input-row border color. Default:
+  `var(--lr-color-border)`. The invalid and focused states keep their own hooks and still win
+  over it.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  row holds focus. Default: `none`. Additive — the focus outline and the focused border are
+  never replaced by it.
 - `--lr-phone-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
 - `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 

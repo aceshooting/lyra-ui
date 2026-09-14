@@ -1346,6 +1346,13 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 `--lr-radius`, `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.
 
+The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
+`--lr-model-select-radius`, which still wins when set.
+
 **Optional peer deps:** none.
 
 ```html
@@ -2844,6 +2851,13 @@ is mirrored into the trigger description. Details without a visible summary rema
 **CSS parts:** `base` (a focusable non-button `role="group"` only when content is both visible and
 describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`.
 
+The anchored breakdown tooltip is a floating surface and paints from the **shared overlay-surface
+family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`),
+`--lr-overlay-border` (default `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default
+`var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
+ancestor, to scope it — retints this surface together with every other floating surface in the
+library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+
 ```html
 <lr-chat-message message-role="assistant" status="sent">
   <lr-usage-badge
@@ -3210,6 +3224,15 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   combobox, and option children. Default: `var(--lr-space-xs)`.
 - `--lr-voice-picker-radius` — Trigger, combobox, listbox, option, and preview-action corner radius.
   Default: `var(--lr-form-control-radius)`.
+- `--lr-overlay-surface` — Shared floating-surface fill, on the listbox. Default:
+  `var(--lr-color-surface-overlay)`.
+- `--lr-overlay-border` — Shared floating-surface edge colour, on the listbox. Default:
+  `var(--lr-color-border)`.
+- `--lr-overlay-radius` — Shared floating-surface corner radius, reached only as the middle arm of
+  `--lr-voice-picker-radius`, which still wins when set. Default: `var(--lr-radius)`.
+- `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
+  None of the four is declared on `:host`, so one declaration on `:root` — or on any ancestor, to
+  scope it — retints this listbox together with every other floating surface in the library.
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
@@ -3617,6 +3640,12 @@ private so controlled rect updates cannot be silently overridden by stale author
 the toolbar avoids collisions. It accepts unitless pixel values and `px`, `rem`, and `em` values; unsupported
 values fall back to the default and negative values clamp to `0`. Collision math uses the active
 `visualViewport` bounds and offsets when available, including after visual-viewport changes.
+
+The toolbar is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 **Slots:** `actions` — extra actions rendered after the built-in ask/quote/cite/copy buttons,
 inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -49,6 +49,12 @@ floating popover on hover/focus. No content means no popover and no hover afford
 **Themeable custom properties:** `--lr-entity-chip-color` (default `var(--lr-color-brand)`,
 text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-entity-chip-border` (default `transparent`, the chip's `--lr-border-width-thin` outline).
+
+The anchored detail popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 **Optional peer deps:** none.
 

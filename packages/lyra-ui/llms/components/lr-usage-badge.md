@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -48,6 +48,13 @@ is mirrored into the trigger description. Details without a visible summary rema
 
 **CSS parts:** `base` (a focusable non-button `role="group"` only when content is both visible and
 describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`.
+
+The anchored breakdown tooltip is a floating surface and paints from the **shared overlay-surface
+family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`),
+`--lr-overlay-border` (default `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default
+`var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
+ancestor, to scope it — retints this surface together with every other floating surface in the
+library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 ```html
 <lr-chat-message message-role="assistant" status="sent">

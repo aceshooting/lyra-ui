@@ -600,7 +600,12 @@ explicitly flipped under `:dir(rtl)` since `translateX` is physical. Override to
 the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
 `--lr-dialog-backdrop-filter`, `--lr-dialog-width`, `--lr-dialog-max-width`, `--lr-dialog-spacing`,
 `--lr-dialog-spacing-block`, `--lr-dialog-panel-duration` and `--lr-dialog-backdrop-duration` —
-since `LyraDrawer` extends `LyraDialog`. `--lr-dialog-height` is deliberately **not** among the
+since `LyraDrawer` extends `LyraDialog`, including the shared overlay-surface family the panel
+paints from: `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius` and
+`--lr-overlay-shadow-modal`. The drawer's own `[part~="panel"]` rule squares the corners and steps
+the elevation down to `var(--lr-shadow-l)` — three of its edges are flush with the viewport — so on
+this tag `--lr-overlay-radius` and `--lr-overlay-shadow-modal` are overridden and only the fill and
+edge colour take effect. `--lr-dialog-height` is deliberately **not** among the
 inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
 `block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
 for `top`/`bottom`), which always wins the cascade over `<lr-dialog>`'s `--lr-dialog-height`-driven
@@ -821,8 +826,30 @@ the padding inside `[part="body"]` and the _inline_ padding of the header and fo
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default
 `var(--lr-duration-base)` — the panel's enter/exit animation duration) and
 `--lr-dialog-backdrop-duration` (default `var(--lr-duration-fast)` — the backdrop's fade duration).
-Otherwise shared tokens include `--lr-space-l/-m/-s`, `--lr-color-surface/-border`, `--lr-radius`,
-`--lr-shadow`, and `--lr-easing-standard`.
+The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
+tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
+— the panel fill), `--lr-overlay-border` (default `var(--lr-color-border)` — the panel edge and the
+header's and footer's dividing rules), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
+corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
+panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
+to scope it) retints the dialog together with every popup opened from it. The modal tier is a
+separate name from `--lr-overlay-shadow-anchored`, which anchored popups read, so raising popups
+never raises dialogs.
+
+Otherwise the shared tokens the panel and its chrome read include the `--lr-size-20rem` /
+`-24rem` / `-28rem` / `-32rem` / `-38rem` / `-48rem` width ladder behind `size`, `--lr-space-l`,
+`--lr-space-m`, `--lr-space-s` and `--lr-space-xs` (spacing defaults), the `--lr-safe-area-*` insets
+on the fixed frame, `--lr-color-overlay` (the scrim default), `--lr-color-text-quiet`,
+`--lr-color-brand` and `--lr-color-brand-quiet` with `--lr-color-mix-partner`/`--lr-color-mix-active`
+(the close button's foreground and its hover/pressed fills), `--lr-border-width-thin`,
+`--lr-icon-button-size` (the close button's hit-area floor), `--lr-focus-ring-width`,
+`--lr-focus-ring-color`, `--lr-focus-ring-offset`, `--lr-font-weight-semibold`,
+`--lr-transition-fast`, and `--lr-layer-modal` behind `--lr-overlay-stack-index`. Earlier revisions
+of this entry instead named `--lr-color-surface`, a bare `--lr-shadow` and `--lr-easing-standard`:
+none of the three has ever been part of a declaration in `dialog.styles.ts`, and the panel's real
+fill and elevation are the overlay-family tokens above, eased through `--lr-transition-fast` (itself
+derived from `--lr-duration-fast` and `--lr-easing-standard`, which is where that last name came
+from).
 
 **Optional peer deps:** none.
 
@@ -1617,6 +1644,17 @@ match; the state is in the part name.
 fallbacks. Arrow size is half the square's width. Rendering the arrow switches `[part~="popup"]` to
 `overflow: visible` so it is not clipped, moving the scroll container onto `[part~="content"]`.
 
+The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). The arrow takes the fill and the
+edge but never the radius — its corners are already cut by its clip path. None of the four is
+declared on `:host`, so a single declaration on `:root` retints every floating surface in the
+application, and the same declaration on one component's own ancestor scopes the retint to that
+subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from the modal tier
+`--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
+dialogs.
+
 ```html
 <lr-popover
   arrow
@@ -1735,6 +1773,12 @@ and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the
 `--lr-tooltip-color`, and `--lr-tooltip-arrow-size` remain fallbacks. A tooltip popup has no inner
 scroll wrapper to move overflow onto, so its default arrow trades internal scrolling for a visible
 arrow — use `<lr-popover>` when a floating surface needs both.
+
+`--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
+because its rules live in the stylesheet module `lr-popover` also composes, but a tooltip bubble is
+a **deliberate exclusion** from the overlay-surface family: it is a high-contrast label, not a
+panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`, draws no border,
+and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
 
 ```html
 <lr-tooltip
@@ -1922,7 +1966,9 @@ popup, preserving the popover, Web Awesome and Shoelace wrapper names on the sam
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
-`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks.
+`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
+`lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
+`--lr-overlay-border`, `--lr-overlay-radius` and `--lr-overlay-shadow-anchored`.
 
 ```html
 <lr-dropdown aria-label="File actions" size="small">
@@ -2253,8 +2299,9 @@ the remove button's `:hover` fill).
 
 ## `lr-alert`
 
-A closed-by-default alert that exactly carries the pinned Shoelace alert surface under the `lr-`
-prefix. Use `lr-callout` for Lyra/Web Awesome's always-open inline callout contract; use `lr-alert`
+A closed-by-default alert that carries the pinned Shoelace alert surface under the `lr-` prefix,
+plus one additive Lyra property (`size`) that is inert until you set it.
+Use `lr-callout` for Lyra/Web Awesome's always-open inline callout contract; use `lr-alert`
 when migrated markup relies on `open`, timed dismissal, countdown, or identity-preserving
 `toast()` behavior.
 
@@ -2264,6 +2311,24 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
   state without a transition event; later property or attribute changes run the full lifecycle
   below.
 - `closable: boolean = false` (reflected) — renders a localized close action.
+- `size?: LyraSize` (reflected, unset by default) — density tier on the library's one size ladder:
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'`, or the Web Awesome / Shoelace spellings `'small'|'medium'|'large'`,
+  which are accepted as authored rather than rewritten to the short form. This is the one Lyra
+  addition on top of the pinned Shoelace surface, and it is opt-in for that reason: unset, the panel
+  keeps the padding it always had and the text size it inherits, so migrated markup renders
+  unchanged. A tier scales the panel padding and text together and takes `lr-callout`'s values for
+  both, so a tiered alert and a tiered callout of the same size line up in one column. Their
+  **untiered** states are not interchangeable, deliberately: with no `size` this panel keeps a fixed
+  gutter and inherits the ambient text size (its exact pre-ladder rendering), while an untiered
+  `lr-callout` reads the ambient form-control slots and falls back to the shared `m` padding and
+  `--lr-font-size-m`. Pinning a default tier here would resize every alert that shipped before this
+  property existed. Two things deliberately do not vary by tier, also matching `lr-callout`: the gap
+  separating icon, message and close action (it separates three boxes rather than setting density)
+  and the leading icon glyph size (a status affordance bounded by the shared tappable-target token).
+  The close action also keeps the shared tappable-target floor at every tier — a WCAG 2.5.8 minimum
+  rather than a density knob — and its optical pull-out toward the panel edge is clamped to the
+  tier's own gutter, so the two smallest tiers cannot push it through the panel's clipped border. An
+  unsupported value normalizes to the omitted state and removes the attribute.
 - `variant: 'primary' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
   `primary` resolves through Lyra's shared brand semantic tokens. Unsupported attributes and
   untyped property writes normalize to reflected `primary`.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -145,6 +145,26 @@ undeclared on the host so ancestor themes work. The upstream-compatible `--colum
 (default `calc(var(--lr-size-1em) * 3)`) retain their component-font-relative sizing through the
 Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
 duration-token fallbacks.
+
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while
+this control is focused or open — one name for every field-shaped control in the library, so a halo
+is configured once instead of per component. It is additive: the focus outline and the
+`--lr-time-input-focus-border-color` edge are the accessibility answer to focus and are never
+replaced by it.
+
+The `popup` panel is a floating surface and paints from the **shared overlay-surface family**
+(16.0.0): `--lr-overlay-surface`, `--lr-overlay-border` (default `var(--lr-color-border)`),
+`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
+ancestor, to scope it — retints this panel together with every other floating surface in the
+library. One deliberate difference from the rest of the family: `--lr-overlay-surface` defaults here
+to `var(--lr-color-surface-raised)` rather than the family's own
+`var(--lr-color-surface-overlay)`. The picker is a dense grid of time cells dropped from a field,
+and the raised tone is what separates it from the field's fill — `--lr-color-surface-overlay`
+resolves to the plain page surface in light mode and would erase that separation, while in dark
+mode the raised tone is already distinct from the page, so this panel never had the
+reads-as-a-hole problem the family exists to fix. Setting `--lr-overlay-surface` still repaints it
+along with every other popup.
 
 ```html
 <lr-time-input

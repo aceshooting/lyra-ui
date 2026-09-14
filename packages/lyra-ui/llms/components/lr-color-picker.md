@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 43 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 43 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -239,6 +239,13 @@ colour painted on the trigger, preview, slider handles and palette swatches),
 `--lr-color-picker-grid-hue` (the grid's fully-saturated base hue), and
 `--lr-color-picker-opacity-gradient` (the opacity ramp's transparent-to-opaque gradient, built from
 the current colour and text direction). Read them if you need the resolved colour; don't assign them.
+
+The popup panel is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
+`--lr-color-picker-radius`, which still wins when set.
 
 **Additional API surface:**
 

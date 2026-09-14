@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -216,8 +216,30 @@ the padding inside `[part="body"]` and the _inline_ padding of the header and fo
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default
 `var(--lr-duration-base)` — the panel's enter/exit animation duration) and
 `--lr-dialog-backdrop-duration` (default `var(--lr-duration-fast)` — the backdrop's fade duration).
-Otherwise shared tokens include `--lr-space-l/-m/-s`, `--lr-color-surface/-border`, `--lr-radius`,
-`--lr-shadow`, and `--lr-easing-standard`.
+The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
+tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
+— the panel fill), `--lr-overlay-border` (default `var(--lr-color-border)` — the panel edge and the
+header's and footer's dividing rules), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
+corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
+panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
+to scope it) retints the dialog together with every popup opened from it. The modal tier is a
+separate name from `--lr-overlay-shadow-anchored`, which anchored popups read, so raising popups
+never raises dialogs.
+
+Otherwise the shared tokens the panel and its chrome read include the `--lr-size-20rem` /
+`-24rem` / `-28rem` / `-32rem` / `-38rem` / `-48rem` width ladder behind `size`, `--lr-space-l`,
+`--lr-space-m`, `--lr-space-s` and `--lr-space-xs` (spacing defaults), the `--lr-safe-area-*` insets
+on the fixed frame, `--lr-color-overlay` (the scrim default), `--lr-color-text-quiet`,
+`--lr-color-brand` and `--lr-color-brand-quiet` with `--lr-color-mix-partner`/`--lr-color-mix-active`
+(the close button's foreground and its hover/pressed fills), `--lr-border-width-thin`,
+`--lr-icon-button-size` (the close button's hit-area floor), `--lr-focus-ring-width`,
+`--lr-focus-ring-color`, `--lr-focus-ring-offset`, `--lr-font-weight-semibold`,
+`--lr-transition-fast`, and `--lr-layer-modal` behind `--lr-overlay-stack-index`. Earlier revisions
+of this entry instead named `--lr-color-surface`, a bare `--lr-shadow` and `--lr-easing-standard`:
+none of the three has ever been part of a declaration in `dialog.styles.ts`, and the panel's real
+fill and elevation are the overlay-family tokens above, eased through `--lr-transition-fast` (itself
+derived from `--lr-duration-fast` and `--lr-easing-standard`, which is where that last name came
+from).
 
 **Optional peer deps:** none.
 

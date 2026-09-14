@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -226,7 +226,10 @@ their private fallback roles rather than the public hooks, and the documented de
 `appearance="outlined"`'s values. Ancestor theme wrappers therefore still win. Setting either
 directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
-`--lr-input-focus-border-color` independently retunes the focused row. Built-in clear/password
+`--lr-input-focus-border-color` independently retunes the focused row, and the shared field halo
+`--lr-form-control-focus-shadow` (default `none`) adds a `box-shadow` layer while the row holds
+focus — one name for every field-shaped control in the library, additive rather than a replacement
+for the focused border. Built-in clear/password
 actions and `lr-number-input` steppers share `--lr-input-action-color`,
 `--lr-input-action-hover-color`, `--lr-input-action-active-color`, and
 `--lr-input-action-active-bg`; all fall back to the previous text/surface semantic tokens.

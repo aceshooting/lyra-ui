@@ -512,6 +512,22 @@ standard size supplies an aligned default), plus shared tokens. `--lr-combobox-g
 `--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
 the properties above, do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
 
+The trigger row's own surface became public in 16.0.0, having been a private pair until then:
+`--lr-combobox-fill` (default `var(--lr-color-surface)`) and `--lr-combobox-border-color` (default
+`var(--lr-color-border)`). The `filled`/`filled-outlined` treatments default the fill to
+`var(--lr-color-surface-raised)` and `filled` defaults the border to `transparent`; a value set
+here wins over every treatment. `--lr-combobox-open-border-color` (default
+`var(--lr-color-brand)`) recolors the row's edge while it holds focus, which was a hardcoded brand
+border before. Read the name as the state the listbox opens in rather than as a synonym for `open`:
+it is bound to `:focus-within`, so it also paints on a focused row whose listbox is closed — after
+an Escape dismissal, say. It is named for symmetry with `lr-select`'s
+`--lr-select-open-border-color`, which really is gated on `open`.
+
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
+while this control is focused — one name for every field-shaped control in the library, so a
+halo is configured once instead of per component. It is additive: the focus outline and
+border cue are the accessibility answer to focus and are never replaced by it.
+
 `--lr-combobox-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of
 a hovered or keyboard-active `[part='option']` row — the same per-component indirection
 `lr-select`'s identical `--lr-select-option-active-bg` uses, so a consumer can retheme just this
@@ -524,6 +540,14 @@ and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`)
 four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
 Like the active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer
 can retheme the selected row without hijacking `--lr-color-brand` library-wide.
+
+The listbox popup itself is a floating surface and paints from the **shared overlay-surface family**
+(16.0.0), not from the page surface every card and input reads: `--lr-overlay-surface` (default
+`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
+`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
+ancestor, to scope it — retints this popup together with every other floating surface, and none of
+it touches the trigger row the popup drops from.
 
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
@@ -911,6 +935,27 @@ default to `--lr-radius-pill`. `--lr-select-tag-padding`
 **not** vary by `size` tier, and inherited or direct public values win.
 Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
 `--hide-duration` cap one tag and independently retime the two popup directions.
+
+The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
+declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
+other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+
+The trigger's own resting surface has hooks as of 16.0.0: `--lr-select-trigger-fill` (default
+`var(--lr-color-surface)`) and `--lr-select-trigger-border-color` (default
+`var(--lr-color-border)`). Both are read by **every** appearance, each falling back to that
+appearance's own default (`var(--lr-color-surface-raised)` for `filled`/`filled-outlined`,
+`transparent` for `plain`, `var(--lr-color-brand)` for `accent`), so one value retints the trigger
+whichever treatment it is wearing. `--lr-select-trigger-hover-border-color` (default: the resting
+`--lr-select-trigger-border-color`) moves the edge under the pointer; unset, the hovered border
+stays exactly where the resting state left it, as it always has.
+
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
+while this control is focused — one name for every field-shaped control in the library, so a
+halo is configured once instead of per component. It is additive: the focus outline and
+border cue are the accessibility answer to focus and are never replaced by it.
 
 The trigger's pointer/open states have component-scoped hooks too:
 `--lr-select-trigger-hover-bg` (default `var(--lr-color-brand-quiet)` for the quiet appearances),
@@ -1459,6 +1504,13 @@ and `dateTimeFormat(locale, options)`.
 - `--lr-date-input-gap` — Gap between input-row children. Default: `var(--lr-space-xs)`.
 - `--lr-date-input-radius` — Input-row corner radius. Default: `var(--lr-radius)`.
 - `--lr-date-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-date-input-fill` — Resting input-row background, public since 16.0.0 (the radius beside it
+  always was). Default: `var(--lr-color-surface)`, or `var(--lr-color-surface-raised)` under the
+  `filled`/`filled-outlined` treatments; a value set here wins over every treatment.
+- `--lr-date-input-border-color` — Resting input-row border color. Default:
+  `var(--lr-color-border)`, or `transparent` under `filled`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the row
+  holds focus. Default: `none`. Additive — the focused brand border is never replaced by it.
 
 ---
 
@@ -1672,6 +1724,10 @@ With no label text the part is hidden and no glyph is painted.
 - `--lr-textarea-hover-border-color` (default `var(--lr-color-brand)`) — the field border while the
   native textarea is hovered, independent of its resting border and every other brand-colored
   component state.
+- `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
+  `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
+  so a halo is configured once instead of per component; additive, so the `:focus-visible` outline
+  is untouched.
 
 `<lr-textarea>` now fills a definite-height host: place it inside a container with a resolved
 block size (a flex/grid item stretched to a track, or an ancestor with an explicit height) and
@@ -2381,7 +2437,10 @@ their private fallback roles rather than the public hooks, and the documented de
 `appearance="outlined"`'s values. Ancestor theme wrappers therefore still win. Setting either
 directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
-`--lr-input-focus-border-color` independently retunes the focused row. Built-in clear/password
+`--lr-input-focus-border-color` independently retunes the focused row, and the shared field halo
+`--lr-form-control-focus-shadow` (default `none`) adds a `box-shadow` layer while the row holds
+focus — one name for every field-shaped control in the library, additive rather than a replacement
+for the focused border. Built-in clear/password
 actions and `lr-number-input` steppers share `--lr-input-action-color`,
 `--lr-input-action-hover-color`, `--lr-input-action-active-color`, and
 `--lr-input-action-active-bg`; all fall back to the previous text/surface semantic tokens.
@@ -2825,6 +2884,26 @@ undeclared on the host so ancestor themes work. The upstream-compatible `--colum
 Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
 duration-token fallbacks.
 
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while
+this control is focused or open — one name for every field-shaped control in the library, so a halo
+is configured once instead of per component. It is additive: the focus outline and the
+`--lr-time-input-focus-border-color` edge are the accessibility answer to focus and are never
+replaced by it.
+
+The `popup` panel is a floating surface and paints from the **shared overlay-surface family**
+(16.0.0): `--lr-overlay-surface`, `--lr-overlay-border` (default `var(--lr-color-border)`),
+`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
+ancestor, to scope it — retints this panel together with every other floating surface in the
+library. One deliberate difference from the rest of the family: `--lr-overlay-surface` defaults here
+to `var(--lr-color-surface-raised)` rather than the family's own
+`var(--lr-color-surface-overlay)`. The picker is a dense grid of time cells dropped from a field,
+and the raised tone is what separates it from the field's fill — `--lr-color-surface-overlay`
+resolves to the plain page surface in light mode and would erase that separation, while in dark
+mode the raised tone is already distinct from the page, so this panel never had the
+reads-as-a-hole problem the family exists to fix. Setting `--lr-overlay-surface` still repaints it
+along with every other popup.
+
 ```html
 <lr-time-input
   label="Start time"
@@ -3155,6 +3234,14 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - `--lr-phone-input-gap` — Country-trigger child gap. Default: `var(--lr-space-xs)`.
 - `--lr-phone-input-radius` — Input-wrapper corner radius. Default: `var(--lr-radius)`.
 - `--lr-phone-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-phone-input-fill` — Resting input-row background, public since 16.0.0. Default:
+  `var(--lr-color-surface)`.
+- `--lr-phone-input-border-color` — Resting input-row border color. Default:
+  `var(--lr-color-border)`. The invalid and focused states keep their own hooks and still win
+  over it.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  row holds focus. Default: `none`. Additive — the focus outline and the focused border are
+  never replaced by it.
 - `--lr-phone-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
 - `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 
@@ -4900,6 +4987,14 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-remove-hover-bg` / `--lr-token-input-remove-pressed-bg` — Remove-action hover
   and pressed backgrounds, with the same aggregate-hover and active-state fallbacks.
 - `--lr-token-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-token-input-fill` — Resting input-row background, public since 16.0.0. Default:
+  `var(--lr-color-surface)`.
+- `--lr-token-input-border-color` — Resting input-row border color. Default:
+  `var(--lr-color-border)`. The invalid and focused states keep their own hooks and still win
+  over it.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  row holds focus. Default: `none`. Additive — the focus outline and the focused border are
+  never replaced by it.
 - `--lr-token-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
 
 ## `lr-code-editor`
@@ -5254,6 +5349,13 @@ colour painted on the trigger, preview, slider handles and palette swatches),
 `--lr-color-picker-grid-hue` (the grid's fully-saturated base hue), and
 `--lr-color-picker-opacity-gradient` (the opacity ramp's transparent-to-opaque gradient, built from
 the current colour and text direction). Read them if you need the resolved colour; don't assign them.
+
+The popup panel is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
+`--lr-color-picker-radius`, which still wins when set.
 
 **Additional API surface:**
 
@@ -5702,6 +5804,14 @@ floor-only escape hatch — set a length to both floor and cap the trigger),
 `--lr-locale-picker-option-selected-font-weight`. The state hooks fall back to the previous brand,
 quiet-brand, and semibold semantic tokens.
 
+The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`), none of
+them declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints
+this listbox together with every other floating surface. `--lr-overlay-radius` reaches the listbox
+only as the middle arm of this component's own `--lr-locale-picker-radius`, which still wins when
+set: a component-scoped override outranks the shared family, never the other way round.
+
 **Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
 peer warning duplication; `lr-flag` itself already logs one) when the optional
 `@aceshooting/lyra-flags` package isn't installed and `showFlags` is left on.
@@ -5740,6 +5850,15 @@ resolver. Menu labels stay visible; a per-entry `country` override also reaches 
 - `--lr-locale-picker-radius` — Trigger/listbox/option corner radius. Default: `var(--lr-radius)`.
 - `--lr-locale-picker-trigger-hover-bg` — Trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-locale-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
+- `--lr-locale-picker-trigger-fill` — Resting trigger background. Default: `var(--lr-color-surface)`.
+- `--lr-locale-picker-trigger-border-color` — Resting trigger border color. Default:
+  `var(--lr-color-border)`.
+- `--lr-locale-picker-trigger-hover-border-color` — Trigger border color under the pointer. Default:
+  the resting `--lr-locale-picker-trigger-border-color`, so an unset hook leaves the hovered border
+  exactly where it has always been.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  trigger is focused or open. Default: `none`. Additive — the focus outline and the open border are
+  never replaced by it.
 - `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
 

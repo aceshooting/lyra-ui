@@ -638,6 +638,12 @@ floating popover on hover/focus. No content means no popover and no hover afford
 text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-entity-chip-border` (default `transparent`, the chip's `--lr-border-width-thin` outline).
 
+The anchored detail popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+
 **Optional peer deps:** none.
 
 ```html
@@ -1249,6 +1255,12 @@ public value remains authoritative in every status. Shared tokens include
 > Retheming a group of badges from outside `<lr-citation-badge>` (e.g. per-source or
 > per-confidence colors)? Set the component hooks above on their ancestor wrapper. Use
 > `--lr-theme-*` instead only when changing a shared semantic palette input for the entire subtree.
+
+The anchored source-preview popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
 **Optional peer deps:** none.
 

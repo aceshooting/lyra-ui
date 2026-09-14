@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -108,6 +108,12 @@ and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the
 `--lr-tooltip-color`, and `--lr-tooltip-arrow-size` remain fallbacks. A tooltip popup has no inner
 scroll wrapper to move overflow onto, so its default arrow trades internal scrolling for a visible
 arrow — use `<lr-popover>` when a floating surface needs both.
+
+`--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
+because its rules live in the stylesheet module `lr-popover` also composes, but a tooltip bubble is
+a **deliberate exclusion** from the overlay-surface family: it is a high-contrast label, not a
+panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`, draws no border,
+and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
 
 ```html
 <lr-tooltip

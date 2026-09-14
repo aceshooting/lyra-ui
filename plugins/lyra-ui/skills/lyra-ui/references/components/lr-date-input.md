@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-picker` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -441,5 +441,12 @@ and `dateTimeFormat(locale, options)`.
 - `--lr-date-input-gap` — Gap between input-row children. Default: `var(--lr-space-xs)`.
 - `--lr-date-input-radius` — Input-row corner radius. Default: `var(--lr-radius)`.
 - `--lr-date-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-date-input-fill` — Resting input-row background, public since 16.0.0 (the radius beside it
+  always was). Default: `var(--lr-color-surface)`, or `var(--lr-color-surface-raised)` under the
+  `filled`/`filled-outlined` treatments; a value set here wins over every treatment.
+- `--lr-date-input-border-color` — Resting input-row border color. Default:
+  `var(--lr-color-border)`, or `transparent` under `filled`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the row
+  holds focus. Default: `none`. Additive — the focused brand border is never replaced by it.
 
 ---

@@ -350,7 +350,10 @@ the width committed at drag-end (and only when that width actually differs from 
 A keyboard step (Arrow/Shift+Arrow/Home/End) is already one discrete action, so it fires that single
 cancelable commit directly, with no live-feedback stream. Calling `preventDefault()` on a cancelable
 emission reverts the column to its pre-gesture width (or removes the override entirely if the column
-had never been resized); calling it on a mid-drag step does nothing, by design — a veto is a decision
+had never been resized) — unless the listener also applied a width of its own during that same
+synchronous dispatch, which stands rather than being rolled back over, so a listener may refuse the
+proposed width and resolve the resize its own way in one step. Calling `preventDefault()` on a
+mid-drag step does nothing, by design — a veto is a decision
 about the final width, not about every pixel the pointer passes through.
 The internal filter input's composed native `input`/`change` events are contained; only
 `lr-filter-change` crosses the host boundary. Cell-editor `input`/`change` events are likewise

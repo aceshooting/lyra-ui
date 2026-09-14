@@ -30,6 +30,14 @@ explicitly empty labels remain empty and later labels render normally.
 - `shape: GaugeShape = 'radial'`, where `GaugeShape = 'radial'|'ring'|'linear'` (reflected —
   `radial` is a 270° sweep; `ring` is a
   full circle that begins at 12 o'clock)
+- `size?: LyraSize` (reflected, unset by default) — density tier on the library's one size ladder:
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'`, or the Web Awesome / Shoelace spellings `'small'|'medium'|'large'`,
+  which are accepted as authored rather than rewritten to the short form. A tier pins the host font
+  size, and because the whole gauge box is expressed in `em` the frame, the stroke geometry and both
+  SVG captions scale together — `8em` square for `radial`/`ring`, `12em` by `1.5em` for `linear`,
+  each multiplied by that tier's font size. Leaving it unset keeps the inherited ambient text size
+  and the exact geometry the gauge rendered before the ladder reached it, so existing markup is
+  untouched. An unsupported value normalizes to the omitted state and removes the attribute.
 - `label: string = ''`
 - `valueText?: string` (attribute `value-text` — overrides both the visible text and the host's
   `aria-valuetext`; an empty string is treated the same as unset and falls back to the numeric
@@ -107,9 +115,10 @@ entirely and falls back to the effective variant's shared semantic token —
   reflected attribute; the resolved color is tracked separately so a component reading back
   `variant` always sees the value it set. `--lr-gauge-fill` still overrides both `variant` and
   `thresholds` unconditionally, for a color outside the shared semantic-tone vocabulary.
-- no documented component-specific sizing custom property; host size is fixed em values
-  (`8em` radial/ring, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
-  element instead.
+- no documented component-specific sizing custom property. The host box is fixed em values
+  (`8em` radial/ring, `12em`/`1.5em` linear) against the host font size, so `size` is the supported
+  way to step it; for a dimension off the ladder, set plain CSS `width`/`height` (or `font-size`)
+  on the element instead.
 - Divide-by-zero guarded, and radial/linear share one component via the `shape`
   attribute.
 - non-finite `value` text remains blank unless `valueText` supplies a truthful fallback; that

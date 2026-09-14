@@ -600,6 +600,7 @@ export type LyraAlertSvelteProps = LyraSvelteElementProps<
   | 'locale'
   | 'open'
   | 'role'
+  | 'size'
   | 'strings'
   | 'variant',
   {},
@@ -2173,7 +2174,11 @@ export type LyraCitationBadgeSvelteProps = LyraSvelteElementProps<
   | 'lr-citation-open',
   | '--lr-citation-badge-accent'
   | '--lr-citation-badge-bg'
-  | '--lr-citation-badge-border',
+  | '--lr-citation-badge-border'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface',
   {
     'source-id'?: LyraCitationBadge['sourceId'];
   }
@@ -2424,6 +2429,10 @@ export type LyraColorPickerSvelteProps = LyraSvelteElementProps<
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
   | '--slider-handle-size'
   | '--slider-height'
   | '--swatch-size',
@@ -2508,9 +2517,12 @@ export type LyraComboboxSvelteProps = LyraSvelteElementProps<
   | 'lr-invalid'
   | 'lr-show',
   | '--hide-duration'
+  | '--lr-combobox-border-color'
   | '--lr-combobox-expand-size'
+  | '--lr-combobox-fill'
   | '--lr-combobox-font-size'
   | '--lr-combobox-gap'
+  | '--lr-combobox-open-border-color'
   | '--lr-combobox-option-active-bg'
   | '--lr-combobox-option-selected-bg'
   | '--lr-combobox-option-selected-border'
@@ -2524,9 +2536,14 @@ export type LyraComboboxSvelteProps = LyraSvelteElementProps<
   | '--lr-combobox-trigger-padding'
   | '--lr-combobox-unknown-value-border-color'
   | '--lr-combobox-unknown-value-border-style'
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
   | '--show-duration'
   | '--tag-max-size',
   {
@@ -3134,8 +3151,10 @@ export type LyraDateInputSvelteProps = LyraSvelteElementProps<
   | '--lr-date-input-action-hover-bg'
   | '--lr-date-input-action-hover-color'
   | '--lr-date-input-action-hover-radius'
+  | '--lr-date-input-border-color'
   | '--lr-date-input-control-height'
   | '--lr-date-input-control-min-height'
+  | '--lr-date-input-fill'
   | '--lr-date-input-focus-border-color'
   | '--lr-date-input-font-size'
   | '--lr-date-input-gap'
@@ -3143,6 +3162,7 @@ export type LyraDateInputSvelteProps = LyraSvelteElementProps<
   | '--lr-date-input-padding-inline'
   | '--lr-date-input-placeholder-color'
   | '--lr-date-input-radius'
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -3346,6 +3366,10 @@ export type LyraDialogSvelteProps = LyraSvelteElementProps<
   | '--lr-dialog-spacing'
   | '--lr-dialog-spacing-block'
   | '--lr-dialog-width'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-modal'
+  | '--lr-overlay-surface'
   | '--show-duration'
   | '--spacing'
   | '--width',
@@ -3751,6 +3775,10 @@ export type LyraDrawerSvelteProps = LyraSvelteElementProps<
   | '--lr-drawer-enter-y'
   | '--lr-drawer-height'
   | '--lr-drawer-width'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-modal'
+  | '--lr-overlay-surface'
   | '--show-duration'
   | '--size'
   | '--spacing'
@@ -3827,7 +3855,11 @@ export type LyraDropdownSvelteProps = LyraSvelteElementProps<
   | '--arrow-size'
   | '--hide-duration'
   | '--lr-overlay-arrow-size'
+  | '--lr-overlay-border'
   | '--lr-overlay-max-inline-size'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
   | '--max-width'
   | '--show-duration',
   {
@@ -3869,7 +3901,13 @@ export type LyraDropdownItemSvelteProps = LyraSvelteElementProps<
   | '--lr-menu-item-danger-color'
   | '--lr-menu-item-danger-hover-bg'
   | '--lr-menu-item-gap'
+  | '--lr-menu-item-hover-bg'
+  | '--lr-menu-item-icon-color'
+  | '--lr-menu-item-min-height'
   | '--lr-menu-item-radius'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-surface'
   | '--submenu-offset',
   {
     'submenu-open'?: LyraDropdownItem['submenuOpen'];
@@ -4069,7 +4107,11 @@ export type LyraEntityChipSvelteProps = LyraSvelteElementProps<
   | 'lr-entity-select',
   | '--lr-entity-chip-bg'
   | '--lr-entity-chip-border'
-  | '--lr-entity-chip-color',
+  | '--lr-entity-chip-color'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface',
   {
     'entity-id'?: LyraEntityChip['entityId'];
     'type-label'?: LyraEntityChip['typeLabel'];
@@ -4233,7 +4275,10 @@ export type LyraExportButtonSvelteProps = LyraSvelteElementProps<
   | 'lr-export-error'
   | 'lr-hide'
   | 'lr-show',
-never,
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface',
   {
     'aria-label'?: LyraExportButton['accessibleLabel'];
   }
@@ -4306,7 +4351,10 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
   | '--lr-file-input-compact-gap'
   | '--lr-file-input-compact-padding'
   | '--lr-file-input-detail-font-size'
+  | '--lr-file-input-dropzone-border-color'
+  | '--lr-file-input-dropzone-fill'
   | '--lr-file-input-dropzone-font-size'
+  | '--lr-file-input-dropzone-hover-border-color'
   | '--lr-file-input-dropzone-icon-size'
   | '--lr-file-input-dropzone-padding'
   | '--lr-file-input-font-size'
@@ -4314,6 +4362,7 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
   | '--lr-file-input-radius'
   | '--lr-file-input-reject-bg'
   | '--lr-file-input-reject-border-color'
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset',
@@ -4659,6 +4708,7 @@ export type LyraGaugeSvelteProps = LyraSvelteElementProps<
   | 'max'
   | 'min'
   | 'shape'
+  | 'size'
   | 'strings'
   | 'thresholds'
   | 'value'
@@ -5450,6 +5500,7 @@ export type LyraInputSvelteProps = LyraSvelteElementProps<
   | 'lr-clear'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -6001,6 +6052,7 @@ export type LyraLocalePickerSvelteProps = LyraSvelteElementProps<
   | 'focus'
   | 'lr-change'
   | 'lr-invalid',
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -6013,10 +6065,17 @@ export type LyraLocalePickerSvelteProps = LyraSvelteElementProps<
   | '--lr-locale-picker-option-selected-color'
   | '--lr-locale-picker-option-selected-font-weight'
   | '--lr-locale-picker-radius'
+  | '--lr-locale-picker-trigger-border-color'
+  | '--lr-locale-picker-trigger-fill'
   | '--lr-locale-picker-trigger-height'
   | '--lr-locale-picker-trigger-hover-bg'
+  | '--lr-locale-picker-trigger-hover-border-color'
   | '--lr-locale-picker-trigger-min-height'
-  | '--lr-locale-picker-trigger-padding',
+  | '--lr-locale-picker-trigger-padding'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface',
   {
     'custom-error'?: LyraLocalePicker['customError'];
     'error-text'?: LyraLocalePicker['errorText'];
@@ -6252,7 +6311,11 @@ export type LyraMentionPopoverSvelteProps = LyraSvelteElementProps<
   LyraMentionPopoverEventMap,
   | 'lr-mention-close'
   | 'lr-mention-select',
-  | '--lr-mention-popover-option-active-bg',
+  | '--lr-mention-popover-option-active-bg'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface',
   {
     'empty-text'?: LyraMentionPopover['emptyText'];
   }
@@ -6267,7 +6330,10 @@ export type LyraMenuSvelteProps = LyraSvelteElementProps<
   {},
   LyraMenuEventMap,
   | 'lr-select',
-never,
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface',
   {}
 >;
 
@@ -6298,6 +6364,9 @@ export type LyraMenuItemSvelteProps = LyraSvelteElementProps<
   | '--lr-menu-item-danger-color'
   | '--lr-menu-item-danger-hover-bg'
   | '--lr-menu-item-gap'
+  | '--lr-menu-item-hover-bg'
+  | '--lr-menu-item-icon-color'
+  | '--lr-menu-item-min-height'
   | '--lr-menu-item-radius'
   | '--submenu-offset',
   {}
@@ -6490,7 +6559,11 @@ export type LyraModelSelectSvelteProps = LyraSvelteElementProps<
   | '--lr-model-select-option-synthetic-border-style'
   | '--lr-model-select-radius'
   | '--lr-model-select-trigger-min-height'
-  | '--lr-model-select-trigger-padding',
+  | '--lr-model-select-trigger-padding'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface',
   {
     'allow-custom'?: LyraModelSelect['allowCustom'];
     'autocorrect'?: LyraModelSelect['autoCorrect'];
@@ -6668,6 +6741,7 @@ export type LyraNativeTimeInputSvelteProps = LyraSvelteElementProps<
   | 'lr-clear'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -6849,6 +6923,7 @@ export type LyraNumberInputSvelteProps = LyraSvelteElementProps<
   | 'lr-clear'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -7255,12 +7330,15 @@ export type LyraPhoneInputSvelteProps = LyraSvelteElementProps<
   | 'lr-change'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
+  | '--lr-phone-input-border-color'
   | '--lr-phone-input-control-height'
   | '--lr-phone-input-control-min-height'
   | '--lr-phone-input-country-hover-bg'
+  | '--lr-phone-input-fill'
   | '--lr-phone-input-flag-size'
   | '--lr-phone-input-focus-border-color'
   | '--lr-phone-input-font-size'
@@ -7560,7 +7638,11 @@ export type LyraPopoverSvelteProps = LyraSvelteElementProps<
   | '--arrow-size'
   | '--hide-duration'
   | '--lr-overlay-arrow-size'
+  | '--lr-overlay-border'
   | '--lr-overlay-max-inline-size'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
   | '--max-width'
   | '--show-duration',
   {
@@ -8831,9 +8913,14 @@ export type LyraSelectSvelteProps = LyraSvelteElementProps<
   | 'lr-invalid'
   | 'lr-show',
   | '--hide-duration'
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
   | '--lr-select-expand-size'
   | '--lr-select-font-size'
   | '--lr-select-gap'
@@ -8847,8 +8934,11 @@ export type LyraSelectSvelteProps = LyraSvelteElementProps<
   | '--lr-select-tag-font-size'
   | '--lr-select-tag-padding'
   | '--lr-select-trigger-active-bg'
+  | '--lr-select-trigger-border-color'
+  | '--lr-select-trigger-fill'
   | '--lr-select-trigger-height'
   | '--lr-select-trigger-hover-bg'
+  | '--lr-select-trigger-hover-border-color'
   | '--lr-select-trigger-min-height'
   | '--lr-select-trigger-padding'
   | '--lr-select-unknown-value-border-color'
@@ -8886,6 +8976,10 @@ export type LyraSelectionToolbarSvelteProps = LyraSvelteElementProps<
   | 'lr-dismiss'
   | 'lr-error'
   | 'lr-selection-action',
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
   | '--lr-selection-toolbar-placement-gap',
   {
     'aria-label'?: LyraSelectionToolbar['accessibleLabel'];
@@ -9971,6 +10065,7 @@ export type LyraTextareaSvelteProps = LyraSvelteElementProps<
   | 'lr-change'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -10133,9 +10228,14 @@ export type LyraTimeInputSvelteProps = LyraSvelteElementProps<
   | '--column-item-height'
   | '--column-width'
   | '--hide-duration'
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
   | '--lr-time-input-action-active-bg'
   | '--lr-time-input-action-color'
   | '--lr-time-input-action-hover-bg'
@@ -10367,15 +10467,18 @@ export type LyraTokenInputSvelteProps = LyraSvelteElementProps<
   | 'lr-invalid'
   | 'lr-remove'
   | 'lr-token-edit',
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
   | '--lr-token-input-action-hover-bg'
+  | '--lr-token-input-border-color'
   | '--lr-token-input-control-height'
   | '--lr-token-input-control-min-height'
   | '--lr-token-input-edit-hover-bg'
   | '--lr-token-input-edit-pressed-bg'
   | '--lr-token-input-editor-inline-size'
+  | '--lr-token-input-fill'
   | '--lr-token-input-focus-border-color'
   | '--lr-token-input-font-size'
   | '--lr-token-input-gap'
@@ -10453,6 +10556,10 @@ export type LyraToolCallChipSvelteProps = LyraSvelteElementProps<
   {},
   LyraToolCallChipEventMap,
   | 'lr-tool-call-chip-select',
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
   | '--lr-tool-call-chip-accent'
   | '--lr-tool-call-chip-bg'
   | '--lr-tool-call-chip-border'
@@ -10645,6 +10752,9 @@ export type LyraTooltipSvelteProps = LyraSvelteElementProps<
   | 'lr-show',
   | '--arrow-size'
   | '--hide-delay'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-surface'
   | '--lr-tooltip-arrow-size'
   | '--lr-tooltip-background'
   | '--lr-tooltip-color'
@@ -10865,7 +10975,10 @@ export type LyraUsageBadgeSvelteProps = LyraSvelteElementProps<
   {},
   {},
 never,
-never,
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface',
   {
     'cost-text'?: LyraUsageBadge['costText'];
     'latency-ms'?: LyraUsageBadge['latencyMs'];
@@ -11032,6 +11145,10 @@ export type LyraVoicePickerSvelteProps = LyraSvelteElementProps<
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
   | '--lr-voice-picker-gap'
   | '--lr-voice-picker-open-border-color'
   | '--lr-voice-picker-option-active-bg'

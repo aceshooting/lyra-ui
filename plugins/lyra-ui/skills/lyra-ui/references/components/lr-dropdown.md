@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -114,7 +114,9 @@ popup, preserving the popover, Web Awesome and Shoelace wrapper names on the sam
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
-`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks.
+`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
+`lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
+`--lr-overlay-border`, `--lr-overlay-radius` and `--lr-overlay-shadow-anchored`.
 
 ```html
 <lr-dropdown aria-label="File actions" size="small">

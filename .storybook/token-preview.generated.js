@@ -2998,6 +2998,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-interactive-transition",
+        "type": "string",
+        "scope": "shared",
+        "values": {
+          "light": "background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast)"
+        }
+      },
+      {
         "name": "--lr-theme-duration-fast",
         "type": "duration",
         "scope": "theme-input",

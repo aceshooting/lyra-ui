@@ -1122,7 +1122,16 @@ for the drag-accept state; `--lr-file-input-reject-border-color` (default `var(-
 and `--lr-file-input-reject-bg` (default `color-mix(in srgb, var(--lr-color-danger) 8%,
 transparent)`) for drag-reject. All four are inline `var()` fallbacks at the point of use, settable
 on the element or any ancestor, so a consumer can retint just this dropzone's drag highlight without
-hijacking the shared `--lr-color-success`/`--lr-color-danger` tokens used elsewhere. Plus shared
+hijacking the shared `--lr-color-success`/`--lr-color-danger` tokens used elsewhere.
+
+The **resting** dropzone — the state it spends most of its life in — has the same three hooks as of
+16.0.0: `--lr-file-input-dropzone-fill` (default `var(--lr-color-surface)`),
+`--lr-file-input-dropzone-border-color` (default `var(--lr-color-border)`; the dashed border style
+itself is unchanged), and `--lr-file-input-dropzone-hover-border-color` (default
+`var(--lr-color-brand)`), which recolours the edge whether the pointer is over the button or over
+the content stacked on it. The shared field halo `--lr-form-control-focus-shadow` (default `none`)
+paints a `box-shadow` while the dropzone holds focus; it is additive, so the
+`[part='base']:focus-visible` outline is untouched. Plus shared
 tokens — `--lr-space-xs`, `--lr-space-l`,
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),

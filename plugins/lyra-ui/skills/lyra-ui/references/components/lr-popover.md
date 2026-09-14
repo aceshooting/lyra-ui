@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -204,6 +204,17 @@ match; the state is in the part name.
 `--hide-duration`, with retained `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size`
 fallbacks. Arrow size is half the square's width. Rendering the arrow switches `[part~="popup"]` to
 `overflow: visible` so it is not clipped, moving the scroll container onto `[part~="content"]`.
+
+The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). The arrow takes the fill and the
+edge but never the radius — its corners are already cut by its clip path. None of the four is
+declared on `:host`, so a single declaration on `:root` retints every floating surface in the
+application, and the same declaration on one component's own ancestor scopes the retint to that
+subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from the modal tier
+`--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
+dialogs.
 
 ```html
 <lr-popover

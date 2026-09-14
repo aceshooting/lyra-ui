@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -142,6 +142,14 @@ floor-only escape hatch — set a length to both floor and cap the trigger),
 `--lr-locale-picker-option-selected-font-weight`. The state hooks fall back to the previous brand,
 quiet-brand, and semibold semantic tokens.
 
+The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+`--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`), none of
+them declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints
+this listbox together with every other floating surface. `--lr-overlay-radius` reaches the listbox
+only as the middle arm of this component's own `--lr-locale-picker-radius`, which still wins when
+set: a component-scoped override outranks the shared family, never the other way round.
+
 **Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
 peer warning duplication; `lr-flag` itself already logs one) when the optional
 `@aceshooting/lyra-flags` package isn't installed and `showFlags` is left on.
@@ -180,5 +188,14 @@ resolver. Menu labels stay visible; a per-entry `country` override also reaches 
 - `--lr-locale-picker-radius` — Trigger/listbox/option corner radius. Default: `var(--lr-radius)`.
 - `--lr-locale-picker-trigger-hover-bg` — Trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-locale-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
+- `--lr-locale-picker-trigger-fill` — Resting trigger background. Default: `var(--lr-color-surface)`.
+- `--lr-locale-picker-trigger-border-color` — Resting trigger border color. Default:
+  `var(--lr-color-border)`.
+- `--lr-locale-picker-trigger-hover-border-color` — Trigger border color under the pointer. Default:
+  the resting `--lr-locale-picker-trigger-border-color`, so an unset hook leaves the hovered border
+  exactly where it has always been.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  trigger is focused or open. Default: `none`. Additive — the focus outline and the open border are
+  never replaced by it.
 - `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
