@@ -62,15 +62,11 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
-  under `lr-widget:${storageKey}` and restores it on the next mount, without overwriting a `collapsed`/
-  `.collapsed=${…}` binding already explicitly assigned on that same mount (any assignment sets a
-  single-shot flag, checked once before the restore runs). This is not byte-identical to
-  `lr-app-rail`'s or `lr-table`'s guard: `lr-app-rail`'s undefaulted `railWidthPx`/`preferredMode`
-  fields key their guard off `willUpdate()`'s own per-field `changed.has(...)`, checked fresh on
-  every update; `lr-table`'s `priorityColumnsVisible` instead checks its own current value, since
-  its `false` default would otherwise always read as "changed"; this component's flag is a single
-  boolean set by any assignment (including the restore's own write) and never reset. Without a
-  `storageKey` there is no persistence and storage is never touched — listen for
+  under `lr-widget:${storageKey}` and restores it on the next mount, without overwriting a
+  `collapsed`/`.collapsed=${…}` binding already assigned on that same mount — including one that
+  assigns `false`, the default. The restore runs once, before the first paint, and is skipped for
+  any property the consumer assigned; `lr-app-rail` and `lr-table` share the same mechanism. Without
+  a `storageKey` there is no persistence and storage is never touched — listen for
   `lr-collapse-change` and persist the state yourself.
 
 **Events:** `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
@@ -86,7 +82,15 @@ toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-v
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
 `preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
 `activeViewId` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
-active view's `viewId`. Not emitted when a consumer sets `activeViewId` directly)
+active view's `viewId`. Not emitted when a consumer sets `activeViewId` directly), and
+`lr-activate` (non-cancelable; `detail: { value }` — note the key is `value`, not `viewId` — is the
+activated view's `viewId`, fired on **every** accepted header view-toggle activation whether or not
+`activeViewId` actually moved. `lr-view-request` stays the veto point, and a vetoed activation emits
+no activation at all. Use it for the repeat pick `lr-view-change` deliberately stays silent for —
+"rebuild that view" is a real intent — which is otherwise unobservable, because the toggles live in
+this shadow root, so a retargeted `click` names no view. When an activation _does_ move the view,
+`lr-view-request` and `lr-view-change` are emitted first. Not emitted when a consumer sets
+`activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
 icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,

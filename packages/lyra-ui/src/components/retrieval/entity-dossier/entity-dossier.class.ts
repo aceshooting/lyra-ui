@@ -236,6 +236,14 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     this.emit('lr-tab-show', { tabId });
   };
 
+  /** The inner `<lr-tab-group>`'s `lr-activate` reports a repeat pick of the tab already active.
+   *  It is swallowed for the same reason `onTabsChange` swallows the raw `lr-tab-show`: this
+   *  component's documented event contract is its own, and a child event escaping as-is would be
+   *  public surface this tag never declared. */
+  private containTabsEvent = (e: Event): void => {
+    e.stopPropagation();
+  };
+
   override render(): TemplateResult {
     if (!this.entity) {
       return html`<div part="base">
@@ -275,6 +283,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
           aria-label=${tabsLabel}
           .active=${this.activeTab}
           @lr-tab-show=${this.onTabsChange}
+          @lr-activate=${this.containTabsEvent}
         >
           <lr-tab panel="relationships"
             >${this.localize('neighborListLabel')}</lr-tab

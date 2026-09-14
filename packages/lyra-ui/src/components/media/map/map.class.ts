@@ -68,6 +68,29 @@ export interface LyraMapLegendEntry {
   readonly color: string;
   readonly label: string;
   readonly pattern: LyraMapLegendPattern;
+  /**
+   * Optional glyph painted inside `[part="legend-swatch"]`, in the entry's own color, instead of
+   * the solid color block that would otherwise cover it. Deliberately the record `point.icons`
+   * already carries, so a key can reproduce the symbol its point layer draws rather than
+   * describing it in color alone — hand the legend the very icon object the layer renders.
+   *
+   * The point layer's `value` category key means nothing to a legend row: it is accepted so a
+   * pass-through needs no reshaping, and left out of the canonical readback. Validation is the
+   * point icon's own (path data only, at most 8192 characters, positive `viewBox` dimensions);
+   * an unusable record is dropped and the row keeps rendering its color swatch.
+   *
+   * That per-record 8192-character cap is deliberately the whole bound on path data, with no
+   * aggregate budget of the kind `label` carries across the legend. Two reasons. The admission
+   * grammar is shared verbatim with `point.icons` through one projector, so a legend-only
+   * aggregate budget would make the same record admissible on the map and rejected in the key
+   * describing it — the exact divergence sharing the projector exists to prevent. And a label
+   * budget bounds *rendered text*, which is measured, wrapped and announced per character,
+   * whereas a path is one inert attribute value on a decorative shape. The rendered total is
+   * still finite and stated: at most one glyph per rendered row, so at most 100 of them, each at
+   * most 8192 characters. A glyph omission is not counted in `legendProjection` either, because
+   * the row it belongs to still renders — only dropped rows are omissions.
+   */
+  readonly icon?: LyraMapPointIcon | Omit<LyraMapPointIcon, 'value'>;
 }
 
 /**
@@ -248,6 +271,7 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
         color?: unknown;
         label?: unknown;
         pattern?: unknown;
+        icon?: unknown;
       } | null;
       if (!candidate || typeof candidate !== 'object') continue;
       const rawColor = candidate.color;
@@ -267,10 +291,15 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
       if (!label.trim()) continue;
       if (rawLabel.length > labelLimit) truncatedLabelCount++;
       labelCharacters += label.length;
+      const rawIcon = candidate.icon;
+      const icon = isRuntimeRecord(rawIcon) ? projectIconPaint(rawIcon) : undefined;
       entries.push(Object.freeze({
         color: rawColor.slice(0, MAP_LEGEND_COLOR_LIMIT),
         label,
         pattern: rawPattern as LyraMapLegendPattern,
+        // An absent or rejected glyph leaves no `icon` key at all, so a color-only row keeps
+        // reading back exactly as it did before glyphs existed.
+        ...(icon ? { icon } : {}),
       }));
     } catch {
       // A hostile record is omitted without preventing later valid entries from rendering.
@@ -287,6 +316,33 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
     truncated: omittedCount > 0 || truncatedLabelCount > 0,
   });
   return { entries: frozenEntries, projection };
+}
+
+/**
+ * A legend row's glyph. Painted in `currentColor` so the swatch's inline entry color reaches both
+ * fill and stroke through one property — which is also what lets forced-colors mode replace it
+ * wholesale, since a system color override lands on `color` and the glyph follows.
+ *
+ * Decorative by construction: the row's own visible label carries the meaning a sighted reader
+ * takes from the shape, and the wrapping swatch is already `aria-hidden` and `inert`.
+ */
+function renderLegendIcon(
+  icon: LyraMapPointIcon | Omit<LyraMapPointIcon, 'value'>,
+): TemplateResult {
+  const [x, y, width, height] = icon.viewBox ?? DEFAULT_ICON_VIEW_BOX;
+  const mode = icon.mode ?? 'fill';
+  return html`<svg
+    class="legend-icon"
+    viewBox=${`${x} ${y} ${width} ${height}`}
+    focusable="false"
+  ><path
+      d=${icon.path}
+      fill=${mode === 'stroke' ? 'none' : 'currentColor'}
+      stroke=${mode === 'fill' ? 'none' : 'currentColor'}
+      stroke-width=${icon.strokeWidth ?? DEFAULT_ICON_STROKE_WIDTH}
+      stroke-linecap=${icon.lineCap ?? 'round'}
+      stroke-linejoin=${icon.lineJoin ?? 'round'}
+    ></path></svg>`;
 }
 
 function addPartToken(element: Element, token: string): void {
@@ -1065,14 +1121,79 @@ interface CanonicalPointOptions {
   readonly iconSize: number;
 }
 
-interface CanonicalPointIcon {
-  readonly value: string;
+/**
+ * The validated paint half of an icon record, shared by a point layer's `icons` and a legend
+ * entry's `icon`: the same grammar, bounds and defaults reach both, so a consumer can hand one
+ * record to each without either admitting something the other rejects.
+ */
+interface CanonicalIconPaint {
   readonly path: string;
   readonly viewBox: readonly [number, number, number, number];
   readonly mode: LyraMapPointIconMode;
   readonly strokeWidth: number;
   readonly lineCap: LyraMapPointIconLineCap;
   readonly lineJoin: LyraMapPointIconLineJoin;
+}
+
+interface CanonicalPointIcon extends CanonicalIconPaint {
+  readonly value: string;
+}
+
+/** Point-icon defaults, applied identically by the projector below and the legend glyph render. */
+const DEFAULT_ICON_VIEW_BOX = Object.freeze([0, 0, 24, 24]) as readonly [
+  number,
+  number,
+  number,
+  number,
+];
+const DEFAULT_ICON_STROKE_WIDTH = 2;
+/** Markup, URLs and non-path commands are rejected: only SVG path data survives this. */
+const ICON_PATH_GRAMMAR = /^[MmLlHhVvCcSsQqTtAaZz\d.eE+,\s-]+$/u;
+const MAX_ICON_PATH_LENGTH = 8192;
+
+/**
+ * Descriptor-safe projection of one hostile-input icon record, minus the point layer's category
+ * key. Returns undefined for anything unusable so each caller decides what an omission means —
+ * a point keeps its circle, a legend row keeps its color swatch.
+ */
+function projectIconPaint(row: object): CanonicalIconPaint | undefined {
+  const path = optionalDescriptorValue(ownDataValue(row, 'path'));
+  if (
+    typeof path !== 'string' ||
+    path.length === 0 ||
+    path.length > MAX_ICON_PATH_LENGTH ||
+    !ICON_PATH_GRAMMAR.test(path)
+  )
+    return undefined;
+  const rawBox = optionalDescriptorValue(ownDataValue(row, 'viewBox'));
+  const box: number[] = [];
+  if (rawBox === undefined) box.push(...DEFAULT_ICON_VIEW_BOX);
+  else {
+    if (boundedOwnArrayLength(rawBox, 4) !== 4) return undefined;
+    for (let index = 0; index < 4; index++) {
+      const coordinate = optionalDescriptorValue(ownDataValue(rawBox as object, String(index)));
+      if (typeof coordinate !== 'number' || !Number.isFinite(coordinate) || Math.abs(coordinate) > 10_000) return undefined;
+      box.push(coordinate);
+    }
+    if (box[2]! < 0.001 || box[3]! < 0.001) return undefined;
+  }
+  const mode = optionalDescriptorValue(ownDataValue(row, 'mode'));
+  const strokeWidth = optionalDescriptorValue(ownDataValue(row, 'strokeWidth'));
+  const lineCap = optionalDescriptorValue(ownDataValue(row, 'lineCap'));
+  const lineJoin = optionalDescriptorValue(ownDataValue(row, 'lineJoin'));
+  return Object.freeze({
+    path,
+    viewBox: Object.freeze(box) as unknown as CanonicalIconPaint['viewBox'],
+    mode: mode === 'stroke' || mode === 'fill-stroke' ? mode : 'fill',
+    strokeWidth: finiteRange(
+      typeof strokeWidth === 'number' ? strokeWidth : NaN,
+      DEFAULT_ICON_STROKE_WIDTH,
+      0,
+      200,
+    ),
+    lineCap: lineCap === 'butt' || lineCap === 'square' ? lineCap : 'round',
+    lineJoin: lineJoin === 'miter' || lineJoin === 'bevel' ? lineJoin : 'round',
+  });
 }
 
 interface CanonicalPointRadius {
@@ -1143,32 +1264,10 @@ function projectPointOptions(value: unknown): CanonicalPointOptions | undefined 
   });
   project(read('icons'), (row) => {
     const key = optionalDescriptorValue(ownDataValue(row, 'value'));
-    const path = optionalDescriptorValue(ownDataValue(row, 'path'));
-    if (typeof key !== 'string' || typeof path !== 'string' || path.length === 0 || path.length > 8192 ||
-      !/^[MmLlHhVvCcSsQqTtAaZz\d.eE+,\s-]+$/u.test(path) || icons.some((icon) => icon.value === key)) return;
-    const rawBox = optionalDescriptorValue(ownDataValue(row, 'viewBox'));
-    const box: number[] = [];
-    if (rawBox === undefined) box.push(0, 0, 24, 24);
-    else {
-      if (boundedOwnArrayLength(rawBox, 4) !== 4) return;
-      for (let index = 0; index < 4; index++) {
-        const coordinate = optionalDescriptorValue(ownDataValue(rawBox as object, String(index)));
-        if (typeof coordinate !== 'number' || !Number.isFinite(coordinate) || Math.abs(coordinate) > 10_000) return;
-        box.push(coordinate);
-      }
-      if (box[2]! < 0.001 || box[3]! < 0.001) return;
-    }
-    const mode = optionalDescriptorValue(ownDataValue(row, 'mode'));
-    const strokeWidth = optionalDescriptorValue(ownDataValue(row, 'strokeWidth'));
-    const lineCap = optionalDescriptorValue(ownDataValue(row, 'lineCap'));
-    const lineJoin = optionalDescriptorValue(ownDataValue(row, 'lineJoin'));
-    icons.push(Object.freeze({ value: key, path,
-      viewBox: Object.freeze(box) as unknown as CanonicalPointIcon['viewBox'],
-      mode: mode === 'stroke' || mode === 'fill-stroke' ? mode : 'fill',
-      strokeWidth: finiteRange(typeof strokeWidth === 'number' ? strokeWidth : NaN, 2, 0, 200),
-      lineCap: lineCap === 'butt' || lineCap === 'square' ? lineCap : 'round',
-      lineJoin: lineJoin === 'miter' || lineJoin === 'bevel' ? lineJoin : 'round',
-    }));
+    if (typeof key !== 'string' || icons.some((icon) => icon.value === key)) return;
+    const paint = projectIconPaint(row);
+    if (!paint) return;
+    icons.push(Object.freeze({ value: key, ...paint }));
   });
   return Object.freeze({ field: string('field'), colors: Object.freeze(colors), radius: projectPointRadius(read('radius')),
     strokeWidth: number('strokeWidth', 0, 0, 200), strokeColor: string('strokeColor'),
@@ -2248,7 +2347,10 @@ export interface LyraMapEventMap {
  * @slot legend - Custom legend content, rendered inside the legend panel's own layout so it stays
  *  positioned with the map instead of floating beside it.
  * @csspart legend - The map legend.
- * @csspart legend-swatch - A legend color swatch.
+ * @csspart legend-swatch - A legend color swatch, or the entry's glyph when it carries an `icon`
+ *   — in which case the swatch drops its color block and pattern overlay, keeps the `pattern`
+ *   border framing the glyph as its non-color cue, carries `data-icon="true"`, and paints the
+ *   glyph itself in the entry color.
  * @csspart legend-gradient - The continuous ramp bar rendered from `legendGradient`.
  * @csspart legend-lo - The low endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
  * @csspart legend-hi - The high endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
@@ -4220,6 +4322,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `[part="legend"]` is never truly `:empty` in CSS even with zero entries, so
     // the panel is omitted only when both the bounded legend and its projection result are empty
     // rather than relying on a CSS `:empty` selector that can never match.
+    //
+    // The legend's `aria-controls` names the map container, which exists only once the peer has
+    // settled successfully: while loading, and on every failure, the attribute is dropped rather
+    // than left pointing at an id that is not in the tree. A dangling idref is an ARIA violation
+    // in its own right (axe reports it critical), and the legend is exactly the element a screen
+    // reader would follow from.
     return html`
       <div
         part="base"
@@ -4243,26 +4351,36 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               id="map-legend"
               role="group"
               aria-label=${this.localize('mapLegend')}
-              aria-controls="map-container"
+              aria-controls=${this.failure || this.loading ? nothing : 'map-container'}
               data-truncated=${String(this.legendProjection.truncated)}
             >
               ${this.renderLegendGradient()}
               <div class="legend-list" role="list">
                 ${this.legend.map((entry, index) => {
-                  const bg = sanitizeCssColor(entry.color);
+                  const paint = sanitizeCssColor(entry.color);
                   return html`<div
                     class="legend-row"
                     role="listitem"
                     aria-posinset=${String(index + 1)}
                     aria-setsize=${String(this.legendProjection.inputCount)}
                   >
-                    <span
-                      part="legend-swatch"
-                      data-pattern=${entry.pattern}
-                      aria-hidden="true"
-                      inert
-                      style=${styleMap(bg ? { backgroundColor: bg } : {})}
-                    ></span>
+                    ${entry.icon
+                      ? html`<span
+                          part="legend-swatch"
+                          data-pattern=${entry.pattern}
+                          data-icon="true"
+                          aria-hidden="true"
+                          inert
+                          style=${styleMap(paint ? { color: paint } : {})}
+                          >${renderLegendIcon(entry.icon)}</span
+                        >`
+                      : html`<span
+                          part="legend-swatch"
+                          data-pattern=${entry.pattern}
+                          aria-hidden="true"
+                          inert
+                          style=${styleMap(paint ? { backgroundColor: paint } : {})}
+                        ></span>`}
                     <span>${entry.label}</span>
                   </div>`;
                 })}

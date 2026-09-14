@@ -123,6 +123,29 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
 progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — when true, scrolling near the bottom
   fires `lr-load-more` (gated by `loading`).
+- `scrollElement?: Element | Window` (attribute: false) — an ancestor that already owns a scrollbar,
+  or the window itself, for a list embedded in a longer scrolling page rather than sized as its own
+  panel. JS-only; set via a property/lit-html binding. While set, `[part="base"]` stops scrolling and
+  grows to the list's full virtual extent, so the page's single scrollbar spans the whole list and
+  `[part="sticky-group"]` sticks to that outer scrollport instead of this component's. Everything
+  expressed in list coordinates keeps answering in list coordinates — `offsetForIndex()`,
+  `indexAtOffset()`, `scrollToIndex()`, `active-item-id` scroll-into-view, and `lr-virtual-scroll`'s
+  `scrollTop` are all still measured from the top of the list, with the component converting to and
+  from the external scroller's position; auto-height scroll anchoring moves the external scroller
+  too, so measuring a row above the viewport does not make the page jump. There is deliberately no
+  ancestor auto-detection: the scroller is the element you name and nothing else, so adding an
+  unrelated `overflow` rule to some wrapper can never silently take the job over. Two consequences:
+  `[part="base"]` drops its `tabindex` and its hover outline, because it is no longer a scrollable
+  region and a focus stop that scrolls nothing is worse than none — keyboard scrolling belongs to the
+  external scroller; and horizontal scrolling of row content that opted out of wrapping becomes the
+  external scroller's responsibility, since CSS cannot leave one axis visible while the other
+  scrolls. The list's position inside the scroller is re-read on scroll, on the scroller's own
+  resize, and whenever the list re-renders; a layout change _above_ the list that shifts it without
+  any of those happening is not observable, so re-assign the property to force a re-read. Listeners
+  follow the property — re-pointing it, disconnecting, and reconnecting all rebind against the
+  current target and leave nothing behind on the previous one. A value that is neither an `Element`
+  nor a `Window` is ignored and the list keeps scrolling its own viewport, so wiring this from a ref
+  that is still empty on a first render is safe.
 
 **Exported types:** `LyraVirtualListRowHeight = number | 'auto'`;
 `LyraVirtualListSource<T> = readonly T[] | LyraVirtualListIndexedSource<T>` and
@@ -152,7 +175,9 @@ That correction is bound to the source, key function, and target identity and is
 target, data replacement, manual scroll intent, or disconnect, so late observations cannot pull a
 newer view back to stale content.
 `offsetForIndex(index)` returns the pixel top row `index` renders at, in the same coordinate space as
-the scroll container's `scrollTop`; it is clamped to `0…count`, so `offsetForIndex(count)`
+the scroll container's `scrollTop`; under an external `scrollElement` that space is unchanged — it
+measures from the top of the list itself, not from the top of the external scroller's content, and
+the component converts between the two. It is clamped to `0…count`, so `offsetForIndex(count)`
 is the total content height and an empty list is always `0`. `indexAtOffset(px)` is its inverse — the
 row whose box contains that offset, clamped at both ends, `-1` for an empty list — so
 `indexAtOffset(offsetForIndex(i)) === i` and `indexAtOffset(scrollContainer.scrollTop)` is the row at
@@ -163,7 +188,10 @@ so `await el.updateComplete` after assigning `items` or `source` before querying
 
 **Getters:** `scrollContainer: HTMLElement | undefined` — the real scroll container (`[part="base"]`),
 `undefined` before the first render; for a host that needs the live scroll position or wants to scroll
-the list itself without reaching into the shadow root. `renderedRows: HTMLElement[]` — the row
+the list itself without reaching into the shadow root. While `scrollElement` is set this element
+still exists and still hosts every row, but it no longer scrolls — read and write the position on the
+external scroller, or keep using `scrollToIndex()`, which targets whichever of the two is currently
+in charge. `renderedRows: HTMLElement[]` — the row
 wrappers (`[part="row"]`) that currently exist as real DOM, in item order (the current window, not the
 whole collection; empty before the first render). It exists for hosts that must _reach_ a rendered row
 rather than style it — keyboard focus management across a windowed list, where the row to focus may
@@ -179,7 +207,10 @@ current visible, non-overscanned item index range — fired only when it actuall
 spelled `lr-visible-range-changed` before 10.0.0, the only past-tense `-changed` spelling among 58
 `-change`-family events, so a convention-driven `lr-${x}-change` listener silently missed it),
 `lr-virtual-scroll`
-(`detail: LyraVirtualListScroll` — the scroll container moved; emitted from the same animation frame that
+(`detail: LyraVirtualListScroll` — the scroll container moved. `scrollTop` is always in the list's own
+offset space (`offsetForIndex()`'s space), including under an external `scrollElement`, where it is how
+far the list has scrolled past the top of that scroller rather than the scroller's own position;
+emitted from the same animation frame that
 already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
 when the position did not change. Unlike `lr-visible-range-change`, which only fires on index-range
 changes, this reports _sub-row_ movement, which is what scroll-linked layout needs)
@@ -187,7 +218,9 @@ changes, this reports _sub-row_ movement, which is what scroll-linked layout nee
 **Slots:** none — all content comes from `renderItem`.
 
 **CSS parts:** `base` (the scrollable container, `role="list"` — or `role="rowgroup"` in
-`item-role="row"` mode — `tabindex="0"`), `spacer` (the full-content-height inner element
+`item-role="row"` mode — `tabindex="0"`; under an external `scrollElement` it stops scrolling, drops
+that `tabindex` and its hover outline, and sizes itself to the list's full virtual extent instead of
+`--lr-virtual-list-height`), `spacer` (the full-content-height inner element
 establishing true scroll extent; `role="presentation"` in `item-role="row"` mode), `row` (one
 rendered row's absolutely-positioned wrapper, `role="listitem"` — or `role="row"` with
 `aria-rowindex` in `item-role="row"` mode), `group` (a `groups` entry's positioned marker; not
@@ -196,11 +229,13 @@ current group, present only while `renderStickyGroup` is set — `aria-hidden`, 
 pointer-transparent, and it shows nothing while the viewport is above the first group)
 
 **Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
-scroll extent; component-specific since a virtualized list is meaningless without a sized viewport),
+scroll extent; component-specific since a virtualized list is meaningless without a sized viewport,
+and ignored while `scrollElement` names an external scroller, whose own height is the visible band),
 plus shared `--lr-focus-ring-width/-color/-offset` (inward-offset ring on `[part="base"]`, negative
 so it isn't clipped by the container's own `overflow: auto`). `[part="base"]` also carries a
 mouse-hover outline — a subtler preview of that same `:focus-visible` ring, shown because the part
-always carries `tabindex="0"` and is a real keyboard-navigable target — tinted via
+carries `tabindex="0"` and is a real keyboard-navigable target whenever it owns the scrollport (both
+the tab stop and this outline are dropped under an external `scrollElement`) — tinted via
 `--lr-virtual-list-hover-outline-color` (default `var(--lr-color-border-strong)`); set it to
 `transparent` to opt out of the hover treatment entirely. Its remaining longhands are independently
 themeable with `--lr-virtual-list-hover-outline-width` (default

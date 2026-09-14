@@ -14,6 +14,7 @@ import { composedAccessibilityText } from '../../../internal/announcement-text.j
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -44,6 +45,10 @@ interface RestingSlide {
 type CarouselChangeOrigin = 'manual' | 'autoplay';
 
 export type LyraCarouselOrientation = LyraOrientation;
+
+/** How long the viewport must stay quiet before the scrolled-to slide is published. Unchanged
+ *  from the inline literal this debounce used before it moved onto the shared controller. */
+const SCROLL_SETTLE_MS = 120;
 
 const LOOP_SNAPSHOT_UNSAFE_TAGS = new Set([
   'audio',
@@ -244,8 +249,15 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     HTMLElement,
     SlideSnapshot
   >();
-  private settleTimer?: number;
-  private settleTimerWindow?: Window;
+  /** The scroll-settle debounce: every `scroll` event restarts it, and the slide the viewport came
+   *  to rest on is published once the stream goes quiet. Scheduled on -- and cancelled through --
+   *  the realm this carousel lives in at the time, so one adopted into another document neither
+   *  leaves a task behind on the old realm nor loses the ability to cancel the new one. */
+  private readonly scrollSettle = new DebounceController<void>(
+    SCROLL_SETTLE_MS,
+    () => this.settleScrolledSlide(),
+    () => this.ownerDocument.defaultView,
+  );
   private adoptingScrolledSlide = false;
   private hasAlignedOnce = false;
   private alignIndex?: number;
@@ -1065,22 +1077,16 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   private cancelScrollSettle(): void {
-    if (this.settleTimer !== undefined) {
-      this.settleTimerWindow?.clearTimeout(this.settleTimer);
-    }
-    this.settleTimer = undefined;
-    this.settleTimerWindow = undefined;
+    this.scrollSettle.cancel();
   }
 
   private onViewportScroll = (): void => {
     this.cancelScrollSettle();
-    const view = this.ownerDocument.defaultView;
-    if (!view) return;
-    this.settleTimerWindow = view;
-    this.settleTimer = view.setTimeout(
-      this.settleScrolledSlide,
-      120
-    );
+    // A realm-less carousel arms nothing at all, deliberately: the controller would otherwise
+    // fall back to the ambient timer queue and schedule work for a document this element does
+    // not live in. `onViewportScrollEnd` still settles such a carousel synchronously.
+    if (!this.ownerDocument.defaultView) return;
+    this.scrollSettle.push(undefined);
   };
 
   private onViewportScrollEnd = (): void => {
@@ -1100,8 +1106,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   private settleScrolledSlide = (): void => {
-    this.settleTimer = undefined;
-    this.settleTimerWindow = undefined;
     if (!this.isConnected) return;
     const viewport = this.viewport;
     if (!viewport) return;

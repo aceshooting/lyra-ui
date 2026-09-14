@@ -677,6 +677,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   private renderCombinator(combinator: ConditionBuilderCombinator): TemplateResult {
     return html`
       <lr-select
+        @lr-activate=${this.containSelectEvent}
         part="combinator"
         size="s"
         aria-label=${this.localize('queryBuilderCombinatorLabel')}
@@ -702,6 +703,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
       const selected = Array.isArray(condition.value) ? condition.value : [];
       return html`
         <lr-combobox
+          @lr-activate=${this.containSelectEvent}
           part="value"
           size="s"
           multiple
@@ -721,6 +723,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
       const current = condition.value === true ? 'true' : condition.value === false ? 'false' : '';
       return html`
         <lr-select
+          @lr-activate=${this.containSelectEvent}
           part="value"
           size="s"
           aria-label=${valueLabel}
@@ -759,6 +762,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
       const current = typeof condition.value === 'string' ? condition.value : '';
       return html`
         <lr-select
+          @lr-activate=${this.containSelectEvent}
           part="value"
           size="s"
           aria-label=${valueLabel}
@@ -833,6 +837,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         aria-invalid=${validationCode ? 'true' : 'false'}
       >
         <lr-select
+          @lr-activate=${this.containSelectEvent}
           part="field-select"
           size="s"
           aria-label=${this.localize('queryBuilderFieldLabel')}
@@ -855,6 +860,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         </lr-select>
 
         <lr-select
+          @lr-activate=${this.containSelectEvent}
           part="operator-select"
           size="s"
           aria-label=${this.localize('queryBuilderOperatorLabel')}

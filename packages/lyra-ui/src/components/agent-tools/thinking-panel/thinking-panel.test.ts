@@ -792,3 +792,45 @@ describe('the tabbable scroll region\'s own affordances', () => {
     }
   });
 });
+
+describe('card chrome theming hooks', () => {
+  const part = (el: LyraThinkingPanel, name: string) =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('repaints the card through --lr-thinking-panel-background/-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-thinking-panel
+        expanded
+        style="--lr-thinking-panel-background: rgb(1, 2, 3); --lr-thinking-panel-border-color: rgb(4, 5, 6); --lr-thinking-panel-radius: 11px"
+        >Reasoning</lr-thinking-panel
+      >
+    `)) as LyraThinkingPanel;
+    const chrome = getComputedStyle(part(el, 'base'));
+    expect(chrome.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(chrome.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(chrome.borderTopLeftRadius).to.equal('11px');
+    expect(getComputedStyle(part(el, 'body')).borderTopColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('leaves the card paint byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(
+      html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const tokened = (await fixture(html`
+      <lr-thinking-panel
+        expanded
+        style="--lr-thinking-panel-background: var(--lr-color-surface); --lr-thinking-panel-border-color: var(--lr-color-border); --lr-thinking-panel-radius: var(--lr-radius)"
+        >Reasoning</lr-thinking-panel
+      >
+    `)) as LyraThinkingPanel;
+    const unset = getComputedStyle(part(control, 'base'));
+    const explicit = getComputedStyle(part(tokened, 'base'));
+    expect(unset.backgroundColor).to.equal(explicit.backgroundColor);
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(part(control, 'body')).borderTopColor).to.equal(
+      getComputedStyle(part(tokened, 'body')).borderTopColor,
+    );
+  });
+});

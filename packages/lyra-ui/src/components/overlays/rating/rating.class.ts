@@ -81,6 +81,7 @@ export type LyraRatingSymbolRenderer = (
 export interface LyraRatingEventMap {
   change: Event;
   'lr-change': CustomEvent<{ value: number }>;
+  'lr-activate': CustomEvent<{ value: number }>;
   'lr-hover': CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
@@ -131,6 +132,16 @@ function starSolid(): SVGTemplateResult {
  * @event change - Bubbling, composed native `Event` emitted when a user commits a new value,
  * immediately before `lr-change`. Programmatic writes and no-op gestures are silent.
  * @event lr-change - The rating changed. `detail: { value }`.
+ * @event lr-activate - Fired on every interactive commit of a rating -- a click on a symbol, or an
+ *   Arrow/Home/End key -- whether or not the value actually moved. `detail: { value }` carries the
+ *   committed rating. Bubbling and composed, so a host outside the shadow tree receives it.
+ *   Not cancelable: it is a notification that the user committed a rating, not a veto point, and
+ *   nothing in this component branches on it. Re-committing the current rating is the case
+ *   `lr-change` deliberately stays silent for, and from the keyboard it is otherwise unobservable:
+ *   End on an already-maximum rating, Home on an already-zero one, or an arrow key at either bound
+ *   commits a rating and produces no click at all. When the commit does move the value, `change`
+ *   and `lr-change` are emitted first, so a listener reading `value` from any of them sees the
+ *   settled rating. A non-interactive (`readonly`/`disabled`) rating fires none of them.
  * @event lr-hover - The pointer entered, moved across, or left the symbols while the rating is
  * settable. `detail: { phase, value }`, where `value` is the rating that committing the current
  * pointer position would produce — enough to render a live description of what is being hovered.
@@ -701,10 +712,14 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
       0,
       Math.min(this.safeMax, Math.round(next / precision) * precision)
     );
-    if (clamped === this.value) return;
-    this.value = clamped;
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: this.value });
+    if (clamped !== this.value) {
+      this.value = clamped;
+      dispatchNativeEvent(this, 'change');
+      this.emit('lr-change', { value: this.value });
+    }
+    // Every interactive commit reports, including the re-commit of the current rating that
+    // `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
+    this.emit('lr-activate', { value: clamped });
   }
 
   /**

@@ -1196,3 +1196,28 @@ describe('explicitly empty host aria-label', () => {
     expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Query builder');
   });
 });
+
+describe('lr-condition-builder contains the composed controls\' lr-activate', () => {
+  it('swallows lr-activate from its inner lr-select, like every other child event', async () => {
+    const el = (await fixture(html`<lr-condition-builder .fields=${FIELDS}></lr-condition-builder>`)) as LyraConditionBuilder;
+    await el.updateComplete;
+    el.addCondition();
+    el.addCondition();
+    await el.updateComplete;
+    const combinator = el.shadowRoot!.querySelector('[part="combinator"]') as HTMLElement | null;
+    expect(combinator?.localName, 'the combinator is the composed select').to.equal('lr-select');
+    let escaped = 0;
+    const listener = (): void => {
+      escaped++;
+    };
+    document.addEventListener('lr-activate', listener);
+    try {
+      combinator!.dispatchEvent(
+        new CustomEvent('lr-activate', { bubbles: true, composed: true, detail: { value: 'and' } }),
+      );
+    } finally {
+      document.removeEventListener('lr-activate', listener);
+    }
+    expect(escaped, "this component owns its own event surface; the child's raw event never escapes").to.equal(0);
+  });
+});

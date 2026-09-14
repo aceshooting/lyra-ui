@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -139,6 +139,15 @@ appearance surface; `--lr-time-input-focus-border-color`;
 `--lr-time-input-column-active-bg`, `--lr-time-input-column-selected-bg`,
 `--lr-time-input-column-selected-color`, `--lr-time-input-column-selected-font-weight`,
 `--lr-time-input-column-selected-hover-bg`, and `--lr-time-input-column-selected-active-bg`.
+Outer row height is a pair, not one knob: `--lr-time-input-control-min-height` (default
+`var(--lr-form-control-height)`) is the row's height **floor**, taken from the active `size` tier of
+the shared form-control ladder, so a time field is exactly as tall as an `lr-input` or `lr-select`
+at the same tier; `--lr-time-input-control-height` is **unset by default** and, given a length,
+pins the row to exactly that height — flooring and capping it at once, which is what pixel-matches
+an `lr-date-input` sharing the same toolbar. Leaving `--lr-time-input-control-height` unset keeps
+`--lr-time-input-control-min-height` working as a floor only, and because the component never
+declares `--lr-time-input-control-height` on its own host it can be set from an ancestor or an
+outer-tree rule just as well as inline on the element.
 Every state hook falls back to the exact semantic token or color mix used previously, and remains
 undeclared on the host so ancestor themes work. The upstream-compatible `--column-item-height`
 (default `calc(var(--lr-size-1em) * 2.25)`) and `--column-width`

@@ -153,3 +153,33 @@ export const RightToLeft: Story = {
     </div>
   `,
 };
+
+export const AnnounceMountedFailures: Story = {
+  name: 'Announce mounted failures',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A queue created to report a retried run that already failed mounts with `stage: "failed"` rows, so there is no later `items` write for the live region to catch. `announce` opts that one mount pass in: the caller-supplied `item.error` strings are list-formatted in the effective locale and sent once to the shared light-DOM assertive sink, through the same path a later failure uses. Leave it off for a queue that is simply part of the page being loaded — those rows already read in document order. It is read once per element lifetime, so reconnecting or adopting the queue stages the same rows again rather than replaying the announcement.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); justify-items: start;">
+      <button
+        @click=${(event: Event) => {
+          const host = (event.currentTarget as HTMLElement).parentElement!;
+          host.querySelector('lr-ingestion-queue')?.remove();
+          const queue = document.createElement('lr-ingestion-queue');
+          queue.setAttribute('announce', '');
+          (queue as unknown as { items: IngestionQueueItem[] }).items = [
+            { id: '1', document: { id: '1', name: 'roadmap.pdf' }, stage: 'done', chunkCount: 12, embeddedChunkCount: 12 },
+            { id: '2', document: { id: '2', name: 'legacy-export.zip' }, stage: 'failed', error: 'Unsupported file type' },
+            { id: '3', document: { id: '3', name: 'handbook.pdf' }, stage: 'failed', error: 'Network unavailable' },
+          ];
+          host.append(queue);
+        }}
+      >Retry ingestion (fails)</button>
+    </div>
+  `,
+};

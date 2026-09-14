@@ -870,6 +870,62 @@ describe('<lr-accordion>', () => {
     expect((outer.querySelector('#outer-one') as LyraAccordionItem).expanded).to.be.true;
   });
 
+  it('lets a nested group reach an outer listener, separated only by event.target', async () => {
+    const outer = (await fixture(html`<lr-accordion id="outer-group">
+      <lr-accordion-item id="outer-item" label="Outer" style=${quickMotion} expanded>
+        <lr-accordion id="inner-group">
+          <lr-accordion-item id="inner-item" label="Inner" style=${quickMotion}
+            >Inner content.</lr-accordion-item
+          >
+        </lr-accordion>
+      </lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const innerGroup = outer.querySelector('#inner-group') as LyraAccordion;
+    const innerItem = outer.querySelector('#inner-item') as LyraAccordionItem;
+    const outerItem = outer.querySelector('#outer-item') as LyraAccordionItem;
+    await Promise.all(
+      [outer, outerItem, innerGroup, innerItem].map((element) => element.updateComplete),
+    );
+
+    // Exactly the guard the class JSDoc hands consumers: an accordion event is scoped by comparing
+    // target with currentTarget, never by trusting the event name or detail.item to be this group.
+    const seen: Array<{ id: string; type: string; itemId: string; scoped: boolean }> = [];
+    const record = (event: Event): void => {
+      const transition = event as CustomEvent<{ item: LyraAccordionItem }>;
+      seen.push({
+        id: (transition.target as Element).id,
+        type: transition.type,
+        itemId: transition.detail.item.id,
+        scoped: transition.target === transition.currentTarget,
+      });
+    };
+    for (const type of ['lr-expand', 'lr-toggle-request', 'lr-after-expand']) {
+      outer.addEventListener(type, record);
+    }
+
+    const settled = oneEvent(innerGroup, 'lr-after-expand');
+    await innerItem.expand();
+    await settled;
+
+    expect(
+      seen.map((entry) => `${entry.type}:${entry.id}`),
+      'every nested group event bubbles through the outer accordion'
+    ).to.deep.equal([
+      'lr-expand:inner-group',
+      'lr-toggle-request:inner-group',
+      'lr-after-expand:inner-group',
+    ]);
+    expect(
+      seen.filter((entry) => entry.scoped).map((entry) => entry.type),
+      'the documented event.target === event.currentTarget guard drops every inner-group event'
+    ).to.deep.equal([]);
+    expect(
+      [...new Set(seen.map((entry) => entry.itemId))],
+      'detail.item belongs to the inner group, so an unguarded outer handler acts on a foreign item'
+    ).to.deep.equal(['inner-item']);
+    expect(outerItem.expanded, 'the outer item kept its own state').to.be.true;
+  });
+
   it('restores one valid roving stop after children shrink and after reconnect', async () => {
     const wrapper = await fixture(html`<div>
       <lr-accordion appearance="outlined">

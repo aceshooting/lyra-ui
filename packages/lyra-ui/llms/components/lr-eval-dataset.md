@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -60,6 +60,14 @@ the host to apply to its controlled `examples` array.
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `search-clear` (replaces the native
 search-cancel glyph the component resets; rendered only while the field has text), `tag-filter`,
 `grid`, `add-button`, `remove-button`, `import`, `export`.
+
+**Themeable custom properties:** `--lr-eval-dataset-search-min-height` (default `auto`),
+`--lr-eval-dataset-search-font-size` (default `inherit`),
+`--lr-eval-dataset-search-padding-inline` (default `var(--lr-space-s)`),
+`--lr-eval-dataset-search-padding-block` (default `var(--lr-space-xs)`) and
+`--lr-eval-dataset-search-radius` (default `var(--lr-radius)`) size the built-in search field; point
+the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
+inline gutter is reserved for the overlaid `search-clear` button and is not a knob.
 
 **Known gotchas:**
 

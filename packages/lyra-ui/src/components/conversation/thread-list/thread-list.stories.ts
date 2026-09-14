@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './thread-list.js';
 import type { LyraChatThread, LyraThreadList } from './thread-list.class.js';
@@ -519,6 +519,50 @@ export const InteractionStateHooks: Story = {
         .threads=${threads}
         .rowActions=${['pin', 'archive', 'delete']}
       ></lr-thread-list>
+    </div>
+  `,
+};
+
+/** `size` puts the built-in search field on the library's one control ladder, so the sidebar's own
+ *  filter box matches an adjacent themed search field of the same tier instead of the single fixed
+ *  geometry it shipped with. Both spellings of every tier are accepted. Leaving `size` unset keeps
+ *  the original field exactly as it was, which is the row shown last. */
+export const SearchSizeTiers: Story = {
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-m);align-items:flex-start;">
+      ${(['s', 'm', 'l', undefined] as const).map(
+        (size) => html`
+          <div
+            style="block-size:280px;inline-size:220px;border:var(--lr-border-width-thin) solid var(--lr-color-border);"
+          >
+            <lr-thread-list
+              searchable
+              size=${size ?? nothing}
+              .threads=${threads}
+            ></lr-thread-list>
+          </div>
+        `
+      )}
+    </div>
+  `,
+};
+
+/** Every search-field geometry hook, moved at once. The tier sizes the field; these move the row
+ *  gutter, the gap, and the clear button's box, which the tier deliberately leaves alone. */
+export const SearchGeometryHooks: Story = {
+  render: () => html`
+    <div
+      style="
+        block-size: 280px;
+        inline-size: 320px;
+        border: var(--lr-border-width-thin) solid var(--lr-color-border);
+        --lr-thread-list-search-padding: var(--lr-space-l);
+        --lr-thread-list-search-gap: var(--lr-space-m);
+        --lr-thread-list-search-radius: var(--lr-radius-pill);
+        --lr-thread-list-search-clear-size: var(--lr-size-2rem);
+      "
+    >
+      <lr-thread-list searchable .threads=${threads}></lr-thread-list>
     </div>
   `,
 };

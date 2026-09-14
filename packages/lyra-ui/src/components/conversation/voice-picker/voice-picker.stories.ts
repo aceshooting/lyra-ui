@@ -191,6 +191,43 @@ export const ThemeableStateHooks: Story = {
   `,
 };
 
+/** The shipped 24rem host ceiling is now the `--lr-voice-picker-max-inline-size` default: set
+ *  `none` for a full-width row, or a length to retune it. `--lr-voice-picker-trigger-height` pins
+ *  an exact height (it floors *and* caps, unlike the new `-trigger-min-height` floor) so the picker
+ *  can pixel-match the control beside it. */
+export const WidthAndHeightHooks: Story = {
+  name: 'Width cap and exact trigger height',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); max-inline-size: var(--lr-size-38rem);">
+      <lr-voice-picker provider="elevenlabs" label="Default 24rem ceiling" .catalog=${catalog}></lr-voice-picker>
+      <lr-voice-picker
+        style="--lr-voice-picker-max-inline-size: none"
+        provider="elevenlabs"
+        label="Fills the row"
+        .catalog=${catalog}
+      ></lr-voice-picker>
+      <div style="display: flex; gap: var(--lr-space-s); align-items: start;">
+        <lr-voice-picker
+          style="--lr-voice-picker-max-inline-size: none; --lr-voice-picker-trigger-height: 3rem"
+          label="Pinned to 3rem"
+          .catalog=${catalog}
+        ></lr-voice-picker>
+        <lr-voice-picker
+          style="--lr-voice-picker-max-inline-size: none; --lr-voice-picker-trigger-height: 3rem"
+          allow-custom
+          label="Same height, free text"
+          .catalog=${catalog}
+        ></lr-voice-picker>
+      </div>
+      <lr-voice-picker
+        style="--lr-voice-picker-max-inline-size: none; --lr-voice-picker-trigger-min-height: 3.5rem"
+        label="Floor only -- the preview action follows it"
+        .catalog=${catalog}
+      ></lr-voice-picker>
+    </div>
+  `,
+};
+
 export const FormLifecycle: Story = {
   parameters: {
     docs: {

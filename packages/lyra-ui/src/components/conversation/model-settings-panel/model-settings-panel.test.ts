@@ -762,3 +762,87 @@ it('is accessible in compact layout', async () => {
   `)) as LyraModelSettingsPanel;
   await expect(el).to.be.accessible();
 });
+
+// -- Width hook --------------------------------------------------------------
+
+/** Resolves what `expression` computes to *inside this panel's shadow root*, where the `--lr-*`
+ *  design tokens actually live (declared on `:host`, so a light-DOM probe would see none). */
+function resolvedInShadow(el: LyraModelSettingsPanel, expression: string): string {
+  const probe = document.createElement('span');
+  probe.style.position = 'absolute';
+  probe.style.maxInlineSize = expression;
+  el.shadowRoot!.append(probe);
+  const value = getComputedStyle(probe).maxInlineSize;
+  probe.remove();
+  return value;
+}
+
+it('keeps the 28rem default card cap when nothing is set (unset regression)', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel .catalog=${CATALOG}></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  expect(getComputedStyle(el).maxInlineSize).to.equal(
+    resolvedInShadow(el, 'var(--lr-size-28rem)'),
+    'the default paint stays exactly where it shipped'
+  );
+});
+
+it('honours --lr-model-settings-panel-max-inline-size, including none', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel .catalog=${CATALOG}></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  const baseline = getComputedStyle(el).maxInlineSize;
+  el.style.setProperty('--lr-model-settings-panel-max-inline-size', '16rem');
+  expect(getComputedStyle(el).maxInlineSize).to.equal(resolvedInShadow(el, '16rem'));
+  el.style.setProperty('--lr-model-settings-panel-max-inline-size', 'none');
+  expect(getComputedStyle(el).maxInlineSize).to.equal('none');
+  el.style.removeProperty('--lr-model-settings-panel-max-inline-size');
+  expect(getComputedStyle(el).maxInlineSize).to.equal(baseline);
+});
+
+it('keeps the card cap hook live in the compact layout too', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel layout="compact" .catalog=${CATALOG}></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  expect(getComputedStyle(el).maxInlineSize).to.equal(
+    'none',
+    'compact still uncaps by default, which is the whole point of the denser layout'
+  );
+  // The compact rule is a higher-specificity :host([layout='compact']) override, so a bare
+  // `max-inline-size: none` there replaced the hook's whole fallback chain and the name did
+  // nothing at all in this layout -- invisible to anything that reads stylesheet text.
+  el.style.setProperty('--lr-model-settings-panel-max-inline-size', '16rem');
+  expect(getComputedStyle(el).maxInlineSize).to.equal(resolvedInShadow(el, '16rem'));
+  el.style.removeProperty('--lr-model-settings-panel-max-inline-size');
+  expect(getComputedStyle(el).maxInlineSize).to.equal('none');
+});
+
+it('lets an ancestor theme wrapper set the card cap (never declared on :host)', async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-model-settings-panel-max-inline-size: 12rem">
+      <lr-model-settings-panel .catalog=${CATALOG}></lr-model-settings-panel>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector('lr-model-settings-panel') as LyraModelSettingsPanel;
+  await el.updateComplete;
+  expect(getComputedStyle(el).maxInlineSize).to.equal(resolvedInShadow(el, '12rem'));
+});
+
+it('uncaps the nested model select by name, so a consumer can re-cap it', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel .catalog=${CATALOG}></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  const select = modelSelect(el);
+  expect(getComputedStyle(select).maxInlineSize).to.equal(
+    'none',
+    'the full-width row still beats lr-model-select own 24rem ceiling'
+  );
+  // The old descendant `max-inline-size: none` rule could never be re-capped: an outer-tree
+  // declaration in this shadow root always beat the child's own :host rule. Setting the name
+  // instead leaves the documented `model-row` part as the re-cap point.
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="model-row"]')!;
+  row.style.setProperty('--lr-model-select-max-inline-size', '10rem');
+  expect(getComputedStyle(select).maxInlineSize).to.equal(
+    resolvedInShadow(el, '10rem')
+  );
+});

@@ -297,8 +297,21 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt =
     DEFAULT_VIRTUALIZE_AT;
 
+  /** Opts this queue into announcing the failures it already carries when it first mounts, through
+   *  the same shared assertive region, the same list formatting and the same caller-supplied
+   *  `item.error` text a later failure uses. Leave unset for a queue that is part of the page a
+   *  user is arriving on: those rows render in document order and repeating them is noise. Set it
+   *  when the queue is created in response to a user action — a retried ingestion run that mounts
+   *  a fresh queue already holding `stage: 'failed'` rows would otherwise never speak them. Read
+   *  once per element lifetime: a later reconnection or adoption stages the same rows again rather
+   *  than replaying the announcement, and later failures announce either way. */
+  @property({ type: Boolean, reflect: true }) announce = false;
+
   @state() private failureLiveText = '';
   private isMounting = true;
+  /** True once the `announce` opt-in has spoken the mount-time failures, so a reconnection (which
+   *  resets `isMounting`) stages them as history instead of replaying them. */
+  private initialFailuresAnnounced = false;
   /** Handle on the shared light-DOM assertive region failures actually announce through -- a
    *  region rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores
    *  one outright), so `[part="failure-live"]` is only an `aria-hidden` mirror. */
@@ -392,19 +405,42 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     super.willUpdate(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
-    if (wasMounting || !changed.has('items')) return;
+    if (wasMounting) {
+      // Opted-in mount-time failures go through the one existing announcement path below, so the
+      // list formatting, the mirrored `[part="failure-live"]` text and the assertive urgency all
+      // resolve exactly as they would for a later failure. Guarded by its own flag rather than
+      // `isMounting`, which `disconnectedCallback()` resets: a reconnection stages the same rows
+      // as history instead of replaying them.
+      if (this.announce && !this.initialFailuresAnnounced) {
+        this.initialFailuresAnnounced = true;
+        this.announceFailures(
+          this.normalizedItems.flatMap((item) =>
+            item.stage === 'failed' && item.error ? [item.error] : []
+          )
+        );
+      }
+      return;
+    }
+    if (!changed.has('items')) return;
 
     const previousItems = this.normalizeItems(changed.get('items'));
     const previousById = new Map(previousItems.map((item) => [item.id, item]));
-    const freshErrors = this.normalizedItems.flatMap((item) => {
-      if (item.stage !== 'failed' || !item.error) return [];
-      const previous = previousById.get(item.id);
-      return !previous ||
-        previous.stage !== 'failed' ||
-        previous.error !== item.error
-        ? [item.error]
-        : [];
-    });
+    this.announceFailures(
+      this.normalizedItems.flatMap((item) => {
+        if (item.stage !== 'failed' || !item.error) return [];
+        const previous = previousById.get(item.id);
+        return !previous ||
+          previous.stage !== 'failed' ||
+          previous.error !== item.error
+          ? [item.error]
+          : [];
+      })
+    );
+  }
+
+  /** Formats `freshErrors` into the mirrored live text and speaks it. The single announcement path
+   *  both the mount-time `announce` opt-in and every later `items` write share. */
+  private announceFailures(freshErrors: readonly string[]): void {
     this.failureLiveText = freshErrors.length
       ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(
           freshErrors

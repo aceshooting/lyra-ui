@@ -10,6 +10,10 @@ import { finiteCount, finiteInteger, finiteRatio } from '../../../internal/numbe
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
+import {
+  definePersistedProperty,
+  isPersistedPropertyExplicitlySet,
+} from '../../../internal/persisted-restore.js';
 import { styles } from './table.styles.js';
 import { chevronIcon, sortIcon } from '../../../internal/icons.js';
 import { minMax } from '../heatmap/heatmap-scale.js';
@@ -1150,6 +1154,17 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  including the built-in English value, renders verbatim — never localized, the same contract
    *  as `emptyDescription`. Has no effect once the `error` slot is filled. */
   @property({ attribute: 'error-description' }) errorDescription = '';
+  /** Opts this table into announcing a failed-load state it already carries when it first mounts,
+   *  through the same shared assertive region and the same heading text the later `error`
+   *  transition announces, so the two paths cannot drift. Leave unset for a table that is part of
+   *  the page a user is arriving on: the built-in error state renders in document order and
+   *  repeating it is noise. Set it when the table is created in response to a user action — a
+   *  reload that rejects mounts a fresh `error` table whose failure would otherwise never be
+   *  spoken. Read once, on the first update: a later reconnection or adoption stages the same
+   *  state again rather than replaying the announcement, and later `error` transitions announce
+   *  either way. Deliberately not forwarded to the composed `[part='error']` `<lr-empty>`, whose
+   *  own `announce` stays unset so the failure is spoken once, not twice. */
+  @property({ type: Boolean, reflect: true }) announce = false;
   @property({ attribute: 'empty-heading' }) emptyHeading?: string;
   @property({ attribute: 'empty-description' }) emptyDescription = '';
   /** Overrides the built-in `[part='empty']` state's `compact` rendering. Leave `undefined` (the
@@ -1177,17 +1192,31 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  wiring is required for the button to work. Also settable from outside
    *  (property or the reflected `priority-columns-visible` attribute) to restore a
    *  previously-persisted preference. The single
-   *  `lr-priority-columns-visibility-change` event reports button-driven changes. */
-  @property({ type: Boolean, attribute: 'priority-columns-visible', reflect: true })
-  priorityColumnsVisible = false;
+   *  `lr-priority-columns-visibility-change` event reports button-driven changes.
+   *  @default false */
+  // Installed by `definePersistedProperty()` (static block below) rather than carrying a class
+  // field, so `willUpdate()`'s restore can tell "the consumer set this" from "this is still the
+  // declared default" -- including for a binding that assigns the default value itself. The
+  // decorator keeps the public attribute/type/reflection contract here (and is what the manifest
+  // generator reads); `noAccessor: true` stops Lit replacing the write-tracking accessor.
+  @property({ type: Boolean, attribute: 'priority-columns-visible', reflect: true, noAccessor: true })
+  priorityColumnsVisible!: boolean;
+
+  static {
+    definePersistedProperty(this.prototype, 'priorityColumnsVisible', {
+      initial: false,
+      attribute: 'priority-columns-visible',
+      type: Boolean,
+      reflect: true,
+    });
+  }
 
   /** Persists `priorityColumnsVisible` to `localStorage` across reloads when set. Namespaced as
-   *  `lr-table:${storageKey}`. Restoration never overwrites an explicitly-declared `true`
-   *  (`priority-columns-visible` present, or a `.priorityColumnsVisible=${true}` binding) on the
-   *  same mount -- conceptually the same "explicit beats persisted" guarantee as `lr-app-rail`'s
-   *  per-field `loadPersisted()` check, just keyed on this property's own current value rather than
-   *  `willUpdate()`'s `changed` map, since this field's `false` default (unlike `lr-app-rail`'s
-   *  undefaulted `railWidthPx`/`preferredMode`) already reads as "changed" on every mount. */
+   *  `lr-table:${storageKey}`. Restoration never overwrites a `priorityColumnsVisible` the consumer
+   *  declared on the same mount (`priority-columns-visible` present, or a
+   *  `.priorityColumnsVisible=${...}` binding) -- including a binding that pins it to `false`, its
+   *  own default. The same "explicit beats persisted" guarantee as `lr-app-rail`'s and
+   *  `lr-widget`'s `storage-key` restores, which share this one's write-tracking mechanism. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
 
   private get storageFullKey(): string | undefined {
@@ -2196,25 +2225,25 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
     // lr-app-rail's loadPersisted() call in its own willUpdate(). The `persistReady` gate in
     // updated() keeps this restored value from being written straight back.
-    // Never overwrites `priorityColumnsVisible` when the consumer already bound it to an explicit
-    // `true` before this point (an attribute present at parse time, or a `.priorityColumnsVisible=
-    // ${true}` binding) -- a controlled declaration stays authoritative over stale `localStorage`
-    // state instead of being silently clobbered by it. This checks the property's own current value
-    // rather than `changed.has('priorityColumnsVisible')`: unlike `lr-app-rail`'s `railWidthPx`/
-    // `preferredMode` (which have no declared default and so start truly absent from `changed`),
-    // this property's own `= false` class-field default already runs through its reactive setter at
-    // construction, before any consumer input -- Lit records that as an initial "change" with no way
-    // to later tell it apart from a genuine explicit assignment (`willUpdate()`'s `changed` map keeps
-    // only the *first* recorded value), so `changed.has(...)` is unconditionally true here and cannot
-    // discriminate. Reading the current value instead works because nothing else assigns
-    // `priorityColumnsVisible` before this point: `false` unambiguously means "still the default",
-    // `true` unambiguously means a consumer already set it.
+    // Never overwrites `priorityColumnsVisible` when the consumer already assigned it before this
+    // point (an attribute present at parse time, or a `.priorityColumnsVisible=${...}` binding) --
+    // a controlled declaration stays authoritative over stale `localStorage` state instead of being
+    // silently clobbered by it. The guard is `isPersistedPropertyExplicitlySet()`, which reports
+    // whether the property's setter ever ran. Neither cheaper test can answer that:
+    // `changed.has('priorityColumnsVisible')` is unconditionally true on the first update (Lit
+    // enters a property carrying a declared default into that batch on its own), and reading the
+    // current value -- what this guard used to do -- cannot see a binding that deliberately assigns
+    // the declared default, so `.priorityColumnsVisible=${false}` was overwritten by a stored `true`.
     if (!this.hasUpdated) {
       const parsed = readPersistedState(
         this.storageFullKey,
         (v): v is { priorityColumnsVisible?: unknown } => typeof v === 'object' && v !== null
       );
-      if (parsed && typeof parsed.priorityColumnsVisible === 'boolean' && !this.priorityColumnsVisible) {
+      if (
+        parsed &&
+        typeof parsed.priorityColumnsVisible === 'boolean' &&
+        !isPersistedPropertyExplicitlySet(this, 'priorityColumnsVisible')
+      ) {
         this.priorityColumnsVisible = parsed.priorityColumnsVisible;
       }
     }
@@ -2356,8 +2385,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     }
     // Guarded the same way as the loading announcement above -- `error` defaulting to `false`
     // means a bare `changed.has('error')` would otherwise be true (and announce) on whatever the
-    // very first update happens to be, not just a real post-mount transition.
-    if (this.firstUpdateAnnouncementsReady && changed.has('error') && this.error) {
+    // very first update happens to be, not just a real post-mount transition. `announce` opts that
+    // one mount pass back in for a table created to report a user-triggered failure, routed
+    // through this same sink and this same text so the mount and transition paths cannot drift.
+    const announcesErrorTransition =
+      this.firstUpdateAnnouncementsReady && changed.has('error') && this.error;
+    const announcesMountedError =
+      !this.firstUpdateAnnouncementsReady && this.announce && this.error;
+    if (announcesErrorTransition || announcesMountedError) {
       this.errorAnnouncementSink?.announce(this.localizedOverride('tableLoadFailed', this.errorHeading));
     }
     this.firstUpdateAnnouncementsReady = true;
@@ -3272,6 +3307,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               .pageSize=${this.normalizedPageSize}
               .total=${this.matchingTotalItems}
               .strings=${this.strings}
+              @lr-activate=${this.stopOwnedEvent}
               @lr-page-change=${this.onPaginationChange}
             ></lr-pagination>`
           : nothing}

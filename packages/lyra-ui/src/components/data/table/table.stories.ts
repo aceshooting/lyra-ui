@@ -122,6 +122,36 @@ export const ErrorState: Story = {
     ></lr-table>`,
 };
 
+export const AnnounceMountedError: Story = {
+  name: 'Announce a mounted error',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A table created to report a reload that just failed mounts already carrying `error`, so there is no `error` transition for the live region to catch. `announce` opts that one mount pass in: the `error-heading` text is sent once to the shared light-DOM assertive sink, through the same path a later `error` transition uses. Leave it off for a table that is simply part of the page being loaded — its built-in error state already reads in document order. The composed `[part="error"]` `<lr-empty>` is deliberately left unannounced so the failure is spoken once, not twice.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); justify-items: start;">
+      <lr-button
+        @click=${(event: Event) => {
+          const host = (event.currentTarget as HTMLElement).parentElement!;
+          host.querySelector('lr-table')?.remove();
+          const table = document.createElement('lr-table');
+          table.setAttribute('announce', '');
+          table.setAttribute('error', '');
+          table.setAttribute('caption', 'Scores');
+          table.setAttribute('error-heading', 'Could not load rows');
+          table.setAttribute('error-description', 'Check your connection and try again.');
+          (table as unknown as { columns: unknown }).columns = columns;
+          host.append(table);
+        }}
+      >Reload (fails)</lr-button>
+    </div>
+  `,
+};
+
 const titledColumns: TableColumn<DemoRow>[] = [
   {
     key: 'name',

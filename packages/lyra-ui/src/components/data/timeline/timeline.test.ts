@@ -238,6 +238,123 @@ it('removes forced-colors masks while every scroll position remains visibly reac
   }
 });
 
+describe('horizontal scroll tab stop', () => {
+  /** A horizontal timeline is a scroll container whose slotted items are deliberately passive --
+   *  the class doc's "no roving-tabindex or per-event selection model" contract. With nothing
+   *  tabbable inside it and only `tabindex="-1"` on the container, an overflowing strip was
+   *  unreachable by keyboard: axe's `scrollable-region-focusable` (WCAG 2.1.1) violation, and the
+   *  off-screen events could not be read at all without a pointer. Same defect, same fix, as
+   *  `<lr-stepper readonly>`. */
+  const overflowingStrip = () => html`
+    <lr-timeline
+      orientation="horizontal"
+      aria-label="Deployment history"
+      style="display: block; max-inline-size: 90px"
+    >
+      <lr-timeline-item style="flex: 0 0 200px">Deployed build 4821</lr-timeline-item>
+      <lr-timeline-item style="flex: 0 0 200px">Rolled back to 4820</lr-timeline-item>
+      <lr-timeline-item style="flex: 0 0 200px">Opened INC-3311</lr-timeline-item>
+    </lr-timeline>
+  `;
+
+  it('gives an overflowing horizontal strip a real tab stop, because nothing inside it is tabbable', async () => {
+    const el = (await fixture(overflowingStrip())) as LyraTimeline;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await nextFrames();
+
+    expect(base.scrollWidth, 'sanity: the strip must genuinely overflow').to.be.greaterThan(
+      base.clientWidth,
+    );
+    expect(base.getAttribute('tabindex'), 'the scroll container is keyboard reachable').to.equal(
+      '0',
+    );
+    await expect(el).to.be.accessible();
+  });
+
+  it('leaves a horizontal strip that fits out of the tab order', async () => {
+    const el = (await fixture(
+      html`<lr-timeline orientation="horizontal"><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,
+    )) as LyraTimeline;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await nextFrames();
+
+    expect(base.scrollWidth - base.clientWidth, 'sanity: the strip must fit').to.be.at.most(1);
+    expect(base.getAttribute('tabindex'), 'nothing to scroll to owes no tab stop').to.equal('-1');
+    await expect(el).to.be.accessible();
+  });
+
+  it('leaves the vertical default out of the tab order, where the strip never scrolls inline', async () => {
+    const el = (await fixture(html`
+      <lr-timeline style="display: block; max-inline-size: 90px">
+        <lr-timeline-item style="flex: 0 0 200px">Deployed build 4821</lr-timeline-item>
+        <lr-timeline-item style="flex: 0 0 200px">Rolled back to 4820</lr-timeline-item>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await nextFrames();
+
+    expect(getComputedStyle(base).overflowX, 'sanity: the vertical axis never scrolls').to.equal(
+      'visible',
+    );
+    expect(base.getAttribute('tabindex')).to.equal('-1');
+  });
+
+  it('adds and drops the stop as the same strip starts and stops overflowing, with no host update in between', async () => {
+    const el = (await fixture(overflowingStrip())) as LyraTimeline;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await nextFrames();
+    expect(base.getAttribute('tabindex'), 'starts overflowing').to.equal('0');
+
+    el.style.maxInlineSize = '2000px';
+    await waitUntil(
+      () => base.getAttribute('tabindex') === '-1',
+      'the stop was never dropped once the strip fit again',
+    );
+
+    el.style.maxInlineSize = '90px';
+    await waitUntil(
+      () => base.getAttribute('tabindex') === '0',
+      'the stop never came back once the strip overflowed again',
+    );
+  });
+
+  it('reaches the stop by Tab and paints the shared focus ring on it', async () => {
+    // Keyboard modality is what makes :focus-visible match; a bare focus() does not match it
+    // reliably across engines.
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button id="before">before</button>
+        <lr-timeline
+          orientation="horizontal"
+          aria-label="Deployment history"
+          style="display: block; max-inline-size: 90px; --lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 4px"
+        >
+          <lr-timeline-item style="flex: 0 0 200px">Deployed build 4821</lr-timeline-item>
+          <lr-timeline-item style="flex: 0 0 200px">Rolled back to 4820</lr-timeline-item>
+        </lr-timeline>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-timeline') as LyraTimeline;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await nextFrames();
+    expect(base.getAttribute('tabindex'), 'sanity: the stop exists').to.equal('0');
+
+    wrapper.querySelector<HTMLElement>('#before')!.focus();
+    await sendKeys({ press: 'Tab' });
+    await waitUntil(
+      () => base.matches(':focus-visible'),
+      'Tab never reached the horizontal scroll stop',
+    );
+
+    const ring = getComputedStyle(base);
+    expect(ring.outlineStyle).to.equal('solid');
+    expect(ring.outlineWidth).to.equal('3px');
+    expect(ring.outlineColor).to.equal('rgb(1, 2, 3)');
+    expect(ring.outlineOffset).to.equal('4px');
+  });
+});
+
 it('leaves a horizontal strip that fits completely unmasked', async () => {
   // The regression this guards: the fade used to be painted unconditionally, dimming the first
   // and last item of a strip with nothing to scroll to.

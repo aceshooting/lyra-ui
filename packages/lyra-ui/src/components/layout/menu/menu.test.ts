@@ -1109,3 +1109,178 @@ it('closes a submenu after a pointerleave delay once focus has moved elsewhere',
     outside.remove();
   }
 });
+
+// -- Width hooks -------------------------------------------------------------
+
+/** Resolves what `expression` computes to *inside this menu's shadow root*, where the `--lr-*`
+ *  design tokens actually live (declared on `:host`, so a light-DOM probe would see none). */
+function resolvedInShadow(el: LyraMenu, expression: string): string {
+  const probe = document.createElement('span');
+  probe.style.position = 'absolute';
+  probe.style.maxInlineSize = expression;
+  el.shadowRoot!.append(probe);
+  const value = getComputedStyle(probe).maxInlineSize;
+  probe.remove();
+  return value;
+}
+
+/* `:host`'s cap is `min(clamp, hook, 100%)`, and Chromium leaves a `min()` carrying a percentage
+   unresolved in the computed `max-inline-size` string -- so every assertion below reads the USED
+   `inline-size` of a menu whose content is far wider than any cap under test. */
+const wideContent = () => html`
+  <lr-menu label="Row actions">
+    <lr-menu-item value="rename"
+      >Rename this row and every descendant beneath it, recursively</lr-menu-item
+    >
+  </lr-menu>
+`;
+
+async function inWideContainer(
+  template: ReturnType<typeof wideContent>
+): Promise<LyraMenu> {
+  const wrapper = await fixture<HTMLDivElement>(
+    html`<div style="inline-size: 1200px">${template}</div>`
+  );
+  const menu = wrapper.querySelector('lr-menu') as LyraMenu;
+  await menu.updateComplete;
+  return menu;
+}
+
+it('keeps the shipped 20rem/10rem width pair when nothing is set (unset regression)', async () => {
+  const el = await inWideContainer(wideContent());
+  expect(getComputedStyle(el).inlineSize).to.equal(
+    resolvedInShadow(el, 'var(--lr-size-20rem)'),
+    'the default paint stays exactly where it shipped'
+  );
+  expect(getComputedStyle(el).minInlineSize).to.equal(
+    resolvedInShadow(el, 'var(--lr-size-10rem)')
+  );
+});
+
+it('retunes the standalone surface through --lr-menu-max-inline-size', async () => {
+  const el = await inWideContainer(wideContent());
+  const baseline = getComputedStyle(el).inlineSize;
+  el.style.setProperty('--lr-menu-max-inline-size', '30rem');
+  expect(getComputedStyle(el).inlineSize).to.equal(resolvedInShadow(el, '30rem'));
+  el.style.setProperty('--lr-menu-max-inline-size', '12rem');
+  expect(getComputedStyle(el).inlineSize).to.equal(resolvedInShadow(el, '12rem'));
+  el.style.removeProperty('--lr-menu-max-inline-size');
+  expect(getComputedStyle(el).inlineSize).to.equal(baseline);
+});
+
+it('lets an ancestor theme wrapper set the cap (the name is never declared on :host)', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="inline-size: 1200px; --lr-menu-max-inline-size: 14rem">
+      ${wideContent()}
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-menu') as LyraMenu;
+  await el.updateComplete;
+  expect(getComputedStyle(el).inlineSize).to.equal(resolvedInShadow(el, '14rem'));
+});
+
+it('needs --lr-menu-min-inline-size to go below the 10rem floor', async () => {
+  const el = await inWideContainer(wideContent());
+  el.style.setProperty('--lr-menu-max-inline-size', '6rem');
+  expect(getComputedStyle(el).inlineSize).to.equal(
+    resolvedInShadow(el, 'var(--lr-size-10rem)'),
+    'the floor still wins, which is why a max name on its own would be half a hook'
+  );
+  el.style.setProperty('--lr-menu-min-inline-size', '4rem');
+  expect(getComputedStyle(el).inlineSize).to.equal(resolvedInShadow(el, '6rem'));
+});
+
+it('keeps the viewport clamp outside the hook, so no value can defeat it', async () => {
+  const el = await inWideContainer(wideContent());
+  el.style.setProperty('--lr-menu-min-inline-size', '0');
+  el.style.setProperty('--lr-menu-max-inline-size', '9999px');
+  el.style.setProperty('--lr-popover-viewport-clamp', '7rem');
+  expect(getComputedStyle(el).inlineSize).to.equal(
+    resolvedInShadow(el, '7rem'),
+    'overflow safety survives any value of the hook'
+  );
+});
+
+it('uncaps to the container on none, with the viewport clamp still enforced', async () => {
+  const el = await inWideContainer(wideContent());
+  el.style.setProperty('--lr-menu-min-inline-size', '0');
+  el.style.setProperty('--lr-popover-viewport-clamp', '9999px');
+  el.style.setProperty('--lr-menu-max-inline-size', 'none');
+  expect(getComputedStyle(el).inlineSize).to.equal(
+    '1200px',
+    'none is the uncap value the sibling width hooks in this library already take'
+  );
+  // The clamp is overflow safety, not a style choice: an out-of-syntax hook value may not take it
+  // down with it. Unregistered, `none` made the whole min() invalid at computed-value time and the
+  // property fell back to its initial `none`, dropping the clamp and the 100% allocation too.
+  el.style.setProperty('--lr-popover-viewport-clamp', '7rem');
+  expect(getComputedStyle(el).inlineSize).to.equal(resolvedInShadow(el, '7rem'));
+});
+
+it('treats any other out-of-syntax hook value the same way, never as no cap at all', async () => {
+  const el = await inWideContainer(wideContent());
+  el.style.setProperty('--lr-menu-min-inline-size', '0');
+  el.style.setProperty('--lr-popover-viewport-clamp', '7rem');
+  el.style.setProperty('--lr-menu-max-inline-size', 'banana');
+  expect(getComputedStyle(el).inlineSize).to.equal(resolvedInShadow(el, '7rem'));
+  el.style.setProperty('--lr-menu-max-inline-size', 'auto');
+  expect(getComputedStyle(el).inlineSize).to.equal(resolvedInShadow(el, '7rem'));
+  el.style.setProperty('--lr-menu-max-inline-size', '6rem');
+  expect(getComputedStyle(el).inlineSize).to.equal(
+    resolvedInShadow(el, '6rem'),
+    'a valid length still caps, so the sanitising indirection did not dead-arm the hook'
+  );
+});
+
+it('lets a submenu surface uncap on none without losing its own clamp', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div
+      style="inline-size: 1200px; --lr-menu-max-inline-size: none; --lr-menu-min-inline-size: 0; --lr-theme-popover-viewport-clamp: 2rem"
+    >
+      ${nested()}
+    </div>
+  `);
+  const menu = wrapper.querySelector('lr-menu') as LyraMenu;
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('none');
+  await settle(menu, child);
+  const surface = submenuSurface(child);
+  expect(surface.className.includes('submenu-surface')).to.equal(
+    true,
+    'the submenu surface never rendered'
+  );
+  // A fixed-position submenu is shrink-to-fit and the positioner publishes a third, placement-
+  // derived term, so the clamp under test is set well below both -- otherwise the assertion could
+  // pass with the cap doing nothing. It is retuned through --lr-theme-popover-viewport-clamp, not
+  // --lr-popover-viewport-clamp: the latter is declared on :host by tokens.styles.ts, so an
+  // ancestor's value never reaches the surface.
+  expect(getComputedStyle(surface).inlineSize).to.equal(
+    resolvedInShadow(menu, '2rem'),
+    'the submenu carries the same clamp, so none may not drop it there either'
+  );
+});
+
+it('applies the same two names to a submenu surface', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div
+      style="inline-size: 1200px; --lr-menu-max-inline-size: 6rem; --lr-menu-min-inline-size: 0"
+    >
+      ${nested()}
+    </div>
+  `);
+  const menu = wrapper.querySelector('lr-menu') as LyraMenu;
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('none');
+  await settle(menu, child);
+  const surface = submenuSurface(child);
+  expect(surface.className.includes('submenu-surface')).to.equal(
+    true,
+    'the submenu surface never rendered'
+  );
+  expect(getComputedStyle(surface).inlineSize).to.equal(
+    resolvedInShadow(menu, '6rem'),
+    'a narrowed menu whose submenus stayed 20rem would be half a hook'
+  );
+});

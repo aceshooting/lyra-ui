@@ -6,6 +6,7 @@ import {
   elementUpdated,
   waitUntil,
 } from "@open-wc/testing";
+import { sendKeys } from "@web/test-runner-commands";
 import "./stepper.js";
 import type { LyraStepper } from "./stepper.js";
 import { styles } from "./stepper.styles.js";
@@ -886,9 +887,11 @@ describe("lr-stepper", () => {
   it("gives a non-disabled step a :hover treatment, matching the click-to-jump affordance", () => {
     const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
     // :where()-wrapped (see the "step hover specificity" describe block below) -- still targets
-    // [part="step"]:hover, excluding aria-disabled="true" steps, just at zeroed specificity.
+    // [part="step"]:hover, excluding aria-disabled="true" steps, just at zeroed specificity. The
+    // `button` type selector lives inside the same :where(), so it excludes the read-only div that
+    // renders the same part without spending any specificity on it.
     expect(css).to.match(
-      /:where\(\[part='step'\]\):hover:where\(:not\(\[aria-disabled='true'\]\)\)\s*\{[^}]+\}/
+      /:where\(button\[part='step'\]\):hover:where\(:not\(\[aria-disabled='true'\]\)\)\s*\{[^}]+\}/
     );
   });
 
@@ -1775,5 +1778,650 @@ describe("lr-stepper host aria-describedby reflection", () => {
         "extra-context"
       );
     }
+  });
+});
+
+/**
+ * `readonly` turns the strip into a passive progress display: the steps stop being buttons
+ * entirely rather than becoming disabled ones. The distinction is the whole point -- `disabled`
+ * means "you may not do this", read-only means "there is nothing to do here", and a dimmed
+ * progress display reads as broken rather than as informational.
+ */
+describe("lr-stepper read-only mode", () => {
+  const mixedSteps = () => [
+    { stepId: "basics", label: "Basics", state: "completed" as const },
+    { stepId: "inputs", label: "Inputs", state: "current" as const },
+    {
+      stepId: "review",
+      label: "Review",
+      state: "pending" as const,
+      disabled: true,
+      title: "Finish Inputs first",
+    },
+  ];
+
+  function stepEls(el: LyraStepper): HTMLElement[] {
+    return [
+      ...el.shadowRoot!.querySelectorAll('[part="step"]'),
+    ] as HTMLElement[];
+  }
+
+  /** Real timers with a margined threshold -- @sinonjs/fake-timers does not work under wtr. */
+  function settle(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 60));
+  }
+
+  it("renders read-only steps as non-interactive list items with no button semantics", async () => {
+    const el = (await fixture(
+      html`<lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+
+    const rendered = stepEls(el);
+    expect(rendered.length, "rendered step count").to.equal(3);
+    expect(
+      rendered.map((step) => step.localName),
+      "read-only steps must not be buttons"
+    ).to.deep.equal(["div", "div", "div"]);
+    expect(
+      rendered.map((step) => step.hasAttribute("tabindex")),
+      "read-only steps must carry no tabindex at all"
+    ).to.deep.equal([false, false, false]);
+    expect(
+      rendered.map((step) => step.hasAttribute("aria-disabled")),
+      "a non-interactive item has no availability to report"
+    ).to.deep.equal([false, false, false]);
+    expect(
+      el.shadowRoot!.querySelectorAll('[tabindex="0"]').length,
+      "a read-only strip that fits takes no tab stop anywhere in its shadow root"
+    ).to.equal(0);
+    expect(
+      el.shadowRoot!.querySelector("button") === null,
+      "no button of any kind survives read-only"
+    ).to.equal(true);
+  });
+
+  it("keeps the state glyphs, the current-step marker and the per-step title while read-only", async () => {
+    const el = (await fixture(
+      html`<lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+
+    const rendered = stepEls(el);
+    expect(
+      rendered.map((step) => step.getAttribute("aria-current")),
+      "the current-step marker survives"
+    ).to.deep.equal(["false", "step", "false"]);
+    expect(
+      rendered.map((step) => step.getAttribute("data-state"))
+    ).to.deep.equal(["completed", "current", "pending"]);
+    expect(
+      rendered[0]!.querySelector('[part="step-check"]') === null,
+      "completed step keeps its checkmark glyph"
+    ).to.equal(false);
+    expect(
+      rendered[1]!.querySelector('[part="step-index"]')?.textContent,
+      "current step keeps its numbered index chip"
+    ).to.equal(new Intl.NumberFormat("en").format(2));
+    expect(rendered[2]!.getAttribute("title")).to.equal("Finish Inputs first");
+    expect(
+      el.shadowRoot!.querySelectorAll('[role="listitem"]').length,
+      "each step stays a list item"
+    ).to.equal(3);
+  });
+
+  it("renders read-only steps at normal opacity, including one whose data is disabled", async () => {
+    const el = (await fixture(
+      html`<lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+
+    expect(
+      stepEls(el).map((step) => getComputedStyle(step).opacity),
+      "a read-only progress display is never dimmed"
+    ).to.deep.equal(["1", "1", "1"]);
+
+    // The same data without `readonly` still dims its disabled step, so the assertion above is a
+    // real difference rather than a stylesheet that never dimmed anything.
+    el.readonly = false;
+    await el.updateComplete;
+    const interactive = stepEls(el);
+    expect(
+      Number(getComputedStyle(interactive[2]!).opacity),
+      "the interactive disabled step is still dimmed"
+    ).to.be.lessThan(1);
+  });
+
+  it("withdraws the click affordance instead of showing a not-allowed cursor", async () => {
+    const el = (await fixture(
+      html`<lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+
+    expect(
+      stepEls(el).map((step) => getComputedStyle(step).cursor)
+    ).to.deep.equal(["default", "default", "default"]);
+  });
+
+  it("fires no lr-step-select from a click on a read-only step", async () => {
+    const el = (await fixture(
+      html`<lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+    let selections = 0;
+    el.addEventListener("lr-step-select", () => {
+      selections += 1;
+    });
+
+    const target = stepEls(el)[0]!;
+    target.click();
+    target.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true })
+    );
+    await el.updateComplete;
+    await settle();
+
+    expect(selections, "a read-only step is not selectable").to.equal(0);
+  });
+
+  it("fires no lr-step-select from Enter or Space while read-only", async () => {
+    const el = (await fixture(
+      html`<lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+    let selections = 0;
+    el.addEventListener("lr-step-select", () => {
+      selections += 1;
+    });
+
+    const target = stepEls(el)[1]!;
+    target.focus();
+    expect(
+      el.shadowRoot!.activeElement === null,
+      "a read-only step cannot take focus"
+    ).to.equal(true);
+
+    for (const key of ["Enter", " "]) {
+      target.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
+      );
+    }
+    await el.updateComplete;
+    await settle();
+
+    expect(selections).to.equal(0);
+  });
+
+  it("moves no focus from the arrow keys while read-only, in either text direction", async () => {
+    for (const direction of ["ltr", "rtl"] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction}>
+          <lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-stepper") as LyraStepper;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+      for (const key of ["ArrowRight", "ArrowLeft", "ArrowDown", "Home", "End"]) {
+        base.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
+        );
+      }
+      await el.updateComplete;
+
+      expect(
+        el.shadowRoot!.activeElement === null,
+        `${direction}: read-only roving navigation must not focus anything`
+      ).to.equal(true);
+      expect(
+        el.shadowRoot!.querySelectorAll('[tabindex="0"]').length,
+        `${direction}: a read-only strip that fits leaves no tab stop to rove between`
+      ).to.equal(0);
+    }
+  });
+
+  it("leaves the interactive contract byte-for-byte unchanged when readonly is unset", async () => {
+    const el = (await fixture(
+      html`<lr-stepper .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+
+    expect(el.readonly, "readonly defaults to false").to.equal(false);
+    expect(el.hasAttribute("readonly"), "nothing reflects by default").to.equal(
+      false
+    );
+    const rendered = stepEls(el);
+    expect(rendered.map((step) => step.localName)).to.deep.equal([
+      "button",
+      "button",
+      "button",
+    ]);
+    expect(
+      rendered.map((step) => step.getAttribute("tabindex")),
+      "the roving stop still lands on the current step"
+    ).to.deep.equal(["-1", "0", "-1"]);
+    expect(
+      rendered.map((step) => step.getAttribute("aria-disabled"))
+    ).to.deep.equal(["false", "false", "true"]);
+
+    const selection = oneEvent(el, "lr-step-select");
+    rendered[0]!.click();
+    expect((await selection).detail).to.deep.equal({
+      stepId: "basics",
+      index: 0,
+    });
+  });
+
+  it("restores button semantics and exactly one tab stop when readonly is turned back off", async () => {
+    const el = (await fixture(
+      html`<lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
+
+    el.readonly = false;
+    await el.updateComplete;
+
+    const rendered = stepEls(el);
+    expect(rendered.map((step) => step.localName)).to.deep.equal([
+      "button",
+      "button",
+      "button",
+    ]);
+    expect(
+      el.shadowRoot!.querySelectorAll('[tabindex="0"]').length,
+      "roving tabindex is back to exactly one stop"
+    ).to.equal(1);
+
+    const selection = oneEvent(el, "lr-step-select");
+    rendered[1]!.click();
+    expect((await selection).detail).to.deep.equal({
+      stepId: "inputs",
+      index: 1,
+    });
+  });
+
+  it("keeps an all-disabled read-only strip out of the tab order without erasing its progress", async () => {
+    const el = (await fixture(
+      html`<lr-stepper
+        readonly
+        .steps=${[
+          {
+            stepId: "one",
+            label: "One",
+            state: "completed" as const,
+            disabled: true,
+          },
+          {
+            stepId: "two",
+            label: "Two",
+            state: "current" as const,
+            disabled: true,
+          },
+        ]}
+      ></lr-stepper>`
+    )) as LyraStepper;
+
+    const rendered = stepEls(el);
+    expect(rendered.map((step) => step.getAttribute("data-state"))).to.deep.equal(
+      ["completed", "current"]
+    );
+    expect(
+      rendered.map((step) => getComputedStyle(step).opacity)
+    ).to.deep.equal(["1", "1"]);
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
+  });
+
+  it("still honors the state-styling custom properties while read-only", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-stepper-current-index-bg: rgb(1, 2, 3)">
+        <lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-stepper") as LyraStepper;
+    await el.updateComplete;
+    const chip = stepEls(el)[1]!.querySelector(
+      '[part="step-index"]'
+    ) as HTMLElement;
+
+    expect(getComputedStyle(chip).backgroundColor).to.equal("rgb(1, 2, 3)");
+  });
+
+  it("stays read-only and step-free of tab stops across a disconnect and reconnect", async () => {
+    const el = (await fixture(
+      html`<lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+    const parent = el.parentNode as ParentNode;
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+
+    expect(el.readonly).to.equal(true);
+    expect(
+      stepEls(el).map((step) => step.localName)
+    ).to.deep.equal(["div", "div", "div"]);
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
+  });
+
+  it("releases a focused step when the strip becomes read-only mid-session", async () => {
+    const el = (await fixture(
+      html`<lr-stepper .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+    stepEls(el)[1]!.focus();
+    expect(
+      el.shadowRoot!.activeElement?.getAttribute("data-step-id"),
+      "the current step starts focused"
+    ).to.equal("inputs");
+
+    el.readonly = true;
+    await el.updateComplete;
+
+    // Unavoidable and correct: the element that held focus stopped existing as a focusable
+    // control. What matters is that nothing is stranded -- no phantom tab stop is left behind for
+    // a keyboard user to land on.
+    expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
+  });
+
+  it("is accessible as a populated read-only progress display", async () => {
+    const el = (await fixture(
+      html`<lr-stepper
+        readonly
+        aria-label="Onboarding progress"
+        .steps=${mixedSteps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+
+    await expect(el).to.be.accessible();
+  });
+
+  it("never repaints a read-only step under a real pointer, while the same data still lights up once it is interactive", async () => {
+    // The load-bearing style change is narrowing the hover/active selectors to
+    // `button[part="step"]` so the read-only <div> stops matching. `styles.cssText` proves only
+    // that the selector was typed; this lands a real pointer and reads the rendered paint on both
+    // sides of the same element, which is what a future selector regression would actually break.
+    const el = (await fixture(
+      html`<lr-stepper
+        readonly
+        style="--lr-transition-fast: 0ms; --lr-stepper-hover-bg: rgb(1, 2, 3)"
+        .steps=${mixedSteps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+
+    try {
+      const readOnlyStep = stepEls(el)[0]!;
+      const restingBackground = getComputedStyle(readOnlyStep).backgroundColor;
+      await hoverUntilMatched(
+        readOnlyStep,
+        "the read-only step never reported :hover"
+      );
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      );
+      expect(
+        getComputedStyle(readOnlyStep).backgroundColor,
+        "a read-only step must not paint a hover fill"
+      ).to.equal(restingBackground);
+      expect(
+        restingBackground,
+        "sanity: the resting read-only background is the transparent default"
+      ).to.equal("rgba(0, 0, 0, 0)");
+
+      // Same element position, same pointer, same stylesheet -- only `readonly` differs, so the
+      // assertion above is a real exclusion rather than a hover rule that never fires at all.
+      el.readonly = false;
+      await el.updateComplete;
+      const interactiveStep = stepEls(el)[0]!;
+      await hoverUntilMatched(
+        interactiveStep,
+        "the interactive step never reported :hover"
+      );
+      await waitUntil(
+        () =>
+          getComputedStyle(interactiveStep).backgroundColor === "rgb(1, 2, 3)",
+        "the interactive step never painted its hover fill"
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
+/**
+ * A read-only strip renders every step as a plain `<div>`, so it has no tabbable descendant at
+ * all. An overflowing scroll container with nothing tabbable inside is unreachable by keyboard --
+ * axe reports it as `scrollable-region-focusable` -- so `[part="base"]` takes the stop itself,
+ * and only while both halves of that condition genuinely hold.
+ */
+describe("lr-stepper read-only scroll tab stop", () => {
+  const mixedSteps = () => [
+    { stepId: "basics", label: "Basics", state: "completed" as const },
+    { stepId: "inputs", label: "Inputs", state: "current" as const },
+    {
+      stepId: "review",
+      label: "Review",
+      state: "pending" as const,
+      disabled: true,
+      title: "Finish Inputs first",
+    },
+  ];
+
+  function baseEl(el: LyraStepper): HTMLElement {
+    return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  }
+
+  /** Two frames, matching what the `horizontal step row overflow` suite already waits for before
+   *  reading any measured overflow state. */
+  function settleLayout(): Promise<void> {
+    return new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    );
+  }
+
+  it("gives an overflowing read-only strip its own tab stop, because no step can take one", async () => {
+    const el = (await fixture(
+      html`<lr-stepper
+        readonly
+        aria-label="Onboarding progress"
+        style="display: block; max-inline-size: 90px"
+        .steps=${mixedSteps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const base = baseEl(el);
+    await settleLayout();
+
+    expect(
+      base.scrollWidth,
+      "sanity: the strip must genuinely overflow"
+    ).to.be.greaterThan(base.clientWidth);
+    expect(
+      base.getAttribute("tabindex"),
+      "the scroll container takes the stop its steps no longer provide"
+    ).to.equal("0");
+    expect(
+      [
+        ...el.shadowRoot!.querySelectorAll('[part="step"]'),
+      ].map((step) => step.hasAttribute("tabindex")),
+      "no step takes a stop back"
+    ).to.deep.equal([false, false, false]);
+    expect(
+      el.shadowRoot!.querySelectorAll('[tabindex="0"]').length,
+      "exactly one stop, and it is the container"
+    ).to.equal(1);
+    expect(
+      base.getAttribute("role"),
+      "the list semantics are unchanged by the stop"
+    ).to.equal("list");
+  });
+
+  it("leaves a read-only strip that fits entirely out of the tab order", async () => {
+    const el = (await fixture(
+      html`<lr-stepper readonly .steps=${mixedSteps()}></lr-stepper>`
+    )) as LyraStepper;
+    const base = baseEl(el);
+    await settleLayout();
+
+    expect(
+      base.scrollWidth - base.clientWidth,
+      "sanity: the strip must fit"
+    ).to.be.at.most(1);
+    expect(
+      base.hasAttribute("tabindex"),
+      "a strip with nothing to scroll to owes no tab stop"
+    ).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
+  });
+
+  it("keeps an overflowing interactive strip's container out of the tab order, so a stepper still costs one tab", async () => {
+    const el = (await fixture(
+      html`<lr-stepper
+        style="display: block; max-inline-size: 90px"
+        .steps=${mixedSteps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const base = baseEl(el);
+    await settleLayout();
+
+    expect(
+      base.scrollWidth,
+      "sanity: the strip must genuinely overflow"
+    ).to.be.greaterThan(base.clientWidth);
+    expect(
+      base.hasAttribute("tabindex"),
+      "the roving step already provides the one stop"
+    ).to.equal(false);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="step"][tabindex="0"]').length,
+      "the roving stop is still on a step"
+    ).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(1);
+  });
+
+  it("takes no tab stop on the vertical axis, whose rules never let the strip scroll", async () => {
+    const el = (await fixture(
+      html`<lr-stepper
+        readonly
+        orientation="vertical"
+        style="display: block; max-inline-size: 90px"
+        .steps=${mixedSteps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const base = baseEl(el);
+    await settleLayout();
+
+    expect(
+      getComputedStyle(base).overflowX,
+      "sanity: the vertical axis never scrolls"
+    ).to.equal("visible");
+    expect(base.hasAttribute("tabindex")).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
+  });
+
+  it("adds and drops the stop as the same read-only strip starts and stops overflowing, with no host update in between", async () => {
+    // Drives the ScrollOverflowController's own ResizeObserver path: nothing about the component's
+    // reactive state changes here, so `updated()` never runs and only the controller's onResize
+    // hook can keep the stop in sync.
+    const el = (await fixture(
+      html`<lr-stepper
+        readonly
+        style="display: block; max-inline-size: 90px"
+        .steps=${mixedSteps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const base = baseEl(el);
+    await settleLayout();
+    expect(base.getAttribute("tabindex"), "starts overflowing").to.equal("0");
+
+    el.style.maxInlineSize = "1000px";
+    await waitUntil(
+      () => !base.hasAttribute("tabindex"),
+      "the stop was never dropped once the strip fit again"
+    );
+    expect(
+      base.scrollWidth - base.clientWidth,
+      "sanity: the strip now fits"
+    ).to.be.at.most(1);
+
+    el.style.maxInlineSize = "90px";
+    await waitUntil(
+      () => base.getAttribute("tabindex") === "0",
+      "the stop never came back once the strip overflowed again"
+    );
+  });
+
+  it("drops the stop the moment a read-only overflowing strip becomes interactive again", async () => {
+    const el = (await fixture(
+      html`<lr-stepper
+        readonly
+        style="display: block; max-inline-size: 90px"
+        .steps=${mixedSteps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const base = baseEl(el);
+    await settleLayout();
+    expect(base.getAttribute("tabindex")).to.equal("0");
+
+    el.readonly = false;
+    await el.updateComplete;
+
+    expect(
+      base.hasAttribute("tabindex"),
+      "the roving step owns the stop again"
+    ).to.equal(false);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="step"][tabindex="0"]').length
+    ).to.equal(1);
+  });
+
+  it("reaches the stop by Tab and paints the shared focus ring on it", async () => {
+    // Keyboard modality is what makes :focus-visible match; a bare focus() does not match it
+    // reliably across engines (same reasoning details.test.ts's summary ring test records).
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button id="before">before</button>
+        <lr-stepper
+          readonly
+          aria-label="Onboarding progress"
+          style="display: block; max-inline-size: 90px; --lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 4px"
+          .steps=${mixedSteps()}
+        ></lr-stepper>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-stepper") as LyraStepper;
+    await el.updateComplete;
+    const base = baseEl(el);
+    await settleLayout();
+    expect(base.getAttribute("tabindex"), "sanity: the stop exists").to.equal(
+      "0"
+    );
+
+    wrapper.querySelector<HTMLElement>("#before")!.focus();
+    await sendKeys({ press: "Tab" });
+    await waitUntil(
+      () => base.matches(":focus-visible"),
+      "Tab never reached the read-only scroll stop"
+    );
+
+    const ring = getComputedStyle(base);
+    expect(ring.outlineStyle).to.equal("solid");
+    expect(ring.outlineWidth).to.equal("3px");
+    expect(ring.outlineColor).to.equal("rgb(1, 2, 3)");
+    expect(ring.outlineOffset).to.equal("4px");
+  });
+
+  it("is accessible as an overflowing read-only progress display", async () => {
+    // The regression this guards: with every step a plain <div>, an overflowing [part="base"] had
+    // zero tabbable descendants -- axe's scrollable-region-focusable violation, and a strip whose
+    // off-screen steps no keyboard user could reach. A 3-step default-width fixture never
+    // overflows, so it can never reproduce this.
+    const el = (await fixture(
+      html`<lr-stepper
+        readonly
+        aria-label="Onboarding progress"
+        style="display: block; max-inline-size: 90px"
+        .steps=${mixedSteps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const base = baseEl(el);
+    await settleLayout();
+    expect(
+      base.scrollWidth,
+      "sanity: the strip must genuinely overflow"
+    ).to.be.greaterThan(base.clientWidth);
+
+    await expect(el).to.be.accessible();
   });
 });

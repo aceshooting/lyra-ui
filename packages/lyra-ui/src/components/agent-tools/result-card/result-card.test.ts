@@ -299,3 +299,45 @@ it('is accessible in the populated compact and plain states', async () => {
   )) as LyraResultCard;
   await expect(plainEl).to.be.accessible();
 });
+
+describe('card chrome theming hooks', () => {
+  const part = (el: LyraResultCard, name: string) =>
+    el.shadowRoot!.querySelector(`[part='${name}']`) as HTMLElement;
+
+  it('repaints the card through --lr-result-card-background/-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-result-card
+        heading="Result"
+        style="--lr-result-card-background: rgb(1, 2, 3); --lr-result-card-border-color: rgb(4, 5, 6); --lr-result-card-radius: 11px"
+        >body</lr-result-card
+      >
+    `)) as LyraResultCard;
+    const chrome = getComputedStyle(part(el, 'base'));
+    expect(chrome.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(chrome.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(chrome.borderTopLeftRadius).to.equal('11px');
+    expect(getComputedStyle(part(el, 'header')).borderBottomColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('leaves the card paint byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(
+      html`<lr-result-card heading="Result">body</lr-result-card>`,
+    )) as LyraResultCard;
+    const tokened = (await fixture(html`
+      <lr-result-card
+        heading="Result"
+        style="--lr-result-card-background: var(--lr-color-surface); --lr-result-card-border-color: var(--lr-color-border); --lr-result-card-radius: var(--lr-radius)"
+        >body</lr-result-card
+      >
+    `)) as LyraResultCard;
+    const unset = getComputedStyle(part(control, 'base'));
+    const explicit = getComputedStyle(part(tokened, 'base'));
+    expect(unset.backgroundColor).to.equal(explicit.backgroundColor);
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(part(control, 'header')).borderBottomColor).to.equal(
+      getComputedStyle(part(tokened, 'header')).borderBottomColor,
+    );
+  });
+});

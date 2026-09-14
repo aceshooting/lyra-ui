@@ -25,6 +25,7 @@ import {
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
@@ -67,6 +68,10 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select, LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** How long the listbox type-ahead buffer survives without a keystroke. Unchanged from the
+ *  inline literal this reset used before it moved onto the shared debounce controller. */
+const TYPE_AHEAD_RESET_MS = 500;
 
 function isLyraOptionElement(value: unknown): value is LyraOption {
   return isHtmlElement(value) && value.localName === tag('option');
@@ -111,6 +116,7 @@ export interface LyraSelectEventMap {
   'lr-change': CustomEvent<
     LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
   >;
+  'lr-activate': CustomEvent<{ value: string }>;
   blur: FocusEvent;
   focus: FocusEvent;
 }
@@ -216,6 +222,18 @@ export interface LyraSelectEventMap {
  * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} lr-change - Prefixed compatibility alias
  *   fired after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s
  *   `lr-change`. Not fired for a programmatic `value` assignment.
+ * @event lr-activate - Fired on every activation of an available listbox row -- a click, or
+ *   Enter/Space on the active row -- whether or not the selection actually moved.
+ *   `detail: { value }` carries the activated option's own value, always a single string even in
+ *   `multiple` mode. Bubbling and composed, so a host outside the shadow tree receives it.
+ *   Not cancelable: it is a notification that the user picked a row, not a veto point, and nothing
+ *   in this component branches on it. In single-select mode, re-picking the already-selected row is
+ *   the case `change`/`lr-change` deliberately stay silent for (matching a native `<select>`) --
+ *   "re-run that filter" is a real intent -- and it is otherwise unobservable, because the rows
+ *   live in this shadow root, so a retargeted `click` names no option and a keyboard commit
+ *   produces no click at all. When an activation does move the selection,
+ *   `input`/`lr-input`/`change`/`lr-change` are emitted first. Not fired for a programmatic
+ *   `value` assignment, nor by the `with-clear` button.
  * @event lr-clear - The `with-clear` button emptied the selection, fired after the
  *   `input`/`lr-input`/`change`/`lr-change` sequence. Never fired when there was nothing to clear.
  * @event lr-show - The listbox is about to open, however `open` became true. Cancelable —
@@ -598,9 +616,20 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // buffer and reset ~500ms after the last one, so "b" then "a" narrows to
   // "ba" instead of restarting the search on every keystroke.
   private typeAheadBuffer = '';
-  private typeAheadTimer?: number;
-  private typeAheadTimerWindow?: Window;
-  private typeAheadTimerGeneration = 0;
+  /** The buffer's reset debounce. Every printable keystroke restarts it, so "b" then "a" narrows
+   *  to "ba"; the buffer clears only once the quiet window passes. Scheduled on -- and cancelled
+   *  through -- the realm this select lives in at the time, and the realm it was armed in is
+   *  re-checked at settle, so a select adopted into another document never clears a buffer that
+   *  now belongs to a different realm. Supersession is the controller's own generation guard: a
+   *  callback already queued when a newer keystroke restarted the timer arrives inert. */
+  private readonly typeAheadReset = new DebounceController<Window>(
+    TYPE_AHEAD_RESET_MS,
+    (armedIn) => {
+      if (!this.isConnected || this.ownerDocument.defaultView !== armedIn) return;
+      this.typeAheadBuffer = '';
+    },
+    () => this.ownerDocument.defaultView,
+  );
 
   /** Focus the internal select trigger. */
   override focus(options?: FocusOptions): void {
@@ -1858,6 +1887,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         : [...this._selected, option.value];
       this.setSelection(values, occurrences);
       this.emitValueEvents();
+      this.emit('lr-activate', { value: option.value });
       return;
     }
     // Reopening the listbox (or, on a single-option select, simply
@@ -1871,6 +1901,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.setSelection([option.value], [option]);
     void this.hide();
     if (changed) this.emitValueEvents();
+    // Every activation of an available row reports, including the re-pick of the current selection
+    // that `change`/`lr-change` are defined to stay silent for. See the class doc's `lr-activate`
+    // entry.
+    this.emit('lr-activate', { value: option.value });
   }
 
   /** Removes one occurrence, rather than collapsing every row sharing its public string value. */
@@ -1961,22 +1995,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.clearTypeAheadTimer();
     this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
     const ownerWindow = this.ownerDocument.defaultView;
-    if (this.isConnected && ownerWindow) {
-      const generation = this.typeAheadTimerGeneration;
-      this.typeAheadTimerWindow = ownerWindow;
-      this.typeAheadTimer = ownerWindow.setTimeout(() => {
-        if (
-          this.typeAheadTimerGeneration !== generation ||
-          !this.isConnected ||
-          this.ownerDocument.defaultView !== ownerWindow
-        ) {
-          return;
-        }
-        this.typeAheadTimer = undefined;
-        this.typeAheadTimerWindow = undefined;
-        this.typeAheadBuffer = '';
-      }, 500);
-    }
+    // A detached or realm-less select arms nothing at all, exactly as before: the controller would
+    // otherwise fall back to the ambient timer queue and clear a buffer through a document this
+    // element does not live in.
+    if (this.isConnected && ownerWindow) this.typeAheadReset.push(ownerWindow);
 
     const navigable = this.navigableOptions();
     if (!navigable.length) return;
@@ -2010,13 +2032,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     }
   }
 
+  /** Discards an armed buffer reset. `cancel()`, never `dispose()`: a disconnect here may be a
+   *  re-parent, and a disposed controller would refuse every later keystroke's reset for good. */
   private clearTypeAheadTimer(): void {
-    this.typeAheadTimerGeneration += 1;
-    if (this.typeAheadTimer !== undefined) {
-      this.typeAheadTimerWindow?.clearTimeout(this.typeAheadTimer);
-    }
-    this.typeAheadTimer = undefined;
-    this.typeAheadTimerWindow = undefined;
+    this.typeAheadReset.cancel();
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {

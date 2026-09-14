@@ -3045,3 +3045,117 @@ describe('lr-tab-group name stability inside a hidden container', () => {
     expect(name).to.equal('Wrapped Tab');
   });
 });
+
+describe("lr-tab-group activation event", () => {
+  it("fires lr-activate without lr-tab-show when the active tab is clicked again", async () => {
+    const el = (await fixture(basic())) as LyraTabGroup;
+    await el.updateComplete;
+    expect(el.active).to.equal("input");
+    let showCount = 0;
+    let hideCount = 0;
+    el.addEventListener("lr-tab-show", () => showCount++);
+    el.addEventListener("lr-tab-hide", () => hideCount++);
+    setTimeout(() => tabButtons(el)[0]!.click());
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "input" });
+    expect(el.active).to.equal("input");
+    expect(showCount, "re-picking the active tab shows nothing new").to.equal(0);
+    expect(hideCount, "and hides nothing").to.equal(0);
+  });
+
+  it("fires lr-activate without lr-tab-show when Home re-activates the already-first active tab", async () => {
+    const el = (await fixture(basic())) as LyraTabGroup;
+    await el.updateComplete;
+    const first = tabButtons(el)[0]!;
+    first.focus();
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute(
+        "data-slot"
+      ),
+      "the keyboard case is driven from the genuinely focused tab"
+    ).to.equal("input");
+    let showCount = 0;
+    el.addEventListener("lr-tab-show", () => showCount++);
+    setTimeout(() => press(first, "Home"));
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "input" });
+    expect(showCount, "Home on the active tab moves nothing").to.equal(0);
+  });
+
+  it("emits lr-tab-hide and lr-tab-show before lr-activate for a moving pick, and bubbles composed and uncancelable", async () => {
+    const el = (await fixture(basic())) as LyraTabGroup;
+    await el.updateComplete;
+    const order: string[] = [];
+    const flags: Array<Record<string, boolean>> = [];
+    el.addEventListener("lr-tab-hide", () => order.push("lr-tab-hide"));
+    el.addEventListener("lr-tab-show", () => order.push("lr-tab-show"));
+    const documentListener = (e: Event): void => {
+      order.push("lr-activate");
+      flags.push({
+        bubbles: e.bubbles,
+        cancelable: e.cancelable,
+        composed: e.composed,
+      });
+    };
+    document.addEventListener("lr-activate", documentListener);
+    try {
+      tabButtons(el)[1]!.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", documentListener);
+    }
+    expect(el.active).to.equal("preview");
+    expect(order).to.deep.equal([
+      "lr-tab-hide",
+      "lr-tab-show",
+      "lr-activate",
+    ]);
+    expect(flags).to.deep.equal([
+      { bubbles: true, cancelable: false, composed: true },
+    ]);
+  });
+
+  it("stays silent for a disabled tab, for the programmatic show() method and for an active assignment", async () => {
+    const el = (await fixture(html`
+      <lr-tab-group>
+        <lr-tab panel="input">Input</lr-tab>
+        <lr-tab panel="preview" disabled>Preview</lr-tab>
+        <lr-tab-panel name="input">Raw input</lr-tab-panel>
+        <lr-tab-panel name="preview">Rendered preview</lr-tab-panel>
+      </lr-tab-group>
+    `)) as LyraTabGroup;
+    await el.updateComplete;
+    let activateCount = 0;
+    el.addEventListener("lr-activate", () => activateCount++);
+    tabButtons(el)[1]!.click();
+    await el.updateComplete;
+    expect(el.active, "the disabled tab never activates").to.equal("input");
+    expect(activateCount, "a disabled tab activates nothing").to.equal(0);
+
+    const navigable = (await fixture(basic())) as LyraTabGroup;
+    await navigable.updateComplete;
+    let moves = 0;
+    navigable.addEventListener("lr-activate", () => activateCount++);
+    navigable.addEventListener("lr-tab-show", () => moves++);
+    navigable.show("preview");
+    await navigable.updateComplete;
+    expect(navigable.active, "show() really did move the tab").to.equal(
+      "preview"
+    );
+    expect(moves, "so lr-tab-show reported it").to.equal(1);
+    expect(
+      activateCount,
+      "show() is a programmatic move, not a user activation"
+    ).to.equal(0);
+
+    navigable.active = "settings";
+    await navigable.updateComplete;
+    expect(navigable.active, "the assignment still lands").to.equal("settings");
+    expect(
+      activateCount,
+      "a host writing `active` is not a user activation"
+    ).to.equal(0);
+  });
+});

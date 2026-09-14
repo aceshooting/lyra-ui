@@ -1835,3 +1835,100 @@ it("exposes its native label association", async () => {
   expect(el.validity.valid).to.equal(true);
   expect(el.validationMessage).to.equal("");
 });
+
+describe("lr-rating activation event", () => {
+  const press = (el: LyraRating, key: string): void => {
+    el.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
+    );
+  };
+
+  it("fires lr-activate without lr-change when End re-commits an already-maximum rating", async () => {
+    const el = await fixture<LyraRating>(
+      html`<lr-rating value="5" max="5"></lr-rating>`
+    );
+    const activated: number[] = [];
+    let changeCount = 0;
+    el.addEventListener("lr-change", () => changeCount++);
+    el.addEventListener("lr-activate", (e) =>
+      activated.push((e as CustomEvent<{ value: number }>).detail.value)
+    );
+    press(el, "End");
+    await el.updateComplete;
+    expect(activated).to.deep.equal([5]);
+    expect(el.value).to.equal(5);
+    expect(changeCount, "re-committing the same rating is not a change").to.equal(0);
+  });
+
+  it("fires lr-activate without lr-change when Home re-commits an already-zero rating", async () => {
+    const el = await fixture<LyraRating>(html`<lr-rating value="0"></lr-rating>`);
+    const activated: number[] = [];
+    let changeCount = 0;
+    el.addEventListener("lr-change", () => changeCount++);
+    el.addEventListener("lr-activate", (e) =>
+      activated.push((e as CustomEvent<{ value: number }>).detail.value)
+    );
+    press(el, "Home");
+    press(el, "ArrowDown");
+    await el.updateComplete;
+    expect(activated).to.deep.equal([0, 0]);
+    expect(changeCount, "an arrow key at the lower bound changes nothing").to.equal(0);
+  });
+
+  it("emits change and lr-change before lr-activate when the commit moves the value, and bubbles composed and uncancelable", async () => {
+    const el = await fixture<LyraRating>(
+      html`<lr-rating value="2" max="5"></lr-rating>`
+    );
+    const order: string[] = [];
+    const flags: Array<Record<string, boolean>> = [];
+    el.addEventListener("change", () => order.push("change"));
+    el.addEventListener("lr-change", () => order.push("lr-change"));
+    const documentListener = (e: Event): void => {
+      order.push("lr-activate");
+      flags.push({
+        bubbles: e.bubbles,
+        cancelable: e.cancelable,
+        composed: e.composed,
+      });
+    };
+    document.addEventListener("lr-activate", documentListener);
+    try {
+      press(el, "ArrowUp");
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", documentListener);
+    }
+    expect(el.value).to.equal(3);
+    expect(order).to.deep.equal(["change", "lr-change", "lr-activate"]);
+    expect(flags).to.deep.equal([
+      { bubbles: true, cancelable: false, composed: true },
+    ]);
+  });
+
+  it("stays silent for a readonly or disabled rating and for a programmatic value assignment", async () => {
+    const el = await fixture<LyraRating>(
+      html`<lr-rating value="2" max="5" readonly></lr-rating>`
+    );
+    let activateCount = 0;
+    el.addEventListener("lr-activate", () => activateCount++);
+    press(el, "ArrowUp");
+    await el.updateComplete;
+    expect(activateCount, "a readonly rating commits nothing").to.equal(0);
+
+    el.readonly = false;
+    el.disabled = true;
+    await el.updateComplete;
+    press(el, "ArrowUp");
+    await el.updateComplete;
+    expect(activateCount, "a disabled rating commits nothing").to.equal(0);
+
+    el.disabled = false;
+    el.value = 4;
+    await el.updateComplete;
+    expect(el.value, "the assignment still lands").to.equal(4);
+    expect(
+      activateCount,
+      "a host writing `value` is not a user activation"
+    ).to.equal(0);
+  });
+});

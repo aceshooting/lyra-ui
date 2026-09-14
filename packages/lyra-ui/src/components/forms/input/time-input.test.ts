@@ -2010,3 +2010,82 @@ describe('valueAsNumber / valueAsDate assignment', () => {
     expect(events).to.equal(0);
   });
 });
+
+// -- Control height hooks ----------------------------------------------------
+
+describe('lr-time-input control height hooks', () => {
+  /** Resolves what `expression` computes to *inside this field's shadow root*, where the `--lr-*`
+   *  design tokens actually live (declared on `:host`, so a light-DOM probe would see none). */
+  function resolvedInShadow(el: LyraTimeInput, expression: string): string {
+    const probe = document.createElement('span');
+    probe.style.position = 'absolute';
+    probe.style.maxInlineSize = expression;
+    el.shadowRoot!.append(probe);
+    const value = getComputedStyle(probe).maxInlineSize;
+    probe.remove();
+    return value;
+  }
+
+  function row(el: LyraTimeInput): HTMLElement {
+    return el.shadowRoot!.querySelector<HTMLElement>('[part~="time-input"]')!;
+  }
+
+  it('keeps the shared form-control height as a floor only when nothing is set (unset regression)', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
+    const control = row(el);
+    expect(getComputedStyle(control).minBlockSize).to.equal(
+      resolvedInShadow(el, 'var(--lr-form-control-height)'),
+      'a time field is exactly as tall as the lr-input beside it'
+    );
+    const baselineBlockSize = getComputedStyle(control).blockSize;
+    el.style.setProperty('--lr-form-control-font-size', '4rem');
+    expect(
+      parseFloat(getComputedStyle(control).blockSize) > parseFloat(baselineBlockSize)
+    ).to.equal(true, 'without an exact height the row is still content-sized');
+    el.style.removeProperty('--lr-form-control-font-size');
+    expect(getComputedStyle(control).blockSize).to.equal(baselineBlockSize);
+  });
+
+  it('pins an exact row height through --lr-time-input-control-height', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
+    const control = row(el);
+    const baselineBlockSize = getComputedStyle(control).blockSize;
+    el.style.setProperty('--lr-time-input-control-height', '64px');
+    expect(getComputedStyle(control).minBlockSize).to.equal('64px');
+    expect(getComputedStyle(control).blockSize).to.equal('64px');
+    // It caps as well as floors. Grown through the font size rather than the padding, because
+    // padding plus border is a hard floor on a border-box element and would prove nothing.
+    el.style.setProperty('--lr-form-control-font-size', '4rem');
+    expect(getComputedStyle(control).blockSize).to.equal('64px');
+    el.style.removeProperty('--lr-form-control-font-size');
+    el.style.removeProperty('--lr-time-input-control-height');
+    expect(getComputedStyle(control).blockSize).to.equal(
+      baselineBlockSize,
+      'removing the exact height returns the row to its shipped geometry'
+    );
+  });
+
+  it('exposes a floor-only hook that the exact height overrides', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
+    const control = row(el);
+    el.style.setProperty('--lr-time-input-control-min-height', '72px');
+    expect(getComputedStyle(control).minBlockSize).to.equal('72px');
+    expect(getComputedStyle(control).blockSize).to.equal('72px');
+    el.style.setProperty('--lr-time-input-control-height', '48px');
+    expect(getComputedStyle(control).minBlockSize).to.equal('48px');
+    expect(getComputedStyle(control).blockSize).to.equal('48px');
+  });
+
+  it('lets an ancestor theme wrapper pin the height, in both writing directions', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir="rtl" style="--lr-time-input-control-height: 56px">
+        <lr-time-input></lr-time-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-time-input') as LyraTimeInput;
+    await el.updateComplete;
+    expect(getComputedStyle(el).direction).to.equal('rtl');
+    expect(getComputedStyle(row(el)).blockSize).to.equal('56px');
+    expect(getComputedStyle(row(el)).minBlockSize).to.equal('56px');
+  });
+});

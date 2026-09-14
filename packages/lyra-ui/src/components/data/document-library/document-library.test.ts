@@ -353,6 +353,7 @@ it('contains every undocumented tag-filter and table event at the composition bo
   `);
   const leaked: string[] = [];
   const comboboxEvents = [
+    'lr-activate',
     'lr-show',
     'lr-after-show',
     'lr-hide',
@@ -984,5 +985,52 @@ describe("explicitly empty host aria-label", () => {
     expect(
       omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
     ).to.equal("Library");
+  });
+});
+
+describe("lr-document-library contains the composed lr-combobox's lr-activate", () => {
+  it("swallows it on a real tag pick, like the nine other child events it already contains", async () => {
+    const el = await fixture<LyraDocumentLibrary>(html`
+      <lr-document-library .documents=${docs}></lr-document-library>
+    `);
+    await el.updateComplete;
+    const combobox = el.shadowRoot!.querySelector("lr-combobox") as HTMLElement & {
+      open: boolean;
+      readonly updateComplete: Promise<boolean>;
+    };
+    combobox.open = true;
+    await combobox.updateComplete;
+    await waitUntil(
+      () => combobox.shadowRoot!.querySelectorAll('[part="option"]').length > 0,
+      "expected the tag filter to render its rows"
+    );
+    const row = combobox.shadowRoot!.querySelector<HTMLElement>('[part="option"]')!;
+
+    let escaped = 0;
+    let onChild = 0;
+    const escapedListener = (): void => {
+      escaped += 1;
+    };
+    // Added AFTER the template's own `@lr-activate` binding, on the same node: `stopPropagation()`
+    // does not silence a same-node listener, so this proves the child really emitted rather than
+    // the assertion passing because nothing fired at all.
+    const childListener = (): void => {
+      onChild += 1;
+    };
+    document.addEventListener("lr-activate", escapedListener);
+    combobox.addEventListener("lr-activate", childListener);
+    try {
+      row.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", escapedListener);
+      combobox.removeEventListener("lr-activate", childListener);
+    }
+
+    expect(onChild, "the composed tag filter did report the pick").to.equal(1);
+    expect(
+      escaped,
+      "this library's documented surface is lr-library-filter; the child's raw event never escapes"
+    ).to.equal(0);
   });
 });

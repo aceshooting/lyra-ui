@@ -11,6 +11,12 @@ import '../../overlays/spinner/spinner.class.js';
 import '../../overlays/empty/empty.class.js';
 import type { RetrievalQuery, CancelEventDetail } from '../../../ai/types.js';
 import { styles } from './retrieval-search.styles.js';
+import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
@@ -20,6 +26,7 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { canonicalIdentityList, isRecord } from '../retrieval-identity.js';
@@ -95,6 +102,10 @@ export interface LyraRetrievalSearchEventMap {
  * @csspart row - The row holding the query field, mode selector, and submit/cancel button.
  * @csspart query - The query `<lr-input type="search">`.
  * @csspart mode - The vector/keyword/hybrid `<lr-segmented>`.
+ * @cssprop [--lr-retrieval-search-submit-min-height=var(--lr-icon-button-size)] - Minimum height of
+ *   the submit button. A `size` tier raises it to that tier's shared form-control height; the
+ *   shared tappable-target minimum always stays underneath, so no tier can shrink the button past
+ *   the WCAG floor.
  * @csspart submit - The submit/cancel `<button>`. Reads "Search" while idle, "Cancel" while
  *   `loading`.
  * @csspart filters - The active-filter/scope `<lr-chip-group>`. Omitted entirely when both
@@ -102,9 +113,12 @@ export interface LyraRetrievalSearchEventMap {
  * @csspart spinner - The busy `<lr-spinner>`, shown only while `loading`.
  * @csspart error - The neutral, visible error message, shown only when `errorText` is non-empty and
  *   not `loading`. New non-empty errors are announced through a shared assertive light-DOM region;
- *   initial and reconnect content is not replayed.
+ *   initial and reconnect content is not replayed unless `announce` is set, which reads the state
+ *   present at first mount once.
  * @csspart empty - The compact `<lr-empty>`, shown only when `empty` is `true` and neither
- *   `loading` nor `errorText` is set.
+ *   `loading` nor `errorText` is set. Later transitions into that settled state are announced
+ *   through a shared polite light-DOM region; the state present at first mount is announced only
+ *   when `announce` is set.
  * @status stable
  * @since 4.1.0
  */
@@ -134,7 +148,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     'scope',
   ]);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, contextualSizes, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-search',
     'lr-filters-change',
@@ -144,6 +158,31 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
    *  the user types (mirroring every other Lyra input's controlled-value convention), and a host
    *  reassignment always wins. */
   @property() query = '';
+
+  private _size?: LyraSize;
+
+  /** Density tier for the whole query row, on the library's one size ladder, in either spelling --
+   *  `2xs`/`xs`/`s`/`m`/`l`/`xl`, or Web Awesome's and Shoelace's `small`/`medium`/`large`. It is
+   *  one property for all three controls on purpose: the query field, the mode selector and the
+   *  submit button share the row's baseline, and sizing any one of them alone is what makes the
+   *  row ragged. Forwarding is the only way to reach the first two, which resolve their tier
+   *  inside their own shadow roots, and it is forwarded as a property rather than an attribute
+   *  because removing an already-written `size` attribute again would leave each child's own
+   *  `size` at `null` instead of back at its own default. Opt-in: with no size every control keeps
+   *  its own `m` default, exactly what the row rendered before, and the submit button keeps the
+   *  shared tappable-target floor at every tier. Unsupported values normalize to the omitted state
+   *  and remove the attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
 
   private _mode: LyraRetrievalMode = 'hybrid';
 
@@ -177,8 +216,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   /** Host-supplied error message from the last failed search, shown verbatim (caller-owned text,
    *  not localized) in a neutral visible region. New non-empty values are announced through a
-   *  shared assertive light-DOM region; initial and reconnect content is not replayed. Empty
-   *  string (the default) shows nothing. */
+   *  shared assertive light-DOM region; initial and reconnect content is not replayed unless
+   *  `announce` is set. Empty string (the default) shows nothing. */
   @property({ attribute: 'error-text' }) errorText = '';
 
   /** Host-driven flag: the last completed search returned zero results. Renders a compact
@@ -186,6 +225,16 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
    *  settled state. Never inferred by this component itself -- see the class doc; it holds no
    *  results data of its own. */
   @property({ type: Boolean, reflect: true }) empty = false;
+
+  /** Opts this search into announcing the state it is already presenting the first time it
+   *  mounts: the verbatim `errorText` assertively, or, with no error and nothing loading, the
+   *  localized zero-result message politely. Set it where the search is rendered in response to a
+   *  query the user just ran and nothing else reports the outcome; leave it unset for a search
+   *  that is part of the page a user is arriving on, whose visible error or empty state is
+   *  already read in document order. Read once, when the search first mounts: a later
+   *  reconnection or adoption stages the existing state again rather than replaying it, and later
+   *  transitions are announced either way. A search presenting neither state announces nothing. */
+  @property({ type: Boolean, reflect: true }) announce = false;
 
   /** Placeholder for the query field. Empty string (the default) falls back to the localized
    *  generic "Search" placeholder, which also becomes that field's accessible name (mirroring
@@ -201,6 +250,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private isMounting = true;
+  private initialStateAnnounced = false;
+  private connectionGeneration = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   private emptyAnnouncementSink?: AnnouncementSink;
   private wasEmptyPresented = false;
@@ -216,10 +267,21 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
       document: this.ownerDocument,
       source: this,
     });
+    const generation = ++this.connectionGeneration;
+    void announceAfterFirstPaint(
+      this,
+      () => generation === this.connectionGeneration,
+      () => {
+        if (!this.announce || this.initialStateAnnounced) return;
+        this.initialStateAnnounced = true;
+        this.announcePresentedState();
+      }
+    );
   }
 
   override disconnectedCallback(): void {
     this.isMounting = true;
+    this.connectionGeneration += 1;
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     this.emptyAnnouncementSink?.release();
@@ -232,12 +294,16 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
+    // Either live branch below retires the still-pending opt-in mount announcement: without the
+    // latch, a transition landing between the first update and the deferred frame would be read
+    // twice.
     if (
       !wasMounting &&
       changed.has('errorText') &&
       this.errorText !== '' &&
       this.isConnected
     ) {
+      this.initialStateAnnounced = true;
       this.errorAnnouncementSink?.announce(this.errorText);
     }
     const emptyPresented = this.empty && !this.loading && this.errorText === '';
@@ -247,9 +313,22 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
       emptyPresented &&
       this.isConnected
     ) {
+      this.initialStateAnnounced = true;
       this.emptyAnnouncementSink?.announce(this.localize('noMatches'));
     }
     this.wasEmptyPresented = emptyPresented;
+  }
+
+  /** Announce whichever state this search is presenting right now, at that state's own urgency.
+   *  `errorText` wins, mirroring the render branch order; a search still `loading` has not
+   *  settled on either state, so it announces nothing. */
+  private announcePresentedState(): void {
+    if (this.errorText !== '') {
+      this.errorAnnouncementSink?.announce(this.errorText);
+      return;
+    }
+    if (this.empty && !this.loading)
+      this.emptyAnnouncementSink?.announce(this.localize('noMatches'));
   }
 
   private modeItems(): LyraSegmentedItem[] {
@@ -362,6 +441,14 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     this.mode = e.detail.value as LyraRetrievalMode;
   };
 
+  /** The inner `<lr-segmented>`'s `lr-activate` reports a repeat pick of the mode already chosen.
+   *  This component owns its own event surface (`lr-search`, `lr-mode-change`, ...), so the child's
+   *  raw event is contained here rather than escaping as an event this tag never documented --
+   *  the same containment `onModeChange` already applies to the child's `lr-change`. */
+  private containModeEvent = (e: Event): void => {
+    e.stopPropagation();
+  };
+
   private onSubmitClick = (): void => {
     if (this.loading) {
       this.cancel();
@@ -394,20 +481,24 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             part="query"
             type="search"
             clearable
+            .size=${this.size ?? 'm'}
             placeholder=${this.placeholder || this.localize('search')}
             .value=${this.query}
             @lr-input=${this.onQueryInput}
             @keydown=${this.onQueryKeyDown}
           ></lr-input>
-          <!-- No size override: the mode selector, the query input and the submit button all
-               resolve their height from the shared --lr-form-control-height ladder, so leaving
-               this at the same default size is what actually makes the row flush. -->
+          <!-- One host size reaches all three controls, which is what keeps the row flush: the
+               mode selector and the query input resolve their height from the shared
+               --lr-form-control-height ladder, and the submit button's own rule tracks the same
+               tier. Sizing any one of them alone is what makes the row ragged. -->
           <lr-segmented
             part="mode"
+            .size=${this.size ?? 'm'}
             .items=${this.modeItems()}
             .value=${this.mode}
             label=${this.localize('retrievalModeLabel')}
             @lr-change=${this.onModeChange}
+            @lr-activate=${this.containModeEvent}
           ></lr-segmented>
           <button part="submit" type="button" @click=${this.onSubmitClick}>
             ${this.loading ? this.localize('cancel') : this.localize('search')}

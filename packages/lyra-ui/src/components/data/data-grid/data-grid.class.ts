@@ -25,6 +25,7 @@ import {
   finiteInteger,
   finiteRange,
 } from '../../../internal/numbers.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -1112,7 +1113,19 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   private requestGeneration = 0;
   private requestController?: AbortController;
-  private requestTimer?: { owner: Window; handle: number };
+  /** The debounced server request. Scheduled on the realm the grid lives in at the time -- a grid
+   *  adopted into another document must keep its pending request on that document's timer queue,
+   *  and must still be able to cancel it there on teardown. `pending` is the "a request is already
+   *  queued" predicate `willUpdate()` reads. */
+  private readonly requestDebounce = new DebounceController<Window>(
+    0,
+    (owner) => {
+      // `loadServerData()` re-checks connection, realm and `usesServerData` itself, so a settle
+      // that outlived any of them is already a no-op there.
+      void this.loadServerData(owner);
+    },
+    () => this.ownerDocument.defaultView,
+  );
   private ownsLoadingState = false;
   private resizeSession?: ResizeSession;
   private columnDragSession?: ColumnDragSession;
@@ -1228,7 +1241,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const serverDisabled = changed.has('server') && !this.usesServerData;
     if (
       (sourceReplaced || serverDisabled) &&
-      (this.requestController || this.requestTimer !== undefined)
+      (this.requestController || this.requestDebounce.pending)
     ) {
       this.requestGeneration += 1;
       this.requestController?.abort();
@@ -2303,29 +2316,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private cancelRequestTimer(): void {
-    const timer = this.requestTimer;
-    this.requestTimer = undefined;
-    if (timer) timer.owner.clearTimeout(timer.handle);
+    // Cancel, never dispose: a disconnect may be a re-parent, after which this grid must still be
+    // able to queue a request.
+    this.requestDebounce.cancel();
   }
 
   private scheduleServerRequest(delayed: boolean): void {
     const owner = this.ownerDocument.defaultView;
     if (!this.isConnected || !owner || !this.usesServerData) return;
-    this.cancelRequestTimer();
-    const delay = delayed ? finiteDuration(this.filterDebounce, 250) : 0;
-    let handle = 0;
-    handle = owner.setTimeout(() => {
-      if (
-        this.requestTimer?.owner !== owner ||
-        this.requestTimer.handle !== handle ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner
-      )
-        return;
-      this.requestTimer = undefined;
-      void this.loadServerData(owner);
-    }, delay);
-    this.requestTimer = { owner, handle };
+    this.requestDebounce.delayMs = delayed ? finiteDuration(this.filterDebounce, 250) : 0;
+    this.requestDebounce.push(owner);
   }
 
   private async loadServerData(owner: Window): Promise<void> {

@@ -402,6 +402,10 @@ later values restore the corresponding content.
 - `compact: boolean = false` (reflected) — tighter, left-aligned rendering (less padding, a lighter
   heading weight) for use inside a constrained space like a widget body or table cell, instead of
   the centered/spacious full-page default
+- `announce: boolean = false` (reflected) — announces the heading and description this empty state
+  already carries when it first mounts, through the same shared light-DOM polite sink later changes
+  use. Set it where the empty state replaces a result set the user just asked for; leave it unset
+  for an empty state that is part of the page being loaded. See the first "Known gotchas" bullet
 
 **Events:** none.
 
@@ -443,7 +447,10 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 
 **Known gotchas:**
 
-- Initial content and reconnect state—including property changes made while detached—stay silent.
+- Initial content and reconnect state—including property changes made while detached—stay silent
+  unless `announce` is set, which announces the heading/description present at first mount once,
+  through the same sink and the same exclusions as a later change. `announce` is read once, so a
+  later reconnection or adoption stages the existing content again rather than replaying it.
   Later meaningful heading and description changes are appended to Lyra's shared light-DOM polite
   announcement sink. Default-slot illustrations, action-slot controls, nested hidden/inert/
   `aria-hidden="true"` content, updates under a hidden/CSS-hidden composed ancestor, and mutations
@@ -2441,7 +2448,10 @@ medium mapping, and removing the attribute restores contextual inheritance), `he
 `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected; `1`–`6` expose the
 property and rich-slot heading wrapper at that semantic level, invalid untyped values retain level
 3, and `none` is the visual-only opt-out),
-`closable: boolean = false` (reflected), `inline: boolean = false` (reflected), `open: boolean = true`
+`closable: boolean = false` (reflected), `inline: boolean = false` (reflected),
+`announce: boolean = false` (reflected — opts the callout into announcing the content it already
+carries when it first mounts; see the announcement paragraph that closes this section),
+`open: boolean = true`
 (reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
 semantic content and hides the host surface), and `accessibleLabel: string = ''`
 (`accessible-label`; used only when the host has no `aria-label` attribute). A host `aria-label`
@@ -2521,6 +2531,19 @@ empty host label still leaves visible heading/message text live.
 accessible label. Initial connection, reconnection, adoption, and detached changes that settle
 during staging stay silent; each connection acquires its owning document's shared sink.
 
+Set `announce` when the callout is created in response to something the user just did — a save
+failure, a validation result — and nothing else would read the message aloud. It announces the
+content the callout already carries the first time it mounts, through the same path a later update
+takes: assertive for `danger` (including a `danger` inherited from a composed ancestor) and polite
+otherwise, the same `hidden`/`inert`/`aria-hidden`/CSS-hidden and hidden-ancestor exclusions, the
+same flattened text through nested forwarding slots, and the same complete localized
+`calloutAnnouncementWithContext` composition when the host carries a nonempty label. A closed
+callout (`open="false"`) announces nothing. `announce` is read once, when the callout first mounts:
+a later reconnection or adoption stages the existing content again rather than replaying the
+announcement, and later content updates are announced whether or not it is set. Leave it unset for
+a callout that is simply part of the page a user is arriving on — that text is already read in
+document order, and announcing it again is noise.
+
 ## `lr-rating`
 
 A keyboard-accessible star rating control with slider semantics. It is a **form-associated control**
@@ -2599,6 +2622,15 @@ Left unset, the built-in star outline/solid pair is unchanged.
 - `lr-change` — `detail: { value }`. The rating was committed to a new value. Not emitted when the
   clamped value is unchanged, nor on a programmatic `value` write. It fires immediately after the
   native `change` event for the same user commit.
+- `lr-activate` — `detail: { value }`, the committed rating. Fired on **every** interactive commit
+  (a click on a symbol, or an Arrow/Home/End key), whether or not the value actually moved.
+  Bubbling, composed, not cancelable — it reports that the user committed a rating and gates
+  nothing. Use it for the re-commit of the current rating that `lr-change` deliberately stays silent
+  for; from the keyboard that case is otherwise unobservable, because End on an already-maximum
+  rating, Home on an already-zero one, or an arrow key at either bound commits a rating and produces
+  no click at all. When the commit _does_ move the value, `change` and `lr-change` are emitted
+  first, so a listener reading `value` from any of the three sees the settled rating. A
+  non-interactive (`readonly`/`disabled`) rating fires none of them.
 - `lr-hover` — **new in 8.0.0.** `detail: { phase: 'start' | 'move' | 'end', value }`, where `value`
   is the rating that committing the current pointer position _would_ produce — enough to render a
   live description of what is being hovered without waiting for a click. Fires only while the rating

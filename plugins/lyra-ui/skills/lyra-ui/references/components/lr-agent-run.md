@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 25 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -95,6 +95,10 @@ padding, and the gap between its header and body, while `compact`; both are igno
 is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
 their point of use rather than `:host` declarations, so either can be set on the element _or on any
 ancestor_ — one rule on a run list retunes every compact run inside it.
+`--lr-agent-run-background` (default `var(--lr-color-surface)`), `--lr-agent-run-border-color`
+(default `var(--lr-color-border)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
+`[part="base"]`'s card chrome without a `::part(base)` override; `frame="plain"` still removes all
+three outright.
 
 **Additional API surface:**
 

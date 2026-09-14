@@ -74,6 +74,23 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   labels to wrap when the effective orientation is vertical. The default preserves single-line
   labels, and horizontal labels remain single-line even when this is enabled. Set this when a
   narrow or localized vertical stepper would otherwise clip labels or overflow its allocation.
+- `readonly: boolean = false` (reflected) — renders the same `steps` data as a passive progress
+  display instead of a navigable control. Each step becomes a non-interactive item inside its
+  existing `role="listitem"` wrapper rather than a `<button>`: no `tabindex` (the stepper takes no
+  tab stop at all), no `aria-disabled`, no click or Enter/Space activation, and therefore no
+  `lr-step-select` — including from a synthetic click dispatched at `::part(step)`.
+  Arrow/Home/End become a no-op and no longer call `preventDefault()`, so Space keeps scrolling
+  the page the way it does anywhere else in static content. Everything that describes _progress_
+  is untouched: the `step-index` chip, the `step-check` glyph, the optional `step-icon`, the
+  per-step `title`, `aria-current="step"` on the current step, and every `--lr-stepper-*` custom
+  property. It is deliberately **not** a disabled treatment — `disabled` means "you may not do
+  this", read-only means "there is nothing to do here" — so a read-only step keeps normal opacity
+  and only loses its pointer cursor, matching `<lr-slider>`'s and `<lr-rating>`'s own `readonly`.
+  A per-step `disabled` flag is inert while read-only for the same reason: there is no activation
+  left for it to gate, so it adds no dimming, and the step still shows its progress state. A
+  focused step loses focus when `readonly` is turned on mid-session, because the control holding
+  it stops existing; nothing is left stranded in the tab order. Unset (the default) is
+  byte-for-byte the previous behavior.
 - `effectiveOrientation: 'horizontal' | 'vertical'` (readonly getter) — the live layout/navigation
   axis actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset or
   doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while
@@ -84,15 +101,16 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   attribute remains empty rather than being treated as absent.
 
 **Events:** `lr-step-select` (`detail: { stepId, index }`) — fired on click, or Enter/Space while
-focused, on a non-`disabled` step. It is non-cancelable because the component takes no default
-action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
+focused, on a non-`disabled` step. Never fired while `readonly`. It is non-cancelable because the
+component takes no default action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
 `effectiveOrientation`.
 
 **Slots:** none.
 
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
-one step), `step` (a single native button; the current step carries `aria-current="step"` and every
+one step), `step` (a single native button — or a non-interactive `<div>` carrying the same part
+while `readonly`; the current step carries `aria-current="step"` and every
 other step carries `aria-current="false"`),
 `step-icon` (optional inert, `aria-hidden` leading topic glyph from the step's `icon` field; only
 rendered when the step has one, additionally to — never instead of — `step-index`/`step-check`),

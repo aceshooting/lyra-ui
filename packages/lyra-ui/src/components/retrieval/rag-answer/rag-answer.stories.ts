@@ -49,3 +49,36 @@ export const NarrowAllStates: Story = {
     </div>
   `,
 };
+
+export const AnnounceOnMount: Story = {
+  name: 'Announce on mount',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An answer surface rendered in response to a question the user just asked should carry `announce`: the `errorText` it already holds when it first mounts is sent to the shared assertive light-DOM sink once, exactly as a later `errorText` change is. Leave it off for an answer that is part of the page being loaded — its visible error is read in document order already. An answer with no error announces nothing, and later `errorText` changes announce either way.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); justify-items: start;">
+      <button
+        @click=${(event: Event) => {
+          const host = (event.currentTarget as HTMLElement).parentElement!;
+          const answer = document.createElement('lr-rag-answer');
+          answer.setAttribute('announce', '');
+          answer.setAttribute(
+            'error-text',
+            'The retrieval service timed out before the answer could be grounded.'
+          );
+          host.append(answer);
+        }}
+      >
+        Show a freshly mounted failed answer
+      </button>
+      <lr-rag-answer
+        error-text="This one is part of the page and is deliberately not announced."
+      ></lr-rag-answer>
+    </div>
+  `,
+};

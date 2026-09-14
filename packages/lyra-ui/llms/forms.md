@@ -404,6 +404,17 @@ want a `lr-`-prefixed event, or to the native-style `input`/`change` for parity 
 control. Re-picking the current single value and programmatic/default/reset/restore writes are
 silent (including on `lr-change`). The clear button emits one `lr-clear` after its
 `input`/`change`/`lr-change` triple.
+`lr-activate` (`detail: { value: string }`, bubbling/composed, non-cancelable) fires on **every**
+activation of an available listbox row — a click, or Enter on the active row — whether or not the
+selection actually moved. Its `value` is the activated option's own value, **always a single
+string**, even in `multiple` mode, where the `input`/`change`/`lr-change` triple carries the whole
+`string[]` instead. It reports that the user picked a row and gates nothing. Use it for the
+single-select repeat pick that `change`/`lr-change` deliberately stay silent for — "re-run that
+filter" is a real intent — which is otherwise unobservable, because the rows live in this shadow
+root, so a retargeted `click` names no option and a keyboard commit produces no click at all. When
+an activation _does_ move the selection, `input`/`change`/`lr-change` are emitted first, so either
+listener reads the settled selection. Not fired for typing, for a committed custom value matching no
+row, for the clear button, or for a programmatic `value` assignment.
 `lr-filter` (`detail: { value: string }`) reports the in-progress filter text on every user-driven
 keystroke — the live as-you-typed search string, deliberately _not_ `value`, which is the committed
 selection. It is the supported way to read that text; reaching into the shadow root for
@@ -879,6 +890,17 @@ listener cannot hold a disabled popup open.
 `lr-after-show` and `lr-after-hide` fire after the corresponding listbox transition has settled; an
 interrupted transition drops its stale after-event.
 `lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
+`lr-activate` (`detail: { value: string }`, bubbling, composed, non-cancelable) fires on **every**
+activation of an available listbox row — a click, or Enter/Space on the active row — whether or not
+the selection actually moved. Its `value` is the activated option's own value, **always a single
+string**, even in `multiple` mode, where `lr-input`/`lr-change` carry the whole `string[]` instead.
+It reports that the user picked a row and gates nothing. Use it for the single-select repeat pick
+that `change`/`lr-change` deliberately stay silent for (matching a native `<select>`) — "re-run that
+filter" is a real intent — which is otherwise unobservable, because the rows live in this shadow
+root, so a retargeted `click` names no option and a keyboard commit produces no click at all. When
+an activation _does_ move the selection, `input`/`lr-input`/`change`/`lr-change` are emitted first,
+so either listener reads the settled selection. It is not fired by a programmatic `value`
+assignment, nor by the `with-clear` button.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides
 the `errorText` attribute when provided), `start`/`prefix` (aliases before the selected-value label),
@@ -2877,6 +2899,15 @@ appearance surface; `--lr-time-input-focus-border-color`;
 `--lr-time-input-column-active-bg`, `--lr-time-input-column-selected-bg`,
 `--lr-time-input-column-selected-color`, `--lr-time-input-column-selected-font-weight`,
 `--lr-time-input-column-selected-hover-bg`, and `--lr-time-input-column-selected-active-bg`.
+Outer row height is a pair, not one knob: `--lr-time-input-control-min-height` (default
+`var(--lr-form-control-height)`) is the row's height **floor**, taken from the active `size` tier of
+the shared form-control ladder, so a time field is exactly as tall as an `lr-input` or `lr-select`
+at the same tier; `--lr-time-input-control-height` is **unset by default** and, given a length,
+pins the row to exactly that height — flooring and capping it at once, which is what pixel-matches
+an `lr-date-input` sharing the same toolbar. Leaving `--lr-time-input-control-height` unset keeps
+`--lr-time-input-control-min-height` working as a floor only, and because the component never
+declares `--lr-time-input-control-height` on its own host it can be set from an ancestor or an
+outer-tree rule just as well as inline on the element.
 Every state hook falls back to the exact semantic token or color mix used previously, and remains
 undeclared on the host so ancestor themes work. The upstream-compatible `--column-item-height`
 (default `calc(var(--lr-size-1em) * 2.25)`) and `--column-width`
@@ -3527,6 +3558,15 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
 
 **Events:** `lr-change` (`detail: { value }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).
+`lr-activate` (`detail: { value }`) — fired on **every** activation of a swatch (a click, or an
+Arrow/Home/End key that lands on one), whether or not the selection actually moved. Bubbling,
+composed, not cancelable — it reports that the user picked a swatch and gates nothing. `value` is
+the activated swatch's own value. Use it for the repeat pick `lr-change` deliberately stays silent
+for, which is otherwise unobservable: the swatches live in this shadow root, so a retargeted `click`
+names no swatch, and keyboard activation produces no click at all — Home on an already-first
+selection, End on an already-last one, or an arrow key in a one-item row activates a swatch and
+fires nothing else. When an activation _does_ move the selection, `lr-change` is emitted first and
+`lr-activate` second, so either listener reads the settled `value`.
 
 **Slots:** none.
 
@@ -5525,7 +5565,13 @@ those same tokens — so any CSS length unit works, `rem`/`em` and `calc()` incl
 geometry matches what is painted without expressing the tokens in `px`. The measurement is cached
 and re-derived only when the resolved pixels can actually change (a token override applied after the
 first render, a theme swap, a root or host font-size change feeding a `rem`/`em` value), never per
-frame.
+frame. `--lr-emoji-picker-search-min-height` (default `auto`),
+`--lr-emoji-picker-search-font-size` (default `inherit`),
+`--lr-emoji-picker-search-padding-inline` (default `var(--lr-space-s)`) and
+`--lr-emoji-picker-search-padding-block` (default `var(--lr-space-xs)`) size the built-in filter
+field. `size` does NOT drive them — on this component `size` scales the emoji glyph and item box,
+never the form-control ladder — so point the height at `--lr-form-control-height-s` (or any tier of
+that ladder) when the filter field has to match a themed search field beside it.
 
 Emoji interaction states are separate: `--lr-emoji-picker-hover-bg`,
 `--lr-emoji-picker-keyboard-active-bg`, `--lr-emoji-picker-selected-bg`/
@@ -5719,6 +5765,13 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   follows `label`/the host `aria-label`. The square uses the shared/scoped trigger height with a
   24px floor. `showFlags=false` retains visible text in every mode. Selection, keyboard navigation,
   form values and the uncommitted effective-locale preview keep their usual behavior.
+- `optionDisplay: LyraLocaleOptionDisplay = 'label-tag'` (attribute `option-display`) —
+  `'label' | 'label-tag'`. The default renders each option row as the locale's label above its raw
+  BCP-47 tag. `'label'` renders the label alone and **omits the `option-tag` element from the DOM**
+  rather than hiding it with CSS — a visually hidden tag would still join the row's accessible name
+  and would still be matched by `::part(option-tag)`, so under `'label'` that part matches nothing
+  at all. The trigger, the row flags, `showFlags`, selection, keyboard navigation and form values
+  are identical in both modes; only the option rows change.
 - `value: string = ''` — the **committed** selection (form value, drives `lr-change`). While `''`
   and untouched, the trigger _displays_ `effectiveLocale` as a preview label, but
   `checkValidity()`/`required` are governed by the real `value`, which stays `''` until a real
@@ -5784,7 +5837,9 @@ priority until cleared.
 `trigger-flag` (the trigger's leading `<lr-flag>` for the current value, present only while
 `showFlags` is on and `triggerDisplay` is not `label`), `trigger-label` (the current language,
 visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present only while `showFlags` is on),
-`option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag), `expand-icon`,
+`option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag; rendered only while
+`optionDisplay` is `label-tag`, and absent from the DOM entirely under `optionDisplay="label"`),
+`expand-icon`,
 `hint`, `error`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on

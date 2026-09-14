@@ -6,12 +6,18 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  /* Card chrome behind inline var() fallbacks, same convention as the compact density below. The
+     background fallback is transparent, which is what this card has always painted -- it takes
+     the surface it sits on -- so an unset card renders unchanged while a consumer can now give it
+     its own fill without a ::part(base) override. */
   [part='base'] {
     box-sizing: border-box;
     min-inline-size: 0;
     max-inline-size: 100%;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-commit-card-border-color, var(--lr-color-border));
+    border-radius: var(--lr-commit-card-radius, var(--lr-radius));
+    background: var(--lr-commit-card-background, transparent);
     padding: var(--lr-space-m);
   }
   /* Density escape -- same convention as lr-agent-run's compact. The tuned value sits behind an
@@ -23,11 +29,18 @@ export const styles = css`
   }
   /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'] at equal
      specificity, so source order alone decides the padding when a card is both compact and
-     frame="plain". plain is the stronger statement -- no chrome at all -- so it goes last. */
+     frame="plain". plain is the stronger statement -- no chrome at all -- so it goes last.
+
+     background: transparent is NOT redundant with the hook's transparent fallback above: it is
+     what makes plain mean the same thing here as on every sibling card. Without it a consumer who
+     sets --lr-commit-card-background still gets a filled "plain" card, while lr-activity-feed,
+     lr-agent-run, lr-result-card, lr-stack-trace, lr-task-list, lr-terminal, lr-thinking-panel and
+     lr-chat-composer all drop the fill. */
   :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
+    background: transparent;
   }
   [part='subject'] {
     min-inline-size: 0;

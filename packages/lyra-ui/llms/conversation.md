@@ -755,7 +755,13 @@ attachment tray rendered above the input row).
 treatment). Scoped separately from the shared `--lr-color-text-quiet` token, which
 `[part="textarea"]`'s placeholder color also reads — overriding this cssprop recolors only the busy
 button, not the placeholder too (the same shared-token-collision fix `<lr-chat-message>`'s own
-user-bubble background pair documents). Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
+user-bubble background pair documents). `--lr-chat-composer-background` (default
+`var(--lr-color-surface)`), `--lr-chat-composer-border-color` (default `var(--lr-color-border)`) and
+`--lr-chat-composer-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome so a
+composer docked into a themed panel can match it, with no `::part(base)` override. The
+`:focus-within` border keeps its `--lr-color-brand` shift — that is state paint, not card chrome —
+and `frame="plain"` still removes the border, radius and fill outright. Plus shared tokens
+`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-brand`, `--lr-color-on-brand`,
 `--lr-color-text-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-transition-fast`,
 `--lr-opacity-disabled`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
@@ -1315,35 +1321,42 @@ message), `error` (the error message)
 
 **Themeable custom properties:** `--lr-model-select-trigger-padding` (default
 `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`) —
-`[part="trigger"]`/`[part="combobox"]`'s padding shorthand.
-`--lr-model-select-trigger-min-height` (default `var(--lr-form-control-height)`) — their block-size
-floor. `--lr-model-select-font-size` (default `var(--lr-form-control-font-size)`) — their font size.
-Those three are indirections onto the shared `--lr-form-control-*` scale rather than literal values:
-the public property surface is unchanged, but the numbers come from the one ladder every other
-control sizes against, so a tier is restated in exactly one place. `--lr-model-select-expand-size`
-(default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s decorative box size (clamped against
-`--lr-icon-button-size` via `min()`); this one is a glyph box rather than a control metric, so the
-shared ladder has no equivalent and its per-tier values stay local. `size` is the primary lever;
-override a cssprop directly only to retune a single element or step outside the scale entirely.
-`--lr-model-select-gap` (default `var(--lr-space-xs)`) controls the child gap in the trigger,
-combobox, and option rows; `--lr-model-select-radius` (default `var(--lr-radius)`) controls the
-corner radius of the trigger, combobox, listbox, and option rows. Both remain inheritable fallback
-arms, so set them on an ancestor to retheme a group without changing unrelated controls.
-`--lr-model-select-open-border-color` (default `var(--lr-color-brand)`) controls the trigger
-border while the listbox is open. A synthetic stale-value row has independent
+`[part="trigger"]`/`[part="combobox"]`'s padding shorthand. `--lr-model-select-trigger-min-height`
+(default `var(--lr-form-control-height)`) — their block-size floor, and
+`--lr-model-select-trigger-height` (unset by default) — an _exact_ block size that both floors and
+caps them, taking precedence over the floor, for pixel-matching a sibling field in the same toolbar
+row. `--lr-model-select-font-size` (default `var(--lr-form-control-font-size)`) — their font size.
+`--lr-model-select-trigger-padding`, `--lr-model-select-trigger-min-height` and
+`--lr-model-select-font-size` are indirections onto the shared `--lr-form-control-*` scale rather
+than literal values: the public property surface is unchanged, but the numbers come from the one
+ladder every other control sizes against, so a tier is restated in exactly one place.
+`--lr-model-select-expand-size` (default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s
+decorative box size (clamped against `--lr-icon-button-size` via `min()`); this one is a glyph box
+rather than a control metric, so the shared ladder has no equivalent and its per-tier values stay
+local. `size` is the primary lever; override a cssprop directly only to retune a single element or
+step outside the scale entirely. `--lr-model-select-gap` (default `var(--lr-space-xs)`) controls the
+child gap in the trigger, combobox, and option rows; `--lr-model-select-radius` (default
+`var(--lr-radius)`) controls the corner radius of the trigger, combobox, listbox, and option rows.
+Both remain inheritable fallback arms, so set them on an ancestor to retheme a group without
+changing unrelated controls. `--lr-model-select-open-border-color` (default `var(--lr-color-brand)`)
+controls the trigger border while the listbox is open. A synthetic stale-value row has independent
 `--lr-model-select-option-synthetic-border-style` (default `dashed`) and
 `--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
-`--lr-model-select-option-active-bg` (default
-`var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
-declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. The
-selected row (`[part="option"][aria-selected="true"]`) has the matching set
+`--lr-model-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) — background of a
+hovered or keyboard-active `[part="option"]` row; declared as a `var()` fallback at the point of
+use, not on `:host`, so it isn't tied to `size`. The selected row
+(`[part="option"][aria-selected="true"]`) has the matching set
 `--lr-model-select-option-selected-bg` (default `transparent`),
 `--lr-model-select-option-selected-border` and `--lr-model-select-option-selected-color` (both
 `var(--lr-color-brand)`), and `--lr-model-select-option-selected-font-weight`
 (`var(--lr-font-weight-semibold)`), all inline `var()` fallbacks so the selected row is rethemeable
-without hijacking `--lr-color-brand`. Plus
-shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
-`--lr-radius`, `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
+without hijacking `--lr-color-brand`. `--lr-model-select-max-inline-size` (default
+`var(--lr-size-24rem)`) publishes the host's own width ceiling, which was previously a hard-wired
+literal: set a length to retune it, or `none` to let the control fill its container the way
+`lr-select` does. Like every other name here it is read as a `var()` fallback and never declared on
+`:host`, so a value set on `:root` or any ancestor still reaches it. Plus shared tokens —
+`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lr-radius`,
+`--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.
 
 The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
@@ -1967,7 +1980,12 @@ assigned directly instead of via the child's own event. The nested selector's na
 **CSS parts:** `base`, `model-row`, `model-select`, `model-label` (forwarded visible internal
 selector label), `temperature-row`, `temperature-label`, `temperature-value`
 
-**Themeable custom properties:** no component-specific custom properties; consumes shared tokens
+**Themeable custom properties:** `--lr-model-settings-panel-max-inline-size` — the card's own width
+ceiling (default `var(--lr-size-28rem)`). Set a length to retune it, or `none` for a full-width
+card. `layout="compact"` uncaps the card by default and reads the same name, so a length narrows a
+compact card too. The panel also sets `--lr-model-select-max-inline-size: none` on its own
+`[part="model-row"]`, so the nested selector fills the row rather than stopping at its standalone
+24rem ceiling — set that name on the row to re-cap it. Otherwise it consumes shared tokens
 `--lr-space-l/-m/-s/-xs`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-text-quiet`.
 
@@ -2578,7 +2596,15 @@ false` (reflected) — shows the built-in search field, including a `part="clear
 that appears next to it once it has a value (never when empty), clears it on click, fires the same
 `lr-filter-change`/`lr-query-change` event typing already fires, and returns focus to the field. Its
 accessible name is the localized `clear` message (the same key `<lr-input>`'s own clear button
-uses). `filter?: (thread, query) => boolean`
+uses). `size?: LyraSize` (reflected) — opt-in density tier for that search field, on the library's
+one six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`, or the Web Awesome/Shoelace `small`/`medium`/`large`
+spellings, accepted as authored). A tier gives the field the row height, text size, gutters and
+corner radius an `lr-input` of that tier has, so the sidebar's own filter box lines up with an
+adjacent themed search field. With no `size` the field keeps exactly the gutters, corner radius and
+inherited text size it shipped with, so existing markup renders unchanged; an unsupported value
+normalizes to the omitted state and removes the attribute rather than snapping to a tier. Only the
+field is tiered — the gutter around it and the clear button keep their own sizes, and have their own
+custom properties. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
@@ -2712,6 +2738,20 @@ var(--lr-thread-list-row-action-hover-bg, var(--lr-color-surface-raised)),
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
 `--lr-thread-list-row-action-active-color` (default
 `var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))`) do the same for row actions.
+
+**Themeable search geometry:** `--lr-thread-list-search-padding` (default `var(--lr-space-s)`) is
+the gutter around the search row and `--lr-thread-list-search-gap` (default `var(--lr-space-xs)`)
+the gap between the field and its clear button; neither follows `size`.
+`--lr-thread-list-search-min-height` and `--lr-thread-list-search-font-size` are unset while `size`
+is — the field is then as tall as its own text and inherits the ambient text size — and a tier
+resolves them to that tier's shared form-control height and font size.
+`--lr-thread-list-search-padding-inline` (default `var(--lr-space-s)`),
+`--lr-thread-list-search-padding-block` (default `var(--lr-space-xs)`) and
+`--lr-thread-list-search-radius` (default `var(--lr-radius)`) are replaced by the tier's shared
+form-control values when `size` is set. `--lr-thread-list-search-clear-size` (default
+`var(--lr-size-1-5rem)`) is the clear button's box; it never follows `size`, because that button is
+a tap target floored at `--lr-icon-button-size` rather than a text box. Every one of these wins over
+the tier, so a consumer can take a tier and then move one value.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
 component's own render-callback output (`wrapRow`, `renderStart`, `renderExcerpt`,
@@ -3220,6 +3260,21 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 **Additional API surface:**
 
+- `--lr-voice-picker-max-inline-size` — The host's own width ceiling, previously a hard-wired
+  literal. Set a length to retune it, or `none` to fill the container the way `lr-select` does.
+  Default: `var(--lr-size-24rem)`.
+- `--lr-voice-picker-trigger-min-height` — Trigger/combobox block-size floor, reading the shared
+  form-control height ladder so retuning `--lr-theme-form-control-height-*` moves this control and
+  every sibling field together. Default: `var(--lr-form-control-height)`.
+- `--lr-voice-picker-trigger-height` — An _exact_ trigger/combobox height that both floors and caps
+  the control, for pixel-matching a sibling field in the same toolbar row. Takes precedence over
+  `--lr-voice-picker-trigger-min-height`. Unset by default.
+- The `[part="preview-button"]` action follows whichever of those two names is in play, not just
+  the exact height: `.control-row` is `align-items: stretch`, and stretch never applies to an item
+  with a definite cross size, so an action that tracked only `--lr-voice-picker-trigger-height`
+  would sit short and top-aligned beside a field whose floor had been raised. Its own WCAG
+  hit-area floor (`--lr-icon-button-size`) still wins below that, so pinning a short field cannot
+  shrink the action's hit area.
 - `--lr-voice-picker-gap` — Gap between the field and preview action, and between trigger,
   combobox, and option children. Default: `var(--lr-space-xs)`.
 - `--lr-voice-picker-radius` — Trigger, combobox, listbox, option, and preview-action corner radius.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -81,7 +81,13 @@ The `compact` density is retunable through three properties: `--lr-activity-feed
 `--lr-activity-feed-compact-entry-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`)
 scoped to `[part="entry"]` while `compact`. All three are inline `var()` fallbacks at their point
 of use, so any can be set on the element or on an ancestor, same as `lr-confirm-bar`'s and
-`lr-thinking-panel`'s own compact tokens.
+`lr-thinking-panel`'s own compact tokens. The card chrome itself is retunable the same way:
+`--lr-activity-feed-background` (default `var(--lr-color-surface)`) fills `[part="base"]`,
+`--lr-activity-feed-border-color` (default `var(--lr-color-border)`) colors both its border and the
+header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
+`var(--lr-radius)`) sets its corner radius — so retuning a nested feed no longer needs a
+`::part(base)` override. `frame="plain"` still removes the border, radius and fill outright; the
+hooks tune the card presentation rather than reinstating chrome you asked to drop.
 
 **Known gotchas:**
 

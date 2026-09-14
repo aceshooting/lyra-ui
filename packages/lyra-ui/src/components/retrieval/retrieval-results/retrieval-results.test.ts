@@ -9,6 +9,28 @@ import type { LyraChunkInspector } from '../chunk-inspector/chunk-inspector.clas
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.class.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  ANNOUNCEMENT_SINK_ATTRIBUTE,
+  type AnnouncementPoliteness,
+} from '../../../internal/announcer.js';
+
+function sinkOf(politeness: AnnouncementPoliteness): HTMLElement {
+  return document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`
+  )!;
+}
+
+// The opt-in mount announcement is deliberately deferred past the first paint, so the shared
+// region is mounted in an earlier task than the text that lands in it.
+async function settleInitialAnnouncement(
+  el: LyraRetrievalResults
+): Promise<void> {
+  await el.updateComplete;
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  );
+  await el.updateComplete;
+}
 
 async function nextFrame(): Promise<void> {
   await new Promise<void>((r) =>
@@ -257,6 +279,106 @@ it('renders a neutral error message and announces only later errors from light D
   expect(
     sink().children.length,
     'reconnect does not replay the current error'
+  ).to.equal(0);
+});
+
+it('announces the error it already presents on mount when announce is set', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results
+      announce
+      error-text="Retrieval failed"
+      .chunks=${chunks}
+    ></lr-retrieval-results>`
+  )) as LyraRetrievalResults;
+  await settleInitialAnnouncement(el);
+  expect(el.announce, 'announce reflects the authored attribute').to.equal(
+    true
+  );
+  expect(el.getAttribute('announce')).to.equal('');
+  expect(
+    Array.from(sinkOf('assertive').children, (child) => child.textContent)
+  ).to.deep.equal(['Retrieval failed']);
+  expect(
+    sinkOf('polite').children.length,
+    'an error state is announced assertively and only once'
+  ).to.equal(0);
+  await expect(el).to.be.accessible();
+});
+
+it('announces the settled empty state it already presents on mount when announce is set', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results announce></lr-retrieval-results>`
+  )) as LyraRetrievalResults;
+  await settleInitialAnnouncement(el);
+  expect(
+    Array.from(sinkOf('polite').children, (child) => child.textContent)
+  ).to.deep.equal(['No chunks retrieved']);
+  expect(
+    sinkOf('assertive').children.length,
+    'there is no error state to announce'
+  ).to.equal(0);
+});
+
+it('keeps an announce results panel that is still loading silent on mount', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results announce loading></lr-retrieval-results>`
+  )) as LyraRetrievalResults;
+  await settleInitialAnnouncement(el);
+  expect(
+    sinkOf('polite').children.length,
+    'an empty result set is not settled while loading'
+  ).to.equal(0);
+});
+
+it('keeps an announce results panel with chunks silent on mount', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results announce .chunks=${chunks}></lr-retrieval-results>`
+  )) as LyraRetrievalResults;
+  await settleInitialAnnouncement(el);
+  expect(
+    sinkOf('polite').children.length,
+    'rendered results are read in document order, not announced'
+  ).to.equal(0);
+});
+
+it('keeps mount silent while announce is unset, with later transitions still announced', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results
+      error-text="Retrieval failed"
+    ></lr-retrieval-results>`
+  )) as LyraRetrievalResults;
+  await settleInitialAnnouncement(el);
+  expect(el.announce, 'announce defaults to false').to.equal(false);
+  expect(el.hasAttribute('announce')).to.equal(false);
+  expect(
+    sinkOf('assertive').children.length,
+    'an unannounced results panel stays silent on mount'
+  ).to.equal(0);
+
+  el.errorText = 'A newer failure';
+  await el.updateComplete;
+  expect(
+    Array.from(sinkOf('assertive').children, (child) => child.textContent)
+  ).to.deep.equal(['A newer failure']);
+});
+
+it('does not replay the initial announcement when an announce results panel reconnects', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results
+      announce
+      error-text="Retrieval failed"
+    ></lr-retrieval-results>`
+  )) as LyraRetrievalResults;
+  await settleInitialAnnouncement(el);
+  expect(sinkOf('assertive').children.length).to.equal(1);
+
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await settleInitialAnnouncement(el);
+  expect(
+    sinkOf('assertive').children.length,
+    'reconnect stages the existing error again rather than replaying it'
   ).to.equal(0);
 });
 

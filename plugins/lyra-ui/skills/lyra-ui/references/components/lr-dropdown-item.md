@@ -84,6 +84,19 @@ no effect there — the dropdown's popup carries it. The header/footer dividing 
 surface's edge. Otherwise shared spacing and motion tokens. Row chrome is controlled through the
 menu-item properties listed below.
 
+Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
+`--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`
+(default `var(--lr-size-10rem)`). They move together — the floor wins over the ceiling, so capping
+alone cannot take a menu below 10rem. Neither is declared on `:host`, so an ancestor theme wrapper's
+value reaches the menu. The ceiling takes a length or a percentage; `100%` and `none` both uncap it
+to the container, and any other value outside `<length-percentage>` is treated as `none` rather than
+dropping the cap's safety terms. Those terms — the shared `--lr-popover-viewport-clamp` and the
+container allocation — are applied outside the name, so no value of the hook can make a menu wider
+than its container or the viewport. (That guarantee is enforced by a registered custom property, so
+an out-of-syntax value falls back cleanly instead of invalidating the whole declaration; an engine
+without `CSS.registerProperty` degrades to "use `100%`, not `none`".) A menu contained by
+`<lr-dropdown>` sizes from its dropdown and is unaffected by both names.
+
 **Methods:** no menu-specific public overlay methods. Use `<lr-dropdown>`'s `show()`/`hide()` and
 `open` state for an overlay. Menu-item submenu methods remain public because they drive a row's
 nested disclosure.

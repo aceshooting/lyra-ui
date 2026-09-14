@@ -8024,3 +8024,56 @@ describe('a column missing its cell renderer', () => {
     }
   });
 });
+
+describe("lr-table contains the composed lr-pagination's lr-activate", () => {
+  it('swallows it on a re-request of the page already shown, like every other pagination event', async () => {
+    const el = (await fixture(html`<lr-table page-size="1"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const pagination = el.shadowRoot!.querySelector('lr-pagination') as HTMLElement & {
+      readonly updateComplete: Promise<boolean>;
+    };
+    await pagination.updateComplete;
+    const pageInput = pagination.shadowRoot!.querySelector<HTMLInputElement>('[part="page-input"]');
+    expect(pageInput, 'the compact footer renders the page-jump input').to.exist;
+
+    let escaped = 0;
+    let onChild = 0;
+    let pageChanges = 0;
+    const escapedListener = (): void => {
+      escaped++;
+    };
+    // Added AFTER the template's own `@lr-activate` binding, on the same node: `stopPropagation()`
+    // does not silence a same-node listener, so this proves the child really emitted rather than
+    // the assertion passing because nothing fired at all.
+    const childListener = (): void => {
+      onChild++;
+    };
+    const pageChangeListener = (): void => {
+      pageChanges++;
+    };
+    document.addEventListener('lr-activate', escapedListener);
+    pagination.addEventListener('lr-activate', childListener);
+    el.addEventListener('lr-page-change', pageChangeListener);
+    try {
+      pageInput!.value = '1';
+      pageInput!.dispatchEvent(new Event('change', { bubbles: true }));
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener('lr-activate', escapedListener);
+      pagination.removeEventListener('lr-activate', childListener);
+      el.removeEventListener('lr-page-change', pageChangeListener);
+    }
+
+    expect(onChild, 'the composed pagination did report the re-request').to.equal(1);
+    expect(pageChanges, 'a re-request of the current page moves nothing').to.equal(0);
+    expect(el.page, 'the re-request changed nothing').to.equal(1);
+    expect(
+      escaped,
+      "lr-table's documented event surface is lr-page-change; the child's raw event never escapes",
+    ).to.equal(0);
+  });
+});

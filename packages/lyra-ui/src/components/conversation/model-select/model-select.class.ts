@@ -137,8 +137,15 @@ export interface LyraModelSelectEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
+ * @cssprop [--lr-model-select-max-inline-size=var(--lr-size-24rem)] - The host's own width
+ * ceiling. Set a length to retune it, or `none` to let the control fill its container the way
+ * `<lr-select>` does.
  * @cssprop [--lr-model-select-trigger-padding=var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)] - Trigger/combobox padding shorthand, scaled by `size` off the shared control ladder.
  * @cssprop [--lr-model-select-trigger-min-height=var(--lr-form-control-height)] - Trigger/combobox block-size floor, scaled by `size` off the shared control ladder.
+ * @cssprop --lr-model-select-trigger-height - Exact trigger/combobox height. Unset by default (a
+ * floor only, via `-trigger-min-height`); set a length to both floor and cap the control, e.g. to
+ * pixel-match a sibling field in the same toolbar row. Takes precedence over
+ * `-trigger-min-height`.
  * @cssprop [--lr-model-select-font-size=var(--lr-form-control-font-size)] - Trigger/combobox font size, scaled by `size` off the shared control ladder.
  * @cssprop [--lr-model-select-expand-size=var(--lr-size-1-75rem)] - Decorative expand-icon box size, scaled by `size`.
  * @cssprop [--lr-model-select-gap=var(--lr-space-xs)] - Trigger, combobox, and option child gap.

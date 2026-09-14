@@ -116,6 +116,16 @@ export interface LyraEvalDatasetEventMap {
  * @csspart tag-filter - The tag-filter chip group's wrapper. Only rendered while `examples`
  *   carries at least one tag.
  * @csspart grid - The internal `<lr-table>`.
+ * @cssprop [--lr-eval-dataset-search-min-height=auto] - Minimum row height of the search field,
+ *   for matching it to a themed search field of a chosen density tier. Point it at
+ *   `--lr-form-control-height-s` (or any tier of that ladder) to line this field up with the rest
+ *   of an application's controls.
+ * @cssprop [--lr-eval-dataset-search-font-size=inherit] - Text size of the search field.
+ * @cssprop [--lr-eval-dataset-search-padding-inline=var(--lr-space-s)] - Leading gutter of the
+ *   search field. The trailing gutter is reserved for the overlaid clear button.
+ * @cssprop [--lr-eval-dataset-search-padding-block=var(--lr-space-xs)] - Block gutter of the search
+ *   field.
+ * @cssprop [--lr-eval-dataset-search-radius=var(--lr-radius)] - Corner radius of the search field.
  * @status stable
  * @since 4.1.0
  */

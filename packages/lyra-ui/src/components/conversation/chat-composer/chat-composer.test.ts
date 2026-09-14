@@ -1851,3 +1851,59 @@ it("reads and writes the textarea selection direction through the host", async (
     textarea.selectionDirection
   );
 });
+
+describe('card chrome theming hooks', () => {
+  const base = (el: LyraChatComposer) =>
+    el.shadowRoot!.querySelector("[part='base']") as HTMLElement;
+
+  it('repaints the card through --lr-chat-composer-background/-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-chat-composer
+        style="--lr-chat-composer-background: rgb(1, 2, 3); --lr-chat-composer-border-color: rgb(4, 5, 6); --lr-chat-composer-radius: 11px"
+      ></lr-chat-composer>
+    `)) as LyraChatComposer;
+    const chrome = getComputedStyle(base(el));
+    expect(chrome.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(chrome.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(chrome.borderTopLeftRadius).to.equal('11px');
+  });
+
+  it('leaves the card paint byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+    const tokened = (await fixture(html`
+      <lr-chat-composer
+        style="--lr-chat-composer-background: var(--lr-color-surface); --lr-chat-composer-border-color: var(--lr-color-border); --lr-chat-composer-radius: var(--lr-radius)"
+      ></lr-chat-composer>
+    `)) as LyraChatComposer;
+    const unset = getComputedStyle(base(control));
+    const explicit = getComputedStyle(base(tokened));
+    expect(unset.backgroundColor).to.equal(explicit.backgroundColor);
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('keeps the brand focus-within border, which is state paint rather than card chrome', async () => {
+    // The card affordance is a transitioned border-color, so the value right after focus is
+    // mid-transition -- zero the duration and poll for the exact settled colour, read from an
+    // unhooked control rather than restated here as a literal.
+    const control = (await fixture(html`
+      <lr-chat-composer style="--lr-theme-transition-fast: 0s"></lr-chat-composer>
+    `)) as LyraChatComposer;
+    textareaOf(control).focus();
+    const focusedBorder = getComputedStyle(base(control)).borderTopColor;
+    expect(focusedBorder).to.not.equal('rgb(4, 5, 6)');
+
+    const el = (await fixture(html`
+      <lr-chat-composer
+        style="--lr-theme-transition-fast: 0s; --lr-chat-composer-border-color: rgb(4, 5, 6)"
+      ></lr-chat-composer>
+    `)) as LyraChatComposer;
+    expect(getComputedStyle(base(el)).borderTopColor).to.equal('rgb(4, 5, 6)');
+    textareaOf(el).focus();
+    await waitUntil(
+      () => getComputedStyle(base(el)).borderTopColor === focusedBorder,
+      'the focus-within border reaches the brand colour even with the chrome hook set'
+    );
+  });
+});

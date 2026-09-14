@@ -4,12 +4,16 @@ export const styles = css`
   :host {
     display: block;
   }
+  /* Card chrome behind inline var() fallbacks, same convention as the compact density below: each
+     fallback is the pre-existing token, so an unset card paints exactly as before while a
+     transcript can retune the nested card without a ::part(base) override. */
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-result-card-border-color, var(--lr-color-border));
+    border-radius: var(--lr-result-card-radius, var(--lr-radius));
+    background: var(--lr-result-card-background, var(--lr-color-surface));
     overflow: hidden;
     font-size: var(--lr-font-size-sm);
   }
@@ -37,7 +41,10 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* The header divider is the same chrome the outer border is, so it follows the same hook
+       rather than stranding a mismatched rule inside a retuned card. */
+    border-block-end: var(--lr-border-width-thin) solid
+      var(--lr-result-card-border-color, var(--lr-color-border));
   }
   :host([frame='plain']) [part='header'] {
     border-block-end: 0;

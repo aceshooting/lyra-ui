@@ -41,6 +41,17 @@ export function normalizeCatalog<T extends LyraCatalogEntry>(catalog: LyraCatalo
   return normalized;
 }
 
+/**
+ * Appends the committed `value` as a synthetic trailing row when no catalog row claims it, so a
+ * stale id is visible and re-selectable instead of silently vanishing.
+ *
+ * The `value.trim() !== ''` test is a deliberate contract, not the truthiness defect
+ * `<lr-select>`/`<lr-combobox>` were corrected for. There, `''` was a legitimate option value being
+ * misread as "no value". Here `normalizeCatalog()` rejects a blank `id` outright, so `''` can never
+ * name a row: it is this family's single "nothing committed" sentinel. Synthesizing a row for it
+ * would render an unlabelled option badged "not in catalog", turning an empty field into a fake
+ * stale selection.
+ */
 export function withSyntheticCatalogValue<T extends LyraCatalogEntry>(
   catalog: readonly T[],
   value: string,
@@ -150,6 +161,11 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     return this.closedMode ? this.effectiveEntries : this.filteredEntries;
   }
 
+  /** The display label for a committed id, falling back to the raw id when no row claims it.
+   *  The `!id` short-circuit is behaviour-identical to letting the lookup run -- no row can carry a
+   *  blank id (see `normalizeCatalog`), so the find would miss and `?? id` would return `''` too --
+   *  and is kept only to skip the scan on the common empty-field path. It is therefore not an
+   *  instance of the `''`-as-missing-value shape corrected in `<lr-select>`/`<lr-combobox>`. */
   labelFor(id: string): string {
     if (!id) return '';
     return this.effectiveEntries.find((entry) => entry.id === id)?.label ?? id;

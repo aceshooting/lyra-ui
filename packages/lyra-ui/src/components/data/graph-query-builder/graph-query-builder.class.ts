@@ -1033,6 +1033,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return html`
       <div part="filter-group" data-kind=${kind}>
         <lr-select
+          @lr-activate=${this.containSelectEvent}
           part=${pickerPart}
           label=${pickerLabel}
           placeholder=${this.localize('select')}
@@ -1123,6 +1124,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             }}
           ></lr-input>
           <lr-select
+            @lr-activate=${this.containSelectEvent}
             part="min-hops"
             label=${this.localize('graphQueryMinHopsLabel')}
             .value=${String(value.minHops)}
@@ -1145,6 +1147,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             ${hops.map((n) => html`<lr-option value=${String(n)}>${hopNumber.format(n)}</lr-option>`)}
           </lr-select>
           <lr-select
+            @lr-activate=${this.containSelectEvent}
             part="max-hops"
             label=${this.localize('graphQueryMaxHopsLabel')}
             .value=${String(value.maxHops)}
@@ -1187,6 +1190,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
         )}
 
         <lr-select
+          @lr-activate=${this.containSelectEvent}
           part="direction"
           label=${this.localize('graphQueryDirectionLabel')}
           .value=${value.direction}

@@ -938,27 +938,58 @@ it("resets the type-ahead buffer after ~500ms of inactivity", async () => {
   expect(el.value).to.equal("c");
 });
 
+it("still resets its type-ahead buffer after a disconnect and reconnect", async () => {
+  // The buffer reset runs on the shared DebounceController. Teardown must `cancel()` it, never
+  // `dispose()` it: a disconnect here may be a re-parent (a drag-drop, a Lit re-key), and a
+  // disposed controller silently refuses every later `push()` -- leaving a reconnected select
+  // with a buffer that never clears, so "ba" typed a minute apart would narrow as one search.
+  const el = (await fixture(basic())) as LyraSelect;
+  const parent = el.parentElement!;
+  const buffer = (): string =>
+    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer;
+
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+
+  trigger(el).dispatchEvent(
+    new KeyboardEvent("keydown", { key: "b", bubbles: true, cancelable: true })
+  );
+  await el.updateComplete;
+  expect(buffer(), "a reconnected select still accumulates").to.equal("b");
+  await aTimeout(700);
+  expect(buffer(), "and its reset still fires").to.equal("");
+});
+
 it("leaves the type-ahead buffer alone when its reset timer fires after being superseded", async () => {
   const el = (await fixture(basic())) as LyraSelect;
   const btn = trigger(el);
-  btn.dispatchEvent(
-    new KeyboardEvent("keydown", { key: "a", bubbles: true, cancelable: true })
-  );
+  const buffer = (): string =>
+    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer;
+  const type = (key: string): void => {
+    btn.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
+    );
+  };
+
+  type("a");
   await el.updateComplete;
+  expect(buffer()).to.equal("a");
+  // Supersede the first reset with a real second keystroke rather than by poking a private
+  // generation counter: the counter now lives inside the shared DebounceController, and the
+  // contract this test exists for is the user-visible one -- the first keystroke's reset must not
+  // clear a buffer the second keystroke has already taken over.
+  await aTimeout(300);
+  type("b");
+  await el.updateComplete;
+  expect(buffer(), "a second keystroke extends the buffer").to.equal("ab");
+  await aTimeout(350);
   expect(
-    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer
-  ).to.equal("a");
-  // Bump the generation counter directly, without going through `clearTypeAheadTimer()` (which
-  // would also cancel the real, already-scheduled timeout) -- so that timeout still fires in
-  // ~500ms, but now finds itself superseded and takes its own early-return guard instead of
-  // clearing the buffer.
-  (el as unknown as { typeAheadTimerGeneration: number })
-    .typeAheadTimerGeneration++;
-  await aTimeout(600);
-  expect(
-    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer,
+    buffer(),
     "a superseded timer must not clear a buffer it no longer owns"
-  ).to.equal("a");
+  ).to.equal("ab");
+  await aTimeout(400);
+  expect(buffer(), "the surviving reset still fires on its own schedule").to.equal("");
 });
 
 it("participates in a form: value reflects in FormData on submit", async () => {
@@ -5937,5 +5968,116 @@ describe('lr-option start/end adornments in the select listbox', () => {
       start.left,
       'DOM-first "start" renders on the visual right under RTL, matching a plain flex row'
     ).to.be.greaterThan(end.left);
+  });
+});
+
+describe("lr-select activation event", () => {
+  const openSelect = async (
+    template = html`
+      <lr-select value="b">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-select>
+    `
+  ): Promise<LyraSelect> => {
+    const el = await fixture<LyraSelect>(template);
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  };
+
+  const row = (el: LyraSelect, value: string): HTMLElement =>
+    el.shadowRoot!.querySelector<HTMLElement>(
+      `[part="option"][data-value="${value}"]`
+    )!;
+
+  it("fires lr-activate without change/lr-change when the already-selected row is picked again", async () => {
+    const el = await openSelect();
+    const activated: string[] = [];
+    let changeCount = 0;
+    el.addEventListener("change", () => changeCount++);
+    el.addEventListener("lr-change", () => changeCount++);
+    el.addEventListener("lr-activate", (e) =>
+      activated.push((e as CustomEvent<{ value: string }>).detail.value)
+    );
+    row(el, "b").click();
+    await el.updateComplete;
+    expect(activated).to.deep.equal(["b"]);
+    expect(el.value).to.equal("b");
+    expect(changeCount, "re-picking the current row is not a change").to.equal(0);
+  });
+
+  it("emits change and lr-change before lr-activate for a moving pick, and bubbles composed and uncancelable", async () => {
+    const el = await openSelect();
+    const order: string[] = [];
+    const flags: Array<Record<string, boolean>> = [];
+    el.addEventListener("change", () => order.push("change"));
+    el.addEventListener("lr-change", () => order.push("lr-change"));
+    const documentListener = (e: Event): void => {
+      order.push("lr-activate");
+      flags.push({
+        bubbles: e.bubbles,
+        cancelable: e.cancelable,
+        composed: e.composed,
+      });
+    };
+    document.addEventListener("lr-activate", documentListener);
+    try {
+      row(el, "c").click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", documentListener);
+    }
+    expect(el.value).to.equal("c");
+    expect(order).to.deep.equal(["change", "lr-change", "lr-activate"]);
+    expect(flags).to.deep.equal([
+      { bubbles: true, cancelable: false, composed: true },
+    ]);
+  });
+
+  it("reports the toggled-off row in multiple mode, where every pick is also a change", async () => {
+    const el = await openSelect(html`
+      <lr-select multiple .value=${["a"]}>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `);
+    const activated: string[] = [];
+    el.addEventListener("lr-activate", (e) =>
+      activated.push((e as CustomEvent<{ value: string }>).detail.value)
+    );
+    row(el, "a").click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal([]);
+    expect(
+      activated,
+      "deselecting a row is still an activation of that row"
+    ).to.deep.equal(["a"]);
+  });
+
+  it("stays silent for a disabled option and for a programmatic value assignment", async () => {
+    const el = await openSelect(html`
+      <lr-select value="a">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b" disabled>Banana</lr-option>
+      </lr-select>
+    `);
+    let activateCount = 0;
+    el.addEventListener("lr-activate", () => activateCount++);
+    row(el, "b").click();
+    await el.updateComplete;
+    expect(el.value, "the disabled option never selects").to.equal("a");
+    expect(activateCount, "a disabled option activates nothing").to.equal(0);
+
+    el.value = "b";
+    await el.updateComplete;
+    expect(el.value, "the assignment still lands").to.equal("b");
+    expect(
+      activateCount,
+      "a host writing `value` is not a user activation"
+    ).to.equal(0);
   });
 });

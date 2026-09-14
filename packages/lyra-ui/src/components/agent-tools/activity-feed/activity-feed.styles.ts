@@ -5,10 +5,14 @@ export const styles = css`
     display: block;
     --_lr-activity-feed-max-height: var(--lr-size-16rem);
   }
+  /* Card chrome behind inline var() fallbacks, the same convention the compact density already
+     uses here: each fallback is the pre-existing token, so an unset feed paints exactly as before,
+     and a transcript can retune the whole nested card without a ::part(base) override. */
   [part="base"] {
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-activity-feed-border-color, var(--lr-color-border));
+    border-radius: var(--lr-activity-feed-radius, var(--lr-radius));
+    background: var(--lr-activity-feed-background, var(--lr-color-surface));
     overflow: hidden;
   }
   /* Density escape for transcript rows. Inline var() fallbacks let a containing transcript retune
@@ -120,7 +124,11 @@ export const styles = css`
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* The divider belongs to the same chrome the outer border does, and frame="plain" keeps it, so
+       it follows the border-colour hook rather than stranding a mismatched rule inside a retuned
+       card. */
+    border-block-start: var(--lr-border-width-thin) solid
+      var(--lr-activity-feed-border-color, var(--lr-color-border));
   }
   [part="body"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

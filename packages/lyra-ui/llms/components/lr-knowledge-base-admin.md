@@ -34,6 +34,16 @@ tab and panel inactive.
 `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the
 correlated ids/details from their composed primitives).
+`lr-activate` (`detail: { value: 'sources' | 'ingestion' }`, bubbling, composed, non-cancelable)
+fires on **every** user activation of an available tab — a click, or an Arrow/Home/End key —
+whether or not `activeTab` actually moved. `value` is the activated tab, the same identity
+`lr-tab-change` reports under the key `tab`. It reports that the user picked a tab and gates
+nothing. Use it for the repeat pick `lr-tab-change` deliberately stays silent for — "refresh that
+queue" is a real intent — which from the keyboard is otherwise unobservable, because Home on an
+already-first active tab (or End on an already-last one) activates a tab and produces no click at
+all. When an activation _does_ move the tab, `lr-tab-change` is emitted first. The normalization
+that moves an invalid or newly-hidden tab back to Sources is not a user activation and fires only
+`lr-tab-change`.
 
 **Slots:** `settings` — host-owned KB configuration controls.
 

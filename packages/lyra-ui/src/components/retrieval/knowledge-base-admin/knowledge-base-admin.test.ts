@@ -403,3 +403,109 @@ describe("lr-knowledge-base-admin", () => {
     expect(details).to.deep.equal([{ tab: "sources" }]);
   });
 });
+
+describe("lr-knowledge-base-admin activation event", () => {
+  const admin = async (
+    template = html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`
+  ): Promise<LyraKnowledgeBaseAdmin> => {
+    const el = (await fixture(template)) as LyraKnowledgeBaseAdmin;
+    await el.updateComplete;
+    return el;
+  };
+
+  const tabButtons = (el: LyraKnowledgeBaseAdmin): HTMLButtonElement[] => [
+    ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+  ];
+
+  it("fires lr-activate without lr-tab-change when the active tab is clicked again", async () => {
+    const el = await admin();
+    expect(el.activeTab).to.equal("sources");
+    const activated: string[] = [];
+    let changeCount = 0;
+    el.addEventListener("lr-tab-change", () => changeCount++);
+    el.addEventListener("lr-activate", (e) =>
+      activated.push((e as CustomEvent<{ value: string }>).detail.value)
+    );
+    tabButtons(el)[0]!.click();
+    await el.updateComplete;
+    expect(activated).to.deep.equal(["sources"]);
+    expect(el.activeTab).to.equal("sources");
+    expect(changeCount, "re-picking the active tab is not a change").to.equal(0);
+  });
+
+  it("fires lr-activate without lr-tab-change when Home re-activates the already-first active tab", async () => {
+    const el = await admin();
+    const activated: string[] = [];
+    let changeCount = 0;
+    el.addEventListener("lr-tab-change", () => changeCount++);
+    el.addEventListener("lr-activate", (e) =>
+      activated.push((e as CustomEvent<{ value: string }>).detail.value)
+    );
+    const first = tabButtons(el)[0]!;
+    first.focus();
+    first.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Home",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(activated).to.deep.equal(["sources"]);
+    expect(changeCount, "Home on the active tab moves nothing").to.equal(0);
+  });
+
+  it("emits lr-tab-change before lr-activate for a moving pick, and bubbles composed and uncancelable", async () => {
+    const el = await admin();
+    const order: string[] = [];
+    const flags: Array<Record<string, boolean>> = [];
+    el.addEventListener("lr-tab-change", () => order.push("lr-tab-change"));
+    const documentListener = (e: Event): void => {
+      order.push("lr-activate");
+      flags.push({
+        bubbles: e.bubbles,
+        cancelable: e.cancelable,
+        composed: e.composed,
+      });
+    };
+    document.addEventListener("lr-activate", documentListener);
+    try {
+      tabButtons(el)[1]!.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", documentListener);
+    }
+    expect(el.activeTab).to.equal("ingestion");
+    expect(order).to.deep.equal(["lr-tab-change", "lr-activate"]);
+    expect(flags).to.deep.equal([
+      { bubbles: true, cancelable: false, composed: true },
+    ]);
+  });
+
+  it("stays silent for the hidden ingestion tab, its normalization and a programmatic activeTab assignment", async () => {
+    const el = await admin(
+      html`<lr-knowledge-base-admin active-tab="ingestion"></lr-knowledge-base-admin>`
+    );
+    let activateCount = 0;
+    let changeCount = 0;
+    el.addEventListener("lr-activate", () => activateCount++);
+    el.addEventListener("lr-tab-change", () => changeCount++);
+
+    el.hideIngestion = true;
+    await el.updateComplete;
+    expect(el.activeTab, "normalization moved it back").to.equal("sources");
+    expect(changeCount, "and reported that move").to.equal(1);
+    expect(
+      activateCount,
+      "normalization is not a user activation"
+    ).to.equal(0);
+
+    el.activeTab = "sources";
+    await el.updateComplete;
+    expect(el.activeTab, "the assignment still lands").to.equal("sources");
+    expect(
+      activateCount,
+      "a host writing `activeTab` is not a user activation"
+    ).to.equal(0);
+  });
+});

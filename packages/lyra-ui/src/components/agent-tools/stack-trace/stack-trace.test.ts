@@ -662,3 +662,38 @@ it('rejects a max-height that tries to escape the custom property into extra dec
   await el.updateComplete;
   expect(base.style.getPropertyValue('--lr-stack-trace-max-height').trim()).to.equal('20rem');
 });
+
+describe('card chrome theming hooks', () => {
+  const base = (el: LyraStackTrace) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  it('repaints the card through --lr-stack-trace-background/-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-stack-trace
+        .trace=${trace}
+        style="--lr-stack-trace-background: rgb(1, 2, 3); --lr-stack-trace-border-color: rgb(4, 5, 6); --lr-stack-trace-radius: 11px"
+      ></lr-stack-trace>
+    `)) as LyraStackTrace;
+    const chrome = getComputedStyle(base(el));
+    expect(chrome.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(chrome.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(chrome.borderTopLeftRadius).to.equal('11px');
+  });
+
+  it('leaves the card paint byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(
+      html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`,
+    )) as LyraStackTrace;
+    const tokened = (await fixture(html`
+      <lr-stack-trace
+        .trace=${trace}
+        style="--lr-stack-trace-background: var(--lr-color-surface); --lr-stack-trace-border-color: var(--lr-color-border); --lr-stack-trace-radius: var(--lr-radius)"
+      ></lr-stack-trace>
+    `)) as LyraStackTrace;
+    const unset = getComputedStyle(base(control));
+    const explicit = getComputedStyle(base(tokened));
+    expect(unset.backgroundColor).to.equal(explicit.backgroundColor);
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+});

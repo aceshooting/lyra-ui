@@ -63,3 +63,30 @@ export const CompactCentered: Story = {
     </div>
   `,
 };
+
+export const AnnounceOnMount: Story = {
+  name: 'Announce on mount',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An empty state that replaces a result set the user just asked for should carry `announce`: the heading and description it already holds when it first mounts are sent once to the shared light-DOM polite sink. Leave it off for an empty state that is simply part of the page being loaded. Later heading/description changes announce either way.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); justify-items: start;">
+      <button
+        @click=${(event: Event) => {
+          const host = (event.currentTarget as HTMLElement).parentElement!;
+          host.querySelector('lr-empty')?.remove();
+          const empty = document.createElement('lr-empty');
+          empty.setAttribute('announce', '');
+          empty.setAttribute('heading', 'No results');
+          empty.setAttribute('description', 'Try a different search.');
+          host.append(empty);
+        }}
+      >Run a search with no matches</button>
+    </div>
+  `,
+};

@@ -9,6 +9,10 @@ import { isRtl } from '../../../internal/rtl.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
+import {
+  definePersistedProperty,
+  isPersistedPropertyExplicitlySet,
+} from '../../../internal/persisted-restore.js';
 import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -38,6 +42,19 @@ const APP_RAIL_PERSIST_FIELDS = new Set<LyraAppRailPersistField>([
   'width',
   'preferred-mode',
 ]);
+
+/** Which fields one `loadPersisted()` pass actually wrote -- not which ones storage happened to
+ *  hold, and not which ones `persist` selects. `willUpdate()` post-processes exactly those two:
+ *  a restored `preferredMode` is folded into the first render's effective mode, and a restored
+ *  `open` is dropped again when the settled mode cannot support it. Internal (not exported): it
+ *  describes a private return value, not any part of the element's public surface. */
+interface LyraAppRailRestoredFields {
+  /** A stored `open` was applied -- so it is this component's own write, not a consumer binding
+   *  or declared attribute, that willUpdate()'s mobile-only invariant check may undo. */
+  open: boolean;
+  /** A stored `preferredMode` was applied and the effective mode needs recomputing for it. */
+  preferredMode: boolean;
+}
 
 export interface LyraAppRailModeChangeDetail {
   mode: LyraAppRailMode;
@@ -280,11 +297,22 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  three states as the viewport narrows. */
   @property({ attribute: 'mobile-breakpoint', useDefault: true }) mobileBreakpoint = '600px';
 
+  // The three `storage-key`-restorable properties below are installed by
+  // `definePersistedProperty()` (see the static block under them) rather than carrying a class
+  // field, so `loadPersisted()` can tell "the consumer set this" from "this is still the declared
+  // default". Their `@property()` decorators keep the public attribute/type/reflection contract in
+  // one readable place -- and are the shape the manifest generator reads -- while `noAccessor: true`
+  // stops Lit replacing the write-tracking accessor with its own. The declared default lives in the
+  // static block's `initial`, and in the `@default` JSDoc tag for the manifest; adding a class-field
+  // initializer back would assign through the setter during construction and re-create the exact
+  // ambiguity this shape removes.
+
   /** Whether the mobile floating overlay is shown. Only meaningful while
    *  `mode` is `'mobile'`; leaving mobile mode closes it so a later mobile
    *  transition never restores a stale modal. Set this directly, or use the built-in toggle button
-   *  — there is no separate `show()`/`hide()` pair. */
-  @property({ type: Boolean, reflect: true }) open = false;
+   *  — there is no separate `show()`/`hide()` pair.
+   *  @default false */
+  @property({ type: Boolean, reflect: true, noAccessor: true }) open!: boolean;
 
   /** Optional accessible name for the rail's navigation landmark and mobile dialog. Every
    *  nonempty supplied string is literal; only absence/empty uses the localized fallback. A
@@ -303,7 +331,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  viewport. Only consulted while `mode` isn't pinned via `forceMode` — that continues to take
    *  full priority, unchanged. Unset (the default, `null`) reproduces today's exact
    *  breakpoint-only behavior. */
-  @property({ attribute: 'preferred-mode' }) preferredMode?: LyraAppRailPreferredMode | null;
+  @property({ attribute: 'preferred-mode', noAccessor: true })
+  preferredMode?: LyraAppRailPreferredMode | null;
 
   /** Pins the rail's effective `mode` to `'full'` or `'icon-only'`, bypassing the live
    *  `icon-only-breakpoint`/`mobile-breakpoint` match entirely. The sentinel `'auto'` (and the
@@ -386,8 +415,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   /** When set, persists the fields selected by `persist` to `localStorage` under
    *  `lr-app-rail:${storageKey}`, restoring them on the next mount — mirrors `lr-multi-split`'s
-   *  `storage-key`. Effective `mode` is breakpoint-derived and is never persisted. Unset (the
-   *  default) means no persistence, exactly as before. */
+   *  `storage-key`. Effective `mode` is breakpoint-derived and is never persisted, and a stored
+   *  `open` is restored only onto a mount whose breakpoint-derived mode is already `'mobile'` —
+   *  `open` means nothing at a wider breakpoint (see its own doc), so a stored one is dropped
+   *  there rather than left primed to throw the overlay open the moment the viewport narrows.
+   *  Unset (the default) means no persistence, exactly as before. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
 
   /**
@@ -399,7 +431,26 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   /** The rail's current width in px while `resizable` — settable/gettable. Unset defers to the
    *  `--lr-app-rail-width` CSS token's own resolved width. */
-  @property({ type: Number, attribute: 'rail-width-px' }) railWidthPx?: number;
+  @property({ type: Number, attribute: 'rail-width-px', noAccessor: true })
+  railWidthPx?: number;
+
+  static {
+    definePersistedProperty(this.prototype, 'open', {
+      initial: false,
+      attribute: true,
+      type: Boolean,
+      reflect: true,
+    });
+    definePersistedProperty(this.prototype, 'preferredMode', {
+      initial: undefined,
+      attribute: 'preferred-mode',
+    });
+    definePersistedProperty(this.prototype, 'railWidthPx', {
+      initial: undefined,
+      attribute: 'rail-width-px',
+      type: Number,
+    });
+  }
 
   /** Minimum `railWidthPx` a drag/keyboard resize can reach. */
   @property({ type: Number, attribute: 'min-rail-width-px', useDefault: true }) minRailWidthPx = 190;
@@ -585,27 +636,42 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   /** Restore the selected persisted fields. Runs once, before the first render, and never
-   *  overwrites a field the consumer already bound to an explicit, non-default value before this
-   *  point (`changed.has(...)`) -- a controlled `.open=${false}`/`.railWidthPx=${240}` binding
-   *  stays authoritative over stale `localStorage` state instead of being silently clobbered by
-   *  it, with no `lr-toggle` (or equivalent) firing for a change the consumer never asked for.
-   *  Effective `mode` remains breakpoint-derived; only the optional non-mobile `preferredMode`
-   *  input is restorable. */
-  private loadPersisted(changed: PropertyValues): boolean {
+   *  overwrites a field the consumer already assigned before this point -- a controlled
+   *  `.open=${false}`/`.railWidthPx=${240}` binding stays authoritative over stale `localStorage`
+   *  state instead of being silently clobbered by it, with no `lr-toggle` (or equivalent) firing
+   *  for a change the consumer never asked for. Effective `mode` remains breakpoint-derived; only
+   *  the optional non-mobile `preferredMode` input is restorable.
+   *
+   *  The per-field guard is `isPersistedPropertyExplicitlySet()`, which reports whether the
+   *  property's setter ever ran. The `changed.has(...)` check it replaces could not answer that
+   *  for `open`: Lit enters a property carrying a declared default into the very first
+   *  `changedProperties` batch on its own, so the guard was true on every mount and the restore
+   *  never ran at all.
+   *
+   *  Reports which fields this pass actually wrote (never which ones storage merely held), so
+   *  `willUpdate()` can post-process exactly those: fold a restored `preferredMode` into the
+   *  first render's effective mode, and drop a restored `open` the settled mode cannot support. */
+  private loadPersisted(): LyraAppRailRestoredFields {
+    const restored: LyraAppRailRestoredFields = { open: false, preferredMode: false };
     const parsed = readPersistedState(
       this.storageFullKey,
       (v): v is { open?: unknown; railWidthPx?: unknown; preferredMode?: unknown;
       } =>
         typeof v === 'object' && v !== null,
     );
-    if (!parsed) return false;
+    if (!parsed) return restored;
     const fields = this.persistFields;
-    if (fields.has('open') && !changed.has('open') && typeof parsed.open === 'boolean') {
+    if (
+      fields.has('open') &&
+      !isPersistedPropertyExplicitlySet(this, 'open') &&
+      typeof parsed.open === 'boolean'
+    ) {
       this.open = parsed.open;
+      restored.open = true;
     }
     if (
       fields.has('width') &&
-      !changed.has('railWidthPx') &&
+      !isPersistedPropertyExplicitlySet(this, 'railWidthPx') &&
       typeof parsed.railWidthPx === 'number' &&
       Number.isFinite(parsed.railWidthPx)
     ) {
@@ -613,13 +679,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
     if (
       fields.has('preferred-mode') &&
-      !changed.has('preferredMode') &&
+      !isPersistedPropertyExplicitlySet(this, 'preferredMode') &&
       (parsed.preferredMode === 'full' || parsed.preferredMode === 'icon-only')
     ) {
       this.preferredMode = parsed.preferredMode;
-      return true;
+      restored.preferredMode = true;
     }
-    return false;
+    return restored;
   }
 
   private persistState(): void {
@@ -647,8 +713,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
-      const restoredPreferredMode = this.loadPersisted(changed);
-      if (restoredPreferredMode && !this.forced) {
+      const restored = this.loadPersisted();
+      if (restored.preferredMode && !this.forced) {
         // Fold the restored preference into the first render directly (bypassing
         // setEffectiveMode()) rather than emitting lr-mode-change from inside willUpdate(): the
         // event fires synchronously, before this same update's render/attribute-reflection has
@@ -663,16 +729,29 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         // at all when the restored mode happens to equal whatever `_mode` already settled to
         // (whether that is the constructor default or the pre-restore breakpoint match): nothing
         // observable changed either way.
-        const restored = computeAppRailMode(
+        const restoredMode = computeAppRailMode(
           this.iconOnlyMatches,
           this.mobileMatches,
           this.preferredMode,
         );
-        if (restored !== this._mode) {
-          this._mode = restored;
-          this.pendingInitialModeAnnouncement = restored;
+        if (restoredMode !== this._mode) {
+          this._mode = restoredMode;
+          this.pendingInitialModeAnnouncement = restoredMode;
         }
       }
+      // `open` is meaningful only while the effective mode is 'mobile' -- the same invariant
+      // `setEffectiveMode()` enforces for every later mode change, which cannot cover this one.
+      // `connectedCallback()` -> `setupMediaQueries()` settles the breakpoint-derived mode BEFORE
+      // this restore runs, and `setEffectiveMode()` early-returns on an unchanged mode, so it
+      // never re-fires to fix up a value written after it: a desktop mount that stays desktop
+      // would keep a stored `open: true`, reflect `[open]`, and then spring a focus-trapping,
+      // scroll-locking modal on the user with no user action at all the first time the viewport
+      // narrowed past `mobile-breakpoint` (where the mode-change path skips its own force-close,
+      // because the mode it is entering IS 'mobile'). Dropped silently, and only for a value this
+      // restore itself wrote: no `lr-toggle` announced the restore, so none announces undoing it,
+      // and a consumer's own declared `open` -- an explicit initial state for the overlay rather
+      // than stale cross-session storage -- stays authoritative exactly as before.
+      if (restored.open && this.open && this._mode !== 'mobile') this.open = false;
     }
     if (this.hasUpdated && (changed.has('iconOnlyBreakpoint') || changed.has('mobileBreakpoint'))) {
       this.teardownMediaQueries();

@@ -219,6 +219,18 @@ export interface LyraVoicePickerEventMap {
  * @csspart empty - The empty-listbox message.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
+ * @cssprop [--lr-voice-picker-max-inline-size=var(--lr-size-24rem)] - The host's own width
+ *   ceiling. Set a length to retune it, or `none` to let the control fill its container the way
+ *   `<lr-select>` does.
+ * @cssprop [--lr-voice-picker-trigger-min-height=var(--lr-form-control-height)] - Trigger/combobox
+ *   block-size floor. Reads the shared form-control height ladder, so retuning
+ *   `--lr-theme-form-control-height-*` moves this control and every sibling field together. The
+ *   preview action follows it, so raising the floor keeps the pair the same height; the action's
+ *   own WCAG hit-area floor still wins below `--lr-icon-button-size`.
+ * @cssprop --lr-voice-picker-trigger-height - Exact trigger/combobox height. Unset by default (a
+ *   floor only, via `-trigger-min-height`); set a length to both floor and cap the control, e.g. to
+ *   pixel-match a sibling field in the same toolbar row. Takes precedence over
+ *   `-trigger-min-height`, and the preview action follows whichever of the two is in play.
  * @cssprop [--lr-voice-picker-gap=var(--lr-space-xs)] - Gap between the field and preview action,
  *   and between trigger, combobox, and option children.
  * @cssprop [--lr-voice-picker-radius=var(--lr-form-control-radius)] - Trigger, combobox, listbox,

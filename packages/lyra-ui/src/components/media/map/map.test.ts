@@ -1206,7 +1206,9 @@ it('renders a legend swatch per entry', async () => {
   const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
   expect(legend.getAttribute('role')).to.equal('group');
   expect(legend.getAttribute('aria-label')).to.equal('Map legend');
-  expect(legend.getAttribute('aria-controls')).to.equal('map-container');
+  // The peer has not settled in this fixture, so there is no `#map-container` to control yet and
+  // the attribute is withheld rather than left dangling.
+  expect(legend.hasAttribute('aria-controls')).to.be.false;
   expect(legend.querySelector('[role="list"]') != null).to.be.true;
   expect(legend.querySelectorAll('[role="listitem"]')).to.have.length(2);
   expect([...legend.querySelectorAll('[part="legend-swatch"]')].every(
@@ -1317,11 +1319,19 @@ it('keeps every legend category pattern distinct in forced colors', async () => 
       { color: '#0f0', label: 'Diagonal', pattern: 'diagonal' },
       { color: '#00f', label: 'Dots', pattern: 'dots' },
       { color: '#ff0', label: 'Crosshatch', pattern: 'crosshatch' },
+      // A glyph row is the fifth case: forced colors collapse its authored color, so the pattern
+      // border has to keep framing the swatch or the row loses every non-color cue it had.
+      { color: '#0ff', label: 'Glyph', pattern: 'diagonal', icon: { path: 'M12 3 L21 20 L3 20 Z' } },
     ];
     await el.updateComplete;
-    const styles = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')]
-      .map((swatch) => getComputedStyle(swatch).borderStyle);
-    expect(styles).to.deep.equal(['solid', 'dashed', 'dotted', 'double']);
+    const swatches = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')];
+    const styles = swatches.map((swatch) => getComputedStyle(swatch).borderStyle);
+    expect(styles).to.deep.equal(['solid', 'dashed', 'dotted', 'double', 'dashed']);
+    const widths = swatches.map((swatch) => getComputedStyle(swatch).borderTopWidth);
+    expect(
+      widths[4],
+      'the glyph row keeps a drawn border, not a zero-width one that computes to a style name',
+    ).to.equal(widths[1]);
   } finally {
     await setForcedColors('none');
   }
@@ -5716,6 +5726,10 @@ it('renders declarative route metrics, restores them after style changes, and ex
   await waitUntil(() => loaded, 'component map loaded', { timeout: 5000 });
   const map = el.map as unknown as import('maplibre-gl').Map;
   expect(map.getCanvas().getAttribute('aria-describedby')).to.equal('map-legend');
+  // The container exists once the peer has settled, so the legend advertises it in that state.
+  expect(
+    el.shadowRoot!.querySelector('[part="legend"]')?.getAttribute('aria-controls'),
+  ).to.equal('map-container');
   const errors: string[] = [];
   map.on('error', (event) => errors.push(String(event.error)));
   for (const [field, speed] of [['instant', 30], ['average', 50], ['maximum', 90]] as const) {

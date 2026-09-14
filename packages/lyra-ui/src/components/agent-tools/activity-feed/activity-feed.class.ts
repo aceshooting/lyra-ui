@@ -13,6 +13,7 @@ import {
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
+  repairComposedFocus,
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -122,7 +123,11 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * `compact` tightens the header and entry-row padding for dense transcript rows. `frame="plain"`
  * removes the outside card chrome when a containing message or panel already supplies it; the
  * header/body divider remains, so the disclosure keeps its internal structure -- the same two-knob
- * convention `<lr-thinking-panel>` and `<lr-confirm-bar>` already establish.
+ * convention `<lr-thinking-panel>` and `<lr-confirm-bar>` already establish. The card's own paint
+ * is retunable without a `::part(base)` override through `--lr-activity-feed-background`,
+ * `--lr-activity-feed-border-color` and `--lr-activity-feed-radius`; each is an inline `var()`
+ * fallback at its point of use, so an unset feed renders exactly as before and any of the three can
+ * be set on the feed or on an ancestor transcript.
  *
  * Focus is repaired, not merely dropped, when the currently focused control disappears from under
  * it: collapsing (`expanded` becoming `false`) moves focus already inside the body to
@@ -173,6 +178,12 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   toggle, status dot, label, and summary while `compact`.
  * @cssprop [--lr-activity-feed-compact-entry-padding=var(--lr-space-2xs) var(--lr-space-s)] -
  *   `[part="entry"]` padding while `compact`.
+ * @cssprop [--lr-activity-feed-background=var(--lr-color-surface)] - Fill of the outer card
+ *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-activity-feed-border-color=var(--lr-color-border)] - Colour of the outer card's
+ *   border and of the header/body divider, which `frame="plain"` keeps.
+ * @cssprop [--lr-activity-feed-radius=var(--lr-radius)] - Corner radius of the outer card.
+ *   `frame="plain"` still squares the corners.
  * @status stable
  * @since 4.0.0
  */
@@ -293,8 +304,9 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private externalDescribedByLease?: ResolvedAriaRelationshipLease;
   private relationshipSyncRequest = 0;
   /** Captured in `willUpdate()` before an `entries` change re-renders, settled in `updated()`
-   *  once it's clear whether the specific row that held focus actually disappeared. */
-  private pendingEntryFocusRepair?: { node: Element; repair: ComposedFocusRepairSnapshot };
+   *  once it's clear whether the specific row that held focus actually disappeared. The snapshot
+   *  already records that row as its `activeElement`, so no parallel node field is kept. */
+  private pendingEntryFocusRepair?: ComposedFocusRepairSnapshot;
   private entryFocusRepairRequest = 0;
 
   override connectedCallback(): void {
@@ -422,15 +434,19 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     }
   }
 
+  /** The always-rendered header button, this component's single focus-repair fallback target. */
+  private get headerElement(): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>('[part="header"]');
+  }
+
   /** Moves focus already inside the body to `[part="header"]` before the body becomes hidden --
-   *  synchronous capture-then-apply in `willUpdate()`, the same shape `<lr-callout>`'s own
-   *  collapse handling uses. The header renders regardless of `expanded`, so its focusability
-   *  never depends on the render this `willUpdate()` is about to commit, and no async settle (or
-   *  generation guard) is needed. A no-op when focus is elsewhere. */
+   *  the shared helper's synchronous capture-then-apply, called from `willUpdate()`, the same
+   *  shape `<lr-callout>`'s own collapse handling uses. The header renders regardless of
+   *  `expanded`, so its focusability never depends on the render this `willUpdate()` is about to
+   *  commit, and no async settle (or generation guard) is needed. A no-op when focus is
+   *  elsewhere. */
   private repairFocusOnCollapse(): void {
-    const header = this.renderRoot.querySelector<HTMLElement>('[part="header"]');
-    const repair = captureComposedFocusRepair(this, header);
-    if (repair) applyComposedFocusRepair(repair);
+    repairComposedFocus(this, () => this.headerElement);
   }
 
   /**
@@ -442,9 +458,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
    * committed, by checking whether the originally focused node is still connected.
    */
   private captureEntryFocusRepair(): void {
-    const header = this.renderRoot.querySelector<HTMLElement>('[part="header"]');
-    const repair = captureComposedFocusRepair(this, header);
-    this.pendingEntryFocusRepair = repair ? { node: repair.activeElement, repair } : undefined;
+    this.pendingEntryFocusRepair = captureComposedFocusRepair(this, this.headerElement) ?? undefined;
   }
 
   /** Settles a capture from `captureEntryFocusRepair()`. Guarded by `entryFocusRepairRequest` (a
@@ -466,8 +480,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
         return;
       }
       // Still connected: the render kept (or reordered) this row, so its focus is still valid.
-      if (pending.node.isConnected) return;
-      applyComposedFocusRepair(pending.repair);
+      if (pending.activeElement.isConnected) return;
+      // The fallback is resolved as a thunk, at apply time, so the repair names whichever header
+      // node the settled render left behind rather than the one captured before it.
+      applyComposedFocusRepair(pending, () => this.headerElement);
     };
     const list = this.virtualListEl;
     if (list) void list.updateComplete.then(settle);

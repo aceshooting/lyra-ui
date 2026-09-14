@@ -817,3 +817,75 @@ it('leaves the compact heading font size inherited when the token is unset, so i
   // non-compact heading's font size.
   expect(getComputedStyle(compactHeading).fontSize).to.equal(getComputedStyle(normalHeading).fontSize);
 });
+
+async function settleEmptyAnnouncements(el: LyraEmpty): Promise<void> {
+  await el.updateComplete;
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+it('announces its initial content on mount when announce is set', async () => {
+  const el = (await fixture(html`
+    <lr-empty announce heading="No results" description="Try a different search."></lr-empty>
+  `)) as LyraEmpty;
+  await settleEmptyAnnouncements(el);
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(el.announce).to.equal(true);
+  expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal([
+    'No results Try a different search.',
+  ]);
+  await expect(el).to.be.accessible();
+
+  el.heading = 'Still no results';
+  await el.updateComplete;
+  expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal([
+    'No results Try a different search.',
+    'Still no results Try a different search.',
+  ]);
+});
+
+it('keeps mount silent while announce is unset, with later changes still live', async () => {
+  const el = (await fixture(html`<lr-empty heading="No results"></lr-empty>`)) as LyraEmpty;
+  await settleEmptyAnnouncements(el);
+  expect(el.announce, 'announce defaults to false').to.equal(false);
+  expect(el.hasAttribute('announce')).to.equal(false);
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(sink.childElementCount, 'an unannounced empty state stays silent on mount').to.equal(0);
+
+  el.heading = 'Still no results';
+  await el.updateComplete;
+  expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal([
+    'Still no results',
+  ]);
+});
+
+it('does not replay the initial announcement when an announce empty state reconnects', async () => {
+  const el = document.createElement('lr-empty') as LyraEmpty;
+  el.announce = true;
+  el.heading = 'No results';
+  document.body.append(el);
+  await settleEmptyAnnouncements(el);
+  expect(
+    document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)
+      ?.childElementCount,
+  ).to.equal(1);
+
+  el.remove();
+  document.body.append(el);
+  await settleEmptyAnnouncements(el);
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(sink.childElementCount, 'reconnect stages the existing content again').to.equal(0);
+
+  el.heading = 'Still no results';
+  await el.updateComplete;
+  expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal([
+    'Still no results',
+  ]);
+  el.remove();
+});

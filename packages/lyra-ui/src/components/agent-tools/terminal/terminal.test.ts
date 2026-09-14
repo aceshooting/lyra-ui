@@ -1830,3 +1830,44 @@ it('reads its border widths from --lr-border-width-thin, not the generic --lr-si
   expect(getComputedStyle(toolbar).borderBottomWidth).to.equal('11px');
   expect(getComputedStyle(copyButton).borderTopWidth).to.equal('11px');
 });
+
+describe('card chrome theming hooks', () => {
+  const CHROME_LOG = 'first line\nsecond line';
+  const part = (el: LyraTerminal, name: string) =>
+    el.shadowRoot!.querySelector(`[part='${name}']`) as HTMLElement;
+
+  it('repaints the card border and radius through --lr-terminal-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-terminal
+        downloadable
+        .content=${CHROME_LOG}
+        style="--lr-terminal-border-color: rgb(4, 5, 6); --lr-terminal-radius: 11px"
+      ></lr-terminal>
+    `)) as LyraTerminal;
+    const chrome = getComputedStyle(part(el, 'base'));
+    expect(chrome.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(chrome.borderTopLeftRadius).to.equal('11px');
+    expect(getComputedStyle(part(el, 'toolbar')).borderBottomColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('leaves the card paint byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(
+      html`<lr-terminal downloadable .content=${CHROME_LOG}></lr-terminal>`,
+    )) as LyraTerminal;
+    const tokened = (await fixture(html`
+      <lr-terminal
+        downloadable
+        .content=${CHROME_LOG}
+        style="--lr-terminal-border-color: var(--lr-color-border); --lr-terminal-radius: var(--lr-radius)"
+      ></lr-terminal>
+    `)) as LyraTerminal;
+    const unset = getComputedStyle(part(control, 'base'));
+    const explicit = getComputedStyle(part(tokened, 'base'));
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.borderTopLeftRadius).to.not.equal('0px');
+    expect(getComputedStyle(part(control, 'toolbar')).borderBottomColor).to.equal(
+      getComputedStyle(part(tokened, 'toolbar')).borderBottomColor,
+    );
+  });
+});

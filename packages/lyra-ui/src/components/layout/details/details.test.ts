@@ -954,6 +954,33 @@ describe("unified show/hide lifecycle", () => {
     expect(el.hasAttribute("open")).to.be.true;
   });
 
+  it("announces nothing after a vetoed lr-hide, and still settles hide()", async () => {
+    const el = (await fixture(
+      html`<lr-details summary="More" open>Content</lr-details>`
+    )) as LyraDetails;
+    await el.updateComplete;
+    const seen: string[] = [];
+    for (const name of ["lr-toggle", "lr-after-hide"]) {
+      el.addEventListener(name, () => seen.push(name));
+    }
+    el.addEventListener("lr-hide", (event) =>
+      (event as Event).preventDefault()
+    );
+
+    // `lr-after-hide` announces a close that happened, so a rejected request must never reach it,
+    // and the rejected `hide()` must still resolve rather than hang on a settle that never comes.
+    // `hideWithSource()` reads that outcome off a flag its own commit sets, mirroring
+    // `beginShow()` -- the only reading that stays correct if this pair ever gains a veto-write
+    // guard, where a suppressed commit leaves `defaultPrevented` false.
+    await el.hide();
+    await el.updateComplete;
+
+    expect(seen, "a vetoed close announces nothing").to.deep.equal([]);
+    expect(el.open).to.be.true;
+    expect(el.hasAttribute("open")).to.be.true;
+    expect(nativeDetailsOf(el).open).to.be.true;
+  });
+
   it("toggles from the summary click through the lifecycle when nothing vetoes", async () => {
     const el = (await fixture(
       html`<lr-details summary="More">Content</lr-details>`
@@ -1029,6 +1056,56 @@ describe("unified show/hide lifecycle", () => {
     expect(el.open).to.be.false;
     expect(fired).to.equal(0);
   });
+
+  it('lets a nested disclosure reach an outer listener, separated only by event.target', async () => {
+    const outer = (await fixture(html`<lr-details id="outer-disclosure" summary="Outer">
+      Outer content.
+      <lr-details id="inner-disclosure" summary="Inner">Inner content.</lr-details>
+    </lr-details>`)) as LyraDetails;
+    const inner = outer.querySelector('lr-details') as LyraDetails;
+    await Promise.all([outer.updateComplete, inner.updateComplete]);
+
+    // Exactly the guard the class JSDoc hands consumers: a disclosure event is scoped by
+    // comparing target with currentTarget, never by trusting the event name to be this panel.
+    const seen: Array<{ id: string; type: string; scoped: boolean }> = [];
+    const record = (event: Event): void => {
+      seen.push({
+        id: (event.target as Element).id,
+        type: event.type,
+        scoped: event.target === event.currentTarget,
+      });
+    };
+    for (const type of ['lr-show', 'lr-toggle', 'lr-after-show']) {
+      outer.addEventListener(type, record);
+    }
+
+    await outer.show();
+    await inner.show();
+
+    expect(
+      seen.map((entry) => `${entry.type}:${entry.id}`),
+      'every nested disclosure event bubbles through the outer panel'
+    ).to.deep.equal([
+      'lr-show:outer-disclosure',
+      'lr-toggle:outer-disclosure',
+      'lr-after-show:outer-disclosure',
+      'lr-show:inner-disclosure',
+      'lr-toggle:inner-disclosure',
+      'lr-after-show:inner-disclosure',
+    ]);
+    expect(
+      seen.filter((entry) => entry.scoped).map((entry) => `${entry.type}:${entry.id}`),
+      'the documented event.target === event.currentTarget guard keeps exactly the outer panel events'
+    ).to.deep.equal([
+      'lr-show:outer-disclosure',
+      'lr-toggle:outer-disclosure',
+      'lr-after-show:outer-disclosure',
+    ]);
+    expect(inner.open, 'the inner disclosure opened').to.be.true;
+    expect(outer.open, 'the outer disclosure stayed open').to.be.true;
+    await expect(outer).to.be.accessible();
+  });
+
 });
 
 describe('findable closed-content gate', () => {

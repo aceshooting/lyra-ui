@@ -74,6 +74,20 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   replaces the whole result view with a neutral visible message. Caller-supplied text is not
   localized (app/network data, not library copy). A new non-empty value is announced through a
   shared assertive light-DOM region; initial and reconnect content is not replayed
+- `announce: boolean = false` (reflected) — opt-in: announce the state the panel is **already
+  presenting** the first time it mounts, rather than only announcing later transitions into it.
+  Urgency follows the state, exactly as the live path does and in the same branch order the panel
+  renders: a non-empty `errorText` wins and is announced verbatim through the shared assertive
+  light-DOM region, otherwise a panel that is neither `loading` nor holding any chunk announces the
+  localized empty-result message through the shared polite region. A panel still `loading`, or one
+  already showing chunks, announces nothing — rendered results are ordinary content read in
+  document order. The announcement is deferred one frame past the first update so the shared region
+  exists before its text lands, and any live transition arriving first retires the pending
+  mount-time announcement so nothing is read twice. Set it where the panel is rendered in response
+  to a retrieval the user just ran and nothing else reports the outcome; leave it unset for a panel
+  that is part of the page a user is arriving on. Read once, when the panel first mounts: a later
+  reconnection or adoption stages the existing state again rather than replaying it, and later
+  transitions are announced either way
 - `label?: string` — fallback name for the populated result group; omission uses localized
   `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty

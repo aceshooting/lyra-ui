@@ -1844,3 +1844,25 @@ describe('setCustomValidity()', () => {
     expect(host.matches(':state(user-invalid)')).to.be.false;
   });
 });
+
+describe("lr-graph-query-builder contains the composed controls' lr-activate", () => {
+  it('swallows lr-activate from its inner direction lr-select, like every other child event', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const direction = el.shadowRoot!.querySelector('[part="direction"]') as HTMLElement | null;
+    expect(direction?.localName, 'the direction control is the composed select').to.equal('lr-select');
+    let escaped = 0;
+    const listener = (): void => {
+      escaped++;
+    };
+    document.addEventListener('lr-activate', listener);
+    try {
+      direction!.dispatchEvent(
+        new CustomEvent('lr-activate', { bubbles: true, composed: true, detail: { value: 'any' } }),
+      );
+    } finally {
+      document.removeEventListener('lr-activate', listener);
+    }
+    expect(escaped, "this component owns its own event surface; the child's raw event never escapes").to.equal(0);
+  });
+});

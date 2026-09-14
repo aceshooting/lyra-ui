@@ -1516,6 +1516,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         ?disabled=${this.effectiveDisabled}
         @input=${this.stopNestedControlEvent}
         @lr-input=${this.stopNestedControlEvent}
+        @lr-activate=${this.stopNestedControlEvent}
         @change=${(e: Event) => this.onSelectChange(key, e)}
         @lr-change=${this.stopNestedControlEvent}
         @lr-show=${this.stopNestedControlEvent}
@@ -1579,6 +1580,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         ?disabled=${this.effectiveDisabled}
         @input=${this.stopNestedControlEvent}
         @lr-input=${this.stopNestedControlEvent}
+        @lr-activate=${this.stopNestedControlEvent}
         @change=${this.stopNestedControlEvent}
         @lr-change=${(e: Event) => this.onBooleanSelectChange(key, e)}
         @lr-show=${this.stopNestedControlEvent}

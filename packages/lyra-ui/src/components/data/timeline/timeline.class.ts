@@ -9,7 +9,10 @@ import {
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
-import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import {
+  observeScrollOverflow,
+  SCROLL_OVERFLOW_ATTRIBUTE,
+} from '../../../internal/scroll-overflow.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import type { LyraTimelineItem } from './timeline-item.class.js';
@@ -157,8 +160,11 @@ function itemEpochMs(element: Element): number | null {
  *
  * No roving-tabindex or per-event selection model is introduced. Timeline items remain passive;
  * each cluster marker is an independent native `<button>` in the normal Tab sequence, so pointer,
- * Enter, and Space activation require no custom keyboard model. Not a form-associated control —
- * no value to submit, no label/hint/error chrome.
+ * Enter, and Space activation require no custom keyboard model. The one tab stop the timeline
+ * itself owns is `[part='base']` while a `horizontal` strip genuinely overflows — passive items
+ * leave nothing tabbable inside a scroll container, so without it the events scrolled off the edge
+ * are pointer-only content. Not a form-associated control — no value to submit, no
+ * label/hint/error chrome.
  *
  * The first member in document order represents a cluster: its ordinary shadow row is temporarily
  * replaced by the count action while the remaining members are hidden. This preserves the author's
@@ -175,7 +181,10 @@ function itemEpochMs(element: Element): number | null {
  *   landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction:
  *   column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`,
  *   `overflow-y: hidden`, and an edge-fade `mask-image` applied only while the strip actually
- *   overflows) in `horizontal` orientation.
+ *   overflows) in `horizontal` orientation. Its `tabindex` rises from `-1` to `0` while (and only
+ *   while) that horizontal strip genuinely overflows: timeline items are passive, so nothing
+ *   inside is tabbable and the off-screen events would otherwise be pointer-only content. Style
+ *   that state with `::part(base):focus-visible`.
  * @cssprop [--lr-timeline-gap=var(--lr-space-l)] - Spacing between consecutive items along the
  *   timeline's main axis; also the length each item's own rail visually bridges to reach the next
  *   item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own
@@ -349,6 +358,8 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       if (this.scale === 'time' && this.collision === 'cluster') {
         this.scheduleClusterMeasurement();
       }
+      // The one path that flips overflow with no host update for `updated()` to ride on.
+      this.syncScrollTabStop();
     }
   );
 
@@ -407,6 +418,9 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     // join that observer because their public size token can change without the fixed time axis's
     // own border box changing; their footprint directly controls collision membership.
     this.scrollOverflow.observeExtra(this.timelineItems());
+    // After the controller's own `hostUpdated()` measurement, which Lit runs before this method,
+    // so the overflow attribute read below is this render's.
+    this.syncScrollTabStop();
     this.scheduleTimeExtentMeasurement();
     if (changed.has('orientation') && this.getAttribute('orientation') !== this.orientation) {
       this.setAttribute('orientation', this.orientation);
@@ -423,6 +437,30 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     if (this.collisionClusters.length > 0) {
       this.syncClusterPresentations(this.collisionClusters);
     }
+  }
+
+  /** Makes the horizontal strip reachable by keyboard while, and only while, it genuinely
+   *  overflows.
+   *
+   *  Timeline items are deliberately passive (see the class doc: no roving tabindex, no selection
+   *  model), so a `horizontal` strip is a scroll container with nothing tabbable inside it. At
+   *  `tabindex="-1"` it is focusable only by script -- Tab cannot reach it -- so every event that
+   *  had scrolled off the edge was pointer-only content, which is the WCAG 2.1.1 keyboard failure
+   *  `<lr-stepper readonly>` hit in the same shape and fixes the same way.
+   *
+   *  Gated on real overflow so a strip that fits (and the `vertical` default, whose rules never
+   *  give `[part='base']` a scrolling axis at all) still costs a keyboard user nothing -- and
+   *  returns to the `tabindex="-1"` the template renders rather than dropping the attribute, so a
+   *  consumer's own script-focus target survives. Written as an attribute rather than through the
+   *  template because overflow is measured, not rendered; the static `tabindex` in `render()` is
+   *  cloned once and never re-committed, so an imperative write here is stable. */
+  private syncScrollTabStop(): void {
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    if (!base) return;
+    const reachableOnlyByScrolling =
+      this.orientation === 'horizontal' &&
+      base.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE);
+    base.setAttribute('tabindex', reachableOnlyByScrolling ? '0' : '-1');
   }
 
   private countTimelineItems(slot: HTMLSlotElement): number {

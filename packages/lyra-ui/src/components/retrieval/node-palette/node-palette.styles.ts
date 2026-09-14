@@ -20,15 +20,26 @@ export const styles = css`
     inline-size: 100%;
     box-sizing: border-box;
     min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    /* Geometry knobs, each defaulting to the value the field shipped with, so an unset palette
+       renders exactly as before. The tappable-target floor stays underneath the height knob: a
+       density tier may not shrink this field below the shared WCAG minimum. */
+    min-block-size: max(
+      var(--lr-icon-button-size),
+      var(--lr-node-palette-search-min-height, var(--lr-icon-button-size))
+    );
+    padding-block: var(--lr-node-palette-search-padding-block, var(--lr-space-xs));
+    padding-inline-start: var(
+      --lr-node-palette-search-padding-inline,
+      var(--lr-space-s)
+    );
     /* Room for the search-clear button, rendered only once the field has a value. */
     padding-inline-end: calc(var(--lr-icon-button-size) + var(--lr-space-2xs));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-node-palette-search-radius, var(--lr-radius));
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    font-size: var(--lr-node-palette-search-font-size, inherit);
     transition: border-color var(--lr-transition-fast);
   }
   [part='search']:focus-visible {

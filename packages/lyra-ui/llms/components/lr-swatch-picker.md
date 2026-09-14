@@ -67,6 +67,15 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
 
 **Events:** `lr-change` (`detail: { value }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).
+`lr-activate` (`detail: { value }`) — fired on **every** activation of a swatch (a click, or an
+Arrow/Home/End key that lands on one), whether or not the selection actually moved. Bubbling,
+composed, not cancelable — it reports that the user picked a swatch and gates nothing. `value` is
+the activated swatch's own value. Use it for the repeat pick `lr-change` deliberately stays silent
+for, which is otherwise unobservable: the swatches live in this shadow root, so a retargeted `click`
+names no swatch, and keyboard activation produces no click at all — Home on an already-first
+selection, End on an already-last one, or an arrow key in a one-item row activates a swatch and
+fires nothing else. When an activation _does_ move the selection, `lr-change` is emitted first and
+`lr-activate` second, so either listener reads the settled `value`.
 
 **Slots:** none.
 

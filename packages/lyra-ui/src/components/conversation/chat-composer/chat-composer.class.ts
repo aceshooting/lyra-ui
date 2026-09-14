@@ -180,6 +180,12 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @csspart stop-glyph - Symmetric stop glyph wrapper.
  * @csspart action-button - The built-in send/stop button. Absent whenever `end` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`, or the dedicated `--lr-chat-composer-busy-bg` cssprop below.
  * @cssprop [--lr-chat-composer-busy-bg=var(--lr-color-text-quiet)] - `action-button` background while `status` is `"sending"` or `"streaming"`. Scoped separately from the shared `--lr-color-text-quiet` token, which the `textarea` part's placeholder also reads -- overriding this recolors only the busy button, not the placeholder text too.
+ * @cssprop [--lr-chat-composer-background=var(--lr-color-surface)] - Fill of the card
+ *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-chat-composer-border-color=var(--lr-color-border)] - Resting colour of the card's
+ *   border. The `:focus-within` border stays on the brand token -- it is state paint, not chrome.
+ * @cssprop [--lr-chat-composer-radius=var(--lr-radius)] - Corner radius of the card.
+ *   `frame="plain"` still squares the corners.
  * @status stable
  * @since 4.0.0
  */

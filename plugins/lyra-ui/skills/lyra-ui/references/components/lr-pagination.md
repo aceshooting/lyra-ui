@@ -119,6 +119,15 @@ compact layout returns focus to its page field instead. This keeps keyboard orie
 when a next/previous, edge, or ellipsis control is replaced by the newly rendered page window. If
 the application applies the controlled page asynchronously and the user has moved focus outside
 the pagination component in the meantime, it leaves that newer focus destination alone.
+`lr-activate` (`detail: { value: number }`, bubbles and composes, non-cancelable) fires on **every**
+accepted page request, whether or not the page actually moved; `value` is the requested page number.
+`lr-before-page-change` remains the veto point, and a vetoed request emits no activation at all, so
+`lr-activate` only ever reports a request the component accepted. Use it for the re-request of the
+current page that `lr-page-change` deliberately stays silent for — "load that page again" is a real
+intent, and it is otherwise unobservable, because the page buttons and the jump input live in this
+shadow root, so a retargeted `click` names no page and pressing Enter on the jump field produces no
+click at all. When a request _does_ move the page, `lr-before-page-change` and `lr-page-change` are
+emitted first. Link-mode anchors navigate without emitting it.
 `focus` and `blur` are re-dispatched as exactly one bubbling, composed native `FocusEvent` from
 whichever internal control the user reached — a page button or link, previous/next, first/last, or
 the page input. The shadow-origin event is stopped, and the host event preserves its native focus

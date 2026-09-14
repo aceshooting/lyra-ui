@@ -28,6 +28,7 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -136,12 +137,14 @@ function safeScore(score: number): number {
  * collection/state transition removes every focused result action.
  * @csspart error - The neutral, visible error message shown while `errorText` is non-empty. New
  *   non-empty errors are announced through a shared assertive light-DOM region; initial and
- *   reconnect content is not replayed.
+ *   reconnect content is not replayed unless `announce` is set, which reads the state present at
+ *   first mount once.
  * @csspart spinner - The initial-load `<lr-spinner>`, shown while `loading` is true and `chunks`
  * is still empty.
  * @csspart empty - The `<lr-empty>` wrapper, shown when `chunks` is empty and neither `errorText` nor
  * `loading` is set. A later transition into this settled state is announced through a shared
- * polite light-DOM region; initial and reconnect content is not replayed.
+ * polite light-DOM region; initial and reconnect content is not replayed unless `announce` is set,
+ * which reads the state present at first mount once.
  * @csspart row - One result row's wrapper. Below the virtualization threshold this is a plain,
  * directly-styleable element in this component's own shadow root; while virtualized it is exported
  * from the internal `<lr-virtual-list>`'s own `row` part instead (`::part(row)` still reaches it
@@ -293,8 +296,19 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  supplied text, not routed through `localize()` (the same stance `<lr-document-preview>`'s own
    *  `error-text` takes for the same reason: this is app/network data, not library copy). New
    *  non-empty values are announced through a shared assertive light-DOM region; initial and
-   *  reconnect content is not replayed. */
+   *  reconnect content is not replayed unless `announce` is set. */
   @property({ attribute: 'error-text' }) errorText = '';
+
+  /** Opts this panel into announcing the state it is already presenting the first time it mounts:
+   *  the verbatim `errorText` assertively, or, with no error and nothing loading, the localized
+   *  empty-result message politely. Set it where the panel is rendered in response to a retrieval
+   *  the user just ran and nothing else reports the outcome; leave it unset for a panel that is
+   *  part of the page a user is arriving on, whose visible error or empty state is already read
+   *  in document order. Read once, when the panel first mounts: a later reconnection or adoption
+   *  stages the existing state again rather than replaying it, and later transitions are
+   *  announced either way. A panel that already has chunks announces nothing -- rendered results
+   *  are ordinary content. */
+  @property({ type: Boolean, reflect: true }) announce = false;
 
   /** Fallback name for the results region. Omitting it falls back to the localized
    *  `chunkInspectorLabel` ("Retrieved chunks") -- reused rather than a new key, since it already
@@ -306,6 +320,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private previousProcessedChunkIds: string[] = [];
   private focusRestoreGeneration = 0;
   private isMounting = true;
+  private initialStateAnnounced = false;
+  private connectionGeneration = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   private emptyAnnouncementSink?: AnnouncementSink;
   private readonly retrievalChunkKey = (item: unknown): string => (item as RetrievalChunk).id;
@@ -330,10 +346,21 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       document: this.ownerDocument,
       source: this,
     });
+    const generation = ++this.connectionGeneration;
+    void announceAfterFirstPaint(
+      this,
+      () => generation === this.connectionGeneration,
+      () => {
+        if (!this.announce || this.initialStateAnnounced) return;
+        this.initialStateAnnounced = true;
+        this.announcePresentedState();
+      }
+    );
   }
 
   override disconnectedCallback(): void {
     this.isMounting = true;
+    this.connectionGeneration += 1;
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     this.emptyAnnouncementSink?.release();
@@ -460,12 +487,16 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
+    // Either live branch below retires the still-pending opt-in mount announcement: without the
+    // latch, a transition landing between the first update and the deferred frame would be read
+    // twice.
     if (
       !wasMounting &&
       changed.has('errorText') &&
       this.errorText !== '' &&
       this.isConnected
     ) {
+      this.initialStateAnnounced = true;
       this.errorAnnouncementSink?.announce(this.errorText);
     }
     const emptyPresented =
@@ -478,6 +509,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       emptyPresented &&
       this.isConnected
     ) {
+      this.initialStateAnnounced = true;
       this.emptyAnnouncementSink?.announce(
         this.localize('chunkInspectorEmpty')
       );
@@ -491,6 +523,20 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     if (target === undefined) return;
     this.pendingFocusTarget = undefined;
     void this.restoreControlledFocus(target, generation);
+  }
+
+  /** Announce whichever state this panel is presenting right now, at that state's own urgency.
+   *  `errorText` wins, mirroring the render branch order; a panel still `loading`, or one already
+   *  showing chunks, has no announcement to make. */
+  private announcePresentedState(): void {
+    if (this.errorText !== '') {
+      this.errorAnnouncementSink?.announce(this.errorText);
+      return;
+    }
+    if (!this.loading && this.processedChunks.chunks.length === 0)
+      this.emptyAnnouncementSink?.announce(
+        this.localize('chunkInspectorEmpty')
+      );
   }
 
   private async restoreControlledFocus(

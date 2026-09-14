@@ -7672,3 +7672,92 @@ describe('unknown committed value presentation', () => {
     ).to.be.true;
   });
 });
+
+describe("lr-combobox activation event", () => {
+  const openCombobox = async (
+    template = html`
+      <lr-combobox value="b">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-combobox>
+    `
+  ): Promise<LyraCombobox> => {
+    const el = (await fixture(template)) as LyraCombobox;
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  };
+
+  const rows = (el: LyraCombobox): HTMLElement[] =>
+    [...el.shadowRoot!.querySelectorAll('[part="option"]')] as HTMLElement[];
+
+  it("fires lr-activate without change/lr-change when the already-selected row is picked again", async () => {
+    const el = await openCombobox();
+    const activated: string[] = [];
+    let changeCount = 0;
+    el.addEventListener("change", () => changeCount++);
+    el.addEventListener("lr-change", () => changeCount++);
+    el.addEventListener("lr-activate", (e) =>
+      activated.push((e as CustomEvent<{ value: string }>).detail.value)
+    );
+    rows(el)[1]!.click();
+    await el.updateComplete;
+    expect(activated).to.deep.equal(["b"]);
+    expect(el.value).to.equal("b");
+    expect(changeCount, "re-picking the current row is not a change").to.equal(0);
+  });
+
+  it("emits change and lr-change before lr-activate for a moving pick, and bubbles composed and uncancelable", async () => {
+    const el = await openCombobox();
+    const order: string[] = [];
+    const flags: Array<Record<string, boolean>> = [];
+    el.addEventListener("change", () => order.push("change"));
+    el.addEventListener("lr-change", () => order.push("lr-change"));
+    const documentListener = (e: Event): void => {
+      order.push("lr-activate");
+      flags.push({
+        bubbles: e.bubbles,
+        cancelable: e.cancelable,
+        composed: e.composed,
+      });
+    };
+    document.addEventListener("lr-activate", documentListener);
+    try {
+      rows(el)[2]!.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", documentListener);
+    }
+    expect(el.value).to.equal("c");
+    expect(order).to.deep.equal(["change", "lr-change", "lr-activate"]);
+    expect(flags).to.deep.equal([
+      { bubbles: true, cancelable: false, composed: true },
+    ]);
+  });
+
+  it("stays silent for a disabled row and for a programmatic value assignment", async () => {
+    const el = await openCombobox(html`
+      <lr-combobox value="a">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b" disabled>Banana</lr-option>
+      </lr-combobox>
+    `);
+    let activateCount = 0;
+    el.addEventListener("lr-activate", () => activateCount++);
+    rows(el)[1]!.click();
+    await el.updateComplete;
+    expect(el.value, "the disabled row never selects").to.equal("a");
+    expect(activateCount, "a disabled row activates nothing").to.equal(0);
+
+    el.value = "b";
+    await el.updateComplete;
+    expect(el.value, "the assignment still lands").to.equal("b");
+    expect(
+      activateCount,
+      "a host writing `value` is not a user activation"
+    ).to.equal(0);
+  });
+});

@@ -139,6 +139,12 @@ const NEAR_BOTTOM_PX = 48;
  *   `[part="header"]` while `compact`.
  * @cssprop [--lr-thinking-panel-compact-body-padding=var(--lr-space-s)] - `[part="body"]` padding
  *   while `compact`.
+ * @cssprop [--lr-thinking-panel-background=var(--lr-color-surface)] - Fill of the outer card
+ *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-thinking-panel-border-color=var(--lr-color-border)] - Colour of the outer card's
+ *   border and of the header/body divider, which `frame="plain"` keeps.
+ * @cssprop [--lr-thinking-panel-radius=var(--lr-radius)] - Corner radius of the outer card.
+ *   `frame="plain"` still squares the corners.
  * @status stable
  * @since 4.0.0
  */

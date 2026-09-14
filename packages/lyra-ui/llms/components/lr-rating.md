@@ -92,6 +92,15 @@ Left unset, the built-in star outline/solid pair is unchanged.
 - `lr-change` — `detail: { value }`. The rating was committed to a new value. Not emitted when the
   clamped value is unchanged, nor on a programmatic `value` write. It fires immediately after the
   native `change` event for the same user commit.
+- `lr-activate` — `detail: { value }`, the committed rating. Fired on **every** interactive commit
+  (a click on a symbol, or an Arrow/Home/End key), whether or not the value actually moved.
+  Bubbling, composed, not cancelable — it reports that the user committed a rating and gates
+  nothing. Use it for the re-commit of the current rating that `lr-change` deliberately stays silent
+  for; from the keyboard that case is otherwise unobservable, because End on an already-maximum
+  rating, Home on an already-zero one, or an arrow key at either bound commits a rating and produces
+  no click at all. When the commit _does_ move the value, `change` and `lr-change` are emitted
+  first, so a listener reading `value` from any of the three sees the settled rating. A
+  non-interactive (`readonly`/`disabled`) rating fires none of them.
 - `lr-hover` — **new in 8.0.0.** `detail: { phase: 'start' | 'move' | 'end', value }`, where `value`
   is the rating that committing the current pointer position _would_ produce — enough to render a
   live description of what is being hovered without waiting for a click. Fires only while the rating

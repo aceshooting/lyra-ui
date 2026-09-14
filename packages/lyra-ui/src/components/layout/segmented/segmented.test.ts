@@ -1670,3 +1670,197 @@ describe("focus rehoming under a hostile DOM", () => {
     );
   });
 });
+
+describe("lr-segmented activation event", () => {
+  it("fires lr-activate without lr-change when the already-selected segment is clicked again", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    let changeCount = 0;
+    el.addEventListener("lr-change", () => changeCount++);
+    setTimeout(() => buttons[1]!.click());
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "week" });
+    expect(el.value).to.equal("week");
+    expect(changeCount, "re-activation is not a value change").to.equal(0);
+  });
+
+  it("fires lr-activate without lr-change when the focused, already-selected segment is re-activated from the keyboard", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    segmentButtons(el)[0]!.focus();
+    const focused = el.shadowRoot!.activeElement as HTMLElement;
+    expect(
+      focused.dataset["value"],
+      "the keyboard case is driven from the genuinely focused segment"
+    ).to.equal("day");
+    let changeCount = 0;
+    el.addEventListener("lr-change", () => changeCount++);
+    setTimeout(() =>
+      focused.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Home",
+          bubbles: true,
+          cancelable: true,
+        })
+      )
+    );
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "day" });
+    expect(
+      changeCount,
+      "Home on an already-first selection is not a value change"
+    ).to.equal(0);
+  });
+
+  it("fires lr-change before lr-activate when the activation does change the value", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    const order: string[] = [];
+    el.addEventListener("lr-change", () => order.push("lr-change"));
+    el.addEventListener("lr-activate", () =>
+      order.push("lr-activate")
+    );
+    setTimeout(() => segmentButtons(el)[2]!.click());
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "month" });
+    expect(el.value).to.equal("month");
+    expect(order).to.deep.equal(["lr-change", "lr-activate"]);
+  });
+
+  it("bubbles and is composed so a host outside the shadow tree sees it, and is not cancelable", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    const seen: {
+      bubbles: boolean;
+      composed: boolean;
+      cancelable: boolean;
+    }[] = [];
+    const listener = (event: Event): void => {
+      seen.push({
+        bubbles: event.bubbles,
+        composed: event.composed,
+        cancelable: event.cancelable,
+      });
+    };
+    document.addEventListener("lr-activate", listener);
+    try {
+      segmentButtons(el)[1]!.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", listener);
+    }
+    expect(seen).to.deep.equal([
+      { bubbles: true, composed: true, cancelable: false },
+    ]);
+  });
+
+  it("stays silent when a disabled segment is clicked", async () => {
+    const withDisabled = [
+      items()[0]!,
+      { ...items()[1]!, disabled: true },
+      items()[2]!,
+    ];
+    const el = (await fixture(
+      html`<lr-segmented .items=${withDisabled} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    const seen: string[] = [];
+    el.addEventListener("lr-activate", () =>
+      seen.push("lr-activate")
+    );
+    el.addEventListener("lr-change", () => seen.push("lr-change"));
+    segmentButtons(el)[1]!.click();
+    await el.updateComplete;
+    expect(seen).to.deep.equal([]);
+    expect(el.value).to.equal("day");
+  });
+
+  it("reports the direction-resolved target under dir=\"rtl\"", async () => {
+    const el = (await fixture(
+      html`<lr-segmented dir="rtl" .items=${items()} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    segmentButtons(el)[0]!.focus();
+    const focused = el.shadowRoot!.activeElement as HTMLElement;
+    setTimeout(() =>
+      focused.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowLeft",
+          bubbles: true,
+          cancelable: true,
+        })
+      )
+    );
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail, "ArrowLeft is forward under rtl").to.deep.equal({
+      value: "week",
+    });
+  });
+
+  it("keeps firing after the element is removed and re-appended", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const parent = el.parentNode!;
+    parent.removeChild(el);
+    parent.appendChild(el);
+    await el.updateComplete;
+    setTimeout(() => segmentButtons(el)[1]!.click());
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "week" });
+  });
+
+  it("reports the surviving segment after the items array shrinks under the selection", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="month"></lr-segmented>`
+    )) as LyraSegmented;
+    el.items = [items()[0]!];
+    await el.updateComplete;
+    const only = segmentButtons(el)[0]!;
+    only.focus();
+    setTimeout(() =>
+      only.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          cancelable: true,
+        })
+      )
+    );
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "day" });
+  });
+
+  it("stays silent for a programmatic value assignment and for an items swap that re-derives the selection", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    let activateCount = 0;
+    el.addEventListener("lr-activate", () => activateCount++);
+
+    el.value = "month";
+    await el.updateComplete;
+    expect(el.value, "the assignment still lands").to.equal("month");
+    expect(
+      activateCount,
+      "a host writing `value` is not a user activation"
+    ).to.equal(0);
+
+    el.items = [...items(), { value: "year", label: "Year" }];
+    await el.updateComplete;
+    expect(el.value, "the items swap keeps the selection").to.equal("month");
+    expect(
+      activateCount,
+      "re-deriving selectedItem in willUpdate() is not a user activation"
+    ).to.equal(0);
+  });
+});

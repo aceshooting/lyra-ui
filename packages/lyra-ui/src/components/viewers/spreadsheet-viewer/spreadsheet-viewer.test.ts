@@ -2111,3 +2111,39 @@ it('keeps a stable items reference and keyFunction on the composed lr-virtual-li
     restore();
   }
 });
+
+it("contains the composed lr-tab-group's lr-activate on a real repeat pick of the active sheet tab", async () => {
+  const el = (await fixture(
+    html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
+  )) as LyraSpreadsheetViewer;
+  const restore = fetchBuffer(
+    buffer({ Inventory: [['Name'], ['Widget']], Summary: [['Total'], [12]] })
+  );
+  try {
+    el.src = 'https://example.test/book.xlsx';
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-tab-group') !== null);
+    const tabs = el.shadowRoot!.querySelector('lr-tab-group')!;
+    await (tabs as HTMLElement & { updateComplete: Promise<boolean> }).updateComplete;
+    const activeTab = tabs.shadowRoot!.querySelector<HTMLElement>(
+      '[part="tab"][aria-selected="true"]'
+    );
+    expect(activeTab?.getAttribute('data-slot')).to.equal('sheet-0');
+    let escaped = 0;
+    const listener = (): void => {
+      escaped++;
+    };
+    document.addEventListener('lr-activate', listener);
+    try {
+      activeTab!.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener('lr-activate', listener);
+    }
+    expect(
+      escaped,
+      "this viewer owns its own event surface; the child's raw event never escapes"
+    ).to.equal(0);
+  } finally {
+    restore();
+  }
+});

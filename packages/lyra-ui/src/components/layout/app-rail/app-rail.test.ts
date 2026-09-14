@@ -2462,6 +2462,21 @@ describe("storage-key persistence", () => {
     keys.length = 0;
   });
 
+  // A genuinely mobile-matching matchMedia, installed before the element is ever connected --
+  // rather than fireMobileChange()'s post-mount fabricated callback -- so the mount's very first
+  // update already settles into 'mobile', the one mode a persisted `open` is restorable onto.
+  // Mirrors the "reparents the same toggle node into an already-open panel on first mount" stub;
+  // the file-level afterEach puts the real matchMedia back.
+  function matchMobileViewport(): void {
+    window.matchMedia = ((query: string) =>
+      ({
+        matches: true,
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      } as unknown as MediaQueryList)) as typeof window.matchMedia;
+  }
+
   it("persists railWidthPx and restores it on a fresh mount", async () => {
     const key = uniqueKey();
     const el = (await fixture(
@@ -2693,6 +2708,217 @@ describe("storage-key persistence", () => {
     } finally {
       el.remove();
     }
+  });
+
+  /**
+   * Regression: the persisted `open` restore was guarded on `changed.has("open")`, which cannot
+   * distinguish a consumer's binding from `open`'s own declared default -- Lit reports the default
+   * in the very first batch too. The guard was therefore true on every mount, so a persisted
+   * `open` was never restored at all, silently, for every consumer of the default `persist`
+   * allowlist.
+   */
+  it("restores a persisted open state on a mobile mount that never binds open", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(
+      `lr-app-rail:${key}`,
+      JSON.stringify({ open: true, railWidthPx: 260 })
+    );
+    matchMobileViewport();
+
+    const el = (await fixture(
+      html`<lr-app-rail resizable storage-key=${key}
+        ><a href="/a">A</a></lr-app-rail
+      >`
+    )) as LyraAppRail;
+    await el.updateComplete;
+
+    // `open` is only meaningful here, so this is the mount the restore is for.
+    expect(el.mode).to.equal("mobile");
+    expect(el.open).to.be.true;
+    // The restored value reflects, exactly as a directly assigned one does -- `[open]` is what
+    // the mobile panel/toggle rules key off.
+    expect(el.hasAttribute("open")).to.be.true;
+    expect(el.railWidthPx).to.equal(260);
+  });
+
+  /**
+   * Regression for the consequence of making the restore above actually run: it writes `open`
+   * directly, bypassing `setOpen()`/`setEffectiveMode()`, and `setEffectiveMode()` -- the one
+   * place that force-closes a non-mobile `open` -- has already run (silently, from
+   * connectedCallback) by then and early-returns for an unchanged mode, so it never re-fires to
+   * clean up after the restore. A stored `open: true` reopened at a desktop width would
+   * otherwise sit `true` under `mode === 'full'`, the exact state `open`'s own doc says cannot
+   * exist.
+   */
+  it("drops a persisted open state restored at a non-mobile breakpoint", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(
+      `lr-app-rail:${key}`,
+      JSON.stringify({ open: true, railWidthPx: 260 })
+    );
+
+    const el = document.createElement("lr-app-rail") as LyraAppRail;
+    el.setAttribute("storage-key", key);
+    el.toggleAttribute("resizable", true);
+    el.innerHTML = '<a href="/a">A</a>';
+    let toggles = 0;
+    el.addEventListener("lr-toggle", () => toggles++);
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+
+      expect(el.mode).to.equal("full");
+      expect(el.open).to.be.false;
+      expect(el.hasAttribute("open")).to.be.false;
+      // Only `open` carries the mobile-only invariant -- the width restore is untouched.
+      expect(el.railWidthPx).to.equal(260);
+      // Undoing a restore is as silent as the restore itself: neither is a user action.
+      expect(toggles).to.equal(0);
+      // Outside 'mobile' the landmark renders as [part="base"] (it becomes [part="panel"] only
+      // in mobile) -- its presence is itself proof the rail did not render as an overlay.
+      const nav = el.shadowRoot!.querySelector('[part="base"]')!;
+      expect(nav.getAttribute("role")).to.equal("navigation");
+      expect(nav.hasAttribute("aria-modal")).to.equal(false);
+    } finally {
+      el.remove();
+    }
+  });
+
+  // The half of the same invariant that only shows up later: a dropped restore must stay dropped
+  // when the viewport does reach the mobile breakpoint, because setEffectiveMode()'s force-close
+  // is skipped on the way *into* 'mobile'. A surviving `open` would make willUpdate's overlay
+  // branch activate a focus-trapping, scroll-locking modal with no user action at all.
+  it("leaves the overlay closed when a mount that dropped a persisted open later narrows to mobile", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(`lr-app-rail:${key}`, JSON.stringify({ open: true }));
+    const outside = (await fixture(
+      html`<button>outside</button>`
+    )) as HTMLButtonElement;
+
+    const el = document.createElement("lr-app-rail") as LyraAppRail;
+    el.setAttribute("storage-key", key);
+    el.innerHTML = '<a href="/a">A</a>';
+    let toggles = 0;
+    el.addEventListener("lr-toggle", () => toggles++);
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      outside.focus();
+      expect(document.activeElement === outside).to.equal(true);
+
+      fireMobileChange(el, true);
+      await el.updateComplete;
+      await el.updateComplete;
+
+      expect(el.mode).to.equal("mobile");
+      // Asserted before `open` itself: these are the user-visible harm -- a modal dialog role, a
+      // focus trap and a scroll lock arriving with no user action at all.
+      const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
+      expect(panel.getAttribute("role")).to.equal("navigation");
+      expect(panel.hasAttribute("aria-modal")).to.equal(false);
+      expect(
+        document.activeElement === outside,
+        "no overlay opened, so nothing pulled focus off the page"
+      ).to.equal(true);
+      expect(toggles).to.equal(0);
+      expect(el.open).to.be.false;
+    } finally {
+      el.remove();
+    }
+  });
+
+  // A restore is not a user dismissal/opening, so it announces nothing. `fixture()` isn't used
+  // here: it can resolve after the element's first update has already run, so the listener is
+  // attached before the element is ever connected.
+  it("fires no lr-toggle for an open state restored on mount", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(`lr-app-rail:${key}`, JSON.stringify({ open: true }));
+    matchMobileViewport();
+
+    const el = document.createElement("lr-app-rail") as LyraAppRail;
+    el.setAttribute("storage-key", key);
+    el.innerHTML = '<a href="/a">A</a>';
+    let toggles = 0;
+    el.addEventListener("lr-toggle", () => toggles++);
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      expect(el.open).to.be.true;
+      expect(toggles).to.equal(0);
+    } finally {
+      el.remove();
+    }
+  });
+
+  // The restored value must never win over a controlled binding -- including one that assigns
+  // `open`'s own default value, which is exactly what a value-based ("still the default?") guard
+  // cannot see.
+  it("keeps an explicit open=false binding authoritative over a persisted open state", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(
+      `lr-app-rail:${key}`,
+      JSON.stringify({ open: true, railWidthPx: 260 })
+    );
+    // Mobile, so the stored `open: true` is one the rail would otherwise genuinely apply -- at a
+    // wider breakpoint it is dropped regardless, which would make this guard vacuous.
+    matchMobileViewport();
+
+    const el = (await fixture(
+      html`<lr-app-rail resizable storage-key=${key} .open=${false}
+        ><a href="/a">A</a></lr-app-rail
+      >`
+    )) as LyraAppRail;
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(el.railWidthPx).to.equal(260);
+  });
+
+  it("keeps a declared open attribute authoritative over a persisted closed state", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(`lr-app-rail:${key}`, JSON.stringify({ open: false }));
+
+    const el = (await fixture(
+      html`<lr-app-rail storage-key=${key} open
+        ><a href="/a">A</a></lr-app-rail
+      >`
+    )) as LyraAppRail;
+    await el.updateComplete;
+
+    // The non-mobile drop above is scoped to a value the restore itself wrote: a consumer's own
+    // declared `open` is an explicit initial state for the overlay (the documented "mounts
+    // directly into an already-open mobile overlay" pattern), not stale cross-session storage,
+    // so it survives a mount at a wider breakpoint exactly as it always has.
+    expect(el.mode).to.equal("full");
+    expect(el.open).to.be.true;
+  });
+
+  // Reconnect: the restore belongs to the first update alone. Re-running it on every reconnect
+  // would let storage written by another instance (or another tab) overwrite the live state a
+  // user just chose, long after mount.
+  it("does not re-apply persisted open state on reconnect", async () => {
+    const key = uniqueKey();
+    localStorage.setItem(`lr-app-rail:${key}`, JSON.stringify({ open: true }));
+    matchMobileViewport();
+
+    const el = (await fixture(
+      html`<lr-app-rail storage-key=${key}><a href="/a">A</a></lr-app-rail>`
+    )) as LyraAppRail;
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    const parent = el.parentNode as ParentNode;
+    el.open = false;
+    await el.updateComplete;
+    expect(el.hasAttribute("open")).to.be.false;
+    // Re-arm storage behind the component's back, so a re-running restore would be visible.
+    localStorage.setItem(`lr-app-rail:${key}`, JSON.stringify({ open: true }));
+
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
   });
 });
 

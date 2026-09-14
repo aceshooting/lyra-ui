@@ -301,3 +301,28 @@ it('is accessible in the fully populated state', async () => {
   const el = await populated();
   await expect(el).to.be.accessible();
 });
+
+it("contains the composed lr-tab-group's lr-activate on a real repeat pick of the active tab", async () => {
+  const el = await populated();
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
+  await tabs.updateComplete;
+  expect(tabs.active, 'the dossier opens on relationships').to.equal('relationships');
+  const activeTab = tabs.shadowRoot!.querySelector<HTMLElement>('[part="tab"][aria-selected="true"]');
+  expect(activeTab?.getAttribute('data-slot')).to.equal('relationships');
+  let escaped = 0;
+  const listener = (): void => {
+    escaped++;
+  };
+  document.addEventListener('lr-activate', listener);
+  try {
+    activeTab!.click();
+    await el.updateComplete;
+  } finally {
+    document.removeEventListener('lr-activate', listener);
+  }
+  expect(el.activeTab, 'the repeat pick changed nothing').to.equal('relationships');
+  expect(
+    escaped,
+    "this component's documented contract is lr-tab-show with `tabId`; the child's raw event never escapes",
+  ).to.equal(0);
+});

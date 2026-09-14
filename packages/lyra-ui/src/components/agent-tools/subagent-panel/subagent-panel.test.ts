@@ -1,7 +1,8 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './subagent-panel.js';
 import type { LyraSubagentPanel, SubagentRun } from './subagent-panel.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 type CssEscapeHost = { escape?: (identifier: string) => string };
 
@@ -666,4 +667,90 @@ it('drops each run row\'s border/radius under frame="plain"', async () => {
   const run = el.shadowRoot!.querySelector('[part~="run"]') as HTMLElement;
   expect(getComputedStyle(run).borderTopWidth).to.equal('0px');
   expect(getComputedStyle(run).borderRadius).to.equal('0px');
+});
+
+describe('run-row chrome theming hooks', () => {
+  const runPart = (el: LyraSubagentPanel, selector: string) =>
+    el.shadowRoot!.querySelector(selector) as HTMLElement;
+
+  it('repaints each run row through --lr-subagent-panel-background/-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-subagent-panel
+        .runs=${runs}
+        style="--lr-subagent-panel-background: rgb(1, 2, 3); --lr-subagent-panel-border-color: rgb(4, 5, 6); --lr-subagent-panel-radius: 11px"
+      ></lr-subagent-panel>
+    `)) as LyraSubagentPanel;
+    const row = getComputedStyle(runPart(el, '[part~="run"]'));
+    expect(row.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(row.borderTopLeftRadius).to.equal('11px');
+    expect(getComputedStyle(runPart(el, '[part="run-trigger"]')).backgroundColor).to.equal(
+      'rgb(1, 2, 3)',
+    );
+  });
+
+  it('leaves the run-row paint byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(
+      html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`,
+    )) as LyraSubagentPanel;
+    const tokened = (await fixture(html`
+      <lr-subagent-panel
+        .runs=${runs}
+        style="--lr-subagent-panel-background: var(--lr-color-surface); --lr-subagent-panel-border-color: var(--lr-color-border); --lr-subagent-panel-radius: var(--lr-radius)"
+      ></lr-subagent-panel>
+    `)) as LyraSubagentPanel;
+    const unset = getComputedStyle(runPart(control, '[part~="run"]'));
+    const explicit = getComputedStyle(runPart(tokened, '[part~="run"]'));
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.borderTopLeftRadius).to.not.equal('0px');
+    const unsetFill = getComputedStyle(runPart(control, '[part="run-trigger"]')).backgroundColor;
+    expect(unsetFill).to.equal(
+      getComputedStyle(runPart(tokened, '[part="run-trigger"]')).backgroundColor,
+    );
+    expect(unsetFill).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  // The resting hook alone cannot retune these controls: hover is the one state whose fill is
+  // painted by a different declaration, so a panel retuned to a dark fill would flash the stock
+  // light raised surface under the pointer. Both readings below are of the RENDERED result.
+  it('paints the hovered run control from --lr-subagent-panel-hover-background', async () => {
+    const el = (await fixture(html`
+      <lr-subagent-panel
+        .runs=${runs}
+        style="--lr-subagent-panel-background: rgb(1, 2, 3); --lr-subagent-panel-hover-background: rgb(7, 8, 9); --lr-transition-fast: 0s"
+      ></lr-subagent-panel>
+    `)) as LyraSubagentPanel;
+    const trigger = runPart(el, '[part="run-trigger"]');
+    expect(getComputedStyle(trigger).backgroundColor).to.equal('rgb(1, 2, 3)');
+    try {
+      await hoverUntilMatched(trigger, 'the run trigger never registered :hover');
+      await waitUntil(
+        () => getComputedStyle(trigger).backgroundColor === 'rgb(7, 8, 9)',
+        'the hovered run trigger never took the hover hook',
+      );
+      expect(getComputedStyle(trigger).backgroundColor).to.equal('rgb(7, 8, 9)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('keeps the hovered fill on the raised surface token when the hover hook is unset', async () => {
+    const el = (await fixture(html`
+      <lr-subagent-panel
+        .runs=${runs}
+        style="--lr-color-surface-raised: rgb(4, 5, 6); --lr-transition-fast: 0s"
+      ></lr-subagent-panel>
+    `)) as LyraSubagentPanel;
+    const trigger = runPart(el, '[part="run-trigger"]');
+    try {
+      await hoverUntilMatched(trigger, 'the run trigger never registered :hover');
+      await waitUntil(
+        () => getComputedStyle(trigger).backgroundColor === 'rgb(4, 5, 6)',
+        'the hovered run trigger never fell back to the raised surface token',
+      );
+      expect(getComputedStyle(trigger).backgroundColor).to.equal('rgb(4, 5, 6)');
+    } finally {
+      await resetMouse();
+    }
+  });
 });

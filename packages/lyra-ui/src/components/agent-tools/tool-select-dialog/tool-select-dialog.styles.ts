@@ -81,14 +81,25 @@ export const styles = css`
     appearance: textfield;
     inline-size: 100%;
     box-sizing: border-box;
-    padding-block: var(--lr-space-s);
-    padding-inline-start: var(--lr-space-m);
+    /* Geometry knobs, each defaulting to the value the field shipped with, so an unset dialog
+       renders exactly as before. The inline-end gutter is reserved for the overlaid clear button
+       and is therefore not a knob. */
+    min-block-size: var(--lr-tool-select-dialog-search-min-height, auto);
+    padding-block: var(
+      --lr-tool-select-dialog-search-padding-block,
+      var(--lr-space-s)
+    );
+    padding-inline-start: var(
+      --lr-tool-select-dialog-search-padding-inline,
+      var(--lr-space-m)
+    );
     padding-inline-end: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-tool-select-dialog-search-radius, var(--lr-radius));
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
+    font-size: var(--lr-tool-select-dialog-search-font-size, inherit);
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   /* Replaces the native ::-webkit-search-cancel-button suppressed below -- same "opt-out chrome

@@ -66,14 +66,22 @@ export const styles = css`
     inline-size: 100%;
     -webkit-appearance: none;
     appearance: none;
-    padding-inline-start: var(--lr-space-s);
+    /* Geometry knobs, each defaulting to the value the field shipped with, so an unset dataset
+       renders exactly as before. The inline-end gutter is reserved for the overlaid clear button
+       and is therefore not a knob. */
+    min-block-size: var(--lr-eval-dataset-search-min-height, auto);
+    padding-inline-start: var(
+      --lr-eval-dataset-search-padding-inline,
+      var(--lr-space-s)
+    );
     padding-inline-end: var(--lr-icon-button-size);
-    padding-block: var(--lr-space-xs);
+    padding-block: var(--lr-eval-dataset-search-padding-block, var(--lr-space-xs));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-eval-dataset-search-radius, var(--lr-radius));
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    font-size: var(--lr-eval-dataset-search-font-size, inherit);
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   /* Replaces the native ::-webkit-search-cancel-button suppressed below -- same "opt-out chrome

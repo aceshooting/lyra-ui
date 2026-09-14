@@ -46,6 +46,18 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   exactly this many items still render as a plain list. Before 9.0.0 this was spelled
   `virtualizeThreshold`/`virtualize-threshold` _and_ compared inclusively (`>=`), so a migration
   that only renames the attribute shifts the switchover point by one item
+- `announce: boolean = false` (reflected) — opt-in: announce the failures the queue **already
+  carries** the first time it mounts, instead of staying silent until a row fails later. The
+  mount-time pass reuses the one announcement path a later failure takes — the same shared
+  assertive light-DOM region, the same locale-aware conjunction list of the caller-supplied
+  `item.error` strings, and the same `[part="failure-live"]` mirror — so an opted-in mount reads
+  exactly what a live failure would. Set it where the queue is created in response to something
+  the user just did: a retried ingestion run that mounts a fresh queue already holding
+  `stage="failed"` rows would otherwise never speak them. Leave it unset for a queue that is part
+  of the page a user is arriving on — those rows render in document order and repeating them is
+  noise. Read once per element lifetime: a later reconnection or adoption stages the same rows
+  again rather than replaying the announcement, and failures added or changed after mount announce
+  either way. A queue carrying no `stage="failed"` row with an `error` announces nothing
 
 Queue item ids must be nonblank and unique. Malformed rows and later duplicates are omitted
 first-wins before empty state, counts, virtualization, failure announcements, rendering, or actions.

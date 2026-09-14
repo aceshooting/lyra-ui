@@ -300,6 +300,17 @@ want a `lr-`-prefixed event, or to the native-style `input`/`change` for parity 
 control. Re-picking the current single value and programmatic/default/reset/restore writes are
 silent (including on `lr-change`). The clear button emits one `lr-clear` after its
 `input`/`change`/`lr-change` triple.
+`lr-activate` (`detail: { value: string }`, bubbling/composed, non-cancelable) fires on **every**
+activation of an available listbox row — a click, or Enter on the active row — whether or not the
+selection actually moved. Its `value` is the activated option's own value, **always a single
+string**, even in `multiple` mode, where the `input`/`change`/`lr-change` triple carries the whole
+`string[]` instead. It reports that the user picked a row and gates nothing. Use it for the
+single-select repeat pick that `change`/`lr-change` deliberately stay silent for — "re-run that
+filter" is a real intent — which is otherwise unobservable, because the rows live in this shadow
+root, so a retargeted `click` names no option and a keyboard commit produces no click at all. When
+an activation _does_ move the selection, `input`/`change`/`lr-change` are emitted first, so either
+listener reads the settled selection. Not fired for typing, for a committed custom value matching no
+row, for the clear button, or for a programmatic `value` assignment.
 `lr-filter` (`detail: { value: string }`) reports the in-progress filter text on every user-driven
 keystroke — the live as-you-typed search string, deliberately _not_ `value`, which is the committed
 selection. It is the supported way to read that text; reaching into the shadow root for

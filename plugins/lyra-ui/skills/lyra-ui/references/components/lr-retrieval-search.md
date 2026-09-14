@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -44,6 +44,19 @@ at the same size tier, so the toolbar row renders as one flush line.
   results"; never inferred, since this component holds no results data (see `lr-retrieval-results`).
   A later transition into the settled empty state announces the localized “No matches” heading
   through the shared polite light-DOM region; initial and reconnect content is not replayed
+- `announce: boolean = false` (reflected) — opt-in: announce the state the search bar is **already
+  presenting** the first time it mounts, rather than only announcing later transitions into it.
+  Urgency follows the state, in the same branch order the row renders: a non-empty `errorText` wins
+  and is announced verbatim through the shared assertive light-DOM region, otherwise an `empty`
+  search that is not `loading` announces the localized “No matches” text through the shared polite
+  region. A search that is still `loading`, or that has settled on neither state, announces
+  nothing. The announcement is deferred one frame past the first update so the shared region exists
+  before its text lands, and any live transition arriving first retires the pending mount-time
+  announcement so nothing is read twice. Set it where the search is rendered in response to a query
+  the user just ran and nothing else reports the outcome; leave it unset for a search that is part
+  of the page a user is arriving on, whose visible error or empty state is already read in document
+  order. Read once, when the search first mounts: a later reconnection or adoption stages the
+  existing state again rather than replaying it, and later transitions are announced either way
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
 - `label?: string` — fallback name for the `role="search"` landmark; omission uses the localized
@@ -52,6 +65,12 @@ at the same size tier, so the toolbar row renders as one flush line.
   the host attribute is absent, overrides the search-landmark name. A non-empty authored host
   `aria-label` makes the host the sole overall owner, so the inner shell omits its duplicate
   role/name; an explicitly empty host label stays empty on the search landmark
+- `size?: LyraSize` (reflected) — opt-in density tier for the whole query row, on the library's one
+  six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`, or `small`/`medium`/`large`). It is one property for
+  all three controls deliberately: the query field, the mode selector and the submit button share
+  the row's baseline, and sizing one of them alone is what makes the row ragged. With no `size` each
+  control keeps its own `m` default, exactly what the row rendered before; an unsupported value
+  normalizes to the omitted state and removes the attribute
 
 **Events:**
 
@@ -74,7 +93,11 @@ component), `row`, `query`, `mode`, `submit` (reads
 `errorText` is non-empty and not `loading`), `empty` (only when `empty` and neither `loading` nor
 `errorText`).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-retrieval-search-submit-min-height` (default
+`var(--lr-icon-button-size)`, raised to the tier's shared form-control height when `size` is set) is
+the submit button's minimum height; the shared tappable-target minimum always stays underneath it,
+so the smallest tiers cannot shrink the button below the WCAG floor. Everything else is shared
+tokens.
 
 **Optional peer deps:** none.
 

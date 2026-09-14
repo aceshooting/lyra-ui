@@ -72,6 +72,14 @@ LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' |
 'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
   rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
   bounded before validation. The overlay scrolls within the map allocation.
+  A row may also carry `icon`, deliberately the same record a `point.icons` entry uses — hand the
+  legend the very icon object its point layer renders and the key shows the symbol drawn on the
+  map instead of describing it in colour alone. The point layer's category key (`value`) is
+  accepted so a pass-through needs no reshaping, and is left out of the canonical readback;
+  `path`, `viewBox`, `mode`, `strokeWidth`, `lineCap` and `lineJoin` keep their point-icon meaning
+  and their point-icon defaults, and the same validation applies (path data only, at most 8,192
+  characters, positive `viewBox` dimensions). An unusable record is dropped and that row keeps
+  rendering its colour swatch, exactly as a row that supplies no `icon` does.
 - readonly `legendProjection: LyraMapLegendProjection` — frozen `{ inputCount, renderedCount,
 omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
   projection renders a localized visible `1–N of M items` summary rather than silently claiming
@@ -413,6 +421,14 @@ Keep that target at least 24px in both axes. This leaves navigation controls at 
 `legend` is a localized `role="group"` containing a real list associated to the map canvas with
 `aria-describedby`; each entry is a `listitem`, decorative swatches are inert/accessibility-hidden,
 and the overlay is bounded to the map allocation with scrolling and long-label wrapping.
+A swatch rendering an entry's `icon` carries `data-icon="true"`, paints the glyph in that entry's
+own colour through `currentColor`, and drops the colour block, its border and the `pattern`
+overlay — all three would sit on top of the shape they identify, and the shape is itself the
+non-colour cue the pattern supplies for a colour-only row. The glyph stays decorative: the row's
+visible label carries its meaning. That association is advertised only while it is true — while
+the optional `maplibre-gl` peer is still loading, and after any failure, there is no map
+container in the tree, so `legend` withholds `aria-controls` rather than leaving a dangling
+idref.
 `legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
 stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
 `marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic

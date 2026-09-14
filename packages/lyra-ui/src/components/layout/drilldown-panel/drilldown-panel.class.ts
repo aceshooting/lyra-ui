@@ -1250,6 +1250,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
         activation="manual"
         aria-label=${accessibleLabel ?? nothing}
         .active=${active}
+        @lr-activate=${this.stopOwnedEvent}
         @lr-tab-hide=${this.stopOwnedEvent}
         @lr-tab-show=${this.onCategoryShow}
       >

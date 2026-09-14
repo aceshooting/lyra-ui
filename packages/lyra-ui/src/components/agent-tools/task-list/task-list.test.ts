@@ -707,3 +707,41 @@ it('caps the number of rendered rows for a very large items array', async () => 
   expect(rendered.length).to.be.lessThan(600);
   expect(rendered.length).to.be.greaterThan(0);
 });
+
+describe('card chrome theming hooks', () => {
+  const part = (el: LyraTaskList, name: string) =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('repaints the card through --lr-task-list-background/-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-task-list
+        .items=${items}
+        style="--lr-task-list-background: rgb(1, 2, 3); --lr-task-list-border-color: rgb(4, 5, 6); --lr-task-list-radius: 11px"
+      ></lr-task-list>
+    `)) as LyraTaskList;
+    const chrome = getComputedStyle(part(el, 'base'));
+    expect(chrome.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(chrome.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(chrome.borderTopLeftRadius).to.equal('11px');
+    expect(getComputedStyle(part(el, 'body')).borderTopColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('leaves the card paint byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
+    const tokened = (await fixture(html`
+      <lr-task-list
+        .items=${items}
+        style="--lr-task-list-background: var(--lr-color-surface); --lr-task-list-border-color: var(--lr-color-border); --lr-task-list-radius: var(--lr-radius)"
+      ></lr-task-list>
+    `)) as LyraTaskList;
+    const unset = getComputedStyle(part(control, 'base'));
+    const explicit = getComputedStyle(part(tokened, 'base'));
+    expect(unset.backgroundColor).to.equal(explicit.backgroundColor);
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(part(control, 'body')).borderTopColor).to.equal(
+      getComputedStyle(part(tokened, 'body')).borderTopColor,
+    );
+  });
+});

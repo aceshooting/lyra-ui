@@ -777,3 +777,38 @@ it('normalizes duplicate metric ids first-wins', async () => {
   expect(metrics[0]!.textContent).to.contain('First metric');
   expect(metrics[0]!.textContent).not.to.contain('Later metric');
 });
+
+describe('card chrome theming hooks', () => {
+  const base = (el: LyraAgentRun) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  it('repaints the card through --lr-agent-run-background/-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-agent-run
+        style="--lr-agent-run-background: rgb(1, 2, 3); --lr-agent-run-border-color: rgb(4, 5, 6); --lr-agent-run-radius: 11px"
+        .run=${makeRun({ steps })}
+      ></lr-agent-run>
+    `)) as LyraAgentRun;
+    const chrome = getComputedStyle(base(el));
+    expect(chrome.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(chrome.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(chrome.borderTopLeftRadius).to.equal('11px');
+  });
+
+  it('leaves the card paint byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(
+      html`<lr-agent-run .run=${makeRun({ steps })}></lr-agent-run>`,
+    )) as LyraAgentRun;
+    const tokened = (await fixture(html`
+      <lr-agent-run
+        style="--lr-agent-run-background: var(--lr-color-surface); --lr-agent-run-border-color: var(--lr-color-border); --lr-agent-run-radius: var(--lr-radius)"
+        .run=${makeRun({ steps })}
+      ></lr-agent-run>
+    `)) as LyraAgentRun;
+    const unset = getComputedStyle(base(control));
+    const explicit = getComputedStyle(base(tokened));
+    expect(unset.backgroundColor).to.equal(explicit.backgroundColor);
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+});

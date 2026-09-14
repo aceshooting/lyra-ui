@@ -2388,3 +2388,66 @@ describe('bounded hostile input snapshots', () => {
     expect(el.formError).to.equal('Schema properties must be a flat object.');
   });
 });
+
+describe("lr-tool-param-form contains the composed lr-select's lr-activate", () => {
+  const containmentCase = async (key: 'units' | 'notify', selected: string): Promise<void> => {
+    const el = (await fixture(
+      html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`,
+    )) as LyraToolParamForm;
+    await el.updateComplete;
+    const select = field(el, key).querySelector('lr-select') as LyraSelect;
+    expect(select.value, `the ${key} control starts on the row this test re-picks`).to.equal(selected);
+    select.open = true;
+    await select.updateComplete;
+    await waitUntil(
+      () => select.shadowRoot!.querySelectorAll('[part="option"]').length > 0,
+      'expected the composed select to render its rows',
+    );
+    const row = select.shadowRoot!.querySelector<HTMLElement>(
+      `[part="option"][data-value="${selected}"]`,
+    );
+    expect(row, `the ${key} control renders the already-picked row`).to.exist;
+
+    let escaped = 0;
+    let onChild = 0;
+    let formInputs = 0;
+    const escapedListener = (): void => {
+      escaped += 1;
+    };
+    // Added AFTER the template's own `@lr-activate` binding, on the same node: `stopPropagation()`
+    // does not silence a same-node listener, so this proves the child really emitted rather than
+    // the assertion passing because nothing fired at all.
+    const childListener = (): void => {
+      onChild += 1;
+    };
+    const formListener = (): void => {
+      formInputs += 1;
+    };
+    document.addEventListener('lr-activate', escapedListener);
+    select.addEventListener('lr-activate', childListener);
+    el.addEventListener('lr-input', formListener);
+    try {
+      row!.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener('lr-activate', escapedListener);
+      select.removeEventListener('lr-activate', childListener);
+      el.removeEventListener('lr-input', formListener);
+    }
+
+    expect(onChild, `the composed ${key} select did report the repeat pick`).to.equal(1);
+    expect(formInputs, 're-picking the row already held moves nothing on the form').to.equal(0);
+    expect(
+      escaped,
+      "this form's documented surface is lr-input/lr-submit; the child's raw event never escapes",
+    ).to.equal(0);
+  };
+
+  it('swallows it from the enum select, like lr-input/lr-change/lr-show/lr-hide', async () => {
+    await containmentCase('units', 'celsius');
+  });
+
+  it('swallows it from the boolean select, like lr-input/lr-change/lr-show/lr-hide', async () => {
+    await containmentCase('notify', '');
+  });
+});

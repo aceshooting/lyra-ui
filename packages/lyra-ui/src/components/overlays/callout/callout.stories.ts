@@ -150,3 +150,34 @@ export const LocalizedAnnouncementTemplate: StoryObj = {
     </div>
   `,
 };
+
+export const AnnounceOnMount: StoryObj = {
+  name: 'Announce on mount',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A callout that appears in response to something the user just did should carry `announce`: the content it already holds when it first mounts is sent to the shared light-DOM sink once, politely here and assertively for `variant="danger"`. Leave it off for a callout that is simply part of the page being loaded — that text is read in document order already. Later content updates announce either way.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); justify-items: start;">
+      <button
+        @click=${(event: Event) => {
+          const host = (event.currentTarget as HTMLElement).parentElement!;
+          const callout = document.createElement('lr-callout');
+          callout.setAttribute('announce', '');
+          callout.setAttribute('variant', 'danger');
+          callout.setAttribute('closable', '');
+          callout.setAttribute('heading', 'Save failed');
+          callout.append('The document could not be saved. Try again.');
+          host.append(callout);
+        }}
+      >Show a freshly mounted danger callout</button>
+      <lr-callout heading="Release notes"
+        >This one is part of the page and is deliberately not announced.</lr-callout
+      >
+    </div>
+  `,
+};

@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -167,8 +168,19 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   private readonly thumbnailHandles = new Map<number, PageThumbnailRenderHandle>();
   private boundViewer: PageThumbnailSource | null = null;
   private digitBuffer = '';
-  private digitTimer?: number;
-  private digitTimerWindow?: Window;
+  /** The digit buffer's reset debounce. Every digit restarts it, so "1" then "2" jumps to page 12
+   *  rather than page 2; the buffer clears only once the quiet window passes. Scheduled on -- and
+   *  cancelled through -- the realm this rail lives in at the time, so one adopted into another
+   *  document neither leaves a task behind on the old realm nor loses the ability to cancel the
+   *  new one. Supersession is the controller's own generation guard, replacing the
+   *  handle-and-window identity check the inline timer carried. */
+  private readonly digitBufferReset = new DebounceController<void>(
+    DIGIT_BUFFER_MS,
+    () => {
+      this.digitBuffer = '';
+    },
+    () => this.ownerDocument.defaultView,
+  );
   private thumbnailGeneration = 0;
   private resizeObserver?: ResizeObserver;
   private targetObserver?: MutationObserver;
@@ -602,10 +614,11 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.emit('lr-page-select', { page: pageNumber });
   }
 
+  /** Discards an armed buffer reset. `cancel()`, never `dispose()`: `resetDigitBuffer()` runs on
+   *  disconnect, which here may be a re-parent, and a disposed controller would refuse every
+   *  later digit's reset for good. */
   private cancelDigitTimer(): void {
-    if (this.digitTimer !== undefined) this.digitTimerWindow?.clearTimeout(this.digitTimer);
-    this.digitTimer = undefined;
-    this.digitTimerWindow = undefined;
+    this.digitBufferReset.cancel();
   }
 
   private resetDigitBuffer(): void {
@@ -618,19 +631,12 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.digitBuffer += e.key;
     const target = Number(this.digitBuffer);
     this.cancelDigitTimer();
-    const ownerWindow = this.ownerDocument.defaultView;
-    if (ownerWindow) {
-      const handle = ownerWindow.setTimeout(() => {
-        if (this.digitTimerWindow !== ownerWindow || this.digitTimer !== handle) return;
-        this.digitTimer = undefined;
-        this.digitTimerWindow = undefined;
-        this.digitBuffer = '';
-      }, DIGIT_BUFFER_MS);
-      this.digitTimerWindow = ownerWindow;
-      this.digitTimer = handle;
-    } else {
-      this.digitBuffer = '';
-    }
+    // A realm-less rail arms nothing and drops the buffer immediately, exactly as before: the
+    // controller would otherwise fall back to the ambient timer queue and clear the buffer
+    // through a document this element does not live in. `target` is already read above, so this
+    // keystroke still navigates.
+    if (this.ownerDocument.defaultView) this.digitBufferReset.push(undefined);
+    else this.digitBuffer = '';
     const count = this.effectivePageCount();
     if (target >= 1 && target <= count) {
       if (this.boundViewer) this.onPageActivate(target);

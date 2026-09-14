@@ -199,6 +199,45 @@ export const Events: Story = {
   `,
 };
 
+/** `lr-change` reports a *changed* selection; `lr-activate` reports every activation of a
+ *  non-disabled segment, including re-picking the one that is already selected. Click the checked
+ *  segment, or press Home while it is focused, to see the activation line appear on its own. */
+export const ActivationVersusChange: Story = {
+  name: 'Activation vs. change',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Re-picking the current value is deliberately silent on `lr-change` and reported by `lr-activate`, so a host can re-run a fetch, re-open a panel or re-submit on a repeat pick without inventing a click listener that keyboard activation would never reach.',
+      },
+    },
+  },
+  render: () => {
+    const log = (line: string): void => {
+      const out = document.getElementById('segmented-activation-log');
+      if (!out) return;
+      out.textContent = `${line}\n${out.textContent ?? ''}`.split('\n').slice(0, 6).join('\n');
+    };
+    return html`
+      <div>
+        <lr-segmented
+          .items=${[
+            { value: 'day', label: 'Day' },
+            { value: 'week', label: 'Week' },
+            { value: 'month', label: 'Month' },
+          ]}
+          value="week"
+          @lr-change=${(e: CustomEvent<{ value: string }>) =>
+            log(`lr-change: ${JSON.stringify(e.detail)}`)}
+          @lr-activate=${(e: CustomEvent<{ value: string }>) =>
+            log(`lr-activate: ${JSON.stringify(e.detail)}`)}
+        ></lr-segmented>
+        <pre id="segmented-activation-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</pre>
+      </div>
+    `;
+  },
+};
+
 /** The checked pill's background, text color, weight and shadow are individually themeable, as are
  *  the hover and pressed treatments of an *unchecked* segment. This keeps selection, hover, and
  *  press paint independently configurable from an ancestor. */

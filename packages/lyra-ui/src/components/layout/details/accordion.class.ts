@@ -65,10 +65,18 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  *
  * @customElement lr-accordion
  * @slot - Direct `<lr-accordion-item>` elements.
- * @event lr-expand - Emitted before a direct item expands. `detail: { item }`. Cancelable.
+ * @event lr-expand - Emitted before a direct item expands. `detail: { item }`. Cancelable. Nested
+ *   groups emit the same name, with a `detail.item` of their own; handle it as this group's event
+ *   only when `event.target === event.currentTarget` (see `lr-toggle-request`).
  * @event lr-after-expand - Emitted after a direct item finishes expanding. `detail: { item }`.
+ *   Nested groups emit the same name, with a `detail.item` of their own; handle it as this
+ *   group's event only when `event.target === event.currentTarget` (see `lr-toggle-request`).
  * @event lr-collapse - Emitted before a direct item collapses. `detail: { item }`. Cancelable.
+ *   Nested groups emit the same name, with a `detail.item` of their own; handle it as this
+ *   group's event only when `event.target === event.currentTarget` (see `lr-toggle-request`).
  * @event lr-after-collapse - Emitted after a direct item finishes collapsing. `detail: { item }`.
+ *   Nested groups emit the same name, with a `detail.item` of their own; handle it as this
+ *   group's event only when `event.target === event.currentTarget` (see `lr-toggle-request`).
  * @event lr-toggle-request - Emitted alongside `lr-expand`/`lr-collapse` for the same proposed
  *   transition, with the direction in the detail instead of the event name -- the same
  *   `{ collapsed }` shape `<lr-code-block>` and `<lr-chat-message>` use for their own
@@ -77,6 +85,34 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  *   `lr-toggle-request` or the matching `lr-expand`/`lr-collapse` vetoes the transition, and both
  *   always fire so a listener on one name never misses a transition the other name already
  *   vetoed.
+ *
+ *   **A nested group's events are not scoped to it, so filter by target.** Every accordion event
+ *   bubbles and is composed, so an inner `<lr-accordion>` slotted inside an outer item sends its
+ *   own `lr-expand`, `lr-collapse`, `lr-toggle-request`, `lr-after-expand` and `lr-after-collapse`
+ *   straight through the outer group. A listener bound directly on the outer `<lr-accordion>`
+ *   therefore also receives the inner group's — and their `detail.item` is an item of the inner
+ *   group, so an outer handler that looks that item up among its own children finds nothing, or
+ *   acts on a panel it does not own. Coordination itself is already scoped: an outer group never
+ *   applies its single-panel invariant, roving keyboard model, or lifecycle to an inner group's
+ *   items. It is only the listener that needs the guard, the same one `<lr-details>` and
+ *   `<lr-dialog>` document for their own events:
+ *
+ *   ```html
+ *   <lr-accordion id="outer">
+ *     <lr-accordion-item label="Outer">
+ *       <lr-accordion>
+ *         <lr-accordion-item label="Inner">Inner content.</lr-accordion-item>
+ *       </lr-accordion>
+ *     </lr-accordion-item>
+ *   </lr-accordion>
+ *   <script type="module">
+ *     const outer = document.querySelector('#outer');
+ *     outer.addEventListener('lr-expand', (event) => {
+ *       if (event.target !== event.currentTarget) return; // a nested group expanded, not this one
+ *       // ...
+ *     });
+ *   </script>
+ *   ```
  * @csspart base - The accordion wrapper.
  * @cssprop [--lr-accordion-outlined-bg=var(--lr-color-surface)] - Outlined group background.
  * @cssprop [--lr-accordion-outlined-border-color=var(--lr-color-border)] - Outlined border color.

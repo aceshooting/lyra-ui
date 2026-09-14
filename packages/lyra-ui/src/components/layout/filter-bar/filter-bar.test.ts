@@ -3356,3 +3356,80 @@ describe("'combobox' debounce", () => {
     expect(el.value).to.deep.equal({});
   });
 });
+
+describe("lr-filter-bar contains its composed controls' lr-activate", () => {
+  const containmentCase = async (
+    filterId: "status" | "tags",
+    selected: string,
+    // A single-select repeat pick moves nothing; the multiple combobox toggles the row back off,
+    // which is a real change and does reach the bar's own `lr-input`.
+    expectedBarInputs: number
+  ): Promise<void> => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+    );
+    el.value =
+      filterId === "status" ? { status: selected } : { tags: [selected] };
+    await el.updateComplete;
+    const child = control(el, filterId) as HTMLElement & {
+      open: boolean;
+      readonly updateComplete: Promise<boolean>;
+    };
+    child.open = true;
+    await child.updateComplete;
+    await aTimeout(0);
+    const row = child.shadowRoot!.querySelector<HTMLElement>(
+      `[part="option"][data-value="${selected}"]`
+    );
+    expect(row, `the ${filterId} control renders the already-picked row`).to
+      .exist;
+
+    let escaped = 0;
+    let onChild = 0;
+    let barInputs = 0;
+    const escapedListener = (): void => {
+      escaped += 1;
+    };
+    // Added AFTER the template's own `@lr-activate` binding, on the same node: `stopPropagation()`
+    // does not silence a same-node listener, so this proves the child really emitted rather than
+    // the assertion passing because nothing fired at all.
+    const childListener = (): void => {
+      onChild += 1;
+    };
+    const barListener = (): void => {
+      barInputs += 1;
+    };
+    document.addEventListener("lr-activate", escapedListener);
+    child.addEventListener("lr-activate", childListener);
+    el.addEventListener("lr-input", barListener);
+    try {
+      row!.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", escapedListener);
+      child.removeEventListener("lr-activate", childListener);
+      el.removeEventListener("lr-input", barListener);
+    }
+
+    expect(
+      onChild,
+      `the composed ${filterId} control did report the repeat pick`
+    ).to.equal(1);
+    expect(
+      barInputs,
+      "the bar's own lr-input still reports exactly its documented value moves"
+    ).to.equal(expectedBarInputs);
+    expect(
+      escaped,
+      "this bar's documented surface is its own lr-input/lr-change; the child's raw event never escapes"
+    ).to.equal(0);
+  };
+
+  it("swallows lr-activate from the composed lr-select, like lr-input/lr-change", async () => {
+    await containmentCase("status", "open", 0);
+  });
+
+  it("swallows lr-activate from the composed lr-combobox, like lr-input/lr-change", async () => {
+    await containmentCase("tags", "urgent", 1);
+  });
+});

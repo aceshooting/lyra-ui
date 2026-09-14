@@ -1081,6 +1081,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       }));
       const value = typeof current === 'number' ? String(current) : '';
       return html`<lr-segmented
+        @lr-activate=${this.stopChildEvent}
         id=${fieldId}
         class="control"
         part="scale"
@@ -1156,6 +1157,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     }
     const value = typeof current === 'string' ? current : '';
     return html`<lr-select
+      @lr-activate=${this.stopChildEvent}
       id=${fieldId}
       class="control"
       part="scale"

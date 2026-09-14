@@ -8,7 +8,14 @@ export const styles = css`
     display: inline-block;
     inline-size: 100%;
     min-inline-size: 0;
-    max-inline-size: var(--lr-size-24rem);
+    /* The 24rem ceiling is the shipped default, kept rather than dropped to match lr-select's
+       uncapped host: a model id row lives in a settings card or a composer toolbar, where an
+       uncapped control stretches to the full container. The value is now a public name instead of a
+       literal, so a full-width row is one declaration (set it to none) rather than a ::part
+       override -- which is exactly what model-settings-panel.styles.ts had to write. Read as a
+       var() fallback and never declared on :host, so an ancestor theme wrapper's value still
+       reaches it. */
+    max-inline-size: var(--lr-model-select-max-inline-size, var(--lr-size-24rem));
     /* The ladder lives in internal/sizes.styles.ts, composed ahead of this sheet; only the
        indirection is here. The public --lr-model-select-* surface is unchanged, its values coming
        from the one --lr-form-control-* scale every other control sizes against, so a model select
@@ -61,10 +68,19 @@ export const styles = css`
     gap: var(--lr-model-select-gap, var(--_lr-model-select-gap-default));
     inline-size: 100%;
     min-inline-size: 0;
+    /* --lr-model-select-trigger-height is deliberately undeclared on :host: it is read only through
+       these two var() fallbacks, so any declared value (even auto) would dead-arm them and turn
+       --lr-model-select-trigger-min-height into dead code -- the same trap lr-select documents. The
+       per-tier floor falls out of the fallback; an override pins an exact height, flooring and
+       capping the row at once. */
     min-block-size: var(
-      --lr-model-select-trigger-min-height,
-      var(--_lr-model-select-trigger-min-height)
+      --lr-model-select-trigger-height,
+      var(
+        --lr-model-select-trigger-min-height,
+        var(--_lr-model-select-trigger-min-height)
+      )
     );
+    block-size: var(--lr-model-select-trigger-height, auto);
     box-sizing: border-box;
     padding: var(
       --lr-model-select-trigger-padding,

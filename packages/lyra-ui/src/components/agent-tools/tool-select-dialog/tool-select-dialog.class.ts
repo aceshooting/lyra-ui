@@ -332,6 +332,17 @@ interface ToolProjection {
  *   component resets. Only rendered while the field has text.
  * @csspart footer - The wrapper around the `footer` slot.
  * @cssprop [--lr-tool-select-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
+ * @cssprop [--lr-tool-select-dialog-search-min-height=auto] - Minimum row height of the search
+ *   field, for matching it to a themed search field of a chosen density tier. Point it at
+ *   `--lr-form-control-height-s` (or any tier of that ladder) to line this field up with the rest
+ *   of an application's controls.
+ * @cssprop [--lr-tool-select-dialog-search-font-size=inherit] - Text size of the search field.
+ * @cssprop [--lr-tool-select-dialog-search-padding-inline=var(--lr-space-m)] - Leading gutter of
+ *   the search field. The trailing gutter is reserved for the overlaid clear button.
+ * @cssprop [--lr-tool-select-dialog-search-padding-block=var(--lr-space-s)] - Block gutter of the
+ *   search field.
+ * @cssprop [--lr-tool-select-dialog-search-radius=var(--lr-radius)] - Corner radius of the search
+ *   field.
  * @status stable
  * @since 4.0.0
  */

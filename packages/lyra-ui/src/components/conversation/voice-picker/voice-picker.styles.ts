@@ -8,9 +8,14 @@ export const styles = css`
     display: inline-block;
     inline-size: 100%;
     min-inline-size: 0;
-    max-inline-size: var(--lr-size-24rem);
+    /* Same shipped 24rem ceiling lr-model-select carries, and published under the same contract:
+       kept as the default so no existing layout moves, read as a var() fallback so a consumer can
+       retune it or set none for a full-width row, and never declared on :host so an ancestor theme
+       wrapper's value still reaches this control. */
+    max-inline-size: var(--lr-voice-picker-max-inline-size, var(--lr-size-24rem));
     --_lr-voice-picker-gap-default: var(--lr-space-xs);
     --_lr-voice-picker-radius-default: var(--lr-form-control-radius);
+    --_lr-voice-picker-trigger-min-height-default: var(--lr-form-control-height);
   }
   :host(:disabled) {
     cursor: not-allowed;
@@ -43,7 +48,17 @@ export const styles = css`
     gap: var(--lr-voice-picker-gap, var(--_lr-voice-picker-gap-default));
     flex: 1 1 auto;
     min-inline-size: 0;
-    min-block-size: var(--lr-form-control-height);
+    /* Neither public name is declared on :host: both are read only through these var() fallbacks,
+       so a declared value (even auto) would dead-arm them. The shared ladder height is the floor;
+       --lr-voice-picker-trigger-height pins an exact height, flooring and capping at once. */
+    min-block-size: var(
+      --lr-voice-picker-trigger-height,
+      var(
+        --lr-voice-picker-trigger-min-height,
+        var(--_lr-voice-picker-trigger-min-height-default)
+      )
+    );
+    block-size: var(--lr-voice-picker-trigger-height, auto);
     box-sizing: border-box;
     padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -145,9 +160,22 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     inline-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
-    block-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
+    /* The action sits beside the trigger in an align-items: stretch row, but stretch does not
+       apply to an item with a definite cross size -- so a definite block-size here would stay at
+       the ladder height while the field moved, leaving a short top-aligned square next to a taller
+       field. It reads the SAME two-name chain the field reads, in the same order: raising only the
+       floor moves the field exactly as pinning an exact height does, so an action that followed
+       only -trigger-height would reproduce that defect for every consumer who set the floor. */
+    block-size: var(
+      --lr-voice-picker-trigger-height,
+      var(
+        --lr-voice-picker-trigger-min-height,
+        max(var(--lr-icon-button-size), var(--lr-form-control-height))
+      )
+    );
     /* Compact picker chrome may be smaller than the WCAG interaction floor; the independent
-       preview action never is. Large tiers grow the action with the field. */
+       preview action never is -- the floor stays below the hook, so pinning a short field cannot
+       shrink this hit area. */
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

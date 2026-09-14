@@ -32,7 +32,12 @@ export const styles = css`
     flex: 0 0 auto;
     box-sizing: border-box;
     min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    /* The tappable-target floor stays underneath the knob, so neither a consumer override nor the
+       size tier below can shrink this button past the shared WCAG minimum. */
+    min-block-size: max(
+      var(--lr-icon-button-size),
+      var(--lr-retrieval-search-submit-min-height, var(--lr-icon-button-size))
+    );
     padding-inline: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-brand);
     border-radius: var(--lr-radius);
@@ -44,6 +49,21 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
+  }
+  /* A size tier is forwarded to the composed lr-input and lr-segmented, which resolve it inside
+     their own shadow roots; this native button has to be tiered here instead. Explicit-only, so a
+     row with no size attribute keeps the exact geometry it shipped with. */
+  :host(:where([size])) [part='submit'] {
+    min-block-size: max(
+      var(--lr-icon-button-size),
+      var(
+        --lr-retrieval-search-submit-min-height,
+        var(--lr-form-control-height)
+      )
+    );
+    padding-inline: var(--lr-form-control-padding-inline);
+    border-radius: var(--lr-form-control-radius);
+    font-size: var(--lr-form-control-font-size);
   }
   /* filter: brightness() multiplies every channel of the subtree, so it dragged the button's own
      --lr-color-on-brand label along with the fill and moved neither once the brand token was

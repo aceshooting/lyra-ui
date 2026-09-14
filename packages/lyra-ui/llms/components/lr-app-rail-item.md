@@ -111,7 +111,10 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   width.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists the fields selected by
   `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next
-  mount. Effective `mode` is breakpoint-derived and never persisted. Unset means no persistence.
+  mount. Each field is restored only when the consumer has not assigned it on that same mount: an
+  `open`/`rail-width-px`/`preferred-mode` attribute, or a `.open=${false}`-style binding, wins over
+  stored state, and a restored `open` fires no `lr-toggle`. Effective `mode` is breakpoint-derived
+  and never persisted. Unset means no persistence.
 - `persist: string = 'open width'` — whitespace-separated field allowlist used with `storageKey`.
   Valid `LyraAppRailPersistField` tokens are `open`, `width` (`railWidthPx`), and `preferred-mode`
   (`preferredMode`). The default preserves the existing open+width behavior. Use

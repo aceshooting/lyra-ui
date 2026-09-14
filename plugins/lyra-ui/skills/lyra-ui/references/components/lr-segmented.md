@@ -45,8 +45,19 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
   one; `m` is still the default, but the tiers now resolve to the shared control heights, paddings
   and font sizes rather than to this component's former private values.
 
-**Events:** `lr-change` (`detail: { value }`) — fired when the selected value changes via click or
-keyboard.
+**Events:**
+
+- `lr-change` (`detail: { value }`) — fired when the selected value changes via click or keyboard.
+- `lr-activate` (`detail: { value }`) — fired on **every** activation of a non-disabled
+  segment (a click, or an Arrow/Home/End key that lands on one), whether or not the selection
+  actually moved. Bubbling, composed, not cancelable — it reports that the user picked a segment
+  and gates nothing. Use it for the repeat pick `lr-change` deliberately stays silent for: "run
+  that report again", reopening a panel, re-fetching the same range. A `click` listener only
+  half-covers that case, because keyboard activation produces no click — pressing Home on an
+  already-first selection, End on an already-last one, or an arrow key in a one-item row activates
+  a segment and fires no click at all. When an activation _does_ move the selection, `lr-change` is
+  emitted first and `lr-activate` second, so either listener reads the settled `value`. A
+  disabled segment fires neither event.
 
 **Methods:**
 
@@ -127,6 +138,7 @@ resolves.
   ];
   seg.value = "week";
   seg.addEventListener("lr-change", (e) => console.log(e.detail.value));
+  seg.addEventListener("lr-activate", (e) => console.log("activated", e.detail.value));
 </script>
 ```
 
@@ -136,7 +148,9 @@ resolves.
   rather than clamping at the first/last item, unlike `lr-stepper`'s clamped Left/Right.
 - this component self-selects on navigation: clicking or arrow-navigating to an item immediately
   updates `value` and fires `lr-change` — there's no separate "commit" step the way, e.g.,
-  `lr-select`'s popup has.
+  `lr-select`'s popup has. `lr-change` is change-only, so re-picking the segment that is already
+  selected fires nothing on it; listen for `lr-activate` if a repeat pick is meaningful to
+  your application.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
   host `aria-label`; a present host attribute wins, including an explicit empty value, and the
   component deliberately forwards the resulting name to that internal role.

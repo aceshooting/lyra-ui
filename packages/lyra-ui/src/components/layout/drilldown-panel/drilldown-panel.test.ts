@@ -1524,3 +1524,58 @@ it("clamps a negative entity degree to zero instead of dropping it", async () =>
   ) as LyraEntityCard;
   expect(entityCard.entity!.degree).to.equal(0);
 });
+
+describe("lr-drilldown-panel contains the composed lr-tab-group's lr-activate", () => {
+  it("swallows it on a repeat pick of the category tab already active, like lr-tab-show/lr-tab-hide", async () => {
+    const el = await populated();
+    const tabs = el.shadowRoot!.querySelector("lr-tab-group") as LyraTabGroup;
+    await tabs.updateComplete;
+    expect(tabs.active, "the panel opens on the evidence category").to.equal(
+      "evidence"
+    );
+    const activeTab = [
+      ...tabs.shadowRoot!.querySelectorAll<HTMLElement>('[part="tab"]'),
+    ].find((button) => button.dataset["slot"] === "evidence")!;
+
+    let escaped = 0;
+    let onChild = 0;
+    let categoryChanges = 0;
+    const escapedListener = (): void => {
+      escaped += 1;
+    };
+    // Added AFTER the template's own `@lr-activate` binding, on the same node: `stopPropagation()`
+    // does not silence a same-node listener, so this proves the child really emitted rather than
+    // the assertion passing because nothing fired at all.
+    const childListener = (): void => {
+      onChild += 1;
+    };
+    const categoryListener = (): void => {
+      categoryChanges += 1;
+    };
+    document.addEventListener("lr-activate", escapedListener);
+    tabs.addEventListener("lr-activate", childListener);
+    el.addEventListener("lr-drilldown-category-change", categoryListener);
+    try {
+      activeTab.click();
+      await el.updateComplete;
+      await tabs.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", escapedListener);
+      tabs.removeEventListener("lr-activate", childListener);
+      el.removeEventListener("lr-drilldown-category-change", categoryListener);
+    }
+
+    expect(onChild, "the composed tab group did report the repeat pick").to.equal(
+      1
+    );
+    expect(
+      categoryChanges,
+      "a repeat pick of the active category moves nothing"
+    ).to.equal(0);
+    expect(tabs.active, "the repeat pick changed nothing").to.equal("evidence");
+    expect(
+      escaped,
+      "this panel's documented surface is lr-drilldown-category-change; the child's raw event never escapes"
+    ).to.equal(0);
+  });
+});

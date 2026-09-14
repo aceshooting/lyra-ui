@@ -845,13 +845,11 @@ cell: (row) => unknown }` —
   container breakpoints in either direction; revealing columns restores all three bands.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
   `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount, without
-  overwriting an explicitly declared `true` (`priority-columns-visible` present, or a
-  `.priorityColumnsVisible=${true}` binding) on that same mount. Unset (the default) touches storage
-  not at all. This is the same "explicit beats persisted" guarantee `lr-app-rail` gives each of its
-  several `persist`-selected fields, but not byte-identical: `lr-app-rail`'s undefaulted
-  `railWidthPx`/`preferredMode` fields let it key the guard off `willUpdate()`'s `changed` map,
-  while this property's own `false` default already reads as "changed" on every mount, so this
-  guard instead checks the property's own current value
+  overwriting a `priorityColumnsVisible` the consumer declared on that same mount
+  (`priority-columns-visible` present, or a `.priorityColumnsVisible=${…}` binding) — including a
+  binding that pins it to `false`, its own default. Unset (the default) touches storage not at all.
+  The same "explicit beats persisted" guarantee `lr-app-rail` gives each of its `persist`-selected
+  fields and `lr-widget` gives `collapsed`; all three share one mechanism
 - `heatTintScale?: { min?: number; max?: number }` (attribute: false) — overrides the auto-derived
   heat-tint domain (min/max of every `heatValue` result across every currently-rendered row —
   post-sort, pre-pagination, the same rows `footer(rows)` already sees). Unset (the default) computes
@@ -1247,6 +1245,15 @@ compact layout returns focus to its page field instead. This keeps keyboard orie
 when a next/previous, edge, or ellipsis control is replaced by the newly rendered page window. If
 the application applies the controlled page asynchronously and the user has moved focus outside
 the pagination component in the meantime, it leaves that newer focus destination alone.
+`lr-activate` (`detail: { value: number }`, bubbles and composes, non-cancelable) fires on **every**
+accepted page request, whether or not the page actually moved; `value` is the requested page number.
+`lr-before-page-change` remains the veto point, and a vetoed request emits no activation at all, so
+`lr-activate` only ever reports a request the component accepted. Use it for the re-request of the
+current page that `lr-page-change` deliberately stays silent for — "load that page again" is a real
+intent, and it is otherwise unobservable, because the page buttons and the jump input live in this
+shadow root, so a retargeted `click` names no page and pressing Enter on the jump field produces no
+click at all. When a request _does_ move the page, `lr-before-page-change` and `lr-page-change` are
+emitted first. Link-mode anchors navigate without emitting it.
 `focus` and `blur` are re-dispatched as exactly one bubbling, composed native `FocusEvent` from
 whichever internal control the user reached — a page button or link, previous/next, first/last, or
 the page input. The shadow-origin event is stopped, and the host event preserves its native focus
@@ -3672,6 +3679,13 @@ changes), public controlled `searchTerm: string = ''`
 (`search-term`), `sortKey: LibraryDocumentSortKey = 'name'` (`sort-key`), canonical
 `sortDir: 'asc'|'desc' = 'asc'` (`sort-dir`), and clone-owned frozen
 `tagFilter: readonly string[] = []` (at most 10,000 unique tags; reassign after changes).
+`size?: LyraSize` (reflected) — opt-in density tier forwarded to BOTH composed toolbar controls, the
+search `lr-input` and the tag-filter `lr-combobox`, on the library's one six-step ladder
+(`2xs`/`xs`/`s`/`m`/`l`/`xl`, or `small`/`medium`/`large`). Forwarding is the only way to reach them:
+each resolves its tier inside its own shadow root, so no custom property on this component would get
+there. The two always stay on the same tier as each other, so the toolbar row never goes ragged.
+With no `size` both keep their own `m` default; an unsupported value normalizes to the omitted state
+and removes the attribute.
 
 **Events:** `lr-filter-change` emits a fresh frozen readonly
 `{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly

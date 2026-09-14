@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -88,7 +88,13 @@ of use rather than a `:host` declaration, so it can be set on the element _or on
 `::part(command)[data-active='true']` is invalid CSS (Shadow Parts forbids an attribute selector
 after `::part()`), so highlighting the active row previously required hijacking the library-wide
 `--lr-color-brand-quiet` token and repainting everything else that read it. Unset, it falls back to
-that token, so rendering is unchanged.
+that token, so rendering is unchanged. `--lr-command-palette-search-padding` (default
+`var(--lr-space-m)`) and `--lr-command-palette-search-gap` (default `var(--lr-space-s)`) size the
+query row; `--lr-command-palette-search-min-height` (default `auto`) and
+`--lr-command-palette-search-font-size` (default `inherit`) size the field itself. Point the height
+at `--lr-form-control-height-s` (or any tier of that ladder) to match the palette's query field to a
+themed search field elsewhere in the application. Unset, all four leave the row exactly as it
+shipped.
 
 **Additional API surface:**
 

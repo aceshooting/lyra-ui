@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -71,7 +71,15 @@ below the list).
 listbox), `group-header`, `item`, `item-icon`, `item-label`, `item-description`, `empty`
 (no-results message), `live-region` (result-count announcement).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-node-palette-search-min-height` (default
+`var(--lr-icon-button-size)`), `--lr-node-palette-search-font-size` (default `inherit`),
+`--lr-node-palette-search-padding-inline` (default `var(--lr-space-s)`),
+`--lr-node-palette-search-padding-block` (default `var(--lr-space-xs)`) and
+`--lr-node-palette-search-radius` (default `var(--lr-radius)`) size the built-in search field; point
+the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The height
+hook can only raise the field — the shared tappable-target minimum stays underneath it, so no tier
+can shrink it past the WCAG floor. The trailing inline gutter is reserved for the overlaid
+`search-clear` button and is not a knob. Everything else is shared tokens.
 
 **Optional peer deps:** none.
 

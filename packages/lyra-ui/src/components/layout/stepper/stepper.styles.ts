@@ -21,6 +21,16 @@ export const styles = css`
     overflow-x: auto;
     overflow-y: hidden;
   }
+  /* The track becomes focusable only while it is read-only AND genuinely overflowing, because a
+     read-only strip has no tabbable step left inside it (stepper.ts's syncScrollTabStop()). A
+     focusable box owes a visible focus indicator, so it gets the same ring [part="step"] carries.
+     No :hover twin: a scroll container is not a pointer target -- it has no cursor: pointer and
+     nothing of its own to light up -- and tinting the whole strip under the pointer would read as
+     a selection it cannot make. */
+  [part="base"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   /* Edge fade, gated on real overflow: ScrollOverflowController sets data-scroll-overflow from a
      scrollWidth/clientWidth measurement; unconditional, it faded a stepper that fits. The
      vertical-axis rules below reset it to 'none' at higher specificity, so it cannot bleed into
@@ -248,16 +258,28 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
+  /* A read-only strip is a progress display, not a locked control: the steps stop being buttons
+     altogether (stepper.ts's render()), so only the click affordance is withdrawn. Deliberately no
+     --lr-opacity-disabled here -- 'disabled' says "you may not do this", read-only says "there is
+     nothing to do here", and a dimmed progress display reads as broken rather than informational.
+     Matches lr-slider's and lr-rating's own read-only rules. The disabled rule above cannot reach
+     these steps at all: a read-only step renders no aria-disabled, because a non-interactive item
+     has no availability to report. */
+  :host([readonly]) [part="step"] {
+    cursor: default;
+  }
   /* :where() leaves only :hover contributing -- (0,1,0), below the (0,2,0)
      [part='step'][data-state='current'] / [data-state='error'] colour rules further down, so those
-     steps keep their own colour under the pointer. */
-  :where([part="step"]):hover:where(:not([aria-disabled="true"])) {
+     steps keep their own colour under the pointer. The button type selector is inside the
+     :where() too, so it costs nothing and keeps this exact ordering while excluding the read-only
+     div that renders the same part. */
+  :where(button[part="step"]):hover:where(:not([aria-disabled="true"])) {
     background: var(--lr-stepper-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-stepper-hover-color, var(--lr-color-text));
   }
   /* The hover fill mixed further toward --lr-color-mix-partner, so a press reads a visible tier
      past a rest. Same :not() guard and zeroed specificity as the hover rule above. */
-  :where([part="step"]):active:where(:not([aria-disabled="true"])) {
+  :where(button[part="step"]):active:where(:not([aria-disabled="true"])) {
     background: var(
       --lr-stepper-active-bg,
       color-mix(

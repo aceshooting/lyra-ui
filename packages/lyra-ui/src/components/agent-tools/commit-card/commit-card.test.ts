@@ -692,3 +692,58 @@ it('normalizes duplicate file paths first-wins before diffstat and row events', 
   expect(el.shadowRoot!.querySelector('[part="additions"]')!.textContent).to.contain('2');
   expect(el.shadowRoot!.querySelector('[part="deletions"]')!.textContent).to.contain('1');
 });
+
+describe('card chrome theming hooks', () => {
+  const base = (el: LyraCommitCard) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  it('repaints the card through --lr-commit-card-background/-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-commit-card
+        hash="abcdef1"
+        style="--lr-commit-card-background: rgb(1, 2, 3); --lr-commit-card-border-color: rgb(4, 5, 6); --lr-commit-card-radius: 11px"
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    const chrome = getComputedStyle(base(el));
+    expect(chrome.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(chrome.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(chrome.borderTopLeftRadius).to.equal('11px');
+  });
+
+  it('keeps the card unfilled and byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(html`<lr-commit-card hash="abcdef1"></lr-commit-card>`)) as LyraCommitCard;
+    const tokened = (await fixture(html`
+      <lr-commit-card
+        hash="abcdef1"
+        style="--lr-commit-card-border-color: var(--lr-color-border); --lr-commit-card-radius: var(--lr-radius)"
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    const unset = getComputedStyle(base(control));
+    const explicit = getComputedStyle(base(tokened));
+    // The card has never painted a fill of its own -- it inherits the surface it sits on.
+    expect(unset.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.borderTopLeftRadius).to.not.equal('0px');
+  });
+
+  it('still removes the fill under frame="plain" when the background hook is set', async () => {
+    const framed = (await fixture(html`
+      <lr-commit-card hash="abcdef1" style="--lr-commit-card-background: rgb(1, 2, 3)"></lr-commit-card>
+    `)) as LyraCommitCard;
+    const plain = (await fixture(html`
+      <lr-commit-card
+        hash="abcdef1"
+        frame="plain"
+        style="--lr-commit-card-background: rgb(1, 2, 3)"
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    // The framed reading keeps the assertion below honest: the hook demonstrably paints, so a
+    // transparent plain card is plain's reset winning, not an unresolved custom property.
+    expect(getComputedStyle(base(framed)).backgroundColor).to.equal('rgb(1, 2, 3)');
+    // plain means the same thing here as on every sibling card: no border, no radius, no fill.
+    const chrome = getComputedStyle(base(plain));
+    expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(chrome.borderTopWidth).to.equal('0px');
+    expect(chrome.borderTopLeftRadius).to.equal('0px');
+  });
+});

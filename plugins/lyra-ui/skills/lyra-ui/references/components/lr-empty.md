@@ -31,6 +31,10 @@ later values restore the corresponding content.
 - `compact: boolean = false` (reflected) — tighter, left-aligned rendering (less padding, a lighter
   heading weight) for use inside a constrained space like a widget body or table cell, instead of
   the centered/spacious full-page default
+- `announce: boolean = false` (reflected) — announces the heading and description this empty state
+  already carries when it first mounts, through the same shared light-DOM polite sink later changes
+  use. Set it where the empty state replaces a result set the user just asked for; leave it unset
+  for an empty state that is part of the page being loaded. See the first "Known gotchas" bullet
 
 **Events:** none.
 
@@ -72,7 +76,10 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 
 **Known gotchas:**
 
-- Initial content and reconnect state—including property changes made while detached—stay silent.
+- Initial content and reconnect state—including property changes made while detached—stay silent
+  unless `announce` is set, which announces the heading/description present at first mount once,
+  through the same sink and the same exclusions as a later change. `announce` is read once, so a
+  later reconnection or adoption stages the existing content again rather than replaying it.
   Later meaningful heading and description changes are appended to Lyra's shared light-DOM polite
   announcement sink. Default-slot illustrations, action-slot controls, nested hidden/inert/
   `aria-hidden="true"` content, updates under a hidden/CSS-hidden composed ancestor, and mutations

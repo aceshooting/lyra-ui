@@ -217,6 +217,12 @@ export interface LyraAgentRunEventMap {
  *   `compact`.
  * @cssprop [--lr-agent-run-compact-gap=var(--lr-space-s)] - Gap between `[part="base"]`'s header
  *   and body while `compact`.
+ * @cssprop [--lr-agent-run-background=var(--lr-color-surface)] - Fill of the outer card
+ *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-agent-run-border-color=var(--lr-color-border)] - Colour of the outer card's
+ *   border.
+ * @cssprop [--lr-agent-run-radius=var(--lr-radius)] - Corner radius of the outer card.
+ *   `frame="plain"` still squares the corners.
  * @status stable
  * @since 4.1.0
  */

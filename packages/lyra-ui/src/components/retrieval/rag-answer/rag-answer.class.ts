@@ -20,6 +20,7 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
@@ -63,7 +64,7 @@ export interface LyraRagAnswerEventMap {
  * @csspart loading - The loading indicator.
  * @csspart error - The neutral, visible caller-supplied error message. New non-empty errors are
  *   announced through a shared assertive light-DOM region; initial and reconnect content is not
- *   replayed.
+ *   replayed unless `announce` is set, which reads the error present at first mount once.
  * @csspart retry - The retry button.
  * @csspart grounding - The grounding assessment.
  * @csspart citations - The citation section.
@@ -111,8 +112,18 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   @property({ type: Boolean, reflect: true }) loading = false;
   /** Caller-supplied error text. The visible message is deliberately not a shadow live region;
    *  new non-empty values are announced through a shared assertive light-DOM region. Content
-   *  present on the initial render or reconnect is not replayed. */
+   *  present on the initial render or reconnect is not replayed unless `announce` is set. */
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Opts this answer into announcing the error it is already presenting the first time it
+   *  mounts, through the same shared assertive light-DOM region and the same verbatim
+   *  caller-supplied text a later `errorText` change takes. Set it where the answer is rendered
+   *  in response to a request the user just made and nothing else reports the failure; leave it
+   *  unset for an answer that is part of the page a user is arriving on, whose error text is
+   *  already read in document order. Read once, when the answer first mounts: a later
+   *  reconnection or adoption stages the existing error again rather than replaying it, and
+   *  later `errorText` changes are announced either way. An answer with no error announces
+   *  nothing. */
+  @property({ type: Boolean, reflect: true }) announce = false;
   /** Whether the source section is rendered when source data or slotted content exists. */
   @property({
     type: Boolean,
@@ -138,6 +149,8 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private isMounting = true;
+  private initialStateAnnounced = false;
+  private connectionGeneration = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   private slotObserver?: MutationObserver;
 
@@ -147,6 +160,16 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       document: this.ownerDocument,
       source: this,
     });
+    const generation = ++this.connectionGeneration;
+    void announceAfterFirstPaint(
+      this,
+      () => generation === this.connectionGeneration,
+      () => {
+        if (!this.announce || this.initialStateAnnounced) return;
+        this.initialStateAnnounced = true;
+        this.announcePresentedState();
+      }
+    );
     // A realm without MutationObserver loses only slotted-content change tracking, so bail out
     // rather than falling back to a bare global identifier that throws a ReferenceError out of
     // connectedCallback and takes the whole component down with it.
@@ -175,6 +198,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
 
   override disconnectedCallback(): void {
     this.isMounting = true;
+    this.connectionGeneration += 1;
     this.slotObserver?.disconnect();
     this.slotObserver = undefined;
     this.errorAnnouncementSink?.release();
@@ -192,8 +216,19 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       this.errorText !== '' &&
       this.isConnected
     ) {
+      // The live path has spoken, so the still-pending opt-in mount announcement has nothing left
+      // to say -- without this latch a change landing between the first update and the deferred
+      // frame would be read twice.
+      this.initialStateAnnounced = true;
       this.errorAnnouncementSink?.announce(this.errorText);
     }
+  }
+
+  /** Announce whichever state this answer is presenting right now. Only the error state has an
+   *  announcement: a rendered answer is ordinary content, read in document order. */
+  private announcePresentedState(): void {
+    if (this.errorText !== '')
+      this.errorAnnouncementSink?.announce(this.errorText);
   }
 
   private hasSlot(name: string): boolean {

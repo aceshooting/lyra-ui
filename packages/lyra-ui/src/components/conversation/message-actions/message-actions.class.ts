@@ -824,6 +824,15 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         ? Math.min(Math.max(0, focused.index), Math.max(0, stops.length - 1))
         : Math.min(this.activeStopIndex, Math.max(0, stops.length - 1));
     this.setActiveStop(stops, targetIndex);
+    // Deliberately not the shared helper's ordered fallback list (toolbar-then-survivor expressed
+    // as `[survivor, toolbar]`): that list is typed and implemented over real HTMLElements, which
+    // it probes with the composed availability predicate and then focuses directly. A survivor
+    // here is a LyraToolbarAction -- the public protocol whose whole point is that a composite
+    // child contributes a focusable logical action *without* handing its implementation node to
+    // the parent. So the toolbar half stays on the shared primitive (it names a real element, this
+    // component's own [part="base"]), and the survivor half stays bespoke: the toolbar focus is
+    // also the gate proving focus was still ours to move before the action takes it, and it is the
+    // correct resting place when no survivor exists at all.
     if (focused && retainedIndex < 0) {
       const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
       if (base && applyComposedFocusRepair(focused.repair, base)) {

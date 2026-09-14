@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 15 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -129,7 +129,13 @@ those same tokens — so any CSS length unit works, `rem`/`em` and `calc()` incl
 geometry matches what is painted without expressing the tokens in `px`. The measurement is cached
 and re-derived only when the resolved pixels can actually change (a token override applied after the
 first render, a theme swap, a root or host font-size change feeding a `rem`/`em` value), never per
-frame.
+frame. `--lr-emoji-picker-search-min-height` (default `auto`),
+`--lr-emoji-picker-search-font-size` (default `inherit`),
+`--lr-emoji-picker-search-padding-inline` (default `var(--lr-space-s)`) and
+`--lr-emoji-picker-search-padding-block` (default `var(--lr-space-xs)`) size the built-in filter
+field. `size` does NOT drive them — on this component `size` scales the emoji glyph and item box,
+never the form-control ladder — so point the height at `--lr-form-control-height-s` (or any tier of
+that ladder) when the filter field has to match a themed search field beside it.
 
 Emoji interaction states are separate: `--lr-emoji-picker-hover-bg`,
 `--lr-emoji-picker-keyboard-active-bg`, `--lr-emoji-picker-selected-bg`/

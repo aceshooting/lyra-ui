@@ -15,7 +15,10 @@ import { styles } from './empty.styles.js';
 /**
  * `<lr-empty>` — a generic empty/no-data state. First-party invention (no
  * Web Awesome equivalent); fills a gap common to dashboard-style apps.
- * Initial and reconnect content are not announced as new live updates. Later meaningful heading
+ * Initial and reconnect content are not announced as new live updates unless `announce` opts in;
+ * with it set, the heading/description present when the empty state first mounts is announced once
+ * through the same polite sink, while reconnection and adoption still stage the existing content
+ * instead of replaying it. Later meaningful heading
  * or description changes are appended to Lyra's shared light-DOM polite announcement sink;
  * decorative icon and action slots, hidden/inert content, and unchanged accessible text are not.
  * A visibility-hidden wrapper omits its own text but can contain a visible override descendant.
@@ -74,6 +77,15 @@ export class LyraEmpty extends LyraElement {
    */
   @property({ type: Boolean, reflect: true }) compact = false;
 
+  /** Opts this empty state into announcing the heading/description it already carries when it
+   *  first mounts, through the same shared light-DOM polite sink later changes use. Leave unset
+   *  for an empty state that is part of the page a user is arriving on: its text is read in
+   *  document order and repeating it is noise. Set it where the empty state replaces a result set
+   *  the user just asked for. This is read once, when the component first mounts -- a later
+   *  reconnection or adoption stages the existing content again rather than replaying it, and
+   *  later heading/description changes are announced either way. */
+  @property({ type: Boolean, reflect: true }) announce = false;
+
   // `[part='icon']:empty` never matches because the part always contains a
   // `<slot>` element (CSS `:empty` only ignores text/comment nodes). Track
   // real slot assignment in JS instead and key the CSS off these instead.
@@ -81,6 +93,7 @@ export class LyraEmpty extends LyraElement {
   private contentObserver?: MutationObserver;
   private announcementSink?: AnnouncementSink;
   private announcementsArmed = false;
+  private initialContentAnnounced = false;
   private announcementGeneration = 0;
   private lastAnnouncementText = '';
 
@@ -109,6 +122,14 @@ export class LyraEmpty extends LyraElement {
       if (!this.isConnected || generation !== this.announcementGeneration) return;
       this.lastAnnouncementText = this.announcementText();
       this.announcementsArmed = true;
+      // Opted-in initial content goes through the one existing announcement path, so accessibility
+      // visibility and slot-flattened text resolve exactly as they do for a later change. `force`
+      // is required: the arming line above already recorded this exact text as the baseline, which
+      // the deduplicating path would otherwise treat as a repeat.
+      if (this.announce && !this.initialContentAnnounced) {
+        this.initialContentAnnounced = true;
+        this.announceCurrentContent(true);
+      }
     });
   }
 
@@ -250,10 +271,10 @@ export class LyraEmpty extends LyraElement {
     ].join(' ').replace(/\s+/g, ' ').trim();
   }
 
-  private announceCurrentContent(): void {
+  private announceCurrentContent(force = false): void {
     if (!this.announcementsArmed || !this.isConnected) return;
     const text = this.announcementText();
-    if (text === this.lastAnnouncementText) return;
+    if (!force && text === this.lastAnnouncementText) return;
     this.lastAnnouncementText = text;
     if (text) this.announcementSink?.announce(text);
   }

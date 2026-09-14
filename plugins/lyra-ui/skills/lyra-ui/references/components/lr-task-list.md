@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -84,4 +84,8 @@ var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact
 `--lr-task-list-running-color` (default `var(--lr-color-brand)`),
 `--lr-task-list-success-color` (default `var(--lr-color-success)`), and
 `--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
-status icons without changing shared status tokens.
+status icons without changing shared status tokens. `--lr-task-list-background` (default
+`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
+`--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
+`::part(base)` override; the border-color hook also colors the header/body divider that
+`frame="plain"` keeps.

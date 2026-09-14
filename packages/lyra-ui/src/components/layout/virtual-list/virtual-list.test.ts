@@ -13,7 +13,11 @@ import {
   type LyraVirtualListIndexedSource,
 } from "./virtual-list.js";
 import { styles } from "./virtual-list.styles.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from "../../../../test/wtr-mouse.js";
 
 /** Waits two animation frames -- enough for the component's rAF-coalesced
  *  scroll handler *and* a queued ResizeObserver callback to have run. */
@@ -3679,4 +3683,503 @@ it("renders nothing per row until a renderItem callback is supplied", async () =
   expect(
     el.shadowRoot!.querySelector('[part="row"]')!.textContent!.trim()
   ).to.equal("Row 1");
+});
+
+/* --- external scroll element (`scrollElement`) --------------------------------------------- */
+
+const EXTERNAL_SCROLLER_HEIGHT = 200;
+const EXTERNAL_LEAD_IN_HEIGHT = 40;
+/** A lead-in taller than the scrollport, so at `scroller.scrollTop === 0` the scroller sits
+ *  entirely ABOVE the list: the list's true position in its own offset space is -600, which
+ *  windowing clamps to 0 and every coordinate conversion must not. */
+const EXTERNAL_TALL_LEAD_IN_HEIGHT = 600;
+const EXTERNAL_ROW_HEIGHT = 40;
+
+/** The shape a consumer builds when an ancestor -- not the list -- owns the scrollbar: a bounded
+ *  scrollport, some lead-in content above the list, then the list itself. */
+async function externalScrollFixture(
+  direction: "ltr" | "rtl" = "ltr",
+  leadIn: number = EXTERNAL_LEAD_IN_HEIGHT
+): Promise<{ scroller: HTMLElement; el: LyraVirtualList }> {
+  const items = Array.from({ length: 500 }, (_, i) => i);
+  const scroller = (await fixture(html`
+    <div
+      dir=${direction}
+      style="block-size:${EXTERNAL_SCROLLER_HEIGHT}px;overflow:auto"
+    >
+      <div style="block-size:${leadIn}px"></div>
+      <lr-virtual-list
+        row-height=${EXTERNAL_ROW_HEIGHT}
+        overscan="0"
+        .items=${items}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    </div>
+  `)) as HTMLElement;
+  const el = scroller.querySelector("lr-virtual-list") as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  return { scroller, el };
+}
+
+function renderedIndices(el: LyraVirtualList): number[] {
+  return el.renderedRows.map((row) =>
+    Number(row.getAttribute("data-row-index"))
+  );
+}
+
+it("virtualizes against an external scrollElement instead of its own viewport", async () => {
+  const { scroller, el } = await externalScrollFixture();
+  el.scrollElement = scroller;
+  await el.updateComplete;
+  await nextFrame();
+  const base = el.scrollContainer!;
+
+  // The component's own viewport stops being a scrollport ...
+  expect(
+    getComputedStyle(base).overflowY,
+    "own viewport overflow-y once an external scrollElement is set"
+  ).to.equal("visible");
+  // ... and so has no independent scroll extent left of its own.
+  expect(
+    base.scrollHeight - base.clientHeight,
+    "own viewport scrollable extent once an external scrollElement is set"
+  ).to.be.at.most(1);
+
+  expect(
+    Math.min(...renderedIndices(el)),
+    "first windowed row before scrolling the ancestor"
+  ).to.equal(0);
+
+  scroller.scrollTop = 4000;
+  scroller.dispatchEvent(new Event("scroll"));
+  await nextFrame();
+  await el.updateComplete;
+
+  // 4000px of ancestor scroll less the 40px lead-in above the list = 3960px into the list's own
+  // offset space, which is row 99 at the top of the band.
+  expect(
+    Math.min(...renderedIndices(el)),
+    "first windowed row after scrolling the ancestor"
+  ).to.be.within(98, 100);
+  expect(
+    Math.max(...renderedIndices(el)),
+    "last windowed row after scrolling the ancestor"
+  ).to.be.at.least(103);
+  await expect(el).to.be.accessible();
+});
+
+it("detaches its external scroll listeners on disconnect and re-attaches them on reconnect", async () => {
+  const { scroller, el } = await externalScrollFixture();
+  const added: string[] = [];
+  const removed: string[] = [];
+  const realAdd = scroller.addEventListener;
+  const realRemove = scroller.removeEventListener;
+  const countScroll = (types: string[]): number =>
+    types.filter((type) => type === "scroll").length;
+  scroller.addEventListener = function (this: HTMLElement, ...args: unknown[]) {
+    added.push(String(args[0]));
+    return (realAdd as (...a: unknown[]) => void).apply(this, args);
+  } as typeof scroller.addEventListener;
+  scroller.removeEventListener = function (
+    this: HTMLElement,
+    ...args: unknown[]
+  ) {
+    removed.push(String(args[0]));
+    return (realRemove as (...a: unknown[]) => void).apply(this, args);
+  } as typeof scroller.removeEventListener;
+  try {
+    el.scrollElement = scroller;
+    await el.updateComplete;
+    await nextFrame();
+    expect(
+      countScroll(added),
+      "scroll listeners attached to the external scroller"
+    ).to.equal(1);
+
+    const parent = el.parentNode as ParentNode;
+    el.remove();
+    await nextFrame();
+    expect(
+      countScroll(removed),
+      "scroll listeners removed from the external scroller on disconnect"
+    ).to.equal(1);
+
+    parent.appendChild(el);
+    await el.updateComplete;
+    await nextFrame();
+    expect(
+      countScroll(added),
+      "scroll listeners re-attached to the external scroller on reconnect"
+    ).to.equal(2);
+
+    scroller.scrollTop = 4000;
+    scroller.dispatchEvent(new Event("scroll"));
+    await nextFrame();
+    await el.updateComplete;
+    expect(
+      Math.min(...renderedIndices(el)),
+      "first windowed row after reconnecting and scrolling the ancestor"
+    ).to.be.within(98, 100);
+  } finally {
+    scroller.addEventListener = realAdd;
+    scroller.removeEventListener = realRemove;
+  }
+});
+
+it("keeps its own viewport scrolling while scrollElement is unset, and round-trips back to it", async () => {
+  const { scroller, el } = await externalScrollFixture();
+  const base = el.scrollContainer!;
+  expect(
+    el.scrollElement === undefined,
+    "scrollElement defaults to no external scroller"
+  ).to.be.true;
+  expect(
+    getComputedStyle(base).overflowY,
+    "own viewport overflow-y by default"
+  ).to.equal("auto");
+  expect(
+    base.getAttribute("tabindex"),
+    "own viewport tab stop by default"
+  ).to.equal("0");
+
+  el.scrollElement = scroller;
+  await el.updateComplete;
+  await nextFrame();
+  expect(
+    getComputedStyle(base).overflowY,
+    "own viewport overflow-y while an external scrollElement is set"
+  ).to.equal("visible");
+  expect(
+    base.getAttribute("tabindex"),
+    "own viewport tab stop while an external scrollElement is set"
+  ).to.equal(null);
+
+  el.scrollElement = undefined;
+  await el.updateComplete;
+  await nextFrame();
+  expect(
+    getComputedStyle(base).overflowY,
+    "own viewport overflow-y after clearing scrollElement"
+  ).to.equal("auto");
+  expect(
+    base.getAttribute("tabindex"),
+    "own viewport tab stop after clearing scrollElement"
+  ).to.equal("0");
+
+  base.scrollTop = 4000;
+  base.dispatchEvent(new Event("scroll"));
+  await nextFrame();
+  await el.updateComplete;
+  expect(
+    Math.min(...renderedIndices(el)),
+    "first windowed row after scrolling its own viewport again"
+  ).to.equal(100);
+
+  // Neither an Element nor a Window: ignored, rather than throwing or half-disabling the viewport.
+  (el as unknown as { scrollElement: unknown }).scrollElement = "scroller";
+  await el.updateComplete;
+  await nextFrame();
+  expect(
+    getComputedStyle(base).overflowY,
+    "own viewport overflow-y for a non-element scrollElement value"
+  ).to.equal("auto");
+});
+
+it("hands the inline axis to the external scrollElement under dir=rtl", async () => {
+  // Rows that opted out of wrapping are the only way the inline axis is observable at all, and RTL
+  // is the direction where that axis overflows towards the *start* edge -- so this fixture asserts
+  // the documented handover ("horizontal scrolling becomes the external scroller's job") on the
+  // side a physical-property mistake would get wrong, instead of repeating the LTR block-axis
+  // assertion under a dir attribute that nothing on the path reads.
+  const items = Array.from({ length: 500 }, (_, i) => i);
+  const wideRow = (item: unknown) =>
+    html`<div style="inline-size:900px;white-space:nowrap">row ${item}</div>`;
+  const scroller = (await fixture(html`
+    <div
+      dir="rtl"
+      style="block-size:${EXTERNAL_SCROLLER_HEIGHT}px;inline-size:300px;overflow:auto"
+    >
+      <div style="block-size:${EXTERNAL_LEAD_IN_HEIGHT}px"></div>
+      <lr-virtual-list
+        row-height=${EXTERNAL_ROW_HEIGHT}
+        overscan="0"
+        .items=${items}
+        .renderItem=${wideRow}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    </div>
+  `)) as HTMLElement;
+  const el = scroller.querySelector("lr-virtual-list") as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const base = el.scrollContainer!;
+
+  expect(
+    getComputedStyle(base).direction,
+    "the exercised path is genuinely RTL"
+  ).to.equal("rtl");
+  expect(
+    getComputedStyle(base).overflowX,
+    "inline overflow while the list still owns its scrollport"
+  ).to.equal("auto");
+  expect(
+    base.scrollWidth - base.clientWidth,
+    "the list's own inline scroll extent before the handover"
+  ).to.be.greaterThan(100);
+  expect(
+    scroller.scrollWidth - scroller.clientWidth,
+    "the ancestor's inline scroll extent before the handover"
+  ).to.be.at.most(1);
+
+  el.scrollElement = scroller;
+  await el.updateComplete;
+  await nextFrame();
+
+  expect(
+    getComputedStyle(base).overflowX,
+    "inline overflow once the ancestor owns the scrollport"
+  ).to.equal("visible");
+  expect(
+    scroller.scrollWidth - scroller.clientWidth,
+    "the ancestor's inline scroll extent after the handover"
+  ).to.be.greaterThan(100);
+  // RTL puts the inline start at the right edge, so a row begins there -- not at the left.
+  const rowRight = el.renderedRows[0]!.getBoundingClientRect().right;
+  expect(
+    rowRight,
+    "a row's inline-start edge under RTL"
+  ).to.be.closeTo(base.getBoundingClientRect().right, 2);
+
+  scroller.scrollTop = 2000;
+  scroller.dispatchEvent(new Event("scroll"));
+  await nextFrame();
+  await el.updateComplete;
+
+  expect(
+    Math.min(...renderedIndices(el)),
+    "first windowed row after scrolling the RTL ancestor"
+  ).to.be.within(48, 50);
+});
+
+it("virtualizes against the window when scrollElement is the window", async () => {
+  // Deliberately NOT the nested-scroller fixture above: the page itself has to be the scrollport,
+  // so the list must sit directly in it rather than inside a 200px-tall ancestor that clips it.
+  const items = Array.from({ length: 500 }, (_, i) => i);
+  const el = (await fixture(html`
+    <lr-virtual-list
+      row-height=${EXTERNAL_ROW_HEIGHT}
+      overscan="0"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const previousScrollY = window.scrollY;
+  try {
+    el.scrollElement = window;
+    await el.updateComplete;
+    await nextFrame();
+
+    window.scrollTo({ top: 4000 });
+    window.dispatchEvent(new Event("scroll"));
+    await nextFrame();
+    await el.updateComplete;
+
+    // Read back the geometry the page scroll actually produced rather than assuming where the
+    // fixture sits: what matters is that the list windowed to it at all.
+    const spacer = el.shadowRoot!.querySelector(
+      '[part="spacer"]'
+    ) as HTMLElement;
+    const localTop = Math.max(0, -spacer.getBoundingClientRect().top);
+    expect(localTop, "the page scrolled past the top of the list").to.be.greaterThan(1000);
+    expect(
+      Math.min(...renderedIndices(el)),
+      "first windowed row after scrolling the page"
+    ).to.equal(Math.floor(localTop / EXTERNAL_ROW_HEIGHT));
+  } finally {
+    window.scrollTo({ top: previousScrollY });
+  }
+});
+
+it("drops its own viewport hover outline while an external scrollElement drives it", async () => {
+  const { scroller, el } = await externalScrollFixture();
+  const base = el.scrollContainer!;
+  try {
+    await hoverUntilMatched(
+      scroller,
+      "pointer never landed on the list's own scroll viewport"
+    );
+    await waitUntil(
+      () => getComputedStyle(base).outlineStyle === "solid",
+      "the list's own scroll viewport never took its hover outline"
+    );
+
+    el.scrollElement = scroller;
+    await el.updateComplete;
+    await nextFrame();
+    await hoverUntilMatched(
+      scroller,
+      "pointer never landed on the externally-scrolled viewport"
+    );
+    await waitUntil(
+      () => getComputedStyle(base).outlineStyle === "none",
+      "the externally-scrolled viewport kept a hover outline it can no longer honour"
+    );
+  } finally {
+    await resetMouse();
+  }
+});
+
+/* The list-coordinate contract under an external scroller: every public position API keeps
+   answering in the list's own offsets, and the component converts. The regression these guard is
+   converting through the ZERO-CLAMPED position: while the scroller still sits above the list, the
+   true list-space position is negative, and measuring a conversion from the clamp lands every
+   absolute target short by exactly the distance the scroller has yet to travel. */
+
+it("scrollToIndex lands the row at the band's top while the external scroller is above the list", async () => {
+  const { scroller, el } = await externalScrollFixture(
+    "ltr",
+    EXTERNAL_TALL_LEAD_IN_HEIGHT
+  );
+  el.scrollElement = scroller;
+  await el.updateComplete;
+  await nextFrame();
+
+  expect(
+    scroller.scrollTop,
+    "the external scroller starts parked above the list"
+  ).to.equal(0);
+  expect(
+    el.indexAtOffset(0),
+    "the window is pinned to the first row before any scrolling"
+  ).to.equal(0);
+
+  el.scrollToIndex(100, { align: "start", behavior: "auto" });
+  scroller.dispatchEvent(new Event("scroll"));
+  await nextFrame();
+  await el.updateComplete;
+
+  // 600px of lead-in + 100 rows x 40px. Deriving the move from the clamped 0 instead of the real
+  // -600 stops 600px (15 rows) short, at row 85.
+  expect(
+    scroller.scrollTop,
+    "external scroller position that puts row 100 at the top of the band"
+  ).to.be.closeTo(EXTERNAL_TALL_LEAD_IN_HEIGHT + 100 * EXTERNAL_ROW_HEIGHT, 1);
+  expect(
+    Math.min(...renderedIndices(el)),
+    "first windowed row after scrollToIndex(100)"
+  ).to.equal(100);
+});
+
+it("keeps offsetForIndex/indexAtOffset in the list's own offsets under an external scrollElement", async () => {
+  const { scroller, el } = await externalScrollFixture(
+    "ltr",
+    EXTERNAL_TALL_LEAD_IN_HEIGHT
+  );
+  el.scrollElement = scroller;
+  await el.updateComplete;
+  await nextFrame();
+
+  const offset = el.offsetForIndex(100);
+  expect(
+    offset,
+    "offsetForIndex measures from the top of the list, not the top of the scroller"
+  ).to.equal(100 * EXTERNAL_ROW_HEIGHT);
+  expect(
+    el.indexAtOffset(offset),
+    "indexAtOffset round-trips offsetForIndex while the scroller is above the list"
+  ).to.equal(100);
+
+  scroller.scrollTop = EXTERNAL_TALL_LEAD_IN_HEIGHT + 3000;
+  scroller.dispatchEvent(new Event("scroll"));
+  await nextFrame();
+  await el.updateComplete;
+
+  expect(
+    el.offsetForIndex(100),
+    "offsetForIndex is unchanged by the external scroller's position"
+  ).to.equal(offset);
+  expect(
+    el.indexAtOffset(offset),
+    "indexAtOffset is unchanged by the external scroller's position"
+  ).to.equal(100);
+  expect(
+    Math.min(...renderedIndices(el)),
+    "first windowed row for 3000px into the list's own offset space"
+  ).to.equal(75);
+});
+
+it("reports lr-virtual-scroll in list offsets, not the external scroller's own position", async () => {
+  const { scroller, el } = await externalScrollFixture(
+    "ltr",
+    EXTERNAL_TALL_LEAD_IN_HEIGHT
+  );
+  el.scrollElement = scroller;
+  await el.updateComplete;
+  await nextFrame();
+  const details: { scrollTop: number; viewportHeight: number }[] = [];
+  el.addEventListener("lr-virtual-scroll", (e) =>
+    details.push((e as CustomEvent).detail)
+  );
+
+  scroller.scrollTop = EXTERNAL_TALL_LEAD_IN_HEIGHT + 1000;
+  scroller.dispatchEvent(new Event("scroll"));
+  await nextFrame();
+  await el.updateComplete;
+
+  expect(
+    details.length,
+    "one lr-virtual-scroll per frame of external scrolling"
+  ).to.equal(1);
+  expect(
+    details[0]!.scrollTop,
+    "detail.scrollTop is how far the list has scrolled, not the scroller's own position"
+  ).to.be.closeTo(1000, 1);
+  expect(
+    details[0]!.viewportHeight,
+    "detail.viewportHeight is the external scroller's band"
+  ).to.be.closeTo(EXTERNAL_SCROLLER_HEIGHT, 1);
+});
+
+it("aligns an early row to the bottom of the band the external scroller has not reached yet", async () => {
+  // The same clamp, one call site over: a list offset below zero is meaningless for this
+  // component's own viewport but legal under an external scroller, and `align: "end"` on row 0
+  // genuinely asks for one (row 0's bottom is 40px into a 200px band, so the band's top belongs
+  // 160px ABOVE the list).
+  const { scroller, el } = await externalScrollFixture(
+    "ltr",
+    EXTERNAL_TALL_LEAD_IN_HEIGHT
+  );
+  el.scrollElement = scroller;
+  await el.updateComplete;
+  await nextFrame();
+
+  el.scrollToIndex(0, { align: "end", behavior: "auto" });
+  scroller.dispatchEvent(new Event("scroll"));
+  await nextFrame();
+  await el.updateComplete;
+
+  expect(
+    scroller.scrollTop,
+    "external scroller position that puts row 0's bottom at the band's bottom"
+  ).to.be.closeTo(
+    EXTERNAL_TALL_LEAD_IN_HEIGHT +
+      EXTERNAL_ROW_HEIGHT -
+      EXTERNAL_SCROLLER_HEIGHT,
+    1.5
+  );
+  // Measured from [part="spacer"], the origin of the list's offset space -- a row's own box is
+  // content-sized in fixed row-height mode, so its rect is not the bottom of its 40px slot.
+  const spacerTop = (
+    el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement
+  ).getBoundingClientRect().top;
+  expect(
+    spacerTop + EXTERNAL_ROW_HEIGHT,
+    "the bottom of row 0's slot against the external scrollport's bottom edge"
+  ).to.be.closeTo(scroller.getBoundingClientRect().bottom, 2);
 });

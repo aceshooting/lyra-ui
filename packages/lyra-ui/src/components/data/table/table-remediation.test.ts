@@ -362,6 +362,29 @@ describe('storage-key persistence of priorityColumnsVisible', () => {
     }
   });
 
+  /**
+   * Regression: the restore was guarded on the property's own current value ("still `false`, so
+   * nobody set it"), which cannot see a controlled binding that deliberately assigns the default.
+   * A consumer pinning the columns hidden was silently overridden by a stale stored `true`.
+   */
+  it('keeps an explicit priorityColumnsVisible=false binding over a persisted true', async () => {
+    const key = 'table-priority-columns-explicit-false';
+    localStorage.setItem(`lr-table:${key}`, JSON.stringify({ priorityColumnsVisible: true }));
+    try {
+      const element = await fixture<LyraTable<Row>>(html`<lr-table
+        caption="Names"
+        storage-key=${key}
+        .priorityColumnsVisible=${false}
+        .rows=${rows}
+        .columns=${columns}
+        .rowKey=${rowKey}
+      ></lr-table>`);
+      expect(element.priorityColumnsVisible).to.equal(false);
+    } finally {
+      localStorage.removeItem(`lr-table:${key}`);
+    }
+  });
+
   it('restores a persisted priority-columns-visible when the consumer declares nothing', async () => {
     const key = 'table-priority-columns-restore';
     localStorage.setItem(`lr-table:${key}`, JSON.stringify({ priorityColumnsVisible: true }));
@@ -658,6 +681,85 @@ describe('error state', () => {
     element.error = true;
     await element.updateComplete;
     expect(assertiveSinkTexts()).to.deep.equal(['Could not load data']);
+  });
+
+  it('announces the failed-load state it mounts with once `announce` opts in', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      announce
+      error-heading="Could not load rows"
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+
+    expect(element.announce).to.equal(true);
+    expect(
+      assertiveSinkTexts(),
+      'an opted-in table created to report a failure speaks the caller-supplied heading at mount'
+    ).to.deep.equal(['Could not load rows']);
+
+    // The later transition path still works, and still routes through the same sink.
+    element.error = false;
+    await element.updateComplete;
+    element.error = true;
+    await element.updateComplete;
+    expect(assertiveSinkTexts()).to.deep.equal(['Could not load rows', 'Could not load rows']);
+  });
+
+  it('keeps `announce` inert when the table mounts without `error`, and never replays it on reconnect', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      announce
+      error-heading="Could not load rows"
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    expect(assertiveSinkTexts(), 'no error at mount means nothing to announce').to.deep.equal([]);
+
+    const parent = element.parentNode!;
+    element.remove();
+    parent.appendChild(element);
+    element.error = true;
+    await element.updateComplete;
+    expect(
+      assertiveSinkTexts(),
+      'a reconnected table announces the real transition once, not a replayed mount state'
+    ).to.deep.equal(['Could not load rows']);
+  });
+
+  it('leaves the composed error `lr-empty` unannounced so the failure is spoken once', async () => {
+    const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
+      caption="Rows"
+      error
+      announce
+      error-heading="Could not load rows"
+      error-description="Retry in a moment."
+      .rows=${manyFailedLoadRows(2)}
+      .columns=${failedLoadColumns}
+      .rowKey=${failedLoadRowKey}
+    ></lr-table>`);
+    await element.updateComplete;
+    const composedEmpty = element.shadowRoot!.querySelector(
+      'lr-empty[part="error"]'
+    ) as HTMLElement & { updateComplete: Promise<unknown> };
+    await composedEmpty.updateComplete;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(
+      composedEmpty.hasAttribute('announce'),
+      'forwarding announce to the composed empty state would double-speak the failure'
+    ).to.equal(false);
+    expect(assertiveSinkTexts()).to.deep.equal(['Could not load rows']);
+    const politeSink = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+    );
+    expect(politeSink === null ? 0 : politeSink.childElementCount).to.equal(0);
   });
 
   it('is accessible in the error state', async () => {

@@ -33,6 +33,27 @@ export const Horizontal: Story = {
   `,
 };
 
+export const HorizontalScrollingStrip: Story = {
+  name: 'Horizontal strip narrow enough to scroll',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Timeline items are passive, so a horizontal strip is a scroll container with nothing tabbable inside it. While it genuinely overflows, `[part=\'base\']` rises from `tabindex="-1"` to `0` and shows a `::part(base):focus-visible` ring, so Tab reaches the strip and the arrow keys scroll it natively — otherwise every event past the edge would be pointer-only content. Widen the allocation past the content and the stop returns to `-1`, costing a keyboard user nothing.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size: 220px; max-inline-size: 100%;">
+      <lr-timeline orientation="horizontal" aria-label="Release stages">
+        <lr-timeline-item variant="success">Build queued behind 4820</lr-timeline-item>
+        <lr-timeline-item variant="success">Integration tests green</lr-timeline-item>
+        <lr-timeline-item variant="brand" active>Released to production</lr-timeline-item>
+      </lr-timeline>
+    </div>
+  `,
+};
+
 export const ClusteredTimeScale: Story = {
   name: 'Clustered time scale',
   parameters: {

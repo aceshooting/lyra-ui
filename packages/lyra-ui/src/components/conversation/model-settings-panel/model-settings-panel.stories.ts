@@ -121,3 +121,31 @@ export const ListensForConsolidatedChange: Story = {
     </div>
   `,
 };
+/** The card's own width ceiling. `layout="compact"` uncaps it by default, but reads the same name,
+ *  so a length narrows a compact card too. The nested selector is uncapped by name on the panel's
+ *  own `[part="model-row"]`, which is where a consumer re-caps it. */
+export const WidthHook: Story = {
+  name: 'Card width ceiling',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l); inline-size: 720px; max-inline-size: 100%;">
+      <lr-model-settings-panel
+        provider="OpenAI"
+        model="gpt-4.1"
+        .catalog=${OPENAI_CATALOG}
+      ></lr-model-settings-panel>
+      <lr-model-settings-panel
+        style="--lr-model-settings-panel-max-inline-size: none"
+        provider="OpenAI"
+        model="gpt-4.1"
+        .catalog=${OPENAI_CATALOG}
+      ></lr-model-settings-panel>
+      <lr-model-settings-panel
+        layout="compact"
+        style="--lr-model-settings-panel-max-inline-size: 30rem"
+        provider="OpenAI"
+        model="o3"
+        .catalog=${OPENAI_CATALOG}
+      ></lr-model-settings-panel>
+    </div>
+  `,
+};

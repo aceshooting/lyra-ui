@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -71,3 +71,14 @@ import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-pane
   `compact`. Default: `var(--lr-font-size-2xs)`.
 - `--lr-subagent-panel-compact-action-padding` — `[part="cancel"]`/`[part="retry"]` padding while
   `compact`. Default: `var(--lr-space-2xs)`.
+- `--lr-subagent-panel-background` — Resting fill of each run row's trigger and action buttons.
+  Hover and press follow `--lr-subagent-panel-hover-background`, so retune both together.
+  Default: `var(--lr-color-surface)`.
+- `--lr-subagent-panel-hover-background` — Hovered fill of each run row's trigger and action
+  buttons. The pressed fill is this value mixed a further `--lr-color-mix-active` toward
+  `--lr-color-mix-partner`, so retuning hover carries the press with it.
+  Default: `var(--lr-color-surface-raised)`.
+- `--lr-subagent-panel-border-color` — Each run row's border and its action divider. A selected row
+  still uses `--lr-subagent-panel-selected-border`. Default: `var(--lr-color-border)`.
+- `--lr-subagent-panel-radius` — Each run row's corner radius; `frame="plain"` still squares them.
+  Default: `var(--lr-radius)`.

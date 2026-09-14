@@ -103,6 +103,7 @@ const SCROLL_STEP_RATIO = 0.8;
 export interface LyraTabGroupEventMap {
   'lr-tab-show': CustomEvent<{ name: string }>;
   'lr-tab-hide': CustomEvent<{ name: string }>;
+  'lr-activate': CustomEvent<{ value: string }>;
 }
 /**
  * `<lr-tab-group>` — a tab strip composed from direct `<lr-tab panel="x">` and
@@ -166,6 +167,17 @@ export interface LyraTabGroupEventMap {
  * @slot nav - Upstream-compatible slot used by `<lr-tab>` descriptors.
  * @event lr-tab-show - `detail: { name }`, fired when a tab becomes active via click or keyboard.
  * @event lr-tab-hide - `detail: { name }`, fired for the outgoing tab immediately before `lr-tab-show`.
+ * @event lr-activate - Fired on every user activation of a navigable tab -- a click, or an
+ *   Arrow/Home/End key under `activation="auto"`, or Enter/Space under `activation="manual"` --
+ *   whether or not the active tab actually moved. `detail: { value }` carries the activated tab's
+ *   panel name, the same identity `lr-tab-show` reports. Bubbling and composed, so a host outside
+ *   the shadow tree receives it. Not cancelable: it is a notification that the user picked a tab,
+ *   not a veto point, and nothing in this component branches on it. Re-picking the active tab is
+ *   the case `lr-tab-show` deliberately stays silent for -- "reload that panel" is a real intent --
+ *   and from the keyboard it is otherwise unobservable, because Home on an already-first active tab
+ *   (or End on an already-last one) activates a tab and produces no click at all. When an
+ *   activation does move the tab, `lr-tab-hide` and `lr-tab-show` are emitted first. The
+ *   programmatic `show()` method is not a user activation and never fires it.
  * @csspart base - Compatibility name for the root wrapper; use `tab-group`.
  * @csspart tab-group - The root wrapper around the tablist and panels. It is the same node as
  *   `base`.
@@ -812,6 +824,16 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     this.emit('lr-tab-show', { name: tab.slotName });
   }
 
+  /** The user-driven wrapper around `selectTab`: it additionally reports the activation itself,
+   *  including the re-pick of the already-active tab that `lr-tab-show` is defined to stay silent
+   *  for. See the class doc's `lr-activate` entry. Kept separate from `selectTab` so the public
+   *  `show()` method stays a programmatic move rather than a synthesized user gesture. */
+  private activateTab(tab: TabDef): void {
+    if (!this.isNavigable(tab)) return;
+    this.selectTab(tab);
+    this.emit('lr-activate', { value: tab.slotName });
+  }
+
   /** Show the panel named by an `<lr-tab panel>`. */
   show(panel: string): void {
     const tab = this.tabs.find((candidate) => candidate.slotName === panel);
@@ -934,7 +956,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     ) {
       if (!origin) return;
       e.preventDefault();
-      this.selectTab(origin);
+      this.activateTab(origin);
       return;
     }
 
@@ -965,7 +987,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       this.focusOnly(target);
       return;
     }
-    this.selectTab(target);
+    this.activateTab(target);
     this.focusTab(target.slotName);
   };
 
@@ -1161,7 +1183,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       aria-controls=${this.panelId(tab.slotName)}
       aria-keyshortcuts=${closable ? 'Delete' : nothing}
       tabindex=${tab.slotName === this.rovingTab ? '0' : '-1'}
-      @click=${() => this.selectTab(tab)}
+      @click=${() => this.activateTab(tab)}
     >
       <span data-tab-label><slot name=${this.tabSlotName(tab.slotName)}></slot></span>${tab.label
         ? html`<span hidden aria-hidden="true">${tab.label}</span>`

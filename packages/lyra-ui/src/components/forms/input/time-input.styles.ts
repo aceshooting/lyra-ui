@@ -12,6 +12,11 @@ export const styles = css`
     --_lr-time-input-border-color-default: var(--lr-color-border);
     --_lr-time-input-fill-default: transparent;
     --_lr-time-input-color-default: var(--lr-color-text);
+    --_lr-time-input-control-min-height-default: var(--lr-form-control-height);
+    /* --lr-time-input-control-height is deliberately NOT declared here: it is read only through
+       the two var() fallbacks on [part~='time-input'] below, and declaring any value (even 'auto')
+       would make those arms unreachable, turning --lr-time-input-control-min-height into dead
+       code. Same contract as lr-input/lr-date-input, whose pair this mirrors. */
     /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
        reaches this row while the halo itself is painted in one place for every field. */
@@ -37,7 +42,16 @@ export const styles = css`
     align-items: center;
     box-sizing: border-box;
     inline-size: 100%;
-    min-block-size: var(--lr-form-control-height);
+    min-block-size: var(
+      --lr-time-input-control-height,
+      var(
+        --lr-time-input-control-min-height,
+        var(--_lr-time-input-control-min-height-default)
+      )
+    );
+    /* Pinned only when --lr-time-input-control-height is set; 'auto' otherwise, so the row keeps
+       growing to fit its own segments. */
+    block-size: var(--lr-time-input-control-height, auto);
     gap: var(--lr-time-input-gap, var(--lr-form-control-gap));
     padding-inline: var(--lr-form-control-padding-inline);
     border: var(--lr-border-width-thin) solid

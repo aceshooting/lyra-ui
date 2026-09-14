@@ -9,9 +9,14 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-xs);
     box-sizing: border-box;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    /* Card chrome behind inline var() fallbacks: each fallback is the pre-existing token, so an
+       unset composer paints exactly as before while a docking surface can retune the card without
+       a ::part(base) override. The focus-within border-color below is state paint, not card
+       chrome, so it stays on the brand token. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-chat-composer-border-color, var(--lr-color-border));
+    border-radius: var(--lr-chat-composer-radius, var(--lr-radius));
+    background: var(--lr-chat-composer-background, var(--lr-color-surface));
     padding: var(--lr-space-s);
     transition: border-color var(--lr-transition-fast);
   }

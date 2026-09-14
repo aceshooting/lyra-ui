@@ -246,6 +246,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     super.willUpdate(changed);
     if (!changed.has('parts')) return;
     const current = this.effectiveParts.filter((part) => part.type === 'error');
+    // The `hasUpdated` half of this guard is a deliberate mount exclusion, not an oversight, and
+    // deliberately carries no `announce` opt-in the way `<lr-callout>`/`<lr-empty>`/`<lr-table>` do:
+    // the parts present at mount are one turn of an already-written transcript, replayed in
+    // document order alongside every sibling turn, so speaking their errors would assertively
+    // interrupt a user who is reading backwards through history. `<lr-transcript-feed>` and
+    // `<lr-chat-viewport>` baseline their mount content for the same reason.
     if (this.hasUpdated && !this.suppressNextErrorAnnouncement) {
       for (const part of current) {
         if (!this.knownErrorIds.has(part.id)) {

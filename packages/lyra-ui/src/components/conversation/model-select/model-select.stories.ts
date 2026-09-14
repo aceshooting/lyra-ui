@@ -196,6 +196,47 @@ export const ThemeableGeometryAndStates: Story = {
   `,
 };
 
+export const WidthAndHeightHooks: Story = {
+  name: 'Width cap and exact trigger height',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The shipped 24rem host ceiling is now the `--lr-model-select-max-inline-size` default: set `none` for a full-width row, or a length to retune it. `--lr-model-select-trigger-height` pins an exact trigger height (it floors *and* caps, unlike the `-trigger-min-height` floor) so the picker can pixel-match the control beside it.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); max-inline-size: var(--lr-size-38rem);">
+      <lr-model-select
+        label="Default 24rem ceiling"
+        provider="ollama"
+        .catalog=${OLLAMA_CATALOG}
+      ></lr-model-select>
+      <lr-model-select
+        style="--lr-model-select-max-inline-size: none"
+        label="Fills the row"
+        provider="ollama"
+        .catalog=${OLLAMA_CATALOG}
+      ></lr-model-select>
+      <div style="display: flex; gap: var(--lr-space-s); align-items: start;">
+        <lr-model-select
+          style="--lr-model-select-max-inline-size: none; --lr-model-select-trigger-height: 3rem"
+          label="Pinned to 3rem"
+          provider="ollama"
+          .catalog=${OLLAMA_CATALOG}
+        ></lr-model-select>
+        <lr-model-select
+          style="--lr-model-select-max-inline-size: none; --lr-model-select-trigger-height: 3rem"
+          allow-custom
+          label="Same height, free text"
+          .catalog=${OLLAMA_CATALOG}
+        ></lr-model-select>
+      </div>
+    </div>
+  `,
+};
+
 export const Disabled: Story = {
   render: () => html`
     <lr-model-select disabled placeholder="Can't touch this" .catalog=${OLLAMA_CATALOG}></lr-model-select>

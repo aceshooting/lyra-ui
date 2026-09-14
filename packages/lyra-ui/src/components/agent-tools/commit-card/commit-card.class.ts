@@ -111,6 +111,13 @@ export interface LyraCommitCardEventMap {
  * @csspart actions - The `actions` slot wrapper.
  * @cssprop [--lr-commit-card-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
  *   `compact`.
+ * @cssprop [--lr-commit-card-background=transparent] - Fill of the outer card (`[part="base"]`)
+ *   while `frame="card"`, unset by default so the card takes the surface it sits on.
+ *   `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-commit-card-border-color=var(--lr-color-border)] - Colour of the outer card's
+ *   border.
+ * @cssprop [--lr-commit-card-radius=var(--lr-radius)] - Corner radius of the outer card.
+ *   `frame="plain"` still squares the corners.
  * @status stable
  * @since 4.0.0
  */

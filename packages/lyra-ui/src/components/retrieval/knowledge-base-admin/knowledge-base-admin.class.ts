@@ -20,6 +20,7 @@ export type KnowledgeBaseAdminTab = 'sources' | 'ingestion';
 
 export interface LyraKnowledgeBaseAdminEventMap {
   'lr-tab-change': CustomEvent<{ tab: KnowledgeBaseAdminTab }>;
+  'lr-activate': CustomEvent<{ value: KnowledgeBaseAdminTab }>;
   'lr-source-create': CustomEvent<null>;
   'lr-source-sync': CustomEvent<{ sourceId: string }>;
   'lr-source-pause': CustomEvent<{ sourceId: string }>;
@@ -40,6 +41,17 @@ export interface LyraKnowledgeBaseAdminEventMap {
  * @customElement lr-knowledge-base-admin
  * @slot settings - Optional host-owned ingestion, chunking, embedding, or permissions controls.
  * @event lr-tab-change - The active operations tab changed. `detail: { tab }`.
+ * @event lr-activate - Fired on every user activation of an available tab -- a click, or an
+ *   Arrow/Home/End key -- whether or not `activeTab` actually moved. `detail: { value }` carries
+ *   the activated tab, the same identity `lr-tab-change` reports. Bubbling and composed, so a host
+ *   outside the shadow tree receives it. Not cancelable: it is a notification that the user picked
+ *   a tab, not a veto point, and nothing in this component branches on it. Re-picking the active
+ *   tab is the case `lr-tab-change` deliberately stays silent for -- "refresh that queue" is a real
+ *   intent -- and from the keyboard it is otherwise unobservable, because Home on an already-first
+ *   active tab (or End on an already-last one) activates a tab and produces no click at all. When
+ *   an activation does move the tab, `lr-tab-change` is emitted first. The normalization that
+ *   moves an invalid or newly-hidden tab back to Sources is not a user activation and fires only
+ *   `lr-tab-change`.
  * @event lr-source-create - Forwarded source creation request.
  * @event lr-source-sync - Forwarded source sync request. `detail: { sourceId }`.
  * @event lr-source-pause - Forwarded source pause request. `detail: { sourceId }`.
@@ -104,9 +116,13 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
 
   private setTab(tab: KnowledgeBaseAdminTab): void {
     if (tab === 'ingestion' && this.hideIngestion) return;
-    if (tab === this.activeTab) return;
-    this.activeTab = tab;
-    this.emit('lr-tab-change', { tab });
+    if (tab !== this.activeTab) {
+      this.activeTab = tab;
+      this.emit('lr-tab-change', { tab });
+    }
+    // Every activation of an available tab reports, including the re-pick of the active tab that
+    // `lr-tab-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
+    this.emit('lr-activate', { value: tab });
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {

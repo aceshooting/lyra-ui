@@ -21,6 +21,7 @@ import {
 } from '../../../internal/custom-states.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
@@ -202,6 +203,22 @@ export type ComboboxSource = (
 ) => Promise<readonly ComboboxSourceRow[] | ComboboxSourceResult>;
 export type LyraComboboxSelectionDirection = LyraSelectionDirection;
 
+/** One debounced `source()` call, captured when it was armed rather than read back when it fires:
+ *  the query text, the generation `token` that decides whether its result is still the current
+ *  one, the realm it must run (and abort) in, and the exact `source` function installed at the
+ *  time -- a later `source` assignment supersedes it through the token, and must not retroactively
+ *  redirect a call the consumer already triggered. */
+interface ComboboxSourceRequest {
+  readonly query: string;
+  readonly token: number;
+  /** `Window & typeof globalThis`, not a bare `Window`: the realm is captured so the request can
+   *  construct its `AbortController` *in that realm*, and the global constructors live on the
+   *  `typeof globalThis` half. A bare `Window` drops them and the `new owner.AbortController()`
+   *  below stops compiling (TS2339). */
+  readonly owner: Window & typeof globalThis;
+  readonly source: ComboboxSource;
+}
+
 const MAX_SOURCE_ROWS = 2_000;
 const MAX_SOURCE_TEXT_UNITS = 250_000;
 const MAX_SOURCE_FIELD_UNITS = 4_096;
@@ -320,6 +337,7 @@ export interface LyraComboboxEventMap {
   'lr-change': CustomEvent<
     LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
   >;
+  'lr-activate': CustomEvent<{ value: string }>;
   input: InputEvent | CustomEvent<
     LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
   >;
@@ -392,6 +410,18 @@ export interface LyraComboboxEventMap {
  * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} lr-change - Prefixed compatibility alias fired
  * after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s `lr-change`.
  * `detail: { value }`. Not fired for typing or a programmatic `value` assignment.
+ * @event lr-activate - Fired on every activation of an available listbox row -- a click, or
+ *   Enter on the active row -- whether or not the selection actually moved. `detail: { value }`
+ *   carries the activated option's own value, always a single string even in `multiple` mode.
+ *   Bubbling and composed, so a host outside the shadow tree receives it. Not cancelable: it is a
+ *   notification that the user picked a row, not a veto point, and nothing in this component
+ *   branches on it. In single-select mode, re-picking the already-selected row is the case
+ *   `change`/`lr-change` deliberately stay silent for -- "re-run that filter" is a real intent --
+ *   and it is otherwise unobservable, because the rows live in this shadow root, so a retargeted
+ *   `click` names no option and a keyboard commit produces no click at all. When an activation does
+ *   move the selection, `input`/`change`/`lr-change` are emitted first. Not fired for typing, for a
+ *   committed custom value that matches no row, for the clear button, or for a programmatic `value`
+ *   assignment.
  * @event lr-show - The listbox is about to open, however `open` became true. Cancelable —
  *   `preventDefault()` leaves it closed and the reflected attribute untouched.
  * @event lr-after-show - The listbox finished opening and its transition settled.
@@ -760,7 +790,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private _sourceTruncated = false;
   private sourceErrorAnnouncementSink?: AnnouncementSink;
   @query('[part="combobox-input"]') private inputEl?: HTMLInputElement;
-  private sourceTimer?: { owner: Window; handle: number; token: number };
+  /** The debounced `source()` call. Scheduled on -- and cancelled through -- the realm this
+   *  combobox lives in at the time, so a combobox adopted into another document neither leaves a
+   *  task behind on the old realm nor loses the ability to cancel the new one. */
+  private readonly sourceDebounce = new DebounceController<ComboboxSourceRequest>(
+    0,
+    (request) => this.runSourceRequest(request),
+    () => this.ownerDocument.defaultView,
+  );
   private sourceToken = 0;
   /** Aborted when a newer query supersedes the in-flight one, or on disconnect, so the source's
    *  own `fetch` can cancel. */
@@ -2557,6 +2594,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // mode) matches the now-empty input instead of the stale prior query.
     if (this.source) this.runSource(this.query);
     if (selectionChanged) this.emitValueEvents();
+    // Every activation of an available row reports, including the re-pick of the current selection
+    // that `change`/`lr-change` are defined to stay silent for. See the class doc's `lr-activate`
+    // entry.
+    this.emit('lr-activate', { value: row.value });
   }
 
   private removeValue(value: string): void {
@@ -2612,90 +2653,98 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const token = ++this.sourceToken;
     const ownerWindow = this.ownerDocument.defaultView;
     if (!this.isConnected || !ownerWindow) return;
-    const timer = { owner: ownerWindow, handle: 0, token };
-    timer.handle = ownerWindow.setTimeout(() => {
-      if (
-        this.sourceTimer !== timer ||
-        token !== this.sourceToken ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== ownerWindow
-      ) {
-        return;
-      }
-      this.sourceTimer = undefined;
-      const controller = new ownerWindow.AbortController();
-      this.sourceAbort = controller;
-      this.loading = true;
-      this.sourceFailed = false;
-      // `Promise.resolve().then(() => this.source!(query, ...))` moves the call
-      // itself inside a `.then()` callback, so a *synchronous* throw from
-      // `this.source(query)` becomes a normal promise rejection the
-      // following `.catch()` handles, instead of escaping this `setTimeout`
-      // callback as an uncaught exception.
-      Promise.resolve()
-        .then(() =>
-          source(query, { signal: controller.signal, limit: MAX_SOURCE_ROWS })
-        )
-        .then((result) => {
-          if (
-            token !== this.sourceToken ||
-            !this.isConnected ||
-            this.ownerDocument.defaultView !== ownerWindow
-          ) {
-            return;
-          }
-          const normalized = normalizeSourceResult(result);
-          this._sourceTotal = normalized.total;
-          this._sourceTruncated = normalized.truncated;
-          this.asyncRows = normalized.rows;
-          this.sourceFailed = false;
-          this.normalizeActiveIndex();
-          this.applyPendingSelectedRows(true);
-          const selected = new Set(this._selected);
-          for (const row of normalized.rows) {
-            if (selected.has(row.value))
-              this._selectedRowCache.set(row.value, row);
-          }
-        })
-        .catch((err) => {
-          if (
-            token !== this.sourceToken ||
-            !this.isConnected ||
-            this.ownerDocument.defaultView !== ownerWindow
-          ) {
-            return;
-          }
-          // A caller that forwarded the signal to fetch() surfaces cancellation as an AbortError;
-          // that is expected teardown, not a source failure, so don't warn about it.
-          if (
-            typeof err === 'object' &&
-            err !== null &&
-            'name' in err &&
-            err.name === 'AbortError'
-          ) {
-            return;
-          }
-          this.asyncRows = [];
-          this._sourceTotal = 0;
-          this._sourceTruncated = false;
-          this.activeIndex = -1;
-          this.sourceFailed = true;
-          this.sourceErrorAnnouncementSink?.announce(
-            this.localize('comboboxLoadError')
-          );
-          console.warn('<lr-combobox> source() rejected:', err);
-        })
-        .finally(() => {
-          if (token === this.sourceToken) this.loading = false;
-        });
-    }, this._sourceDelay);
-    this.sourceTimer = timer;
+    this.sourceDebounce.delayMs = this._sourceDelay;
+    this.sourceDebounce.push({ query, token, owner: ownerWindow, source });
+  }
+
+  /** Runs one debounced `source()` call. The generation `token` is the guard that keeps a stale
+   *  result from overwriting a newer one: it is re-checked here and again in every continuation
+   *  below, because each `await` is another chance for a newer query, a re-parent, or a disconnect
+   *  to have superseded this request while it was in flight. */
+  private runSourceRequest({
+    query,
+    token,
+    owner: ownerWindow,
+    source,
+  }: ComboboxSourceRequest): void {
+    if (
+      token !== this.sourceToken ||
+      !this.isConnected ||
+      this.ownerDocument.defaultView !== ownerWindow
+    ) {
+      return;
+    }
+    const controller = new ownerWindow.AbortController();
+    this.sourceAbort = controller;
+    this.loading = true;
+    this.sourceFailed = false;
+    // `Promise.resolve().then(() => source(query, ...))` moves the call
+    // itself inside a `.then()` callback, so a *synchronous* throw from
+    // `source(query)` becomes a normal promise rejection the
+    // following `.catch()` handles, instead of escaping this debounced
+    // settle callback as an uncaught exception.
+    Promise.resolve()
+      .then(() =>
+        source(query, { signal: controller.signal, limit: MAX_SOURCE_ROWS })
+      )
+      .then((result) => {
+        if (
+          token !== this.sourceToken ||
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== ownerWindow
+        ) {
+          return;
+        }
+        const normalized = normalizeSourceResult(result);
+        this._sourceTotal = normalized.total;
+        this._sourceTruncated = normalized.truncated;
+        this.asyncRows = normalized.rows;
+        this.sourceFailed = false;
+        this.normalizeActiveIndex();
+        this.applyPendingSelectedRows(true);
+        const selected = new Set(this._selected);
+        for (const row of normalized.rows) {
+          if (selected.has(row.value))
+            this._selectedRowCache.set(row.value, row);
+        }
+      })
+      .catch((err) => {
+        if (
+          token !== this.sourceToken ||
+          !this.isConnected ||
+          this.ownerDocument.defaultView !== ownerWindow
+        ) {
+          return;
+        }
+        // A caller that forwarded the signal to fetch() surfaces cancellation as an AbortError;
+        // that is expected teardown, not a source failure, so don't warn about it.
+        if (
+          typeof err === 'object' &&
+          err !== null &&
+          'name' in err &&
+          err.name === 'AbortError'
+        ) {
+          return;
+        }
+        this.asyncRows = [];
+        this._sourceTotal = 0;
+        this._sourceTruncated = false;
+        this.activeIndex = -1;
+        this.sourceFailed = true;
+        this.sourceErrorAnnouncementSink?.announce(
+          this.localize('comboboxLoadError')
+        );
+        console.warn('<lr-combobox> source() rejected:', err);
+      })
+      .finally(() => {
+        if (token === this.sourceToken) this.loading = false;
+      });
   }
 
   private clearSourceTimer(): void {
-    const timer = this.sourceTimer;
-    this.sourceTimer = undefined;
-    if (timer) timer.owner.clearTimeout(timer.handle);
+    // Cancel, never dispose: a disconnect may be a re-parent, and the combobox must still be able
+    // to debounce a later query. The controller clears through the realm that scheduled the work.
+    this.sourceDebounce.cancel();
   }
 
   private onInputBlur = (event: FocusEvent): void => {

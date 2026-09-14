@@ -69,11 +69,10 @@ const REACTIVE_DECORATORS = new Set(['property', 'state']);
 /**
  * Call sites that still carry the dead guard and are tracked for conversion to
  * `definePersistedProperty()`. An entry that no longer matches is reported as stale, so the list
- * shrinks with the conversions instead of outliving them.
+ * shrinks with the conversions instead of outliving them. Empty since `lr-app-rail`'s `open` was
+ * converted -- every persisted restore in the package now guards on a recorded write.
  */
-const ACKNOWLEDGED = new Map([
-  ['src/components/layout/app-rail/app-rail.class.ts', new Set(['open'])],
-]);
+const ACKNOWLEDGED = new Map();
 
 function childNodes(node) {
   return (visitorKeys[node.type] ?? []).flatMap((key) => {

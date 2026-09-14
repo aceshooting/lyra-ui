@@ -1,4 +1,4 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html } from '@open-wc/testing';
 import './filter-bar.js';
 import type { LyraFilterBar, LyraFilterBarCustomControlContext, LyraFilterBarFilterDefinition } from './filter-bar.class.js';
 
@@ -47,4 +47,59 @@ it('does not swallow an admitted trusted renderer exception', () => {
     adapter: { valueFromEvent: () => '', clearValue: '' }, render() { throw new Error('trusted renderer'); },
   } }];
   expect(() => element.render()).to.throw('trusted renderer');
+});
+
+/** A `'text'` filter's live native `<input>`, reached through its composed `<lr-input>`. */
+async function nativeInput(element: LyraFilterBar, filterId: string): Promise<HTMLInputElement> {
+  const composed = element.shadowRoot!.querySelector(
+    `[data-filter-id="${filterId}"]`,
+  ) as HTMLElement & { updateComplete: Promise<unknown> };
+  await composed.updateComplete;
+  return composed.shadowRoot!.querySelector('input') as HTMLInputElement;
+}
+
+/** How many debounce controllers the bar is holding. The map is private because it is pure
+ *  bookkeeping, but its *size* is the only observable proof that a settled edit released its
+ *  controller rather than retaining one keyed on a filter id a later schema may drop. */
+function controllerCount(element: LyraFilterBar): number {
+  return (element as unknown as { debounceControllers: Map<string, unknown> }).debounceControllers.size;
+}
+
+describe('filter-bar debounce controller lifecycle', () => {
+  const filters: LyraFilterBarFilterDefinition[] = [
+    { filterId: 'q', label: 'Search', type: 'text', debounce: 40 },
+  ];
+
+  it('releases a text filter controller once its edit settles naturally', async () => {
+    const element = await fixture<LyraFilterBar>(html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`);
+    const native = await nativeInput(element, 'q');
+    native.value = 'tim';
+    native.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    expect(controllerCount(element), 'an in-flight edit holds exactly one controller').to.equal(1);
+    await aTimeout(200);
+    expect(element.value).to.deep.equal({ q: 'tim' });
+    expect(controllerCount(element), 'a settled edit leaves no controller behind').to.equal(0);
+  });
+
+  it('releases a text filter controller when its edit is flushed by the control own change', async () => {
+    const element = await fixture<LyraFilterBar>(html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`);
+    const native = await nativeInput(element, 'q');
+    native.value = 'flush';
+    native.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    expect(controllerCount(element)).to.equal(1);
+    native.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    expect(element.value).to.deep.equal({ q: 'flush' });
+    expect(controllerCount(element), 'a flushed edit leaves no controller behind either').to.equal(0);
+  });
+
+  it('strands no controller on a filter id a schema replacement removed after a settled edit', async () => {
+    const element = await fixture<LyraFilterBar>(html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`);
+    const native = await nativeInput(element, 'q');
+    native.value = 'gone';
+    native.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    await aTimeout(200);
+    element.filters = [{ filterId: 'other', label: 'Other', type: 'text', debounce: 40 }];
+    await element.updateComplete;
+    expect(controllerCount(element), 'the removed id keeps nothing alive').to.equal(0);
+  });
 });

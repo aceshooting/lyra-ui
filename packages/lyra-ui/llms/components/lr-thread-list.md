@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -62,7 +62,15 @@ false` (reflected) — shows the built-in search field, including a `part="clear
 that appears next to it once it has a value (never when empty), clears it on click, fires the same
 `lr-filter-change`/`lr-query-change` event typing already fires, and returns focus to the field. Its
 accessible name is the localized `clear` message (the same key `<lr-input>`'s own clear button
-uses). `filter?: (thread, query) => boolean`
+uses). `size?: LyraSize` (reflected) — opt-in density tier for that search field, on the library's
+one six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`, or the Web Awesome/Shoelace `small`/`medium`/`large`
+spellings, accepted as authored). A tier gives the field the row height, text size, gutters and
+corner radius an `lr-input` of that tier has, so the sidebar's own filter box lines up with an
+adjacent themed search field. With no `size` the field keeps exactly the gutters, corner radius and
+inherited text size it shipped with, so existing markup renders unchanged; an unsupported value
+normalizes to the omitted state and removes the attribute rather than snapping to a tier. Only the
+field is tiered — the gutter around it and the clear button keep their own sizes, and have their own
+custom properties. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
@@ -196,6 +204,20 @@ var(--lr-thread-list-row-action-hover-bg, var(--lr-color-surface-raised)),
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
 `--lr-thread-list-row-action-active-color` (default
 `var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))`) do the same for row actions.
+
+**Themeable search geometry:** `--lr-thread-list-search-padding` (default `var(--lr-space-s)`) is
+the gutter around the search row and `--lr-thread-list-search-gap` (default `var(--lr-space-xs)`)
+the gap between the field and its clear button; neither follows `size`.
+`--lr-thread-list-search-min-height` and `--lr-thread-list-search-font-size` are unset while `size`
+is — the field is then as tall as its own text and inherits the ambient text size — and a tier
+resolves them to that tier's shared form-control height and font size.
+`--lr-thread-list-search-padding-inline` (default `var(--lr-space-s)`),
+`--lr-thread-list-search-padding-block` (default `var(--lr-space-xs)`) and
+`--lr-thread-list-search-radius` (default `var(--lr-radius)`) are replaced by the tier's shared
+form-control values when `size` is set. `--lr-thread-list-search-clear-size` (default
+`var(--lr-size-1-5rem)`) is the clear button's box; it never follows `size`, because that button is
+a tap target floored at `--lr-icon-button-size` rather than a text box. Every one of these wins over
+the tier, so a consumer can take a tier and then move one value.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
 component's own render-callback output (`wrapRow`, `renderStart`, `renderExcerpt`,

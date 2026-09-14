@@ -105,6 +105,29 @@ export const NoFlags: Story = {
   `,
 };
 
+export const OptionDisplay: Story = {
+  name: 'Option rows without the tag line',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`option-display="label"` drops each row\'s raw BCP-47 tag line. The tag element is omitted rather than hidden, so it is absent from the row\'s accessible name and `::part(option-tag)` matches nothing — open both lists to compare.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; gap: var(--lr-space-l); align-items: start;">
+      <lr-locale-picker open label="Label and tag" .locales=${['fr', 'pt-BR', 'ja']}></lr-locale-picker>
+      <lr-locale-picker
+        open
+        option-display="label"
+        label="Label only"
+        .locales=${['fr', 'pt-BR', 'ja']}
+      ></lr-locale-picker>
+    </div>
+  `,
+};
+
 export const Disabled: Story = {
   render: () => html`<lr-locale-picker disabled label="Language" .locales=${['fr', 'de']}></lr-locale-picker>`,
 };

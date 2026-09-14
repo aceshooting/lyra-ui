@@ -568,6 +568,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       return html`<p class="empty-note">${this.localize('noData')}</p>`;
     if (sheets.length === 1) return this.renderSheet(sheets[0]!, 0);
     return html`<lr-tab-group
+      @lr-activate=${this.stopInternalEvent}
       part="tabs"
       .active=${`sheet-${this.activeSheetIndex}`}
       @lr-tab-hide=${this.stopInternalEvent}

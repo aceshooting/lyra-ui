@@ -505,6 +505,88 @@ describe('populated rows', () => {
     expect(sinkElement('assertive') === null, 'the last disconnect unmounts it')
       .to.be.true;
   });
+
+  it('announces the failures it mounts with once `announce` opts in', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        announce
+        .items=${[
+          item({ id: '1', stage: 'queued' }),
+          item({ id: '2', stage: 'failed', error: 'Unsupported file type' }),
+          item({ id: '3', stage: 'failed', error: 'Network unavailable' }),
+        ]}
+      ></lr-ingestion-queue>`
+    )) as LyraIngestionQueue;
+    await el.updateComplete;
+
+    expect(el.announce).to.equal(true);
+    expect(
+      sinkTexts('assertive'),
+      'an opted-in queue speaks the caller-supplied errors it already carries'
+    ).to.deep.equal(['Unsupported file type and Network unavailable']);
+
+    // The later-failure path is untouched and still routes through the same sink.
+    el.items = [
+      item({ id: '1', stage: 'failed', error: 'Timed out' }),
+      item({ id: '2', stage: 'failed', error: 'Unsupported file type' }),
+      item({ id: '3', stage: 'failed', error: 'Network unavailable' }),
+    ];
+    await el.updateComplete;
+    expect(sinkTexts('assertive')).to.deep.equal([
+      'Unsupported file type and Network unavailable',
+      'Timed out',
+    ]);
+  });
+
+  it('stays silent at mount with failed rows while `announce` is unset', async () => {
+    const quiet = (await fixture(
+      html`<lr-ingestion-queue
+        .items=${[item({ id: '1', stage: 'failed', error: 'Unsupported file type' })]}
+      ></lr-ingestion-queue>`
+    )) as LyraIngestionQueue;
+    await quiet.updateComplete;
+    expect(quiet.announce, '`announce` defaults to false').to.equal(false);
+    expect(quiet.hasAttribute('announce')).to.equal(false);
+    expect(
+      sinkTexts('assertive'),
+      'an unannounced queue mounting with failed rows stays silent'
+    ).to.deep.equal([]);
+
+    quiet.items = [item({ id: '1', stage: 'failed', error: 'Network unavailable' })];
+    await quiet.updateComplete;
+    expect(
+      sinkTexts('assertive'),
+      'a later failure still announces with `announce` unset'
+    ).to.deep.equal(['Network unavailable']);
+  });
+
+  it('never replays the `announce` opt-in when the queue reconnects', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        announce
+        .items=${[item({ id: '9', stage: 'failed', error: 'Network unavailable' })]}
+      ></lr-ingestion-queue>`
+    )) as LyraIngestionQueue;
+    await el.updateComplete;
+    expect(sinkTexts('assertive')).to.deep.equal(['Network unavailable']);
+
+    const parent = el.parentNode!;
+    el.remove();
+    parent.appendChild(el);
+    el.items = [item({ id: '9', stage: 'failed', error: 'Network unavailable' })];
+    await el.updateComplete;
+    expect(
+      sinkTexts('assertive'),
+      'reconnect stages the same rows again instead of replaying the mount announcement'
+    ).to.deep.equal([]);
+
+    el.items = [item({ id: '9', stage: 'failed', error: 'Disk full' })];
+    await el.updateComplete;
+    expect(
+      sinkTexts('assertive'),
+      'a genuinely new failure after reconnect still reaches the re-acquired sink'
+    ).to.deep.equal(['Disk full']);
+  });
 });
 
 describe('retry/cancel affordances', () => {

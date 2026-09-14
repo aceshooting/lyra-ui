@@ -121,6 +121,34 @@ sibling's cancelable collapse is consulted before the new panel changes state; v
 old item open and cancels the new expansion, so the group never silently violates its one-item
 invariant.
 
+> **A nested `lr-accordion`'s events are not scoped to it — filter by target.** Every accordion
+> event goes through the shared `emit()` helper with `bubbles: true, composed: true`, so an inner
+> `<lr-accordion>` slotted inside an outer item sends its own `lr-expand`, `lr-collapse`,
+> `lr-toggle-request`, `lr-after-expand` and `lr-after-collapse` straight through the outer group.
+> A listener bound directly on the outer `<lr-accordion>` therefore also receives the inner
+> group's — and their `detail.item` is an item of the inner group, so an outer handler that looks
+> that item up among its own children finds nothing, or acts on a panel it does not own.
+> Coordination itself is already scoped: an outer group never applies its single-panel invariant,
+> roving keyboard model, or lifecycle to an inner group's items. It is only the listener that
+> needs the guard, the same one `<lr-details>` and `<lr-dialog>` document for their own events:
+>
+> ```html
+> <lr-accordion id="outer">
+>   <lr-accordion-item label="Outer">
+>     <lr-accordion>
+>       <lr-accordion-item label="Inner">Inner content.</lr-accordion-item>
+>     </lr-accordion>
+>   </lr-accordion-item>
+> </lr-accordion>
+> <script type="module">
+>   const outer = document.querySelector('#outer');
+>   outer.addEventListener('lr-expand', (event) => {
+>     if (event.target !== event.currentTarget) return; // a nested group expanded, not this one
+>     // ...
+>   });
+> </script>
+> ```
+
 The Details events `lr-show` and `lr-hide` have no detail payload and are cancelable; preventing
 either leaves the panel in its previous state. Accepted changes emit `lr-toggle` with
 `detail: { open, source }`, then the non-cancelable `lr-after-show` or `lr-after-hide` once

@@ -34,6 +34,7 @@ export interface LyraPaginationChangeDetail {
 export interface LyraPaginationEventMap {
   'lr-before-page-change': CustomEvent<LyraPaginationChangeDetail>;
   'lr-page-change': CustomEvent<LyraPaginationChangeDetail>;
+  'lr-activate': CustomEvent<{ value: number }>;
   blur: FocusEvent;
   focus: FocusEvent;
 }
@@ -144,6 +145,16 @@ function paginationItems(
  * @event lr-page-change - Fired when a button or compact field requests a valid page.
  *   `detail: { page, pageSize }`. The component remains controlled and never mutates `page`
  *   itself; link-mode anchors navigate without emitting.
+ * @event lr-activate - Fired on every accepted page request, whether or not the page actually
+ *   moved. `detail: { value }` carries the requested page number. Bubbling and composed, so a host
+ *   outside the shadow tree receives it. Not cancelable: `lr-before-page-change` is this
+ *   component's veto point, and a vetoed request emits no activation at all. Re-requesting the
+ *   current page is the case `lr-page-change` deliberately stays silent for -- "load that page
+ *   again" is a real intent, and it is otherwise unobservable, because the page buttons and the
+ *   jump input live in this shadow root, so a retargeted `click` names no page and pressing Enter
+ *   on the jump field produces no click. When a request does move the page,
+ *   `lr-before-page-change` and `lr-page-change` are emitted first. Link-mode anchors navigate
+ *   without emitting.
  * @slot first-icon - Replacement for the first-page icon.
  * @slot previous-icon - Replacement for the previous-page icon.
  * @slot next-icon - Replacement for the next-page icon.
@@ -521,23 +532,28 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   private requestPage(page: number): void {
-    if (this.controlsDisabled || page === this.currentPage || page < 1 || page > this.calculatedTotalPages) {
+    if (this.controlsDisabled || page < 1 || page > this.calculatedTotalPages) {
       return;
     }
-    const focusOrigin = deepActiveElementIn(this.ownerDocument);
-    const detail = (): LyraPaginationChangeDetail =>
-      Object.freeze({ page, pageSize: this.normalizedPageSize });
-    if (this.emit('lr-before-page-change', detail(), { cancelable: true }).defaultPrevented) {
+    if (page !== this.currentPage) {
+      const focusOrigin = deepActiveElementIn(this.ownerDocument);
+      const detail = (): LyraPaginationChangeDetail =>
+        Object.freeze({ page, pageSize: this.normalizedPageSize });
+      if (this.emit('lr-before-page-change', detail(), { cancelable: true }).defaultPrevented) {
+        this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
+        this.invalidDraft = false;
+        return;
+      }
+      this.pendingFocusPage = page;
+      this.pendingFocusOrigin = focusOrigin;
+      this.emit('lr-page-change', detail());
+      // A controlled input reflects the applied property again after a request.
       this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
       this.invalidDraft = false;
-      return;
     }
-    this.pendingFocusPage = page;
-    this.pendingFocusOrigin = focusOrigin;
-    this.emit('lr-page-change', detail());
-    // A controlled input reflects the applied property again after a request.
-    this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
-    this.invalidDraft = false;
+    // Every accepted request reports, including the re-request of the current page that
+    // `lr-page-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
+    this.emit('lr-activate', { value: page });
   }
 
   private onPageInput = (event: Event): void => {

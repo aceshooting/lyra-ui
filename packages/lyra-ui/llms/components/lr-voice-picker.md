@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -162,6 +162,21 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 **Additional API surface:**
 
+- `--lr-voice-picker-max-inline-size` — The host's own width ceiling, previously a hard-wired
+  literal. Set a length to retune it, or `none` to fill the container the way `lr-select` does.
+  Default: `var(--lr-size-24rem)`.
+- `--lr-voice-picker-trigger-min-height` — Trigger/combobox block-size floor, reading the shared
+  form-control height ladder so retuning `--lr-theme-form-control-height-*` moves this control and
+  every sibling field together. Default: `var(--lr-form-control-height)`.
+- `--lr-voice-picker-trigger-height` — An _exact_ trigger/combobox height that both floors and caps
+  the control, for pixel-matching a sibling field in the same toolbar row. Takes precedence over
+  `--lr-voice-picker-trigger-min-height`. Unset by default.
+- The `[part="preview-button"]` action follows whichever of those two names is in play, not just
+  the exact height: `.control-row` is `align-items: stretch`, and stretch never applies to an item
+  with a definite cross size, so an action that tracked only `--lr-voice-picker-trigger-height`
+  would sit short and top-aligned beside a field whose floor had been raised. Its own WCAG
+  hit-area floor (`--lr-icon-button-size`) still wins below that, so pinning a short field cannot
+  shrink the action's hit area.
 - `--lr-voice-picker-gap` — Gap between the field and preview action, and between trigger,
   combobox, and option children. Default: `var(--lr-space-xs)`.
 - `--lr-voice-picker-radius` — Trigger, combobox, listbox, option, and preview-action corner radius.

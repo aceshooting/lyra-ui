@@ -46,6 +46,11 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   the host attribute is absent, overrides the tree name. Authored host `aria-label` instead names
   the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,
   which retains the distinct `label`/localized name
+- `size?: LyraSize` (reflected) — opt-in density tier forwarded to the composed filter `lr-input`,
+  on the library's one six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`, or `small`/`medium`/`large`).
+  Forwarding is the only way to reach that field, which resolves its tier inside its own shadow
+  root. With no `size` the field keeps its own `m` default; an unsupported value normalizes to the
+  omitted state and removes the attribute
 
 **Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
 fired after every toggle including select-all).

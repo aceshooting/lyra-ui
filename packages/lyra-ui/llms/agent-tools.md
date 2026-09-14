@@ -591,9 +591,15 @@ keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 
 **Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token
-`<lr-dialog>`/`<lr-tool-result-dialog>` read), plus shared `--lr-space-*`,
-`--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`, `--lr-shadow`,
-`--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
+`<lr-dialog>`/`<lr-tool-result-dialog>` read). `--lr-tool-select-dialog-search-min-height` (default
+`auto`), `--lr-tool-select-dialog-search-font-size` (default `inherit`),
+`--lr-tool-select-dialog-search-padding-inline` (default `var(--lr-space-m)`),
+`--lr-tool-select-dialog-search-padding-block` (default `var(--lr-space-s)`) and
+`--lr-tool-select-dialog-search-radius` (default `var(--lr-radius)`) size the search field; point
+the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
+inline gutter is reserved for the overlaid `search-clear` button and is not a knob. Plus shared
+`--lr-space-*`, `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`,
+`--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-checkbox>` and `<lr-switch>`, both bundled
 dependencies of this package imported directly, not optional peers.
@@ -720,7 +726,11 @@ pending duration/toggle accent without changing the shared brand token;
 `--lr-thinking-panel-compact-header-font-size` (default `var(--lr-font-size-sm)`) — font size of
 `[part="header"]` while `compact`; and
 `--lr-thinking-panel-compact-body-padding` (default `var(--lr-space-s)`) — `[part="body"]`
-padding while `compact`. Plus shared
+padding while `compact`. `--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
+`--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
+`--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
+without a `::part(base)` override; the border-color hook also colors the header/body divider that
+`frame="plain"` keeps. Plus shared
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.
@@ -850,7 +860,10 @@ hover/focus, internal-toggle, and copy-button-hover accent, plus the two density
 `compact`, overridden entirely by `frame="plain"`) and `--lr-stack-trace-compact-gap` (default
 `var(--lr-space-2xs)`, the space below `[part="message"]` and between `[part="group"]`s while
 `compact`). The scoped color hooks avoid changing
-the shared quiet/brand tokens used by surrounding UI. Plus shared tokens
+the shared quiet/brand tokens used by surrounding UI. `--lr-stack-trace-background` (default
+`var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border)`) and
+`--lr-stack-trace-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
+`::part(base)` override; `frame="plain"` still removes all three outright. Plus shared tokens
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
 `--lr-font-weight-bold`/`-semibold`, `--lr-focus-ring-*`.
@@ -1361,6 +1374,11 @@ whenever the slot has no assigned content), `body`.
 `var(--lr-space-2xs)`) — gap between `[part="body"]`'s children while `compact`, one step tighter
 than the uncompacted `--lr-space-xs`. The two gap knobs mean `compact` now tightens interior spacing,
 not only the padding box — a compact card no longer keeps full-size gaps inside a shrunken frame.
+`--lr-result-card-background` (default `var(--lr-color-surface)`), `--lr-result-card-border-color`
+(default `var(--lr-color-border)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
+the card chrome without a `::part(base)` override. The border-color hook also colors
+`[part="header"]`'s divider, so a retuned card doesn't strand a mismatched interior rule;
+`frame="plain"` still drops the outer chrome and that divider.
 Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
 `--lr-radius`.
 
@@ -1597,7 +1615,11 @@ var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact
 `--lr-task-list-running-color` (default `var(--lr-color-brand)`),
 `--lr-task-list-success-color` (default `var(--lr-color-success)`), and
 `--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
-status icons without changing shared status tokens.
+status icons without changing shared status tokens. `--lr-task-list-background` (default
+`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
+`--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
+`::part(base)` override; the border-color hook also colors the header/body divider that
+`frame="plain"` keeps.
 
 ## `lr-terminal`
 
@@ -1676,7 +1698,11 @@ the right hook for styling and for reading back what the terminal last announced
 viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
 `--lr-terminal-surface-color` (default `var(--lr-color-surface-raised)`) controls the card-frame
 background and the fallback foreground for inverse ANSI segments without an explicit background;
-`frame="plain"` remains transparent. `--lr-terminal-toolbar-button-hover-bg` (default
+`frame="plain"` remains transparent. `--lr-terminal-border-color` (default
+`var(--lr-color-border)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
+chrome — the border-color hook also colors the toolbar/log divider `frame="plain"` keeps.
+`--lr-terminal-surface-color` keeps its established name; nothing was renamed.
+`--lr-terminal-toolbar-button-hover-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-terminal-toolbar-button-active-bg` (default
 `color-mix(in oklab, var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet)),
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`) control the copy and download buttons.
@@ -1891,7 +1917,13 @@ The `compact` density is retunable through three properties: `--lr-activity-feed
 `--lr-activity-feed-compact-entry-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`)
 scoped to `[part="entry"]` while `compact`. All three are inline `var()` fallbacks at their point
 of use, so any can be set on the element or on an ancestor, same as `lr-confirm-bar`'s and
-`lr-thinking-panel`'s own compact tokens.
+`lr-thinking-panel`'s own compact tokens. The card chrome itself is retunable the same way:
+`--lr-activity-feed-background` (default `var(--lr-color-surface)`) fills `[part="base"]`,
+`--lr-activity-feed-border-color` (default `var(--lr-color-border)`) colors both its border and the
+header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
+`var(--lr-radius)`) sets its corner radius — so retuning a nested feed no longer needs a
+`::part(base)` override. `frame="plain"` still removes the border, radius and fill outright; the
+hooks tune the card presentation rather than reinstating chrome you asked to drop.
 
 **Known gotchas:**
 
@@ -1956,7 +1988,11 @@ message keys, so one `registerLyraLocale()` registration (or one `.strings` over
 badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
-`[part="base"]` padding while `compact`.
+`[part="base"]` padding while `compact`. `--lr-commit-card-border-color` (default
+`var(--lr-color-border)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
+card's border and corner radius, and `--lr-commit-card-background` (default `transparent`) gives it
+a fill of its own — this card has never painted one, so it still takes the surface it sits on unless
+you opt in. `frame="plain"` still removes the border and radius.
 
 ## `lr-test-results`
 
@@ -2401,6 +2437,10 @@ padding, and the gap between its header and body, while `compact`; both are igno
 is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
 their point of use rather than `:host` declarations, so either can be set on the element _or on any
 ancestor_ — one rule on a run list retunes every compact run inside it.
+`--lr-agent-run-background` (default `var(--lr-color-surface)`), `--lr-agent-run-border-color`
+(default `var(--lr-color-border)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
+`[part="base"]`'s card chrome without a `::part(base)` override; `frame="plain"` still removes all
+three outright.
 
 **Additional API surface:**
 
@@ -2561,6 +2601,14 @@ the host to apply to its controlled `examples` array.
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `search-clear` (replaces the native
 search-cancel glyph the component resets; rendered only while the field has text), `tag-filter`,
 `grid`, `add-button`, `remove-button`, `import`, `export`.
+
+**Themeable custom properties:** `--lr-eval-dataset-search-min-height` (default `auto`),
+`--lr-eval-dataset-search-font-size` (default `inherit`),
+`--lr-eval-dataset-search-padding-inline` (default `var(--lr-space-s)`),
+`--lr-eval-dataset-search-padding-block` (default `var(--lr-space-xs)`) and
+`--lr-eval-dataset-search-radius` (default `var(--lr-radius)`) size the built-in search field; point
+the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
+inline gutter is reserved for the overlaid `search-clear` button and is not a knob.
 
 **Known gotchas:**
 
@@ -3162,6 +3210,17 @@ import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-pane
   `compact`. Default: `var(--lr-font-size-2xs)`.
 - `--lr-subagent-panel-compact-action-padding` — `[part="cancel"]`/`[part="retry"]` padding while
   `compact`. Default: `var(--lr-space-2xs)`.
+- `--lr-subagent-panel-background` — Resting fill of each run row's trigger and action buttons.
+  Hover and press follow `--lr-subagent-panel-hover-background`, so retune both together.
+  Default: `var(--lr-color-surface)`.
+- `--lr-subagent-panel-hover-background` — Hovered fill of each run row's trigger and action
+  buttons. The pressed fill is this value mixed a further `--lr-color-mix-active` toward
+  `--lr-color-mix-partner`, so retuning hover carries the press with it.
+  Default: `var(--lr-color-surface-raised)`.
+- `--lr-subagent-panel-border-color` — Each run row's border and its action divider. A selected row
+  still uses `--lr-subagent-panel-selected-border`. Default: `var(--lr-color-border)`.
+- `--lr-subagent-panel-radius` — Each run row's corner radius; `frame="plain"` still squares them.
+  Default: `var(--lr-radius)`.
 
 ## Consumer integration notes
 

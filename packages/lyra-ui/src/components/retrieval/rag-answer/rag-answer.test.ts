@@ -3,6 +3,25 @@ import './rag-answer.js';
 import type { LyraRagAnswer } from './rag-answer.class.js';
 import type { LyraSourceCard } from '../source-card/source-card.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function assertiveSink(): HTMLElement {
+  return document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`
+  )!;
+}
+
+// The opt-in mount announcement is deliberately deferred past the first paint, so the shared
+// region is mounted in an earlier task than the text that lands in it.
+async function settleInitialAnnouncement(
+  el: LyraRagAnswer
+): Promise<void> {
+  await el.updateComplete;
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  );
+  await el.updateComplete;
+}
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-rag-answer', 'error');
@@ -382,6 +401,69 @@ describe('lr-rag-answer', () => {
     expect(
       sink().children.length,
       'reconnect does not replay the current error'
+    ).to.equal(0);
+  });
+  it('announces the error it already carries on mount when announce is set', async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer announce error-text="Retrieval failed"></lr-rag-answer>`
+    )) as LyraRagAnswer;
+    await settleInitialAnnouncement(el);
+    expect(el.announce, 'announce reflects the authored attribute').to.equal(
+      true
+    );
+    expect(el.getAttribute('announce')).to.equal('');
+    expect(
+      Array.from(
+        assertiveSink().children,
+        (child) => child.textContent
+      )
+    ).to.deep.equal(['Retrieval failed']);
+    await expect(el).to.be.accessible();
+  });
+  it('keeps an announce rag answer with no error silent on mount', async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer announce answer="All good"></lr-rag-answer>`
+    )) as LyraRagAnswer;
+    await settleInitialAnnouncement(el);
+    expect(
+      document.querySelectorAll(
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"] > *`
+      ).length,
+      'there is no presented error state to announce'
+    ).to.equal(0);
+  });
+  it('keeps mount silent while announce is unset, with later errors still announced', async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer error-text="Retrieval failed"></lr-rag-answer>`
+    )) as LyraRagAnswer;
+    await settleInitialAnnouncement(el);
+    expect(el.announce, 'announce defaults to false').to.equal(false);
+    expect(el.hasAttribute('announce')).to.equal(false);
+    expect(
+      assertiveSink().children.length,
+      'an unannounced rag answer stays silent on mount'
+    ).to.equal(0);
+
+    el.errorText = 'A newer failure';
+    await el.updateComplete;
+    expect(
+      Array.from(assertiveSink().children, (child) => child.textContent)
+    ).to.deep.equal(['A newer failure']);
+  });
+  it('does not replay the initial announcement when an announce rag answer reconnects', async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer announce error-text="Retrieval failed"></lr-rag-answer>`
+    )) as LyraRagAnswer;
+    await settleInitialAnnouncement(el);
+    expect(assertiveSink().children.length).to.equal(1);
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await settleInitialAnnouncement(el);
+    expect(
+      assertiveSink().children.length,
+      'reconnect stages the existing error again rather than replaying it'
     ).to.equal(0);
   });
   // 9.0.0 renamed `error` -> `errorText`/`error-text`, the spelling 25 other components (including

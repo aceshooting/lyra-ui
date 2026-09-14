@@ -277,6 +277,14 @@ export interface LyraCommandPaletteEventMap {
  *   live changes rebuild row transforms, scrolling coordinates, and the result extent.
  * @cssprop [--lr-command-palette-group-height=var(--lr-size-2rem)] - Virtual group-heading height;
  *   live changes rebuild heading/row transforms and the result extent.
+ * @cssprop [--lr-command-palette-search-padding=var(--lr-space-m)] - Gutter around the query row.
+ * @cssprop [--lr-command-palette-search-gap=var(--lr-space-s)] - Gap between the leading glyph and
+ *   the query field.
+ * @cssprop [--lr-command-palette-search-min-height=auto] - Minimum row height of the query field,
+ *   for matching it to a themed search field of a chosen density tier. Point it at
+ *   `--lr-form-control-height-s` (or any tier of that ladder) to line the palette's own field up
+ *   with the rest of an application's controls.
+ * @cssprop [--lr-command-palette-search-font-size=inherit] - Text size of the query field.
  * @cssprop [--lr-command-palette-active-bg=var(--lr-color-brand-quiet)] - Background of the active
  *   (keyboard-highlighted, `data-active="true"`) command row. Declared as an inline `var()` fallback
  *   (never on `:host`), so setting it on the element or an ancestor recolors only the active row

@@ -128,6 +128,16 @@ focus off the tab the user was on.
 - `lr-tab-hide` (`detail: { name: string }`) — the outgoing tab, emitted immediately _before_ the
   matching `lr-tab-show`, so a listener that tears down the old panel always runs before the one
   that builds the new one. Not fired when there was no previous selection.
+- `lr-activate` (`detail: { value: string }`) — fired on **every** user activation of a navigable
+  tab (a click, an Arrow/Home/End key under `activation="auto"`, or Enter/Space under
+  `activation="manual"`), whether or not the active tab actually moved. Bubbling, composed, not
+  cancelable — it reports that the user picked a tab and gates nothing. `value` is the activated
+  tab's panel name, the same identity `lr-tab-show` reports under the key `name`. Use it for the
+  repeat pick `lr-tab-show` deliberately stays silent for: "reload that panel". From the keyboard
+  that case is otherwise unobservable, because Home on an already-first active tab (or End on an
+  already-last one) activates a tab and produces no click at all. When an activation _does_ move the
+  tab, `lr-tab-hide` and `lr-tab-show` are emitted first. The programmatic `show()` method is not a
+  user activation and never fires it.
 
 **Slots:** default — canonical `<lr-tab>`/`<lr-tab-panel>` pairs. `nav` is the upstream-compatible
 projection slot a standalone `<lr-tab>` uses before a hydrated group assigns its private slot.

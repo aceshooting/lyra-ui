@@ -103,3 +103,41 @@ for (const [tag, selector] of [
     }
   });
 }
+
+describe('locale-picker type-ahead reset debounce', () => {
+  const bufferOf = (el: LyraLocalePicker): string =>
+    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer;
+  const typeAhead = (el: LyraLocalePicker, char: string): void => {
+    (el as unknown as { typeAhead(char: string): void }).typeAhead(char);
+  };
+
+  it('restarts the reset on every keystroke instead of clearing a buffer a later one owns', async () => {
+    const el = await fixture<LyraLocalePicker>('<lr-locale-picker></lr-locale-picker>');
+    await settle(el);
+    typeAhead(el, 'e');
+    expect(bufferOf(el)).to.equal('e');
+    await aTimeout(300);
+    typeAhead(el, 'n');
+    expect(bufferOf(el), 'a second keystroke extends the buffer').to.equal('en');
+    await aTimeout(350);
+    expect(bufferOf(el), 'the superseded reset must not clear it').to.equal('en');
+    await aTimeout(400);
+    expect(bufferOf(el), 'the surviving reset still fires on its own schedule').to.equal('');
+  });
+
+  it('still resets its buffer after a disconnect and reconnect', async () => {
+    // The reset runs on the shared DebounceController. Teardown must `cancel()` it, never
+    // `dispose()` it: a disconnect here may be a re-parent, and a disposed controller silently
+    // refuses every later push, leaving a reconnected picker with a buffer that never clears.
+    const el = await fixture<LyraLocalePicker>('<lr-locale-picker></lr-locale-picker>');
+    await settle(el);
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await settle(el);
+    typeAhead(el, 'f');
+    expect(bufferOf(el), 'a reconnected picker still accumulates').to.equal('f');
+    await aTimeout(700);
+    expect(bufferOf(el), 'and its reset still fires').to.equal('');
+  });
+});

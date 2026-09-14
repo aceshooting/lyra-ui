@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -63,4 +63,8 @@ message keys, so one `registerLyraLocale()` registration (or one `.strings` over
 badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
-`[part="base"]` padding while `compact`.
+`[part="base"]` padding while `compact`. `--lr-commit-card-border-color` (default
+`var(--lr-color-border)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
+card's border and corner radius, and `--lr-commit-card-background` (default `transparent`) gives it
+a fill of its own — this card has never painted one, so it still takes the surface it sits on unless
+you opt in. `frame="plain"` still removes the border and radius.

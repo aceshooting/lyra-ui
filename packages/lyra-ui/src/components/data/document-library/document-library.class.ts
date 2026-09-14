@@ -25,6 +25,11 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { styles } from './document-library.styles.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_documentLibraryClearSelection, LYRA_DEFAULT_documentLibraryEmptyHeading, LYRA_DEFAULT_documentLibraryFilterByTag, LYRA_DEFAULT_documentLibraryFreshnessAging, LYRA_DEFAULT_documentLibraryFreshnessColumn, LYRA_DEFAULT_documentLibraryFreshnessFresh, LYRA_DEFAULT_documentLibraryFreshnessStale, LYRA_DEFAULT_documentLibraryLabel, LYRA_DEFAULT_documentLibraryNameColumn, LYRA_DEFAULT_documentLibraryNoMatchesHeading, LYRA_DEFAULT_documentLibraryOwnerColumn, LYRA_DEFAULT_documentLibrarySearchPlaceholder, LYRA_DEFAULT_documentLibrarySelectAll, LYRA_DEFAULT_documentLibrarySelectColumn, LYRA_DEFAULT_documentLibrarySelectDocument, LYRA_DEFAULT_documentLibrarySelectedCount, LYRA_DEFAULT_documentLibraryTagsColumn, LYRA_DEFAULT_documentLibraryTypeColumn, LYRA_DEFAULT_documentLibraryUpdatedColumn, LYRA_DEFAULT_documentLibraryVersionColumn } from '../../../internal/default-strings.generated.js';
@@ -389,6 +394,30 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   @property({ attribute: 'search-term' }) searchTerm = '';
 
   @property({ type: Boolean, reflect: true }) loading = false;
+
+  private _size?: LyraSize;
+
+  /** Density tier for the toolbar's own search field and tag filter, on the library's one size
+   *  ladder, in either spelling -- `2xs`/`xs`/`s`/`m`/`l`/`xl`, or Web Awesome's and Shoelace's
+   *  `small`/`medium`/`large`. Forwarded verbatim to the composed `<lr-input>` and `<lr-combobox>`,
+   *  which is the only way to reach them: each resolves its tier inside its own shadow root, so no
+   *  custom property this component could publish would get there. Opt-in: with no size both keep
+   *  their own `m` default, exactly what they rendered before, and the two stay on the same tier as
+   *  each other at every setting so the toolbar row never goes ragged. Forwarded as a property
+   *  rather than an attribute, because removing an already-written `size` attribute again would
+   *  leave each child's own `size` at `null` instead of back at its own default. Unsupported
+   *  values normalize to the omitted state and remove the attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
 
   /** Accessible name for the region and the inner grid. Defaults to the localized
    *  `documentLibraryLabel` when unset. An explicitly empty string renders as an empty label
@@ -866,6 +895,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           <lr-input
             part="search"
             type="search"
+            .size=${this.size ?? 'm'}
             .value=${this.searchTerm}
             placeholder=${this.localize('documentLibrarySearchPlaceholder')}
             aria-label=${this.localize('documentLibrarySearchPlaceholder')}
@@ -878,11 +908,13 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
             ? html`<lr-combobox
                 part="tag-filter"
                 multiple
+                .size=${this.size ?? 'm'}
                 .value=${this.tagFilter}
                 placeholder=${this.localize('documentLibraryFilterByTag')}
                 aria-label=${this.localize('documentLibraryFilterByTag')}
                 @input=${this.stopOwnedEvent}
                 @lr-input=${this.stopOwnedEvent}
+                @lr-activate=${this.stopOwnedEvent}
                 @change=${this.onTagFilterChange}
                 @lr-change=${this.stopOwnedEvent}
                 @lr-show=${this.stopOwnedEvent}

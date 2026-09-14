@@ -10,6 +10,7 @@ import {
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -60,6 +61,11 @@ const SUBMENU_OPEN_DELAY = 150;
  *  submenu -- deliberately longer than the open delay, so crossing a *sibling* submenu parent
  *  in transit neither dismisses the open one nor opens the sibling. */
 const SUBMENU_CLOSE_DELAY = 300;
+
+/** How long the type-ahead buffer survives without a keystroke, in ms. Unchanged from the inline
+ *  literal this reset used before it moved onto the shared debounce controller, and identical to
+ *  `<lr-select>`'s listbox type-ahead. */
+const TYPE_AHEAD_RESET_MS = 500;
 
 function isLyraMenuItemElement(value: unknown): value is LyraMenuItem {
   if (!isHtmlElement(value)) return false;
@@ -124,6 +130,47 @@ interface OwnedTimeout {
 export interface LyraMenuEventMap {
   'lr-select': CustomEvent<LyraEventDetailSnapshot<MenuItemSelectDetail>>;
 }
+
+/** Guards `registerMenuWidthScale()` so the document-global registration is attempted once per
+ * page, not once per menu. Module scope, never touched at import time: `menu.class.ts` is the
+ * side-effect-free half of the tree-shaking split, so the call itself lives in
+ * `connectedCallback()`. */
+let menuWidthScaleRegistered = false;
+
+/** Types `--_lr-menu-max-inline-size`, the private name `menu.styles.ts` reads the public width
+ * ceiling through, as `<length-percentage>` with a `100%` initial value.
+ *
+ * Without it, `--lr-menu-max-inline-size: none` — the uncap value every sibling width hook in this
+ * library takes — makes `max-inline-size: min(clamp, hook, 100%)` invalid at computed-value time,
+ * so the property falls back to its initial `none` and the viewport clamp and container allocation
+ * are discarded along with the hook: the menu then paints wider than the viewport, the exact
+ * opposite of the documented guarantee. Registered, an out-of-syntax value is invalid at
+ * computed-value time for this one name and computes to `100%`, which is the "uncap to the
+ * container" the consumer meant, while the clamp survives in the surrounding `min()`.
+ *
+ * This is done from script rather than with an `@property` rule in the stylesheet because an
+ * `@property` rule inside a shadow-root stylesheet registers nothing in any current engine — it
+ * parses and is then ignored, which is precisely the silently-inert CSS this library refuses to
+ * ship. Registration is document-global, so `inherits: false` plus a per-surface assignment keeps
+ * the fallback deterministic rather than inherited from an ancestor menu. */
+function registerMenuWidthScale(): void {
+  if (menuWidthScaleRegistered) return;
+  menuWidthScaleRegistered = true;
+  if (typeof CSS === 'undefined' || typeof CSS.registerProperty !== 'function') return;
+  try {
+    CSS.registerProperty({
+      name: '--_lr-menu-max-inline-size',
+      syntax: '<length-percentage>',
+      inherits: false,
+      initialValue: '100%',
+    });
+  } catch {
+    // Already registered — by an earlier copy of this library on the page, or by the application
+    // itself. The registration is global and identical, so a rejected second attempt IS the
+    // success case; an engine that lacks the API entirely was filtered out above.
+  }
+}
+
 /**
  * `<lr-menu>` — the inline semantic controller mapped from `<sl-menu>`. It owns the
  * `role="menu"` list, real roving focus, wrapping Arrow/Home/End navigation, typeahead, and the
@@ -165,6 +212,15 @@ export interface LyraMenuEventMap {
  * @csspart list - The `role="menu"` container wrapping the default slot.
  * @csspart footer - The wrapper around the `footer` slot, below the list and
  * outside `role="menu"`. `display: none` while the slot is unfilled.
+ * @cssprop [--lr-menu-max-inline-size=var(--lr-size-20rem)] - Width ceiling of the standalone menu
+ *   surface and of a submenu's own surface. Takes a length or a percentage; `100%` and `none` both
+ *   uncap it to the container, and any other value outside `<length-percentage>` is treated as
+ *   `none` rather than silently dropping the cap's safety terms. The viewport clamp and the
+ *   container allocation are applied outside this name, so no value can make a menu overflow
+ *   either. A contained menu (inside `lr-dropdown`) sizes from its dropdown and is unaffected.
+ * @cssprop [--lr-menu-min-inline-size=var(--lr-size-10rem)] - Width floor of the same two
+ *   surfaces. Lower it alongside `--lr-menu-max-inline-size` to make a menu narrower than 10rem;
+ *   the floor wins over the ceiling, so capping alone cannot go below it.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  *   on the standalone menu surface and on a submenu's own surface. A contained menu (inside
  *   `lr-dropdown`) paints no surface of its own, so it is unaffected.
@@ -273,7 +329,19 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   // after the last one, so "d" then "e" narrows to "de" instead of
   // restarting the search on every keystroke.
   private typeAheadBuffer = '';
-  private typeAheadTimer?: OwnedTimeout;
+  /** The buffer's reset debounce. Every printable keystroke restarts it; the buffer clears only
+   *  once the quiet window passes, which is what makes "d" then "e" narrow to "de". Scheduled on
+   *  -- and cancelled through -- the realm this menu lives in at the time, the same ownership the
+   *  submenu hover-intent timers keep through `scheduleOwnedTimeout()`. Supersession is the
+   *  controller's own generation guard, so a callback already queued when a newer keystroke
+   *  restarted the timer arrives inert. */
+  private readonly typeAheadReset = new DebounceController<void>(
+    TYPE_AHEAD_RESET_MS,
+    () => {
+      this.typeAheadBuffer = '';
+    },
+    () => this.ownerDocument.defaultView,
+  );
 
   /** @internal Symbol-keyed so submenu overlay mechanics never become a second public menu API. */
   readonly [submenuPanelController] = this.createSubmenuController();
@@ -317,6 +385,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    registerMenuWidthScale();
     if (this.hasUpdated) {
       const slot =
         this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
@@ -464,9 +533,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.cleanup?.();
     this.cleanup = undefined;
     this.presentationPositioned = false;
-    this.clearOwnedTimeout(this.typeAheadTimer);
-    this.typeAheadTimer = undefined;
-    this.typeAheadBuffer = '';
+    this.resetTypeAhead();
     this.clearSubmenuTimers();
     this.itemStateObserver?.disconnect();
     this.itemStateObserver = undefined;
@@ -1082,11 +1149,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  accumulated buffer, cycling from just after the currently active item
    *  -- mirrors `<lr-select>`'s identical listbox type-ahead. */
   private typeAhead(char: string): void {
-    this.clearOwnedTimeout(this.typeAheadTimer);
+    this.typeAheadReset.cancel();
     this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
-    this.typeAheadTimer = this.scheduleOwnedTimeout(() => {
-      this.typeAheadBuffer = '';
-    }, 500);
+    // A realm-less menu arms nothing at all, exactly as `scheduleOwnedTimeout()` did by returning
+    // `undefined`: the controller would otherwise fall back to the ambient timer queue and clear
+    // the buffer through a document this element does not live in.
+    if (this.ownerDocument.defaultView) this.typeAheadReset.push(undefined);
 
     const navigable = this.items.filter((i) => this.isNavigable(i));
     if (!navigable.length) return;
@@ -1108,9 +1176,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
   }
 
+  /** Discards the buffer and any armed reset. `cancel()`, never `dispose()`: this also runs on
+   *  disconnect, which here may be a re-parent, and a disposed controller would refuse every
+   *  later keystroke's reset for good. */
   private resetTypeAhead(): void {
-    this.clearOwnedTimeout(this.typeAheadTimer);
-    this.typeAheadTimer = undefined;
+    this.typeAheadReset.cancel();
     this.typeAheadBuffer = '';
   }
 

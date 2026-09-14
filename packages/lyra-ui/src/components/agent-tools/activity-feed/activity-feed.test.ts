@@ -1546,3 +1546,72 @@ describe('compact and frame', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('card chrome theming hooks', () => {
+  const part = (el: LyraActivityFeed, name: string) =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('repaints the card through --lr-activity-feed-background/-border-color/-radius', async () => {
+    const el = (await fixture(html`
+      <lr-activity-feed
+        expanded
+        style="--lr-activity-feed-background: rgb(1, 2, 3); --lr-activity-feed-border-color: rgb(4, 5, 6); --lr-activity-feed-radius: 11px"
+        .entries=${makeEntries(1)}
+      ></lr-activity-feed>
+    `)) as LyraActivityFeed;
+    const base = getComputedStyle(part(el, 'base'));
+    expect(base.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(base.borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(base.borderTopLeftRadius).to.equal('11px');
+  });
+
+  it('carries the border-color hook into the header/body divider frame="plain" keeps', async () => {
+    const el = (await fixture(html`
+      <lr-activity-feed
+        expanded
+        frame="plain"
+        style="--lr-activity-feed-border-color: rgb(4, 5, 6)"
+        .entries=${makeEntries(1)}
+      ></lr-activity-feed>
+    `)) as LyraActivityFeed;
+    const body = getComputedStyle(part(el, 'body'));
+    expect(body.borderTopColor).to.equal('rgb(4, 5, 6)');
+    // plain still drops the outer card itself; only the interior divider is retuned.
+    expect(getComputedStyle(part(el, 'base')).borderTopWidth).to.equal('0px');
+  });
+
+  it('leaves the card paint byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(html`
+      <lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>
+    `)) as LyraActivityFeed;
+    const tokened = (await fixture(html`
+      <lr-activity-feed
+        expanded
+        style="--lr-activity-feed-background: var(--lr-color-surface); --lr-activity-feed-border-color: var(--lr-color-border); --lr-activity-feed-radius: var(--lr-radius)"
+        .entries=${makeEntries(1)}
+      ></lr-activity-feed>
+    `)) as LyraActivityFeed;
+    const unset = getComputedStyle(part(control, 'base'));
+    const explicit = getComputedStyle(part(tokened, 'base'));
+    // An unset feed resolves each hook to exactly the design token it documents as its default.
+    expect(unset.backgroundColor).to.equal(explicit.backgroundColor);
+    expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
+    expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
+    expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(unset.borderTopLeftRadius).to.not.equal('0px');
+    expect(getComputedStyle(part(control, 'body')).borderTopColor).to.equal(
+      getComputedStyle(part(tokened, 'body')).borderTopColor,
+    );
+  });
+
+  it('is accessible with the card repainted and entries rendered', async () => {
+    const el = (await fixture(html`
+      <lr-activity-feed
+        expanded
+        style="--lr-activity-feed-background: rgb(255, 255, 255); --lr-activity-feed-border-color: rgb(4, 5, 6); --lr-activity-feed-radius: 11px"
+        .entries=${makeEntries(3)}
+      ></lr-activity-feed>
+    `)) as LyraActivityFeed;
+    await expect(el).to.be.accessible();
+  });
+});

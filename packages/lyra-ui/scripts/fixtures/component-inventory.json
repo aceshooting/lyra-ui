@@ -1729,7 +1729,9 @@
             "name": "lr-toggle-request",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly collapsed: boolean; readonly item: LyraAccordionItem }> >",
             "cancelable": "always",
-            "constructor": "CustomEvent"
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
           }
         ],
         "parts": [
@@ -2554,6 +2556,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-activity-feed-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-activity-feed-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-activity-feed-compact-entry-padding",
             "deprecated": null,
             "hasDefault": true,
@@ -2582,6 +2596,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "16rem"
+          },
+          {
+            "name": "--lr-activity-feed-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [],
@@ -3239,6 +3259,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-agent-run-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-agent-run-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-agent-run-compact-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -3273,6 +3305,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-warning)"
+          },
+          {
+            "name": "--lr-agent-run-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-agent-run-spin",
@@ -15874,6 +15912,16 @@
             "default": ""
           },
           {
+            "name": "announce",
+            "property": "announce",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "appearance",
             "property": "appearance",
             "type": "CalloutAppearance",
@@ -15972,6 +16020,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "announce",
+            "attribute": "announce",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "appearance",
@@ -19305,10 +19363,28 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-chat-composer-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-chat-composer-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-chat-composer-busy-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chat-composer-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [],
@@ -27779,6 +27855,14 @@
             "composed": true
           },
           {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
             "name": "lr-after-hide",
             "type": "CustomEvent<null>",
             "cancelable": "never",
@@ -28731,6 +28815,30 @@
             "default": "var(--lr-size-3rem)"
           },
           {
+            "name": "--lr-command-palette-search-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-command-palette-search-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-command-palette-search-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-command-palette-search-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
             "name": "--lr-command-palette-z-index",
             "deprecated": null,
             "hasDefault": true,
@@ -29120,10 +29228,28 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-commit-card-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-commit-card-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-commit-card-compact-padding",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-commit-card-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [],
@@ -38161,7 +38287,9 @@
             "name": "lr-toggle",
             "type": "CustomEvent<LyraDetailsToggleDetail>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "CustomEvent",
+            "bubbles": false,
+            "composed": true
           }
         ],
         "parts": [
@@ -40120,6 +40248,15 @@
             "default": ""
           },
           {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "sort-dir",
             "property": "sortDir",
             "type": "TableSortDirection",
@@ -40204,6 +40341,15 @@
             "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize | undefined",
+            "readonly": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": false
           },
@@ -46297,10 +46443,34 @@
             "default": "calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))"
           },
           {
+            "name": "--lr-emoji-picker-search-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-emoji-picker-search-hover-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-emoji-picker-search-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-emoji-picker-search-padding-block",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-emoji-picker-search-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-emoji-picker-selected-bg",
@@ -46532,6 +46702,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "announce",
+            "property": "announce",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "compact",
             "property": "compact",
             "type": "boolean",
@@ -46583,6 +46763,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "announce",
+            "attribute": "announce",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
           {
             "name": "compact",
             "attribute": "compact",
@@ -48170,7 +48360,38 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-eval-dataset-search-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-eval-dataset-search-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-eval-dataset-search-padding-block",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-eval-dataset-search-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-eval-dataset-search-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -62611,6 +62832,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "announce",
+            "property": "announce",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -62641,6 +62872,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "announce",
+            "attribute": "announce",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
           {
             "name": "items",
             "attribute": null,
@@ -65812,6 +66053,14 @@
           }
         ],
         "events": [
+          {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: KnowledgeBaseAdminTab }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
+          },
           {
             "name": "lr-ingestion-cancel",
             "type": "CustomEvent<CancelEventDetail & { itemId: string }>",
@@ -70016,6 +70265,16 @@
             "hasDefault": false
           },
           {
+            "name": "option-display",
+            "property": "optionDisplay",
+            "type": "LyraLocaleOptionDisplay",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "label-tag"
+          },
+          {
             "name": "required",
             "property": "required",
             "type": "boolean",
@@ -70186,6 +70445,16 @@
             "reflects": true,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "optionDisplay",
+            "attribute": "option-display",
+            "type": "LyraLocaleOptionDisplay",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "label-tag"
           },
           {
             "name": "required",
@@ -73657,6 +73926,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-menu-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
+            "name": "--lr-menu-min-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-10rem)"
+          },
+          {
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
@@ -76383,6 +76664,12 @@
             "default": "var(--lr-space-xs)"
           },
           {
+            "name": "--lr-model-select-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-24rem)"
+          },
+          {
             "name": "--lr-model-select-open-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -76435,6 +76722,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-model-select-trigger-height",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-model-select-trigger-min-height",
@@ -77063,7 +77355,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-model-settings-panel-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-28rem)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -79813,7 +80112,38 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-node-palette-search-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-node-palette-search-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-node-palette-search-padding-block",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-node-palette-search-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-node-palette-search-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -84832,6 +85162,14 @@
             "type": "FocusEvent",
             "cancelable": "never",
             "constructor": "FocusEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
             "bubbles": true,
             "composed": true
           },
@@ -98486,6 +98824,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "announce",
+            "property": "announce",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "answer",
             "property": "answer",
             "type": "string",
@@ -98575,6 +98923,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "announce",
+            "attribute": "announce",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "answer",
@@ -99762,6 +100120,14 @@
             "type": "FocusEvent",
             "cancelable": "never",
             "constructor": "FocusEvent"
+          },
+          {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
           },
           {
             "name": "lr-change",
@@ -101665,6 +102031,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-result-card-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-result-card-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-result-card-compact-body-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -101687,6 +102065,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-result-card-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [],
@@ -102108,6 +102492,16 @@
             "default": ""
           },
           {
+            "name": "announce",
+            "property": "announce",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "dedupe",
             "property": "dedupe",
             "type": "boolean",
@@ -102227,6 +102621,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "announce",
+            "attribute": "announce",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "chunks",
@@ -102599,6 +103003,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "announce",
+            "property": "announce",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string | null",
@@ -102685,6 +103099,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "properties": [
@@ -102697,6 +103120,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "announce",
+            "attribute": "announce",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "empty",
@@ -102795,6 +103228,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "slots": [],
@@ -102856,7 +103298,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-retrieval-search-submit-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -105307,6 +105756,14 @@
         "slots": [],
         "events": [
           {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
@@ -106250,6 +106707,14 @@
             "type": "InputEvent",
             "cancelable": "never",
             "constructor": "InputEvent"
+          },
+          {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
           },
           {
             "name": "lr-after-hide",
@@ -109874,6 +110339,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "properties": [
@@ -109935,6 +110409,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "sources",
@@ -111890,6 +112373,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-stack-trace-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-stack-trace-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-stack-trace-compact-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -111924,6 +112419,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-stack-trace-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [],
@@ -112649,6 +113150,16 @@
             "default": "container"
           },
           {
+            "name": "readonly",
+            "property": "readonly",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "wrap-labels",
             "property": "wrapLabels",
             "type": "boolean",
@@ -112727,6 +113238,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "container"
+          },
+          {
+            "name": "readonly",
+            "attribute": "readonly",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "steps",
@@ -113529,6 +114050,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-subagent-panel-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-subagent-panel-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-subagent-panel-compact-action-padding",
             "deprecated": null,
             "hasDefault": true,
@@ -113553,6 +114086,12 @@
             "default": "var(--lr-space-2xs) var(--lr-space-s)"
           },
           {
+            "name": "--lr-subagent-panel-hover-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
             "name": "--lr-subagent-panel-progress-fill",
             "deprecated": null,
             "hasDefault": true,
@@ -113563,6 +114102,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-subagent-panel-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-subagent-panel-selected-border",
@@ -114289,6 +114834,14 @@
         ],
         "slots": [],
         "events": [
+          {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
+          },
           {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
@@ -115653,6 +116206,14 @@
         ],
         "events": [
           {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
             "name": "lr-tab-hide",
             "type": "CustomEvent<{ name: string }>",
             "cancelable": "never",
@@ -116035,6 +116596,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "announce",
+            "property": "announce",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "autocapitalize",
@@ -116434,6 +117005,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "announce",
+            "attribute": "announce",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "autocapitalize",
@@ -118141,6 +118722,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-task-list-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-task-list-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-task-list-compact-body-padding",
             "deprecated": null,
             "hasDefault": true,
@@ -118181,6 +118774,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-task-list-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-task-list-running-color",
@@ -118643,6 +119242,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-terminal-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-terminal-compact-line-padding-inline",
             "deprecated": null,
             "hasDefault": true,
@@ -118707,6 +119312,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-terminal-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-terminal-search-active-outline-color",
@@ -120726,6 +121337,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-thinking-panel-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-thinking-panel-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-thinking-panel-compact-body-padding",
             "deprecated": null,
             "hasDefault": true,
@@ -120760,6 +121383,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-thinking-panel-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [],
@@ -120903,6 +121532,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "sticky-groups",
@@ -121113,6 +121751,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "stickyGroups",
@@ -121434,6 +122081,52 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-thread-list-search-clear-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-1-5rem)"
+          },
+          {
+            "name": "--lr-thread-list-search-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-thread-list-search-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-thread-list-search-min-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-thread-list-search-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-thread-list-search-padding-block",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-thread-list-search-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-thread-list-search-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [],
@@ -122423,6 +123116,17 @@
             "name": "--lr-time-input-column-selected-hover-bg",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-time-input-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-time-input-control-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-height)"
           },
           {
             "name": "--lr-time-input-fill",
@@ -128008,6 +128712,36 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-overlay)"
+          },
+          {
+            "name": "--lr-tool-select-dialog-search-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-tool-select-dialog-search-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-tool-select-dialog-search-padding-block",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-tool-select-dialog-search-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-tool-select-dialog-search-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [],
@@ -132961,6 +133695,15 @@
             "hasDefault": false
           },
           {
+            "name": "scrollElement",
+            "attribute": null,
+            "type": "Element | Window | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "source",
             "attribute": null,
             "type": "LyraVirtualListSource | undefined",
@@ -133980,6 +134723,12 @@
             "default": "var(--lr-space-xs)"
           },
           {
+            "name": "--lr-voice-picker-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-24rem)"
+          },
+          {
             "name": "--lr-voice-picker-open-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -134062,6 +134811,17 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-radius)"
+          },
+          {
+            "name": "--lr-voice-picker-trigger-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-voice-picker-trigger-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-height)"
           }
         ],
         "cssStates": [
@@ -134733,6 +135493,14 @@
           }
         ],
         "events": [
+          {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
+          },
           {
             "name": "lr-collapse-change",
             "type": "CustomEvent<{ collapsed: boolean }>",

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -65,7 +65,12 @@ assigned directly instead of via the child's own event. The nested selector's na
 **CSS parts:** `base`, `model-row`, `model-select`, `model-label` (forwarded visible internal
 selector label), `temperature-row`, `temperature-label`, `temperature-value`
 
-**Themeable custom properties:** no component-specific custom properties; consumes shared tokens
+**Themeable custom properties:** `--lr-model-settings-panel-max-inline-size` — the card's own width
+ceiling (default `var(--lr-size-28rem)`). Set a length to retune it, or `none` for a full-width
+card. `layout="compact"` uncaps the card by default and reads the same name, so a length narrows a
+compact card too. The panel also sets `--lr-model-select-max-inline-size: none` on its own
+`[part="model-row"]`, so the nested selector fills the row rather than stopping at its standalone
+24rem ceiling — set that name on the row to re-cap it. Otherwise it consumes shared tokens
 `--lr-space-l/-m/-s/-xs`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-text-quiet`.
 

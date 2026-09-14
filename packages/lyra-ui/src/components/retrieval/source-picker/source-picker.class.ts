@@ -11,6 +11,11 @@ import '../../forms/input/input.class.js';
 import '../../forms/checkbox/checkbox.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './source-picker.styles.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -171,6 +176,29 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
    *  while keeping a visible tree entry available whenever rows remain. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter })
   searchable = true;
+
+  private _size?: LyraSize;
+
+  /** Density tier for the built-in filter field, on the library's one size ladder, in either
+   *  spelling -- `2xs`/`xs`/`s`/`m`/`l`/`xl`, or Web Awesome's and Shoelace's
+   *  `small`/`medium`/`large`. Forwarded to the composed `<lr-input>`, which is the only way to
+   *  reach it: that control resolves its tier inside its own shadow root, so no custom property
+   *  this component could publish would get there. Forwarded as a property rather than an
+   *  attribute, because removing an already-written `size` attribute again would leave the child's
+   *  own `size` at `null` instead of back at its own default. Opt-in: with no size the field keeps
+   *  its own `m` default, exactly what it rendered before. Unsupported values normalize to the
+   *  omitted state and remove the attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
   /** Visible/fallback accessible label for the source tree. Omitting it falls back to a
    *  localized default; an explicit empty string clears it. */
   @property() label?: string;
@@ -667,6 +695,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         ${this.searchable
           ? html`<lr-input
               part="search"
+              .size=${this.size ?? 'm'}
               placeholder=${this.localize('search')}
               .value=${this.query}
               @lr-input=${(e: CustomEvent<{ value: string }>) => {

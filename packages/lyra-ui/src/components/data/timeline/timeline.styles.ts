@@ -101,6 +101,16 @@ export const styles = css`
     overflow-x: auto;
     overflow-y: hidden;
   }
+  /* The strip becomes keyboard-reachable (tabindex 0 instead of -1) only while it genuinely
+     overflows, because its items are passive and nothing inside it is tabbable -- see
+     timeline.ts's syncScrollTabStop(). A focusable box owes a visible focus indicator.
+     no-hover-state: a scroll container is not a pointer target -- it has no cursor: pointer and
+     nothing of its own to paint, and tinting the whole strip under the pointer would suggest a
+     selection a timeline cannot make. */
+  [part='base']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   /* Edge affordance gated on real overflow: ScrollOverflowController toggles data-scroll-overflow
      from a scrollWidth/clientWidth measurement; unconditional, it fades the first and last item of
      a strip that fits. One-sided and RTL-aware, matching

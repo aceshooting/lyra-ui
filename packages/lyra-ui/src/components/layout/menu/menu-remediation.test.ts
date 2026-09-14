@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './menu.js';
 import './menu-item.js';
 import './menu-label.js';
@@ -62,5 +62,47 @@ describe('lr-menu host aria-describedby reflection', () => {
         'extra-context'
       );
     }
+  });
+});
+
+describe('menu type-ahead reset debounce', () => {
+  const menuFixture = (): Promise<LyraMenu> =>
+    fixture<LyraMenu>(html`<lr-menu>
+      <lr-menu-item>Delete</lr-menu-item>
+      <lr-menu-item>Details</lr-menu-item>
+      <lr-menu-item>Export</lr-menu-item>
+    </lr-menu>`);
+  const bufferOf = (el: LyraMenu): string =>
+    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer;
+  const typeAhead = (el: LyraMenu, char: string): void => {
+    (el as unknown as { typeAhead(char: string): void }).typeAhead(char);
+  };
+
+  it('restarts the reset on every keystroke instead of clearing a buffer a later one owns', async () => {
+    const el = await menuFixture();
+    typeAhead(el, 'd');
+    expect(bufferOf(el)).to.equal('d');
+    await aTimeout(300);
+    typeAhead(el, 'e');
+    expect(bufferOf(el), 'a second keystroke extends the buffer').to.equal('de');
+    await aTimeout(350);
+    expect(bufferOf(el), 'the superseded reset must not clear it').to.equal('de');
+    await aTimeout(400);
+    expect(bufferOf(el), 'the surviving reset still fires on its own schedule').to.equal('');
+  });
+
+  it('still resets its buffer after a disconnect and reconnect', async () => {
+    // The reset runs on the shared DebounceController. Teardown must `cancel()` it, never
+    // `dispose()` it: a disconnect here may be a re-parent, and a disposed controller silently
+    // refuses every later push, leaving a reconnected menu with a buffer that never clears.
+    const el = await menuFixture();
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    typeAhead(el, 'e');
+    expect(bufferOf(el), 'a reconnected menu still accumulates').to.equal('e');
+    await aTimeout(700);
+    expect(bufferOf(el), 'and its reset still fires').to.equal('');
   });
 });

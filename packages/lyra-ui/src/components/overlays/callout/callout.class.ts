@@ -123,7 +123,10 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  * `<lr-callout>` — an inline message surface for status, warning, and error content.
  * Set `inline` for lightweight reactive status/error text: it removes the panel chrome while
  * preserving the accessible content, optional leading icon, and close action.
- * Initial content is not announced as a new live update. Once the first render and slot
+ * Initial content is not announced as a new live update unless `announce` opts in; with it set,
+ * the content present when the callout first mounts is announced once, at the same urgency the
+ * later-update path derives from `variant`, and reconnection or adoption stages that content
+ * again instead of replaying the announcement. Once the first render and slot
  * distribution settle, later content updates are appended to a shared light-DOM polite sink, or
  * an assertive one for `variant="danger"`. Announcements normalize accessible heading/message
  * text, excluding icon and close chrome plus subtree-pruned descendants. A visibility-hidden
@@ -284,6 +287,14 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   @property({ type: Boolean, reflect: true }) closable = false;
   @property({ type: Boolean, reflect: true }) inline = false;
 
+  /** Opts this callout into announcing the content it already carries when it first mounts,
+   *  through the same shared light-DOM sink and the same `variant`-derived urgency the
+   *  later-update path uses. Leave unset for a callout that is part of the page a user is
+   *  arriving on: its text is read in document order and repeating it is noise. This is read once,
+   *  when the callout first mounts -- a later reconnection or adoption stages the existing content
+   *  again rather than replaying it, and later content updates are announced either way. */
+  @property({ type: Boolean, reflect: true }) announce = false;
+
   @property({
     type: Boolean,
     reflect: true,
@@ -293,6 +304,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   private readonly slotPresence = new SlotPresenceController(this);
   private liveActive = false;
+  private initialContentAnnounced = false;
   private connectionGeneration = 0;
   private politeSink?: AnnouncementSink;
   private assertiveSink?: AnnouncementSink;
@@ -344,6 +356,14 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         if (this.isConnected && generation === this.connectionGeneration) {
           this.lastAnnouncementText = this.announcementText();
           this.liveActive = true;
+          // Opted-in initial content goes through the one existing announcement path, so it
+          // resolves urgency, accessibility visibility and localized context identically to a
+          // later update. `force` is required: the arming line above already recorded this exact
+          // text as the baseline, which the deduplicating path would otherwise treat as a repeat.
+          if (this.announce && !this.initialContentAnnounced) {
+            this.initialContentAnnounced = true;
+            this.announceCurrentContent(true);
+          }
         }
       });
   }

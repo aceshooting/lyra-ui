@@ -443,6 +443,27 @@ describe('lr-page-rail', () => {
     expect(el.page).to.equal(2);
   });
 
+  it('still resets its digit buffer after a disconnect and reconnect', async () => {
+    // The reset runs on the shared DebounceController. Teardown must `cancel()` it, never
+    // `dispose()` it: a disconnect here may be a re-parent, and a disposed controller silently
+    // refuses every later push -- leaving a reconnected rail whose buffer never clears, so digits
+    // typed seconds apart would concatenate into an out-of-range page and navigation would stop.
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="20"></lr-page-rail>`);
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.page, 'a reconnected rail still navigates').to.equal(1);
+    await aTimeout(650);
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.page, 'and its buffer still resets, so this is page 2 and not page 12').to.equal(2);
+  });
+
   it('resets the digit buffer once the real digit-buffer timeout elapses', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="20"></lr-page-rail>`);
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

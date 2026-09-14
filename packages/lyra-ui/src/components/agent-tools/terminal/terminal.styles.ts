@@ -4,11 +4,15 @@ export const styles = css`
   :host {
     display: block;
   }
+  /* Border and radius join the pre-existing --lr-terminal-surface-color fill behind inline var()
+     fallbacks, so the whole card chrome is retunable without a ::part(base) override and an unset
+     terminal paints exactly as before. */
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-terminal-border-color, var(--lr-color-border));
+    border-radius: var(--lr-terminal-radius, var(--lr-radius));
     background: var(--lr-terminal-surface-color, var(--lr-color-surface-raised));
     overflow: hidden;
   }
@@ -27,7 +31,10 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* The toolbar/log divider is the same chrome the outer border is, and frame="plain" keeps it,
+       so it follows the same hook rather than stranding a mismatched rule in a retuned card. */
+    border-block-end: var(--lr-border-width-thin) solid
+      var(--lr-terminal-border-color, var(--lr-color-border));
   }
   /* Density escape -- same convention as lr-task-list's/lr-thinking-panel's compact. Inline var()
      fallbacks, not a :host declaration every instance would re-declare and so shadow an ancestor

@@ -2353,6 +2353,85 @@ describe("storage-key persistence", () => {
     el.remove();
     localStorage.removeItem(fullKey);
   });
+
+  /**
+   * The harder half of the same guarantee: a binding that assigns `collapsed`'s OWN default value
+   * is still a binding. A guard keyed on the current value ("still `false`, so nobody set it")
+   * cannot see it; only a record of whether the setter ever ran can.
+   */
+  it("keeps an explicit collapsed=false binding authoritative over a persisted collapsed state", async () => {
+    const key = `lr-test-widget-explicit-false-${Math.random()}`;
+    const fullKey = `lr-widget:${key}`;
+    localStorage.setItem(fullKey, JSON.stringify({ collapsed: true }));
+
+    let changeEvents = 0;
+    const el = document.createElement("lr-widget") as LyraWidget;
+    el.addEventListener("lr-collapse-change", () => changeEvents++);
+    el.setAttribute("storage-key", key);
+    el.setAttribute("collapsible", "");
+    el.collapsed = false;
+    document.body.append(el);
+    await el.updateComplete;
+
+    expect(el.collapsed).to.be.false;
+    expect(el.hasAttribute("collapsed")).to.be.false;
+    expect(changeEvents).to.equal(0);
+
+    el.remove();
+    localStorage.removeItem(fullKey);
+  });
+
+  /**
+   * `collapsed`'s hand-written setter (the one `definePersistedProperty()` replaced) wrote the
+   * reflected attribute synchronously, and `requestCollapse()` emits `lr-collapse-change` in the
+   * same turn as the assignment -- so a listener reading `[collapsed]`, the ordinary way to
+   * observe a reflecting boolean, read the post-toggle value. Lit's own `reflect: true` lands
+   * during `update()` instead, which would silently leave such a listener (and whatever sibling
+   * chrome it syncs) one state behind. Pinned here because nothing else in the suite reads the
+   * attribute before `updateComplete`, so the regression was invisible.
+   */
+  it("reflects collapsed to the attribute synchronously, in step with lr-collapse-change", async () => {
+    const el = (await fixture(
+      html`<lr-widget label="x" collapsible>content</lr-widget>`
+    )) as LyraWidget;
+    const seenInListener: boolean[] = [];
+    el.addEventListener("lr-collapse-change", () =>
+      seenInListener.push(el.hasAttribute("collapsed"))
+    );
+    const button = el.shadowRoot!.querySelector(
+      '[part="collapse-button"]'
+    ) as HTMLButtonElement;
+
+    button.click();
+    expect(seenInListener).to.deep.equal([true]);
+    button.click();
+    expect(seenInListener).to.deep.equal([true, false]);
+
+    // A direct property write reflects in the same turn too -- the old setter reflected on every
+    // assignment, not just the toggle's.
+    el.collapsed = true;
+    expect(el.hasAttribute("collapsed")).to.be.true;
+    el.collapsed = false;
+    expect(el.hasAttribute("collapsed")).to.be.false;
+    await el.updateComplete;
+    expect(el.hasAttribute("collapsed")).to.be.false;
+  });
+
+  it("reflects a restored collapsed state to the collapsed attribute", async () => {
+    const key = `lr-test-widget-reflect-${Math.random()}`;
+    const fullKey = `lr-widget:${key}`;
+    localStorage.setItem(fullKey, JSON.stringify({ collapsed: true }));
+
+    const el = await fixture<LyraWidget>(
+      html`<lr-widget storage-key=${key} collapsible></lr-widget>`
+    );
+    await el.updateComplete;
+
+    expect(el.collapsed).to.be.true;
+    expect(el.hasAttribute("collapsed")).to.be.true;
+
+    localStorage.removeItem(fullKey);
+  });
 });
 
 describe("view-toggle active-state cssprops", () => {
@@ -2896,5 +2975,96 @@ describe("activeView (deprecated alias for activeViewId)", () => {
     chartToggle.click();
     await el.updateComplete;
     expect(el.activeViewId, "the stale alias must not re-seed on every update").to.equal("chart");
+  });
+});
+
+describe("lr-widget view activation event", () => {
+  const widgetWithViews = async (): Promise<LyraWidget> => {
+    const el = (await fixture(html`
+      <lr-widget
+        label="Usage"
+        .views=${[
+          { viewId: "chart", label: "Chart" },
+          { viewId: "table", label: "Table" },
+        ]}
+      >
+        <div slot="view-chart">chart content</div>
+        <div slot="view-table">table content</div>
+      </lr-widget>
+    `)) as LyraWidget;
+    await el.updateComplete;
+    return el;
+  };
+
+  const toggleFor = (el: LyraWidget, viewId: string): HTMLButtonElement =>
+    [...el.shadowRoot!.querySelectorAll('[part="view-toggle"]')].find(
+      (toggle) => (toggle as HTMLElement).dataset["viewId"] === viewId
+    ) as HTMLButtonElement;
+
+  it("fires lr-activate without lr-view-change when the active view toggle is clicked again", async () => {
+    const el = await widgetWithViews();
+    expect(el.activeViewId).to.equal("chart");
+    let changeCount = 0;
+    let requestCount = 0;
+    el.addEventListener("lr-view-change", () => changeCount++);
+    el.addEventListener("lr-view-request", () => requestCount++);
+    setTimeout(() => toggleFor(el, "chart").click());
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "chart" });
+    expect(el.activeViewId).to.equal("chart");
+    expect(changeCount, "re-picking the active view is not a change").to.equal(0);
+    expect(requestCount, "and proposes no change either").to.equal(0);
+  });
+
+  it("emits lr-view-change before lr-activate for a moving pick, and bubbles composed and uncancelable", async () => {
+    const el = await widgetWithViews();
+    const order: string[] = [];
+    const flags: Array<Record<string, boolean>> = [];
+    el.addEventListener("lr-view-request", () => order.push("lr-view-request"));
+    el.addEventListener("lr-view-change", () => order.push("lr-view-change"));
+    const documentListener = (e: Event): void => {
+      order.push("lr-activate");
+      flags.push({
+        bubbles: e.bubbles,
+        cancelable: e.cancelable,
+        composed: e.composed,
+      });
+    };
+    document.addEventListener("lr-activate", documentListener);
+    try {
+      toggleFor(el, "table").click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", documentListener);
+    }
+    expect(el.activeViewId).to.equal("table");
+    expect(order).to.deep.equal([
+      "lr-view-request",
+      "lr-view-change",
+      "lr-activate",
+    ]);
+    expect(flags).to.deep.equal([
+      { bubbles: true, cancelable: false, composed: true },
+    ]);
+  });
+
+  it("stays silent for a vetoed pick and for a programmatic activeViewId assignment", async () => {
+    const el = await widgetWithViews();
+    let activateCount = 0;
+    el.addEventListener("lr-activate", () => activateCount++);
+    el.addEventListener("lr-view-request", (e) => e.preventDefault());
+    toggleFor(el, "table").click();
+    await el.updateComplete;
+    expect(el.activeViewId, "the veto held").to.equal("chart");
+    expect(activateCount, "a vetoed pick activates nothing").to.equal(0);
+
+    el.activeViewId = "table";
+    await el.updateComplete;
+    expect(el.activeViewId, "the assignment still lands").to.equal("table");
+    expect(
+      activateCount,
+      "a host writing `activeViewId` is not a user activation"
+    ).to.equal(0);
   });
 });

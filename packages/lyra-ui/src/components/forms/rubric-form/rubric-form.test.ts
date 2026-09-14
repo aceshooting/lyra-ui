@@ -2816,3 +2816,39 @@ describe("lr-rubric-form remaining public accessors and interaction paths", () =
     }
   });
 });
+
+describe("lr-rubric-form contains the composed scale control's lr-activate", () => {
+  it("swallows lr-activate from its inner lr-segmented, like every other child event", async () => {
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    const scale = el.shadowRoot!.querySelector(
+      '[data-key="accuracy"] lr-segmented'
+    ) as HTMLElement | null;
+    expect(
+      scale?.localName,
+      "the scale control is the composed segmented"
+    ).to.equal("lr-segmented");
+    let escaped = 0;
+    const listener = (): void => {
+      escaped++;
+    };
+    document.addEventListener("lr-activate", listener);
+    try {
+      scale!.dispatchEvent(
+        new CustomEvent("lr-activate", {
+          bubbles: true,
+          composed: true,
+          detail: { value: "1" },
+        })
+      );
+    } finally {
+      document.removeEventListener("lr-activate", listener);
+    }
+    expect(
+      escaped,
+      "this component owns its own event surface; the child's raw event never escapes"
+    ).to.equal(0);
+  });
+});

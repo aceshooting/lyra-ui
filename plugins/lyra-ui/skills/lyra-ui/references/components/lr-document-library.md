@@ -40,6 +40,13 @@ changes), public controlled `searchTerm: string = ''`
 (`search-term`), `sortKey: LibraryDocumentSortKey = 'name'` (`sort-key`), canonical
 `sortDir: 'asc'|'desc' = 'asc'` (`sort-dir`), and clone-owned frozen
 `tagFilter: readonly string[] = []` (at most 10,000 unique tags; reassign after changes).
+`size?: LyraSize` (reflected) — opt-in density tier forwarded to BOTH composed toolbar controls, the
+search `lr-input` and the tag-filter `lr-combobox`, on the library's one six-step ladder
+(`2xs`/`xs`/`s`/`m`/`l`/`xl`, or `small`/`medium`/`large`). Forwarding is the only way to reach them:
+each resolves its tier inside its own shadow root, so no custom property on this component would get
+there. The two always stay on the same tier as each other, so the toolbar row never goes ragged.
+With no `size` both keep their own `m` default; an unsupported value normalizes to the omitted state
+and removes the attribute.
 
 **Events:** `lr-filter-change` emits a fresh frozen readonly
 `{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly

@@ -78,6 +78,9 @@ const DEFAULT_TEMPERATURE = 1;
  * @csspart temperature-row - The row wrapping the temperature label/slider/value.
  * @csspart temperature-label - The visible "Temperature" caption.
  * @csspart temperature-value - The visible current temperature readout.
+ * @cssprop [--lr-model-settings-panel-max-inline-size=var(--lr-size-28rem)] - The card's own width
+ *   ceiling. Set a length to retune it or `none` for a full-width card. `layout="compact"` uncaps
+ *   the card by default, and reads the same name, so a length still narrows a compact card.
  * @status stable
  * @since 4.0.0
  */

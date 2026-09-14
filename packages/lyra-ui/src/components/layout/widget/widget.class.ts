@@ -14,6 +14,10 @@ import {
   readPersistedState,
   writePersistedState,
 } from '../../../internal/persisted-state.js';
+import {
+  definePersistedProperty,
+  isPersistedPropertyExplicitlySet,
+} from '../../../internal/persisted-restore.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   bindAccessibleTextObserver,
@@ -101,6 +105,41 @@ function snapshotWidgetViews(value: unknown): readonly Readonly<LyraWidgetView>[
   return Object.freeze(normalized);
 }
 
+/**
+ * Puts back, over `definePersistedProperty()`'s accessor for `collapsed`, the synchronous
+ * attribute write the hand-written setter it replaced performed on every assignment.
+ *
+ * Lit's own `reflect: true` writes the attribute during `update()`, not during the assignment.
+ * That timing is right for every other reflected property here -- but `requestCollapse()` assigns
+ * `collapsed` and emits `lr-collapse-change` in the same synchronous turn, so a listener reading
+ * the reflected `[collapsed]` attribute (the ordinary way to observe a reflecting boolean) would
+ * read the pre-toggle value and leave whatever it syncs one state behind until some unrelated
+ * render happened to catch it up. That is not how this component shipped, and moving `collapsed`
+ * onto the shared persisted accessor is a refactor -- it does not get to change it.
+ *
+ * Wraps the installed setter instead of replacing it, so the explicitly-set tracking the
+ * `storage-key` restore depends on stays exactly as `definePersistedProperty()` installed it. The
+ * manual `toggleAttribute()` re-enters `attributeChangedCallback` precisely as the old setter's
+ * did, and converges immediately: the re-entrant write is value-identical, so it mutates no
+ * attribute and fires no second callback.
+ */
+function installSynchronousCollapsedReflection(prototype: LyraWidget): void {
+  // Non-null: the only caller is the static block below, immediately after
+  // `definePersistedProperty()` installed this exact accessor pair. A `TypeError` at class
+  // evaluation is the correct outcome if that ever stops being true.
+  const installed = Object.getOwnPropertyDescriptor(prototype, 'collapsed')!;
+  const installedSet = installed.set!;
+  Object.defineProperty(prototype, 'collapsed', {
+    ...installed,
+    set(this: LyraWidget, next: boolean): void {
+      installedSet.call(this, next);
+      // Reads back through the getter so the attribute follows the coerced value, not the raw
+      // argument -- `collapsed` accepts any truthy value (see the `coerce` option below).
+      this.toggleAttribute('collapsed', this.collapsed);
+    },
+  });
+}
+
 export interface LyraWidgetEventMap {
   'lr-collapse-request': CustomEvent<{ collapsed: boolean }>;
   'lr-collapse-change': CustomEvent<{ collapsed: boolean }>;
@@ -108,6 +147,7 @@ export interface LyraWidgetEventMap {
   'lr-fullscreen-change': CustomEvent<{ fullscreen: boolean }>;
   'lr-view-request': CustomEvent<{ viewId: string }>;
   'lr-view-change': CustomEvent<{ viewId: string }>;
+  'lr-activate': CustomEvent<{ value: string }>;
 }
 /**
  * `<lr-widget>` — a titled panel shell with an optional collapse toggle and
@@ -153,6 +193,15 @@ export interface LyraWidgetEventMap {
  * @event lr-view-change - Non-cancelable post-commit notification, fired after a header
  *   view-toggle click accepts the change. Not fired when a consumer sets `activeViewId` directly.
  *   `detail: { viewId }`.
+ * @event lr-activate - Fired on every accepted header view-toggle activation, whether or not
+ *   `activeViewId` actually moved. `detail: { value }` carries the activated view's `viewId`.
+ *   Bubbling and composed, so a host outside the shadow tree receives it. Not cancelable:
+ *   `lr-view-request` is this component's veto point, and a vetoed activation emits no activation
+ *   at all. Re-picking the active view is the case `lr-view-change` deliberately stays silent for
+ *   -- "rebuild that view" is a real intent -- and it is otherwise unobservable, because the
+ *   toggles live in this shadow root, so a retargeted `click` names no view. When an activation
+ *   does move the view, `lr-view-request` and `lr-view-change` are emitted first. Not fired when a
+ *   consumer sets `activeViewId` directly.
  * @csspart base - The panel root (dialog role + backdrop when fullscreen).
  * @csspart header - The header row containing the title, actions, and toggle buttons.
  * @csspart title - The wrapper around the label/sublabel.
@@ -213,16 +262,30 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  // `collapsed` needs a hand-rolled accessor (mirrors `lr-select`'s identical `noAccessor`
-  // pattern for `value`/`multiple`) so its setter can record whether it was ever explicitly
-  // assigned -- Lit's own dirty-tracking can't distinguish that from the class field's own
-  // `= false` default landing during construction: both land in the very same first-update
-  // batch, and `_changedProperties` only ever remembers the *first* `oldValue` recorded for a
-  // property within one batch, not whether a later assignment also occurred. See `collapsed`'s
-  // own getter/setter doc.
+  // `collapsed` is installed by `definePersistedProperty()` (the static block below), whose
+  // accessor records whether the property was ever assigned -- Lit's own dirty-tracking can't
+  // distinguish that from a declared default landing during construction: both land in the very
+  // same first-update batch. This entry keeps the public attribute/reflection contract declared in
+  // one readable place (and is the shape the manifest generator reads); `noAccessor: true` stops
+  // Lit replacing that accessor with its own. See `collapsed`'s own doc.
   static override properties = {
     collapsed: { type: Boolean, reflect: true, noAccessor: true },
   };
+
+  static {
+    definePersistedProperty(this.prototype, 'collapsed', {
+      initial: false,
+      attribute: true,
+      type: Boolean,
+      reflect: true,
+      // Historically settable to any truthy value, so the readback is normalized on the way in
+      // rather than at every read site.
+      coerce: (next: boolean) => Boolean(next),
+    });
+    // Keeps the attribute in step with the synchronous `lr-collapse-change` emit -- see the
+    // function's own doc for why Lit's update-time reflection is too late for this one property.
+    installSynchronousCollapsedReflection(this.prototype);
+  }
 
   // Two independent observers: either header row can overflow on its own, and each one gates its
   // own edge fade -- the same measurement-gated affordance lr-segmented/lr-stepper/lr-tab-group
@@ -249,26 +312,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   /** Secondary header copy. Removed or empty attributes render no fallback text. */
   @property() sublabel = '';
   @property({ type: Boolean, reflect: true }) collapsible = false;
-  private _collapsed = false;
-  /** Explicitly assigned at least once (attribute, property, or `requestCollapse()`) -- lets
-   *  `willUpdate()`'s `storage-key` restore skip an explicit `.collapsed=${…}`/`collapsed`
-   *  binding on the very same mount instead of silently overwriting it, mirroring `lr-app-rail`'s
-   *  `loadPersisted()` guard. `changed.has('collapsed')` alone can't do this: the class field
-   *  default and an explicit binding both land in the same first-update batch, and Lit's
-   *  `_changedProperties` only remembers the *first* recorded `oldValue`. */
-  private _collapsedExplicitlySet = false;
   /** Whether the body is collapsed. Reflects to the `collapsed` attribute.
    *  @default false */
-  get collapsed(): boolean {
-    return this._collapsed;
-  }
-  set collapsed(next: boolean) {
-    this._collapsedExplicitlySet = true;
-    const old = this._collapsed;
-    this._collapsed = Boolean(next);
-    this.toggleAttribute('collapsed', this._collapsed);
-    this.requestUpdate('collapsed', old);
-  }
+  declare collapsed: boolean;
   /** Persists `collapsed` to `localStorage` across reloads when set. Namespaced as
    *  `lr-widget:${storageKey}` -- mirrors `lr-app-rail`'s/`lr-table`'s identical `storage-key`
    *  pattern. Unset (the default) touches storage not at all. */
@@ -372,12 +418,13 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
       // lr-table's/lr-app-rail's restore in their own willUpdate(). The `persistReady` gate in
       // updated() keeps this restored value from being written straight back.
-      // Never overwrites `collapsed` when the consumer already bound it to an explicit value
-      // before this point (`_collapsedExplicitlySet` -- see its own doc for why `changed.has`
-      // can't do this) -- a controlled `.collapsed=${false}` binding stays authoritative over
-      // stale `localStorage` state instead of being silently clobbered by it, with no
-      // `lr-collapse-change` firing for a change the consumer never asked for. Mirrors
-      // `lr-app-rail`'s identical `loadPersisted()` guard.
+      // Never overwrites `collapsed` when the consumer already assigned it before this point --
+      // a controlled `.collapsed=${false}` binding stays authoritative over stale `localStorage`
+      // state instead of being silently clobbered by it, with no `lr-collapse-change` firing for
+      // a change the consumer never asked for. The guard reports whether the property's setter
+      // ever ran, which `changed.has('collapsed')` cannot: a declared default lands in the same
+      // first-update batch as a consumer's binding. Mirrors `lr-app-rail`'s and `lr-table`'s
+      // identical restores, which share this mechanism.
       const parsed = readPersistedState(
         this.storageFullKey,
         (v): v is { collapsed?: unknown } => typeof v === 'object' && v !== null
@@ -385,7 +432,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       if (
         parsed &&
         typeof parsed.collapsed === 'boolean' &&
-        !this._collapsedExplicitlySet
+        !isPersistedPropertyExplicitlySet(this, 'collapsed')
       )
         this.collapsed = parsed.collapsed;
     }
@@ -631,11 +678,15 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   };
 
   private setActiveView = (viewId: string): void => {
-    if (viewId === this.activeViewId) return;
-    const request = this.emit('lr-view-request', { viewId }, { cancelable: true });
-    if (request.defaultPrevented) return;
-    this.activeViewId = viewId;
-    this.emit('lr-view-change', { viewId });
+    if (viewId !== this.activeViewId) {
+      const request = this.emit('lr-view-request', { viewId }, { cancelable: true });
+      if (request.defaultPrevented) return;
+      this.activeViewId = viewId;
+      this.emit('lr-view-change', { viewId });
+    }
+    // Every accepted toggle activation reports, including the re-pick of the active view that
+    // `lr-view-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
+    this.emit('lr-activate', { value: viewId });
   };
 
   /** Emits the cancelable interaction proposal before touching the persisted

@@ -278,6 +278,17 @@ export interface LyraNodePaletteEventMap {
  * @csspart search-field - The wrapper around the search input and its clear button.
  * @csspart empty - The no-results message.
  * @csspart live-region - The result-count announcement.
+ * @cssprop [--lr-node-palette-search-min-height=var(--lr-icon-button-size)] - Minimum row height of
+ *   the search field, for matching it to a themed search field of a chosen density tier. Point it
+ *   at `--lr-form-control-height-l` (or any tier of that ladder) to line this field up with the
+ *   rest of an application's controls. It can only raise the height: the shared tappable-target
+ *   minimum stays underneath it, so no tier can shrink the field past the WCAG floor.
+ * @cssprop [--lr-node-palette-search-font-size=inherit] - Text size of the search field.
+ * @cssprop [--lr-node-palette-search-padding-inline=var(--lr-space-s)] - Leading gutter of the
+ *   search field. The trailing gutter is reserved for the overlaid clear button.
+ * @cssprop [--lr-node-palette-search-padding-block=var(--lr-space-xs)] - Block gutter of the search
+ *   field.
+ * @cssprop [--lr-node-palette-search-radius=var(--lr-radius)] - Corner radius of the search field.
  * @status stable
  * @since 4.0.0
  */

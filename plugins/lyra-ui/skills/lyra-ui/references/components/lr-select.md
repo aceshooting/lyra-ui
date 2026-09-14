@@ -196,6 +196,17 @@ listener cannot hold a disabled popup open.
 `lr-after-show` and `lr-after-hide` fire after the corresponding listbox transition has settled; an
 interrupted transition drops its stale after-event.
 `lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
+`lr-activate` (`detail: { value: string }`, bubbling, composed, non-cancelable) fires on **every**
+activation of an available listbox row — a click, or Enter/Space on the active row — whether or not
+the selection actually moved. Its `value` is the activated option's own value, **always a single
+string**, even in `multiple` mode, where `lr-input`/`lr-change` carry the whole `string[]` instead.
+It reports that the user picked a row and gates nothing. Use it for the single-select repeat pick
+that `change`/`lr-change` deliberately stay silent for (matching a native `<select>`) — "re-run that
+filter" is a real intent — which is otherwise unobservable, because the rows live in this shadow
+root, so a retargeted `click` names no option and a keyboard commit produces no click at all. When
+an activation _does_ move the selection, `input`/`lr-input`/`change`/`lr-change` are emitted first,
+so either listener reads the settled selection. It is not fired by a programmatic `value`
+assignment, nor by the `with-clear` button.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides
 the `errorText` attribute when provided), `start`/`prefix` (aliases before the selected-value label),

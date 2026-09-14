@@ -4,6 +4,7 @@ import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { DisclosureMotionController } from './disclosure-motion.js';
@@ -59,15 +60,48 @@ export interface LyraDetailsEventMap {
  * @slot expand-icon - Icon shown while the panel is closed.
  * @slot collapse-icon - Icon shown while the panel is open.
  * @slot - Panel content.
- * @event lr-show - The panel is about to open. Cancelable.
- * @event lr-after-show - The panel is open and its marker transition has finished.
- * @event lr-hide - The panel is about to close. Cancelable.
- * @event lr-after-hide - The panel is closed and its marker transition has finished.
+ * @event lr-show - The panel is about to open. Cancelable. Nested disclosures emit the same name;
+ *   handle it as this panel's event only when `event.target === event.currentTarget` (see
+ *   `lr-toggle`).
+ * @event lr-after-show - The panel is open and its marker transition has finished. Nested
+ *   disclosures emit the same name; handle it as this panel's event only when
+ *   `event.target === event.currentTarget` (see `lr-toggle`).
+ * @event lr-hide - The panel is about to close. Cancelable. Nested disclosures emit the same name;
+ *   handle it as this panel's event only when `event.target === event.currentTarget` (see
+ *   `lr-toggle`).
+ * @event lr-after-hide - The panel is closed and its marker transition has finished. Nested
+ *   disclosures emit the same name; handle it as this panel's event only when
+ *   `event.target === event.currentTarget` (see `lr-toggle`).
  * @event lr-toggle - The disclosure state changed. `detail: { open, source }`, where `source` is
  *   `user` for summary activation, `programmatic` for `show()`/`hide()`/`open`, or `peer` when a
  *   named disclosure closes this panel. Reports the direction and source of an accepted state
  *   change. `<lr-accordion>` coordinates its direct `<lr-accordion-item>` children; Details
  *   disclosures manage their own state and optional named-peer grouping.
+ *
+ *   **A nested disclosure's events are not scoped to it, so filter by target.** Every Details
+ *   event bubbles and is composed, with no exception for this component. A `<lr-details>` nested
+ *   inside another one — as ordinary slotted content, in the default panel or in
+ *   `header-actions` — sends its own `lr-show`, `lr-hide`, `lr-toggle`, `lr-after-show` and
+ *   `lr-after-hide` straight through the outer panel, so a listener bound directly on the outer
+ *   `<lr-details>` also receives the inner one's, and an inner disclosure opening or closing looks
+ *   identical to the outer one doing the same. It is the failure mode `<lr-dialog>`'s `lr-close`
+ *   carries and documents too. This is deliberate rather than a bug to fix: non-bubbling
+ *   disclosure events would be a breaking change, and `event.target`/`event.currentTarget`
+ *   already give every listener what it needs to tell the two apart. Guard on the target:
+ *
+ *   ```html
+ *   <lr-details id="outer" summary="Outer">
+ *     Some outer content.
+ *     <lr-details id="inner" summary="Inner">Inner content.</lr-details>
+ *   </lr-details>
+ *   <script type="module">
+ *     const outer = document.querySelector('#outer');
+ *     outer.addEventListener('lr-toggle', (event) => {
+ *       if (event.target !== event.currentTarget) return; // the inner details toggled, not this one
+ *       // ...
+ *     });
+ *   </script>
+ *   ```
  * @csspart base - Compatibility name for the outer disclosure container; use `details`.
  * @csspart details - The outer disclosure container. It is the same node as `base`.
  * @csspart header - The complete row containing the native summary and any header actions.
@@ -278,16 +312,26 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       this.syncOpenAttribute();
       return false;
     }
-    if (this.emit('lr-show', null, { cancelable: true }).defaultPrevented) {
-      this.syncOpenAttribute();
-      return false;
-    }
-    if (!this.closeNamedPeers()) {
-      this.syncOpenAttribute();
-      return false;
-    }
-    this.applyOpenState(true);
-    return true;
+    // `lr-show` is the veto point and opening is the default action, so this runs through the
+    // library's one request/commit helper rather than a hand-written `defaultPrevented` branch.
+    // No write-tracking guard is passed: `open`'s setter routes straight back into `show()`/
+    // `hide()`, so a listener cannot resolve this transition by assigning the property, and
+    // treating such a write as a veto would change the shipped lifecycle.
+    let opened = false;
+    requestThenCommit({
+      requestDetail: null,
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-show', detail, init),
+      commit: () => {
+        // A named group's peers get their own veto before this panel opens; a peer that refuses
+        // to close rejects this request too, so the root never holds two open group members.
+        if (!this.closeNamedPeers()) return;
+        this.applyOpenState(true);
+        opened = true;
+      },
+    });
+    if (!opened) this.syncOpenAttribute();
+    return opened;
   }
 
   /** Collapse the panel. The promise resolves after `lr-after-hide`; vetoed requests resolve
@@ -300,11 +344,25 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     source: LyraDetailsToggleSource
   ): Promise<void> {
     if (!this._open) return;
-    if (this.emit('lr-hide', null, { cancelable: true }).defaultPrevented) {
+    // Same request/commit shape as `beginShow()`, in the closing direction -- including how the
+    // outcome is read. A flag set inside `commit` is the only reading that stays correct if this
+    // pair ever gains a `guard`: `requestThenCommit()` suppresses `commit` for a listener write
+    // as well as for `preventDefault()`, and in that first case `defaultPrevented` is still
+    // `false`, so branching on it would announce `lr-after-hide` for a transition that never ran.
+    let closed = false;
+    requestThenCommit({
+      requestDetail: null,
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-hide', detail, init),
+      commit: () => {
+        this.applyOpenState(false);
+        closed = true;
+      },
+    });
+    if (!closed) {
       this.syncOpenAttribute();
       return;
     }
-    this.applyOpenState(false);
     await this.settleTransition('lr-after-hide', source);
   }
 

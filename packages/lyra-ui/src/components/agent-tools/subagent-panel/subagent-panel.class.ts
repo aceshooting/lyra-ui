@@ -97,6 +97,18 @@ interface OrderedRuns {
  *   `[part="model"]` font size while `compact`.
  * @cssprop [--lr-subagent-panel-compact-action-padding=var(--lr-space-2xs)] - `[part="cancel"]`/
  *   `[part="retry"]` padding while `compact`.
+ * @cssprop [--lr-subagent-panel-background=var(--lr-color-surface)] - Resting fill of each run
+ *   row's trigger and action buttons. Hover and press follow
+ *   `--lr-subagent-panel-hover-background`, so retune both together.
+ * @cssprop [--lr-subagent-panel-hover-background=var(--lr-color-surface-raised)] - Hovered fill of
+ *   each run row's trigger and action buttons. The pressed fill is this value mixed a further
+ *   `--lr-color-mix-active` toward `--lr-color-mix-partner`, so retuning hover carries the press
+ *   with it.
+ * @cssprop [--lr-subagent-panel-border-color=var(--lr-color-border)] - Colour of each run row's
+ *   border and of its action divider. A selected row still uses
+ *   `--lr-subagent-panel-selected-border`.
+ * @cssprop [--lr-subagent-panel-radius=var(--lr-radius)] - Corner radius of each run row.
+ *   `frame="plain"` still squares the corners.
  * @status stable
  * @since 7.0.0
  */

@@ -85,12 +85,19 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part='search'] {
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    /* Geometry knobs, each defaulting to the value the field shipped with, so an unset picker
+       renders exactly as before. The size attribute deliberately does not drive them: on this
+       component it scales the emoji glyph and item box, and pulling the filter field along would
+       resize a surface that has never tracked that tier. */
+    min-block-size: var(--lr-emoji-picker-search-min-height, auto);
+    padding-block: var(--lr-emoji-picker-search-padding-block, var(--lr-space-xs));
+    padding-inline: var(--lr-emoji-picker-search-padding-inline, var(--lr-space-s));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-emoji-picker-item-radius, var(--_lr-emoji-picker-item-radius-default));
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    font-size: var(--lr-emoji-picker-search-font-size, inherit);
     /* Hover below only repaints border-color, so that is all this needs; without it this field's
        edge snaps while lr-button/lr-icon-button ease. */
     transition: border-color var(--lr-transition-fast);

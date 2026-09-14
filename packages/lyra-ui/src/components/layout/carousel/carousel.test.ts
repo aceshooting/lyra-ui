@@ -2153,6 +2153,32 @@ describe("touch scrolling and scroll-snap", () => {
     expect(behaviors).to.deep.equal(["smooth"]);
   });
 
+  it("still arms its scroll-settle debounce after a disconnect and reconnect", async () => {
+    // The scroll settle runs on the shared DebounceController. Teardown must `cancel()` it, never
+    // `dispose()` it: a disconnect here may be a re-parent, and a disposed controller silently
+    // refuses every later `push()`. Asserting the armed flag rather than the resulting
+    // `lr-slide-change` is deliberate -- `scrollend` settles the slide synchronously through a
+    // path that bypasses the debounce entirely, so an outcome assertion would pass either way.
+    const el = await sized();
+    const parent = el.parentElement!;
+    const armed = (): boolean =>
+      (el as unknown as { scrollSettle: { pending: boolean } }).scrollSettle.pending;
+
+    viewportOf(el).dispatchEvent(new Event("scroll"));
+    expect(armed(), "a connected carousel arms on scroll").to.be.true;
+
+    el.remove();
+    expect(armed(), "disconnect discards the in-flight settle").to.be.false;
+    parent.append(el);
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    viewportOf(el).dispatchEvent(new Event("scroll"));
+    expect(armed(), "a reconnected carousel can still arm one").to.be.true;
+    await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
+    expect(armed(), "and it settles rather than staying armed forever").to.be.false;
+  });
+
   it("drops a pending scroll settle when the carousel disconnects mid-gesture", async () => {
     const el = await sized();
     const viewport = viewportOf(el);
@@ -3049,9 +3075,10 @@ it("falls back to no reduced-motion query and an inline timer-less scheduler in 
     ) as HTMLElement;
     viewport.dispatchEvent(new Event("scroll"));
     expect(
-      (el as unknown as { settleTimer?: number }).settleTimer,
+      (el as unknown as { scrollSettle: { pending: boolean } }).scrollSettle
+        .pending,
       "no window means no timer host to schedule a settle on"
-    ).to.be.undefined;
+    ).to.be.false;
 
     // A completed drag also has no window to schedule the click-suppression timeout on, so the
     // suppression must clear synchronously instead of leaking.

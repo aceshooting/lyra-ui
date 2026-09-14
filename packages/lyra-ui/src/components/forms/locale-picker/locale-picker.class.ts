@@ -9,6 +9,7 @@ import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import {
   activateNonmodalOverlay,
   type OverlayHandle,
@@ -74,6 +75,14 @@ export type LyraLocaleCatalog = readonly string[] | readonly LyraLocaleEntry[];
 
 /** Visible content of the locale picker's trigger; option labels are always retained. */
 export type LyraLocaleTriggerDisplay = 'flag' | 'label' | 'flag-label';
+
+/** Visible content of each option row's label column; the trigger is unaffected. */
+export type LyraLocaleOptionDisplay = 'label' | 'label-tag';
+
+/** How long the listbox type-ahead buffer survives without a keystroke. Unchanged from the inline
+ *  literal this reset used before it moved onto the shared debounce controller, and identical to
+ *  `<lr-select>`'s. */
+const TYPE_AHEAD_RESET_MS = 500;
 
 const MAX_LOCALE_ENTRIES = 512;
 
@@ -201,7 +210,9 @@ export interface LyraLocalePickerEventMap {
  * @csspart option - An option row.
  * @csspart option-flag - The row's leading `<lr-flag>` (present only while `showFlags` is on).
  * @csspart option-label - An option row's label wrapper (native name + tag).
- * @csspart option-tag - An option row's secondary line — the raw BCP-47 tag.
+ * @csspart option-tag - An option row's secondary line — the raw BCP-47 tag. Rendered only while
+ *   `optionDisplay` is `label-tag` (the default); `optionDisplay="label"` omits the element
+ *   outright, so this part matches nothing at all rather than matching a hidden node.
  * @csspart expand-icon - The dropdown indicator.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
@@ -316,6 +327,14 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @property({ attribute: 'trigger-display', converter: declaredDefaultConverter('flag-label') })
   triggerDisplay: LyraLocaleTriggerDisplay = 'flag-label';
 
+  /** Option-row content. The default `label-tag` keeps today's two-line row: the locale's label
+   * above its raw BCP-47 tag. `label` renders the label alone and OMITS the `option-tag` part
+   * rather than hiding it -- a visually hidden tag still joins the row's accessible name and still
+   * matches a consumer's own `::part(option-tag)` rule, so hiding is not omitting. The trigger,
+   * the row flags and selection behaviour are identical either way. */
+  @property({ attribute: 'option-display', converter: declaredDefaultConverter('label-tag') })
+  optionDisplay: LyraLocaleOptionDisplay = 'label-tag';
+
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -377,9 +396,19 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   // Standard listbox type-ahead: printable keystrokes accumulate into this buffer and reset
   // ~500ms after the last one, matching lr-select's identical buffer/timer pair.
   private typeAheadBuffer = '';
-  private typeAheadTimer?: number;
-  private typeAheadTimerWindow?: Window;
-  private typeAheadTimerGeneration = 0;
+  /** The buffer's reset debounce -- `<lr-select>`'s identical pair, on the shared controller.
+   *  Every printable keystroke restarts it; the buffer clears only once the quiet window passes.
+   *  Scheduled on -- and cancelled through -- the realm this picker lives in at the time, and the
+   *  realm it was armed in is re-checked at settle, so one adopted into another document never
+   *  clears a buffer that now belongs to a different realm. */
+  private readonly typeAheadReset = new DebounceController<Window>(
+    TYPE_AHEAD_RESET_MS,
+    (armedIn) => {
+      if (!this.isConnected || this.ownerDocument.defaultView !== armedIn) return;
+      this.typeAheadBuffer = '';
+    },
+    () => this.ownerDocument.defaultView,
+  );
   private activeScrollGeneration = 0;
   private localizedValidityLocale = '';
   private localizedIntrinsicMessage = '';
@@ -750,7 +779,15 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   /** The tag actually shown in the trigger: the committed `value` once set, else a live preview
    *  of `effectiveLocale` -- never a committed selection, see the class doc's value/preview
-   *  split. */
+   *  split.
+   *
+   *  The `||` here (and `hasMissingRequiredValue()`'s `!this._value`) is deliberately NOT the
+   *  truthiness bug `<lr-select>`/`<lr-combobox>` were corrected for. There, `''` was a legitimate
+   *  option value being misread as "no value". Here `''` cannot be a row: `snapshotLocaleCatalog()`
+   *  drops a zero-length `tag`, and a BCP-47 tag has at least a primary language subtag, so the
+   *  empty string is this control's one documented "nothing committed" sentinel -- the very state
+   *  the preview and the `valueMissing` constraint exist to express. Treating `''` as a candidate
+   *  value would break both. */
   private get previewTag(): string {
     return this._value || this.effectiveLocale;
   }
@@ -759,6 +796,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this.normalizedEntries.find((e) => e.tag === tag);
   }
 
+  /** A tag with no row falls back to its derived endonym rather than to a "not in catalog" badge,
+   *  unlike `<lr-model-select>`/`<lr-voice-picker>`. The catalog here is live: with `locales` unset
+   *  it tracks `getRegisteredLyraLocales()`, so a value restored from a profile is routinely
+   *  legitimate-but-not-yet-listed for as long as its translation pack takes to register. Badging
+   *  it would flag a correct value as stale, which is the same false alarm `<lr-combobox>`
+   *  suppresses while an async `source` fetch is still in flight. */
   private labelFor(tag: string): string {
     return this.entryFor(tag)?.label ?? localeNativeName(tag);
   }
@@ -929,22 +972,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.clearTypeAheadTimer();
     this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
     const ownerWindow = this.ownerDocument.defaultView;
-    if (this.isConnected && ownerWindow) {
-      const generation = this.typeAheadTimerGeneration;
-      this.typeAheadTimerWindow = ownerWindow;
-      this.typeAheadTimer = ownerWindow.setTimeout(() => {
-        if (
-          this.typeAheadTimerGeneration !== generation ||
-          !this.isConnected ||
-          this.ownerDocument.defaultView !== ownerWindow
-        ) {
-          return;
-        }
-        this.typeAheadTimer = undefined;
-        this.typeAheadTimerWindow = undefined;
-        this.typeAheadBuffer = '';
-      }, 500);
-    }
+    // A detached or realm-less picker arms nothing at all, exactly as before: the controller would
+    // otherwise fall back to the ambient timer queue and clear a buffer through a document this
+    // element does not live in.
+    if (this.isConnected && ownerWindow) this.typeAheadReset.push(ownerWindow);
 
     const rows = this.normalizedEntries;
     if (!rows.length) return;
@@ -965,13 +996,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     }
   }
 
+  /** Discards an armed buffer reset. `cancel()`, never `dispose()`: a disconnect here may be a
+   *  re-parent, and a disposed controller would refuse every later keystroke's reset for good. */
   private clearTypeAheadTimer(): void {
-    this.typeAheadTimerGeneration += 1;
-    if (this.typeAheadTimer !== undefined) {
-      this.typeAheadTimerWindow?.clearTimeout(this.typeAheadTimer);
-    }
-    this.typeAheadTimer = undefined;
-    this.typeAheadTimerWindow = undefined;
+    this.typeAheadReset.cancel();
   }
 
   /** Updates active-descendant ownership and keeps the resulting row visible after render. */
@@ -1087,7 +1115,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
           : ''}
         <span part="option-label">
           <span>${entry.label}</span>
-          <span part="option-tag">${entry.tag}</span>
+          ${this.optionDisplay === 'label'
+            ? nothing
+            : html`<span part="option-tag">${entry.tag}</span>`}
         </span>
       </div>`;
     });

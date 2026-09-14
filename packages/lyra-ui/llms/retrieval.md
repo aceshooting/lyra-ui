@@ -423,7 +423,15 @@ below the list).
 listbox), `group-header`, `item`, `item-icon`, `item-label`, `item-description`, `empty`
 (no-results message), `live-region` (result-count announcement).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-node-palette-search-min-height` (default
+`var(--lr-icon-button-size)`), `--lr-node-palette-search-font-size` (default `inherit`),
+`--lr-node-palette-search-padding-inline` (default `var(--lr-space-s)`),
+`--lr-node-palette-search-padding-block` (default `var(--lr-space-xs)`) and
+`--lr-node-palette-search-radius` (default `var(--lr-radius)`) size the built-in search field; point
+the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The height
+hook can only raise the field — the shared tappable-target minimum stays underneath it, so no tier
+can shrink it past the WCAG floor. The trailing inline gutter is reserved for the overlaid
+`search-clear` button and is not a knob. Everything else is shared tokens.
 
 **Optional peer deps:** none.
 
@@ -995,6 +1003,11 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   the host attribute is absent, overrides the tree name. Authored host `aria-label` instead names
   the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,
   which retains the distinct `label`/localized name
+- `size?: LyraSize` (reflected) — opt-in density tier forwarded to the composed filter `lr-input`,
+  on the library's one six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`, or `small`/`medium`/`large`).
+  Forwarding is the only way to reach that field, which resolves its tier inside its own shadow
+  root. With no `size` the field keeps its own `m` default; an unsupported value normalizes to the
+  omitted state and removes the attribute
 
 **Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
 fired after every toggle including select-all).
@@ -1623,6 +1636,18 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   exactly this many items still render as a plain list. Before 9.0.0 this was spelled
   `virtualizeThreshold`/`virtualize-threshold` _and_ compared inclusively (`>=`), so a migration
   that only renames the attribute shifts the switchover point by one item
+- `announce: boolean = false` (reflected) — opt-in: announce the failures the queue **already
+  carries** the first time it mounts, instead of staying silent until a row fails later. The
+  mount-time pass reuses the one announcement path a later failure takes — the same shared
+  assertive light-DOM region, the same locale-aware conjunction list of the caller-supplied
+  `item.error` strings, and the same `[part="failure-live"]` mirror — so an opted-in mount reads
+  exactly what a live failure would. Set it where the queue is created in response to something
+  the user just did: a retried ingestion run that mounts a fresh queue already holding
+  `stage="failed"` rows would otherwise never speak them. Leave it unset for a queue that is part
+  of the page a user is arriving on — those rows render in document order and repeating them is
+  noise. Read once per element lifetime: a later reconnection or adoption stages the same rows
+  again rather than replaying the announcement, and failures added or changed after mount announce
+  either way. A queue carrying no `stage="failed"` row with an `error` announces nothing
 
 Queue item ids must be nonblank and unique. Malformed rows and later duplicates are omitted
 first-wins before empty state, counts, virtualization, failure announcements, rendering, or actions.
@@ -2038,6 +2063,20 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   replaces the whole result view with a neutral visible message. Caller-supplied text is not
   localized (app/network data, not library copy). A new non-empty value is announced through a
   shared assertive light-DOM region; initial and reconnect content is not replayed
+- `announce: boolean = false` (reflected) — opt-in: announce the state the panel is **already
+  presenting** the first time it mounts, rather than only announcing later transitions into it.
+  Urgency follows the state, exactly as the live path does and in the same branch order the panel
+  renders: a non-empty `errorText` wins and is announced verbatim through the shared assertive
+  light-DOM region, otherwise a panel that is neither `loading` nor holding any chunk announces the
+  localized empty-result message through the shared polite region. A panel still `loading`, or one
+  already showing chunks, announces nothing — rendered results are ordinary content read in
+  document order. The announcement is deferred one frame past the first update so the shared region
+  exists before its text lands, and any live transition arriving first retires the pending
+  mount-time announcement so nothing is read twice. Set it where the panel is rendered in response
+  to a retrieval the user just ran and nothing else reports the outcome; leave it unset for a panel
+  that is part of the page a user is arriving on. Read once, when the panel first mounts: a later
+  reconnection or adoption stages the existing state again rather than replaying it, and later
+  transitions are announced either way
 - `label?: string` — fallback name for the populated result group; omission uses localized
   `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty
@@ -2141,6 +2180,19 @@ at the same size tier, so the toolbar row renders as one flush line.
   results"; never inferred, since this component holds no results data (see `lr-retrieval-results`).
   A later transition into the settled empty state announces the localized “No matches” heading
   through the shared polite light-DOM region; initial and reconnect content is not replayed
+- `announce: boolean = false` (reflected) — opt-in: announce the state the search bar is **already
+  presenting** the first time it mounts, rather than only announcing later transitions into it.
+  Urgency follows the state, in the same branch order the row renders: a non-empty `errorText` wins
+  and is announced verbatim through the shared assertive light-DOM region, otherwise an `empty`
+  search that is not `loading` announces the localized “No matches” text through the shared polite
+  region. A search that is still `loading`, or that has settled on neither state, announces
+  nothing. The announcement is deferred one frame past the first update so the shared region exists
+  before its text lands, and any live transition arriving first retires the pending mount-time
+  announcement so nothing is read twice. Set it where the search is rendered in response to a query
+  the user just ran and nothing else reports the outcome; leave it unset for a search that is part
+  of the page a user is arriving on, whose visible error or empty state is already read in document
+  order. Read once, when the search first mounts: a later reconnection or adoption stages the
+  existing state again rather than replaying it, and later transitions are announced either way
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
 - `label?: string` — fallback name for the `role="search"` landmark; omission uses the localized
@@ -2149,6 +2201,12 @@ at the same size tier, so the toolbar row renders as one flush line.
   the host attribute is absent, overrides the search-landmark name. A non-empty authored host
   `aria-label` makes the host the sole overall owner, so the inner shell omits its duplicate
   role/name; an explicitly empty host label stays empty on the search landmark
+- `size?: LyraSize` (reflected) — opt-in density tier for the whole query row, on the library's one
+  six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`, or `small`/`medium`/`large`). It is one property for
+  all three controls deliberately: the query field, the mode selector and the submit button share
+  the row's baseline, and sizing one of them alone is what makes the row ragged. With no `size` each
+  control keeps its own `m` default, exactly what the row rendered before; an unsupported value
+  normalizes to the omitted state and removes the attribute
 
 **Events:**
 
@@ -2171,7 +2229,11 @@ component), `row`, `query`, `mode`, `submit` (reads
 `errorText` is non-empty and not `loading`), `empty` (only when `empty` and neither `loading` nor
 `errorText`).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-retrieval-search-submit-min-height` (default
+`var(--lr-icon-button-size)`, raised to the tier's shared form-control height when `size` is set) is
+the submit button's minimum height; the shared tappable-target minimum always stays underneath it,
+so the smallest tiers cannot shrink the button below the WCAG floor. Everything else is shared
+tokens.
 
 **Optional peer deps:** none.
 
@@ -2348,6 +2410,16 @@ tab and panel inactive.
 `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the
 correlated ids/details from their composed primitives).
+`lr-activate` (`detail: { value: 'sources' | 'ingestion' }`, bubbling, composed, non-cancelable)
+fires on **every** user activation of an available tab — a click, or an Arrow/Home/End key —
+whether or not `activeTab` actually moved. `value` is the activated tab, the same identity
+`lr-tab-change` reports under the key `tab`. It reports that the user picked a tab and gates
+nothing. Use it for the repeat pick `lr-tab-change` deliberately stays silent for — "refresh that
+queue" is a real intent — which from the keyboard is otherwise unobservable, because Home on an
+already-first active tab (or End on an already-last one) activates a tab and produces no click at
+all. When an activation _does_ move the tab, `lr-tab-change` is emitted first. The normalization
+that moves an invalid or newly-hidden tab back to Sources is not a user activation and fires only
+`lr-tab-change`.
 
 **Slots:** `settings` — host-owned KB configuration controls.
 

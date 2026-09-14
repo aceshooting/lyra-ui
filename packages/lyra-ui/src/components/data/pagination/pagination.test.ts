@@ -2338,3 +2338,116 @@ describe("page-input pointer feedback", () => {
     }
   });
 });
+
+describe("lr-pagination activation event", () => {
+  it("fires lr-activate without lr-page-change when the current page button is clicked again", async () => {
+    const el = await pagination();
+    el.page = 3;
+    await el.updateComplete;
+    let changeCount = 0;
+    let beforeCount = 0;
+    el.addEventListener("lr-page-change", () => changeCount++);
+    el.addEventListener("lr-before-page-change", () => beforeCount++);
+    const current = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part~="page-current"]'
+    )!;
+    setTimeout(() => current.click());
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: 3 });
+    expect(el.page).to.equal(3);
+    expect(changeCount, "re-requesting the current page is not a change").to.equal(0);
+    expect(beforeCount, "and proposes no change either").to.equal(0);
+  });
+
+  it("fires lr-activate when Enter re-commits the current page in the jump field", async () => {
+    const el = await pagination(
+      html`<lr-pagination total="95" page-size="10" format="compact"></lr-pagination>`
+    );
+    el.page = 4;
+    await el.updateComplete;
+    let changeCount = 0;
+    el.addEventListener("lr-page-change", () => changeCount++);
+    const input = el.shadowRoot!.querySelector<HTMLInputElement>(
+      '[part="page-input"]'
+    )!;
+    input.value = "4";
+    setTimeout(() =>
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          bubbles: true,
+          cancelable: true,
+        })
+      )
+    );
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: 4 });
+    expect(changeCount, "re-entering the current page is not a change").to.equal(0);
+  });
+
+  it("emits lr-page-change before lr-activate for a moving request, and bubbles composed and uncancelable", async () => {
+    const el = await pagination();
+    const order: string[] = [];
+    const flags: Array<Record<string, boolean>> = [];
+    el.addEventListener("lr-before-page-change", () =>
+      order.push("lr-before-page-change")
+    );
+    el.addEventListener("lr-page-change", () => order.push("lr-page-change"));
+    const documentListener = (e: Event): void => {
+      order.push("lr-activate");
+      flags.push({
+        bubbles: e.bubbles,
+        cancelable: e.cancelable,
+        composed: e.composed,
+      });
+    };
+    document.addEventListener("lr-activate", documentListener);
+    try {
+      const buttons = [
+        ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="page"]'),
+      ];
+      buttons.find((button) => button.textContent?.trim() === "2")!.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", documentListener);
+    }
+    expect(order).to.deep.equal([
+      "lr-before-page-change",
+      "lr-page-change",
+      "lr-activate",
+    ]);
+    expect(flags).to.deep.equal([
+      { bubbles: true, cancelable: false, composed: true },
+    ]);
+  });
+
+  it("stays silent for a vetoed request, an out-of-range request and a programmatic page assignment", async () => {
+    const el = await pagination();
+    let activateCount = 0;
+    el.addEventListener("lr-activate", () => activateCount++);
+    el.addEventListener("lr-before-page-change", (e) => e.preventDefault());
+    const buttons = [
+      ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="page"]'),
+    ];
+    buttons.find((button) => button.textContent?.trim() === "2")!.click();
+    await el.updateComplete;
+    expect(el.page, "the veto held").to.equal(1);
+    expect(activateCount, "a vetoed request activates nothing").to.equal(0);
+
+    el.shadowRoot!
+      .querySelector<HTMLButtonElement>('[part~="previous"]')
+      ?.click();
+    await el.updateComplete;
+    expect(activateCount, "previous on page 1 is out of range").to.equal(0);
+
+    el.page = 5;
+    await el.updateComplete;
+    expect(el.page, "the assignment still lands").to.equal(5);
+    expect(
+      activateCount,
+      "a host writing `page` is not a user activation"
+    ).to.equal(0);
+  });
+});

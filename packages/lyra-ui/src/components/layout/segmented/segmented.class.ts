@@ -24,6 +24,7 @@ export interface LyraSegmentedItem {
 
 export interface LyraSegmentedEventMap {
   'lr-change': CustomEvent<{ value: string }>;
+  'lr-activate': CustomEvent<{ value: string }>;
 }
 
 const MAX_SEGMENTED_ITEMS = 256;
@@ -96,6 +97,15 @@ function snapshotSegmentedItems(
  * @customElement lr-segmented
  * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value }`.
+ * @event lr-activate - Fired on every activation of a non-disabled segment -- a click, or
+ *   an Arrow/Home/End key that lands on one -- whether or not the selection actually moved.
+ *   `detail: { value }` carries the activated segment's own value. Bubbling and composed, so a host
+ *   outside the shadow tree receives it. Not cancelable: it is a notification that the user picked a
+ *   segment, not a veto point, and nothing in this component branches on it. Re-picking the current
+ *   value is the case `lr-change` deliberately stays silent for (a re-submit, a re-fetch, a panel
+ *   the host wants to reopen), and it is otherwise unobservable for keyboard activation, which
+ *   produces no click. When an activation does move the selection, `lr-change` is emitted first, so
+ *   a listener reading `value` from either event always sees the settled selection.
  * @method scrollToValue - `scrollToValue(value: string): void` — scroll the segment with the given
  *   `value` into view within the (possibly overflowing) track. Called automatically when `value`
  *   changes programmatically; exposed for the "reveal without selecting" case. Honors
@@ -202,13 +212,19 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   );
 
   private select(item: Readonly<LyraSegmentedItem>): void {
-    if (item.disabled || item === this.selectedItem) return;
-    const valueChanged = item.value !== this.value;
-    this.selectedItem = item;
-    if (valueChanged) {
-      this.value = item.value;
-      this.emit('lr-change', { value: item.value });
+    if (item.disabled) return;
+    if (item !== this.selectedItem) {
+      const valueChanged = item.value !== this.value;
+      this.selectedItem = item;
+      if (valueChanged) {
+        this.value = item.value;
+        this.emit('lr-change', { value: item.value });
+      }
     }
+    // Every non-disabled activation reports, including the re-pick of the current value that
+    // `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry
+    // for why this one is a notification rather than a veto point.
+    this.emit('lr-activate', { value: item.value });
   }
 
   private segmentButtonAt(index: number): HTMLElement | null {

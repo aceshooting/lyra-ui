@@ -19,15 +19,25 @@ export const styles = css`
     /* A fast fling must not scroll the page behind this list at either end. */
     overscroll-behavior: contain;
   }
+  /* An external scrollElement hands the scrollport to a consumer-owned ancestor: this element
+     stops scrolling and grows to the list's whole virtual extent, so the ancestor's own scrollbar
+     spans the full list and [part="sticky-group"] sticks to that ancestor's scrollport instead of
+     this one. Horizontal scrolling of content that opted out of wrapping becomes the ancestor's job
+     too, because CSS cannot leave one axis visible while the other scrolls. */
+  [part="base"][data-external-scroll] {
+    block-size: auto;
+    overflow: visible;
+  }
   [part="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     /* Inward: the outward ring every other component uses is clipped along the scrolling edges by
        this element's own overflow:auto. */
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  /* [part="base"] always carries tabindex="0", so mouse users need a hint it is interactive. A plain
-     border color, not the focus ring's brand color, keeps the ring distinct; inward offset for the
-     reason above. */
+  /* [part="base"] carries tabindex="0" whenever it owns the scrollport, so mouse users need a hint
+     it is interactive. A plain border color, not the focus ring's brand color, keeps the ring
+     distinct; inward offset for the reason above. Suppressed under an external scrollElement, where
+     the element is neither focusable nor scrollable and this outline would promise both. */
   /* no-pressed-state: the scroll port activates nothing, and :active matches the ancestors of
      whatever was pressed, so clicking any row would flash this outline around the entire list. */
   [part="base"]:hover {
@@ -44,6 +54,15 @@ export const styles = css`
       --lr-virtual-list-hover-outline-offset,
       calc(-1 * var(--lr-border-width-thin))
     );
+  }
+  /* Under an external scrollElement this element is neither focusable nor scrollable (see the
+     template), so the hover hint above would advertise an interactivity it no longer has. Only the
+     style is reset: the three scoped hover custom properties stay inert rather than overridden, so a
+     consumer theming them sees the same values return the moment the list owns its scrollport again. */
+  /* no-pressed-state: this rule REMOVES the hover treatment rather than adding one, so there is no
+     pointer feedback here for a pressed state to follow through on. */
+  [part="base"][data-external-scroll]:hover {
+    outline-style: none;
   }
   [part="spacer"] {
     position: relative;

@@ -229,6 +229,25 @@ import type { LyraAnchorTargetEventMap } from './internal/anchor-target.js';
 import type { LyraTextViewerTargetEventMap } from './internal/text-viewer-target.js';
 
 /**
+ * `lr-activate` — dispatched by 9 components: `<lr-combobox>`, `<lr-knowledge-base-admin>`,
+ * `<lr-pagination>`, `<lr-rating>`, `<lr-segmented>`, `<lr-select>`, `<lr-swatch-picker>`,
+ * `<lr-tab-group>`, `<lr-widget>`.
+ *
+ * A union of 9 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g. `LyraComboboxEventMap['lr-activate']`.
+ */
+export type LyraActivateEvent =
+  | LyraComboboxEventMap['lr-activate']
+  | LyraKnowledgeBaseAdminEventMap['lr-activate']
+  | LyraPaginationEventMap['lr-activate']
+  | LyraRatingEventMap['lr-activate']
+  | LyraSegmentedEventMap['lr-activate']
+  | LyraSelectEventMap['lr-activate']
+  | LyraSwatchPickerEventMap['lr-activate']
+  | LyraTabGroupEventMap['lr-activate']
+  | LyraWidgetEventMap['lr-activate'];
+
+/**
  * `lr-add` — dispatched by 2 components: `<lr-memory-panel>`, `<lr-token-input>`.
  *
  * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
@@ -3519,6 +3538,7 @@ export type LyraZoomChangeEvent =
  * Those stay typed per component through the component's own event map.
  */
 export interface LyraGlobalEventMap {
+  'lr-activate': LyraActivateEvent;
   'lr-add': LyraAddEvent;
   'lr-add-condition': LyraAddConditionEvent;
   'lr-after-collapse': LyraAfterCollapseEvent;

@@ -6,6 +6,28 @@ export const styles = css`
     flex-direction: column;
     block-size: 100%;
     min-block-size: 0;
+
+    /* Private search-field slots. Only the three with a value here are set while no size tier is
+       present: the two that stay unset leave their use-site declaration invalid at computed-value
+       time, which is exactly the pre-ladder rendering -- an inherited font-size and an auto
+       minimum height. So a thread-list with no size attribute paints byte-for-byte what it
+       painted before the ladder reached it, whatever an ancestor may have set on the shared
+       form-control slots. */
+    --_lr-thread-list-search-padding-inline: var(--lr-space-s);
+    --_lr-thread-list-search-padding-block: var(--lr-space-xs);
+    --_lr-thread-list-search-radius: var(--lr-radius);
+  }
+  /* A size tier re-points every field slot at the shared form-control ladder that lr-input,
+     lr-select and lr-button already resolve, so the built-in filter box matches an adjacent themed
+     search field of the same tier instead of one fixed geometry. Both spellings of each tier are
+     matched by internal/contextual-vocabulary.styles.ts, so small/medium/large need no JS
+     normalisation here. */
+  :host(:where([size])) {
+    --_lr-thread-list-search-min-height: var(--lr-form-control-height);
+    --_lr-thread-list-search-font-size: var(--lr-form-control-font-size);
+    --_lr-thread-list-search-padding-inline: var(--lr-form-control-padding-inline);
+    --_lr-thread-list-search-padding-block: var(--lr-form-control-padding-block);
+    --_lr-thread-list-search-radius: var(--lr-form-control-radius);
   }
   [part='base'] {
     display: flex;
@@ -16,21 +38,43 @@ export const styles = css`
   [part='search'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-xs);
-    padding: var(--lr-space-s);
+    gap: var(--lr-thread-list-search-gap, var(--lr-space-xs));
+    padding: var(--lr-thread-list-search-padding, var(--lr-space-s));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='search-input'] {
     box-sizing: border-box;
     flex: 1 1 auto;
     min-inline-size: 0;
-    padding-inline: var(--lr-space-s);
-    padding-block: var(--lr-space-xs);
+    min-block-size: var(
+      --lr-thread-list-search-min-height,
+      var(--_lr-thread-list-search-min-height)
+    );
+    padding-inline: var(
+      --lr-thread-list-search-padding-inline,
+      var(--_lr-thread-list-search-padding-inline)
+    );
+    padding-block: var(
+      --lr-thread-list-search-padding-block,
+      var(--_lr-thread-list-search-padding-block)
+    );
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(
+      --lr-thread-list-search-radius,
+      var(--_lr-thread-list-search-radius)
+    );
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    /* Follows the font shorthand deliberately: the shorthand pins every other font longhand to the
+       inherited value, and this one declaration then re-points only the size. With neither the
+       public hook nor a size tier set, both names are undefined, the declaration is invalid at
+       computed-value time, and an inherited property falls back to the inherited value -- the same
+       size the shorthand alone produced. */
+    font-size: var(
+      --lr-thread-list-search-font-size,
+      var(--_lr-thread-list-search-font-size)
+    );
   }
   [part='search-input']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -59,8 +103,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-size-1-5rem);
-    block-size: var(--lr-size-1-5rem);
+    inline-size: var(--lr-thread-list-search-clear-size, var(--lr-size-1-5rem));
+    block-size: var(--lr-thread-list-search-clear-size, var(--lr-size-1-5rem));
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: 0;

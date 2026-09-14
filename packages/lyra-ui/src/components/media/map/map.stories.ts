@@ -6,6 +6,7 @@ import type {
   LyraMapLegendEntry,
   LyraMapMarker,
   LyraMapMarkerActivationDetail,
+  LyraMapPointIcon,
 } from './map.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 import '../../../../../../.storybook/maplibre-worker.js';
@@ -532,9 +533,15 @@ export const NavigationAndScale: Story = {
 export const ClassifiedPoints: Story = {
   args: { zoom: 13 },
   argTypes: { zoom: { control: { type: 'range', min: 10, max: 18, step: 1 } } },
-  parameters: { docs: { description: { story: 'One clustered source retains cross-category aggregation. Increase zoom past 14 to see category colors, visit bands (10/12/14/16px radii), and filled/outlined path icons. point.radius names its own numeric field independently of category colors; cluster-count sizes stay independent. The same feature is returned by lr-map-click on its circle or icon, and CSS token colors follow the theme.' } } },
+  parameters: { docs: { description: { story: 'One clustered source retains cross-category aggregation. Increase zoom past 14 to see category colors, visit bands (10/12/14/16px radii), and filled/outlined path icons. point.radius names its own numeric field independently of category colors; cluster-count sizes stay independent. The same feature is returned by lr-map-click on its circle or icon, and CSS token colors follow the theme. Each legend row is handed the very icon record its category draws on the map, so the key shows the symbol instead of describing it in color alone.' } } },
   render: ({ zoom }) => {
     const categories = ['home', 'work', 'shop'];
+    const icons = [
+      { value: 'home', path: 'M2 12L12 2L22 12V22H2Z' },
+      { value: 'work', path: 'M8 6V3H16V6M3 6H21V21H3ZM3 11H21',
+        mode: 'stroke', strokeWidth: 1.75, lineCap: 'round', lineJoin: 'round' },
+      { value: 'shop', path: 'M4 2H20L23 9H21V22H3V9H1ZM6 12V20H10V12Z' },
+    ] as const satisfies readonly LyraMapPointIcon[];
     const layer: LyraMapGeoJsonDataLayer = {
       sourceId: 'places', cluster: {},
       geojson: { type: 'FeatureCollection', features: Array.from({ length: 1200 }, (_, index) => ({
@@ -544,19 +551,14 @@ export const ClassifiedPoints: Story = {
       point: { field: 'category', colors: [['home', storyColor('brand')], ['work', storyColor('success')], ['shop', storyColor('warning')]],
         radius: { field: 'visits', stops: [[0, 10], [10, 12], [50, 14], [100, 16]], fallback: 10 },
         strokeWidth: 1, iconSize: 14,
-        icons: [
-          { value: 'home', path: 'M2 12L12 2L22 12V22H2Z' },
-          { value: 'work', path: 'M8 6V3H16V6M3 6H21V21H3ZM3 11H21',
-            mode: 'stroke', strokeWidth: 1.75, lineCap: 'round', lineJoin: 'round' },
-          { value: 'shop', path: 'M4 2H20L23 9H21V22H3V9H1ZM6 12V20H10V12Z' },
-        ],
+        icons,
       },
     };
     return html`<lr-map label="Classified locations" .mapStyle=${OFFLINE_RASTER_STYLE} .zoom=${zoom}
       .dataLayers=${[layer]} .legend=${[
-        { label: 'Home', color: storyColor('brand'), pattern: 'solid' },
-        { label: 'Work', color: storyColor('success'), pattern: 'diagonal' },
-        { label: 'Shop', color: storyColor('warning'), pattern: 'dots' },
+        { label: 'Home', color: storyColor('brand'), pattern: 'solid', icon: icons[0] },
+        { label: 'Work', color: storyColor('success'), pattern: 'diagonal', icon: icons[1] },
+        { label: 'Shop', color: storyColor('warning'), pattern: 'dots', icon: icons[2] },
       ]}></lr-map>`;
   },
 };

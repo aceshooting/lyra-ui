@@ -1,4 +1,4 @@
-import { html } from "lit";
+import { html, nothing } from "lit";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./document-library.js";
 import type { LibraryDocument } from "./document-library.class.js";
@@ -171,6 +171,28 @@ export const OptionalTagsAndSearchRemoval: Story = {
         { id: 'alpha', name: 'Alpha', tags: undefined },
         { id: 'beta', name: 'Beta' },
       ]}></lr-document-library>
+    </div>
+  `,
+};
+
+/** `size` puts the toolbar's own search field and tag filter on the library's one control ladder
+ *  together, by forwarding the tier to the composed `<lr-input>` and `<lr-combobox>` -- the only
+ *  way to reach controls that resolve their tier inside their own shadow roots. Both spellings of
+ *  every tier are accepted, and the two controls stay on the same tier as each other so the
+ *  toolbar row never goes ragged. Leaving `size` unset keeps both on their own `m` default, which
+ *  is the library shown last. */
+export const SearchSizeTiers: Story = {
+  name: 'Size tiers',
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-l);">
+      ${(['s', 'm', 'l', undefined] as const).map(
+        (size) => html`
+          <lr-document-library
+            size=${size ?? nothing}
+            .documents=${documents}
+          ></lr-document-library>
+        `
+      )}
     </div>
   `,
 };

@@ -11,10 +11,14 @@ export const styles = css`
        this property). Not a component prop: a pure layout knob nothing branches on. */
     --_lr-thinking-panel-max-block-size: var(--lr-size-16rem);
   }
+  /* Card chrome behind inline var() fallbacks, same convention as the compact density below: each
+     fallback is the pre-existing token, so an unset panel paints exactly as before while a
+     transcript can retune the nested card without a ::part(base) override. */
   [part="base"] {
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-thinking-panel-border-color, var(--lr-color-border));
+    border-radius: var(--lr-thinking-panel-radius, var(--lr-radius));
+    background: var(--lr-thinking-panel-background, var(--lr-color-surface));
     overflow: hidden;
   }
   /* Density escape for transcript rows. Inline var() fallbacks let a containing transcript retune
@@ -147,7 +151,10 @@ export const styles = css`
        as virtual-list.styles.ts's auto-scrolling region. */
     overscroll-behavior: contain;
     padding: var(--lr-space-m);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* The header/body divider is the same chrome the outer border is, and frame="plain" keeps it,
+       so it follows the same hook rather than stranding a mismatched rule in a retuned card. */
+    border-block-start: var(--lr-border-width-thin) solid
+      var(--lr-thinking-panel-border-color, var(--lr-color-border));
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
     line-height: var(--lr-line-height-normal);

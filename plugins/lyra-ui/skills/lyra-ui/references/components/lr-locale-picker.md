@@ -57,6 +57,13 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   follows `label`/the host `aria-label`. The square uses the shared/scoped trigger height with a
   24px floor. `showFlags=false` retains visible text in every mode. Selection, keyboard navigation,
   form values and the uncommitted effective-locale preview keep their usual behavior.
+- `optionDisplay: LyraLocaleOptionDisplay = 'label-tag'` (attribute `option-display`) —
+  `'label' | 'label-tag'`. The default renders each option row as the locale's label above its raw
+  BCP-47 tag. `'label'` renders the label alone and **omits the `option-tag` element from the DOM**
+  rather than hiding it with CSS — a visually hidden tag would still join the row's accessible name
+  and would still be matched by `::part(option-tag)`, so under `'label'` that part matches nothing
+  at all. The trigger, the row flags, `showFlags`, selection, keyboard navigation and form values
+  are identical in both modes; only the option rows change.
 - `value: string = ''` — the **committed** selection (form value, drives `lr-change`). While `''`
   and untouched, the trigger _displays_ `effectiveLocale` as a preview label, but
   `checkValidity()`/`required` are governed by the real `value`, which stays `''` until a real
@@ -122,7 +129,9 @@ priority until cleared.
 `trigger-flag` (the trigger's leading `<lr-flag>` for the current value, present only while
 `showFlags` is on and `triggerDisplay` is not `label`), `trigger-label` (the current language,
 visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present only while `showFlags` is on),
-`option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag), `expand-icon`,
+`option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag; rendered only while
+`optionDisplay` is `label-tag`, and absent from the DOM entirely under `optionDisplay="label"`),
+`expand-icon`,
 `hint`, `error`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on

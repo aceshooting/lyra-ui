@@ -16,6 +16,13 @@ import type {
 } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './thread-list.styles.js';
+import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
 import {
   getDateTimeFormat,
   getNumberFormat,
@@ -357,6 +364,25 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  * @csspart row-item-meta - Data mode: the row item's `meta` wrapper.
  * @csspart row-item-timestamp - Data mode: the row item's `<time>` element.
  * @csspart row-item-actions - Data mode: the row item's `actions` wrapper.
+ * @cssprop [--lr-thread-list-search-padding=var(--lr-space-s)] - Gutter around the built-in search
+ *   field. Deliberately not tiered by `size`, which sizes the field itself.
+ * @cssprop [--lr-thread-list-search-gap=var(--lr-space-xs)] - Gap between the search field and its
+ *   clear button.
+ * @cssprop [--lr-thread-list-search-min-height] - Minimum row height of the search field. Unset
+ *   while `size` is, so the field is exactly as tall as its own text plus padding; a `size` tier
+ *   resolves it to that tier's shared form-control height.
+ * @cssprop [--lr-thread-list-search-font-size] - Text size of the search field. Unset while `size`
+ *   is, so the field inherits the ambient text size; a `size` tier resolves it to that tier's
+ *   shared form-control font size.
+ * @cssprop [--lr-thread-list-search-padding-inline=var(--lr-space-s)] - Inline gutter of the search
+ *   field. A `size` tier replaces the default with that tier's shared form-control inline gutter.
+ * @cssprop [--lr-thread-list-search-padding-block=var(--lr-space-xs)] - Block gutter of the search
+ *   field. A `size` tier replaces the default with that tier's shared form-control block gutter.
+ * @cssprop [--lr-thread-list-search-radius=var(--lr-radius)] - Corner radius of the search field. A
+ *   `size` tier replaces the default with that tier's shared form-control radius.
+ * @cssprop [--lr-thread-list-search-clear-size=var(--lr-size-1-5rem)] - Box size of the search
+ *   field's clear button. Deliberately not tiered by `size`: it is a tap target floored at the
+ *   shared minimum target size, not a text box.
  * @cssprop [--lr-thread-list-group-toggle-hover-bg=var(--lr-color-surface-raised)] - Group-toggle hover background.
  * @cssprop [--lr-thread-list-group-toggle-hover-color=var(--lr-color-text)] - Group-toggle hover foreground.
  * @cssprop [--lr-thread-list-group-toggle-active-bg=color-mix(in oklab, var(--lr-thread-list-group-toggle-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Group-toggle pressed background.
@@ -406,7 +432,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['threads', 'groupOrder', 'collapsedGroupIds', 'rowActions']);
   protected static override readonly identityCollectionProperties = Object.freeze(['threads']);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, contextualSizes, styles];
 
   /** At least one valid thread ⇒ data mode (the default slot is ignored). No valid threads and no
    *  slotted content ⇒ data mode with zero rows (the built-in empty state). No valid threads with
@@ -423,6 +449,31 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** Shows the built-in search field. */
   @property({ type: Boolean, reflect: true }) searchable = false;
+
+  private _size?: LyraSize;
+
+  /** Density tier for the built-in search field, on the library's one size ladder, in either
+   *  spelling -- `2xs`/`xs`/`s`/`m`/`l`/`xl`, or Web Awesome's and Shoelace's
+   *  `small`/`medium`/`large`. Opt-in: with no size the field keeps the exact gutters, corner
+   *  radius and inherited text size it shipped with, so existing markup renders unchanged. A tier
+   *  gives it the row height, text size, gutters and corner radius an `<lr-input>` of that tier
+   *  has, so this sidebar's own filter box lines up with an adjacent themed search field instead
+   *  of sitting at one fixed size no consumer could reach. Only the field is tiered: the gutter
+   *  around it and the clear affordance keep their own sizes, because the clear button is a tap
+   *  target floored by the shared minimum target size rather than by the text scale -- both have
+   *  their own custom properties for a consumer that wants to move them too. Unsupported values
+   *  normalize to the omitted state and remove the attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
 
   /** Overrides the default case-insensitive `title` + `excerpt` substring match. */
   @property({ attribute: false }) filter?: (
@@ -1202,15 +1253,29 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  happens, always precedes that listener in the same synchronous dispatch. */
   private toggleGroupCollapsed(groupId: string, collapsed: boolean): void {
     const detail: ThreadGroupToggleDetail = { groupId, collapsed };
-    const request = this.emit('lr-group-toggle-request', detail, {
-      cancelable: true,
+    // The library's one request/commit helper rather than a hand-written `defaultPrevented`
+    // branch. No write-tracking guard is passed, and the reason is the ordering a guard would
+    // observe on THIS dispatch, not the one the JSDoc above describes: a guard watches
+    // `lr-group-toggle-request`, whose listeners run inside `emit()` and therefore run BEFORE
+    // `commit()` writes `collapsedGroupIds`. So a request listener that reassigns the property
+    // today is overwritten by this component's own write and only `preventDefault()` stops it.
+    // Passing a guard would newly let that reassignment suppress the commit, which is a behavior
+    // change, not a refactor. (`collapsedGroupIds` is also a plain collection property with no
+    // setter side effects, so it calls no `markVetoGuardWrite()` for a guard to observe.) The
+    // settled-event ordering -- own write first, then the `lr-group-toggle` listener's
+    // reassignment landing last -- is a separate guarantee, stated in the method JSDoc.
+    requestThenCommit({
+      requestDetail: detail,
+      emitRequest: (requestDetail, init: { cancelable: true }) =>
+        this.emit('lr-group-toggle-request', requestDetail, init),
+      commit: () => {
+        const next = new Set(this.collapsedGroupIds);
+        if (collapsed) next.add(groupId);
+        else next.delete(groupId);
+        this.collapsedGroupIds = [...next];
+        this.emit('lr-group-toggle', detail);
+      },
     });
-    if (request.defaultPrevented) return;
-    const next = new Set(this.collapsedGroupIds);
-    if (collapsed) next.add(groupId);
-    else next.delete(groupId);
-    this.collapsedGroupIds = [...next];
-    this.emit('lr-group-toggle', detail);
   }
 
   /** The header markup for one group. The `sticky` copy repeats only the visual label/glyph:

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 26 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -105,9 +105,15 @@ keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 
 **Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token
-`<lr-dialog>`/`<lr-tool-result-dialog>` read), plus shared `--lr-space-*`,
-`--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`, `--lr-shadow`,
-`--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
+`<lr-dialog>`/`<lr-tool-result-dialog>` read). `--lr-tool-select-dialog-search-min-height` (default
+`auto`), `--lr-tool-select-dialog-search-font-size` (default `inherit`),
+`--lr-tool-select-dialog-search-padding-inline` (default `var(--lr-space-m)`),
+`--lr-tool-select-dialog-search-padding-block` (default `var(--lr-space-s)`) and
+`--lr-tool-select-dialog-search-radius` (default `var(--lr-radius)`) size the search field; point
+the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
+inline gutter is reserved for the overlaid `search-clear` button and is not a knob. Plus shared
+`--lr-space-*`, `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`,
+`--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-checkbox>` and `<lr-switch>`, both bundled
 dependencies of this package imported directly, not optional peers.

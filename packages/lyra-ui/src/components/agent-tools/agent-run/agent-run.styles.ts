@@ -12,9 +12,13 @@ export const styles = css`
     box-sizing: border-box;
     inline-size: 100%;
     padding: var(--lr-space-m);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    /* Card chrome behind inline var() fallbacks, same convention as the compact density below:
+       each fallback is the pre-existing token, so an unset run paints exactly as before while a
+       transcript can retune the nested card without a ::part(base) override. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-agent-run-border-color, var(--lr-color-border));
+    border-radius: var(--lr-agent-run-radius, var(--lr-radius));
+    background: var(--lr-agent-run-background, var(--lr-color-surface));
     color: var(--lr-color-text);
   }
   /* Density escape -- same convention as lr-empty's compact. Inline var() fallbacks rather than a

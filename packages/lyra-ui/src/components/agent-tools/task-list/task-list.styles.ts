@@ -8,10 +8,14 @@ export const styles = [
       display: block;
       --_lr-task-list-spin: var(--lr-transition-ambient);
     }
+    /* Card chrome behind inline var() fallbacks, same convention as the compact density below:
+       each fallback is the pre-existing token, so an unset list paints exactly as before while a
+       transcript can retune the nested card without a ::part(base) override. */
     [part="base"] {
-      border: var(--lr-border-width-thin) solid var(--lr-color-border);
-      border-radius: var(--lr-radius);
-      background: var(--lr-color-surface);
+      border: var(--lr-border-width-thin) solid
+        var(--lr-task-list-border-color, var(--lr-color-border));
+      border-radius: var(--lr-task-list-radius, var(--lr-radius));
+      background: var(--lr-task-list-background, var(--lr-color-surface));
       overflow: hidden;
     }
     /* Density escape -- same convention as lr-agent-run/lr-source-card's compact. Values sit behind
@@ -113,8 +117,11 @@ export const styles = [
       max-inline-size: 100%;
       gap: var(--lr-space-s);
       padding: var(--lr-space-xs) var(--lr-space-m) var(--lr-space-m);
+      /* The header/body divider is the same chrome the outer border is, and frame="plain" keeps
+         it, so it follows the same hook rather than stranding a mismatched rule in a retuned
+         card. */
       border-block-start: var(--lr-border-width-thin) solid
-        var(--lr-color-border);
+        var(--lr-task-list-border-color, var(--lr-color-border));
     }
     [part="body"][hidden] {
       display: none;

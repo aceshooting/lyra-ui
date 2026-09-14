@@ -308,13 +308,11 @@ cell: (row) => unknown }` —
   container breakpoints in either direction; revealing columns restores all three bands.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
   `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount, without
-  overwriting an explicitly declared `true` (`priority-columns-visible` present, or a
-  `.priorityColumnsVisible=${true}` binding) on that same mount. Unset (the default) touches storage
-  not at all. This is the same "explicit beats persisted" guarantee `lr-app-rail` gives each of its
-  several `persist`-selected fields, but not byte-identical: `lr-app-rail`'s undefaulted
-  `railWidthPx`/`preferredMode` fields let it key the guard off `willUpdate()`'s `changed` map,
-  while this property's own `false` default already reads as "changed" on every mount, so this
-  guard instead checks the property's own current value
+  overwriting a `priorityColumnsVisible` the consumer declared on that same mount
+  (`priority-columns-visible` present, or a `.priorityColumnsVisible=${…}` binding) — including a
+  binding that pins it to `false`, its own default. Unset (the default) touches storage not at all.
+  The same "explicit beats persisted" guarantee `lr-app-rail` gives each of its `persist`-selected
+  fields and `lr-widget` gives `collapsed`; all three share one mechanism
 - `heatTintScale?: { min?: number; max?: number }` (attribute: false) — overrides the auto-derived
   heat-tint domain (min/max of every `heatValue` result across every currently-rendered row —
   post-sort, pre-pagination, the same rows `footer(rows)` already sees). Unset (the default) computes

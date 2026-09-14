@@ -153,3 +153,36 @@ export const ThemedSelectedRow: Story = {
     ></lr-retrieval-results>
   `,
 };
+
+export const AnnounceOnMount: Story = {
+  name: 'Announce on mount',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A results panel rendered in response to a retrieval the user just ran should carry `announce`: the state it is already presenting when it first mounts is sent to the shared light-DOM sink once — `errorText` assertively, or the localized empty-result message politely. A panel that is `loading`, or that already has chunks, announces nothing. Leave it off for a panel that is part of the page being loaded; later transitions announce either way.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); inline-size: 520px; max-inline-size: 100%;">
+      <button
+        @click=${(event: Event) => {
+          const host = (event.currentTarget as HTMLElement).parentElement!;
+          const results = document.createElement('lr-retrieval-results');
+          results.setAttribute('announce', '');
+          results.setAttribute(
+            'error-text',
+            'The retrieval service timed out before any chunk was returned.'
+          );
+          host.append(results);
+        }}
+      >
+        Show a freshly mounted failed retrieval
+      </button>
+      <lr-retrieval-results
+        error-text="This one is part of the page and is deliberately not announced."
+      ></lr-retrieval-results>
+    </div>
+  `,
+};

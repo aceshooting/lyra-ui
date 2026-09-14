@@ -253,6 +253,15 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @csspart hint - The hint message.
  * @csspart error - Ordinary validation text referenced by the segmented input through
  *   `aria-describedby`; it is not a live region, avoiding duplicate native validation feedback.
+ * @cssprop [--lr-time-input-control-min-height=var(--lr-form-control-height)] - Outer row height
+ *   floor, taken from the active `size` tier of the shared form-control ladder
+ *   (`internal/sizes.styles.ts`), so a time field is exactly as tall as an `<lr-input>`/
+ *   `<lr-select>` of the same tier.
+ * @cssprop --lr-time-input-control-height - Exact outer row height. Unset by default, which leaves
+ *   `--lr-time-input-control-min-height` as a floor only; set it to a length to both floor and cap
+ *   the row (e.g. to pixel-match `<lr-date-input>` in the same toolbar). Because it is never
+ *   declared by the component itself, it can be set from an ancestor or an outer-tree rule as well
+ *   as inline on the element.
  * @cssprop [--lr-time-input-gap=var(--lr-form-control-gap)] - Gap between segments, adornments,
  *   and actions in the outer row. Undeclared on the host so ancestor theme wrappers can set it.
  * @cssprop [--lr-time-input-radius=var(--lr-form-control-radius)] - Outer row corner radius.

@@ -39,6 +39,7 @@ const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
 
 export interface LyraSwatchPickerEventMap {
   'lr-change': CustomEvent<{ value: string }>;
+  'lr-activate': CustomEvent<{ value: string }>;
 }
 
 /**
@@ -68,6 +69,16 @@ export interface LyraSwatchPickerEventMap {
  * @customElement lr-swatch-picker
  * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value }`.
+ * @event lr-activate - Fired on every activation of a swatch -- a click, or an Arrow/Home/End key
+ *   that lands on one -- whether or not the selection actually moved. `detail: { value }` carries
+ *   the activated swatch's own value. Bubbling and composed, so a host outside the shadow tree
+ *   receives it. Not cancelable: it is a notification that the user picked a swatch, not a veto
+ *   point, and nothing in this component branches on it. Re-picking the current value is the case
+ *   `lr-change` deliberately stays silent for, and it is otherwise unobservable -- the swatches
+ *   live in this shadow root, so a retargeted `click` names no swatch, and keyboard activation
+ *   (Home on an already-first selection, End on an already-last one, an arrow key in a one-item
+ *   row) produces no click at all. When an activation does move the selection, `lr-change` is
+ *   emitted first, so a listener reading `value` from either event sees the settled selection.
  * @csspart base - The `role="radiogroup"` root.
  * @csspart swatch - A single `role="radio"` color swatch's interactive hit target; sized via
  *   `--lr-swatch-picker-hit-size` (its private default follows `size` and is floored at 24px),
@@ -239,13 +250,17 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   private select(option: SwatchPickerItem, index: number): void {
     if (this.disabled) return;
     const previousIndex = this.resolveSelectedIndex();
-    if (index === previousIndex && option.value === this.value) return;
-    const previousValue = this.value;
-    this.selectedOption = option;
-    this.selectedIndex = index;
-    this.value = option.value;
-    if (previousValue === option.value) this.requestUpdate();
-    this.emit('lr-change', { value: option.value });
+    if (index !== previousIndex || option.value !== this.value) {
+      const previousValue = this.value;
+      this.selectedOption = option;
+      this.selectedIndex = index;
+      this.value = option.value;
+      if (previousValue === option.value) this.requestUpdate();
+      this.emit('lr-change', { value: option.value });
+    }
+    // Every activation of an enabled swatch reports, including the re-pick of the current value
+    // that `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
+    this.emit('lr-activate', { value: option.value });
   }
 
   private focusSwatch(index: number): void {

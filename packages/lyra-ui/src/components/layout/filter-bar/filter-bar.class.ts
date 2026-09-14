@@ -15,6 +15,7 @@ import {
   getListFormat,
 } from '../../../internal/intl-cache.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import { styles } from './filter-bar.styles.js';
 import '../../forms/select/select.class.js';
 import '../../forms/combobox/combobox.class.js';
@@ -741,13 +742,15 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
    *  assignment -- same microtask/script order, or the same Lit template's binding order -- never
    *  permanently drops fields for filters that simply hadn't been declared yet. */
   private rawValue: LyraFilterBarValue = EMPTY_VALUE;
-  // One in-flight `debounce` timer per `'text'`/`'combobox'` filter id, plus the pending value it
-  // will commit. Presence in `debounceTimers` is also what marks that field as "the user is
-  // mid-edit", which suppresses the external-value sync in `syncTextControls()` (for `'text'`)
-  // and substitutes the pending value into the composed `<lr-combobox>`'s `.value=` binding (for
-  // `'combobox'`).
-  private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private pendingValue = new Map<string, LyraFilterBarFieldValue>();
+  // One in-flight `debounce` per `'text'`/`'combobox'` filter id, each owning the value it will
+  // commit. A controller's `pending` is also what marks that field as "the user is mid-edit",
+  // which suppresses the external-value sync in `syncTextControls()` (for `'text'`) and
+  // substitutes its `pendingValue` into the composed `<lr-combobox>`'s `.value=` binding (for
+  // `'combobox'`). An entry exists only while that field has an uncommitted edit: every exit path
+  // drops the key -- a cancel disposes it, and a settle (natural or flushed) drops it from inside
+  // its own callback -- so a filter id that disappears with a schema replacement leaves nothing
+  // behind.
+  private debounceControllers = new Map<string, DebounceController<LyraFilterBarFieldValue>>();
   private chipFocusGeneration = 0;
   // Guards lr-validity-change so it only fires on an actual change, not on every render --
   // `undefined` guarantees the first computed state always "changes" from it, mirroring
@@ -994,10 +997,33 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   /** Parks `value` under `id` and (re)starts its commit timer -- the shared mechanics behind both
    *  `'text'`'s per-keystroke debounce and `'combobox'`'s per-selection-change debounce. */
   private scheduleDebounce(id: string, value: LyraFilterBarFieldValue, delay: number): void {
-    this.pendingValue.set(id, value);
-    const existing = this.debounceTimers.get(id);
-    if (existing !== undefined) clearTimeout(existing);
-    this.debounceTimers.set(id, setTimeout(() => this.flushDebounce(id), delay));
+    let controller = this.debounceControllers.get(id);
+    if (!controller) {
+      const created: DebounceController<LyraFilterBarFieldValue> =
+        new DebounceController<LyraFilterBarFieldValue>(delay, (pending) => {
+          // Drop the key before committing. A settle ends this controller's life exactly like a
+          // cancel does, so the map really does hold only mid-edit fields and a schema
+          // replacement cannot strand a controller keyed on a filter id it removed. Dropping it
+          // *first* leaves a re-entrant edit triggered by `setFilterValue()`'s own render owning
+          // the fresh controller it creates, instead of having this one delete it.
+          if (this.debounceControllers.get(id) === created) {
+            this.debounceControllers.delete(id);
+          }
+          if (pending !== undefined) this.setFilterValue(id, pending);
+        });
+      controller = created;
+      this.debounceControllers.set(id, created);
+    }
+    // Re-read on every edit: a schema replacement can change this filter's own `debounce`, and a
+    // surviving controller must honour the new one rather than the delay it was built with.
+    controller.delayMs = delay;
+    controller.push(value);
+  }
+
+  /** Whether that field currently holds an uncommitted edit -- i.e. the user is mid-edit and owns
+   *  the control (and its caret) until they pause, blur, or commit. */
+  private hasPendingDebounce(id: string): boolean {
+    return this.debounceControllers.get(id)?.pending ?? false;
   }
 
   private onControlChange = (def: LyraFilterBarFilterDefinition, e: Event): void => {
@@ -1044,16 +1070,12 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     this.scheduleDebounce(def.filterId, next, def.debounce);
   }
 
-  /** Commits an in-flight keystroke/selection right now (the field's own `change`/blur, or the
-   *  timer itself). A no-op when nothing is pending, so it is safe to call on every blur. */
+  /** Commits an in-flight keystroke/selection right now, ahead of its own delay -- the field's own
+   *  `change`, or its blur. A no-op when nothing is pending, so it is safe to call on every blur.
+   *  The settle callback drops the map entry, so a flushed field is left in the same state a
+   *  naturally-settled one is: no controller, nothing pending. */
   private flushDebounce(id: string): void {
-    const timer = this.debounceTimers.get(id);
-    if (timer === undefined) return;
-    clearTimeout(timer);
-    this.debounceTimers.delete(id);
-    const pending = this.pendingValue.get(id);
-    this.pendingValue.delete(id);
-    if (pending !== undefined) this.setFilterValue(id, pending);
+    this.debounceControllers.get(id)?.flush();
   }
 
   /** Discards an in-flight keystroke/selection without committing it -- one filter's, or (with no
@@ -1062,11 +1084,13 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
    *  binding reverts on its own, being fully controlled), so the discarded draft does not linger
    *  on screen either. */
   private cancelDebounce(id?: string): void {
-    for (const [key, timer] of this.debounceTimers) {
+    for (const [key, controller] of this.debounceControllers) {
       if (id !== undefined && key !== id) continue;
-      clearTimeout(timer);
-      this.debounceTimers.delete(key);
-      this.pendingValue.delete(key);
+      // Dispose rather than merely cancel: the entry is dropped here, so nothing can ever push to
+      // this instance again, and an already-queued callback can no longer reach a discarded draft.
+      // The next edit builds a fresh controller carrying that filter's current `debounce`.
+      controller.dispose();
+      this.debounceControllers.delete(key);
     }
   }
 
@@ -1254,7 +1278,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       if (id !== undefined) fields.set(id, element);
     }
     for (const def of this._filters) {
-      if (def.type !== 'text' || this.debounceTimers.has(def.filterId)) continue;
+      if (def.type !== 'text' || this.hasPendingDebounce(def.filterId)) continue;
       const field = fields.get(def.filterId);
       if (!field) continue;
       const raw = this._value[def.filterId];
@@ -1355,9 +1379,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       // unlike `'text'`'s uncontrolled-with-sync field, so without this substitution a render
       // triggered by anything else (another filter's edit, `disabled`/`loading` toggling) would
       // push the stale committed value back over the user's own pending pick.
-      const pending = this.debounceTimers.has(def.filterId)
-        ? this.pendingValue.get(def.filterId)
-        : undefined;
+      const pending = this.debounceControllers.get(def.filterId)?.pendingValue;
       const effectiveValue = pending !== undefined ? pending : value;
       const comboValue = multiple
         ? Array.isArray(effectiveValue)
@@ -1380,6 +1402,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         .value=${comboValue}
         ?disabled=${this.disabled}
         @change=${onChange}
+        @lr-activate=${this.stopControlAlias}
         @lr-input=${this.stopControlAlias}
         @lr-change=${this.stopControlAlias}
         @focusout=${() => this.onFieldFocusout(def.filterId)}
@@ -1463,6 +1486,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       .value=${typeof value === 'string' ? value : ''}
       ?disabled=${this.disabled}
       @change=${onChange}
+      @lr-activate=${this.stopControlAlias}
       @lr-input=${this.stopControlAlias}
       @lr-change=${this.stopControlAlias}
       @focusout=${onFocusout}

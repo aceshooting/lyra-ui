@@ -279,3 +279,40 @@ export const ResponsiveOrientationRem: Story = {
     </div>
   `,
 };
+
+export const ReadOnly: Story = {
+  name: "Read-only progress display",
+  render: () => html`<lr-stepper
+    readonly
+    aria-label="Onboarding progress"
+    .steps=${wizardSteps}
+  ></lr-stepper>`,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Set `readonly` to publish the same data as a passive progress display. Steps stop being buttons entirely -- no tab stop on any step, no pointer cursor, no `lr-step-select` -- while every state glyph, the current-step marker and the `--lr-stepper-*` hooks stay exactly as they are. It is deliberately not a disabled treatment: `disabled` means \"you may not do this\", read-only means \"there is nothing to do here\", so nothing is dimmed. The last step here carries `disabled: true`, which is inert (and therefore invisible) while read-only.",
+      },
+    },
+  },
+};
+
+export const ReadOnlyOverflowing: Story = {
+  name: "Read-only progress display, narrow enough to scroll",
+  render: () => html`<div style="inline-size: 220px; max-inline-size: 100%;">
+    <lr-stepper
+      readonly
+      aria-label="Onboarding progress"
+      style="inline-size: 100%;"
+      .steps=${wizardSteps}
+    ></lr-stepper>
+  </div>`,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "A read-only strip has no tabbable step, so an overflowing one would be a scrollable region with no keyboard access at all. While both conditions hold -- read-only and genuinely overflowing -- `[part=\"base\"]` takes the tab stop itself and shows a `::part(base):focus-visible` ring; Tab reaches it and the arrow keys scroll it natively. Widen this story past its content and the stop disappears again, so a stepper that has nothing to scroll costs a keyboard user nothing.",
+      },
+    },
+  },
+};

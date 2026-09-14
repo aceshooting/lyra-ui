@@ -519,15 +519,11 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
-  under `lr-widget:${storageKey}` and restores it on the next mount, without overwriting a `collapsed`/
-  `.collapsed=${…}` binding already explicitly assigned on that same mount (any assignment sets a
-  single-shot flag, checked once before the restore runs). This is not byte-identical to
-  `lr-app-rail`'s or `lr-table`'s guard: `lr-app-rail`'s undefaulted `railWidthPx`/`preferredMode`
-  fields key their guard off `willUpdate()`'s own per-field `changed.has(...)`, checked fresh on
-  every update; `lr-table`'s `priorityColumnsVisible` instead checks its own current value, since
-  its `false` default would otherwise always read as "changed"; this component's flag is a single
-  boolean set by any assignment (including the restore's own write) and never reset. Without a
-  `storageKey` there is no persistence and storage is never touched — listen for
+  under `lr-widget:${storageKey}` and restores it on the next mount, without overwriting a
+  `collapsed`/`.collapsed=${…}` binding already assigned on that same mount — including one that
+  assigns `false`, the default. The restore runs once, before the first paint, and is skipped for
+  any property the consumer assigned; `lr-app-rail` and `lr-table` share the same mechanism. Without
+  a `storageKey` there is no persistence and storage is never touched — listen for
   `lr-collapse-change` and persist the state yourself.
 
 **Events:** `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
@@ -543,7 +539,15 @@ toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-v
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
 `preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
 `activeViewId` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
-active view's `viewId`. Not emitted when a consumer sets `activeViewId` directly)
+active view's `viewId`. Not emitted when a consumer sets `activeViewId` directly), and
+`lr-activate` (non-cancelable; `detail: { value }` — note the key is `value`, not `viewId` — is the
+activated view's `viewId`, fired on **every** accepted header view-toggle activation whether or not
+`activeViewId` actually moved. `lr-view-request` stays the veto point, and a vetoed activation emits
+no activation at all. Use it for the repeat pick `lr-view-change` deliberately stays silent for —
+"rebuild that view" is a real intent — which is otherwise unobservable, because the toggles live in
+this shadow root, so a retargeted `click` names no view. When an activation _does_ move the view,
+`lr-view-request` and `lr-view-change` are emitted first. Not emitted when a consumer sets
+`activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
 icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,
@@ -1036,6 +1040,16 @@ focus off the tab the user was on.
 - `lr-tab-hide` (`detail: { name: string }`) — the outgoing tab, emitted immediately _before_ the
   matching `lr-tab-show`, so a listener that tears down the old panel always runs before the one
   that builds the new one. Not fired when there was no previous selection.
+- `lr-activate` (`detail: { value: string }`) — fired on **every** user activation of a navigable
+  tab (a click, an Arrow/Home/End key under `activation="auto"`, or Enter/Space under
+  `activation="manual"`), whether or not the active tab actually moved. Bubbling, composed, not
+  cancelable — it reports that the user picked a tab and gates nothing. `value` is the activated
+  tab's panel name, the same identity `lr-tab-show` reports under the key `name`. Use it for the
+  repeat pick `lr-tab-show` deliberately stays silent for: "reload that panel". From the keyboard
+  that case is otherwise unobservable, because Home on an already-first active tab (or End on an
+  already-last one) activates a tab and produces no click at all. When an activation _does_ move the
+  tab, `lr-tab-hide` and `lr-tab-show` are emitted first. The programmatic `show()` method is not a
+  user activation and never fires it.
 
 **Slots:** default — canonical `<lr-tab>`/`<lr-tab-panel>` pairs. `nav` is the upstream-compatible
 projection slot a standalone `<lr-tab>` uses before a hydrated group assigns its private slot.
@@ -1208,6 +1222,23 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   labels to wrap when the effective orientation is vertical. The default preserves single-line
   labels, and horizontal labels remain single-line even when this is enabled. Set this when a
   narrow or localized vertical stepper would otherwise clip labels or overflow its allocation.
+- `readonly: boolean = false` (reflected) — renders the same `steps` data as a passive progress
+  display instead of a navigable control. Each step becomes a non-interactive item inside its
+  existing `role="listitem"` wrapper rather than a `<button>`: no `tabindex` (the stepper takes no
+  tab stop at all), no `aria-disabled`, no click or Enter/Space activation, and therefore no
+  `lr-step-select` — including from a synthetic click dispatched at `::part(step)`.
+  Arrow/Home/End become a no-op and no longer call `preventDefault()`, so Space keeps scrolling
+  the page the way it does anywhere else in static content. Everything that describes _progress_
+  is untouched: the `step-index` chip, the `step-check` glyph, the optional `step-icon`, the
+  per-step `title`, `aria-current="step"` on the current step, and every `--lr-stepper-*` custom
+  property. It is deliberately **not** a disabled treatment — `disabled` means "you may not do
+  this", read-only means "there is nothing to do here" — so a read-only step keeps normal opacity
+  and only loses its pointer cursor, matching `<lr-slider>`'s and `<lr-rating>`'s own `readonly`.
+  A per-step `disabled` flag is inert while read-only for the same reason: there is no activation
+  left for it to gate, so it adds no dimming, and the step still shows its progress state. A
+  focused step loses focus when `readonly` is turned on mid-session, because the control holding
+  it stops existing; nothing is left stranded in the tab order. Unset (the default) is
+  byte-for-byte the previous behavior.
 - `effectiveOrientation: 'horizontal' | 'vertical'` (readonly getter) — the live layout/navigation
   axis actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset or
   doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while
@@ -1218,15 +1249,16 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   attribute remains empty rather than being treated as absent.
 
 **Events:** `lr-step-select` (`detail: { stepId, index }`) — fired on click, or Enter/Space while
-focused, on a non-`disabled` step. It is non-cancelable because the component takes no default
-action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
+focused, on a non-`disabled` step. Never fired while `readonly`. It is non-cancelable because the
+component takes no default action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
 `effectiveOrientation`.
 
 **Slots:** none.
 
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
-one step), `step` (a single native button; the current step carries `aria-current="step"` and every
+one step), `step` (a single native button — or a non-interactive `<div>` carrying the same part
+while `readonly`; the current step carries `aria-current="step"` and every
 other step carries `aria-current="false"`),
 `step-icon` (optional inert, `aria-hidden` leading topic glyph from the step's `icon` field; only
 rendered when the step has one, additionally to — never instead of — `step-index`/`step-check`),
@@ -1580,8 +1612,19 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
   one; `m` is still the default, but the tiers now resolve to the shared control heights, paddings
   and font sizes rather than to this component's former private values.
 
-**Events:** `lr-change` (`detail: { value }`) — fired when the selected value changes via click or
-keyboard.
+**Events:**
+
+- `lr-change` (`detail: { value }`) — fired when the selected value changes via click or keyboard.
+- `lr-activate` (`detail: { value }`) — fired on **every** activation of a non-disabled
+  segment (a click, or an Arrow/Home/End key that lands on one), whether or not the selection
+  actually moved. Bubbling, composed, not cancelable — it reports that the user picked a segment
+  and gates nothing. Use it for the repeat pick `lr-change` deliberately stays silent for: "run
+  that report again", reopening a panel, re-fetching the same range. A `click` listener only
+  half-covers that case, because keyboard activation produces no click — pressing Home on an
+  already-first selection, End on an already-last one, or an arrow key in a one-item row activates
+  a segment and fires no click at all. When an activation _does_ move the selection, `lr-change` is
+  emitted first and `lr-activate` second, so either listener reads the settled `value`. A
+  disabled segment fires neither event.
 
 **Methods:**
 
@@ -1662,6 +1705,7 @@ resolves.
   ];
   seg.value = "week";
   seg.addEventListener("lr-change", (e) => console.log(e.detail.value));
+  seg.addEventListener("lr-activate", (e) => console.log("activated", e.detail.value));
 </script>
 ```
 
@@ -1671,7 +1715,9 @@ resolves.
   rather than clamping at the first/last item, unlike `lr-stepper`'s clamped Left/Right.
 - this component self-selects on navigation: clicking or arrow-navigating to an item immediately
   updates `value` and fires `lr-change` — there's no separate "commit" step the way, e.g.,
-  `lr-select`'s popup has.
+  `lr-select`'s popup has. `lr-change` is change-only, so re-picking the segment that is already
+  selected fires nothing on it; listen for `lr-activate` if a repeat pick is meaningful to
+  your application.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
   host `aria-label`; a present host attribute wins, including an explicit empty value, and the
   component deliberately forwards the resulting name to that internal role.
@@ -1797,6 +1843,29 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
 progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — when true, scrolling near the bottom
   fires `lr-load-more` (gated by `loading`).
+- `scrollElement?: Element | Window` (attribute: false) — an ancestor that already owns a scrollbar,
+  or the window itself, for a list embedded in a longer scrolling page rather than sized as its own
+  panel. JS-only; set via a property/lit-html binding. While set, `[part="base"]` stops scrolling and
+  grows to the list's full virtual extent, so the page's single scrollbar spans the whole list and
+  `[part="sticky-group"]` sticks to that outer scrollport instead of this component's. Everything
+  expressed in list coordinates keeps answering in list coordinates — `offsetForIndex()`,
+  `indexAtOffset()`, `scrollToIndex()`, `active-item-id` scroll-into-view, and `lr-virtual-scroll`'s
+  `scrollTop` are all still measured from the top of the list, with the component converting to and
+  from the external scroller's position; auto-height scroll anchoring moves the external scroller
+  too, so measuring a row above the viewport does not make the page jump. There is deliberately no
+  ancestor auto-detection: the scroller is the element you name and nothing else, so adding an
+  unrelated `overflow` rule to some wrapper can never silently take the job over. Two consequences:
+  `[part="base"]` drops its `tabindex` and its hover outline, because it is no longer a scrollable
+  region and a focus stop that scrolls nothing is worse than none — keyboard scrolling belongs to the
+  external scroller; and horizontal scrolling of row content that opted out of wrapping becomes the
+  external scroller's responsibility, since CSS cannot leave one axis visible while the other
+  scrolls. The list's position inside the scroller is re-read on scroll, on the scroller's own
+  resize, and whenever the list re-renders; a layout change _above_ the list that shifts it without
+  any of those happening is not observable, so re-assign the property to force a re-read. Listeners
+  follow the property — re-pointing it, disconnecting, and reconnecting all rebind against the
+  current target and leave nothing behind on the previous one. A value that is neither an `Element`
+  nor a `Window` is ignored and the list keeps scrolling its own viewport, so wiring this from a ref
+  that is still empty on a first render is safe.
 
 **Exported types:** `LyraVirtualListRowHeight = number | 'auto'`;
 `LyraVirtualListSource<T> = readonly T[] | LyraVirtualListIndexedSource<T>` and
@@ -1826,7 +1895,9 @@ That correction is bound to the source, key function, and target identity and is
 target, data replacement, manual scroll intent, or disconnect, so late observations cannot pull a
 newer view back to stale content.
 `offsetForIndex(index)` returns the pixel top row `index` renders at, in the same coordinate space as
-the scroll container's `scrollTop`; it is clamped to `0…count`, so `offsetForIndex(count)`
+the scroll container's `scrollTop`; under an external `scrollElement` that space is unchanged — it
+measures from the top of the list itself, not from the top of the external scroller's content, and
+the component converts between the two. It is clamped to `0…count`, so `offsetForIndex(count)`
 is the total content height and an empty list is always `0`. `indexAtOffset(px)` is its inverse — the
 row whose box contains that offset, clamped at both ends, `-1` for an empty list — so
 `indexAtOffset(offsetForIndex(i)) === i` and `indexAtOffset(scrollContainer.scrollTop)` is the row at
@@ -1837,7 +1908,10 @@ so `await el.updateComplete` after assigning `items` or `source` before querying
 
 **Getters:** `scrollContainer: HTMLElement | undefined` — the real scroll container (`[part="base"]`),
 `undefined` before the first render; for a host that needs the live scroll position or wants to scroll
-the list itself without reaching into the shadow root. `renderedRows: HTMLElement[]` — the row
+the list itself without reaching into the shadow root. While `scrollElement` is set this element
+still exists and still hosts every row, but it no longer scrolls — read and write the position on the
+external scroller, or keep using `scrollToIndex()`, which targets whichever of the two is currently
+in charge. `renderedRows: HTMLElement[]` — the row
 wrappers (`[part="row"]`) that currently exist as real DOM, in item order (the current window, not the
 whole collection; empty before the first render). It exists for hosts that must _reach_ a rendered row
 rather than style it — keyboard focus management across a windowed list, where the row to focus may
@@ -1853,7 +1927,10 @@ current visible, non-overscanned item index range — fired only when it actuall
 spelled `lr-visible-range-changed` before 10.0.0, the only past-tense `-changed` spelling among 58
 `-change`-family events, so a convention-driven `lr-${x}-change` listener silently missed it),
 `lr-virtual-scroll`
-(`detail: LyraVirtualListScroll` — the scroll container moved; emitted from the same animation frame that
+(`detail: LyraVirtualListScroll` — the scroll container moved. `scrollTop` is always in the list's own
+offset space (`offsetForIndex()`'s space), including under an external `scrollElement`, where it is how
+far the list has scrolled past the top of that scroller rather than the scroller's own position;
+emitted from the same animation frame that
 already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
 when the position did not change. Unlike `lr-visible-range-change`, which only fires on index-range
 changes, this reports _sub-row_ movement, which is what scroll-linked layout needs)
@@ -1861,7 +1938,9 @@ changes, this reports _sub-row_ movement, which is what scroll-linked layout nee
 **Slots:** none — all content comes from `renderItem`.
 
 **CSS parts:** `base` (the scrollable container, `role="list"` — or `role="rowgroup"` in
-`item-role="row"` mode — `tabindex="0"`), `spacer` (the full-content-height inner element
+`item-role="row"` mode — `tabindex="0"`; under an external `scrollElement` it stops scrolling, drops
+that `tabindex` and its hover outline, and sizes itself to the list's full virtual extent instead of
+`--lr-virtual-list-height`), `spacer` (the full-content-height inner element
 establishing true scroll extent; `role="presentation"` in `item-role="row"` mode), `row` (one
 rendered row's absolutely-positioned wrapper, `role="listitem"` — or `role="row"` with
 `aria-rowindex` in `item-role="row"` mode), `group` (a `groups` entry's positioned marker; not
@@ -1870,11 +1949,13 @@ current group, present only while `renderStickyGroup` is set — `aria-hidden`, 
 pointer-transparent, and it shows nothing while the viewport is above the first group)
 
 **Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
-scroll extent; component-specific since a virtualized list is meaningless without a sized viewport),
+scroll extent; component-specific since a virtualized list is meaningless without a sized viewport,
+and ignored while `scrollElement` names an external scroller, whose own height is the visible band),
 plus shared `--lr-focus-ring-width/-color/-offset` (inward-offset ring on `[part="base"]`, negative
 so it isn't clipped by the container's own `overflow: auto`). `[part="base"]` also carries a
 mouse-hover outline — a subtler preview of that same `:focus-visible` ring, shown because the part
-always carries `tabindex="0"` and is a real keyboard-navigable target — tinted via
+carries `tabindex="0"` and is a real keyboard-navigable target whenever it owns the scrollport (both
+the tab stop and this outline are dropped under an external `scrollElement`) — tinted via
 `--lr-virtual-list-hover-outline-color` (default `var(--lr-color-border-strong)`); set it to
 `transparent` to opt out of the hover treatment entirely. Its remaining longhands are independently
 themeable with `--lr-virtual-list-hover-outline-width` (default
@@ -2087,7 +2168,10 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   width.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists the fields selected by
   `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next
-  mount. Effective `mode` is breakpoint-derived and never persisted. Unset means no persistence.
+  mount. Each field is restored only when the consumer has not assigned it on that same mount: an
+  `open`/`rail-width-px`/`preferred-mode` attribute, or a `.open=${false}`-style binding, wins over
+  stored state, and a restored `open` fires no `lr-toggle`. Effective `mode` is breakpoint-derived
+  and never persisted. Unset means no persistence.
 - `persist: string = 'open width'` — whitespace-separated field allowlist used with `storageKey`.
   Valid `LyraAppRailPersistField` tokens are `open`, `width` (`railWidthPx`), and `preferred-mode`
   (`preferredMode`). The default preserves the existing open+width behavior. Use
@@ -2582,6 +2666,19 @@ no effect there — the dropdown's popup carries it. The header/footer dividing 
 `<hr>` deliberately stay on `--lr-color-border`: they separate content rather than draw the
 surface's edge. Otherwise shared spacing and motion tokens. Row chrome is controlled through the
 menu-item properties listed below.
+
+Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
+`--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`
+(default `var(--lr-size-10rem)`). They move together — the floor wins over the ceiling, so capping
+alone cannot take a menu below 10rem. Neither is declared on `:host`, so an ancestor theme wrapper's
+value reaches the menu. The ceiling takes a length or a percentage; `100%` and `none` both uncap it
+to the container, and any other value outside `<length-percentage>` is treated as `none` rather than
+dropping the cap's safety terms. Those terms — the shared `--lr-popover-viewport-clamp` and the
+container allocation — are applied outside the name, so no value of the hook can make a menu wider
+than its container or the viewport. (That guarantee is enforced by a registered custom property, so
+an out-of-syntax value falls back cleanly instead of invalidating the whole declaration; an engine
+without `CSS.registerProperty` degrades to "use `100%`, not `none`".) A menu contained by
+`<lr-dropdown>` sizes from its dropdown and is unaffected by both names.
 
 **Methods:** no menu-specific public overlay methods. Use `<lr-dropdown>`'s `show()`/`hide()` and
 `open` state for an overlay. Menu-item submenu methods remain public because they drive a row's
@@ -3155,7 +3252,13 @@ of use rather than a `:host` declaration, so it can be set on the element _or on
 `::part(command)[data-active='true']` is invalid CSS (Shadow Parts forbids an attribute selector
 after `::part()`), so highlighting the active row previously required hijacking the library-wide
 `--lr-color-brand-quiet` token and repainting everything else that read it. Unset, it falls back to
-that token, so rendering is unchanged.
+that token, so rendering is unchanged. `--lr-command-palette-search-padding` (default
+`var(--lr-space-m)`) and `--lr-command-palette-search-gap` (default `var(--lr-space-s)`) size the
+query row; `--lr-command-palette-search-min-height` (default `auto`) and
+`--lr-command-palette-search-font-size` (default `inherit`) size the field itself. Point the height
+at `--lr-form-control-height-s` (or any tier of that ladder) to match the palette's query field to a
+themed search field elsewhere in the application. Unset, all four leave the row exactly as it
+shipped.
 
 **Additional API surface:**
 
@@ -3273,6 +3376,34 @@ methods and group methods use this lifecycle too. When opening an item in a sing
 sibling's cancelable collapse is consulted before the new panel changes state; vetoing it keeps the
 old item open and cancels the new expansion, so the group never silently violates its one-item
 invariant.
+
+> **A nested `lr-accordion`'s events are not scoped to it — filter by target.** Every accordion
+> event goes through the shared `emit()` helper with `bubbles: true, composed: true`, so an inner
+> `<lr-accordion>` slotted inside an outer item sends its own `lr-expand`, `lr-collapse`,
+> `lr-toggle-request`, `lr-after-expand` and `lr-after-collapse` straight through the outer group.
+> A listener bound directly on the outer `<lr-accordion>` therefore also receives the inner
+> group's — and their `detail.item` is an item of the inner group, so an outer handler that looks
+> that item up among its own children finds nothing, or acts on a panel it does not own.
+> Coordination itself is already scoped: an outer group never applies its single-panel invariant,
+> roving keyboard model, or lifecycle to an inner group's items. It is only the listener that
+> needs the guard, the same one `<lr-details>` and `<lr-dialog>` document for their own events:
+>
+> ```html
+> <lr-accordion id="outer">
+>   <lr-accordion-item label="Outer">
+>     <lr-accordion>
+>       <lr-accordion-item label="Inner">Inner content.</lr-accordion-item>
+>     </lr-accordion>
+>   </lr-accordion-item>
+> </lr-accordion>
+> <script type="module">
+>   const outer = document.querySelector('#outer');
+>   outer.addEventListener('lr-expand', (event) => {
+>     if (event.target !== event.currentTarget) return; // a nested group expanded, not this one
+>     // ...
+>   });
+> </script>
+> ```
 
 The Details events `lr-show` and `lr-hide` have no detail payload and are cancelable; preventing
 either leaves the panel in its previous state. Accepted changes emit `lr-toggle` with

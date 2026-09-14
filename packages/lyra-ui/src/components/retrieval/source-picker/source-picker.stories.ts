@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, nothing } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './source-picker.js';
 import type { LyraSourceEntry, LyraSourcePicker } from './source-picker.class.js';
@@ -115,5 +115,25 @@ export const ThemedCheckedState: Story = {
       .sources=${sources}
       .selectedSourceIds=${['doc1']}
     ></lr-source-picker>
+  `,
+};
+
+/** `size` puts the built-in filter field on the library's one control ladder by forwarding the
+ *  tier to the composed `<lr-input>`, which is the only way to reach a control that resolves its
+ *  tier inside its own shadow root. Both spellings of every tier are accepted. Leaving `size`
+ *  unset keeps the field on the input's own `m` default, exactly what it rendered before, which is
+ *  the picker shown last. */
+export const SearchSizeTiers: Story = {
+  name: 'Size tiers',
+  render: () => html`
+    <div style="display:flex; gap:var(--lr-space-m); align-items:flex-start;">
+      ${(['s', 'm', 'l', undefined] as const).map(
+        (size) => html`
+          <div style="inline-size:220px;">
+            <lr-source-picker size=${size ?? nothing} .sources=${sources}></lr-source-picker>
+          </div>
+        `
+      )}
+    </div>
   `,
 };

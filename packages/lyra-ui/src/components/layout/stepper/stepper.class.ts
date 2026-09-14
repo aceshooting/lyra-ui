@@ -8,7 +8,10 @@ import {
 } from '../../../internal/orientation-breakpoint.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import {
+  observeScrollOverflow,
+  SCROLL_OVERFLOW_ATTRIBUTE,
+} from '../../../internal/scroll-overflow.js';
 import { styles } from './stepper.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -24,14 +27,15 @@ export interface LyraStepItem {
   /** Stable business identity for this step. Duplicate IDs are valid occurrences and are
    * disambiguated by their zero-based collection index. */
   stepId: string;
-  /** Nonblank text used as the step button's visible and accessible name. */
+  /** Nonblank text used as the step's visible and accessible name. */
   label: string;
   /** Progress state. Availability is independent so a disabled step retains its progress. */
   state: LyraStepState;
   /** Excludes this step from activation and roving focus without changing `state`. */
   disabled?: boolean;
-  /** Optional native `title` tooltip for this step's button -- e.g. explaining why a
-   *  disabled step is locked. Omit for no `title` attribute at all (not an empty string). */
+  /** Optional native `title` tooltip for this step -- e.g. explaining why a disabled step is
+   *  locked. Renders on the step's button, or on the non-interactive item that replaces it while
+   *  `readonly`. Omit for no `title` attribute at all (not an empty string). */
   title?: string;
   /** Optional leading topic glyph for this step (e.g. a payment icon on a "Payment" step) --
    *  same `LyraPaletteItem`/`MentionItem`/`LyraSegmentedItem` precedent: intentionally general content
@@ -154,17 +158,30 @@ function checkmarkGlyph() {
  * `effectiveOrientation` getter, a `data-effective-orientation` host attribute (only present while
  * the breakpoint feature is active), and `lr-stepper-orientation-change`.
  *
+ * An opt-in `readonly` (false by default -- no behavior change) turns the same data into a passive
+ * progress display: every step renders as a non-interactive item rather than a button, so no step
+ * takes a tab stop and no `lr-step-select` is emitted. (A read-only horizontal strip that actually
+ * overflows moves the single tab stop onto its own scroll container instead, so its off-screen
+ * steps stay keyboard-reachable.) It is deliberately *not* a disabled
+ * treatment -- `disabled` says "you may not do this", read-only says "there is nothing to do here"
+ * -- so read-only steps keep normal opacity and every state glyph, current-step marker and
+ * `--lr-stepper-*` custom property.
+ *
  * @customElement lr-stepper
  * @event lr-step-select - Fired on click, or Enter/Space while focused, on a non-`disabled`
- *   step. `detail: { stepId, index }`; the index disambiguates legitimate duplicate step IDs.
+ *   step. Never fired while `readonly`. `detail: { stepId, index }`; the index disambiguates
+ *   legitimate duplicate step IDs.
  *   Not cancelable: this component is fully controlled (mirrors
  *   `lr-table`'s `columns`/`rows` contract) and takes no default action of its own on selection
  *   (it never mutates `steps`), so there is no real veto point for `preventDefault()` to gate.
  * @event lr-stepper-orientation-change - `detail: { orientation }`, fired when an enabled
  *   `orientationBreakpoint` changes the effective layout/navigation axis.
- * @csspart base - The root wrapper.
+ * @csspart base - The root wrapper, and the horizontally scrolling track. Takes `tabindex="0"`
+ *   only while `readonly` and genuinely overflowing, so an otherwise keyboard-unreachable
+ *   read-only strip can still be scrolled; style that state with `::part(base):focus-visible`.
  * @csspart step-item - The `role="listitem"` wrapper for one step.
- * @csspart step - A single step button.
+ * @csspart step - A single step button, or a non-interactive `<div>` carrying the same part while
+ *   `readonly`.
  * @csspart step-icon - Optional inert, aria-hidden leading topic glyph supplied by the item's
  *   `icon` field; content may have a natural aspect ratio and is not restricted to a square icon.
  *   Rendered additionally to, never instead of, `step-index`/`step-check`.
@@ -201,8 +218,8 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   /** Ordered step data. Never mutated by this component -- see the class doc's controlled-
    *  component contract. Empty (the default) renders nothing. Each step's optional `title`
-   *  renders as a native `title` tooltip on that step's button -- e.g. to explain why a
-   *  `disabled` step is locked. */
+   *  renders as a native `title` tooltip on that step -- e.g. to explain why a `disabled` step is
+   *  locked. */
   private effectiveSteps: readonly Readonly<LyraStepItem>[] = Object.freeze([]);
 
   @property({ attribute: false })
@@ -265,6 +282,27 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   @property({ type: Boolean, reflect: true, attribute: 'wrap-labels' })
   wrapLabels = false;
 
+  /** Turns the strip into a passive progress display. Each step renders as a non-interactive
+   *  `role="listitem"` item instead of a button: no `tabindex`, no `aria-disabled`, no click or
+   *  Enter/Space activation, and therefore no `lr-step-select` at all. Everything that describes
+   *  *progress* is kept untouched -- the index chip, the completed checkmark, the optional topic
+   *  icon, the per-step `title`, `aria-current="step"` on the current step, and every
+   *  `--lr-stepper-*` custom property.
+   *
+   *  Deliberately not `disabled` styling: `disabled` says "you may not do this", read-only says
+   *  "there is nothing to do here", so a read-only step keeps normal opacity and simply loses its
+   *  pointer cursor (the same bargain `lr-slider` and `lr-rating` strike for their own `readonly`).
+   *  A per-step `disabled` flag is inert while read-only for the same reason -- there is no
+   *  activation left for it to gate, so it contributes no dimming either.
+   *
+   *  No *step* takes a tab stop: roving tabindex exists to give a composite *control* exactly one
+   *  entry point, and a passive list is not a control. The one exception is the scroll container
+   *  itself -- a read-only horizontal strip that genuinely overflows gives `[part="base"]`
+   *  `tabindex="0"` so its hidden steps stay reachable by keyboard (see `syncScrollTabStop()`);
+   *  a strip that fits, or a vertical one, still takes no tab stop at all. Unset (the default) is
+   *  byte-for-byte the previous behavior. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
+
   /** Accessible name for the `role="list"` step strip. Attribute-reflects from a host-level
    *  `aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS
    *  property. Unset, the list renders without an `aria-label` (the role carries no localized
@@ -301,8 +339,15 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  regardless of this attribute. Stored (rather than a bare statement-expression call) so
    *  `updated()` can register each step on the controller's own `ResizeObserver` via
    *  `observeExtra()` below -- a step's own intrinsic content (a longer localized label, an icon
-   *  loading in) can grow scrollWidth without [part="base"]'s own border box changing at all. */
-  private scrollOverflow = observeScrollOverflow(this, () => this.baseEl);
+   *  loading in) can grow scrollWidth without [part="base"]'s own border box changing at all.
+   *  The `onResize` hook re-syncs the read-only scroll tab stop from inside this controller's own
+   *  (already-measured) `ResizeObserver` callback, which is the one path that flips overflow
+   *  without a host update for `updated()` to ride on -- see `syncScrollTabStop()`. */
+  private scrollOverflow = observeScrollOverflow(
+    this,
+    () => this.baseEl,
+    () => this.syncScrollTabStop()
+  );
 
   /** The live layout/navigation axis after applying `orientationBreakpoint` -- identical to
    *  `orientation` whenever that's unset. See the class doc. */
@@ -401,6 +446,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     this.scrollOverflow.observeExtra(
       this.renderRoot.querySelectorAll('[part="step"]')
     );
+    // Runs after the controller's own `hostUpdated()` measurement (Lit drives every controller's
+    // `hostUpdated` before the host's `updated`), so the overflow attribute it reads is this
+    // render's, not the previous one's.
+    this.syncScrollTabStop();
     if (this.pendingStepFocus !== undefined) {
       const focusedOccurrence = this.pendingStepFocus;
       this.pendingStepFocus = undefined;
@@ -436,6 +485,40 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
         this.armResizeObserver();
       else this.resetResizeObserver();
     }
+  }
+
+  /** Gives the horizontally scrolling `[part="base"]` its own tab stop while, and only while, it
+   *  both is `readonly` and genuinely overflows.
+   *
+   *  A read-only strip renders every step as a plain `<div>`, so it has no tabbable descendant of
+   *  any kind. A scroll container with content to scroll and nothing tabbable inside is
+   *  unreachable by keyboard -- the WCAG 2.1.1 failure axe reports as
+   *  `scrollable-region-focusable` -- so the container itself takes the stop. `role="list"` and
+   *  its optional `aria-label` are unchanged, and `onKeyDown()` already returns early while
+   *  read-only, so this is a pure scroll stop: arrow keys scroll the box natively and no roving
+   *  semantics come back with it.
+   *
+   *  Both halves of the gate matter. While interactive, the roving tabindex already guarantees
+   *  exactly one tabbable step inside, and a second stop on the container would make every
+   *  stepper cost two tabs instead of one. While read-only but fitting, there is nothing to
+   *  scroll to, so a stop there would be dead weight -- the same "only when it actually
+   *  overflows" bargain the edge fade above already strikes, and what the browsers' own
+   *  keyboard-focusable-scrollers behavior does. The vertical axis is excluded outright because
+   *  its rules set `overflow: visible` on both axes (stepper.styles.ts), so that box never
+   *  scrolls whatever `scrollWidth` reports.
+   *
+   *  Written as an attribute rather than through the template because overflow is measured, not
+   *  rendered: the controller flips it from a `ResizeObserver`/content change with no state Lit
+   *  could re-render from, and `[part="base"]` is a stable node across every re-render. Mirrors
+   *  the `syncAriaDescribedByElements()` call in `updated()` on this same element. */
+  private syncScrollTabStop(): void {
+    const base = this.baseEl;
+    if (!base) return;
+    const scrollable =
+      this.effectiveOrientation === 'horizontal' &&
+      base.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE);
+    if (this.readonly && scrollable) base.setAttribute('tabindex', '0');
+    else base.removeAttribute('tabindex');
   }
 
   /** Classifies a measured inline size into the effective layout/navigation axis and, only on an
@@ -517,7 +600,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   }
 
   private selectStep(step: LyraStepItem, index: number): void {
-    if (step.disabled) return;
+    // `readonly` is re-checked here, not only in render(): a read-only step binds no @click, but a
+    // host can still dispatch a synthetic click at the part, and a passive progress display must
+    // never publish a selection it has no way to have been asked for.
+    if (this.readonly || step.disabled) return;
     // Not cancelable -- see the class doc's `lr-step-select` entry for why this component (a
     // fully controlled, data-driven component like `lr-table`) has no default action of its own
     // to gate behind `.defaultPrevented`.
@@ -535,6 +621,11 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    // A read-only strip owns no focus stop, so there is nothing to rove between and nothing to
+    // activate. Returning before the preventDefault() branches below also leaves Space scrolling
+    // the page and Home/End reaching whatever scroll container the list sits in, which is the
+    // correct behavior for a passive list.
+    if (this.readonly) return;
     const navigable = this.steps
       .map((step, index) => ({ step, index }))
       .filter(({ step }) => !step.disabled);
@@ -595,11 +686,32 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     const currentIndex = this.steps.findIndex(
       (step) => step.state === 'current'
     );
-    const rovingIndex =
-      currentIndex >= 0 && !this.steps[currentIndex]!.disabled
-        ? currentIndex
-        : this.steps.findIndex((step) => !step.disabled);
+    // -1 while `readonly`, so no step claims the stop: roving tabindex gives a composite *control*
+    // exactly one entry point, and a passive progress display is not a control. That is the one
+    // case where leaving zero focusable stops is correct rather than the bug the fallback above
+    // exists to prevent, because there is no keyboard contract left to strand.
+    const rovingIndex = this.readonly
+      ? -1
+      : currentIndex >= 0 && !this.steps[currentIndex]!.disabled
+      ? currentIndex
+      : this.steps.findIndex((step) => !step.disabled);
     const numberFormat = getNumberFormat(this.effectiveLocale);
+    /** The topic icon and state glyph, identical in both branches below, because `readonly`
+     *  changes what a step *is*, never what progress it reports. The `step-label` span stays
+     *  written out at each call site rather than joining this helper: it is the step's meaningful
+     *  text content, and check:hit-area reads that statically to tell a labelled control from a
+     *  compact icon-only one that owes the 40px floor. */
+    const stepGlyphs = (step: Readonly<LyraStepItem>, index: number) =>
+      html`${step.icon !== undefined
+        ? html`<span part="step-icon" aria-hidden="true" inert
+            >${step.icon}</span
+          >`
+        : nothing}
+      ${step.state === 'completed'
+        ? checkmarkGlyph()
+        : html`<span part="step-index"
+            >${numberFormat.format(index + 1)}</span
+          >`}`;
     return html`
       <div
         part="base"
@@ -611,30 +723,37 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
           this.steps,
           (step, index) => `${step.stepId}\u0000${index}`,
           (step, index) => html`<div role="listitem" part="step-item">
-            <button
-              type="button"
-              part="step"
-              data-step-id=${step.stepId}
-              data-index=${index}
-              data-state=${step.state}
-              aria-current=${index === currentIndex ? 'step' : 'false'}
-              aria-disabled=${step.disabled ? 'true' : 'false'}
-              tabindex=${index === rovingIndex ? '0' : '-1'}
-              title=${step.title ?? nothing}
-              @click=${() => this.selectStep(step, index)}
-            >
-              ${step.icon !== undefined
-                ? html`<span part="step-icon" aria-hidden="true" inert
-                    >${step.icon}</span
-                  >`
-                : nothing}
-              ${step.state === 'completed'
-                ? checkmarkGlyph()
-                : html`<span part="step-index"
-                    >${numberFormat.format(index + 1)}</span
-                  >`}
-              <span part="step-label">${step.label}</span>
-            </button>
+            ${this.readonly
+              ? // No button element, no tabindex, no @click and no aria-disabled: a read-only step
+                // is a plain item inside the role="listitem" wrapper, so assistive technology
+                // announces progress instead of an unavailable command. aria-current and the state
+                // glyphs stay, because those describe progress, not availability.
+                html`<div
+                  part="step"
+                  data-step-id=${step.stepId}
+                  data-index=${index}
+                  data-state=${step.state}
+                  aria-current=${index === currentIndex ? 'step' : 'false'}
+                  title=${step.title ?? nothing}
+                >
+                  ${stepGlyphs(step, index)}
+                  <span part="step-label">${step.label}</span>
+                </div>`
+              : html`<button
+                  type="button"
+                  part="step"
+                  data-step-id=${step.stepId}
+                  data-index=${index}
+                  data-state=${step.state}
+                  aria-current=${index === currentIndex ? 'step' : 'false'}
+                  aria-disabled=${step.disabled ? 'true' : 'false'}
+                  tabindex=${index === rovingIndex ? '0' : '-1'}
+                  title=${step.title ?? nothing}
+                  @click=${() => this.selectStep(step, index)}
+                >
+                  ${stepGlyphs(step, index)}
+                  <span part="step-label">${step.label}</span>
+                </button>`}
           </div>`
         )}
       </div>

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -204,35 +204,42 @@ message), `error` (the error message)
 
 **Themeable custom properties:** `--lr-model-select-trigger-padding` (default
 `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`) —
-`[part="trigger"]`/`[part="combobox"]`'s padding shorthand.
-`--lr-model-select-trigger-min-height` (default `var(--lr-form-control-height)`) — their block-size
-floor. `--lr-model-select-font-size` (default `var(--lr-form-control-font-size)`) — their font size.
-Those three are indirections onto the shared `--lr-form-control-*` scale rather than literal values:
-the public property surface is unchanged, but the numbers come from the one ladder every other
-control sizes against, so a tier is restated in exactly one place. `--lr-model-select-expand-size`
-(default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s decorative box size (clamped against
-`--lr-icon-button-size` via `min()`); this one is a glyph box rather than a control metric, so the
-shared ladder has no equivalent and its per-tier values stay local. `size` is the primary lever;
-override a cssprop directly only to retune a single element or step outside the scale entirely.
-`--lr-model-select-gap` (default `var(--lr-space-xs)`) controls the child gap in the trigger,
-combobox, and option rows; `--lr-model-select-radius` (default `var(--lr-radius)`) controls the
-corner radius of the trigger, combobox, listbox, and option rows. Both remain inheritable fallback
-arms, so set them on an ancestor to retheme a group without changing unrelated controls.
-`--lr-model-select-open-border-color` (default `var(--lr-color-brand)`) controls the trigger
-border while the listbox is open. A synthetic stale-value row has independent
+`[part="trigger"]`/`[part="combobox"]`'s padding shorthand. `--lr-model-select-trigger-min-height`
+(default `var(--lr-form-control-height)`) — their block-size floor, and
+`--lr-model-select-trigger-height` (unset by default) — an _exact_ block size that both floors and
+caps them, taking precedence over the floor, for pixel-matching a sibling field in the same toolbar
+row. `--lr-model-select-font-size` (default `var(--lr-form-control-font-size)`) — their font size.
+`--lr-model-select-trigger-padding`, `--lr-model-select-trigger-min-height` and
+`--lr-model-select-font-size` are indirections onto the shared `--lr-form-control-*` scale rather
+than literal values: the public property surface is unchanged, but the numbers come from the one
+ladder every other control sizes against, so a tier is restated in exactly one place.
+`--lr-model-select-expand-size` (default `var(--lr-size-1-75rem)`) — `[part="expand-icon"]`'s
+decorative box size (clamped against `--lr-icon-button-size` via `min()`); this one is a glyph box
+rather than a control metric, so the shared ladder has no equivalent and its per-tier values stay
+local. `size` is the primary lever; override a cssprop directly only to retune a single element or
+step outside the scale entirely. `--lr-model-select-gap` (default `var(--lr-space-xs)`) controls the
+child gap in the trigger, combobox, and option rows; `--lr-model-select-radius` (default
+`var(--lr-radius)`) controls the corner radius of the trigger, combobox, listbox, and option rows.
+Both remain inheritable fallback arms, so set them on an ancestor to retheme a group without
+changing unrelated controls. `--lr-model-select-open-border-color` (default `var(--lr-color-brand)`)
+controls the trigger border while the listbox is open. A synthetic stale-value row has independent
 `--lr-model-select-option-synthetic-border-style` (default `dashed`) and
 `--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
-`--lr-model-select-option-active-bg` (default
-`var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
-declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. The
-selected row (`[part="option"][aria-selected="true"]`) has the matching set
+`--lr-model-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) — background of a
+hovered or keyboard-active `[part="option"]` row; declared as a `var()` fallback at the point of
+use, not on `:host`, so it isn't tied to `size`. The selected row
+(`[part="option"][aria-selected="true"]`) has the matching set
 `--lr-model-select-option-selected-bg` (default `transparent`),
 `--lr-model-select-option-selected-border` and `--lr-model-select-option-selected-color` (both
 `var(--lr-color-brand)`), and `--lr-model-select-option-selected-font-weight`
 (`var(--lr-font-weight-semibold)`), all inline `var()` fallbacks so the selected row is rethemeable
-without hijacking `--lr-color-brand`. Plus
-shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
-`--lr-radius`, `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
+without hijacking `--lr-color-brand`. `--lr-model-select-max-inline-size` (default
+`var(--lr-size-24rem)`) publishes the host's own width ceiling, which was previously a hard-wired
+literal: set a length to retune it, or `none` to let the control fill its container the way
+`lr-select` does. Like every other name here it is read as a `var()` fallback and never declared on
+`:host`, so a value set on `:root` or any ancestor still reaches it. Plus shared tokens —
+`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lr-radius`,
+`--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.
 
 The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):

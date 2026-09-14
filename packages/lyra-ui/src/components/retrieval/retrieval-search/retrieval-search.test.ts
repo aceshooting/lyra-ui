@@ -4,6 +4,28 @@ import './retrieval-search.js';
 import type { LyraRetrievalSearch } from './retrieval-search.js';
 import type { RetrievalQuery, CancelEventDetail } from '../../../ai/types.js';
 import type { RetrievalFiltersChangeDetail } from './retrieval-search.class.js';
+import {
+  ANNOUNCEMENT_SINK_ATTRIBUTE,
+  type AnnouncementPoliteness,
+} from '../../../internal/announcer.js';
+
+function sinkOf(politeness: AnnouncementPoliteness): HTMLElement {
+  return document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`
+  )!;
+}
+
+// The opt-in mount announcement is deliberately deferred past the first paint, so the shared
+// region is mounted in an earlier task than the text that lands in it.
+async function settleInitialAnnouncement(
+  el: LyraRetrievalSearch
+): Promise<void> {
+  await el.updateComplete;
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  );
+  await el.updateComplete;
+}
 
 function queryInputOf(el: LyraRetrievalSearch): HTMLElement {
   return el.shadowRoot!.querySelector('[part="query"]') as HTMLElement;
@@ -690,6 +712,94 @@ describe('loading / error / empty status region', () => {
     expect(reconnectedSink.children.length).to.equal(0);
   });
 
+  it('announces the error it already presents on mount when announce is set', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search
+        announce
+        error-text="The retrieval service timed out."
+      ></lr-retrieval-search>`
+    )) as LyraRetrievalSearch;
+    await settleInitialAnnouncement(el);
+    expect(el.announce, 'announce reflects the authored attribute').to.equal(
+      true
+    );
+    expect(el.getAttribute('announce')).to.equal('');
+    expect(
+      Array.from(sinkOf('assertive').children, (child) => child.textContent)
+    ).to.deep.equal(['The retrieval service timed out.']);
+    expect(
+      sinkOf('polite').children.length,
+      'an error state is announced assertively and only once'
+    ).to.equal(0);
+    await expect(el).to.be.accessible();
+  });
+
+  it('announces the settled zero-result state it already presents on mount when announce is set', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search announce empty></lr-retrieval-search>`
+    )) as LyraRetrievalSearch;
+    await settleInitialAnnouncement(el);
+    expect(
+      Array.from(sinkOf('polite').children, (child) => child.textContent)
+    ).to.deep.equal(['No matches']);
+    expect(
+      sinkOf('assertive').children.length,
+      'there is no error state to announce'
+    ).to.equal(0);
+  });
+
+  it('keeps an announce search that is still loading silent on mount', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search announce loading empty></lr-retrieval-search>`
+    )) as LyraRetrievalSearch;
+    await settleInitialAnnouncement(el);
+    expect(
+      sinkOf('polite').children.length,
+      'a zero-result state is not settled while loading'
+    ).to.equal(0);
+  });
+
+  it('keeps mount silent while announce is unset, with later transitions still announced', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search
+        error-text="The retrieval service timed out."
+      ></lr-retrieval-search>`
+    )) as LyraRetrievalSearch;
+    await settleInitialAnnouncement(el);
+    expect(el.announce, 'announce defaults to false').to.equal(false);
+    expect(el.hasAttribute('announce')).to.equal(false);
+    expect(
+      sinkOf('assertive').children.length,
+      'an unannounced search stays silent on mount'
+    ).to.equal(0);
+
+    el.errorText = 'The retry also failed.';
+    await el.updateComplete;
+    expect(
+      Array.from(sinkOf('assertive').children, (child) => child.textContent)
+    ).to.deep.equal(['The retry also failed.']);
+  });
+
+  it('does not replay the initial announcement when an announce search reconnects', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search
+        announce
+        error-text="The retrieval service timed out."
+      ></lr-retrieval-search>`
+    )) as LyraRetrievalSearch;
+    await settleInitialAnnouncement(el);
+    expect(sinkOf('assertive').children.length).to.equal(1);
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await settleInitialAnnouncement(el);
+    expect(
+      sinkOf('assertive').children.length,
+      'reconnect stages the existing error again rather than replaying it'
+    ).to.equal(0);
+  });
+
   it('prioritizes loading over error and empty', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
@@ -1074,4 +1184,34 @@ it('renders the query field, mode selector, and submit button at one flush toolb
     heights[0]!,
     1
   );
+});
+
+it("contains the composed lr-segmented's lr-activate on a real repeat pick of the current mode", async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-search mode="vector"></lr-retrieval-search>`
+  )) as LyraRetrievalSearch;
+  await el.updateComplete;
+  const mode = modeOf(el);
+  expect(mode.tagName.toLowerCase()).to.equal('lr-segmented');
+  await (mode as HTMLElement & { updateComplete: Promise<boolean> }).updateComplete;
+  const checked = mode.shadowRoot!.querySelector<HTMLElement>(
+    '[part="segment"][aria-checked="true"]'
+  );
+  expect(checked?.dataset['value'], 'the checked segment is the current mode').to.equal('vector');
+  let escaped = 0;
+  const listener = (): void => {
+    escaped++;
+  };
+  document.addEventListener('lr-activate', listener);
+  try {
+    checked!.click();
+    await el.updateComplete;
+  } finally {
+    document.removeEventListener('lr-activate', listener);
+  }
+  expect(el.mode, 'the repeat pick changed nothing').to.equal('vector');
+  expect(
+    escaped,
+    "this component owns its own event surface; the child's raw event never escapes"
+  ).to.equal(0);
 });

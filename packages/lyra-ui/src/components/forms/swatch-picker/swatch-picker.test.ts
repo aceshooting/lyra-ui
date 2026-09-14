@@ -1283,3 +1283,96 @@ describe('hostile focus ownership', () => {
     }
   });
 });
+
+describe("lr-swatch-picker activation event", () => {
+  it("fires lr-activate without lr-change when the already-selected swatch is clicked again", async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .items=${options()} value="green"></lr-swatch-picker>`
+    )) as LyraSwatchPicker;
+    let changeCount = 0;
+    el.addEventListener("lr-change", () => changeCount++);
+    setTimeout(() => swatches(el)[1]!.click());
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "green" });
+    expect(el.value).to.equal("green");
+    expect(changeCount, "re-activation is not a value change").to.equal(0);
+  });
+
+  it("fires lr-activate without lr-change when Home re-activates the already-first selection", async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .items=${options()} value="blue"></lr-swatch-picker>`
+    )) as LyraSwatchPicker;
+    swatches(el)[0]!.focus();
+    const focused = el.shadowRoot!.activeElement as HTMLElement;
+    expect(
+      focused.dataset["index"],
+      "the keyboard case is driven from the genuinely focused swatch"
+    ).to.equal("0");
+    let changeCount = 0;
+    el.addEventListener("lr-change", () => changeCount++);
+    setTimeout(() =>
+      focused.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Home",
+          bubbles: true,
+          cancelable: true,
+        })
+      )
+    );
+    const ev = await oneEvent(el, "lr-activate");
+    await el.updateComplete;
+    expect(ev.detail).to.deep.equal({ value: "blue" });
+    expect(changeCount, "Home on the current selection changes nothing").to.equal(0);
+  });
+
+  it("emits lr-change before lr-activate when the pick does move the selection, and bubbles composed and uncancelable", async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .items=${options()} value="blue"></lr-swatch-picker>`
+    )) as LyraSwatchPicker;
+    const order: string[] = [];
+    const flags: Array<Record<string, boolean>> = [];
+    el.addEventListener("lr-change", () => order.push("lr-change"));
+    const documentListener = (e: Event): void => {
+      order.push("lr-activate");
+      flags.push({
+        bubbles: e.bubbles,
+        cancelable: e.cancelable,
+        composed: e.composed,
+      });
+    };
+    document.addEventListener("lr-activate", documentListener);
+    try {
+      swatches(el)[2]!.click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener("lr-activate", documentListener);
+    }
+    expect(el.value).to.equal("red");
+    expect(order).to.deep.equal(["lr-change", "lr-activate"]);
+    expect(flags).to.deep.equal([
+      { bubbles: true, cancelable: false, composed: true },
+    ]);
+  });
+
+  it("stays silent for a disabled picker and for a programmatic value assignment", async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .items=${options()} value="blue" disabled></lr-swatch-picker>`
+    )) as LyraSwatchPicker;
+    let activateCount = 0;
+    el.addEventListener("lr-activate", () => activateCount++);
+    swatches(el)[0]!.click();
+    swatches(el)[1]!.click();
+    await el.updateComplete;
+    expect(activateCount, "a disabled picker activates nothing").to.equal(0);
+
+    el.disabled = false;
+    el.value = "red";
+    await el.updateComplete;
+    expect(el.value, "the assignment still lands").to.equal("red");
+    expect(
+      activateCount,
+      "a host writing `value` is not a user activation"
+    ).to.equal(0);
+  });
+});

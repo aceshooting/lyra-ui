@@ -264,6 +264,16 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @cssprop [--lr-emoji-picker-radius=var(--lr-radius)] - Outer picker corner radius.
  * @cssprop [--lr-emoji-picker-item-radius=var(--lr-radius-xs)] - Search and emoji corner radius.
  * @cssprop [--lr-emoji-picker-search-hover-border-color=var(--lr-color-brand)] - Search hover border.
+ * @cssprop [--lr-emoji-picker-search-min-height=auto] - Minimum row height of the filter field,
+ *   for matching it to a themed search field of a chosen density tier. Point it at
+ *   `--lr-form-control-height-s` (or any tier of that ladder) to line the picker's own field up
+ *   with the rest of an application's controls. `size` does not drive it: on this component `size`
+ *   scales the emoji glyph and item box, not the form-control ladder.
+ * @cssprop [--lr-emoji-picker-search-font-size=inherit] - Text size of the filter field.
+ * @cssprop [--lr-emoji-picker-search-padding-inline=var(--lr-space-s)] - Inline gutter of the
+ *   filter field.
+ * @cssprop [--lr-emoji-picker-search-padding-block=var(--lr-space-xs)] - Block gutter of the filter
+ *   field.
  * @cssprop [--lr-emoji-picker-row-height=calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))] -
  *   One windowed row's height. Must stay at or above the item size plus the group-label band, or
  *   consecutive absolutely-positioned rows overlap.

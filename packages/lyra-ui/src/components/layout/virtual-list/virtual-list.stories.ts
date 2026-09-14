@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { createRef, ref } from 'lit/directives/ref.js';
 import './virtual-list.js';
 import type { LyraVirtualList } from './virtual-list.js';
 import type { LyraVirtualListIndexedSource } from './virtual-list.js';
@@ -342,6 +343,43 @@ export const LoadMore: Story = {
         has-more
         @lr-load-more=${onLoadMore}
       ></lr-virtual-list>
+    `;
+  },
+};
+
+/**
+ * `scrollElement` hands the scrollport to an ancestor that already scrolls, for a list embedded in
+ * a longer page rather than sized as its own panel. The list's own viewport stops scrolling and
+ * grows to its full virtual extent, so this box's single scrollbar moves the lead-in copy *and*
+ * re-windows the 2000-row list. There is no ancestor auto-detection -- the scroller is the element
+ * you name and nothing else, so an unrelated `overflow` rule on some wrapper can never silently
+ * take the job over.
+ */
+export const ExternalScrollElement: Story = {
+  render: () => {
+    // The scroller's own ref commits before its children's, so the list's ref callback below is the
+    // first moment both elements exist -- wiring it the other way round reads an empty ref.
+    const scrollerRef = createRef<HTMLElement>();
+    return html`
+      <div
+        style="max-width: 32rem; block-size: 20rem; overflow: auto; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius);"
+        ${ref(scrollerRef)}
+      >
+        <p style="margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet);">
+          Ordinary page content above the list. Scroll this box: the paragraph
+          leaves, and the list keeps windowing against the very same scrollbar
+          instead of introducing a second, nested one.
+        </p>
+        <lr-virtual-list
+          ${ref((element?: Element) => {
+            const list = element as LyraVirtualList | undefined;
+            if (list) list.scrollElement = scrollerRef.value;
+          })}
+          .items=${messages}
+          .renderItem=${renderMessage}
+          .keyFunction=${keyFunction}
+        ></lr-virtual-list>
+      </div>
     `;
   },
 };

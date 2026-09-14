@@ -172,3 +172,33 @@ export const NarrowLongContent: Story = {
     </div>
   `,
 };
+/** The width pair, applied to the standalone surface and to a submenu's own surface alike. The
+ *  ceiling takes a length or a percentage; `100%` and `none` both uncap to the container, and the
+ *  viewport clamp stays outside the name, so no value can make a menu overflow. The floor moves
+ *  with it -- capping below 10rem needs `--lr-menu-min-inline-size` too. */
+export const WidthHooks: Story = {
+  name: 'Width ceiling and floor',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l); inline-size: 640px; max-inline-size: 100%;">
+      <lr-menu label="Default 20rem ceiling">
+        <lr-menu-item value="rename"
+          >Rename this row and every descendant beneath it</lr-menu-item
+        >
+        <lr-menu-item value="archive">Archive</lr-menu-item>
+      </lr-menu>
+      <lr-menu label="Uncapped to the row" style="--lr-menu-max-inline-size: none">
+        <lr-menu-item value="rename"
+          >Rename this row and every descendant beneath it</lr-menu-item
+        >
+        <lr-menu-item value="archive">Archive</lr-menu-item>
+      </lr-menu>
+      <lr-menu
+        label="Narrower than the 10rem floor"
+        style="--lr-menu-max-inline-size: 7rem; --lr-menu-min-inline-size: 0"
+      >
+        <lr-menu-item value="rename">Rename</lr-menu-item>
+        <lr-menu-item value="archive">Archive</lr-menu-item>
+      </lr-menu>
+    </div>
+  `,
+};

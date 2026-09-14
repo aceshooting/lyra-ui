@@ -1,6 +1,6 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './callout.js';
 import type { LyraCallout } from './callout.js';
 
@@ -1047,14 +1047,16 @@ it('maps explicit neutral to its semantic quiet/loud palette', async () => {
 it('gives close-button a rendered hover state', async () => {
   const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
-  const rect = button.getBoundingClientRect();
   const resting = getComputedStyle(button).backgroundColor;
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
-    expect(getComputedStyle(button).backgroundColor).to.not.equal(resting);
+    // The pointer has to actually land (a synthesized move resolving is not the browser having
+    // processed it) and the fill eases out of `transparent`, so both halves are polled rather
+    // than read once straight after the move.
+    await hoverUntilMatched(button, 'the close button receives the pointer');
+    await waitUntil(
+      () => getComputedStyle(button).backgroundColor !== resting,
+      'the close button paints a hover background',
+    );
   } finally {
     await resetMouse();
   }
@@ -1165,4 +1167,126 @@ it('uses break-word, not anywhere, on content/message text', async () => {
   const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
   expect(getComputedStyle(content).overflowWrap).to.equal('break-word');
   expect(getComputedStyle(message).overflowWrap).to.equal('break-word');
+});
+
+it('announces its initial content on mount when announce is set, at the danger urgency', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.announce = true;
+  el.setAttribute('variant', 'danger');
+  el.heading = 'Deployment failed';
+  el.append(document.createTextNode('Retry the release job.'));
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const assertive = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(el.getAttribute('announce'), 'announce reflects').to.equal('');
+  expect(Array.from(assertive.children, (child) => child.textContent)).to.deep.equal([
+    'Deployment failed Retry the release job.',
+  ]);
+  expect(polite.childElementCount, 'danger initial content uses the assertive sink only').to.equal(0);
+  await expect(el).to.be.accessible();
+  el.remove();
+});
+
+it('announces initial content politely and keeps later updates live, without repeating itself', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.announce = true;
+  el.textContent = 'Import finished';
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(Array.from(polite.children, (child) => child.textContent)).to.deep.equal([
+    'Import finished',
+  ]);
+
+  el.firstChild!.textContent = 'Import finished with warnings';
+  await flushMutations();
+  expect(Array.from(polite.children, (child) => child.textContent)).to.deep.equal([
+    'Import finished',
+    'Import finished with warnings',
+  ]);
+  el.remove();
+});
+
+it('keeps mount silent while announce is unset, with later updates still live', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.textContent = 'Import finished';
+  document.body.append(el);
+  await settleLiveRegion(el);
+  expect(el.announce, 'announce defaults to false').to.equal(false);
+  expect(el.hasAttribute('announce')).to.equal(false);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(polite.childElementCount, 'an unannounced callout stays silent on mount').to.equal(0);
+
+  el.firstChild!.textContent = 'Import failed';
+  await flushMutations();
+  expect(Array.from(polite.children, (child) => child.textContent)).to.deep.equal(['Import failed']);
+  el.remove();
+});
+
+it('keeps a closed announce callout silent on mount', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.announce = true;
+  el.open = false;
+  el.textContent = 'Nothing to see';
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(polite.childElementCount).to.equal(0);
+  el.remove();
+});
+
+it('does not replay the initial announcement when an announce callout reconnects', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.announce = true;
+  el.textContent = 'Session expired';
+  document.body.append(el);
+  await settleLiveRegion(el);
+  expect(
+    document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)
+      ?.childElementCount,
+  ).to.equal(1);
+
+  el.remove();
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(polite.childElementCount, 'reconnect stages the existing content again').to.equal(0);
+
+  el.firstChild!.textContent = 'Session restored';
+  await flushMutations();
+  expect(Array.from(polite.children, (child) => child.textContent)).to.deep.equal([
+    'Session restored',
+  ]);
+  el.remove();
+});
+
+it('composes the initial announcement through the localized context template, under rtl too', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.announce = true;
+  el.setAttribute('dir', 'rtl');
+  el.strings = { calloutAnnouncementWithContext: '{content} ← {context}' };
+  el.setAttribute('aria-label', 'Storage warning');
+  el.textContent = 'Disk is nearly full';
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  expect(Array.from(polite.children, (child) => child.textContent)).to.deep.equal([
+    'Disk is nearly full ← Storage warning',
+  ]);
+  el.remove();
 });

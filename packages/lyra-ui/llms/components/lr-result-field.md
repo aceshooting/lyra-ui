@@ -74,6 +74,11 @@ whenever the slot has no assigned content), `body`.
 `var(--lr-space-2xs)`) — gap between `[part="body"]`'s children while `compact`, one step tighter
 than the uncompacted `--lr-space-xs`. The two gap knobs mean `compact` now tightens interior spacing,
 not only the padding box — a compact card no longer keeps full-size gaps inside a shrunken frame.
+`--lr-result-card-background` (default `var(--lr-color-surface)`), `--lr-result-card-border-color`
+(default `var(--lr-color-border)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
+the card chrome without a `::part(base)` override. The border-color hook also colors
+`[part="header"]`'s divider, so a retuned card doesn't strand a mismatched interior rule;
+`frame="plain"` still drops the outer chrome and that divider.
 Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
 `--lr-radius`.
 

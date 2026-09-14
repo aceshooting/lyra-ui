@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -91,7 +91,11 @@ the right hook for styling and for reading back what the terminal last announced
 viewport's block size; not declared on `:host`, so it is inherited from the host or any ancestor.
 `--lr-terminal-surface-color` (default `var(--lr-color-surface-raised)`) controls the card-frame
 background and the fallback foreground for inverse ANSI segments without an explicit background;
-`frame="plain"` remains transparent. `--lr-terminal-toolbar-button-hover-bg` (default
+`frame="plain"` remains transparent. `--lr-terminal-border-color` (default
+`var(--lr-color-border)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
+chrome — the border-color hook also colors the toolbar/log divider `frame="plain"` keeps.
+`--lr-terminal-surface-color` keeps its established name; nothing was renamed.
+`--lr-terminal-toolbar-button-hover-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-terminal-toolbar-button-active-bg` (default
 `color-mix(in oklab, var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet)),
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`) control the copy and download buttons.

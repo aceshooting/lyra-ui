@@ -56,18 +56,23 @@ export const styles = css`
     display: flex;
     align-items: center;
     min-inline-size: 0;
-    gap: var(--lr-space-s);
-    padding: var(--lr-space-m);
+    gap: var(--lr-command-palette-search-gap, var(--lr-space-s));
+    padding: var(--lr-command-palette-search-padding, var(--lr-space-m));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part="input"] {
     flex: 1;
     min-inline-size: 0;
+    /* Both knobs resolve to the field's shipped behaviour when the consumer sets neither: an auto
+       minimum height and the text size inherited through the font shorthand below. The shorthand
+       stays first so it keeps pinning every other font longhand to the inherited value. */
+    min-block-size: var(--lr-command-palette-search-min-height, auto);
     border: 0;
     outline: 0;
     background: transparent;
     color: inherit;
     font: inherit;
+    font-size: var(--lr-command-palette-search-font-size, inherit);
   }
   [part="input"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

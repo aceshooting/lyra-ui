@@ -4,7 +4,12 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteAdd, finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import {
+  finiteAdd,
+  finiteCount,
+  finiteInteger,
+  finiteNumber,
+} from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   getOwnDataDescriptor,
@@ -126,6 +131,16 @@ function isIndexedSource(
   return !Array.isArray(source);
 }
 
+/** `Node.ELEMENT_NODE`, spelled out so the check below needs no live `Node` binding (the value is
+ *  identical in every realm, including the one a server render runs in). */
+const ELEMENT_NODE_TYPE = 1;
+
+/** Only a `Window` is its own `window`, in any realm -- so this stays correct for a scroller handed
+ *  in from an iframe, which an `instanceof Window` check against this realm would misclassify. */
+function isWindowScroller(target: Element | Window): target is Window {
+  return (target as Window).window === target;
+}
+
 /** A typed key is used in maps and active-row matching; this token is only for
  * DOM attributes, where every value is necessarily a string. */
 function domKeyToken(key: VirtualListKey): string {
@@ -239,7 +254,10 @@ export interface LyraVirtualListEventMap {
  * - Its measured height becomes a `scroll-padding-block-start` on the scroll container, so both
  *   `active-item-id`/`scrollToIndex` and native keyboard scrolling stop *below* the band instead of
  *   parking the target row behind it. Scrolled above the first group the band shows nothing but
- *   stays mounted, so that height is known before the first jump rather than after it.
+ *   stays mounted, so that height is known before the first jump rather than after it. Under an
+ *   external `scrollElement` that inset is written on an element that no longer scrolls: the
+ *   programmatic paths still clear the band (they subtract it arithmetically), but the consumer
+ *   owns mirroring `scroll-padding-block-start` onto their own scroller for the native one.
  * A host that renders its own group headers as ordinary rows supplies `groups` purely as position
  * anchors, with `label: ''` so no duplicate `[part="group"]` marker renders.
  *
@@ -248,6 +266,16 @@ export interface LyraVirtualListEventMap {
  * coordinate space as the scroll container's `scrollTop`. A host doing its own scroll-linked layout
  * (a pinned group header, a scrollbar minimap, a "jump to here" affordance) needs those numbers and
  * would otherwise have to duplicate the offsets array.
+ *
+ * **External scroll container.** `scrollElement` points the whole windowing loop at an ancestor
+ * element (or the `Window`) that already owns a scrollbar, for a list embedded in a longer scrolling
+ * page rather than sized as its own panel. `[part="base"]` then stops scrolling and grows to the
+ * list's full virtual extent, so the page scrollbar spans the whole list, the visible band is the
+ * external scroller's height, and `[part="sticky-group"]` sticks to that scrollport. Every
+ * list-coordinate API (`offsetForIndex()`, `indexAtOffset()`, `scrollToIndex()`, `active-item-id`,
+ * `lr-virtual-scroll`) keeps answering in the list's own offsets; this component converts. There is
+ * no ancestor auto-detection, deliberately: a detected scroller would silently change this
+ * component's behavior the day an unrelated `overflow` rule landed on a wrapper in between.
  *
  * **Programmatic scrolling.** `scrollToIndex()` is the public counterpart to `active-item-id`'s automatic
  * scroll-into-view -- used by `<lr-chat-viewport>`'s virtual mode and any other host that needs to
@@ -276,7 +304,10 @@ export interface LyraVirtualListEventMap {
  *   `LyraVirtualListRange`) — the current visible (non-overscanned) item index
  *   range, fired only when it actually changes.
  * @event lr-virtual-scroll - `detail: { scrollTop, viewportHeight }` (see
- *   `LyraVirtualListScroll`) — the scroll container moved. Emitted from the same
+ *   `LyraVirtualListScroll`) — the scroll container moved. `scrollTop` is always in the list's own
+ *   offset space (`offsetForIndex()`'s space), including under an external `scrollElement`, where it
+ *   is how far the list has scrolled past the top of that scroller rather than the scroller's own
+ *   position. Emitted from the same
  *   `requestAnimationFrame` tick that already coalesces native `scroll`
  *   events, so a fling that fires dozens of native events produces at most one
  *   of these per frame, and none at all when the position did not actually
@@ -288,7 +319,9 @@ export interface LyraVirtualListEventMap {
  * container, since `aria-label` set on a custom-element host does not by itself name a role living
  * on an internal shadow element. Used by `<lr-activity-feed>`'s virtualized mode.
  * @csspart base - The scrollable container (`role="list"`), including the horizontal scrollport
- *   used when consumer-rendered row content explicitly opts out of wrapping.
+ *   used when consumer-rendered row content explicitly opts out of wrapping. Under an external
+ *   `scrollElement` it stops scrolling, drops its `tabindex` and hover outline, and sizes itself to
+ *   the list's full virtual extent instead of `--lr-virtual-list-height`.
  * @csspart spacer - The full-content-height inner element that gives the
  *   container its true scrollable extent.
  * @csspart group - A positioned group label. Not rendered for a `groups` entry whose `label` is the
@@ -302,7 +335,8 @@ export interface LyraVirtualListEventMap {
  *   within the row; consumer content can opt out with `white-space: nowrap`.
  * @cssprop [--lr-virtual-list-height=var(--lr-size-24rem)] - The scroll viewport's height. A
  *   virtualized list needs a bounded scroll extent, so this ships a default rather than
- *   collapsing to zero when a caller does not size the host.
+ *   collapsing to zero when a caller does not size the host. Ignored while `scrollElement` names an
+ *   external scroller, whose own height is the visible band.
  * @cssprop [--lr-virtual-list-hover-outline-width=var(--lr-border-width-thin)] - Outline width of
  *   the mouse-hover preview on `[part="base"]`.
  * @cssprop [--lr-virtual-list-hover-outline-style=solid] - Outline style of the mouse-hover preview
@@ -427,9 +461,57 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     false;
 
   /**
+   * An ancestor element — or the `Window` — that already owns the scrollbar, for a list that is
+   * part of a longer scrolling page rather than a self-contained panel. While set, this component's
+   * own `[part="base"]` viewport stops scrolling (it grows to the list's full virtual extent) and
+   * the windowing math tracks the named scroller's position instead, so one page scrollbar moves
+   * the whole page *and* re-windows the list.
+   *
+   * There is deliberately **no ancestor auto-detection**: the scroller is whichever element you
+   * name and nothing else. A detected ancestor would silently change this component's behavior the
+   * day an unrelated `overflow` rule lands on some wrapper between the two.
+   *
+   * Everything expressed in list coordinates keeps working unchanged — `offsetForIndex()`,
+   * `indexAtOffset()`, `scrollToIndex()`, `active-item-id`, and `lr-virtual-scroll`'s `scrollTop`
+   * are all still relative to the top of the list itself, not to the external scroller; the
+   * component converts between the two. What changes hands is the scrollbar, the visible band's
+   * height (the scroller's, not `--lr-virtual-list-height`'s), and `[part="sticky-group"]`'s
+   * sticky container, which becomes the external scrollport.
+   *
+   * Four consequences worth knowing before reaching for this:
+   * - `[part="base"]` drops its `tabindex` and its hover outline, because it is no longer a
+   *   scrollable region. Keyboard scrolling belongs to the external scroller, and a focus stop that
+   *   scrolls nothing is worse than none.
+   * - Horizontal scrolling of row content that opted out of wrapping (`white-space: nowrap`)
+   *   becomes the external scroller's responsibility: CSS cannot leave one axis visible while the
+   *   other scrolls.
+   * - The list's position inside the scroller is re-read on scroll, on the scroller's own resize,
+   *   when the list's own rendered extent resizes, and whenever this property *changes*. A layout
+   *   change *above* the list that shifts it without any of those happening is not observable. To
+   *   force a re-read, clear the property and set it again
+   *   (`el.scrollElement = undefined; el.scrollElement = scroller`) -- assigning the same value
+   *   twice does nothing, because an unchanged value is not a change as far as Lit is concerned.
+   * - While `renderStickyGroup` is set, mirror `scroll-padding-block-start` onto the external
+   *   scroller yourself. This component writes that inset on `[part="base"]`, where it stops having
+   *   any effect once that element no longer scrolls, and it will not write style on an element it
+   *   does not own. Programmatic scrolling is unaffected -- `scrollToIndex()` and `active-item-id`
+   *   subtract the band's height arithmetically -- but native keyboard scrolling can otherwise park
+   *   the row it lands on underneath `[part="sticky-group"]`.
+   *
+   * A value that is neither an `Element` nor a `Window` is ignored (the component keeps scrolling
+   * its own viewport) rather than throwing — a consumer wiring this from a ref commonly passes
+   * `null`/`undefined` on its first render.
+   */
+  @property({ attribute: false }) scrollElement?: Element | Window;
+
+  /**
    * The real scroll container — the `[part="base"]` element, the box whose `scrollTop`/
    * `clientHeight` this component's windowing math is expressed against. `undefined` until the
    * first render (and for a never-connected element), since the element does not exist before then.
+   *
+   * While `scrollElement` is set this element still exists and still hosts every row, but it no
+   * longer scrolls: the named external scroller does. Read and write the scroll position there, or
+   * keep using `scrollToIndex()`, which targets whichever of the two is currently in charge.
    *
    * Exposed so a host that needs the live scroll position, or needs to scroll the list itself, can
    * do it without reaching into this component's shadow root. Pair it with `lr-virtual-scroll` (change
@@ -459,6 +541,127 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   get renderedRows(): HTMLElement[] {
     const root = this.renderRoot as ParentNode | undefined;
     return root ? [...root.querySelectorAll<HTMLElement>('[part="row"]')] : [];
+  }
+
+  /** The configured external scroller once it is usable, or `undefined` whenever this component
+   *  scrolls its own `[part="base"]` viewport. See `scrollElement` for why a non-`Element`,
+   *  non-`Window` assignment resolves to "no external scroller" instead of throwing. */
+  private get externalScroller(): Element | Window | undefined {
+    const target = this.scrollElement;
+    if (target == null) return undefined;
+    if (isWindowScroller(target)) return target;
+    return (target as Node).nodeType === ELEMENT_NODE_TYPE ? target : undefined;
+  }
+
+  /** The full-extent inner element every row offset is measured from — the origin of this
+   *  component's own scroll-coordinate space, and therefore the thing an external scroller's
+   *  position has to be expressed relative to. */
+  private get spacerElement(): HTMLElement | undefined {
+    const root = this.renderRoot as ParentNode | undefined;
+    return (
+      (root?.querySelector('[part="spacer"]') as HTMLElement | null) ?? undefined
+    );
+  }
+
+  /**
+   * The current scroll position in this list's *own* offset space (the space `offsetForIndex()`
+   * answers in) plus the height of the band visible over it, whichever element is scrolling.
+   * `null` before the container exists.
+   *
+   * For an external scroller the position is a rect delta rather than a `scrollTop` read, because
+   * the list generally does not start at the top of that scroller's content. That delta is genuinely
+   * negative while the scroller still sits above the list, so it is reported twice: `scrollTop` is
+   * clamped at zero, which is what windowing wants (the window stays pinned to the first row while
+   * the list is still below the scroller's top edge), and `rawScrollTop` keeps the signed value,
+   * which is what any *conversion* wants. Converting through the clamped number would silently drop
+   * exactly the lead-in distance from every absolute scroll target and from every anchoring
+   * comparison, landing each one short by however far the scroller is above the list.
+   * The band is reported as the scroller's whole height even when the list occupies only part of
+   * it, which over-renders slightly at the edges and never under-renders.
+   */
+  private readScrollMetrics(): {
+    scrollTop: number;
+    rawScrollTop: number;
+    viewportHeight: number;
+  } | null {
+    const base = this.scrollContainer;
+    if (!base) return null;
+    const external = this.externalScroller;
+    if (!external) {
+      // An element's own scrollTop is never negative, so the two positions coincide here.
+      return {
+        scrollTop: base.scrollTop,
+        rawScrollTop: base.scrollTop,
+        viewportHeight: base.clientHeight,
+      };
+    }
+    const spacerTop = (this.spacerElement ?? base).getBoundingClientRect().top;
+    if (isWindowScroller(external)) {
+      // documentElement.clientHeight excludes a classic scrollbar's thickness; innerHeight does not.
+      const documentHeight = finiteNumber(
+        external.document?.documentElement?.clientHeight ?? 0,
+        0
+      );
+      const rawScrollTop = finiteNumber(-spacerTop, 0);
+      return {
+        scrollTop: Math.max(0, rawScrollTop),
+        rawScrollTop,
+        viewportHeight:
+          documentHeight > 0 ? documentHeight : finiteNumber(external.innerHeight, 0),
+      };
+    }
+    const scrollerTop = external.getBoundingClientRect().top;
+    const rawScrollTop = finiteNumber(scrollerTop - spacerTop, 0);
+    return {
+      scrollTop: Math.max(0, rawScrollTop),
+      rawScrollTop,
+      viewportHeight: finiteNumber(external.clientHeight, 0),
+    };
+  }
+
+  /** Moves whichever element is scrolling so this list's own offset space lands at `top`. Omit
+   *  `behavior` for the direct `scrollTop` write the measurement-anchoring paths need. */
+  private applyScrollPosition(top: number, behavior?: 'auto' | 'smooth'): void {
+    const external = this.externalScroller;
+    if (!external) {
+      const base = this.scrollContainer;
+      if (!base) return;
+      const next = Math.max(0, finiteNumber(top, 0));
+      if (behavior === undefined) base.scrollTop = next;
+      else base.scrollTo({ top: next, behavior });
+      return;
+    }
+    const metrics = this.readScrollMetrics();
+    if (!metrics) return;
+    // List coordinates are an offset *into* the external scroller's content, not a position within
+    // it, so move it by the difference rather than assigning an absolute value. The difference is
+    // taken against the UNCLAMPED position: while the scroller is still above the list the true
+    // list-space position is negative, and measuring from the clamped zero would move the scroller
+    // short by exactly the distance it has yet to travel to reach the list.
+    const delta = finiteNumber(top, metrics.rawScrollTop) - metrics.rawScrollTop;
+    if (isWindowScroller(external)) {
+      // A Window has no writable scrollTop, so even the instant path goes through scrollTo().
+      const options: ScrollToOptions = {
+        top: Math.max(0, finiteNumber(external.scrollY + delta, 0)),
+      };
+      if (behavior !== undefined) options.behavior = behavior;
+      external.scrollTo(options);
+      return;
+    }
+    const next = Math.max(0, finiteNumber(external.scrollTop + delta, 0));
+    if (behavior === undefined) external.scrollTop = next;
+    else external.scrollTo({ top: next, behavior });
+  }
+
+  /** Re-reads the external scroller's geometry into the reactive windowing state. Writes only on a
+   *  real change, so the render this can trigger converges instead of looping. */
+  private syncExternalScrollMetrics(): void {
+    const metrics = this.readScrollMetrics();
+    if (!metrics) return;
+    if (this.viewportHeight !== metrics.viewportHeight)
+      this.viewportHeight = metrics.viewportHeight;
+    if (this.containerScrollTop !== metrics.scrollTop)
+      this.containerScrollTop = metrics.scrollTop;
   }
 
   /** A finite, nonnegative whole-row count before it reaches ARIA arithmetic. */
@@ -560,7 +763,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private scrollRafId?: number;
   private scrollRafOwner?: Window;
   private scrollRafDocument?: Document;
-  private scrollListenerTarget?: HTMLElement;
+  /** Whatever this component last bound its scroll/intent listeners to -- its own `[part="base"]`,
+   *  an external `scrollElement`, or a `Window`. Detaching reads this stored target rather than
+   *  re-deriving one, so re-pointing `scrollElement` can never strand a listener on the old target. */
+  private scrollListenerTarget?: EventTarget;
+  /** Set only for a `Window` scroller, which has no box a `ResizeObserver` could watch. */
+  private viewportResizeTarget?: Window;
+  /** An external scroll happened and its rect-delta position is still to be read, in the coalescing
+   *  frame below rather than once per native `scroll` event. */
+  private externalMetricsPending = false;
   private ownerRealmGeneration = 0;
   /** True for the remainder of the frame in which any of this component's `ResizeObserver`s
    *  delivered -- so `syncRowObservers()` can tell that the re-render it is running inside is still
@@ -735,6 +946,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.scrollRafOwner = undefined;
     this.scrollRafDocument = undefined;
     this.pendingScrollTop = null;
+    this.externalMetricsPending = false;
     this.pendingScrollCorrection = undefined;
     this.detachContainerListeners();
     this.scrollListenerTarget = undefined;
@@ -754,7 +966,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       changed.has('keyFunction') ||
       changed.has('rowHeight') ||
       changed.has('groups') ||
-      changed.has('activeItemId')
+      changed.has('activeItemId') ||
+      changed.has('scrollElement')
     ) this.pendingScrollCorrection = undefined;
     if (
       changed.has('items') ||
@@ -802,6 +1015,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.syncRowObservers();
     this.syncGroupObservers();
     this.syncStickyOverlay();
+    // Re-point every listener at the element that is now scrolling. attachContainerListeners()
+    // detaches from the stored previous target first, so the element this component is leaving
+    // never keeps a listener -- the leak an externally-supplied scroller otherwise invites.
+    if (changed.has('scrollElement') && !this.isFirstUpdate)
+      this.attachContainerListeners();
     if (changed.has('activeItemId') && !this.isFirstUpdate)
       this.scrollActiveIntoView();
     this.emitRangeChangeIfNeeded();
@@ -973,14 +1191,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       // anchored; without this, a far scrollToIndex() jump can immediately reinterpret its target
       // as a different window when the old measurements are discarded.
       if (removedDeltaBeforeWindow !== 0) {
-        const base = this.scrollContainer;
-        const oldScrollTop = base?.scrollTop ?? this.containerScrollTop;
-        const nextScrollTop = Math.max(
-          0,
-          oldScrollTop - removedDeltaBeforeWindow
-        );
-        if (base) base.scrollTop = nextScrollTop;
-        this.containerScrollTop = nextScrollTop;
+        // Anchoring is a *shift*, so it reads and writes the unclamped position: starting from the
+        // clamped zero while an external scroller still sits above the list would turn the shift
+        // into a jump down to the list's top. Only the windowing state keeps the clamped value.
+        const oldScrollTop =
+          this.readScrollMetrics()?.rawScrollTop ?? this.containerScrollTop;
+        const nextScrollTop = oldScrollTop - removedDeltaBeforeWindow;
+        this.applyScrollPosition(nextScrollTop);
+        this.containerScrollTop = Math.max(0, nextScrollTop);
         this.pendingScrollTop = null;
       }
     }
@@ -1173,17 +1391,28 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const ownerWindow = ownerDocument.defaultView;
     if (!base || !this.isConnected || !ownerWindow) return;
     this.containerResizeObserver?.disconnect();
+    this.containerResizeObserver = undefined;
     this.detachContainerListeners();
+    const external = this.externalScroller;
+    // One binding site for both modes: whichever element is actually scrolling gets every
+    // listener, and the stored reference is what the detach path later removes them from.
+    const scrollTarget: EventTarget = external ?? base;
     const generation = this.ownerRealmGeneration;
     const ResizeObserverCtor = ownerWindow.ResizeObserver;
     if (ResizeObserverCtor) {
       const observer = new ResizeObserverCtor((entries) => {
         if (
           this.containerResizeObserver !== observer ||
-          this.scrollListenerTarget !== base ||
+          this.scrollListenerTarget !== scrollTarget ||
           !this.isCurrentOwnerWork(ownerDocument, generation)
         ) return;
         this.beginResizeDelivery();
+        if (external) {
+          // Either box resizing changes the same answer -- the scroller's is the visible band, and
+          // this element's is the list's own extent within it -- so both route to one rect read.
+          this.syncExternalScrollMetrics();
+          return;
+        }
         const entry = entries[0];
         if (!entry) return;
         this.viewportHeight =
@@ -1191,35 +1420,49 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       });
       this.containerResizeObserver = observer;
       observer.observe(base);
-    } else {
-      this.containerResizeObserver = undefined;
+      if (external && !isWindowScroller(external)) observer.observe(external);
     }
-    base.addEventListener('scroll', this.onScroll, { passive: true });
-    base.addEventListener('wheel', this.onUserScrollIntent, { passive: true });
-    base.addEventListener('pointerdown', this.onUserScrollIntent, { passive: true });
-    base.addEventListener('touchstart', this.onUserScrollIntent, { passive: true });
-    base.addEventListener('keydown', this.onUserScrollIntent);
-    this.scrollListenerTarget = base;
+    scrollTarget.addEventListener('scroll', this.onScroll, { passive: true });
+    scrollTarget.addEventListener('wheel', this.onUserScrollIntent, { passive: true });
+    scrollTarget.addEventListener('pointerdown', this.onUserScrollIntent, { passive: true });
+    scrollTarget.addEventListener('touchstart', this.onUserScrollIntent, { passive: true });
+    scrollTarget.addEventListener('keydown', this.onUserScrollIntent);
+    this.scrollListenerTarget = scrollTarget;
+    if (external && isWindowScroller(external)) {
+      // A Window has no box for a ResizeObserver to watch; `resize` is its equivalent notification.
+      external.addEventListener('resize', this.onExternalViewportResize, {
+        passive: true,
+      });
+      this.viewportResizeTarget = external;
+    }
     // Queue a one-time read as a fast path for browsers that delay the first
     // ResizeObserver callback. It runs after firstUpdated() returns, so these
     // reactive writes do not schedule an update from inside Lit's lifecycle
     // callback; the observer remains responsible for later measurements.
     ownerWindow.queueMicrotask(() => {
       if (
-        this.scrollListenerTarget !== base ||
+        this.scrollListenerTarget !== scrollTarget ||
         this.scrollContainer !== base ||
         !this.isCurrentOwnerWork(ownerDocument, generation)
       ) return;
-      const viewportHeight = base.clientHeight;
-      const scrollTop = base.scrollTop;
-      if (this.viewportHeight !== viewportHeight)
-        this.viewportHeight = viewportHeight;
-      if (this.containerScrollTop !== scrollTop)
-        this.containerScrollTop = scrollTop;
+      const metrics = this.readScrollMetrics();
+      if (!metrics) return;
+      if (this.viewportHeight !== metrics.viewportHeight)
+        this.viewportHeight = metrics.viewportHeight;
+      if (this.containerScrollTop !== metrics.scrollTop)
+        this.containerScrollTop = metrics.scrollTop;
     });
   }
 
   private detachContainerListeners(): void {
+    const viewportTarget = this.viewportResizeTarget;
+    if (viewportTarget) {
+      viewportTarget.removeEventListener(
+        'resize',
+        this.onExternalViewportResize
+      );
+      this.viewportResizeTarget = undefined;
+    }
     const target = this.scrollListenerTarget;
     if (!target) return;
     target.removeEventListener('scroll', this.onScroll);
@@ -1228,6 +1471,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     target.removeEventListener('touchstart', this.onUserScrollIntent);
     target.removeEventListener('keydown', this.onUserScrollIntent);
   }
+
+  private onExternalViewportResize = (): void => {
+    this.syncExternalScrollMetrics();
+  };
 
   private onUserScrollIntent = (event: Event): void => {
     if (event instanceof KeyboardEvent) {
@@ -1246,7 +1493,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   };
 
   private onScroll = (e: Event): void => {
-    this.pendingScrollTop = (e.currentTarget as HTMLElement).scrollTop;
+    if (this.externalScroller) {
+      // Deferred to the coalescing frame below: an external position is a rect delta, and taking
+      // one per native `scroll` event would force a layout per event instead of per frame.
+      this.pendingScrollTop = null;
+      this.externalMetricsPending = true;
+    } else {
+      this.pendingScrollTop = (e.currentTarget as HTMLElement).scrollTop;
+    }
     if (this.scrollRafId !== undefined) return;
     // Coalesce to one recompute per animation frame -- native `scroll`
     // events can fire far faster than that under a fast trackpad/touch
@@ -1268,6 +1522,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.scrollRafId = undefined;
       this.scrollRafOwner = undefined;
       this.scrollRafDocument = undefined;
+      if (this.externalMetricsPending) {
+        this.externalMetricsPending = false;
+        const metrics = this.readScrollMetrics();
+        if (metrics) {
+          this.pendingScrollTop = metrics.scrollTop;
+          if (this.viewportHeight !== metrics.viewportHeight)
+            this.viewportHeight = metrics.viewportHeight;
+        }
+      }
       if (this.pendingScrollTop !== null) {
         const scrollTop = this.pendingScrollTop;
         this.pendingScrollTop = null;
@@ -1290,7 +1553,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.beginResizeDelivery();
     if (this.fixedRowHeight != null) return;
     const base = this.scrollContainer;
-    const oldScrollTop = base?.scrollTop ?? this.containerScrollTop;
+    // Unclamped: both the "is this row above the viewport top?" test below and the shift it feeds
+    // are expressed against the real position, which is negative while an external scroller has
+    // not reached the list yet -- and then nothing is above the viewport top at all.
+    const oldScrollTop =
+      this.readScrollMetrics()?.rawScrollTop ?? this.containerScrollTop;
     let scrollAdjustment = 0;
     let changed = false;
     for (const entry of entries) {
@@ -1320,9 +1587,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (changed) {
       this.indexedMeasurementIndexDirty = true;
       if (base && scrollAdjustment !== 0) {
-        const nextScrollTop = Math.max(0, oldScrollTop + scrollAdjustment);
-        base.scrollTop = nextScrollTop;
-        this.containerScrollTop = nextScrollTop;
+        const nextScrollTop = oldScrollTop + scrollAdjustment;
+        this.applyScrollPosition(nextScrollTop);
+        this.containerScrollTop = Math.max(0, nextScrollTop);
         this.pendingScrollTop = null;
       }
       this.offsetsDirty = true;
@@ -1334,7 +1601,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private onGroupsResized = (entries: ResizeObserverEntry[]): void => {
     this.beginResizeDelivery();
     const base = this.scrollContainer;
-    const oldScrollTop = base?.scrollTop ?? this.containerScrollTop;
+    // Unclamped, for the same reason as `onRowsResized`: a group at offset 0 compares equal to a
+    // clamped zero and would anchor against a viewport top the scroller has not reached yet.
+    const oldScrollTop =
+      this.readScrollMetrics()?.rawScrollTop ?? this.containerScrollTop;
     let scrollAdjustment = 0;
     let changed = false;
     for (const entry of entries) {
@@ -1354,9 +1624,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     if (!changed) return;
     if (base && scrollAdjustment !== 0) {
-      const nextScrollTop = Math.max(0, oldScrollTop + scrollAdjustment);
-      base.scrollTop = nextScrollTop;
-      this.containerScrollTop = nextScrollTop;
+      const nextScrollTop = oldScrollTop + scrollAdjustment;
+      this.applyScrollPosition(nextScrollTop);
+      this.containerScrollTop = Math.max(0, nextScrollTop);
       this.pendingScrollTop = null;
     }
     this.offsetsDirty = true;
@@ -1580,22 +1850,31 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     align: 'start' | 'end' | 'auto',
     behavior: 'auto' | 'smooth'
   ): boolean {
-    const base = this.scrollContainer;
-    if (!base) return false;
+    // Expressed against whichever element is scrolling, in this list's own offset space either
+    // way -- so an external `scrollElement` needs no separate alignment arithmetic here.
+    const metrics = this.readScrollMetrics();
+    if (!metrics) return false;
     const inset = this.stickyInset;
     const top = this.offsetAt(index);
     const bottom = this.rowBottomAt(index);
-    const viewTop = base.scrollTop;
-    const viewBottom = viewTop + base.clientHeight;
+    // The band's position, not the window's: under an external scroller that has not reached the
+    // list, the visible part of the list starts at offset 0 but ENDS a lead-in early, and the
+    // clamped number would report rows as visible that are still below the scroller's bottom edge.
+    const viewTop = metrics.rawScrollTop;
+    const viewBottom = viewTop + metrics.viewportHeight;
     let target: number | null = null;
     // Only the top-edge alignments need the sticky inset -- `'end'` puts the row's *bottom* edge at
     // the viewport bottom, which the band never covers.
     if (align === 'start') target = top - inset;
-    else if (align === 'end') target = bottom - base.clientHeight;
+    else if (align === 'end') target = bottom - metrics.viewportHeight;
     else if (top - inset < viewTop) target = top - inset;
-    else if (bottom > viewBottom) target = bottom - base.clientHeight;
+    else if (bottom > viewBottom) target = bottom - metrics.viewportHeight;
     if (target === null) return false;
-    base.scrollTo({ top: Math.max(0, target), behavior });
+    // Deliberately unclamped: a negative list offset is meaningless for this component's own
+    // viewport but perfectly legal under an external scroller, where it simply means "park above
+    // the list" -- which is exactly where `align: 'end'` on one of the first rows belongs. Both
+    // branches of applyScrollPosition() already clamp to the scrolling element's own legal domain.
+    this.applyScrollPosition(target, behavior);
     return true;
   }
 
@@ -1886,12 +2165,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // declaration -- and the attribute is absent entirely while there is no sticky layer.
     const stickyInset = this.stickyInset;
     const activeIndex = this.activeIndex;
+    // An external scroller owns the scrollport, so this element is no longer a scrollable region:
+    // it must not keep a tab stop (or the hover outline advertising one) for scrolling it cannot do.
+    const isExternallyScrolled = this.externalScroller !== undefined;
 
     return html`
       <div
         part="base"
         role=${isRowMode ? 'rowgroup' : 'list'}
-        tabindex="0"
+        ?data-external-scroll=${isExternallyScrolled}
+        tabindex=${isExternallyScrolled ? nothing : '0'}
         style=${stickyInset > 0
           ? `scroll-padding-block-start:${stickyInset}px`
           : nothing}
