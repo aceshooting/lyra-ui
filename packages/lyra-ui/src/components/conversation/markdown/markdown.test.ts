@@ -1560,12 +1560,12 @@ describe("inline code / code-block theming hooks", () => {
   const dualContent = "some `inline` and:\n\n```\nfenced\n```";
 
   it("falls back to the ambient --lr-color-brand-quiet for both surfaces when --lr-markdown-code-bg is unset", async () => {
-    const wrapper = (await fixture(
-      html`<div style="--lr-color-brand-quiet: rgb(1, 2, 3);">
-        <lr-markdown content=${dualContent}></lr-markdown>
-      </div>`
-    )) as HTMLDivElement;
-    const el = wrapper.querySelector("lr-markdown") as LyraMarkdown;
+    const el = (await fixture(
+      html`<lr-markdown
+        style="--lr-theme-color-brand-fill-quiet: rgb(1, 2, 3);"
+        content=${dualContent}
+      ></lr-markdown>`
+    )) as LyraMarkdown;
     await waitUntil(
       () =>
         el.shadowRoot!.querySelector('[part="inline-code"]') &&

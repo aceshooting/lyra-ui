@@ -2922,7 +2922,6 @@ it("resets the native search-cancel glyph on the search field", async () => {
   `;
   el.shadowRoot!.append(nativeDecoration);
   input.focus();
-  const rect = input.getBoundingClientRect();
   try {
     let cancelPosition: [number, number] | undefined;
     for (let offset = 2; offset <= 48; offset += 2) {
@@ -2931,6 +2930,13 @@ it("resets the native search-cancel glyph on the search field", async () => {
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve())
       );
+      // Captured fresh each iteration (not once, up front): the sibling `[part='clear-button']`
+      // this component now renders once the field is non-empty shrinks the input's own box, so a
+      // rect taken before that button ever mounted would place candidates past the input's real
+      // right edge -- inside the *new* button's box instead of the native glyph's zone the input
+      // itself paints. Re-measuring keeps every candidate inside the input, which is the surface
+      // under test here.
+      const rect = input.getBoundingClientRect();
       const candidate: [number, number] = [
         Math.round(rect.right - offset),
         Math.round(rect.top + rect.height / 2),

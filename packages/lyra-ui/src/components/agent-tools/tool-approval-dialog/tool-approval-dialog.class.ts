@@ -196,8 +196,30 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   static override styles = [LyraElement.styles, styles];
 
+  // `open`/`pending` are accessor-backed rather than plain fields so `onApprove`/`onDeny` can tell
+  // "a synchronous listener wrote here" apart from "nothing wrote here" -- see
+  // `dispatchWriteTouched` below. Comparing before/after *values* cannot make that distinction:
+  // both guards only reach their check once `pending` is already `null`, so a listener that writes
+  // `pending = null` right back (bouncing out to an out-of-band resolution) is value-identical to a
+  // listener that touched nothing at all.
+  private _open = false;
+  private _pending: ToolApprovalDialogPending = null;
+
+  /** Set on every write to `open`/`pending`, from any source. `onApprove`/`onDeny` clear it
+   *  immediately before dispatching `lr-approve`/`lr-deny` and read it back afterward: since the
+   *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have set
+   *  it in between. */
+  private dispatchWriteTouched = false;
+
   /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
-  @property({ type: Boolean, reflect: true }) open = false;
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean { return this._open; }
+  set open(value: boolean) {
+    const previous = this._open;
+    this._open = value;
+    this.dispatchWriteTouched = true;
+    this.requestUpdate('open', previous);
+  }
 
   /** Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching
    *  `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, and the sibling tool dialogs. */
@@ -228,7 +250,14 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
    *  `editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance
    *  never leaks one proposal's stuck pending state into the next. While non-null, Escape and an
    *  enabled backdrop dismissal are suppressed (see `activateOverlay()`). */
-  @property({ reflect: true }) pending: ToolApprovalDialogPending = null;
+  @property({ reflect: true })
+  get pending(): ToolApprovalDialogPending { return this._pending; }
+  set pending(value: ToolApprovalDialogPending) {
+    const previous = this._pending;
+    this._pending = value;
+    this.dispatchWriteTouched = true;
+    this.requestUpdate('pending', previous);
+  }
 
   /** Native editing-assistance attributes forwarded to the raw-JSON textarea. */
   @property({ converter: spellcheckConverter }) override spellcheck = false;
@@ -471,14 +500,18 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     // The guard above proves `pending` is null right up to this point -- but `emit()` below
     // dispatches synchronously, so a listener can still write `pending` or `open` from inside it
     // (e.g. it calls preventDefault() and resolves the decision itself out of band by calling
-    // close('approve') directly, or bounces `pending` back to null immediately). Snapshot them so
-    // the built-in "awaiting the host" pending state below is applied only when the listener left
-    // both untouched; otherwise it would silently clobber whatever the listener just did.
-    const pendingBeforeDispatch = this.pending;
-    const openBeforeDispatch = this.open;
+    // close('approve') directly, or bounces `pending` back to null immediately). A before/after
+    // *value* comparison can't detect that last case -- both are already null/true respectively, so
+    // a listener writing `pending = null` reads identically to a listener that touched nothing.
+    // `dispatchWriteTouched` tracks the write itself, not its value: cleared here, then set by the
+    // `open`/`pending` setters if a listener assigns either one during the synchronous `emit()`
+    // below. Only when it's still false did the listener leave both alone, and the built-in
+    // "awaiting the host" pending state applies; otherwise it would silently clobber whatever the
+    // listener just did.
+    this.dispatchWriteTouched = false;
     const event = this.emit('lr-approve', { args: currentArgs }, { cancelable: true });
     if (event.defaultPrevented) {
-      if (this.pending === pendingBeforeDispatch && this.open === openBeforeDispatch) {
+      if (!this.dispatchWriteTouched) {
         this.pending = 'approve';
       }
       return;
@@ -488,11 +521,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   private onDeny = (): void => {
     if (this.pending != null) return;
-    const pendingBeforeDispatch = this.pending;
-    const openBeforeDispatch = this.open;
+    this.dispatchWriteTouched = false;
     const event = this.emit('lr-deny', null, { cancelable: true });
     if (event.defaultPrevented) {
-      if (this.pending === pendingBeforeDispatch && this.open === openBeforeDispatch) {
+      if (!this.dispatchWriteTouched) {
         this.pending = 'deny';
       }
       return;

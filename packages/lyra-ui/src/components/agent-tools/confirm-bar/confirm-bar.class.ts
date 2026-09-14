@@ -196,14 +196,43 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /** Shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when defined. */
   @property({ attribute: false }) args: unknown = undefined;
 
+  // `decision`/`pending` are accessor-backed rather than plain fields so `decide()` can tell "a
+  // synchronous listener wrote here" apart from "nothing wrote here" -- see
+  // `dispatchWriteTouched` below. Comparing before/after *values* cannot make that distinction: the
+  // guard in `decide()` only reaches its check once both are already `null`, so a listener that
+  // writes `pending = null` right back (bouncing out to an out-of-band resolution) is
+  // value-identical to a listener that touched nothing at all.
+  private _decision: ConfirmBarDecision = null;
+  private _pending: ApprovalAction | null = null;
+
+  /** Set on every write to `decision`/`pending`, from any source. `decide()` clears it immediately
+   *  before dispatching `lr-approve`/`lr-deny` and reads it back afterward: since the dispatch is
+   *  synchronous, only a listener invoked during that same `emit()` call can have set it in
+   *  between. */
+  private dispatchWriteTouched = false;
+
   /** Decided state. Set by the component on activation *and* host-writable (an externally-resolved
    *  decision -- timeout, another reviewer -- renders identically but emits nothing). */
-  @property({ reflect: true }) decision: ConfirmBarDecision = null;
+  @property({ reflect: true })
+  get decision(): ConfirmBarDecision { return this._decision; }
+  set decision(value: ConfirmBarDecision) {
+    const previous = this._decision;
+    this._decision = value;
+    this.dispatchWriteTouched = true;
+    this.requestUpdate('decision', previous);
+  }
 
   /** Which action is awaiting host resolution, while an lr-approve/lr-deny listener has called
    *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
    *  on failure, so the user can retry), or set `decision` to finalize. */
-  @property({ reflect: true }) pending: ApprovalAction | null = null;
+  @property({ reflect: true })
+  get pending(): ApprovalAction | null { return this._pending; }
+  set pending(value: ApprovalAction | null) {
+    const previous = this._pending;
+    this._pending = value;
+    this.dispatchWriteTouched = true;
+    this.requestUpdate('pending', previous);
+  }
 
   /** Disables both Deny and Approve and makes `decide()` a no-op, without discarding any
    *  in-flight `decision`/`pending` state. Distinct from `pending`: `pending` marks one specific
@@ -277,11 +306,14 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     // The guard above proves both are null right up to this point -- but `emit()` below dispatches
     // synchronously, so a listener can still write either one from inside it (e.g. it calls
     // preventDefault() and resolves the decision itself out of band, or bounces `pending` back to
-    // null immediately). Snapshot them so the built-in "awaiting the host" pending state below is
-    // applied only when the listener left both untouched; otherwise it would silently clobber
+    // null immediately). A before/after *value* comparison can't detect that last case -- both are
+    // already null, so a listener writing `pending = null` reads identically to a listener that
+    // touched nothing. `dispatchWriteTouched` tracks the write itself, not its value: cleared here,
+    // then set by the `decision`/`pending` setters if a listener assigns either one during the
+    // synchronous `emit()` below. Only when it's still false did the listener leave both alone, and
+    // the built-in "awaiting the host" pending state applies; otherwise it would silently clobber
     // whatever the listener just did.
-    const pendingBeforeDispatch = this.pending;
-    const decisionBeforeDispatch = this.decision;
+    this.dispatchWriteTouched = false;
     const event = this.emit(eventName, detail, { cancelable: true });
     if (event.defaultPrevented) {
       // Same handoff as the synchronous path below, and for the same reason: `?loading` on the
@@ -291,10 +323,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
       // <body> for the whole duration of the host's async work. Ordered before the `pending` write
       // so the button is still focusable when focus leaves it.
       this.statusEl?.focus();
-      if (
-        this.pending === pendingBeforeDispatch &&
-        this.decision === decisionBeforeDispatch
-      ) {
+      if (!this.dispatchWriteTouched) {
         this.pending = approvalAction(next);
       }
       return;

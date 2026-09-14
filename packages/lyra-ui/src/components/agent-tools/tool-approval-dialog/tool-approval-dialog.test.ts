@@ -1256,6 +1256,29 @@ describe('async pending decisions', () => {
     expect(el.open).to.be.false;
   });
 
+  it('a listener that vetoes and clears pending itself synchronously wins over the built-in fallback', async () => {
+    // Regression: onApprove()/onDeny() used to dispatch lr-approve/lr-deny synchronously, then
+    // unconditionally overwrite `pending` with their own built-in value -- clobbering whatever a
+    // synchronous listener had just set (e.g. a listener that resolves out of band and bounces
+    // pending straight back to null instead of ever wanting the loading/disabled pending
+    // presentation).
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-approve', (e) => {
+      e.preventDefault();
+      el.pending = null;
+    });
+    approveButton(el).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal(null);
+    expect(el.open).to.be.true;
+    // Both controls stay enabled and interactive -- the built-in pending presentation never landed.
+    expect(denyButton(el).disabled).to.be.false;
+    expect(approveButton(el).disabled).to.be.false;
+    expect(approveButton(el).loading).to.be.false;
+  });
+
   it('bounces back to the undecided, both-buttons-enabled state when pending is reset to null', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
