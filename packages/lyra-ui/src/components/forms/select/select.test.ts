@@ -5779,7 +5779,7 @@ describe('unknown committed value presentation (fr_j78P1f--O__WYl1AIDwRvA)', () 
     await el.updateComplete;
     const displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
     expect(displayInput.hasAttribute('data-unknown-value')).to.be.false;
-    expect(displayInput.querySelector('[part="unknown-value"]')).to.equal(null);
+    expect(displayInput.querySelector('[part="unknown-value"]') === null).to.be.true;
   });
 
   it('flags only the unmatched tag in multiple mode, not every selected tag', async () => {
@@ -5869,8 +5869,9 @@ describe('lr-option start/end adornments in the select listbox (fr_JdccfkynRjnbG
     `);
     const row = rowFor(el, 'fr');
 
-    expect(row.querySelector('[part~="option-start"]'), 'no empty start wrapper').to.equal(null);
-    expect(row.querySelector('[part~="option-end"]'), 'no empty end wrapper').to.equal(null);
+    expect(row.querySelector('[part~="option-start"]') === null, 'no empty start wrapper').to.be
+      .true;
+    expect(row.querySelector('[part~="option-end"]') === null, 'no empty end wrapper').to.be.true;
   });
 
   it('leaves the author light-DOM option subtree untouched', async () => {

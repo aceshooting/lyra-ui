@@ -153,7 +153,7 @@ describe('labelPlacement', () => {
     const el = (await fixture(
       html`<lr-typing-indicator label="Working on it…"></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
-    expect(el.shadowRoot!.querySelector('[part="label"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="label"]') === null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('.sr-only').length).to.equal(1);
     const srText = el.shadowRoot!.querySelector('.sr-only');
     expect(srText).to.not.equal(null);
@@ -176,7 +176,7 @@ describe('labelPlacement', () => {
     const visibleLabel = el.shadowRoot!.querySelector('[part="label"]');
     expect(visibleLabel).to.not.equal(null);
     expect(visibleLabel!.textContent).to.equal('Working on it…');
-    expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('.sr-only') === null).to.be.true;
     // The accessible name still comes from the host aria-label, set independently of this
     // visible text node (see willUpdate()).
     expect(el.getAttribute('aria-label')).to.equal('Working on it…');
@@ -195,17 +195,17 @@ describe('labelPlacement', () => {
     const el = (await fixture(
       html`<lr-typing-indicator label="Working on it…"></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
-    expect(el.shadowRoot!.querySelector('[part="label"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="label"]') === null).to.be.true;
     expect(el.shadowRoot!.querySelector('.sr-only')).to.not.equal(null);
 
     el.labelPlacement = 'after';
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.equal(null);
-    expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('.sr-only') === null).to.be.true;
 
     el.labelPlacement = 'none';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="label"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="label"]') === null).to.be.true;
     expect(el.shadowRoot!.querySelector('.sr-only')).to.not.equal(null);
   });
 

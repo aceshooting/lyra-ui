@@ -1850,9 +1850,9 @@ describe("data mode", () => {
           ></lr-thread-list>`
         )) as LyraThreadList;
         await el.updateComplete;
-        expect(el.shadowRoot!.querySelector('[part="clear-button"]')).to.equal(
-          null
-        );
+        expect(
+          el.shadowRoot!.querySelector('[part="clear-button"]') === null
+        ).to.be.true;
       });
 
       it("renders a keyboard-reachable button with a localized accessible name once the field has a value", async () => {
@@ -1933,9 +1933,12 @@ describe("data mode", () => {
 
         expect(input.value).to.equal("");
         expect(
-          el.shadowRoot!.querySelector('[part="clear-button"]')
-        ).to.equal(null);
-        expect(el.shadowRoot!.activeElement).to.equal(input);
+          el.shadowRoot!.querySelector('[part="clear-button"]') === null
+        ).to.be.true;
+        expect(
+          el.shadowRoot!.activeElement === input,
+          "focus should remain on the input"
+        ).to.be.true;
       });
 
       it("emits lr-query-change instead, in slotted mode", async () => {

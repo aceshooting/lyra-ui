@@ -7579,7 +7579,7 @@ describe('unknown committed value presentation (fr_j78P1f--O__WYl1AIDwRvA)', () 
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
     expect(input.hasAttribute('data-unknown-value')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="unknown-value"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="unknown-value"]') === null).to.be.true;
   });
 
   it('does not flag while the listbox is open and the input shows the live query instead', async () => {
@@ -7639,7 +7639,7 @@ describe('unknown committed value presentation (fr_j78P1f--O__WYl1AIDwRvA)', () 
     expect(el.value).to.equal('Cerulean');
     expect(input.hasAttribute('data-unknown-value'), 'a custom value is not "unknown"').to.be
       .false;
-    expect(el.shadowRoot!.querySelector('[part="unknown-value"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="unknown-value"]') === null).to.be.true;
   });
 
   it('suppresses the badge while an in-flight source call has not resolved yet', async () => {
