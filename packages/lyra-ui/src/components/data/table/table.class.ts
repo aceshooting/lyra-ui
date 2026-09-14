@@ -746,6 +746,12 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart empty-heading - Exported from the built-in `<lr-empty>`'s `heading` part.
  * @csspart empty-description - Exported from the built-in `<lr-empty>`'s `description` part.
  * @csspart empty-actions - Exported from the built-in `<lr-empty>`'s `actions` part.
+ * @csspart error-row - The single full-width `<tr>` that replaces the row content while `error` is
+ *   set. Present only in the in-grid branch: when `columns` is empty there is no grid to keep
+ *   mounted, so the failed-load content renders standalone and neither this part nor `error-cell`
+ *   exists.
+ * @csspart error-cell - The `<td>` inside `[part='error-row']`, spanning every column, that holds
+ *   the failed-load content.
  * @csspart error - The built-in `<lr-empty>` host rendered in the row body while `error` is set.
  *   Unlike `[part='empty']`'s no-rows branches, its surrounding `<thead>`, filter, and pagination
  *   stay mounted rather than being replaced along with it.

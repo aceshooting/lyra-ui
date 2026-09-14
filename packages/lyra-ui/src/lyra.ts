@@ -344,6 +344,7 @@ export type {
 export { LyraTable } from './components/data/table/table.class.js';
 export type {
   TableColumn,
+  TableColumnEditOption,
   TableColumnEditTrigger,
   TableEdgeAlign,
   TableLoadingAppearance,
@@ -595,6 +596,7 @@ export { LyraGraph } from './components/retrieval/graph/graph.class.js';
 export type {
   LyraGraphCommunity,
   LyraGraphLayout,
+  LyraGraphNodeLabelsMode,
   LyraGraphPickKind,
   LyraGraphRenderer,
   LyraGraphSelectionMode,
