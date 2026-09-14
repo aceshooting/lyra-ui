@@ -1857,10 +1857,18 @@ describe("fill chain (block-size)", () => {
       expected,
       1
     );
+    // The body fills the base's CONTENT box, not the wrapper: the base is border-box and carries its
+    // own border and padding, so the body is exactly that much shorter than the wrapper.
+    const baseStyle = getComputedStyle(base);
+    const baseContentHeight =
+      base.clientHeight -
+      parseFloat(baseStyle.paddingBlockStart) -
+      parseFloat(baseStyle.paddingBlockEnd);
     expect(body.getBoundingClientRect().height, "body").to.be.closeTo(
-      expected,
+      baseContentHeight,
       1
     );
+    expect(baseContentHeight, "base content box is smaller than the wrapper").to.be.lessThan(expected);
   });
 
   it("keeps a header inside a definite-height host instead of overflowing it, with body filling what's left", async () => {
