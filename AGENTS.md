@@ -230,6 +230,17 @@ Full rules, incidents, and patterns:
 - Resolve token units live (`rem` → root `fontSize`, `em` → own); never hardcode `* 16`.
 - Never `createElementNS` a custom element while cloning DOM — it yields an inert,
   never-upgrading node; check `localName.includes('-')` first.
+- Reach a template node's parent with `parentNode`, never `parentElement`. A `ShadowRoot` is a
+  `DocumentFragment`, not an `Element`, so `parentElement` is `null` for every top-level node in a
+  component's own render template — and the idiomatic `el.parentElement?.insertBefore(...)` then
+  silently no-ops forever. It shipped that way in `lr-app-rail`, where the sibling branch called
+  `insertBefore` on a real element and worked, so the dead line read as "only one direction is
+  broken" instead of "this never runs."
+- `insertBefore()` is NOT a no-op when the node is already in the requested position — the spec
+  removes it from its current parent before re-inserting it, and removing the focused element drops
+  focus synchronously. So an "idempotent" catch-up call from `updated()` can re-blur a control that
+  a close path just focused. Check the position before writing (`if (parent.firstChild !== node)`);
+  treat idempotency as something you verify, not something you assume.
 - Reset transient open-state (dropdown/preview/tooltip `@state`) in `disconnectedCallback`.
 - Escape-dismissible / focus-returning overlays go through `activateOverlay()`
   (`src/internal/overlay-manager.ts`), never a raw `document` keydown listener.

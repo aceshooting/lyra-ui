@@ -131,6 +131,27 @@
   `createElementNS`: re-creating a custom element that way yields an inert node with the right
   tag name that never upgrades, silently. `lr-icon`'s `cloneSvgNode()` is the counter-example to
   avoid repeating.
+- **A shadow root is not an `Element`, so `parentElement` is `null` for every top-level template
+  node.** `ShadowRoot` extends `DocumentFragment`; `parentElement` returns only an `Element` parent.
+  So for any node rendered directly into a component's own shadow root — which is most of what a
+  render template produces — `node.parentElement` is `null`, and the idiomatic
+  `node.parentElement?.insertBefore(other, node)` is a permanent silent no-op. Use `parentNode`,
+  which resolves to the `ShadowRoot` itself and implements `insertBefore` like any `Node`.
+  `lr-app-rail`'s `placeToggle()` shipped the broken form: its open direction called
+  `panel.insertBefore(...)` on a real element and worked, so the failure presented as "closing is
+  broken" rather than "that line never executes." Grep shape: `parentElement?.` in any component
+  that moves its own template nodes.
+- **`insertBefore()` into a node's existing position still removes and re-inserts it.** The spec's
+  pre-insert step removes the node from its current parent unconditionally, so "already in the
+  right place" is not a no-op — and if that node is `document.activeElement`, focus is lost
+  synchronously, with no yield the code could guard on. The dangerous shape is an idempotent-looking
+  post-render catch-up call (`updated()` re-asserting DOM order), because it runs immediately after
+  a close path has restored focus. Compare position first (`if (parent.firstChild !== node)`).
+  Discovered because fixing the `parentElement` bug above turned two previously-*passing* focus
+  tests red: the redundant call had been silently dead for the same reason, so the second bug only
+  became reachable once the first was fixed. A fix that reddens unrelated green tests is sometimes
+  the first honest measurement of a bug the first bug was masking — verify before assuming
+  regression.
 - **Reconnect resets transient open-state.** A component owning floating-ui-positioned transient
   UI (open dropdown, hover preview, tooltip) resets the `@state()` boolean driving its visibility
   in `disconnectedCallback`, not just `cleanupPositioner` — otherwise a disconnect→reconnect
