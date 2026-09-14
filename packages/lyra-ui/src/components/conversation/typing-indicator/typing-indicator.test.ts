@@ -3,11 +3,24 @@ import { setReducedMotion } from '../../../../test/wtr-media.js';
 import './typing-indicator.js';
 import type { LyraTypingIndicator } from './typing-indicator.js';
 
-it('defaults to the dots shape, m size, and an empty localized-label override', async () => {
+it('defaults to the dots shape, m size, an empty localized-label override, and label-placement none', async () => {
   const el = (await fixture(html`<lr-typing-indicator></lr-typing-indicator>`)) as LyraTypingIndicator;
   expect(el.shape).to.equal('dots');
   expect(el.size).to.equal('m');
   expect(el.label).to.equal('');
+  expect(el.labelPlacement).to.equal('none');
+});
+
+it('reflects label-placement onto the host attribute', async () => {
+  const el = (await fixture(
+    html`<lr-typing-indicator label-placement="after"></lr-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  expect(el.labelPlacement).to.equal('after');
+  expect(el.getAttribute('label-placement')).to.equal('after');
+
+  el.labelPlacement = 'none';
+  await el.updateComplete;
+  expect(el.getAttribute('label-placement')).to.equal('none');
 });
 
 it('reflects shape and size onto the host attributes', async () => {
@@ -133,6 +146,78 @@ it('renders a visually-hidden text node carrying the label, independent of aria-
   const srText = el.shadowRoot!.querySelector('.sr-only');
   expect((srText) != null).to.equal(true);
   expect(srText!.textContent).to.equal('Working on it…');
+});
+
+describe('labelPlacement', () => {
+  it('keeps the default ("none") rendering byte-identical to before this property existed: sr-only text, no [part="label"]', async () => {
+    const el = (await fixture(
+      html`<lr-typing-indicator label="Working on it…"></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    expect(el.shadowRoot!.querySelector('[part="label"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('.sr-only').length).to.equal(1);
+    const srText = el.shadowRoot!.querySelector('.sr-only');
+    expect(srText).to.not.equal(null);
+    expect(srText!.textContent).to.equal('Working on it…');
+    // Exactly the two top-level nodes rendered before this property existed: the decorative
+    // shape wrapper and the sr-only text, nothing else added to the default branch's output.
+    const topLevelElements = [...el.shadowRoot!.children];
+    expect(topLevelElements.map((node) => node.getAttribute('part') ?? node.className)).to.deep.equal(
+      ['base', 'sr-only'],
+    );
+  });
+
+  it('renders the label visibly next to the shape when label-placement="after", without a duplicate sr-only node', async () => {
+    const el = (await fixture(
+      html`<lr-typing-indicator
+        label-placement="after"
+        label="Working on it…"
+      ></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    const visibleLabel = el.shadowRoot!.querySelector('[part="label"]');
+    expect(visibleLabel).to.not.equal(null);
+    expect(visibleLabel!.textContent).to.equal('Working on it…');
+    expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
+    // The accessible name still comes from the host aria-label, set independently of this
+    // visible text node (see willUpdate()).
+    expect(el.getAttribute('aria-label')).to.equal('Working on it…');
+  });
+
+  it('falls back to the localized "Thinking…" text when visible and label is empty', async () => {
+    const el = (await fixture(
+      html`<lr-typing-indicator label-placement="after"></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    expect(
+      el.shadowRoot!.querySelector('[part="label"]')!.textContent,
+    ).to.equal('Thinking…');
+  });
+
+  it('swaps the rendered label node when label-placement changes on an already-mounted instance', async () => {
+    const el = (await fixture(
+      html`<lr-typing-indicator label="Working on it…"></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    expect(el.shadowRoot!.querySelector('[part="label"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('.sr-only')).to.not.equal(null);
+
+    el.labelPlacement = 'after';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.equal(null);
+    expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
+
+    el.labelPlacement = 'none';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="label"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('.sr-only')).to.not.equal(null);
+  });
+
+  it('is accessible with a visible label', async () => {
+    const el = (await fixture(
+      html`<lr-typing-indicator
+        label-placement="after"
+        label="Working on it…"
+      ></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    await expect(el).to.be.accessible();
+  });
 });
 
 it('marks the decorative shape aria-hidden and renders three dots for the dots variant', async () => {

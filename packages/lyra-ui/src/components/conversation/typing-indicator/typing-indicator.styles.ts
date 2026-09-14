@@ -59,6 +59,15 @@ export const styles = css`
     gap: var(--lr-typing-gap, var(--_lr-typing-gap-default));
   }
 
+  /* label-placement="after": renders the accessible label visibly next to the shape, mirroring
+     <lr-spinner>'s own [part='label'] treatment. The default ("none") never renders this part at
+     all -- see render() -- so this rule has nothing to match there. */
+  [part='label'] {
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-sm);
+    margin-inline-start: var(--lr-space-2xs);
+  }
+
   /* -- dots -------------------------------------------------------------- */
   [part='dot'] {
     inline-size: var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default));

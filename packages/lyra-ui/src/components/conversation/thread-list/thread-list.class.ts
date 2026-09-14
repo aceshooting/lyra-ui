@@ -8,6 +8,7 @@ import {
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { closeIcon } from '../../../internal/icons.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import type {
   LyraVirtualList,
@@ -31,7 +32,7 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_clear, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraChatThread {
@@ -48,6 +49,12 @@ export type ThreadRowAction = 'pin' | 'archive' | 'delete';
 
 export type ThreadListGrouping = 'date' | 'custom' | 'none';
 
+/** Payload shared by the `lr-group-toggle-request`/`lr-group-toggle` pair. */
+export interface ThreadGroupToggleDetail {
+  groupId: string;
+  collapsed: boolean;
+}
+
 export interface LyraThreadListEventMap {
   'lr-select': CustomEvent<{ conversationId: string }>;
   'lr-thread-pin': CustomEvent<{ conversationId: string; pinned: boolean }>;
@@ -59,7 +66,8 @@ export interface LyraThreadListEventMap {
   'lr-thread-rename': CustomEvent<{ conversationId: string; label: string }>;
   'lr-filter-change': CustomEvent<{ text: string; matchCount: number }>;
   'lr-query-change': CustomEvent<{ text: string }>;
-  'lr-group-toggle': CustomEvent<{ groupId: string; collapsed: boolean }>;
+  'lr-group-toggle-request': CustomEvent<ThreadGroupToggleDetail>;
+  'lr-group-toggle': CustomEvent<ThreadGroupToggleDetail>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
 }
@@ -286,8 +294,17 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  *   correlated `lr-rename` request (data mode only).
  * @event lr-filter-change - `detail: { text, matchCount }` -- data-mode query plus owned results.
  * @event lr-query-change - `detail: { text }` -- slotted-mode query request; the host owns results.
- * @event lr-group-toggle - `detail: { groupId, collapsed }` -- requests a controlled custom/date group
- *   collapse-state change; the host updates `collapsedGroupIds`.
+ * @event lr-group-toggle-request - `detail: { groupId, collapsed }` -- cancelable proposal before a
+ *   custom/date group's collapse state changes. Calling `preventDefault()` skips the built-in
+ *   `collapsedGroupIds` write below and suppresses the following `lr-group-toggle`, leaving the
+ *   group's collapse state fully controlled -- the host must then reassign `collapsedGroupIds`
+ *   itself, mirroring `<lr-chat-message>`'s and `<lr-code-block>`'s own
+ *   `lr-toggle-request`/`lr-toggle` pairs.
+ * @event lr-group-toggle - `detail: { groupId, collapsed }` -- a custom/date group's collapse-state
+ *   change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
+ *   `collapsedGroupIds`. A host that already listens here and reassigns `collapsedGroupIds` itself
+ *   keeps working unchanged: this component's own write, when it happens, always precedes that
+ *   listener in the same synchronous event dispatch, so the host's own assignment simply wins last.
  * @event blur - `searchable`: re-dispatched from the internal search `<input>`'s own `blur` --
  *   bubbling and composed (unlike the native event, which is neither), so a listener above the
  *   shadow boundary can observe it.
@@ -296,6 +313,7 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  * @csspart base - The root.
  * @csspart search - The search field wrapper.
  * @csspart search-input - The `<input type="search">`.
+ * @csspart clear-button - Clears the search field. Rendered only while it has a value.
  * @csspart list - The list region.
  * @csspart empty - The empty/no-matches state.
  * @csspart viewport - The real scroll container, exported from the internal `lr-virtual-list`. It
@@ -364,6 +382,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     archiveConversation: LYRA_DEFAULT_archiveConversation,
+    clear: LYRA_DEFAULT_clear,
     deleteConversation: LYRA_DEFAULT_deleteConversation,
     noMatches: LYRA_DEFAULT_noMatches,
     pinConversation: LYRA_DEFAULT_pinConversation,
@@ -435,7 +454,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     | readonly string[]
     | ((a: string, b: string) => number);
 
-  /** Data mode: controlled ids of date/custom groups whose rows are omitted from virtualization. */
+  /** Data mode: ids of date/custom groups whose rows are omitted from virtualization.
+   *  Self-managed by default -- activating the built-in group toggle updates this array directly.
+   *  Prevent the default of the cancelable `lr-group-toggle-request` event to veto that write and
+   *  keep this property fully controlled instead, the only behavior it had before self-management
+   *  existed. */
   @property({ attribute: false }) collapsedGroupIds: readonly string[] = [];
 
   /** Data mode only: built-in icon buttons rendered into each row's `actions` slot, in display order. */
@@ -557,6 +580,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query('[part="search-input"]') private searchInputEl?: HTMLInputElement;
   private focusTaskGeneration = 0;
   private readonly injectedListItemRoles = new Set<Element>();
 
@@ -863,20 +887,37 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     );
   }
 
-  private onSearchInput = (e: Event): void => {
-    e.stopPropagation();
+  /** Applies a new search value, emitting the same mode-appropriate event
+   *  (`lr-query-change`/`lr-filter-change`) whether the text came from typing or from the clear
+   *  button -- both are just "the search value changed" as far as a host is concerned. */
+  private setSearchText(text: string): void {
     this.focusTaskGeneration++;
-    this.searchText = (e.target as HTMLInputElement).value;
+    this.searchText = text;
     if (!this.dataMode) {
-      this.emit('lr-query-change', { text: this.searchText });
+      this.emit('lr-query-change', { text });
       return;
     }
     const count = this.visibleThreads.length;
-    this.emit('lr-filter-change', {
-      text: this.searchText,
-      matchCount: count,
-    });
+    this.emit('lr-filter-change', { text, matchCount: count });
     this.announceMatchCount(count);
+  }
+
+  private onSearchInput = (e: Event): void => {
+    e.stopPropagation();
+    this.setSearchText((e.target as HTMLInputElement).value);
+  };
+
+  // Mirrors <lr-input>'s own clearable contract (part name `clear-button`, `this.localize('clear')`
+  // accessible name) rather than composing <lr-input> itself: this search field is a lightweight
+  // filter box, not a form control, and swapping the plain `<input part="search-input">` for
+  // <lr-input> would turn the documented `search-input` part from the actual input element into a
+  // wrapper custom element, breaking every consumer style rule written against it, on top of
+  // pulling in <lr-input>'s label/hint/error/password/form-associated machinery this field has no
+  // use for. A sibling button reuses the same vocabulary at a fraction of the disruption.
+  private onClearSearch = (): void => {
+    if (this.searchText === '') return;
+    this.setSearchText('');
+    this.searchInputEl?.focus();
   };
 
   private announceMatchCount(count: number): void {
@@ -1149,6 +1190,29 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     `;
   }
 
+  /** Proposes a custom/date group's collapse-state change via the cancelable
+   *  `lr-group-toggle-request`; unless a listener vetoes it, this component updates
+   *  `collapsedGroupIds` itself before announcing the accepted change with `lr-group-toggle` --
+   *  the same request/commit shape `<lr-chat-message>`'s and `<lr-code-block>`'s own
+   *  `lr-toggle-request`/`lr-toggle` pairs use. A listener calling `preventDefault()` on the
+   *  request stops the built-in write entirely and suppresses `lr-group-toggle`, leaving
+   *  `collapsedGroupIds` fully controlled -- the only behavior this method had before self-
+   *  management existed, so a consumer already reassigning `collapsedGroupIds` from an
+   *  `lr-group-toggle` listener keeps working unchanged: this component's own write, when it
+   *  happens, always precedes that listener in the same synchronous dispatch. */
+  private toggleGroupCollapsed(groupId: string, collapsed: boolean): void {
+    const detail: ThreadGroupToggleDetail = { groupId, collapsed };
+    const request = this.emit('lr-group-toggle-request', detail, {
+      cancelable: true,
+    });
+    if (request.defaultPrevented) return;
+    const next = new Set(this.collapsedGroupIds);
+    if (collapsed) next.add(groupId);
+    else next.delete(groupId);
+    this.collapsedGroupIds = [...next];
+    this.emit('lr-group-toggle', detail);
+  }
+
   /** The header markup for one group. The `sticky` copy repeats only the visual label/glyph:
    *  `lr-virtual-list` renders it `aria-hidden` and inert, so the real row remains the group's sole
    *  heading and collapse action. */
@@ -1184,10 +1248,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                   }
                 )}
                 @click=${() =>
-                  this.emit('lr-group-toggle', {
-                    groupId: item.id,
-                    collapsed: nextCollapsed,
-                  })}
+                  this.toggleGroupCollapsed(item.id, nextCollapsed)}
               >
                 <span part="group-icon" aria-hidden="true"
                   >${item.collapsed ? '+' : '−'}</span
@@ -1352,6 +1413,16 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           @focus=${this.onSearchFocus}
           @blur=${this.onSearchBlur}
         />
+        ${this.searchText !== ''
+          ? html`<button
+              type="button"
+              part="clear-button"
+              aria-label=${this.localize('clear')}
+              @click=${this.onClearSearch}
+            >
+              ${closeIcon()}
+            </button>`
+          : nothing}
       </div>
     `;
   }

@@ -801,7 +801,7 @@ describe("data mode", () => {
     await expect(el).to.be.accessible();
   });
 
-  it("keeps group collapse controlled and removes collapsed rows from virtual-list measurement", async () => {
+  it("self-manages group collapse via the lr-group-toggle-request/lr-group-toggle pair by default, removing collapsed rows from virtual-list measurement", async () => {
     const projectThreads = [
       { id: "a1", title: "Alpha one", project: "alpha" },
       { id: "b1", title: "Beta one", project: "beta" },
@@ -818,38 +818,103 @@ describe("data mode", () => {
     await nextFrame();
 
     const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
-    const alphaToggle = [
-      ...list.shadowRoot!.querySelectorAll<HTMLButtonElement>(
-        '[part~="group-toggle"]'
-      ),
-    ].find((button) => button.textContent?.includes("alpha"))!;
-    expect(alphaToggle.getAttribute("aria-expanded")).to.equal("false");
-    expect(alphaToggle.getAttribute("aria-label")).to.equal("Expand alpha");
-    expect(alphaToggle.tabIndex).to.equal(0);
-    expect(dataRows(el).map((row) => row.conversationId)).to.deep.equal(["b1"]);
-    const measuredItems = (list as unknown as { items: unknown[] }).items;
-    expect(measuredItems.length).to.equal(3); // two group headers plus the one expanded row
-
-    const togglePromise = oneEvent(el, "lr-group-toggle");
-    alphaToggle.click();
-    expect((await togglePromise).detail).to.deep.equal({
-      groupId: "alpha",
-      collapsed: false,
-    });
-    expect(alphaToggle.getAttribute("aria-expanded")).to.equal("false");
-
-    el.strings = { threadGroupExpand: "Ouvrir {label}" };
-    await el.updateComplete;
-    expect(
+    const alphaToggle = () =>
       [
         ...list.shadowRoot!.querySelectorAll<HTMLButtonElement>(
           '[part~="group-toggle"]'
         ),
-      ]
-        .find((button) => button.textContent?.includes("alpha"))!
-        .getAttribute("aria-label")
-    ).to.equal("Ouvrir alpha");
+      ].find((button) => button.textContent?.includes("alpha"))!;
+    expect(alphaToggle().getAttribute("aria-expanded")).to.equal("false");
+    expect(alphaToggle().getAttribute("aria-label")).to.equal("Expand alpha");
+    expect(alphaToggle().tabIndex).to.equal(0);
+    expect(dataRows(el).map((row) => row.conversationId)).to.deep.equal(["b1"]);
+    const measuredItems = (list as unknown as { items: unknown[] }).items;
+    expect(measuredItems.length).to.equal(3); // two group headers plus the one expanded row
 
+    const requestPromise = oneEvent(el, "lr-group-toggle-request");
+    const togglePromise = oneEvent(el, "lr-group-toggle");
+    alphaToggle().click();
+    expect((await requestPromise).detail).to.deep.equal({
+      groupId: "alpha",
+      collapsed: false,
+    });
+    expect((await togglePromise).detail).to.deep.equal({
+      groupId: "alpha",
+      collapsed: false,
+    });
+    // Self-managed: nothing prevented the request, so this component wrote collapsedGroupIds
+    // itself -- no host listener required, unlike this property's fully-controlled-only past.
+    expect(el.collapsedGroupIds).to.deep.equal([]);
+    await el.updateComplete;
+    await nextFrame();
+    expect(alphaToggle().getAttribute("aria-expanded")).to.equal("true");
+    expect(alphaToggle().getAttribute("aria-label")).to.equal(
+      "Collapse alpha"
+    );
+    expect(dataRows(el).map((row) => row.conversationId)).to.deep.equal([
+      "a1",
+      "b1",
+    ]);
+
+    el.strings = { threadGroupCollapse: "Réduire {label}" };
+    await el.updateComplete;
+    expect(alphaToggle().getAttribute("aria-label")).to.equal(
+      "Réduire alpha"
+    );
+
+    await expect(el).to.be.accessible();
+  });
+
+  it("lets a consumer veto the built-in write via a cancelable lr-group-toggle-request and stay fully controlled", async () => {
+    const projectThreads = [
+      { id: "a1", title: "Alpha one", project: "alpha" },
+      { id: "b1", title: "Beta one", project: "beta" },
+    ];
+    const el = (await fixture(
+      html`<lr-thread-list style="block-size:400px"></lr-thread-list>`
+    )) as LyraThreadList;
+    el.threads = projectThreads;
+    el.grouping = "custom";
+    el.groupBy = (thread) =>
+      (thread as (typeof projectThreads)[number]).project;
+    el.collapsedGroupIds = ["alpha"];
+    el.addEventListener("lr-group-toggle-request", (event) => {
+      event.preventDefault();
+    });
+    const commitEvents: CustomEvent[] = [];
+    el.addEventListener("lr-group-toggle", (event) =>
+      commitEvents.push(event as CustomEvent)
+    );
+    await el.updateComplete;
+    await nextFrame();
+
+    const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
+    const alphaToggle = () =>
+      [
+        ...list.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+          '[part~="group-toggle"]'
+        ),
+      ].find((button) => button.textContent?.includes("alpha"))!;
+
+    const requestPromise = oneEvent(el, "lr-group-toggle-request");
+    alphaToggle().click();
+    expect((await requestPromise).detail).to.deep.equal({
+      groupId: "alpha",
+      collapsed: false,
+    });
+    await el.updateComplete;
+    expect(
+      commitEvents,
+      "a vetoed request must not also emit the committed lr-group-toggle"
+    ).to.have.length(0);
+    expect(el.collapsedGroupIds).to.deep.equal(["alpha"]);
+    expect(alphaToggle().getAttribute("aria-expanded")).to.equal("false");
+    expect(dataRows(el).map((row) => row.conversationId)).to.deep.equal([
+      "b1",
+    ]);
+
+    // The host remains free to update collapsedGroupIds itself -- exactly how this property
+    // worked before self-management existed.
     el.collapsedGroupIds = [];
     await el.updateComplete;
     await nextFrame();
@@ -857,7 +922,6 @@ describe("data mode", () => {
       "a1",
       "b1",
     ]);
-    await expect(el).to.be.accessible();
   });
 
   it("marks the row matching activeConversationId as active", async () => {
@@ -1774,6 +1838,129 @@ describe("data mode", () => {
       const blurPromise = oneEvent(el, "blur");
       input.dispatchEvent(new FocusEvent("blur"));
       await blurPromise;
+    });
+
+    describe("clear button", () => {
+      it("does not render while the search field is empty", async () => {
+        const el = (await fixture(
+          html`<lr-thread-list
+            style="block-size:400px"
+            searchable
+            .threads=${threads}
+          ></lr-thread-list>`
+        )) as LyraThreadList;
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelector('[part="clear-button"]')).to.equal(
+          null
+        );
+      });
+
+      it("renders a keyboard-reachable button with a localized accessible name once the field has a value", async () => {
+        const el = (await fixture(
+          html`<lr-thread-list
+            style="block-size:400px"
+            searchable
+            .threads=${threads}
+          ></lr-thread-list>`
+        )) as LyraThreadList;
+        await el.updateComplete;
+        const input = el.shadowRoot!.querySelector(
+          '[part="search-input"]'
+        ) as HTMLInputElement;
+        input.value = "today";
+        input.dispatchEvent(new Event("input"));
+        await el.updateComplete;
+
+        const clearButton = el.shadowRoot!.querySelector<HTMLButtonElement>(
+          '[part="clear-button"]'
+        );
+        expect(clearButton).to.not.equal(null);
+        expect(clearButton!.tagName).to.equal("BUTTON");
+        expect(clearButton!.getAttribute("aria-label")).to.equal("Clear");
+        expect(clearButton!.tabIndex).to.equal(0);
+        await expect(el).to.be.accessible();
+      });
+
+      it("respects a .strings override for its accessible name, proving it is not a hardcoded fallback", async () => {
+        const el = (await fixture(
+          html`<lr-thread-list
+            style="block-size:400px"
+            searchable
+            .threads=${threads}
+            .strings=${{ clear: "Effacer" }}
+          ></lr-thread-list>`
+        )) as LyraThreadList;
+        await el.updateComplete;
+        const input = el.shadowRoot!.querySelector(
+          '[part="search-input"]'
+        ) as HTMLInputElement;
+        input.value = "today";
+        input.dispatchEvent(new Event("input"));
+        await el.updateComplete;
+        expect(
+          el.shadowRoot!
+            .querySelector('[part="clear-button"]')!
+            .getAttribute("aria-label")
+        ).to.equal("Effacer");
+      });
+
+      it("clears the field, fires lr-filter-change with the full match count, hides itself again, and keeps focus on the input", async () => {
+        const el = (await fixture(
+          html`<lr-thread-list
+            style="block-size:400px"
+            searchable
+            .threads=${threads}
+          ></lr-thread-list>`
+        )) as LyraThreadList;
+        await el.updateComplete;
+        const input = el.shadowRoot!.querySelector(
+          '[part="search-input"]'
+        ) as HTMLInputElement;
+        input.value = "today";
+        input.dispatchEvent(new Event("input"));
+        await el.updateComplete;
+
+        const filterPromise = oneEvent(el, "lr-filter-change");
+        const clearButton = el.shadowRoot!.querySelector<HTMLButtonElement>(
+          '[part="clear-button"]'
+        )!;
+        clearButton.click();
+        expect((await filterPromise).detail).to.deep.equal({
+          text: "",
+          matchCount: 3, // the three non-archived fixture threads; showArchived defaults to false
+        });
+        await el.updateComplete;
+
+        expect(input.value).to.equal("");
+        expect(
+          el.shadowRoot!.querySelector('[part="clear-button"]')
+        ).to.equal(null);
+        expect(el.shadowRoot!.activeElement).to.equal(input);
+      });
+
+      it("emits lr-query-change instead, in slotted mode", async () => {
+        const el = (await fixture(
+          html`<lr-thread-list searchable>
+            <lr-conversation-item
+              label="Slotted"
+              conversation-id="slotted"
+            ></lr-conversation-item>
+          </lr-thread-list>`
+        )) as LyraThreadList;
+        await el.updateComplete;
+        const input = el.shadowRoot!.querySelector(
+          '[part="search-input"]'
+        ) as HTMLInputElement;
+        input.value = "hello";
+        input.dispatchEvent(new Event("input"));
+        await el.updateComplete;
+
+        const queryPromise = oneEvent(el, "lr-query-change");
+        el.shadowRoot!
+          .querySelector<HTMLButtonElement>('[part="clear-button"]')!
+          .click();
+        expect((await queryPromise).detail).to.deep.equal({ text: "" });
+      });
     });
   });
 

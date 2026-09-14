@@ -25,6 +25,14 @@ export type TypingIndicatorShape = 'dots' | 'pulse' | 'cursor';
 export type TypingIndicatorSize = LyraSize;
 
 /**
+ * Where the accessible label renders, mirroring `<lr-spinner>`'s own `labelPlacement` vocabulary.
+ * `'none'` (the default) keeps `label` in the accessibility tree only, screen-reader-only, exactly
+ * as this component behaved before this property existed. `'after'` also renders it visibly next
+ * to the animated shape.
+ */
+export type TypingIndicatorLabelPlacement = 'none' | 'after';
+
+/**
  * `<lr-typing-indicator>` — a purely presentational "assistant is
  * responding" presence cue. No events, no interactivity: a consumer mounts
  * it while a response is being generated and removes it (or hides it) once
@@ -61,11 +69,17 @@ export type TypingIndicatorSize = LyraSize;
  * shape is `aria-hidden="true"` — it's decorative; `label` is the entire
  * accessible content, so nothing narrates individual animation frames.
  *
+ * `labelPlacement="after"` additionally renders `label` (or its localized "Thinking…" fallback)
+ * visibly next to the shape, in a `part="label"` element, mirroring `<lr-spinner>`'s own
+ * `labelPlacement` vocabulary; the default `"none"` keeps today's screen-reader-only rendering,
+ * a single sr-only text node with no visible twin.
+ *
  * @customElement lr-typing-indicator
  * @csspart base - The decorative (`aria-hidden`) wrapper around the animated shape.
  * @csspart dot - Each of the three dots in the `dots` shape.
  * @csspart pulse - The single pulsing dot in the `pulse` shape.
  * @csspart cursor - The blinking bar in the `cursor` shape.
+ * @csspart label - The visible label, rendered only while `label-placement="after"`.
  * @cssprop [--lr-typing-dot-size=var(--lr-space-s)] - Diameter of each dot in the `dots` and
  * `pulse` variants. The `size` property supplies compact and roomy tier overrides.
  * @cssprop [--lr-typing-gap=var(--lr-space-xs)] - Gap between dots in the `dots` variant. The
@@ -108,6 +122,12 @@ export class LyraTypingIndicator extends LyraElement {
    *  inline with a message bubble. `'m'` (the default) is the standalone status-line size. */
   @property({ reflect: true }) size: TypingIndicatorSize = 'm';
 
+  /** Where the accessible label renders. `'none'` (default) keeps it screen-reader-only, exactly
+   *  as this component rendered before this property existed. `'after'` also renders it visibly
+   *  next to the animated shape -- the same `labelPlacement` vocabulary as `<lr-spinner>`. */
+  @property({ attribute: 'label-placement', reflect: true })
+  labelPlacement: TypingIndicatorLabelPlacement = 'none';
+
   // `label` supplies the default accessible name, but an author-provided host `aria-label` must
   // win (the idiomatic way to name any custom element for assistive tech) -- tracked the same way
   // `<lr-gauge>` tracks its own `explicitAriaLabel`/`appliedAriaLabel` pair, so later `label`
@@ -143,7 +163,9 @@ export class LyraTypingIndicator extends LyraElement {
   override render(): TemplateResult {
     return html`
       <span part="base" aria-hidden="true">${this.renderShape()}</span>
-      <span class="sr-only">${this.accessibleLabel}</span>
+      ${this.labelPlacement === 'after'
+        ? html`<span part="label">${this.accessibleLabel}</span>`
+        : html`<span class="sr-only">${this.accessibleLabel}</span>`}
     `;
   }
 

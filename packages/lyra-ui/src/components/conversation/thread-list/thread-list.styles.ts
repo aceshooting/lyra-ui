@@ -14,12 +14,16 @@ export const styles = css`
     min-block-size: 0;
   }
   [part='search'] {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
     padding: var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='search-input'] {
     box-sizing: border-box;
-    inline-size: 100%;
+    flex: 1 1 auto;
+    min-inline-size: 0;
     padding-inline: var(--lr-space-s);
     padding-block: var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -46,6 +50,41 @@ export const styles = css`
     -webkit-appearance: none;
     appearance: none;
     display: none;
+  }
+  /* Replaces the native ::-webkit-search-cancel-button suppressed above -- same sizing/hover/active
+     shape as [part='row-action'] below, so both icon-only buttons in this component read as one
+     visual language. */
+  [part='clear-button'] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--lr-size-1-5rem);
+    block-size: var(--lr-size-1-5rem);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: 0;
+    border: 0;
+    border-radius: var(--lr-radius-xs);
+    background: transparent;
+    color: var(--lr-color-text-quiet);
+    font: inherit;
+    cursor: pointer;
+  }
+  [part='clear-button']:hover {
+    background: var(--lr-color-surface-raised);
+    color: var(--lr-color-text);
+  }
+  [part='clear-button']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-raised),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part='clear-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='list'] {
     flex: 1 1 auto;
