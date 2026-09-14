@@ -1554,6 +1554,148 @@ describe("paragraph/list/inline-code parts", () => {
   });
 });
 
+describe("inline code / code-block theming hooks", () => {
+  // Renders both surfaces from one document, mirroring the "paragraph/list/inline-code parts"
+  // describe block's own proven-working dual-surface fixture above.
+  const dualContent = "some `inline` and:\n\n```\nfenced\n```";
+
+  it("falls back to the ambient --lr-color-brand-quiet for both surfaces when --lr-markdown-code-bg is unset", async () => {
+    const wrapper = (await fixture(
+      html`<div style="--lr-color-brand-quiet: rgb(1, 2, 3);">
+        <lr-markdown content=${dualContent}></lr-markdown>
+      </div>`
+    )) as HTMLDivElement;
+    const el = wrapper.querySelector("lr-markdown") as LyraMarkdown;
+    await waitUntil(
+      () =>
+        el.shadowRoot!.querySelector('[part="inline-code"]') &&
+        el.shadowRoot!.querySelector('[part="code-block"]'),
+      "never rendered",
+      { timeout: 4000 }
+    );
+    const inlineCode = el.shadowRoot!.querySelector(
+      '[part="inline-code"]'
+    ) as HTMLElement;
+    const codeBlock = el.shadowRoot!.querySelector(
+      '[part="code-block"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(inlineCode).backgroundColor).to.equal(
+      "rgb(1, 2, 3)"
+    );
+    expect(getComputedStyle(codeBlock).backgroundColor).to.equal(
+      "rgb(1, 2, 3)"
+    );
+  });
+
+  it("themes --lr-markdown-code-bg independently of the shared brand-quiet token, for both surfaces", async () => {
+    const el = (await fixture(
+      html`<lr-markdown
+        style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-markdown-code-bg: rgb(4, 5, 6);"
+        content=${dualContent}
+      ></lr-markdown>`
+    )) as LyraMarkdown;
+    await waitUntil(
+      () =>
+        el.shadowRoot!.querySelector('[part="inline-code"]') &&
+        el.shadowRoot!.querySelector('[part="code-block"]'),
+      "never rendered",
+      { timeout: 4000 }
+    );
+    const inlineCode = el.shadowRoot!.querySelector(
+      '[part="inline-code"]'
+    ) as HTMLElement;
+    const codeBlock = el.shadowRoot!.querySelector(
+      '[part="code-block"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(inlineCode).backgroundColor).to.equal(
+      "rgb(4, 5, 6)"
+    );
+    expect(getComputedStyle(codeBlock).backgroundColor).to.equal(
+      "rgb(4, 5, 6)"
+    );
+  });
+
+  it("themes inline code padding/radius via dedicated hooks, unset falling back to today's exact values", async () => {
+    const el = (await fixture(
+      html`<lr-markdown content=${dualContent}></lr-markdown>`
+    )) as LyraMarkdown;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="inline-code"]'),
+      "never rendered",
+      { timeout: 4000 }
+    );
+    const inlineCode = el.shadowRoot!.querySelector(
+      '[part="inline-code"]'
+    ) as HTMLElement;
+    const defaultPaddingBlock = getComputedStyle(inlineCode).paddingBlockStart;
+    const defaultPaddingInline =
+      getComputedStyle(inlineCode).paddingInlineStart;
+    const defaultRadius = getComputedStyle(inlineCode).borderRadius;
+
+    el.style.setProperty("--lr-markdown-code-padding", "3px 9px");
+    el.style.setProperty("--lr-markdown-code-radius", "11px");
+    await waitUntil(
+      () => getComputedStyle(inlineCode).borderRadius === "11px",
+      "the inline code radius hook never applied"
+    );
+    expect(getComputedStyle(inlineCode).paddingBlockStart).to.equal("3px");
+    expect(getComputedStyle(inlineCode).paddingInlineStart).to.equal("9px");
+
+    el.style.removeProperty("--lr-markdown-code-padding");
+    el.style.removeProperty("--lr-markdown-code-radius");
+    await waitUntil(
+      () => getComputedStyle(inlineCode).borderRadius === defaultRadius,
+      "the inline code radius hook never reverted to its documented default"
+    );
+    expect(getComputedStyle(inlineCode).paddingBlockStart).to.equal(
+      defaultPaddingBlock
+    );
+    expect(getComputedStyle(inlineCode).paddingInlineStart).to.equal(
+      defaultPaddingInline
+    );
+  });
+
+  it("themes the fenced code-block padding/radius via dedicated hooks, unset falling back to today's exact values", async () => {
+    const el = (await fixture(
+      html`<lr-markdown content=${dualContent}></lr-markdown>`
+    )) as LyraMarkdown;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"]'),
+      "never rendered",
+      { timeout: 4000 }
+    );
+    const codeBlock = el.shadowRoot!.querySelector(
+      '[part="code-block"]'
+    ) as HTMLElement;
+    const defaultPaddingBlock = getComputedStyle(codeBlock).paddingBlockStart;
+    const defaultPaddingInline =
+      getComputedStyle(codeBlock).paddingInlineStart;
+    const defaultRadius = getComputedStyle(codeBlock).borderRadius;
+
+    el.style.setProperty("--lr-markdown-code-block-padding", "4px 12px");
+    el.style.setProperty("--lr-markdown-code-block-radius", "13px");
+    await waitUntil(
+      () => getComputedStyle(codeBlock).borderRadius === "13px",
+      "the code-block radius hook never applied"
+    );
+    expect(getComputedStyle(codeBlock).paddingBlockStart).to.equal("4px");
+    expect(getComputedStyle(codeBlock).paddingInlineStart).to.equal("12px");
+
+    el.style.removeProperty("--lr-markdown-code-block-padding");
+    el.style.removeProperty("--lr-markdown-code-block-radius");
+    await waitUntil(
+      () => getComputedStyle(codeBlock).borderRadius === defaultRadius,
+      "the code-block radius hook never reverted to its documented default"
+    );
+    expect(getComputedStyle(codeBlock).paddingBlockStart).to.equal(
+      defaultPaddingBlock
+    );
+    expect(getComputedStyle(codeBlock).paddingInlineStart).to.equal(
+      defaultPaddingInline
+    );
+  });
+});
+
 describe("highlightCode cache plumbing (no async loading yet)", () => {
   type Internals = {
     highlightCache: Map<string, string>;

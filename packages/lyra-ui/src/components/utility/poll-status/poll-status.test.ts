@@ -3,7 +3,7 @@ import './poll-status.js';
 import '../live-region/live-region.js';
 import type { LyraPollStatus } from './poll-status.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function liveRegionText(el: LyraPollStatus): string {
   const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
@@ -457,6 +457,37 @@ describe('lr-poll-status', () => {
         return computed.backgroundColor === 'rgb(1, 2, 3)' && computed.color === 'rgb(4, 5, 6)';
       }, 'the poll-status pause-button hover treatment never painted');
     } finally {
+      await resetMouse();
+    }
+  });
+
+  it('paints dedicated pause-button hover/active hooks without repainting the shared brand tokens', async () => {
+    const el = await fixture<LyraPollStatus>(html`
+      <lr-poll-status
+        style="
+          --lr-color-brand-quiet: rgb(1, 2, 3);
+          --lr-color-brand: rgb(4, 5, 6);
+          --lr-poll-status-pause-hover-bg: rgb(7, 8, 9);
+          --lr-poll-status-pause-hover-color: rgb(10, 11, 12);
+          --lr-poll-status-pause-active-bg: rgb(13, 14, 15);
+          --lr-poll-status-pause-active-color: rgb(16, 17, 18);
+        "
+      ></lr-poll-status>
+    `);
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="pause-button"]')!;
+    try {
+      await hoverUntilMatched(button, 'poll-status pause-button never registered :hover');
+      await waitUntil(() => {
+        const computed = getComputedStyle(button);
+        return computed.backgroundColor === 'rgb(7, 8, 9)' && computed.color === 'rgb(10, 11, 12)';
+      }, 'the dedicated pause-button hover hooks never painted over the shared brand tokens');
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => {
+        const computed = getComputedStyle(button);
+        return computed.backgroundColor === 'rgb(13, 14, 15)' && computed.color === 'rgb(16, 17, 18)';
+      }, 'the dedicated pause-button active hooks never painted over the shared brand tokens');
+    } finally {
+      await sendMouse({ type: 'up' });
       await resetMouse();
     }
   });

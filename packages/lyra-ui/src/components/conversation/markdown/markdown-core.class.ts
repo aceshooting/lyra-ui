@@ -169,6 +169,16 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
  * @cssprop [--lr-markdown-font-mono=var(--lr-font-mono)] - Monospace family for rendered `<code>`
  *   inside `content`.
+ * @cssprop [--lr-markdown-code-bg=var(--lr-color-brand-quiet)] - Background shared by every
+ *   inline `code` span and the fenced `code-block` surface.
+ * @cssprop [--lr-markdown-code-padding=var(--lr-size-0-125rem) var(--lr-size-0-3125rem)] - Padding
+ *   of an inline `code` span.
+ * @cssprop [--lr-markdown-code-radius=calc(var(--lr-radius) * 0.5)] - Border radius of an inline
+ *   `code` span.
+ * @cssprop [--lr-markdown-code-block-padding=var(--lr-space-s) var(--lr-space-m)] - Padding of the
+ *   fenced `code-block` surface.
+ * @cssprop [--lr-markdown-code-block-radius=var(--lr-radius)] - Border radius of the fenced
+ *   `code-block` surface.
  * @cssprop [--lr-markdown-highlight-accent-bg=var(--lr-color-brand-quiet)] - Accent highlight fill.
  * @cssprop [--lr-markdown-highlight-success-bg=var(--lr-color-success-quiet)] - Success highlight fill.
  * @cssprop [--lr-markdown-highlight-warning-bg=var(--lr-color-warning-quiet)] - Warning highlight fill.

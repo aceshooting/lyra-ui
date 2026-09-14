@@ -1788,3 +1788,53 @@ it('does not let non-enumerable grammar names consume an admitted language slot'
 
   expect(loads).to.equal(1);
 });
+
+describe('maxHeight', () => {
+  it('applies no maximum block size by default, unchanged from before maxHeight existed', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).maxBlockSize).to.equal('none');
+  });
+
+  it('respects max-height by setting the scoped custom property on the base part', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    el.maxHeight = '10rem';
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lr-diff-view-max-height')).to.equal('10rem');
+  });
+
+  it('rejects declaration-breaking maxHeight values but accepts a var() passthrough', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    el.maxHeight = '10rem;position:fixed';
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.position).to.equal('');
+    expect(base.style.getPropertyValue('--lr-diff-view-max-height')).to.equal('');
+
+    el.maxHeight = 'var(--viewer-height)';
+    await el.updateComplete;
+    expect(base.style.getPropertyValue('--lr-diff-view-max-height')).to.equal('var(--viewer-height)');
+  });
+
+  it('caps the rendered block size once maxHeight is set, scrolling internally instead of growing the page', async () => {
+    const manyLines = Array.from({ length: 200 }, (_, index) => `line-${index}`).join('\n');
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${manyLines} .newText=${`${manyLines}\nline-200`}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const unclamped = base.getBoundingClientRect().height;
+
+    el.maxHeight = '120px';
+    await el.updateComplete;
+    expect(getComputedStyle(base).maxBlockSize).to.equal('120px');
+    expect(base.getBoundingClientRect().height).to.be.at.most(120);
+    expect(base.getBoundingClientRect().height).to.be.lessThan(unclamped);
+  });
+});

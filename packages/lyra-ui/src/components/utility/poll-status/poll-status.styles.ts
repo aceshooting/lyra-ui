@@ -66,12 +66,15 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
   [part='pause-button']:hover:not(:disabled) {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-poll-status-pause-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-poll-status-pause-hover-color, var(--lr-color-brand));
   }
   [part='pause-button']:active:not(:disabled) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    color: var(--lr-color-brand);
+    background: var(
+      --lr-poll-status-pause-active-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+    color: var(--lr-poll-status-pause-active-color, var(--lr-color-brand));
   }
   [part='pause-button']:disabled {
     cursor: default;

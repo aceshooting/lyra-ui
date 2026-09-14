@@ -1,11 +1,13 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -126,6 +128,8 @@ const DIFF_VIEW_LAYOUT = literalSetConverter<LyraDiffViewLayout>(
  * @csspart copy-button - The copy affordance, only rendered while `copyable`.
  * @csspart limit - The localized fallback rendered when either input exceeds `maxLines`.
  * @csspart side - One column in `layout="split"` (`data-side="old"|"new"`).
+ * @cssprop [--lr-diff-view-max-height=none] - Cap on `[part="base"]`'s block size, past which the
+ *   view scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @cssprop [--lr-diff-view-font=var(--lr-font-mono)] - Font family used for the diff lines.
  * @cssprop [--lr-diff-view-add-background=var(--lr-color-success-quiet)] - Added-line background.
  * @cssprop [--lr-diff-view-add-color=var(--lr-color-success)] - Added-line text color.
@@ -163,6 +167,10 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   /** Shows a copy-to-clipboard button for the full unified-diff text. `false` (the default)
    *  renders no button. */
   @property({ type: Boolean }) copyable = false;
+
+  /** A CSS length (e.g. `"20rem"`); once set, the view scrolls internally past this height
+   *  instead of growing the page. Invalid values are ignored. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** `'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two
    *  side-by-side columns derived from the same `LyraDiffOp[]` (see `pairOpsForSplit()`).
@@ -594,13 +602,17 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   }
 
   override render(): TemplateResult {
+    const sanitizedMaxHeight = sanitizeCssLength(this.maxHeight);
+    const maxHeightStyle = sanitizedMaxHeight
+      ? styleMap({ '--lr-diff-view-max-height': sanitizedMaxHeight })
+      : nothing;
     if (this.diffTooLarge) {
-      return html`<div part="base">
+      return html`<div part="base" style=${maxHeightStyle}>
         <div part="limit">${this.localize('diffViewTooLarge')}</div>
       </div>`;
     }
     return html`
-      <div part="base">
+      <div part="base" style=${maxHeightStyle}>
         ${this.copyable
           ? html`<button
               part="copy-button"

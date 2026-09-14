@@ -149,6 +149,69 @@ function equalFrozenGrammars(left: unknown, right: unknown): boolean {
   }
 }
 
+/** A registration's own registered `name` (if any) plus every name Shiki resolves to it without
+ *  help -- its `name` and its declared `aliases`. Tolerant of a malformed/reflection-hostile
+ *  grammar: a construction failure here degrades to "not a known name," never throws. */
+function shikiGrammarOwnNames(input: ShikiLanguageInput): {
+  primaryName: string | undefined;
+  known: Set<string>;
+} {
+  const known = new Set<string>();
+  let primaryName: string | undefined;
+  const registrations = Array.isArray(input) ? input : [input];
+  for (const registration of registrations) {
+    if (!registration || typeof registration !== 'object') continue;
+    const name = (registration as ShikiLanguageRegistration).name;
+    if (typeof name === 'string' && name !== '') {
+      known.add(name);
+      primaryName ??= name;
+    }
+    const aliases = (registration as ShikiLanguageRegistration).aliases;
+    if (Array.isArray(aliases)) {
+      for (const alias of aliases) if (typeof alias === 'string') known.add(alias);
+    }
+  }
+  return { primaryName, known };
+}
+
+/**
+ * Derives a Shiki `langAlias` map (`{ [authorKey]: grammarOwnName }`) for every `languages` map
+ * key that is neither the grammar's own registered `name` nor one of its declared `aliases`.
+ * Shiki resolves a `lang` id (from `codeToHtml()`/`loadLanguage()`) strictly against each loaded
+ * grammar's own name/aliases -- a `languages` entry keyed by anything else (e.g. reusing a
+ * TypeScript grammar under the author-chosen key `'tsx'`, a common way to avoid bundling a second,
+ * near-identical grammar) registers correctly but never matches that key, so
+ * `codeToHtml({ lang: authorKey })` throws "Language `authorKey` not found" -- caught by every
+ * caller here and downgraded to the plain-text fallback, so highlighting silently never activates
+ * for that key. Passing the derived map as `createHighlighterCore()`'s own `langAlias` teaches
+ * Shiki the author's key without renaming anything the grammar itself declares.
+ *
+ * Pure in `languages`: two maps `equalFrozenGrammars()` (this module's own highlighter-core reuse
+ * check, above) considers equal always derive equal alias maps, so reusing a cached/recent core
+ * for an equal `languages` object never carries a stale `langAlias` -- this needs no cache key of
+ * its own.
+ */
+function buildShikiLangAlias(
+  languages: Record<string, ShikiLanguageInput>,
+): Record<string, string> | undefined {
+  let aliases: Record<string, string> | undefined;
+  try {
+    for (const key of Object.keys(languages)) {
+      const grammar = languages[key];
+      if (grammar === undefined) continue;
+      const { primaryName, known } = shikiGrammarOwnNames(grammar);
+      if (!primaryName || known.has(key)) continue;
+      aliases ??= {};
+      aliases[key] = primaryName;
+    }
+  } catch {
+    // Reflection failure on a hostile `languages` map -- fall back to whatever was already
+    // derived, same as this module's other defensive catches.
+    return aliases;
+  }
+  return aliases;
+}
+
 type ShikiHighlighterCoreLoader = (
   languages: Record<string, ShikiLanguageInput>
 ) => Promise<ShikiHighlighterCore | null>;
@@ -213,6 +276,7 @@ export function loadShikiHighlighterCore(
           const core = await createHighlighterCore({
             themes: [light.default, dark.default],
             langs: Object.values(languages) as never,
+            langAlias: buildShikiLangAlias(languages),
             engine: createOnigurumaEngine(import('shiki/wasm')),
           });
           if (!isShikiHighlighter(core)) {

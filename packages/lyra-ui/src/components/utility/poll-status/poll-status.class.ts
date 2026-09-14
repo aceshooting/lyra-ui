@@ -42,6 +42,14 @@ export interface LyraPollStatusEventMap {
  * @cssprop [--lr-poll-status-due-bg=var(--lr-color-success)] - Background of `indicator` while
  *   `data-due` is set, without repainting every other component that reuses the shared success
  *   token.
+ * @cssprop [--lr-poll-status-pause-hover-bg=var(--lr-color-brand-quiet)] - `pause-button` hover
+ *   background.
+ * @cssprop [--lr-poll-status-pause-hover-color=var(--lr-color-brand)] - `pause-button` hover
+ *   foreground.
+ * @cssprop --lr-poll-status-pause-active-bg - `pause-button` pressed background; defaults to the
+ *   former brand-quiet active mix.
+ * @cssprop [--lr-poll-status-pause-active-color=var(--lr-color-brand)] - `pause-button` pressed
+ *   foreground.
  * @status stable
  * @since 4.0.0
  */

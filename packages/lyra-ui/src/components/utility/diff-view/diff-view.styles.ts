@@ -3,6 +3,10 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    /* Consumer-tunable scroll cap; 'none' grows with the content like every other block-level
+       component here until a caller opts into an internal scrollbar via the max-height
+       attribute -- same rationale as lr-json-viewer's identical --_lr-json-viewer-max-height. */
+    --_lr-diff-view-max-height: none;
     --_lr-diff-view-font: var(--lr-font-mono);
     --_lr-diff-view-add-background: var(--lr-color-success-quiet);
     --_lr-diff-view-add-color: var(--lr-color-success);
@@ -13,6 +17,7 @@ export const styles = css`
   }
   [part="base"] {
     position: relative;
+    max-block-size: var(--lr-diff-view-max-height, var(--_lr-diff-view-max-height));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);

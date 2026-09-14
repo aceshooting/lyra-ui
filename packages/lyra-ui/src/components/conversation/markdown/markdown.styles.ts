@@ -58,15 +58,15 @@ export const styles = css`
   [part='content'] code {
     font-family: var(--lr-markdown-font-mono, var(--lr-font-mono));
     font-size: var(--lr-size-0-875em);
-    background: var(--lr-color-brand-quiet);
-    border-radius: calc(var(--lr-radius) * 0.5);
-    padding: var(--lr-size-0-125rem) var(--lr-size-0-3125rem);
+    background: var(--lr-markdown-code-bg, var(--lr-color-brand-quiet));
+    border-radius: var(--lr-markdown-code-radius, calc(var(--lr-radius) * 0.5));
+    padding: var(--lr-markdown-code-padding, var(--lr-size-0-125rem) var(--lr-size-0-3125rem));
   }
   [part='code-block'] {
     margin-block: 0 var(--lr-space-s);
-    padding: var(--lr-space-s) var(--lr-space-m);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-brand-quiet);
+    padding: var(--lr-markdown-code-block-padding, var(--lr-space-s) var(--lr-space-m));
+    border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
+    background: var(--lr-markdown-code-bg, var(--lr-color-brand-quiet));
     overflow-inline: auto;
     /* See [part='content']'s identical overflow-block above -- same paired-axis rationale. */
     overflow-block: hidden;
