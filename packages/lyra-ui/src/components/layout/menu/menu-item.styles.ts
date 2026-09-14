@@ -47,6 +47,22 @@ export const styles = css`
     color: inherit;
     line-height: var(--lr-line-height-snug);
   }
+  /* Unlike lr-option/lr-select/lr-combobox/lr-tree-item, a checked row here previously had no
+     row-chrome hooks of its own: type="checkbox" only painted the checkmark glyph, leaving the
+     row's own background/color/weight identical to an unchecked one. Inline var() fallbacks
+     (never :host declarations), matching every other row-chrome hook above, so unset this is a
+     byte-identical no-op and a menu/ancestor can retune it without a ::part(base) rule. :where()
+     keeps the [checked] qualifier out of the specificity count -- same mechanism lr-tree-item's
+     selected-row rule uses -- so this lands at the SAME (0,2,0) specificity as the hover/active
+     rules below rather than the (0,3,0) a bare :host([checked]) would reach; landing higher would
+     let a checked row's resting background permanently defeat its own :hover/:active paint. Being
+     declared BEFORE those rules means the later hover/active rule still wins the resulting tie, so
+     a checked row keeps normal pointer feedback. */
+  :host(:where([checked])) [part='base'] {
+    background: var(--lr-menu-item-checked-bg, transparent);
+    color: var(--lr-menu-item-checked-color, inherit);
+    font-weight: var(--lr-menu-item-checked-font-weight, inherit);
+  }
   [part='base']:hover {
     background: var(--lr-color-brand-quiet);
   }

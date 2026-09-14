@@ -1588,6 +1588,92 @@ describe("Web Awesome disclosure surface", () => {
     expect(getComputedStyle(summary).paddingInlineStart).to.equal("13px");
   });
 
+  it('tunes summary and content padding independently via the new per-edge hooks, unset by default', async () => {
+    const baseline = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    const baselineSummary = getComputedStyle(summaryOf(baseline));
+    const baselineContent = getComputedStyle(
+      baseline.shadowRoot!.querySelector('[part="content"]') as HTMLElement
+    );
+
+    const summaryBlockOnly = (await fixture(html`<lr-details
+      summary="More"
+      style="--lr-details-summary-padding-block: 30px;"
+      >Content</lr-details
+    >`)) as LyraDetails;
+    const tunedSummary = getComputedStyle(summaryOf(summaryBlockOnly));
+    const untouchedContent = getComputedStyle(
+      summaryBlockOnly.shadowRoot!.querySelector(
+        '[part="content"]'
+      ) as HTMLElement
+    );
+    expect(tunedSummary.paddingBlockStart).to.equal('30px');
+    expect(tunedSummary.paddingInlineStart).to.equal(
+      baselineSummary.paddingInlineStart
+    );
+    expect(untouchedContent.paddingBlockEnd).to.equal(
+      baselineContent.paddingBlockEnd
+    );
+    expect(untouchedContent.paddingInlineStart).to.equal(
+      baselineContent.paddingInlineStart
+    );
+
+    const contentInlineOnly = (await fixture(html`<lr-details
+      summary="More"
+      style="--lr-details-content-padding-inline: 40px;"
+      >Content</lr-details
+    >`)) as LyraDetails;
+    const untouchedSummary = getComputedStyle(summaryOf(contentInlineOnly));
+    const tunedContent = getComputedStyle(
+      contentInlineOnly.shadowRoot!.querySelector(
+        '[part="content"]'
+      ) as HTMLElement
+    );
+    expect(tunedContent.paddingInlineStart).to.equal('40px');
+    expect(tunedContent.paddingBlockEnd).to.equal(
+      baselineContent.paddingBlockEnd
+    );
+    expect(untouchedSummary.paddingBlockStart).to.equal(
+      baselineSummary.paddingBlockStart
+    );
+    expect(untouchedSummary.paddingInlineStart).to.equal(
+      baselineSummary.paddingInlineStart
+    );
+  });
+
+  it('still resolves every summary/content padding edge from --lr-details-spacing when the new per-edge hooks are unset', async () => {
+    const el = (await fixture(html`<lr-details
+      summary="More"
+      style="--lr-details-spacing: 18px;"
+      >Content</lr-details
+    >`)) as LyraDetails;
+    const summary = getComputedStyle(summaryOf(el));
+    const content = getComputedStyle(
+      el.shadowRoot!.querySelector('[part="content"]') as HTMLElement
+    );
+    expect(summary.paddingBlockStart).to.equal('18px');
+    expect(summary.paddingInlineStart).to.equal('18px');
+    expect(content.paddingBlockEnd).to.equal('18px');
+    expect(content.paddingInlineStart).to.equal('18px');
+  });
+
+  it('keeps the upstream --spacing hook authoritative over the new per-edge hooks', async () => {
+    const el = (await fixture(html`<lr-details
+      summary="More"
+      style="--spacing: 13px; --lr-details-summary-padding-block: 30px; --lr-details-content-padding-inline: 40px;"
+      >Content</lr-details
+    >`)) as LyraDetails;
+    const summary = getComputedStyle(summaryOf(el));
+    const content = getComputedStyle(
+      el.shadowRoot!.querySelector('[part="content"]') as HTMLElement
+    );
+    expect(summary.paddingBlockStart).to.equal('13px');
+    expect(summary.paddingInlineStart).to.equal('13px');
+    expect(content.paddingBlockEnd).to.equal('13px');
+    expect(content.paddingInlineStart).to.equal('13px');
+  });
+
   it("does not toggle when a slotted summary link is activated", async () => {
     const el = (await fixture(html`<lr-details>
       <a slot="summary" href="#details-link-target">Read more</a>

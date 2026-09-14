@@ -65,11 +65,17 @@ export const styles = css`
     min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
     padding-block: var(
       --spacing,
-      var(--lr-details-spacing, var(--_lr-details-spacing))
+      var(
+        --lr-details-summary-padding-block,
+        var(--lr-details-spacing, var(--_lr-details-spacing))
+      )
     );
     padding-inline: var(
       --spacing,
-      var(--lr-details-spacing, var(--_lr-details-spacing))
+      var(
+        --lr-details-summary-padding-inline,
+        var(--lr-details-spacing, var(--_lr-details-spacing))
+      )
     );
     color: var(--lr-color-text);
     cursor: pointer;
@@ -161,11 +167,17 @@ export const styles = css`
   [part='content'] {
     padding-block-end: var(
       --spacing,
-      var(--lr-details-spacing, var(--_lr-details-spacing))
+      var(
+        --lr-details-content-padding-block-end,
+        var(--lr-details-spacing, var(--_lr-details-spacing))
+      )
     );
     padding-inline: var(
       --spacing,
-      var(--lr-details-spacing, var(--_lr-details-spacing))
+      var(
+        --lr-details-content-padding-inline,
+        var(--lr-details-spacing, var(--_lr-details-spacing))
+      )
     );
     min-inline-size: 0;
     max-inline-size: 100%;

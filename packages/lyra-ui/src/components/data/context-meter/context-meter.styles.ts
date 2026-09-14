@@ -36,12 +36,15 @@ export const styles = css`
     display: flex;
     align-items: stretch;
     overflow: hidden;
-    block-size: var(--lr-size-0-5rem);
-    border-radius: calc(var(--lr-radius) * 0.5);
+    block-size: var(--lr-context-meter-track-size, var(--lr-size-0-5rem));
+    border-radius: var(--lr-context-meter-track-radius, calc(var(--lr-radius) * 0.5));
     /* Quiet neutral fill for the unfilled remainder: deliberately lighter than a 'neutral'-tone
        segment (var(--lr-color-border) at full strength below), so counted-but-uncolored data
        stays visually distinct from not counted at all. */
-    background: color-mix(in srgb, var(--lr-color-border) 30%, transparent);
+    background: var(
+      --lr-context-meter-track-bg,
+      color-mix(in srgb, var(--lr-color-border) 30%, transparent)
+    );
   }
   [part='segment'] {
     display: block;
@@ -60,7 +63,8 @@ export const styles = css`
      quantities instead of one block. The logical property keeps it RTL-correct without extra
      math. */
   [part='segment']:not(:first-of-type) {
-    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-surface);
+    border-inline-start: var(--lr-border-width-thin) solid
+      var(--lr-context-meter-segment-seam-color, var(--lr-color-surface));
   }
   [part='segment'][data-tone='brand'] {
     background: var(--lr-color-brand);

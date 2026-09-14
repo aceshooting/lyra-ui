@@ -9,8 +9,8 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     flex-direction: column;
-    gap: var(--lr-space-xs);
-    padding: var(--lr-space-m);
+    gap: var(--lr-stat-gap, var(--lr-space-xs));
+    padding: var(--lr-stat-padding, var(--lr-space-m));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -40,8 +40,8 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     flex-direction: column;
-    gap: var(--lr-space-xs);
-    padding: var(--lr-space-m);
+    gap: var(--lr-stat-gap, var(--lr-space-xs));
+    padding: var(--lr-stat-padding, var(--lr-space-m));
     block-size: 100%;
     box-sizing: border-box;
     pointer-events: none;
@@ -265,12 +265,12 @@ export const styles = css`
     display: none;
   }
   :host([compact]) [part='base'] {
-    padding: var(--lr-space-s);
-    gap: var(--lr-size-0-125rem);
+    padding: var(--lr-stat-padding, var(--lr-space-s));
+    gap: var(--lr-stat-gap, var(--lr-size-0-125rem));
   }
   :host([compact]) .linked-content {
-    padding: var(--lr-space-s);
-    gap: var(--lr-size-0-125rem);
+    padding: var(--lr-stat-padding, var(--lr-space-s));
+    gap: var(--lr-stat-gap, var(--lr-size-0-125rem));
   }
   /* MUST stay after :host([compact]): both are :host([x]) [part='base'], equal specificity, so
      source order alone decides the padding when a stat is both, and plain ("no chrome at all")
@@ -279,7 +279,7 @@ export const styles = css`
      The emphasis accent edge is card chrome and goes with the border; the emphasis brand value
      tint still applies. */
   :host([frame='plain']) [part='base'] {
-    padding: 0;
+    padding: var(--lr-stat-padding, 0);
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -290,7 +290,7 @@ export const styles = css`
     block-size: auto;
   }
   :host([frame='plain']) .linked-content {
-    padding: 0;
+    padding: var(--lr-stat-padding, 0);
   }
   /* The card's border-shift-plus-lift affordance does not read on a border-less, background-less
      box, so a linked plain stat underlines its headline value instead. The :focus-visible outline

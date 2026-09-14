@@ -4,7 +4,7 @@ export const styles = css`
   /* --lr-icon-button-size is a minimum tappable box, not a fixed one: flooring both axes pads a
      small glyph out to a full target, while larger slotted content grows the button and keeps its
      aspect ratio instead of being squashed to 1:1. */
-  [part~='button'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); padding: 0; border: var(--lr-icon-button-border, 0); border-radius: var(--lr-icon-button-radius, var(--_lr-icon-button-radius-default)); background: var(--lr-icon-button-background, transparent); color: var(--lr-icon-button-color, inherit); cursor: pointer; text-decoration: none; }
+  [part~='button'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); padding: 0; border: var(--lr-icon-button-border, 0); border-radius: var(--lr-icon-button-radius, var(--_lr-icon-button-radius-default)); background: var(--lr-icon-button-background, transparent); color: var(--lr-icon-button-color, inherit); cursor: pointer; text-decoration: none; transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast), color var(--lr-transition-fast); }
   /* The hover fallback was once var(--lr-color-surface), the PAGE background, so hovering on a
      default page changed nothing. Mixing that surface toward --lr-color-mix-partner (the text
      colour) always moves, and the way the surface needs: darker on a light page, lighter on a dark

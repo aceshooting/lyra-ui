@@ -21,6 +21,7 @@ export const styles = css`
     text-align: start;
     text-decoration: none;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="base"]:not([aria-disabled="true"]):hover {
     background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));

@@ -193,6 +193,14 @@ export interface LyraMenuItemEventMap {
  * @cssprop [--lr-menu-item-danger-hover-bg=var(--lr-color-danger-quiet)] - Background of an enabled
  * danger row while hovered.
  * @cssprop [--lr-menu-item-danger-active-bg=color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of an enabled danger row while pressed.
+ * Checked-state hooks are also inline fallbacks, matching `<lr-option>`/`<lr-select>`/
+ * `<lr-combobox>`/`<lr-tree-item>`'s equivalent row-chrome hooks; all three default to no visual
+ * change, so a `type="checkbox"` item's checked row paints identically to before these existed
+ * unless a consumer sets one.
+ * @cssprop [--lr-menu-item-checked-bg=transparent] - Background of a checked (`type="checkbox"
+ * checked`) row.
+ * @cssprop [--lr-menu-item-checked-color=inherit] - Foreground of a checked row.
+ * @cssprop [--lr-menu-item-checked-font-weight=inherit] - Font weight of a checked row.
  * @method click - Activates the visual row, including checkbox and submenu behavior; no-op while
  * disabled or loading.
  * @method select - Activates a selectable item; no-op while disabled/loading and opens submenu parents.

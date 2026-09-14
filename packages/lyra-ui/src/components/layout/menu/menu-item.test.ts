@@ -337,6 +337,139 @@ describe('danger-state cssprops', () => {
   });
 });
 
+describe('checked-state cssprops', () => {
+  const base = (el: LyraMenuItem): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  it('paints a checked type="checkbox" row identically to an unchecked one by default', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="View">
+        <lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>
+        <lr-menu-item type="checkbox" checked value="minimap"
+          >Minimap</lr-menu-item
+        >
+      </div>
+    `)) as HTMLElement;
+    const [unchecked, checked] = Array.from(
+      wrapper.querySelectorAll<LyraMenuItem>('lr-menu-item')
+    );
+    const uncheckedBase = base(unchecked!);
+    const checkedBase = base(checked!);
+
+    expect(getComputedStyle(checkedBase).backgroundColor).to.equal(
+      getComputedStyle(uncheckedBase).backgroundColor
+    );
+    expect(getComputedStyle(checkedBase).backgroundColor).to.equal(
+      'rgba(0, 0, 0, 0)'
+    );
+    expect(getComputedStyle(checkedBase).color).to.equal(
+      getComputedStyle(uncheckedBase).color
+    );
+    expect(getComputedStyle(checkedBase).fontWeight).to.equal(
+      getComputedStyle(uncheckedBase).fontWeight
+    );
+  });
+
+  it('themes a checked row background, color, and font weight independently of an unchecked sibling', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        role="menu"
+        aria-label="View"
+        style="--lr-menu-item-checked-bg: rgb(1, 2, 3); --lr-menu-item-checked-color: rgb(4, 5, 6); --lr-menu-item-checked-font-weight: 700;"
+      >
+        <lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>
+        <lr-menu-item type="checkbox" checked value="minimap"
+          >Minimap</lr-menu-item
+        >
+      </div>
+    `)) as HTMLElement;
+    const [unchecked, checked] = Array.from(
+      wrapper.querySelectorAll<LyraMenuItem>('lr-menu-item')
+    );
+    const uncheckedBase = base(unchecked!);
+    const checkedBase = base(checked!);
+
+    expect(getComputedStyle(checkedBase).backgroundColor).to.equal(
+      'rgb(1, 2, 3)'
+    );
+    expect(getComputedStyle(checkedBase).color).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(checkedBase).fontWeight).to.equal('700');
+    expect(getComputedStyle(uncheckedBase).backgroundColor).to.equal(
+      'rgba(0, 0, 0, 0)'
+    );
+    expect(getComputedStyle(uncheckedBase).backgroundColor).to.not.equal(
+      'rgb(1, 2, 3)'
+    );
+  });
+
+  it('reacts live when checked toggles at runtime', async () => {
+    const el = (await fixture(html`<lr-menu-item
+      type="checkbox"
+      value="wrap"
+      style="--lr-menu-item-checked-bg: rgb(9, 9, 9);"
+      >Wrap text</lr-menu-item
+    >`)) as LyraMenuItem;
+    const row = base(el);
+    expect(getComputedStyle(row).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+
+    el.checked = true;
+    await el.updateComplete;
+    expect(getComputedStyle(row).backgroundColor).to.equal('rgb(9, 9, 9)');
+
+    el.checked = false;
+    await el.updateComplete;
+    expect(getComputedStyle(row).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  // Regression: a naive `:host([checked]) [part='base']` selector reaches (0,3,0) specificity,
+  // out of reach of `[part='base']:hover`/`:active` at (0,2,0) -- the same trap
+  // lr-tree-item's selected-row rule documents -- which would let a checked row's resting
+  // background permanently defeat its own hover/press paint. The real fix uses :where() to land
+  // the checked rule at the hover/active rules' own specificity, ordered before them.
+  it('still shows the ordinary hover fill on a checked row', async function () {
+    this.timeout(15_000);
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="View">
+        <lr-menu-item type="checkbox" checked value="minimap"
+          >Minimap</lr-menu-item
+        >
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('lr-menu-item') as LyraMenuItem;
+    const row = base(item);
+    const resolveInShadow = (declaration: string, property: string): string => {
+      const probe = document.createElement('span');
+      probe.setAttribute('style', declaration);
+      item.shadowRoot!.append(probe);
+      const value = getComputedStyle(probe).getPropertyValue(property);
+      probe.remove();
+      return value;
+    };
+    const expectedHover = resolveInShadow(
+      'background: var(--lr-color-brand-quiet)',
+      'background-color'
+    );
+    const rect = row.getBoundingClientRect();
+    expect(rect.width, 'the checked row needs rendered geometry').to.be.greaterThan(0);
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(row).backgroundColor === expectedHover,
+        'checked row hover paint did not settle'
+      );
+      expect(getComputedStyle(row).backgroundColor).to.equal(expectedHover);
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
 it('renders WA details and Shoelace prefix/suffix compatibility slots through named parts', async () => {
   const el = (await fixture(html`
     <lr-menu-item>

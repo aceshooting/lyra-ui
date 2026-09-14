@@ -146,6 +146,10 @@ function formatCount(n: number, locale: string): string {
  * @csspart legend-label - The text of a legend item (the segment's `label`).
  * @cssprop [--lr-context-meter-segment-color] - Per-segment color. Set inline on `[part="segment"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge. The matching `[part="legend-swatch"]` reads the same property, so a swatch can never disagree with the band it stands for.
  * @cssprop [--lr-context-meter-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch.
+ * @cssprop [--lr-context-meter-track-size=var(--lr-size-0-5rem)] - Block size (thickness) of the `bar`-shape track, and therefore of its filled segments.
+ * @cssprop [--lr-context-meter-track-radius=calc(var(--lr-radius) * 0.5)] - Corner radius of the `bar`-shape track.
+ * @cssprop [--lr-context-meter-track-bg=color-mix(in srgb, var(--lr-color-border) 30%, transparent)] - Background of the unfilled remainder of the `bar`-shape track.
+ * @cssprop [--lr-context-meter-segment-seam-color=var(--lr-color-surface)] - Color of the hairline seam painted between adjacent `bar`-shape segments.
  * @status stable
  * @since 4.0.0
  */

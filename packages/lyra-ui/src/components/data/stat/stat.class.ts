@@ -95,6 +95,14 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @csspart row-value - The value text of a breakdown row. Shows the row's `exactValue` (if any) as
  *   a hover/focus tooltip, same as the headline `value`, and is accessibly labelled by its
  *   `row-label` (via `aria-labelledby`) the same way the headline `value` is.
+ * @cssprop [--lr-stat-padding=var(--lr-space-m)] - Padding of the card, read by both `[part="base"]`
+ *   and the linked-card content wrapper so a linked and unlinked stat never drift. The `compact`
+ *   and `frame="plain"` variants read the same property with their own current default as its
+ *   fallback (`var(--lr-space-s)` and `0` respectively), so one override reaches every rendering
+ *   path.
+ * @cssprop [--lr-stat-gap=var(--lr-space-xs)] - Gap between the card's stacked parts, read by both
+ *   `[part="base"]` and the linked-card content wrapper. The `compact` variant reads the same
+ *   property with its own current default (`var(--lr-size-0-125rem)`) as its fallback.
  * @cssprop [--lr-stat-trend-good-color=var(--lr-color-success)] - Text color of the trend pill
  *   when its polarity is "good". Independent of the headline value's `variant="success"` tint,
  *   which reads the shared `--lr-color-success` token directly.

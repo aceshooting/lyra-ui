@@ -983,6 +983,93 @@ it('lets plain win over compact when both are set (equal specificity, source ord
   expect(s.borderTopWidth).to.equal('0px');
 });
 
+describe('--lr-stat-padding / --lr-stat-gap cssprops', () => {
+  it('keeps the pre-existing card, compact, and plain padding/gap when unset', async () => {
+    const card = (await fixture(
+      html`<lr-stat label="Revenue" value="12.4"></lr-stat>`
+    )) as LyraStat;
+    const compact = (await fixture(
+      html`<lr-stat compact label="Revenue" value="12.4"></lr-stat>`
+    )) as LyraStat;
+    const plain = (await fixture(
+      html`<lr-stat frame="plain" label="Revenue" value="12.4"></lr-stat>`
+    )) as LyraStat;
+    const cardBase = getComputedStyle(
+      card.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+    );
+    const compactBase = getComputedStyle(
+      compact.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+    );
+    const plainBase = getComputedStyle(
+      plain.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+    );
+
+    expect(cardBase.paddingTop).to.equal('12px'); // --lr-space-m
+    expect(cardBase.rowGap).to.equal('4px'); // --lr-space-xs
+    expect(compactBase.paddingTop).to.equal('8px'); // --lr-space-s
+    expect(compactBase.rowGap).to.equal('2px'); // --lr-size-0-125rem
+    expect(plainBase.paddingTop).to.equal('0px');
+  });
+
+  it('reaches both the unlinked base and the linked-card content wrapper identically', async () => {
+    const unlinked = (await fixture(html`
+      <lr-stat
+        style="--lr-stat-padding: 20px; --lr-stat-gap: 6px;"
+        label="Revenue"
+        value="12.4"
+      ></lr-stat>
+    `)) as LyraStat;
+    const linked = (await fixture(html`
+      <lr-stat
+        style="--lr-stat-padding: 20px; --lr-stat-gap: 6px;"
+        label="Revenue"
+        value="12.4"
+        href="/revenue"
+      ></lr-stat>
+    `)) as LyraStat;
+    const unlinkedBase = getComputedStyle(
+      unlinked.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+    );
+    const linkedContent = getComputedStyle(
+      linked.shadowRoot!.querySelector('.linked-content') as HTMLElement
+    );
+
+    expect(unlinkedBase.paddingTop).to.equal('20px');
+    expect(unlinkedBase.rowGap).to.equal('6px');
+    expect(linkedContent.paddingTop).to.equal('20px');
+    expect(linkedContent.rowGap).to.equal('6px');
+  });
+
+  it('overrides compact and plain padding/gap through the same property', async () => {
+    const compact = (await fixture(html`
+      <lr-stat
+        compact
+        style="--lr-stat-padding: 20px; --lr-stat-gap: 6px;"
+        label="Revenue"
+        value="12.4"
+      ></lr-stat>
+    `)) as LyraStat;
+    const plain = (await fixture(html`
+      <lr-stat
+        frame="plain"
+        style="--lr-stat-padding: 20px;"
+        label="Revenue"
+        value="12.4"
+      ></lr-stat>
+    `)) as LyraStat;
+    const compactBase = getComputedStyle(
+      compact.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+    );
+    const plainBase = getComputedStyle(
+      plain.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+    );
+
+    expect(compactBase.paddingTop).to.equal('20px');
+    expect(compactBase.rowGap).to.equal('6px');
+    expect(plainBase.paddingTop).to.equal('20px');
+  });
+});
+
 it('gives a linked plain stat a rendered text-underline hover/focus affordance, since it has no border to shift', async () => {
   const el = (await fixture(html`
     <lr-stat frame="plain" label="Memories" value="128" href="/memories"></lr-stat>

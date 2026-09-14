@@ -97,7 +97,37 @@ describe('<lr-control-group>', () => {
     expect(getComputedStyle(group).containerType).to.equal('normal');
   });
 
-  it('opts back into container-query sizing (and its narrow-allocation breakpoint) via responsive', async () => {
+  it('fills a host given an explicit definite inline-size, even without responsive', async () => {
+    const el = await fixture<LyraControlGroup>(html`
+      <lr-control-group style="inline-size: 300px;">
+        <lr-button size="s">Open</lr-button>
+      </lr-control-group>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).inlineSize).to.equal('300px');
+  });
+
+  it('stays shrink-to-fit when the host has no explicit size, even inside a wide block ancestor', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="inline-size: 1000px;">
+        <lr-control-group>
+          <lr-button size="s">Open</lr-button>
+        </lr-control-group>
+      </div>
+    `);
+    const group = wrapper.querySelector('lr-control-group') as LyraControlGroup;
+    const base = group.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // :host stays `inline-flex` (inline-level) and gets no size from the wide block ancestor on
+    // its own, so the unconditional fill on [part='base'] has nothing definite to resolve
+    // against and resolves as if `auto` -- the group must still hug its own content, not the
+    // ancestor's 1000px allocation.
+    expect(group.getBoundingClientRect().width).to.be.lessThan(200);
+    expect(base.getBoundingClientRect().width).to.equal(
+      group.getBoundingClientRect().width
+    );
+  });
+
+  it('opts back into container-query sizing via responsive, with the base fill now unconditional regardless', async () => {
     const el = await fixture<LyraControlGroup>(html`
       <lr-control-group responsive style="inline-size: 120px;">
         <lr-button>Open</lr-button>

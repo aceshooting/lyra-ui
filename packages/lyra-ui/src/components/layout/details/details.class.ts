@@ -86,6 +86,20 @@ export interface LyraDetailsEventMap {
  *   knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text
  *   inside a fixed control height and would collapse the summary row. An inherited or direct
  *   public value remains authoritative.
+ * @cssprop [--lr-details-summary-padding-block=var(--lr-details-spacing)] - Summary block padding
+ *   (top/bottom), independently tunable from the panel content's own padding. Falls through to
+ *   `--lr-details-spacing` (and its private ladder default) when unset, so an un-set disclosure
+ *   renders unchanged, mirroring how `--lr-details-gap`/`--lr-details-radius` are already
+ *   independent of each other.
+ * @cssprop [--lr-details-summary-padding-inline=var(--lr-details-spacing)] - Summary inline padding
+ *   (start/end), independently tunable from the panel content's own padding. Same fallback chain as
+ *   `--lr-details-summary-padding-block`.
+ * @cssprop [--lr-details-content-padding-block-end=var(--lr-details-spacing)] - Panel content's
+ *   trailing block padding, independently tunable from the summary's own padding. Same fallback
+ *   chain as `--lr-details-summary-padding-block`.
+ * @cssprop [--lr-details-content-padding-inline=var(--lr-details-spacing)] - Panel content's inline
+ *   padding, independently tunable from the summary's own padding. Same fallback chain as
+ *   `--lr-details-summary-padding-block`.
  * @cssprop [--lr-details-gap=var(--lr-space-s)] - Gap between summary content and its icon.
  * @cssprop [--lr-details-radius=var(--lr-radius)] - Disclosure surface corner radius.
  * @cssprop [--lr-details-outlined-bg=var(--lr-color-surface)] - Outlined surface background.

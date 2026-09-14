@@ -566,3 +566,56 @@ it('floors a near-zero-ratio segment width so its tone stays visible past the se
   const tinyRect = tiny.getBoundingClientRect();
   expect(tinyRect.width).to.be.greaterThan(borderWidthPx);
 });
+
+describe('track and seam cssprops', () => {
+  const segments = () => [
+    { label: 'Used', value: 40, tone: 'brand' as const },
+    { label: 'Reserved', value: 20, tone: 'neutral' as const },
+  ];
+
+  it('preserves the pre-existing computed track size, radius and background by default', async () => {
+    const el = (await fixture(html`
+      <lr-context-meter total="100" .segments=${segments()}></lr-context-meter>
+    `)) as LyraContextMeter;
+    const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+    const computed = getComputedStyle(track);
+    expect(computed.blockSize).to.equal('8px');
+    expect(computed.borderRadius).to.equal('3px');
+    expect(computed.backgroundColor).to.not.equal('');
+  });
+
+  it('preserves the pre-existing seam color between adjacent segments by default', async () => {
+    const el = (await fixture(html`
+      <lr-context-meter
+        style="inline-size: 200px"
+        total="100"
+        .segments=${segments()}
+      ></lr-context-meter>
+    `)) as LyraContextMeter;
+    const seam = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="segment"]')[1]!;
+    const probe = document.createElement('span');
+    probe.setAttribute('style', 'border-inline-start: 1px solid var(--lr-color-surface)');
+    el.shadowRoot!.append(probe);
+    const expected = getComputedStyle(probe).borderInlineStartColor;
+    probe.remove();
+    expect(getComputedStyle(seam).borderInlineStartColor).to.equal(expected);
+  });
+
+  it('lets an ancestor retheme the track size, radius, background and segment seam color', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        style="--lr-context-meter-track-size: 16px; --lr-context-meter-track-radius: 2px; --lr-context-meter-track-bg: rgb(1, 2, 3); --lr-context-meter-segment-seam-color: rgb(4, 5, 6); inline-size: 200px;"
+      >
+        <lr-context-meter total="100" .segments=${segments()}></lr-context-meter>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-context-meter') as LyraContextMeter;
+    const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+    const seam = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="segment"]')[1]!;
+
+    expect(getComputedStyle(track).blockSize).to.equal('16px');
+    expect(getComputedStyle(track).borderRadius).to.equal('2px');
+    expect(getComputedStyle(track).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(seam).borderInlineStartColor).to.equal('rgb(4, 5, 6)');
+  });
+});
