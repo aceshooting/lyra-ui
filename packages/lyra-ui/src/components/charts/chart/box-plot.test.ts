@@ -1047,15 +1047,15 @@ it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the 
   expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
 });
 
-it('resolves an axis tick-label font size from --lr-chart-tick-font-size, defaulting to --lr-font-size-2xs', async () => {
+it('resolves an axis tick-label font size from --lr-chart-tick-font-size, defaulting to Chart.js\'s own 12px built-in size (not a design token) so an unset token renders byte-identically to before the token existed', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
   const defaulted = (el as any).buildConfig();
-  expect(defaulted.options.scales.x.ticks.font.size).to.equal(10);
-  expect(defaulted.options.scales.y.ticks.font.size).to.equal(10);
+  expect(defaulted.options.scales.x.ticks.font.size).to.equal(12);
+  expect(defaulted.options.scales.y.ticks.font.size).to.equal(12);
 
   el.style.setProperty('--lr-chart-tick-font-size', '20px');
   await el.updateComplete;

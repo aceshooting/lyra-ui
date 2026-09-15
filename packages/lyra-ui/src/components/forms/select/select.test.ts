@@ -531,9 +531,9 @@ it("emits exactly one native event pair and typed aliases with the new value", a
   const nativeChange = requiredItem(seen, 2, 'native change event');
   const changeAlias = requiredItem(seen, 3, 'change alias event');
   expect(nativeInput.detail).to.equal(0);
-  expect(inputAlias.detail).to.deep.equal({ value: "b" });
+  expect(inputAlias.detail).to.deep.equal({ value: "b", data: [undefined] });
   expect(nativeChange.detail).to.be.undefined;
-  expect(changeAlias.detail).to.deep.equal({ value: "b" });
+  expect(changeAlias.detail).to.deep.equal({ value: "b", data: [undefined] });
   expect(Object.isFrozen(inputAlias.detail)).to.equal(true);
   expect(Object.isFrozen(changeAlias.detail)).to.equal(true);
   expect(nativeInput.event instanceof InputEvent).to.be.true;
@@ -4054,7 +4054,7 @@ describe("multiple", () => {
     await el.updateComplete;
 
     expect(el.value).to.deep.equal(["b"]);
-    expect(detail).to.deep.equal([{ value: ["b"] }]);
+    expect(detail).to.deep.equal([{ value: ["b"], data: [undefined] }]);
   });
 
   it("renders one tag per selected option instead of a single label", async () => {
@@ -5313,6 +5313,95 @@ describe("lr-select mapped Select parity surface", () => {
     el.value = "a";
     el.formResetCallback();
     expect(el.value).to.equal("b");
+  });
+
+  it("exposes selectedData -- the selected option's own opaque data, by reference", async () => {
+    const payload = { record: "b" };
+    const el = (await fixture(html`
+      <lr-select>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect & { selectedData: readonly unknown[] };
+    const [, banana] = [...el.querySelectorAll("lr-option")] as LyraOption[];
+    banana!.data = payload;
+    el.value = "b";
+    await el.updateComplete;
+
+    expect(el.selectedData.length).to.equal(1);
+    expect(el.selectedData[0]).to.equal(payload);
+
+    el.value = "a";
+    await el.updateComplete;
+    expect(el.selectedData).to.deep.equal([undefined]);
+  });
+
+  it("surfaces the newly selected option's data by reference in lr-input/lr-change details", async () => {
+    const payload = { record: "b" };
+    const el = (await fixture(html`
+      <lr-select>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    const [, banana] = [...el.querySelectorAll("lr-option")] as LyraOption[];
+    banana!.data = payload;
+    el.open = true;
+    await el.updateComplete;
+
+    const seen: unknown[] = [];
+    for (const type of ["lr-input", "lr-change"]) {
+      el.addEventListener(type, (e) =>
+        seen.push((e as CustomEvent<{ data: unknown[] }>).detail.data)
+      );
+    }
+    requiredItem(rows(el), 1, "second option row").click();
+    await el.updateComplete;
+
+    expect(seen.length).to.equal(2);
+    for (const data of seen) {
+      expect((data as unknown[])[0]).to.equal(payload);
+    }
+  });
+
+  it("keeps selectedData and the lr-change data detail index-aligned with value when a stale committed value has no live option", async () => {
+    const payload = { record: "b" };
+    const el = (await fixture(html`
+      <lr-select multiple>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect & { selectedData: readonly unknown[] };
+    const [, banana] = [...el.querySelectorAll("lr-option")] as LyraOption[];
+    banana!.data = payload;
+    // A stale committed value that currently matches no live option -- see `isUnknownValue()`.
+    el.value = ["stale"];
+    await el.updateComplete;
+    expect(el.selectedData).to.deep.equal([undefined]);
+
+    el.open = true;
+    await el.updateComplete;
+    const seen: unknown[][] = [];
+    for (const type of ["lr-input", "lr-change"]) {
+      el.addEventListener(type, (e) =>
+        seen.push((e as CustomEvent<{ data: unknown[] }>).detail.data)
+      );
+    }
+    requiredItem(rows(el), 1, "second option row").click();
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(["stale", "b"]);
+    // `data` stays the same length as `value`: the stale value's own slot is `undefined`, never
+    // dropped, so `b`'s payload lands at index 1 -- not shifted into index 0.
+    expect(el.selectedData.length).to.equal(2);
+    expect(el.selectedData[0]).to.equal(undefined);
+    expect(el.selectedData[1]).to.equal(payload);
+    expect(seen.length).to.equal(2);
+    for (const data of seen) {
+      expect(data.length).to.equal(2);
+      expect(data[0]).to.equal(undefined);
+      expect(data[1]).to.equal(payload);
+    }
   });
 
   it("accepts a direct defaultValue property write in both single and multiple shapes", async () => {

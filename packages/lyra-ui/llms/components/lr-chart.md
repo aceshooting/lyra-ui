@@ -414,9 +414,16 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
 legend text, and tooltip background/text respectively; `--lr-chart-tick-font-size` (default
-`var(--lr-font-size-2xs)`, any CSS length unit) — the axis tick-label font size, same
-`getComputedStyle` resolution and same token name as `lr-lite-chart`'s SVG equivalent, so theming
-either retunes both; plus
+`var(--lr-font-size-xs)`, any CSS length unit) — the axis tick-label font size, same
+`getComputedStyle` resolution and same token *name* as `lr-lite-chart`'s SVG equivalent, though not
+the same default: `--lr-font-size-xs` is 12px at the standard root, matching Chart.js's own
+built-in tick font size that every canvas chart rendered before this token existed, while
+`lr-lite-chart`'s SVG axis labels default to the smaller `--lr-font-size-2xs` (10px), unchanged
+from before this token existed. Also sizes the radar/polarArea `r`-scale `pointLabels` (the spoke
+labels) once set, but NOT by default: Chart.js's `RadialLinearScale` gives `pointLabels` its own
+distinct built-in default (10px, not this token's 12px tick default), so leaving the token unset
+keeps that separate default rather than adopting the tick size; setting the token brings both the
+ticks and the point labels to the same size; plus
 `--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
 `--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
 `--lr-chart-data-table-toggle-hover-bg` / `--lr-chart-data-table-toggle-active-bg` (the

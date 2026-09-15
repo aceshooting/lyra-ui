@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -192,6 +192,10 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   scope it — retints this listbox together with every other floating surface in the library.
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-trigger-border-color` — Resting trigger/combobox border color, independent of
+  the open-state color below. Default: `var(--lr-color-border)`.
+- `--lr-voice-picker-trigger-fill` — Resting trigger/combobox background. Default:
+  `var(--lr-color-surface)`.
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.

@@ -12,6 +12,7 @@ import {
   normalizeMixinDeclarations,
 } from './normalize-mixin-declarations.mjs';
 import { stripCssComments } from './strip-css-comments.mjs';
+import { generateThemeBootstrapAsset } from './generate-theme-bootstrap.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const tsc = join(
@@ -67,6 +68,14 @@ console.log(
   `Published JavaScript compacted: ${compacted.beforeBytes.toLocaleString('en')} -> ` +
     `${compacted.afterBytes.toLocaleString('en')} bytes across ${compacted.files} modules.`,
 );
+
+// Must run after JavaScript compaction: the no-flash theme bootstrap's published bytes are
+// `dist/theme/theme.js`'s own `lyraThemeBootstrap` export as esbuild leaves it, and this asset
+// exists so a strict-CSP application can serve/hash it as an external file instead of inlining
+// (and hand-rolling a nonce/hash pipeline for) that same string. Copied verbatim -- see
+// generate-theme-bootstrap.mjs for why this can never be re-derived from source instead.
+const themeBootstrap = await generateThemeBootstrapAsset(packageDir);
+console.log(`Theme bootstrap asset published: ${themeBootstrap.length.toLocaleString('en')} bytes.`);
 
 // esbuild's minifier treats a template literal's body as opaque -- it must, since the tag can read
 // `raw` -- so the CSS comments in every `css` tagged template survive compaction and ship. They

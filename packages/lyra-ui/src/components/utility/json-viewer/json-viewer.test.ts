@@ -7,7 +7,7 @@ import {
   aTimeout,
 } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import { forceCoarsePointer } from "../../../../test/coarse-pointer-media.js";
+import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import "./json-viewer.js";
 import type { LyraJsonViewer } from "./json-viewer.js";

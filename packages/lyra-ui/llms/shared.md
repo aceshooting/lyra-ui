@@ -1278,6 +1278,28 @@ drift. A missing or malformed record receives the runtime's
 `{ mode: 'auto', accent: null, surface: null }` default; blocked `localStorage` leaves the document
 untouched rather than throwing before your app loads.
 
+**External-file delivery for a strict CSP.** `@aceshooting/lyra-ui/theme-bootstrap.js` is a
+third, non-module way to ship the same bootstrap: a static script asset published alongside the
+package, containing exactly `lyraThemeBootstrap`'s bytes (both are produced from the same build
+step, so they can never drift apart). Reference it with a plain `<script src>` in `<head>`,
+still before any stylesheet:
+
+```html
+<head>
+  <script src="/vendor/theme-bootstrap.js"></script>
+  <link rel="stylesheet" href="/theme.css" />
+</head>
+```
+
+This exists for a Content-Security-Policy that forbids `unsafe-inline` and cannot mint a
+per-response nonce — a static HTML entry, for example — where the documented inline-script
+nonce/hash guidance above does not apply. Serving it same-origin (copy it into your build output,
+or configure your bundler/static host to do so) needs no hash at all; hashing it for an even
+stricter policy uses the same CSP `script-src` hash mechanism browsers already apply to any
+external script resource. It only ever carries the default storage key (`'lyra-theme'`) — an
+application-owned key from `createLyraThemeBootstrap({ storageKey })` still has to be inlined,
+since a static file cannot take a call-time argument.
+
 **Migrating from 15.x.** `accent` used to be exactly an absolute CSS color or `null`; that shape
 still works unchanged (`setLyraTheme({ accent: '#7c3aed' })` keeps deriving only the brand ramp).
 What changed is `LyraTheme` gaining a `surface` field alongside it — a strict superset for every

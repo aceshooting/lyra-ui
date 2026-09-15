@@ -297,6 +297,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *   form-control height ladder, so the visible swatch follows neighbouring field density.
  * @cssprop [--lr-color-picker-gap=var(--lr-space-xs)] - Gap between field chrome and panel rows.
  * @cssprop [--lr-color-picker-radius=var(--lr-radius)] - Trigger, grid, and panel corner radius.
+ * @cssprop [--lr-color-picker-border-color=var(--lr-color-border)] - Resting trigger border color.
  * @cssprop [--lr-color-picker-hover-border-color=var(--lr-color-brand)] - Hover border color.
  * @cssprop [--lr-color-picker-selected-border=var(--lr-color-brand)] - Border of the selected
  * palette swatch.

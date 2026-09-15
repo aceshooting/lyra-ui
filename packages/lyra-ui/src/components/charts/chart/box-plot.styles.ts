@@ -23,7 +23,10 @@ export const styles = css`
        touching unrelated text, border and surface colors. */
     --_lr-chart-grid-color: var(--lr-color-border);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
-    --_lr-chart-tick-font-size: var(--lr-font-size-2xs);
+    /* Matches Chart.js's OWN built-in 12px tick font size (defaults.font.size), mirroring
+       chart.styles.ts -- box-plot never set a font size before --lr-chart-tick-font-size existed,
+       so leaving it unset must keep rendering at that 12px, not a design token. */
+    --_lr-chart-tick-font-size: var(--lr-font-size-xs);
     --_lr-chart-legend-color: var(--lr-color-text);
     --_lr-chart-tooltip-bg: var(--lr-color-surface);
     --_lr-chart-tooltip-text: var(--lr-color-text);

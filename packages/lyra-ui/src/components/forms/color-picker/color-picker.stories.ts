@@ -155,6 +155,17 @@ export const ScopedSelectedSwatchTheme: StoryObj = {
   `,
 };
 
+export const ThemedTriggerBorder: StoryObj = {
+  name: 'Themed resting trigger border',
+  render: () => html`
+    <lr-color-picker
+      label="Accent color"
+      value=${ACCENT}
+      style="--lr-color-picker-border-color: var(--lr-color-danger)"
+    ></lr-color-picker>
+  `,
+};
+
 /** `placement` picks the preferred side; the resolved side still flips to stay in the viewport. */
 export const Placement: StoryObj = {
   render: () => html`

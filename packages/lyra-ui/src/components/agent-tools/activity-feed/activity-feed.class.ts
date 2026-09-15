@@ -42,6 +42,11 @@ export interface ActivityEntry {
   timestamp?: Date | string;
   /** Token-mapped, the library's shared `variant` vocabulary. */
   variant?: LyraVariant;
+  /** Opaque caller payload (e.g. the source record this entry summarizes). Never read or
+   *  rendered by `<lr-activity-feed>` itself -- carried through the owned `entries` snapshot and
+   *  handed back to `renderText` by reference, never deep-cloned, so a consumer can look up
+   *  richer per-entry context without re-scanning its own source array by id on every render. */
+  data?: unknown;
 }
 
 /** Whether the feed is streaming a run live or replaying a finished one -- the library's shared
@@ -118,7 +123,10 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * Each entry's `text` renders as plain text by default; a host needing richer per-entry content
  * (rendered markdown, a trailing tool-call chip list, etc.) sets `renderText` to replace the
  * default text inside the stable `entry-text` styling wrapper, identically whether or not the feed
- * is currently virtualized.
+ * is currently virtualized. An entry's optional `data` is an opaque caller payload -- never read
+ * or rendered by this component -- carried through by reference (never deep-cloned) and handed
+ * back to `renderText`, so a host needing the original source record behind a rendered line does
+ * not have to re-derive it by re-scanning its own source array on every render.
  *
  * `compact` tightens the header and entry-row padding for dense transcript rows. `frame="plain"`
  * removes the outside card chrome when a containing message or panel already supplies it; the
@@ -207,6 +215,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
+  /** Entries may carry opaque caller `data`. Keep each admitted entry's identity only, rather
+   *  than deep-cloning unknown data -- the same policy `<lr-prompt-queue>`'s `items` uses for its
+   *  own opaque `metadata` field. */
+  protected static override readonly identityCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles];
 

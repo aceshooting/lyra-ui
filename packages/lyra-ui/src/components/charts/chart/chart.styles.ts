@@ -17,7 +17,12 @@ export const styles = css`
        can retheme the chart's grid/ticks/legend/tooltip alone. */
     --_lr-chart-grid-color: var(--lr-color-border);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
-    --_lr-chart-tick-font-size: var(--lr-font-size-2xs);
+    /* Matches Chart.js's OWN built-in 12px tick font size (defaults.font.size), not a design
+       token, so leaving --lr-chart-tick-font-size unset renders byte-identically to before that
+       token existed. --lr-font-size-xs is 0.75rem = 12px at the standard 16px root -- coincidence
+       of scale, not a semantic link; do not swap this for --lr-font-size-2xs, which is what
+       lr-lite-chart's already-2xs SVG axis-label default correctly uses instead. */
+    --_lr-chart-tick-font-size: var(--lr-font-size-xs);
     --_lr-chart-legend-color: var(--lr-color-text);
     --_lr-chart-tooltip-bg: var(--lr-color-surface);
     --_lr-chart-tooltip-text: var(--lr-color-text);

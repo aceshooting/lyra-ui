@@ -129,8 +129,19 @@ export const styles = css`
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
      accessibility answer to KEYBOARD focus and is untouched, while a halo a consumer deliberately
-     configured should read on a pointer focus too. Unset it resolves to none. */
+     configured should read on a pointer focus too. Unset it resolves to none. The border-color
+     alongside it is the sibling controls' focus-border hook (--lr-input-focus-border-color and
+     friends), but its own unset fallback deliberately chains back to this field's OWN resting
+     border -- var(--lr-textarea-border-color, var(--_lr-textarea-border-color)), the exact value
+     [part='textarea'] above already paints -- rather than to --lr-color-brand the way those
+     siblings do. Before this hook existed the border never repainted on focus at all, only the
+     outline and halo did; chaining to the resting value keeps that unset rendering pixel-identical
+     while still giving a consumer a named hook to change it. */
   [part="textarea"]:focus {
+    border-color: var(
+      --lr-textarea-focus-border-color,
+      var(--lr-textarea-border-color, var(--_lr-textarea-border-color))
+    );
     ${formControlFocusHalo}
   }
   /* The same 'this is interactive' cue the :focus-visible ring above gives keyboard users --

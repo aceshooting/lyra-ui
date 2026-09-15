@@ -123,8 +123,15 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * element's own root, or by direct element reference) and fails validity — a localized
  * `customError` — whenever the two values disagree, once every other constraint already reports
  * valid; see its own doc comment for the full contract. There is no dedicated password-purpose
- * preset: compose `type="password"`, `password-toggle`, `autocomplete="new-password"`, and `match`
- * directly for a set/change/reset confirmation pair.
+ * preset, by deliberate decision rather than an oversight: the one platform detail a preset would
+ * actually save — `autocomplete` — has no single correct value for "a password field" (`new-password`
+ * on a set/change/reset flow, `current-password` on a login one, never derivable from the other), so
+ * a `purpose`/`preset` property would still take a second parameter carrying that same distinction,
+ * trading the existing attributes for an invented vocabulary that a migrating `wa-`/`sl-`/native
+ * `<input type="password">` author would have to learn instead of carrying over unchanged. Compose
+ * `type="password"`, `password-toggle`, `autocomplete="new-password"`, and `match` directly for a
+ * set/change/reset confirmation pair; a login field needs only `type="password"` and
+ * `autocomplete="current-password"`.
  *
  * Pressing Enter submits the ancestor `<form>`, the implicit submission a native `<input>`
  * performs — the internal input is inside a shadow root and has no form owner of its own, so the

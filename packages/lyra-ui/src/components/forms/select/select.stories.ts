@@ -104,6 +104,31 @@ export const WritableSelectedOptions: Story = {
   `,
 };
 
+/**
+ * `<lr-option data>` is an opaque per-option payload, never rendered, reached by reference (never
+ * deep-cloned) through `selectedData` and the `lr-input`/`lr-change` event details.
+ */
+export const OptionDataPayload: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-width: 20rem;">
+      <lr-select
+        label="Warehouse"
+        @change=${(event: Event) => {
+          const select = event.currentTarget as LyraSelect & { selectedData: readonly unknown[] };
+          const root = (event.currentTarget as HTMLElement).parentElement!;
+          const output = root.querySelector('output')!;
+          const data = select.selectedData[0] as { region?: string } | undefined;
+          output.textContent = `retained region: ${data?.region ?? 'unknown'}`;
+        }}
+      >
+        <lr-option value="wh-1" .data=${{ region: 'north' }}>Warehouse 1</lr-option>
+        <lr-option value="wh-2" .data=${{ region: 'south' }}>Warehouse 2</lr-option>
+      </lr-select>
+      <output aria-live="polite">Select a warehouse to inspect its retained data payload.</output>
+    </div>
+  `,
+};
+
 /** `focus()` and `blur()` target the internal combobox trigger and surface host events. */
 export const ProgrammaticFocus: Story = {
   render: () => html`

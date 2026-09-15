@@ -447,6 +447,46 @@ export const RichAsyncRows: Story = {
 };
 
 /**
+ * `<lr-option data>` is the light-DOM counterpart of an async row's own `data` field: an opaque
+ * per-option payload, never rendered, reached by reference (never deep-cloned) through
+ * `selectedRows` and the `input`/`change`/`lr-change` event details.
+ */
+export const OptionDataPayload: Story = {
+  render: () => {
+    const reportSelection = (event: Event) => {
+      const combobox = event.currentTarget as LyraCombobox;
+      const output = combobox.parentElement?.querySelector("output");
+      const row = combobox.selectedRows[0];
+      const data = row?.data as { region?: string } | undefined;
+      if (output)
+        output.textContent = row
+          ? `${row.label} — retained region: ${data?.region ?? "unknown"}`
+          : "No selection";
+    };
+
+    return html`
+      <div>
+        <lr-combobox
+          label="Warehouse"
+          style="max-width: 28rem"
+          @change=${reportSelection}
+        >
+          <lr-option value="wh-1" .data=${{ region: "north" }}
+            >Warehouse 1</lr-option
+          >
+          <lr-option value="wh-2" .data=${{ region: "south" }}
+            >Warehouse 2</lr-option
+          >
+        </lr-combobox>
+        <output aria-live="polite"
+          >Select a warehouse to inspect its retained data payload.</output
+        >
+      </div>
+    `;
+  },
+};
+
+/**
  * `filter` overrides the default label/searchText matcher entirely, e.g. to
  * match only from the start of the label instead of anywhere within it.
  */

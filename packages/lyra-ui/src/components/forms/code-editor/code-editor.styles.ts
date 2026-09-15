@@ -80,9 +80,13 @@ export const styles = css`
       --lr-code-editor-min-block-size,
       var(--_lr-code-editor-min-block-size)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Resting fill and edge, each an inline var() fallback rather than a :host declaration, so an
+       ancestor or :root value still wins -- the hover/invalid borders below already had their
+       own hooks; the resting state it spends most of its life in did not. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-code-editor-border, var(--lr-color-border));
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
+    background: var(--lr-code-editor-fill, var(--lr-color-surface));
     /* Hover below only repaints border-color, so that is all this needs; without it this frame's
        edge snaps while lr-button/lr-icon-button ease. */
     transition: border-color var(--lr-transition-fast);

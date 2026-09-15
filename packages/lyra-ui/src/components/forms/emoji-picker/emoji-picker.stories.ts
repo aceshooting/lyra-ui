@@ -91,7 +91,7 @@ export const ThemedInteractionStates: Story = {
     },
   },
   render: () => html`<lr-emoji-picker
-    style="--lr-emoji-picker-hover-bg: var(--lr-color-success-quiet); --lr-emoji-picker-keyboard-active-bg: var(--lr-color-warning-quiet); --lr-emoji-picker-selected-bg: var(--lr-color-brand-quiet); --lr-emoji-picker-pressed-bg: var(--lr-color-danger-quiet);"
+    style="--lr-emoji-picker-hover-bg: var(--lr-color-success-quiet); --lr-emoji-picker-keyboard-active-bg: var(--lr-color-warning-quiet); --lr-emoji-picker-selected-bg: var(--lr-color-brand-quiet); --lr-emoji-picker-pressed-bg: var(--lr-color-danger-quiet); --lr-emoji-picker-search-border-color: var(--lr-color-warning); --lr-emoji-picker-search-fill: var(--lr-color-surface-raised);"
     .groups=${groups}
   ></lr-emoji-picker>`,
 };

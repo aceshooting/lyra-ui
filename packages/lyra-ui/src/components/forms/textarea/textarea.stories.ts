@@ -167,6 +167,22 @@ export const IndependentHoverTheme: Story = {
   `,
 };
 
+/**
+ * `--lr-textarea-focus-border-color` gives focus its own border color, independent of the hover
+ * hook above and the shared focus halo. Unset, focus renders with the field's resting border
+ * color, unchanged from before this hook existed.
+ */
+export const IndependentFocusTheme: Story = {
+  name: 'Independent focus-border theme',
+  render: () => html`
+    <lr-textarea
+      label="Focus-border hook"
+      rows="2"
+      style="max-inline-size: var(--lr-size-24rem); --lr-textarea-focus-border-color: var(--lr-color-success);"
+    ></lr-textarea>
+  `,
+};
+
 /** Shoelace's `filled`/`help-text` aliases use the same field and form-chrome engine. */
 export const ShoelaceAliases: Story = {
   render: () => html`

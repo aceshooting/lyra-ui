@@ -318,8 +318,10 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  *   property supplies only a private fallback, so this public token always wins when set.
  * @cssprop [--lr-chart-grid-color=var(--lr-color-border)] - Canvas grid-line color.
  * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Canvas tick and axis-title color.
- * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-2xs)] - Canvas axis tick-label font size.
- *   Same token name as `lr-chart`'s equivalent, so theming either retunes both.
+ * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-xs)] - Canvas axis tick-label font size.
+ *   Same token name and default as `lr-chart`'s equivalent, so theming either retunes both;
+ *   `--lr-font-size-xs` (12px at the standard root) matches Chart.js's OWN built-in tick font
+ *   size, which is what box-plot rendered before this token existed.
  * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - DOM legend label color.
  * @cssprop [--lr-chart-tooltip-bg=var(--lr-color-surface)] - Canvas tooltip background.
  * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Canvas tooltip text color.

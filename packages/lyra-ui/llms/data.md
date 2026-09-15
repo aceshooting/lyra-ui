@@ -2216,7 +2216,9 @@ in calendar mode)
 gradient/`legendStops` swatches, the trailing `valueLabel` caption, and any labeled `annotations`
 entries. Presentation-only, like `legendStops`: slotted content is never consulted by the color
 ramp, the bucket math, the tooltip, or the generated accessible name. Nothing is rendered, and the
-slot itself is absent from the shadow root, while `withoutLegend` is set.
+slot itself is absent from the shadow root, while `withoutLegend` is set. Available since 13.0.0;
+this doc previously said "Slots: none" for several releases after that, which was a documentation
+gap rather than a behavior change — the slot has worked, unannounced, the whole time.
 
 **CSS parts:** `base`, `canvas`, `grid` (the scrollport wrapping the canvas while `stickyLabels`
 freezes an axis — absent entirely otherwise), `row-labels`/`col-labels` (the frozen label bands,
@@ -2346,7 +2348,10 @@ is now literal.
   width, a circular sizing dependency the browser cannot resolve stably. Keep the host at its normal
   block-level, fully-sized width and position the canvas within it instead:
   `::part(canvas) { margin-inline: auto }` centers it, `::part(canvas) { margin-inline-start: auto }`
-  end-aligns it.
+  end-aligns it. Reach for `::part(canvas)`, not `::part(base)`: `[part="base"]` is a flex column, so
+  `::part(base) { align-items: center }` also centers the canvas, but shrink-wraps every other base
+  child along with it — the legend row included, which loses its full-width wrap layout and
+  collapses to the canvas's own (possibly capped) inline size.
 - the host is `role="group"` (not `role="img"`) with a dimensions+range summary `aria-label`
   (calendar mode: a day-count + range summary instead). In default canvas mode,
   `[part="canvas"]` is itself a named `role="application"`, focusable, keyboard-operable,
@@ -2363,6 +2368,11 @@ is now literal.
   `toLocaleString(effectiveLocale, ...)` (previously hardcoded `'en'`) and weekday labels are derived via
   `Intl.DateTimeFormat(effectiveLocale, { weekday: 'short' })` (previously a literal English `['', 'Mon',
 '', 'Wed', '', 'Fri', '']` array) — same sparse every-other-day spacing, just locale-correct text.
+- this component's legend can show more than a label (a value caption, `legendStops` swatches,
+  annotation entries, a custom slot) and can now be turned off outright with `withoutLegend`.
+  `lr-sequence-strip`'s `showLegend` key is swatch+label only, the same "legend needs more than a
+  label" shape `lr-context-meter`'s `legendDisplay` addresses for that component; unaddressed here,
+  since fixing it belongs with whichever component actually has the gap.
 
 ---
 

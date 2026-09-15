@@ -86,12 +86,16 @@ export const styles = css`
       --lr-model-select-trigger-padding,
       var(--_lr-model-select-trigger-padding)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Resting fill and edge, each an inline var() fallback rather than a :host declaration, so an
+       ancestor or :root value still wins -- the same shape as lr-select's own trigger, which had
+       the identical hardcoded pair before its own fix. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-model-select-trigger-border-color, var(--lr-color-border));
     border-radius: var(
       --lr-model-select-radius,
       var(--_lr-model-select-radius-default)
     );
-    background: var(--lr-color-surface);
+    background: var(--lr-model-select-trigger-fill, var(--lr-color-surface));
     color: inherit;
     font: inherit;
     font-size: var(

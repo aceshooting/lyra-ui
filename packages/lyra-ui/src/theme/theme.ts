@@ -774,5 +774,9 @@ export function createLyraThemeBootstrap(
 /**
  * The default-key no-flash bootstrap. Equivalent to `createLyraThemeBootstrap()` and retained for
  * consumers that store their theme under `localStorage['lyra-theme']`.
+ *
+ * Also published as the static, non-module script asset `@aceshooting/lyra-ui/theme-bootstrap.js`
+ * -- byte-identical to this string -- for a Content-Security-Policy that forbids `unsafe-inline`
+ * and cannot mint a per-response nonce.
  */
 export const lyraThemeBootstrap = createLyraThemeBootstrap();

@@ -180,6 +180,7 @@ export const ThemeableGeometryAndStates: Story = {
         max-inline-size: var(--lr-size-24rem);
         --lr-model-select-gap: var(--lr-space-s);
         --lr-model-select-radius: var(--lr-radius-pill);
+        --lr-model-select-trigger-border-color: var(--lr-color-warning);
         --lr-model-select-open-border-color: var(--lr-color-success);
         --lr-model-select-option-synthetic-border-style: dotted;
         --lr-model-select-option-synthetic-border-color: var(--lr-color-warning);

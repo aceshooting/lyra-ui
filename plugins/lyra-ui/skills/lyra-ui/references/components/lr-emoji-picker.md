@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 15 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -175,4 +175,7 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
 - `--lr-emoji-picker-control-gap` — Gap between field sections. Default: `var(--lr-space-xs)`.
 - `--lr-emoji-picker-radius` — Outer picker corner radius. Default: `var(--lr-radius)`.
 - `--lr-emoji-picker-item-radius` — Search and emoji corner radius. Default: `var(--lr-radius-xs)`.
+- `--lr-emoji-picker-search-border-color` — Resting search border color, independent of the hover
+  color below. Default: `var(--lr-color-border)`.
+- `--lr-emoji-picker-search-fill` — Resting search background. Default: `var(--lr-color-surface)`.
 - `--lr-emoji-picker-search-hover-border-color` — Search hover border. Default: `var(--lr-color-brand)`.

@@ -175,6 +175,7 @@ export const ThemeableStateHooks: Story = {
         max-inline-size: var(--lr-size-24rem);
         --lr-voice-picker-gap: var(--lr-space-s);
         --lr-voice-picker-radius: var(--lr-radius-pill);
+        --lr-voice-picker-trigger-border-color: var(--lr-color-warning);
         --lr-voice-picker-open-border-color: var(--lr-color-success);
         --lr-voice-picker-option-synthetic-border-style: dotted;
         --lr-voice-picker-option-synthetic-border-color: var(--lr-color-warning);

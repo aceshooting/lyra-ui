@@ -2558,7 +2558,7 @@ const DECISION_OVERRIDES = new Map([
           member: 'change',
           expected: 'CustomEvent<{ value: string | string[] }>',
           actual:
-            'CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >',
+            'CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
         },
         {
           code: 'event-constructor-mismatch',
@@ -2566,7 +2566,7 @@ const DECISION_OVERRIDES = new Map([
           member: 'input',
           expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
           actual:
-            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >',
+            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
         },
         {
           code: 'event-type-mismatch',
@@ -2574,7 +2574,7 @@ const DECISION_OVERRIDES = new Map([
           member: 'input',
           expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
           actual:
-            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >',
+            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
         },
       ],
     },

@@ -1679,9 +1679,16 @@ function chartDatasetAxis(dataset: unknown): 'y' | 'y2' {
  * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Axis tick-label color; also used
  *   for the `xLabel`/`yLabel`/`y2Label` axis-title text (there is no separate title-color token).
  *   Resolved via `getComputedStyle` on every draw.
- * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-2xs)] - Axis tick-label font size, in any
- *   CSS length unit. Resolved via `getComputedStyle` on every draw, same constraint as every other
- *   `--lr-chart-*` token here (Chart.js paints to canvas and cannot consume `var()`).
+ * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-xs)] - Axis tick-label font size, in any
+ *   CSS length unit. Defaults to `--lr-font-size-xs` (12px at the standard root) because that
+ *   matches Chart.js's OWN built-in tick font size, which is what every canvas chart rendered
+ *   before this token existed -- leaving it unset must stay byte-identical to that, not shrink to
+ *   `<lr-lite-chart>`'s SVG default. Also sizes the radar/polarArea `r`-scale `pointLabels` (the
+ *   spoke labels), but ONLY once set: those default separately to Chart.js's OWN distinct
+ *   `RadialLinearScale` `pointLabels` default (10px, not this token's 12px), and only adopt this
+ *   token's size once the consumer explicitly sets it, at which point ticks and point labels match.
+ *   Resolved via `getComputedStyle` on every draw, same constraint as every other `--lr-chart-*`
+ *   token here (Chart.js paints to canvas and cannot consume `var()`).
  * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - Legend label color. Resolved via
  *   `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-legend-side-max=var(--lr-size-15rem)] - Maximum inline size reserved for a
@@ -3410,6 +3417,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /**
+   * The radar/polarArea `r`-scale `pointLabels` font size ONLY when the consumer has explicitly
+   * set the PUBLIC `--lr-chart-tick-font-size` token -- `undefined` otherwise. Deliberately
+   * ignores the PRIVATE `--_lr-chart-tick-font-size` fallback that `chart.styles.ts` always sets
+   * (to size the adjacent tick labels at 12px): `RadialLinearScale`'s own built-in `pointLabels`
+   * default is 10px, not the global 12px tick default, so an unset public token must leave
+   * `pointLabels.font` unset entirely and let Chart.js apply that scale-specific default, exactly
+   * as it did before `--lr-chart-tick-font-size` existed. When the consumer DOES set the public
+   * token, this returns the same resolved size `theme.tickFontSize` uses for the ticks, so the
+   * two stay in sync as documented.
+   */
+  private explicitTickFontSize(): number | undefined {
+    const resolved = this.styleNumber('--lr-chart-tick-font-size', '--lr-chart-tick-font-size', NaN);
+    return Number.isNaN(resolved) ? undefined : resolved;
+  }
+
+  /**
    * Builds a small deterministic CanvasPattern for the category index, using the family-wide
    * encoding table in `chart-forced-colors.ts` so `<lr-box-plot>` and `<lr-lite-chart>` texture
    * their own series identically.
@@ -3735,6 +3758,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (effectiveType === 'pie' || effectiveType === 'doughnut') return {};
 
     if (effectiveType === 'radar' || effectiveType === 'polarArea') {
+      const explicitPointLabelFontSize = this.explicitTickFontSize();
       return {
         r: {
           beginAtZero: this.beginAtZero,
@@ -3757,7 +3781,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             display: this.gridAxisVisible('x'),
             lineWidth: chartStyle.gridBorderWidth,
           },
-          pointLabels: { color: theme.tick, font: { size: theme.tickFontSize } },
+          // Only carries a `font` key when the consumer explicitly set the public
+          // --lr-chart-tick-font-size token: leaving it out otherwise lets Chart.js's OWN
+          // RadialLinearScale pointLabels default (10px) apply, which is what this rendered
+          // before the token existed -- unlike the adjacent ticks.font.size above, whose 12px
+          // default already matches Chart.js's separate global tick default.
+          pointLabels: {
+            color: theme.tick,
+            ...(explicitPointLabelFontSize !== undefined
+              ? { font: { size: explicitPointLabelFontSize } }
+              : {}),
+          },
         },
       };
     }

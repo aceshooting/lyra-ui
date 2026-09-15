@@ -780,6 +780,52 @@ describe("component-scoped geometry cssprops", () => {
   });
 });
 
+describe("resting border and fill theme cssprops", () => {
+  it("leaves the resting trigger border and fill at the shared tokens when the hooks are unset", async () => {
+    const el = (await fixture(
+      html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`
+    )) as LyraModelSelect;
+    const sharedBorder = getComputedStyle(el)
+      .getPropertyValue("--lr-color-border")
+      .trim();
+    const sharedFill = getComputedStyle(el)
+      .getPropertyValue("--lr-color-surface")
+      .trim();
+    const probe = document.createElement("div");
+    probe.style.color = sharedBorder;
+    const fillProbe = document.createElement("div");
+    fillProbe.style.color = sharedFill;
+    el.shadowRoot!.appendChild(probe);
+    el.shadowRoot!.appendChild(fillProbe);
+    const resolvedBorder = getComputedStyle(probe).color;
+    const resolvedFill = getComputedStyle(fillProbe).color;
+    probe.remove();
+    fillProbe.remove();
+
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(
+      resolvedBorder
+    );
+    expect(getComputedStyle(trigger(el)).backgroundColor).to.equal(
+      resolvedFill
+    );
+  });
+
+  it("themes the resting trigger border and fill through component hooks", async () => {
+    const el = (await fixture(html`
+      <lr-model-select
+        .catalog=${CATALOG}
+        style="--lr-model-select-trigger-border-color: rgb(1, 2, 3); --lr-model-select-trigger-fill: rgb(4, 5, 6);"
+      ></lr-model-select>
+    `)) as LyraModelSelect;
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(
+      "rgb(1, 2, 3)"
+    );
+    expect(getComputedStyle(trigger(el)).backgroundColor).to.equal(
+      "rgb(4, 5, 6)"
+    );
+  });
+});
+
 describe("open and synthetic-row theme cssprops", () => {
   it("inherits independent open-border and synthetic-border longhands in the combined state", async () => {
     const wrapper = (await fixture(html`

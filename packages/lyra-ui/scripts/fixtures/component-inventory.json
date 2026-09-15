@@ -11683,7 +11683,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -12285,7 +12285,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -14254,7 +14254,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -19022,7 +19022,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -25941,6 +25941,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-code-editor-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-code-editor-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
             "name": "--lr-code-editor-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -27119,6 +27131,12 @@
             "name": "--grid-width",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-color-picker-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
           },
           {
             "name": "--lr-color-picker-checker-color",
@@ -28521,7 +28539,7 @@
           },
           {
             "name": "change",
-            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -28537,9 +28555,9 @@
           },
           {
             "name": "input",
-            "type": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >",
+            "type": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
             "cancelable": "never",
-            "constructor": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >",
+            "constructor": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
             "bubbles": true,
             "composed": true
           },
@@ -28565,7 +28583,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -43513,7 +43531,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -47744,6 +47762,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))"
+          },
+          {
+            "name": "--lr-emoji-picker-search-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-emoji-picker-search-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-emoji-picker-search-font-size",
@@ -61366,7 +61396,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -70634,7 +70664,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -78381,6 +78411,18 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-model-select-trigger-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-model-select-trigger-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
             "name": "--lr-model-select-trigger-height",
             "deprecated": null,
             "hasDefault": false
@@ -84171,6 +84213,15 @@
           }
         ],
         "properties": [
+          {
+            "name": "data",
+            "attribute": null,
+            "type": "unknown | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "defaultLabel",
             "attribute": null,
@@ -90610,7 +90661,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -91662,7 +91713,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -98236,7 +98287,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -107226,7 +107277,7 @@
             "name": "--lr-chart-tick-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-2xs)"
+            "default": "var(--lr-font-size-xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -108516,6 +108567,16 @@
             "default": false
           },
           {
+            "name": "selectedData",
+            "attribute": null,
+            "type": "readonly unknown[]",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
             "name": "selectedOptions",
             "attribute": null,
             "type": "LyraOption[]",
@@ -108720,7 +108781,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -108738,7 +108799,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -123210,6 +123271,12 @@
             "default": "transparent"
           },
           {
+            "name": "--lr-textarea-focus-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-textarea-border-color)"
+          },
+          {
             "name": "--lr-textarea-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -137260,6 +137327,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-radius)"
+          },
+          {
+            "name": "--lr-voice-picker-trigger-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-voice-picker-trigger-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-voice-picker-trigger-height",
@@ -196967,21 +197046,21 @@
           "section": "events",
           "member": "change",
           "expected": "CustomEvent<{ value: string | string[] }>",
-          "actual": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >"
+          "actual": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >"
         },
         {
           "code": "event-constructor-mismatch",
           "section": "events",
           "member": "input",
           "expected": "InputEvent | CustomEvent<{ value: string | string[] }>",
-          "actual": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >"
+          "actual": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >"
         },
         {
           "code": "event-type-mismatch",
           "section": "events",
           "member": "input",
           "expected": "InputEvent | CustomEvent<{ value: string | string[] }>",
-          "actual": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }> >"
+          "actual": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >"
         }
       ]
     },

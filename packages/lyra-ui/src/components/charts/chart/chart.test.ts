@@ -2541,7 +2541,7 @@ it('resolves grid/tick/legend/tooltip colors from custom --lr-chart-* values set
   expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
 });
 
-it('resolves an axis tick-label font size from --lr-chart-tick-font-size, defaulting to --lr-font-size-2xs', async () => {
+it('resolves an axis tick-label font size from --lr-chart-tick-font-size, defaulting to Chart.js\'s own 12px built-in size (not a design token) so an unset token renders byte-identically to before the token existed', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
@@ -2550,8 +2550,8 @@ it('resolves an axis tick-label font size from --lr-chart-tick-font-size, defaul
   await waitUntil(() => (el as any).chart != null);
 
   const defaulted = (el as any).buildConfig();
-  expect(defaulted.options.scales.x.ticks.font.size).to.equal(10);
-  expect(defaulted.options.scales.y.ticks.font.size).to.equal(10);
+  expect(defaulted.options.scales.x.ticks.font.size).to.equal(12);
+  expect(defaulted.options.scales.y.ticks.font.size).to.equal(12);
 
   el.style.setProperty('--lr-chart-tick-font-size', '20px');
   await el.updateComplete;
@@ -2560,7 +2560,7 @@ it('resolves an axis tick-label font size from --lr-chart-tick-font-size, defaul
   expect(overridden.options.scales.y.ticks.font.size).to.equal(20);
 });
 
-it('resolves the r-scale pointLabels (radar/polarArea spoke labels) font size from --lr-chart-tick-font-size too, matching the adjacent ticks font size', async () => {
+it('leaves the r-scale pointLabels (radar/polarArea spoke labels) font UNSET by default -- Chart.js\'s own RadialLinearScale default for pointLabels is 10px, distinct from its 12px global tick default, so this must not adopt the adjacent ticks font size until the consumer explicitly sets --lr-chart-tick-font-size, at which point both follow it together', async () => {
   for (const type of ['radar', 'polarArea'] as const) {
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     el.type = type;
@@ -2570,10 +2570,8 @@ it('resolves the r-scale pointLabels (radar/polarArea spoke labels) font size fr
     await waitUntil(() => (el as any).chart != null);
 
     const defaulted = (el as any).buildConfig();
-    expect(defaulted.options.scales.r.pointLabels.font.size).to.equal(10);
-    expect(defaulted.options.scales.r.pointLabels.font.size).to.equal(
-      defaulted.options.scales.r.ticks.font.size
-    );
+    expect(defaulted.options.scales.r.pointLabels.font).to.equal(undefined);
+    expect(defaulted.options.scales.r.ticks.font.size).to.equal(12);
 
     el.style.setProperty('--lr-chart-tick-font-size', '20px');
     await el.updateComplete;

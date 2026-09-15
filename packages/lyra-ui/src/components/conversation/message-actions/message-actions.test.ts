@@ -10,7 +10,7 @@ import "./message-actions.js";
 import "../branch-picker/branch-picker.js";
 import type { LyraMessageActions } from "./message-actions.js";
 import type { LyraToolbarAction } from "./toolbar-actions.js";
-import { forceCoarsePointer } from "../../../../test/coarse-pointer-media.js";
+import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
 class ClosedToolbarProvider extends HTMLElement {
   private readonly trigger: HTMLButtonElement;

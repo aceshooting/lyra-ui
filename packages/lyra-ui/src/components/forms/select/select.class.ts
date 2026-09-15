@@ -129,11 +129,23 @@ export interface LyraSelectEventMap<Multiple extends boolean = boolean> {
   'lr-clear': CustomEvent<null>;
   input: InputEvent;
   change: Event;
+  /** `detail.data` is index-aligned with `detail.value`: `data[i]` is the opaque `data` payload
+   *  behind `value[i]`, by reference and never deep-cloned, or `undefined` for a value resolving
+   *  to no live option -- see `isUnknownValue()`. */
   'lr-input': CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
+    LyraEventDetailSnapshot<{
+      readonly value: LyraPickerDetailValue<Multiple>;
+      readonly data: readonly unknown[];
+    }>
   >;
+  /** `detail.data` is index-aligned with `detail.value`: `data[i]` is the opaque `data` payload
+   *  behind `value[i]`, by reference and never deep-cloned, or `undefined` for a value resolving
+   *  to no live option -- see `isUnknownValue()`. */
   'lr-change': CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
+    LyraEventDetailSnapshot<{
+      readonly value: LyraPickerDetailValue<Multiple>;
+      readonly data: readonly unknown[];
+    }>
   >;
   'lr-activate': CustomEvent<{ value: string }>;
   blur: FocusEvent;
@@ -247,10 +259,12 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  *   `<select>`'s own event name. Read the new selection from `value`.
  * @event {InputEvent} input - Fired alongside `change` on every
  *   selection change (native `<select>` doesn't meaningfully distinguish the two either).
- * @event lr-input - Prefixed compatibility alias for `input`; `detail: { value }`.
- * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>>} lr-change - Prefixed compatibility alias
+ * @event lr-input - Prefixed compatibility alias for `input`; `detail: { value, data }`, where
+ *   `data` is the opaque `data` payload of each newly committed occurrence (see `selectedData`),
+ *   by reference, never deep-cloned.
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }>>} lr-change - Prefixed compatibility alias
  *   fired after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s
- *   `lr-change`. Not fired for a programmatic `value` assignment.
+ *   `lr-change`. Not fired for a programmatic `value` assignment. `detail.data` mirrors `lr-input`.
  * @event lr-activate - Fired on every activation of an available listbox row -- a click, or
  *   Enter/Space on the active row -- whether or not the selection actually moved.
  *   `detail: { value }` carries the activated option's own value, always a single string even in
@@ -434,6 +448,13 @@ export class LyraSelect<
     'lr-input',
     'lr-change',
   ]);
+  /** `data` carries opaque per-option caller payload -- preserve each item's identity through the
+   *  frozen event envelope instead of recursively cloning unknown data, the same policy
+   *  `<lr-prompt-queue>`'s `lr-queue-change` detail uses for its own `items`. */
+  protected static override readonly identityEventDetailCollectionItems = Object.freeze({
+    'lr-input': Object.freeze(['data']),
+    'lr-change': Object.freeze(['data']),
+  });
 
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraSelect>[] {
@@ -1124,6 +1145,20 @@ export class LyraSelect<
     );
   }
 
+  /** The opaque `data` payload of each committed value, index-aligned with `value` -- always an
+   * array the same length as `value`, in both single and `multiple` mode. A committed value with
+   * no currently live matching option -- see `isUnknownValue()` -- fills its own slot with
+   * `undefined` rather than shifting the entries after it, so `selectedData[i]` always describes
+   * `(this.multiple ? this.value[i] : this.value)`. Reached by reference, never deep-cloned: the
+   * light-DOM counterpart to an async combobox source row's own `data` field, surfaced through
+   * `selectedRows`.
+   * @default [] */
+  get selectedData(): readonly unknown[] {
+    return this.resolveOccurrenceSlots(this._selected, this._selectedOptions).map(
+      (option) => option?.data
+    );
+  }
+
   /**
    * The single write path for the committed selection. `preferred` carries the exact
    * `<lr-option>` occurrences a caller already resolved (a click routes to the row that was
@@ -1164,9 +1199,20 @@ export class LyraSelect<
     values: string[],
     preferred: Array<LyraOption | undefined> = []
   ): LyraOption[] {
+    return this.resolveOccurrenceSlots(values, preferred).filter(
+      (option): option is LyraOption => option !== undefined
+    );
+  }
+
+  /** Same resolution as `resolveOccurrences()`, but keeps one slot per `values` entry --
+   *  `undefined` where nothing resolves -- so a caller needing index alignment with `values`
+   *  (e.g. `selectedData`) never has to guess which value a dropped occurrence belonged to. */
+  private resolveOccurrenceSlots(
+    values: string[],
+    preferred: Array<LyraOption | undefined> = []
+  ): Array<LyraOption | undefined> {
     const claimed = new Set<LyraOption>();
-    const resolved: LyraOption[] = [];
-    values.forEach((value, index) => {
+    return values.map((value, index) => {
       const hint = preferred.length === values.length
         ? preferred[index]
         : preferred.find((option) => option?.value === value && !claimed.has(option));
@@ -1179,11 +1225,10 @@ export class LyraSelect<
           : this.options.find(
               (option) => option.value === value && !claimed.has(option)
             );
-      if (!match) return;
+      if (!match) return undefined;
       claimed.add(match);
-      resolved.push(match);
+      return match;
     });
-    return resolved;
   }
 
   /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
@@ -2048,17 +2093,18 @@ export class LyraSelect<
   /** Dispatches the native value-change pair and prefixed aliases. `input`/`change` stay deliberately unprefixed -- this
    *  control is a direct `<select>` counterpart, so its value-change events keep `<select>`'s own
    *  naming instead of the `lr-` prefix `<lr-slider>` uses for its analogous rename. See the class
-   *  doc's `change` entry for the full rule. The prefixed aliases carry `detail: { value }`. */
+   *  doc's `change` entry for the full rule. The prefixed aliases carry `detail: { value, data }`. */
   private emitValueEvents(): void {
     // Pinned to the un-narrowed class. Inside the class body `Multiple` is an unresolved type
     // parameter, which leaves the detail type an unresolved conditional that no concrete argument
     // list can be checked against -- the same reason `<lr-popover>`'s own lifecycle emits resolve
     // against its base event map. The constraint already guarantees the payload's shape.
     const self = this as unknown as LyraSelect<boolean>;
+    const data = this.selectedData;
     dispatchNativeInputEvent(this);
-    self.emit('lr-input', { value: self.value });
+    self.emit('lr-input', { value: self.value, data });
     dispatchNativeEvent(this, 'change');
-    self.emit('lr-change', { value: self.value });
+    self.emit('lr-change', { value: self.value, data });
   }
 
   /**

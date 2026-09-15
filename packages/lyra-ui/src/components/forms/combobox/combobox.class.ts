@@ -344,17 +344,29 @@ export interface LyraComboboxEventMap<Multiple extends boolean = boolean> {
   'lr-clear': CustomEvent<null>;
   'lr-create': CustomEvent<{ inputValue: string }>;
   'lr-filter': CustomEvent<ComboboxFilterDetail>;
+  /** `detail.data` is index-aligned with `detail.value`: `data[i]` is the opaque `data` payload
+   *  behind `value[i]` (light-DOM `<lr-option data>` or an async source row's own `data`), by
+   *  reference and never deep-cloned, or `undefined` for a value resolving to no live row/option. */
   'lr-change': CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
+    LyraEventDetailSnapshot<{
+      readonly value: LyraPickerDetailValue<Multiple>;
+      readonly data: readonly unknown[];
+    }>
   >;
   'lr-activate': CustomEvent<{ value: string }>;
   'lr-source-error': CustomEvent<{ error: unknown }>;
   'lr-retry': CustomEvent<null>;
   input: InputEvent | CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
+    LyraEventDetailSnapshot<{
+      readonly value: LyraPickerDetailValue<Multiple>;
+      readonly data: readonly unknown[];
+    }>
   >;
   change: CustomEvent<
-    LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>
+    LyraEventDetailSnapshot<{
+      readonly value: LyraPickerDetailValue<Multiple>;
+      readonly data: readonly unknown[];
+    }>
   >;
   blur: FocusEvent;
   focus: FocusEvent;
@@ -423,15 +435,18 @@ export type LyraComboboxSourceErrorEvent =
  *   expand icon — so consumer content never sits outboard of the dropdown chevron.
  * @slot clear-icon - Replaces the clear button's built-in icon.
  * @slot expand-icon - Replaces the dropdown indicator's built-in icon.
- * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>>} change - The selection changed through user
- * interaction. A bubbling, composed, non-cancelable event carrying `detail: { value }` (the new
- * committed selection: a string in single mode, a string[] in `multiple` mode).
- * @event {InputEvent | CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>>} input - The user typed in the
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }>>} change - The selection changed through user
+ * interaction. A bubbling, composed, non-cancelable event carrying `detail: { value, data }` (the
+ * new committed selection: a string in single mode, a string[] in `multiple` mode; `data` is
+ * index-aligned with `value` -- `data[i]` is the opaque `data` payload of the row/option behind
+ * `value[i]`, by reference and never deep-cloned, or `undefined` for a value that resolves to no
+ * live row/option -- see `isUnknownValue()`).
+ * @event {InputEvent | CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }>>} input - The user typed in the
  * filter or changed the selection. Text edits expose the original InputEvent (no `value` detail);
- * selection changes emit a bubbling, composed, non-cancelable event carrying `detail: { value }`.
- * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple> }>>} lr-change - Prefixed compatibility alias fired
+ * selection changes emit a bubbling, composed, non-cancelable event carrying `detail: { value, data }`.
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }>>} lr-change - Prefixed compatibility alias fired
  * after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s `lr-change`.
- * `detail: { value }`. Not fired for typing or a programmatic `value` assignment.
+ * `detail: { value, data }`. Not fired for typing or a programmatic `value` assignment.
  * @event lr-activate - Fired on every activation of an available listbox row -- a click, or
  *   Enter on the active row -- whether or not the selection actually moved. `detail: { value }`
  *   carries the activated option's own value, always a single string even in `multiple` mode.
@@ -649,6 +664,14 @@ export class LyraCombobox<
     'input',
     'change',
   ]);
+  /** `data` carries opaque per-row caller payload -- preserve each item's identity through the
+   *  frozen event envelope instead of recursively cloning unknown data, the same policy
+   *  `<lr-prompt-queue>`'s `lr-queue-change` detail uses for its own `items`. */
+  protected static override readonly identityEventDetailCollectionItems = Object.freeze({
+    'lr-change': Object.freeze(['data']),
+    input: Object.freeze(['data']),
+    change: Object.freeze(['data']),
+  });
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
@@ -1445,15 +1468,22 @@ export class LyraCombobox<
    * options or async rows is deferred until that source resolves. Read rows remain detached
    * snapshots. */
   get selectedRows(): ComboboxSourceRow[] {
-    return this._selected
-      .map(
-        (value) =>
-          this._selectedRowCache.get(value) ??
-          this.effectiveRows.find((row) => row.value === value) ??
-          this.asyncRows.find((row) => row.value === value)
-      )
+    return this.resolveSelectedRowSlots()
       .filter((row): row is ComboboxSourceRow => row != null)
       .map((row) => ({ ...row }));
+  }
+
+  /** Same lookup as `selectedRows`, but keeps one slot per `_selected` entry -- `undefined` where
+   *  nothing resolves -- so a caller needing index alignment with `value` (the `data` field of
+   *  `input`/`change`/`lr-change`'s detail) never has to guess which value a dropped row
+   *  belonged to. */
+  private resolveSelectedRowSlots(): Array<ComboboxSourceRow | undefined> {
+    return this._selected.map(
+      (value) =>
+        this._selectedRowCache.get(value) ??
+        this.effectiveRows.find((row) => row.value === value) ??
+        this.asyncRows.find((row) => row.value === value)
+    );
   }
 
   set selectedRows(next: readonly ComboboxSourceRow[]) {
@@ -2095,6 +2125,9 @@ export class LyraCombobox<
       dotColor: option.dotColor || undefined,
       group: option.group || undefined,
       disabled: option.disabled || option.inert || option.closest('[inert]') !== null,
+      // By reference, never cloned -- `option.data` is opaque caller payload, the light-DOM
+      // counterpart to an async source row's own `data` field.
+      data: option.data,
       ...(adornments.start === undefined ? {} : { start: adornments.start }),
       ...(adornments.end === undefined ? {} : { end: adornments.end }),
     };
@@ -2676,7 +2709,11 @@ export class LyraCombobox<
 
   /** Dispatches the platform-style value events used by non-text user
    * interactions: `input`, `change`, and the prefixed `lr-change` alias, each
-   * carrying `detail: { value }` (the new committed selection). Text editing
+   * carrying `detail: { value, data }` (the new committed selection, and its index-aligned opaque
+   * `data` payload -- `data[i]` describes `value[i]`, `undefined` where that value resolves to no
+   * live row/option, never shifted or dropped; see `selectedRows`, which drops that slot instead
+   * since its own contract is "structured rows for the current selection", not index alignment).
+   * Text editing
    * keeps and exposes the original InputEvent from the shadow input so its
    * data/inputType metadata is not lost. `this.emit()` (from `LyraElement`)
    * already dispatches a bubbling, composed, non-cancelable `CustomEvent`. */
@@ -2686,9 +2723,10 @@ export class LyraCombobox<
     // list can be checked against -- the same reason `<lr-popover>`'s own lifecycle emits resolve
     // against its base event map. The constraint already guarantees the payload's shape.
     const self = this as unknown as LyraCombobox<boolean>;
-    self.emit('input', { value: self.value });
-    self.emit('change', { value: self.value });
-    self.emit('lr-change', { value: self.value });
+    const data = this.resolveSelectedRowSlots().map((row) => row?.data);
+    self.emit('input', { value: self.value, data });
+    self.emit('change', { value: self.value, data });
+    self.emit('lr-change', { value: self.value, data });
   }
 
   /**

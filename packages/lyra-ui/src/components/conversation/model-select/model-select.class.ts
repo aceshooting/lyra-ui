@@ -150,6 +150,8 @@ export interface LyraModelSelectEventMap {
  * @cssprop [--lr-model-select-expand-size=var(--lr-size-1-75rem)] - Decorative expand-icon box size, scaled by `size`.
  * @cssprop [--lr-model-select-gap=var(--lr-space-xs)] - Trigger, combobox, and option child gap.
  * @cssprop [--lr-model-select-radius=var(--lr-radius)] - Trigger, combobox, listbox, and option corner radius.
+ * @cssprop [--lr-model-select-trigger-border-color=var(--lr-color-border)] - Resting trigger/combobox border color, independent of the open-state color below.
+ * @cssprop [--lr-model-select-trigger-fill=var(--lr-color-surface)] - Resting trigger/combobox background.
  * @cssprop [--lr-model-select-open-border-color=var(--lr-color-brand)] - Open trigger border color.
  * @cssprop [--lr-model-select-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered or keyboard-active option row.
  * @cssprop [--lr-model-select-option-selected-bg=transparent] - Background of the currently-selected option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`.

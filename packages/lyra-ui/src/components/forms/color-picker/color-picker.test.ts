@@ -534,6 +534,36 @@ it("lets a consumer hover rule override the trigger part without important", asy
   }
 });
 
+it("renders the resting trigger border unchanged when --lr-color-picker-border-color is unset", async () => {
+  const el = (await fixture(
+    html`<lr-color-picker label="A"></lr-color-picker>`
+  )) as LyraColorPicker;
+  const sharedBorder = getComputedStyle(el)
+    .getPropertyValue("--lr-color-border")
+    .trim();
+  const probe = document.createElement("div");
+  probe.style.color = sharedBorder;
+  el.shadowRoot!.appendChild(probe);
+  const resolvedBorder = getComputedStyle(probe).color;
+  probe.remove();
+
+  expect(
+    getComputedStyle(part(el, "trigger"), "::before").borderTopColor
+  ).to.equal(resolvedBorder);
+});
+
+it("themes the resting trigger border through --lr-color-picker-border-color", async () => {
+  const el = (await fixture(html`
+    <lr-color-picker
+      label="A"
+      style="--lr-color-picker-border-color: rgb(1, 2, 3);"
+    ></lr-color-picker>
+  `)) as LyraColorPicker;
+  expect(
+    getComputedStyle(part(el, "trigger"), "::before").borderTopColor
+  ).to.equal("rgb(1, 2, 3)");
+});
+
 // ---------------------------------------------------------------------------
 // format / uppercase / value round-tripping
 // ---------------------------------------------------------------------------

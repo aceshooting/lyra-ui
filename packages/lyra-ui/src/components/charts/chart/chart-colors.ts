@@ -77,9 +77,13 @@ export const FALLBACK_TICK_COLOR = '#6b7280';
 export const FALLBACK_LEGEND_COLOR = '#1a1a1a';
 export const FALLBACK_TOOLTIP_BG = '#fff';
 export const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
-/** Mirrors `--lr-font-size-2xs`'s `0.625rem` default at the standard 16px root -- reached only if
- *  `getComputedStyle` can't resolve `--lr-chart-tick-font-size`/`--_lr-chart-tick-font-size` at all. */
-export const FALLBACK_TICK_FONT_SIZE = 10;
+/** Mirrors Chart.js's OWN built-in tick font size (`defaults.font.size`, 12px, unrelated to any
+ *  `--lr-*` token) -- reached only if `getComputedStyle` can't resolve
+ *  `--lr-chart-tick-font-size`/`--_lr-chart-tick-font-size` at all. The canvas charts never set a
+ *  font size before `--lr-chart-tick-font-size` existed, so an unset token must keep resolving to
+ *  Chart.js's own default rather than a library token -- unlike `<lr-lite-chart>`'s SVG
+ *  `[part='axis-label']`, which already hardcoded `--lr-font-size-2xs` and keeps that default. */
+export const FALLBACK_TICK_FONT_SIZE = 12;
 
 /** Shared canvas theme-color contract every `chart.class.ts`/`box-plot.class.ts` scale, legend, and
  *  tooltip resolver reads from. */

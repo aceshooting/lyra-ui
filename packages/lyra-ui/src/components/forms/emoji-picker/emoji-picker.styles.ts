@@ -92,9 +92,13 @@ export const styles = css`
     min-block-size: var(--lr-emoji-picker-search-min-height, auto);
     padding-block: var(--lr-emoji-picker-search-padding-block, var(--lr-space-xs));
     padding-inline: var(--lr-emoji-picker-search-padding-inline, var(--lr-space-s));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Resting fill and edge, each an inline var() fallback rather than a :host declaration, so an
+       ancestor or :root value still wins -- the hover border below already had its own hook; the
+       resting state it spends most of its life in did not. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-emoji-picker-search-border-color, var(--lr-color-border));
     border-radius: var(--lr-emoji-picker-item-radius, var(--_lr-emoji-picker-item-radius-default));
-    background: var(--lr-color-surface);
+    background: var(--lr-emoji-picker-search-fill, var(--lr-color-surface));
     color: var(--lr-color-text);
     font: inherit;
     font-size: var(--lr-emoji-picker-search-font-size, inherit);

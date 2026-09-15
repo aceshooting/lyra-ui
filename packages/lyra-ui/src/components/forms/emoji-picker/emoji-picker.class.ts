@@ -263,6 +263,9 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @cssprop [--lr-emoji-picker-control-gap=var(--lr-space-xs)] - Gap between field sections.
  * @cssprop [--lr-emoji-picker-radius=var(--lr-radius)] - Outer picker corner radius.
  * @cssprop [--lr-emoji-picker-item-radius=var(--lr-radius-xs)] - Search and emoji corner radius.
+ * @cssprop [--lr-emoji-picker-search-border-color=var(--lr-color-border)] - Resting search border
+ * color, independent of the hover color below.
+ * @cssprop [--lr-emoji-picker-search-fill=var(--lr-color-surface)] - Resting search background.
  * @cssprop [--lr-emoji-picker-search-hover-border-color=var(--lr-color-brand)] - Search hover border.
  * @cssprop [--lr-emoji-picker-search-min-height=auto] - Minimum row height of the filter field,
  *   for matching it to a themed search field of a chosen density tier. Point it at

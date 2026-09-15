@@ -82,7 +82,7 @@ export const ScopedStateTheme: Story = {
       <lr-code-editor
         label="Required configuration"
         required
-        style="--lr-code-editor-hover-border: var(--lr-color-success); --lr-code-editor-invalid-border: var(--lr-color-warning)"
+        style="--lr-code-editor-border: var(--lr-color-brand); --lr-code-editor-hover-border: var(--lr-color-success); --lr-code-editor-invalid-border: var(--lr-color-warning)"
       ></lr-code-editor>
       <button type="submit">Validate</button>
     </form>

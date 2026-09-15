@@ -61,9 +61,13 @@ export const styles = css`
     block-size: var(--lr-voice-picker-trigger-height, auto);
     box-sizing: border-box;
     padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Resting fill and edge, each an inline var() fallback rather than a :host declaration, so an
+       ancestor or :root value still wins -- the same shape as lr-select's own trigger, which had
+       the identical hardcoded pair before its own fix. */
+    border: var(--lr-border-width-thin) solid
+      var(--lr-voice-picker-trigger-border-color, var(--lr-color-border));
     border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
-    background: var(--lr-color-surface);
+    background: var(--lr-voice-picker-trigger-fill, var(--lr-color-surface));
     color: inherit;
     font: inherit;
     font-size: var(--lr-form-control-font-size);

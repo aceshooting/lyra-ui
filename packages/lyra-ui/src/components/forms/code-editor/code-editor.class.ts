@@ -108,6 +108,9 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @cssprop [--lr-code-editor-font-size=var(--lr-font-size-m)] - Font size of the gutter's line numbers and the textarea, from the active `size` tier.
  * @cssprop [--lr-code-editor-line-height=1.5] - Line height shared by the gutter and the textarea, so line numbers stay aligned with their lines.
  * @cssprop [--lr-code-editor-tab-size=2] - The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly.
+ * @cssprop [--lr-code-editor-border=var(--lr-color-border)] - Resting editor-frame border color,
+ * independent of the hover and invalid colors below.
+ * @cssprop [--lr-code-editor-fill=var(--lr-color-surface)] - Resting editor-frame background.
  * @cssprop [--lr-code-editor-hover-border=var(--lr-color-brand)] - Editor-frame border while the
  * enabled surface is hovered.
  * @cssprop [--lr-code-editor-invalid-border=var(--lr-color-danger)] - Editor-frame border while

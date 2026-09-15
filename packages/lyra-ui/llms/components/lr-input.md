@@ -402,8 +402,14 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 attribute form is enough to turn each on. `autofocus` is likewise `false`-defaulting — none of
 these four needs the property form to be reset.
 
-**A new-password field.** There is no dedicated password-purpose preset; compose the existing
-primitives directly, the same way a plain native `<input type="password">` does:
+**A new-password field.** There is no dedicated password-purpose preset — a deliberate decision,
+not an omission: the only thing such a preset would actually save is `autocomplete`, and that value
+has no single correct default for "a password field" (`new-password` on a set/change/reset flow,
+`current-password` on a login one, and one is never derivable from the other), so a `purpose`
+property would still need a second parameter carrying that same distinction, in exchange for a
+non-standard vocabulary a migrating `wa-`/`sl-`/native `<input type="password">` author would have
+to learn instead of carrying over unchanged. Compose the existing primitives directly, the same way
+a plain native `<input type="password">` does:
 
 ```html
 <lr-input

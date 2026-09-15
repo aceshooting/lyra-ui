@@ -151,6 +151,38 @@ it("themes the textarea hover border through a component hook", async () => {
   }
 });
 
+it("gives the textarea field a focus border-colour hook", () => {
+  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
+  expect(css).to.match(/\[part='textarea'\]:focus\s*\{[^}]*border-color:/);
+});
+
+it("leaves the focused textarea border at its resting colour when the hook is unset", async () => {
+  const el = await fixture<LyraTextarea>(
+    html`<lr-textarea
+      aria-label="Notes"
+      style="--lr-transition-fast: 0s"
+    ></lr-textarea>`
+  );
+  const textarea =
+    el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  const restingColor = getComputedStyle(textarea).borderTopColor;
+  textarea.focus();
+  expect(getComputedStyle(textarea).borderTopColor).to.equal(restingColor);
+});
+
+it("themes the textarea focus border through a component hook", async () => {
+  const el = await fixture<LyraTextarea>(html`
+    <lr-textarea
+      aria-label="Notes"
+      style="--lr-transition-fast: 0s; --lr-textarea-focus-border-color: rgb(1, 2, 3)"
+    ></lr-textarea>
+  `);
+  const textarea =
+    el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  textarea.focus();
+  expect(getComputedStyle(textarea).borderTopColor).to.equal("rgb(1, 2, 3)");
+});
+
 it("suppresses host click/focus in the same task that fieldset disablement starts", async () => {
   const form = (await fixture(html`
     <form>

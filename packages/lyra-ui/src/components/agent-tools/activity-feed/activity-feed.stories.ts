@@ -122,6 +122,42 @@ export const RichEntryTextWithConsumerPartStyling: Story = {
   `,
 };
 
+const dataEntries: ActivityEntry[] = [
+  {
+    id: 'd1',
+    text: 'Read the changed file',
+    data: { path: 'src/index.ts', additions: 12, deletions: 3 },
+  },
+];
+
+const renderEntryTextWithSourceData = (entry: ActivityEntry) => {
+  const source = entry.data as { path?: string; additions?: number; deletions?: number } | undefined;
+  return html`
+    <strong>${entry.text}</strong>
+    ${source ? html`<span> · ${source.path} (+${source.additions}/-${source.deletions})</span>` : ''}
+  `;
+};
+
+/**
+ * An entry's opaque `data` is never read or rendered by the feed itself -- it is retained by
+ * reference and handed back to `renderText`, so richer per-entry context (here, the diff stat
+ * behind the summarized line) does not have to be re-derived by re-scanning a source array by id.
+ */
+export const EntryDataInRenderText: Story = {
+  name: 'Entry data surfaced in renderText',
+  render: () => html`
+    <div style="max-width: 32rem;">
+      <lr-activity-feed
+        mode="live"
+        expanded
+        virtualize-at="0"
+        .entries=${dataEntries}
+        .renderText=${renderEntryTextWithSourceData}
+      ></lr-activity-feed>
+    </div>
+  `,
+};
+
 export const LiveStreamingDemo: Story = {
   name: 'Live demo (entries streaming in, then completes)',
   render: () => {

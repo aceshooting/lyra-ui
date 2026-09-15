@@ -2408,6 +2408,8 @@ export type LyraCodeEditorSvelteProps = LyraSvelteElementProps<
   | 'lr-change'
   | 'lr-input'
   | 'lr-invalid',
+  | '--lr-code-editor-border'
+  | '--lr-code-editor-fill'
   | '--lr-code-editor-font-size'
   | '--lr-code-editor-hover-border'
   | '--lr-code-editor-invalid-border'
@@ -2477,6 +2479,7 @@ export type LyraColorPickerSvelteProps = LyraSvelteElementProps<
   | '--grid-handle-size'
   | '--grid-height'
   | '--grid-width'
+  | '--lr-color-picker-border-color'
   | '--lr-color-picker-checker-color'
   | '--lr-color-picker-checker-size'
   | '--lr-color-picker-gap'
@@ -4173,6 +4176,8 @@ export type LyraEmojiPickerSvelteProps = LyraSvelteElementProps<
   | '--lr-emoji-picker-pressed-outline-color'
   | '--lr-emoji-picker-radius'
   | '--lr-emoji-picker-row-height'
+  | '--lr-emoji-picker-search-border-color'
+  | '--lr-emoji-picker-search-fill'
   | '--lr-emoji-picker-search-font-size'
   | '--lr-emoji-picker-search-hover-border-color'
   | '--lr-emoji-picker-search-min-height'
@@ -6742,6 +6747,8 @@ export type LyraModelSelectSvelteProps = LyraSvelteElementProps<
   | '--lr-model-select-option-synthetic-border-color'
   | '--lr-model-select-option-synthetic-border-style'
   | '--lr-model-select-radius'
+  | '--lr-model-select-trigger-border-color'
+  | '--lr-model-select-trigger-fill'
   | '--lr-model-select-trigger-height'
   | '--lr-model-select-trigger-min-height'
   | '--lr-model-select-trigger-padding'
@@ -7165,6 +7172,7 @@ export type LyraNumberInputSvelteProps = LyraSvelteElementProps<
 
 export type LyraOptionSvelteProps = LyraSvelteElementProps<
   LyraOption,
+  | 'data'
   | 'defaultSelected'
   | 'disabled'
   | 'dotColor'
@@ -10348,6 +10356,7 @@ export type LyraTextareaSvelteProps = LyraSvelteElementProps<
   | '--lr-form-control-required-offset'
   | '--lr-textarea-border-color'
   | '--lr-textarea-fill'
+  | '--lr-textarea-focus-border-color'
   | '--lr-textarea-font-size'
   | '--lr-textarea-hover-border-color'
   | '--lr-textarea-max-block-size'
@@ -11464,6 +11473,8 @@ export type LyraVoicePickerSvelteProps = LyraSvelteElementProps<
   | '--lr-voice-picker-preview-hover-bg'
   | '--lr-voice-picker-preview-hover-color'
   | '--lr-voice-picker-radius'
+  | '--lr-voice-picker-trigger-border-color'
+  | '--lr-voice-picker-trigger-fill'
   | '--lr-voice-picker-trigger-height'
   | '--lr-voice-picker-trigger-min-height',
   {

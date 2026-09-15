@@ -32,6 +32,36 @@ it('lets a consumer retint hover and invalid editor borders independently', asyn
   );
 });
 
+it('leaves the resting editor border and fill at the shared tokens when the hooks are unset', async () => {
+  const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  const sharedBorder = getComputedStyle(el).getPropertyValue('--lr-color-border').trim();
+  const sharedFill = getComputedStyle(el).getPropertyValue('--lr-color-surface').trim();
+  const borderProbe = document.createElement('div');
+  borderProbe.style.color = sharedBorder;
+  const fillProbe = document.createElement('div');
+  fillProbe.style.color = sharedFill;
+  el.shadowRoot!.append(borderProbe, fillProbe);
+  const resolvedBorder = getComputedStyle(borderProbe).color;
+  const resolvedFill = getComputedStyle(fillProbe).color;
+  borderProbe.remove();
+  fillProbe.remove();
+
+  expect(getComputedStyle(editor).borderTopColor).to.equal(resolvedBorder);
+  expect(getComputedStyle(editor).backgroundColor).to.equal(resolvedFill);
+});
+
+it('lets a consumer retint the resting editor border and fill through component hooks', async () => {
+  const el = (await fixture(html`
+    <lr-code-editor
+      style="--lr-code-editor-border: rgb(1, 2, 3); --lr-code-editor-fill: rgb(4, 5, 6)"
+    ></lr-code-editor>
+  `)) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  expect(getComputedStyle(editor).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(editor).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
 it('falls back from an invalid runtime resize value without injecting declarations', async () => {
   const el = await fixture<LyraCodeEditor>(
     html`<lr-code-editor></lr-code-editor>`,

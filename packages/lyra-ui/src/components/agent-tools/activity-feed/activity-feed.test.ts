@@ -678,6 +678,46 @@ describe('renderText', () => {
   }
 });
 
+describe('entry data', () => {
+  it('is undefined when unset', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed expanded .entries=${[{ id: '1', text: 'x' }]}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    expect(el.entries[0]!.data).to.equal(undefined);
+  });
+
+  it('is retained by reference on the entries snapshot, not deep-cloned', async () => {
+    const payload = { source: 'record' };
+    const el = (await fixture(html`<lr-activity-feed expanded></lr-activity-feed>`)) as LyraActivityFeed;
+    el.entries = [{ id: '1', text: 'x', data: payload }];
+    await el.updateComplete;
+    expect(el.entries[0]!.data).to.equal(payload);
+  });
+
+  it('is passed back to renderText by reference', async () => {
+    const payload = { source: 'record' };
+    const seen: unknown[] = [];
+    const el = (await fixture(html`<lr-activity-feed expanded></lr-activity-feed>`)) as LyraActivityFeed;
+    el.renderText = (entry) => {
+      seen.push(entry.data);
+      return html`${entry.text}`;
+    };
+    el.entries = [{ id: '1', text: 'x', data: payload }];
+    await el.updateComplete;
+    expect(seen[seen.length - 1]).to.equal(payload);
+  });
+
+  it('survives a re-render triggered by appending an unrelated entry', async () => {
+    const payload = { source: 'record' };
+    const el = (await fixture(html`<lr-activity-feed expanded></lr-activity-feed>`)) as LyraActivityFeed;
+    el.entries = [{ id: '1', text: 'x', data: payload }];
+    await el.updateComplete;
+    el.entries = [...el.entries, { id: '2', text: 'y' }];
+    await el.updateComplete;
+    expect(el.entries[0]!.data).to.equal(payload);
+  });
+});
+
 describe('follow contract (non-virtualized)', () => {
   async function forceSmallBody(el: LyraActivityFeed): Promise<HTMLElement> {
     el.style.setProperty('--lr-activity-feed-max-height', '48px');

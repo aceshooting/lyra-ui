@@ -165,6 +165,12 @@ unknown`, exported under that name from the component's own module, renders one
   Assigning live child options commits their exact occurrences through the same event-silent path
   as `value`; foreign/detached options are ignored, and single mode keeps only the first. Mutating
   an array returned by the getter never mutates the control
+- `selectedData: readonly unknown[]` (read-only) — the opaque `data` payload of each committed
+  value, index-aligned with `value`: `selectedData[i]` describes `value[i]` (or `value` itself in
+  single mode), and stays that value's own slot — `undefined`, never shifted or dropped — when
+  that value currently matches no live option (see "Unknown committed values" below). Always an
+  array the same length as `value`, in both single and `multiple` mode. Reached by reference,
+  never deep-cloned
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 
 **Unknown committed values.** A committed value matching no current `<lr-option>` (a stale value
@@ -191,8 +197,10 @@ state.
 **Events:** each real selection change emits, in order, a native `InputEvent` named `input`,
 `lr-input`, a native `Event` named `change`, then `lr-change`. The native events carry no detail;
 read `event.target.value`. Both
-prefixed aliases carry `detail: { value: string | string[] }` — the new committed selection, a string
-in single mode and a `string[]` in `multiple` mode. The complete sequence is silent for a
+prefixed aliases carry `detail: { value: string | string[]; data: readonly unknown[] }` — `value`
+is the new committed selection, a string in single mode and a `string[]` in `multiple` mode; `data`
+is index-aligned with `value` exactly like `selectedData` above (the same reference, `undefined`
+for a value matching no live option), reached by reference and never deep-cloned. The complete sequence is silent for a
 programmatic `value` write, `form.reset()`, or session-state restoration. Plus
 `lr-clear` (no detail; emitted by the `with-clear` button _after_ its
 `input`/`lr-input`/`change`/`lr-change` run, and never when there was nothing to clear, so it never

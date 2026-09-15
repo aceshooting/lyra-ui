@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 43 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 43 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -262,6 +262,7 @@ surface together with every other floating surface in the library. `--lr-overlay
   activates the editable value field instead. It is a no-op while effectively disabled.
 - `--lr-color-picker-gap` — Gap between field chrome and panel rows. Default: `var(--lr-space-xs)`.
 - `--lr-color-picker-radius` — Trigger, grid, field and panel corner radius. Default: `var(--lr-radius)`.
+- `--lr-color-picker-border-color` — Resting trigger border color. Default: `var(--lr-color-border)`.
 - `--lr-color-picker-hover-border-color` — Hover border color, shared by the trigger, handles, text
   field, format/eyedropper buttons and palette swatches. Default: `var(--lr-color-brand)`.
 - `--lr-color-picker-selected-border` — Selected palette-swatch border. Default:

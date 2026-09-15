@@ -610,6 +610,24 @@ it('reflects sub and dot-color attributes onto their properties', async () => {
   expect(el.dotColor).to.equal('green');
 });
 
+it('leaves data undefined by default', async () => {
+  const el = (await fixture(html`<lr-option value="a">A</lr-option>`)) as LyraOption;
+  expect(el.data).to.equal(undefined);
+});
+
+it('retains an assigned data payload by reference and notifies an owning picker', async () => {
+  const el = (await fixture(html`<lr-option value="a">A</lr-option>`)) as LyraOption;
+  const payload = { record: 'a' };
+  let changes = 0;
+  el.addEventListener('lr-option-change', () => changes++);
+
+  el.data = payload;
+  await el.updateComplete;
+
+  expect(el.data).to.equal(payload);
+  expect(changes).to.equal(1);
+});
+
 describe('pressed feedback under a real pointer press', () => {
   const centerOf = (node: Element): [number, number] => {
     const rect = node.getBoundingClientRect();

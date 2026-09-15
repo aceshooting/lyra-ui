@@ -69,6 +69,12 @@ export interface LyraOptionEventMap {
  * In a constrained option row the default label ellipsizes, while each `start`/`end` adornment is
  * capped at 40% of the row so unbroken consumer content cannot widen the owning listbox.
  *
+ * `data` carries an opaque application payload (e.g. the backend record this option represents),
+ * mirroring an async combobox source row's own `data` field. It is never read or rendered by this
+ * component; it is retained by reference (never deep-cloned) through the owning `lr-combobox`'s
+ * `selectedRows` and the owning `lr-select`'s `selectedData`, and in both controls' `lr-input`/
+ * `lr-change`/`input`/`change` event details.
+ *
  * @customElement lr-option
  * @slot - The option's visible label.
  * @slot start - WA-compatible leading adornment.
@@ -195,6 +201,12 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
 
   /** Optional color for a small leading status dot (any valid CSS color). */
   @property({ attribute: 'dot-color' }) dotColor = '';
+
+  /** Opaque application payload, e.g. the backend record this option represents. Never read or
+   *  rendered by `<lr-option>` itself. The light-DOM counterpart to an async `source` row's own
+   *  `data` field: retained by reference (never deep-cloned) through the owning `lr-combobox`'s
+   *  `selectedRows` and the owning `lr-select`'s `selectedData`. */
+  @property({ attribute: false }) data?: unknown;
 
   /**
    * The option's effective plain-text label. An explicit non-empty property/attribute wins;
@@ -488,7 +500,8 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       changed.has('sub') ||
       changed.has('dotColor') ||
       changed.has('label') ||
-      changed.has('defaultSelected')
+      changed.has('defaultSelected') ||
+      changed.has('data')
     ) {
       this.emit('lr-option-change');
     }

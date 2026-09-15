@@ -20,6 +20,7 @@ import type {
   ComboboxSourceRow,
   LyraCombobox,
 } from "./combobox.js";
+import type { LyraOption } from "./option.js";
 import type { LyraColorPicker } from "../color-picker/color-picker.js";
 import { styles } from "./combobox.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
@@ -269,7 +270,7 @@ it("emits lr-change with the new value alongside native-style change/input", asy
     "lr-change",
   ]);
   for (const s of seen) {
-    expect(s.detail).to.deep.equal({ value: 'b' });
+    expect(s.detail).to.deep.equal({ value: 'b', data: [undefined] });
     expect(Object.isFrozen(s.detail)).to.equal(true);
   }
 });
@@ -653,6 +654,76 @@ it("resolves selectedRows from local rows and uncached async rows", async () => 
   state._selectedRowCache.clear();
   state.asyncRows = [{ value: "remote", label: "Remote" }];
   expect(el.selectedRows[0]?.label).to.equal("Remote");
+});
+
+it('carries a light-DOM option\'s opaque data payload by reference through selectedRows', async () => {
+  const payload = { record: 'b' };
+  const el = (await fixture(basic())) as LyraCombobox;
+  const option = el.querySelectorAll('lr-option')[1] as LyraOption;
+  option.data = payload;
+  el.value = 'b';
+  await el.updateComplete;
+
+  expect(el.selectedRows[0]?.data).to.equal(payload);
+});
+
+it('leaves selectedRows[].data undefined for an option with no data set', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.value = 'a';
+  await el.updateComplete;
+
+  expect(el.selectedRows[0]?.data).to.equal(undefined);
+});
+
+it('surfaces each newly committed row\'s data by reference in the change/input event details', async () => {
+  const payload = { record: 'b' };
+  const el = (await fixture(basic())) as LyraCombobox;
+  const option = el.querySelectorAll('lr-option')[1] as LyraOption;
+  option.data = payload;
+  el.open = true;
+  await el.updateComplete;
+
+  const seen: unknown[] = [];
+  for (const type of ['input', 'change', 'lr-change']) {
+    el.addEventListener(type, (e) => seen.push((e as CustomEvent<{ data: unknown[] }>).detail.data));
+  }
+  (el.shadowRoot!.querySelectorAll('[part="option"]')[1] as HTMLElement).click();
+  await el.updateComplete;
+
+  expect(seen.length).to.equal(3);
+  for (const data of seen) {
+    expect((data as unknown[])[0]).to.equal(payload);
+  }
+});
+
+it('keeps selectedRows-derived event data index-aligned with value when a stale committed value has no live option/row', async () => {
+  const payload = { record: 'b' };
+  const el = (await fixture(basic())) as LyraCombobox;
+  const option = el.querySelectorAll('lr-option')[1] as LyraOption;
+  option.data = payload;
+  el.multiple = true;
+  // A stale committed value that currently matches no live option -- see `isUnknownValue()`.
+  el.value = ['stale'];
+  await el.updateComplete;
+  el.open = true;
+  await el.updateComplete;
+
+  const seen: unknown[][] = [];
+  for (const type of ['input', 'change', 'lr-change']) {
+    el.addEventListener(type, (e) => seen.push((e as CustomEvent<{ data: unknown[] }>).detail.data));
+  }
+  (el.shadowRoot!.querySelectorAll('[part="option"]')[1] as HTMLElement).click();
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(['stale', 'b']);
+  // `data` stays the same length as `value`: the stale value's own slot is `undefined`, never
+  // dropped, so `b`'s payload lands at index 1 -- not shifted into index 0.
+  expect(seen.length).to.equal(3);
+  for (const data of seen) {
+    expect(data.length).to.equal(2);
+    expect(data[0]).to.equal(undefined);
+    expect(data[1]).to.equal(payload);
+  }
 });
 
 it('maps writable selectedRows onto current local values without user-change events', async () => {

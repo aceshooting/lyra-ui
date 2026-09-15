@@ -1352,7 +1352,10 @@ step outside the scale entirely. `--lr-model-select-gap` (default `var(--lr-spac
 child gap in the trigger, combobox, and option rows; `--lr-model-select-radius` (default
 `var(--lr-radius)`) controls the corner radius of the trigger, combobox, listbox, and option rows.
 Both remain inheritable fallback arms, so set them on an ancestor to retheme a group without
-changing unrelated controls. `--lr-model-select-open-border-color` (default `var(--lr-color-brand)`)
+changing unrelated controls. `--lr-model-select-trigger-border-color` (default
+`var(--lr-color-border)`) and `--lr-model-select-trigger-fill` (default `var(--lr-color-surface)`)
+control the trigger/combobox's resting border and background, independent of the open-state border
+below. `--lr-model-select-open-border-color` (default `var(--lr-color-brand)`)
 controls the trigger border while the listbox is open. A synthetic stale-value row has independent
 `--lr-model-select-option-synthetic-border-style` (default `dashed`) and
 `--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
@@ -3425,6 +3428,10 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   scope it — retints this listbox together with every other floating surface in the library.
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-trigger-border-color` — Resting trigger/combobox border color, independent of
+  the open-state color below. Default: `var(--lr-color-border)`.
+- `--lr-voice-picker-trigger-fill` — Resting trigger/combobox background. Default:
+  `var(--lr-color-surface)`.
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.

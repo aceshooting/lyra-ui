@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -123,6 +123,9 @@ the `:host` default of `2`. The component writes the token inline on the `textar
 `tab-size` attribute hands control back to the token. A length-valued override (`40px`, `2ch`, …)
 still sets the visual tab stops for literal tab characters, but is not reinterpreted as a count of
 spaces — the Tab key keeps inserting `tabSize` spaces in that case.
+`--lr-code-editor-border` (default `var(--lr-color-border)`) and `--lr-code-editor-fill` (default
+`var(--lr-color-surface)`) retint the frame's resting border and background, independent of the
+hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.

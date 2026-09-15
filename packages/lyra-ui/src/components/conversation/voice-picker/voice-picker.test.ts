@@ -520,6 +520,39 @@ it('renders a malformed (blank-id) catalog row as an inert trailing option inste
   expect(malformedRow!.hasAttribute('data-synthetic')).to.be.false;
 });
 
+describe('resting border and fill theme cssprops', () => {
+  it('leaves the resting trigger border and fill at the shared tokens when the hooks are unset', async () => {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const sharedBorder = getComputedStyle(el).getPropertyValue('--lr-color-border').trim();
+    const sharedFill = getComputedStyle(el).getPropertyValue('--lr-color-surface').trim();
+    const borderProbe = document.createElement('div');
+    borderProbe.style.color = sharedBorder;
+    const fillProbe = document.createElement('div');
+    fillProbe.style.color = sharedFill;
+    el.shadowRoot!.append(borderProbe, fillProbe);
+    const resolvedBorder = getComputedStyle(borderProbe).color;
+    const resolvedFill = getComputedStyle(fillProbe).color;
+    borderProbe.remove();
+    fillProbe.remove();
+
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(resolvedBorder);
+    expect(getComputedStyle(trigger(el)).backgroundColor).to.equal(resolvedFill);
+  });
+
+  it('themes the resting trigger border and fill through component hooks', async () => {
+    const el = (await fixture(html`
+      <lr-voice-picker
+        .catalog=${CATALOG}
+        style="--lr-voice-picker-trigger-border-color: rgb(1, 2, 3); --lr-voice-picker-trigger-fill: rgb(4, 5, 6);"
+      ></lr-voice-picker>
+    `)) as LyraVoicePicker;
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(trigger(el)).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+});
+
 describe('open and synthetic stale-row theme cssprops', () => {
   it('inherits independent open and synthetic stale-row longhands from an ancestor', async () => {
     const wrapper = (await fixture(html`

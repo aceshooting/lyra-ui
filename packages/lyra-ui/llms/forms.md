@@ -352,7 +352,8 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   as a clear — see "Unknown committed values" below
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `selectedRows` (read: `ComboboxSourceRow[]`; write: `readonly ComboboxSourceRow[]`) — structured
-  rows for the current selection, including any opaque `data` payload supplied by an async source.
+  rows for the current selection, including any opaque `data` payload supplied by an async source
+  row or a light-DOM `<lr-option data>`, reached by reference and never deep-cloned.
   Reads return detached row snapshots. Writes select stable row values resolved against the
   current or deferred source, dropping duplicate and detached values without emitting selection
   events. Selected async rows remain available after the query changes or a later source result
@@ -400,8 +401,9 @@ provide richer spoken text than the visible label, and `data` is retained withou
 for retrieval through `selectedRows`.
 `dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
 render a transparent dot.
-The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group fields to the same
-internal row model.
+The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group/data fields to the
+same internal row model — `<lr-option data>` is the light-DOM counterpart of an async row's own
+`data` field, reached by reference through `selectedRows` exactly the same way.
 
 When a local option is removed or becomes disabled, or an async response shrinks, an existing
 keyboard-active row clamps to the nearest enabled survivor. If every row is disabled or removed,
@@ -412,8 +414,12 @@ as exactly one host `input` event (no `value` detail) and does not fire `change`
 selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
 clear — emits exactly one bubbling/composed, non-cancelable `input` `CustomEvent`, immediately
 followed by the same shape of `change`, then a prefixed `lr-change` alias. All three carry
-`detail: { value }` — the new committed selection (a string in single mode, a `string[]` in
-`multiple` mode). `lr-change` mirrors `<lr-checkbox>`'s namespaced alias; subscribe to it when you
+`detail: { value; data: readonly unknown[] }` — `value` is the new committed selection (a string in
+single mode, a `string[]` in `multiple` mode); `data` is index-aligned with `value`: `data[i]`
+describes `value[i]` — the opaque `data` payload of a light-DOM `<lr-option data>` or an async
+source row's own `data`, reached by reference and never deep-cloned — or `undefined` in that
+value's own slot when it currently matches no live row/option (see "Unknown committed values"
+above; unlike `selectedRows`, which drops that entry instead). `lr-change` mirrors `<lr-checkbox>`'s namespaced alias; subscribe to it when you
 want a `lr-`-prefixed event, or to the native-style `input`/`change` for parity with a native
 control. Re-picking the current single value and programmatic/default/reset/restore writes are
 silent (including on `lr-change`). The clear button emits one `lr-clear` after its
@@ -629,6 +635,11 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 - `sub: string = ''` (optional secondary line rendered under the label, e.g. a status/date summary)
 - `dotColor: string = ''` (attribute `dot-color` — optional CSS color for a small leading status
   dot; invalid values, declaration-breaking input, and `url()` render the dot transparently)
+- `data?: unknown` (attribute: false) — opaque application payload, e.g. the backend record this
+  option represents. Never read or rendered by this component; retained by reference, never
+  deep-cloned, through the owning `lr-combobox`'s `selectedRows` and the owning `lr-select`'s
+  `selectedData`, and in both controls' `lr-input`/`lr-change`/`input`/`change` event details.
+  Assigning it notifies the owning picker with `lr-option-change`, like `sub`/`dotColor`/`group`
 - `label: string` — settable WA-compatible plain-text label. A non-empty property/attribute wins;
   otherwise it resolves to `defaultLabel`. Property writes stay property-only (no reflection)
 - `defaultLabel: string` (read-only) — normalized accessibility-visible text generated from the
@@ -721,10 +732,13 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 - `dotColor`/`sub`/`group` are read from light-DOM `<lr-option>` children as before, but are also
   first-class fields on `ComboboxSourceRow` for the async `source` path — an async lookup can drive
   the same grouped/dot/sub-text rendering a static option list can.
-- `icon`, `badge`, `accessibleLabel`, and `data` are async-source row features rather than
-  `<lr-option>` properties. Icons are decorative (`aria-hidden`); use `accessibleLabel` when the
-  visible label/sub/badge combination needs a fuller spoken name. `data` is deliberately opaque and
-  is available only through the read-only `selectedRows` getter.
+- `icon`, `badge`, and `accessibleLabel` are async-source row features rather than `<lr-option>`
+  properties. Icons are decorative (`aria-hidden`); use `accessibleLabel` when the visible
+  label/sub/badge combination needs a fuller spoken name. `data`, by contrast, is a first-class
+  `<lr-option>` property too (the light-DOM counterpart of the async row's own `data`): it is
+  deliberately opaque, never rendered, and reachable through the read-only `selectedRows` getter
+  (combobox), the read-only `selectedData` getter (select), and both controls' `lr-input`/
+  `lr-change`/`input`/`change` event details.
 - Full ARIA 1.2 combobox pattern (`role=combobox`, roving `aria-activedescendant`, real DOM focus
   kept on the input) is implemented correctly — a genuine strength, safe to build on.
   `<lr-option value="b" selected>` sets that option's `defaultSelected`, seeds the live selection,
@@ -894,6 +908,12 @@ unknown`, exported under that name from the component's own module, renders one
   Assigning live child options commits their exact occurrences through the same event-silent path
   as `value`; foreign/detached options are ignored, and single mode keeps only the first. Mutating
   an array returned by the getter never mutates the control
+- `selectedData: readonly unknown[]` (read-only) — the opaque `data` payload of each committed
+  value, index-aligned with `value`: `selectedData[i]` describes `value[i]` (or `value` itself in
+  single mode), and stays that value's own slot — `undefined`, never shifted or dropped — when
+  that value currently matches no live option (see "Unknown committed values" below). Always an
+  array the same length as `value`, in both single and `multiple` mode. Reached by reference,
+  never deep-cloned
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 
 **Unknown committed values.** A committed value matching no current `<lr-option>` (a stale value
@@ -920,8 +940,10 @@ state.
 **Events:** each real selection change emits, in order, a native `InputEvent` named `input`,
 `lr-input`, a native `Event` named `change`, then `lr-change`. The native events carry no detail;
 read `event.target.value`. Both
-prefixed aliases carry `detail: { value: string | string[] }` — the new committed selection, a string
-in single mode and a `string[]` in `multiple` mode. The complete sequence is silent for a
+prefixed aliases carry `detail: { value: string | string[]; data: readonly unknown[] }` — `value`
+is the new committed selection, a string in single mode and a `string[]` in `multiple` mode; `data`
+is index-aligned with `value` exactly like `selectedData` above (the same reference, `undefined`
+for a value matching no live option), reached by reference and never deep-cloned. The complete sequence is silent for a
 programmatic `value` write, `form.reset()`, or session-state restoration. Plus
 `lr-clear` (no detail; emitted by the `with-clear` button _after_ its
 `input`/`lr-input`/`change`/`lr-change` run, and never when there was nothing to clear, so it never
@@ -1800,6 +1822,10 @@ With no label text the part is hidden and no glyph is painted.
 - `--lr-textarea-hover-border-color` (default `var(--lr-color-brand)`) — the field border while the
   native textarea is hovered, independent of its resting border and every other brand-colored
   component state.
+- `--lr-textarea-focus-border-color` (default `var(--lr-textarea-border-color)`) — the field
+  border while the native textarea is focused. Unset, it resolves to this field's own resting
+  border color, so a textarea with no override renders exactly as before this hook existed; set it
+  to give focus its own border color independent of the hover color above and the halo below.
 - `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
   `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
   so a halo is configured once instead of per component; additive, so the `:focus-visible` outline
@@ -2751,8 +2777,14 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 attribute form is enough to turn each on. `autofocus` is likewise `false`-defaulting — none of
 these four needs the property form to be reset.
 
-**A new-password field.** There is no dedicated password-purpose preset; compose the existing
-primitives directly, the same way a plain native `<input type="password">` does:
+**A new-password field.** There is no dedicated password-purpose preset — a deliberate decision,
+not an omission: the only thing such a preset would actually save is `autocomplete`, and that value
+has no single correct default for "a password field" (`new-password` on a set/change/reset flow,
+`current-password` on a login one, and one is never derivable from the other), so a `purpose`
+property would still need a second parameter carrying that same distinction, in exchange for a
+non-standard vocabulary a migrating `wa-`/`sl-`/native `<input type="password">` author would have
+to learn instead of carrying over unchanged. Compose the existing primitives directly, the same way
+a plain native `<input type="password">` does:
 
 ```html
 <lr-input
@@ -5412,6 +5444,9 @@ the `:host` default of `2`. The component writes the token inline on the `textar
 `tab-size` attribute hands control back to the token. A length-valued override (`40px`, `2ch`, …)
 still sets the visual tab stops for literal tab characters, but is not reinterpreted as a count of
 spaces — the Tab key keeps inserting `tabSize` spaces in that case.
+`--lr-code-editor-border` (default `var(--lr-color-border)`) and `--lr-code-editor-fill` (default
+`var(--lr-color-surface)`) retint the frame's resting border and background, independent of the
+hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.
@@ -5678,6 +5713,7 @@ surface together with every other floating surface in the library. `--lr-overlay
   activates the editable value field instead. It is a no-op while effectively disabled.
 - `--lr-color-picker-gap` — Gap between field chrome and panel rows. Default: `var(--lr-space-xs)`.
 - `--lr-color-picker-radius` — Trigger, grid, field and panel corner radius. Default: `var(--lr-radius)`.
+- `--lr-color-picker-border-color` — Resting trigger border color. Default: `var(--lr-color-border)`.
 - `--lr-color-picker-hover-border-color` — Hover border color, shared by the trigger, handles, text
   field, format/eyedropper buttons and palette swatches. Default: `var(--lr-color-brand)`.
 - `--lr-color-picker-selected-border` — Selected palette-swatch border. Default:
@@ -5886,6 +5922,9 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
 - `--lr-emoji-picker-control-gap` — Gap between field sections. Default: `var(--lr-space-xs)`.
 - `--lr-emoji-picker-radius` — Outer picker corner radius. Default: `var(--lr-radius)`.
 - `--lr-emoji-picker-item-radius` — Search and emoji corner radius. Default: `var(--lr-radius-xs)`.
+- `--lr-emoji-picker-search-border-color` — Resting search border color, independent of the hover
+  color below. Default: `var(--lr-color-border)`.
+- `--lr-emoji-picker-search-fill` — Resting search background. Default: `var(--lr-color-surface)`.
 - `--lr-emoji-picker-search-hover-border-color` — Search hover border. Default: `var(--lr-color-brand)`.
 
 ## `lr-rubric-form`

@@ -154,7 +154,8 @@ export const styles = css`
       --lr-color-picker-swatch-size,
       var(--_lr-color-picker-swatch-size)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-color-picker-border-color, var(--lr-color-border));
     border-radius: var(
       --lr-color-picker-radius,
       var(--_lr-color-picker-radius)

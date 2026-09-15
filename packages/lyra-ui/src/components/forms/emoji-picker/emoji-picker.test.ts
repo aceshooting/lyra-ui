@@ -163,6 +163,39 @@ it('renders the inherited pressed-emoji hook while a direct host value still win
   }
 });
 
+it('leaves the resting search border and fill at the shared tokens when the hooks are unset', async () => {
+  const el = await connectEmojiPicker();
+  const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+  const sharedBorder = getComputedStyle(el).getPropertyValue('--lr-color-border').trim();
+  const sharedFill = getComputedStyle(el).getPropertyValue('--lr-color-surface').trim();
+  const borderProbe = document.createElement('div');
+  borderProbe.style.color = sharedBorder;
+  const fillProbe = document.createElement('div');
+  fillProbe.style.color = sharedFill;
+  el.shadowRoot!.append(borderProbe, fillProbe);
+  const resolvedBorder = getComputedStyle(borderProbe).color;
+  const resolvedFill = getComputedStyle(fillProbe).color;
+  borderProbe.remove();
+  fillProbe.remove();
+
+  expect(getComputedStyle(search).borderTopColor).to.equal(resolvedBorder);
+  expect(getComputedStyle(search).backgroundColor).to.equal(resolvedFill);
+});
+
+it('lets a consumer retint the resting search border and fill through component hooks', async () => {
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+  // Set before the first connect/render, not after: [part='search'] eases border-color, so a
+  // later mutation would be read mid-transition instead of at its settled target value.
+  el.style.setProperty('--lr-emoji-picker-search-border-color', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-emoji-picker-search-fill', 'rgb(4, 5, 6)');
+  created.push(el);
+  document.body.append(el);
+  await el.updateComplete;
+  const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+  expect(getComputedStyle(search).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(search).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
 it('forwards host focus, blur, and click to the live search control with disabled guards', async () => {
   const el = await connectEmojiPicker();
   const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
