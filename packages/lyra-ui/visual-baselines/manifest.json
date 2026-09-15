@@ -213,7 +213,9 @@
     },
     {
       "id": "drawer--end",
-      "profile": "standard"
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The fill-height chain now lets the drawer body fill a sized panel, so the footer is pinned to the panel's bottom edge instead of sitting directly under short body content. The current capture awaits human visual review."
     },
     {
       "id": "feedback-alert--variants",
@@ -538,7 +540,9 @@
     },
     {
       "id": "apprail--forced-icon-only",
-      "profile": "standard"
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current item now paints its current-indicator bar on its inline-start edge in icon-only mode, where the historical baseline showed none. The current capture awaits human visual review."
     },
     {
       "id": "layout-menu-label--default",
