@@ -17,7 +17,7 @@ import { isMainModule } from './is-main-module.mjs';
 // onto the stable per-tag entry specifiers `generate-tag-aliases.mjs` already derives, so a
 // consumer wanting to statically verify "does importing this specifier register that tag" reads
 // one small generated JSON file instead of parsing shipped minified JavaScript for import
-// specifiers and `defineElement(...)` call literals -- fr_IZcp_YakOYwAQKvCSqpWUg.
+// specifiers and `defineElement(...)` call literals.
 //
 // Not folded into `custom-elements.json`: that manifest declares one custom element per FAMILY
 // source module (one `LyraTable` class declaration under `src/components/data/table/`), with no

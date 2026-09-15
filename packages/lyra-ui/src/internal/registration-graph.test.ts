@@ -3,7 +3,7 @@ import '../components/lr-table.js';
 
 /**
  * Contract test for the published registration-graph artifact (`registrations.json`,
- * `scripts/generate-registration-graph.mjs`, fr_IZcp_YakOYwAQKvCSqpWUg): a consumer statically
+ * `scripts/generate-registration-graph.mjs`): a consumer statically
  * reading that file needs proof it describes real runtime behavior, not an aspirational claim.
  * This fetches the real generated artifact the built package ships at its root (the same way
  * `cascade-layers.test.ts`/`tokens-root.test.ts` fetch `theme.css` from the dev server rather than

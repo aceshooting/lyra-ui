@@ -37,7 +37,7 @@ assert.deepEqual(
   'entries must be sorted by tag',
 );
 
-// The audit's own concrete example (fr_IZcp_YakOYwAQKvCSqpWUg): importing lr-table's stable entry
+// The concrete case this artifact exists for: importing lr-table's stable entry
 // also registers its composed children, because table.ts imports their registration entries
 // (empty.js, pagination.js, spinner.js, skeleton.js) before calling defineElement('table', ...).
 const table = entries.find((entry) => entry.tag === 'lr-table');
