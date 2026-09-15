@@ -16,16 +16,17 @@ const manifest = JSON.parse(
 
 test('derives every non-CSS package export and partitions it exhaustively once', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 959, 'the reviewed package has 959 typed exports');
+  assert.equal(entrypoints.length, 958, 'the reviewed package has 958 typed exports');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
   assert.ok(entrypoints.every((entrypoint) => !entrypoint.endsWith('.css')));
+  assert.ok(!entrypoints.includes('./theme-bootstrap.js'), 'classic-script assets are untyped by design');
 
   const shards = Array.from({ length: ATTW_CI_SHARD_TOTAL }, (_, index) =>
     partitionAttwEntrypoints(entrypoints, index + 1, ATTW_CI_SHARD_TOTAL),
   );
-  assert.deepEqual(shards.map((shard) => shard.length), [240, 240, 240, 239]);
+  assert.deepEqual(shards.map((shard) => shard.length), [240, 240, 239, 239]);
   assert.equal(new Set(shards.flat()).size, entrypoints.length, 'shards are disjoint');
   assert.deepEqual(shards.flat().sort(), entrypoints, 'shards cover every typed export');
 });

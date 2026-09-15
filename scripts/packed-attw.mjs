@@ -67,8 +67,15 @@ export function parseAttwArguments(arguments_) {
 }
 
 /**
- * Returns every typed package export ATTW must resolve. Stylesheets are the only deliberate
- * omission: they have no declarations, so ATTW correctly classifies them as untyped.
+ * Classic-script assets published for a `<script src>` tag, never for `import`. Like stylesheets
+ * they carry no declarations by design, so ATTW would correctly report them as untyped.
+ */
+const UNTYPED_SCRIPT_ASSET_EXPORTS = new Set(['./theme-bootstrap.js']);
+
+/**
+ * Returns every typed package export ATTW must resolve. Stylesheets and the classic-script assets
+ * above are the only deliberate omissions: they have no declarations, so ATTW correctly classifies
+ * them as untyped.
  */
 export function attwEntrypoints(manifest) {
   const exportsMap = manifest?.exports;
@@ -81,6 +88,7 @@ export function attwEntrypoints(manifest) {
   }
   const entrypoints = Object.keys(exportsMap)
     .filter((entrypoint) => !entrypoint.endsWith('.css'))
+    .filter((entrypoint) => !UNTYPED_SCRIPT_ASSET_EXPORTS.has(entrypoint))
     .sort();
   if (entrypoints.length === 0) {
     throw new TypeError('The package manifest exposes no typed ATTW entrypoints.');
