@@ -14,6 +14,13 @@ export async function checkLocalizationSlices(packageDir) {
     pathToFileURL(path.join(dist, 'components', 'forms', 'button', 'button.class.js')) + nonce
   );
   const localization = await import(pathToFileURL(path.join(dist, 'localization.js')) + nonce);
+  // Deliberately imported from `utilities/localization.js`, never `localization.js` (the
+  // full-catalog entry) or `internal/localization.js` (where DEFAULT_STRINGS lives): resolving
+  // through it below, successfully, is the proof that the scoped resolver never needed the
+  // compatibility catalog module to answer a real component's own key.
+  const utilitiesLocalization = await import(
+    pathToFileURL(path.join(dist, 'utilities', 'localization.js')) + nonce
+  );
 
   const host = {
     parentElement: null,
@@ -47,6 +54,31 @@ export async function checkLocalizationSlices(packageDir) {
     localization.resolveLyraString(host, 'cancel'),
     'Cancel',
     'the public localization entry must retain the complete English catalog',
+  );
+  // A fresh, never-registered locale tag with NO shared BCP-47 subtag prefix with 'x-node-slice'
+  // (registered two assertions up, to prove the shared-registry claim above): locale resolution
+  // walks candidates by stripping trailing subtags, so a tag like 'x-node-slice-scoped-defaults'
+  // still falls through to the registered 'x-node-slice' catalog and would silently pass this
+  // probe for the wrong reason.
+  const unregisteredHost = {
+    ...host,
+    getAttribute: (name) => (name === 'lang' ? 'x-scoped-defaults-only' : null),
+  };
+  assert.equal(
+    utilitiesLocalization.resolveLyraScopedString(unregisteredHost, 'fieldRequired', defaults),
+    'This field is required.',
+    'the scoped resolver on utilities/localization.js must resolve a real component key against ' +
+      'caller-supplied defaults alone, from a graph that never imported the full catalog',
+  );
+  localization.registerLyraLocale('x-node-slice-scoped', { fieldRequired: 'Node scoped requis' });
+  assert.equal(
+    utilitiesLocalization.resolveLyraScopedString(
+      { ...host, getAttribute: (name) => (name === 'lang' ? 'x-node-slice-scoped' : null) },
+      'fieldRequired',
+      defaults,
+    ),
+    'Node scoped requis',
+    'the scoped resolver must still prefer a registered locale catalog over the supplied defaults',
   );
 
   const declaration = await readFile(

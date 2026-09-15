@@ -1913,6 +1913,143 @@ describe('lr-input mapped Input parity surface', () => {
   });
 });
 
+describe('lr-input debounce', () => {
+  it('debounces exactly one lr-input-settled 150ms after the last keystroke, while input/lr-input still fire per keystroke', async () => {
+    const el = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const settled: CustomEvent[] = [];
+    const rawInputs: string[] = [];
+    el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
+    el.addEventListener('lr-input', () => rawInputs.push(el.value));
+
+    for (const next of ['a', 'ab', 'abc']) {
+      input.value = next;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+    }
+    expect(rawInputs).to.deep.equal(['a', 'ab', 'abc']);
+    expect(settled).to.have.length(0);
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(settled).to.have.length(1);
+    expect(settled[0]!.detail).to.deep.equal({ value: 'abc' });
+    expect(settled[0]!.cancelable).to.be.false;
+  });
+
+  it('flushes a pending debounce immediately on blur, with no dropped keystroke and no later stray settle', async () => {
+    const el = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
+
+    input.focus();
+    input.value = 'zz';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(settled).to.have.length(0);
+
+    el.blur();
+    await el.updateComplete;
+    expect(settled).to.have.length(1);
+    expect(settled[0]!.detail).to.deep.equal({ value: 'zz' });
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(settled).to.have.length(1);
+  });
+
+  it('flushes a pending debounce immediately on Enter and on the native change event', async () => {
+    const form = (await fixture(html`<form><lr-input debounce="150" aria-label="Search"></lr-input></form>`)) as HTMLFormElement;
+    form.addEventListener('submit', (event) => event.preventDefault());
+    const el = form.querySelector('lr-input') as LyraInput;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
+
+    input.value = 'aa';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true })
+    );
+    await el.updateComplete;
+    expect(settled).to.have.length(1);
+    expect(settled[0]!.detail).to.deep.equal({ value: 'aa' });
+
+    input.value = 'bb';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await el.updateComplete;
+    expect(settled).to.have.length(2);
+    expect(settled[1]!.detail).to.deep.equal({ value: 'bb' });
+  });
+
+  it('cancels a pending debounce on a programmatic value write, with no stray settle', async () => {
+    const el = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
+
+    input.value = 'typed';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    el.value = 'x';
+    await el.updateComplete;
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(settled).to.have.length(0);
+    expect(el.value).to.equal('x');
+  });
+
+  it('cancels a pending debounce on the built-in clear button, and on disconnect', async () => {
+    const el = (await fixture(html`<lr-input debounce="150" clearable aria-label="Search"></lr-input>`)) as LyraInput;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
+
+    input.value = 'typed';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(settled).to.have.length(0);
+
+    const second = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+    const secondInput = second.shadowRoot!.querySelector('input') as HTMLInputElement;
+    second.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
+    secondInput.value = 'typed';
+    secondInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await second.updateComplete;
+    second.remove();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(settled).to.have.length(0);
+  });
+
+  it('never fires lr-input-settled with debounce unset or 0 -- byte-identical to today (unset-regression)', async () => {
+    for (const markup of [
+      html`<lr-input aria-label="Search"></lr-input>`,
+      html`<lr-input debounce="0" aria-label="Search"></lr-input>`,
+    ]) {
+      const el = (await fixture(markup)) as LyraInput;
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      const settled: CustomEvent[] = [];
+      const rawInputs: string[] = [];
+      el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
+      el.addEventListener('lr-input', () => rawInputs.push(el.value));
+
+      input.value = 'abc';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+      expect(rawInputs).to.deep.equal(['abc']);
+
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      expect(settled).to.have.length(0);
+    }
+  });
+});
+
 describe('lr-input native value views', () => {
   it('round-trips valueAsDate and valueAsNumber through the native input', async () => {
     const el = (await fixture(html`<lr-input type="date"></lr-input>`)) as LyraInput;

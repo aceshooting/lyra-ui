@@ -7,9 +7,11 @@ import {
   type LyraMarkedParser,
 } from './markdown-loader.js';
 import {
+  ensureShikiLanguageLoaded,
   loadShikiHighlighterCore,
   normalizeShikiLanguage,
-  type ShikiLanguageInput,
+  resolvedShikiLanguages,
+  type ShikiLanguageSource,
 } from '../code-block/shiki-types.js';
 import {
   createMarkdownKatexState,
@@ -303,13 +305,16 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   override highlightCode = true;
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
-   *  `shiki/langs/<name>.mjs`), forwarded verbatim to `loadShikiHighlighterCore()` -- same shape as
+   *  `shiki/langs/<name>.mjs`), or a lazy loader per key, e.g.
+   *  `{ bash: () => import('@shikijs/langs/bash') }` -- called (at most once per key, memoized)
+   *  the first time a fenced block actually requests that language -- same shape as
    *  `<lr-code-block-core>`'s own `languages`. This component has no default/full-table
    *  highlighter to fall back to -- a fenced block whose language isn't a key here always renders
-   *  the plain-text fallback. Empty (the default) never highlights anything. */
+   *  the plain-text fallback, and so does a key whose lazy loader rejects. Empty (the default)
+   *  never highlights anything. */
   @property({ attribute: false }) override languages: Readonly<Record<
     string,
-    ShikiLanguageInput
+    ShikiLanguageSource
   >> = {};
 
   /** Stamps a computed slug as `id` on every rendered heading. `getHeadingTree()` computes the
@@ -340,19 +345,19 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
 
   protected override async tokenizePendingHighlight(
     pending: PendingHighlight,
-    languages: Readonly<Record<string, ShikiLanguageInput>> | undefined,
+    languages: Readonly<Record<string, ShikiLanguageSource>> | undefined,
     isCurrent: () => boolean
   ): Promise<MarkdownHighlightAttempt> {
+    if (!languages) return null;
     const normalizedLang = normalizeShikiLanguage(pending.lang);
-    if (
-      !languages ||
-      (!languages[normalizedLang] && !languages[pending.lang])
-    ) {
-      return null;
-    }
-    const highlighter = await loadShikiHighlighterCore(languages);
+    const source = languages[normalizedLang] ?? languages[pending.lang];
+    if (source === undefined) return null;
+    const highlighter = await loadShikiHighlighterCore(resolvedShikiLanguages(languages));
     if (!isCurrent()) return undefined;
-    return highlighter ? tokenizeMarkdownHighlight(highlighter, pending) : null;
+    if (!highlighter) return null;
+    const loaded = await ensureShikiLanguageLoaded(highlighter, normalizedLang, source);
+    if (!isCurrent()) return undefined;
+    return loaded ? tokenizeMarkdownHighlight(highlighter, pending) : null;
   }
 }
 

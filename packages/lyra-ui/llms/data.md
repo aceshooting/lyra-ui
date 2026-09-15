@@ -619,9 +619,12 @@ cell: (row) => unknown }` —
   otherwise-ascending table (e.g. a "last updated" column) the opposite starting direction.
   Re-activating a column that is already `sortKey` still only toggles between `'asc'` and `'desc'`,
   exactly as the element-level `defaultSortDir` already does;
-  `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
-  (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
-  breakpoints are fixed in `table.styles.ts`, not themeable tokens), reversible via
+  `priority` progressively hides that column once `[part='base']`'s content actually overflows it —
+  `'low'` hides first, and `'medium'` hides too if the table would still overflow with just `'low'`
+  gone — measured via the same `ResizeObserver`-driven overflow check `scroll-mode="auto"` uses, never
+  at a fixed container width (there is deliberately no themeable-token form of this: a `@container`
+  query, which is what a token-driven threshold would need, can only ever read ancestor inline-size,
+  never a measured overflow amount), reversible via
   `[part='reveal-columns-button']`; `sticky` pins that column's header/cells to the logical start or
   end edge while the table scrolls horizontally — multiple sticky columns stack
   in logical order (each measures every earlier sticky column's rendered width via
@@ -873,8 +876,8 @@ cell: (row) => unknown }` —
   the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
-  Priority-hidden columns hide their header, body, and footer cells together at the existing
-  container breakpoints in either direction; revealing columns restores all three bands.
+  Priority-hidden columns hide their header, body, and footer cells together at the same measured
+  overflow point in either direction; revealing columns restores all three bands.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
   `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount, without
   overwriting a `priorityColumnsVisible` the consumer declared on that same mount

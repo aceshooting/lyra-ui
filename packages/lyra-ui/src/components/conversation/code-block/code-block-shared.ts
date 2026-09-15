@@ -39,7 +39,6 @@ import {
   normalizeShikiLanguage,
   SHIKI_THEMES,
   type ShikiHighlighterCore,
-  type ShikiLanguageInput,
 } from './shiki-types.js';
 import type { ShikiTransformer } from './shiki-types.js';
 import type {
@@ -244,11 +243,14 @@ export function codeBlockActiveHighlightLineSet(
 
 /** The `languages` entry for the *current* `language`, if any -- looked up under both the
  *  shiki-normalized id and the raw property value, so `willUpdate()`/`updated()`/`render()`/
- *  `syncHighlight()` on either component all agree on whether the fine-grained path applies. */
-export function codeBlockPreSuppliedGrammar(
-  languages: Record<string, ShikiLanguageInput> | undefined,
+ *  `syncHighlight()` on either component all agree on whether the fine-grained path applies.
+ *  Generic over the entry type so `<lr-code-block-core>` can look up a
+ *  `ShikiLanguageInput | ShikiLanguageLoader` map through the same function `<lr-code-block>`
+ *  uses for its plain-grammar-only one, without widening the latter's inferred return type. */
+export function codeBlockPreSuppliedGrammar<T>(
+  languages: Record<string, T> | undefined,
   language: string
-): ShikiLanguageInput | undefined {
+): T | undefined {
   const normalized = normalizeShikiLanguage(language);
   return languages?.[normalized] ?? languages?.[language];
 }

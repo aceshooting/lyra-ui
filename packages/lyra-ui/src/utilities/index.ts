@@ -86,7 +86,7 @@ export type {
   RecencyBucket,
   RecencyLabels,
 } from './group-by-recency.js';
-export { bridgeLyraLocale, subscribeLyraLocale } from './localization.js';
+export { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from './localization.js';
 export type {
   LyraLocaleBridgeCleanup,
   LyraLocaleBridgeOptions,
@@ -102,6 +102,12 @@ export { allDefined } from './defined.js';
 export type { AllDefinedOptions, LyraDefinitionRoot } from './defined.js';
 export { resolveCssLength } from './css-length.js';
 export type { ResolveCssLengthOptions } from './css-length.js';
+export { formatBytes, formatDate, formatNumber, formatRelativeTime } from './format.js';
+export type {
+  LyraFormatBytesOptions,
+  LyraFormatRelativeTimeOptions,
+  LyraFormattableNumber,
+} from './format.js';
 export { invalidateLyraTheme } from './theme.js';
 export type { LyraThemeRoot } from './theme.js';
 export type { LyraCatalog, LyraCatalogEntry } from './catalog.js';

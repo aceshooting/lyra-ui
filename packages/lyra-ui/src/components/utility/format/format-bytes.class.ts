@@ -3,7 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './format.styles.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatNumber } from '../../../utilities/format.js';
 import { byteFormat, type LyraFormatBytesUnit, type LyraFormatDisplay } from './format-options.js';
 
 export type { LyraFormatBytesUnit, LyraFormatDisplay } from './format-options.js';
@@ -44,11 +44,11 @@ export class LyraFormatBytes extends LyraElement {
         this.decimals,
       );
       try {
-        text = getNumberFormat(this.effectiveLocale || undefined, options).format(amount);
+        text = formatNumber(amount, this.effectiveLocale || undefined, options);
       } catch {
         // A malformed runtime locale is reachable from untyped JS/markup. The unit/options are
         // already normalized above, so retrying with the runtime locale keeps the value useful.
-        text = getNumberFormat(undefined, options).format(amount);
+        text = formatNumber(amount, undefined, options);
       }
     }
     return html`${text || html`<slot></slot>`}`;

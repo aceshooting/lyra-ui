@@ -50,9 +50,12 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `highlightCode: boolean = true` (attribute
-`highlight-code`), `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — required,
-unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced block stays
-unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading-anchors`),
+`highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
+required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
+block stays unhighlighted permanently. Each value is either an already-resolved grammar or a lazy
+loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
+`() => import('@shikijs/langs/bash')`) — called at most once per key, memoized, the first time a
+fenced block actually requests that language, `headingAnchors: boolean = false` (attribute `heading-anchors`),
 `math: boolean = false`; plus the same inherited anchor-target properties as `<lr-markdown>`:
 `highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
@@ -97,8 +100,10 @@ rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
-`shiki/core`/`shiki/engine/oniguruma`/`shiki/langs/*`, the same fine-grained subset
-`<lr-code-block-core>` depends on.
+`shiki/core`, `shiki/engine/oniguruma`, the binary `shiki/onig.wasm` asset (the default; select
+`shiki/engine/javascript` instead via `setShikiCoreEngine('javascript')`), and
+`shiki/themes/github-{light,dark}.mjs`, the same fine-grained subset `<lr-code-block-core>` depends
+on.
 
 ````ts
 import { html } from "lit";
@@ -106,8 +111,8 @@ import python from "shiki/langs/python.mjs";
 import "@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js";
 
 const view = html`<lr-markdown-core
-  .content=${"# Report\n\n```python\nprint('hi')\n```"}
-  .languages=${{ python }}
+  .content=${"# Report\n\n```python\nprint('hi')\n```\n\n```bash\necho hi\n```"}
+  .languages=${{ python, bash: () => import("shiki/langs/bash.mjs") }}
 ></lr-markdown-core>`;
 ````
 

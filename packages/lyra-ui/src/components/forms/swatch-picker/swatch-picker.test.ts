@@ -612,6 +612,60 @@ describe("lr-swatch-picker", () => {
     ).to.equal("0 0 24 24");
   });
 
+  it("sets data-lr-gemstone-selected -- the shared theme/gemstones.js selector -- on the checked automatic gemstone glyph only", async () => {
+    const el = (await fixture(html`
+      <lr-swatch-picker
+        mode="gemstone"
+        .items=${[
+          {
+            value: "ruby",
+            color: "#e63950",
+            label: "Ruby",
+            gemstone: "ruby" as const,
+          },
+          {
+            value: "emerald",
+            color: "#34d399",
+            label: "Emerald",
+            gemstone: "emerald" as const,
+          },
+        ]}
+        value="emerald"
+      ></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    const [rubyIcon, emeraldIcon] = swatches(el).map(
+      (swatch) => swatch.querySelector('[part="swatch-icon"]') as HTMLElement
+    );
+    expect(emeraldIcon!.hasAttribute("data-lr-gemstone-selected")).to.equal(
+      true
+    );
+    expect(rubyIcon!.hasAttribute("data-lr-gemstone-selected")).to.equal(
+      false
+    );
+  });
+
+  it("does not set data-lr-gemstone-selected on a checked CUSTOM icon override in gemstone mode -- only the automatic glyph opts in", async () => {
+    const el = (await fixture(html`
+      <lr-swatch-picker
+        mode="gemstone"
+        .items=${[
+          {
+            value: "ruby",
+            color: "#e63950",
+            label: "Ruby",
+            gemstone: "ruby" as const,
+            icon: html`<svg></svg>`,
+          },
+        ]}
+        value="ruby"
+      ></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    const icon = swatches(el)[0]!.querySelector(
+      '[part="swatch-icon"]'
+    ) as HTMLElement;
+    expect(icon.hasAttribute("data-lr-gemstone-selected")).to.equal(false);
+  });
+
   it("sizes the gemstone glyph to the visible fill box instead of the button UA font size", async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
@@ -830,8 +884,10 @@ describe("lr-swatch-picker", () => {
   it("defaults --lr-swatch-picker-shine-duration to 0s (no-op) and pulses brightness via a dedicated keyframe when set", () => {
     const css = normalizedStyles();
     expect(css).to.include("--_lr-swatch-picker-shine-duration: 0s;");
+    // Aliased onto the shared theme/gemstones.ts export's own custom property (falling back to
+    // the identical literal default), not a second hand-copied literal -- see styles.ts.
     expect(css).to.include(
-      "--_lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);"
+      "--_lr-swatch-picker-gemstone-shine-duration: var(--lr-gemstone-selected-shine-duration, var(--lr-transition-ambient));"
     );
     expect(css).to.match(
       /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine var\(--lr-swatch-picker-shine-duration, var\(--_lr-swatch-picker-shine-duration\)\)/
@@ -841,8 +897,11 @@ describe("lr-swatch-picker", () => {
     );
     // An icon swatch runs a distinct keyframe that composes the selected glow with the brightness
     // pulse -- sharing the fill's brightness-only one would blank the glow out (see styles.ts).
+    // Excludes [data-lr-gemstone-selected]: that automatic-glyph case now paints through the
+    // imported, shared gemstoneSelectedGlyphStyles rule instead (see the dedicated describe block
+    // below and src/theme/gemstones.test.ts's cross-file parity test).
     expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine-icon var\(--lr-swatch-picker-shine-duration, var\(--_lr-swatch-picker-shine-duration\)\)/
+      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-icon'\]:not\(\[data-lr-gemstone-selected\]\)\s*\{[^}]*animation:\s*lr-swatch-picker-shine-icon var\(--lr-swatch-picker-shine-duration, var\(--_lr-swatch-picker-shine-duration\)\)/
     );
     expect(css).to.match(
       /@keyframes lr-swatch-picker-shine-icon\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*drop-shadow\([^}]*brightness\(1\.4\)/
@@ -943,7 +1002,7 @@ describe("lr-swatch-picker", () => {
   it("disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule", async () => {
     const css = normalizedStyles();
     expect(css).to.match(
-      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\][^]*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/
+      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\][^]*\[part='swatch-icon'\]:not\(\[data-lr-gemstone-selected\]\)\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/
     );
 
     try {

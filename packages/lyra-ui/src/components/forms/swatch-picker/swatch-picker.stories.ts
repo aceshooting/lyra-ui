@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { GEMSTONE_KEYS, GEMSTONES } from '../../../theme/gemstones-data.js';
+import {
+  gemstoneGlyph,
+  gemstoneSelectedGlyphStyles,
+} from '../../../theme/gemstones.js';
 import type { LyraSwatchPicker } from './swatch-picker.js';
 import type { LyraSizeStep } from '../../../internal/variants.js';
 import './swatch-picker.js';
@@ -187,6 +191,50 @@ export const GemstoneMode: Story = {
     },
   },
   render: () => html`
+    <lr-swatch-picker
+      mode="gemstone"
+      aria-label="Gemstone accent"
+      .items=${gemstoneAccents(['emerald', 'ruby', 'amethyst', 'sapphire', 'hematite'])}
+      value="amethyst"
+    ></lr-swatch-picker>
+  `,
+};
+
+export const GemstoneGlyphOutsidePicker: Story = {
+  name: 'Gemstone glyph outside the picker (header trigger)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A trigger button rendering `gemstoneGlyph()` for the currently selected accent -- styled with `gemstoneSelectedGlyphStyles`, the exact same `theme/gemstones.js` export `lr-swatch-picker` itself consumes for its own checked gemstone swatch below -- so the trigger and the picker it opens paint an identical halo/shine and can never drift apart. Both are importable independently of this picker for any component that needs to show the current gemstone selection outside it.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      ${gemstoneSelectedGlyphStyles.cssText}
+      .gemstone-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        inline-size: 2.5rem;
+        block-size: 2.5rem;
+        border-radius: 50%;
+        border: none;
+        background: none;
+        color: ${GEMSTONES.amethyst.fill};
+        cursor: pointer;
+        font-size: 1.5rem;
+      }
+    </style>
+    <button
+      class="gemstone-trigger"
+      type="button"
+      aria-label="Change accent color (currently Amethyst)"
+      data-lr-gemstone-selected
+    >
+      ${gemstoneGlyph()}
+    </button>
     <lr-swatch-picker
       mode="gemstone"
       aria-label="Gemstone accent"

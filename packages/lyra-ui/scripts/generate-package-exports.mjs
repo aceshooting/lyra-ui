@@ -49,8 +49,14 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/utility/export-button/csv.ts',
   'src/components/utility/icon/icon-library.ts',
   'src/components/viewers/archive-viewer/archive-viewer-register.ts',
+  'src/components/viewers/csv-viewer/csv-viewer-register.ts',
   'src/components/viewers/document-viewer/registry.ts',
+  'src/components/viewers/docx-viewer/docx-viewer-register.ts',
   'src/components/viewers/ebook-viewer/ebook-viewer-register.ts',
+  'src/components/viewers/pdf-viewer/pdf-viewer-register.ts',
+  'src/components/viewers/pptx-viewer/pptx-viewer-register.ts',
+  'src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.ts',
+  'src/components/viewers/xml-viewer/xml-viewer-register.ts',
   // `PptxViewerAdapter`/`PptxViewerAdapterEvent`/`PptxTextSearchResult`/`PptxSearchHighlightHandle`/
   // `PptxThumbnailHandle` are imported (type-only) by pptx-viewer.class.ts but never re-exported --
   // neither by pptx-viewer.ts's registration barrel nor by the `./components/viewers` family
@@ -115,6 +121,7 @@ export const CURATED_UTILITY_MODULES = Object.freeze([
   'src/utilities/css-length.ts',
   'src/utilities/defined.ts',
   'src/utilities/form-associated.ts',
+  'src/utilities/format.ts',
   'src/utilities/group-by-recency.ts',
   'src/utilities/icons.ts',
   'src/utilities/index.ts',

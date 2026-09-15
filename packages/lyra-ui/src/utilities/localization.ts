@@ -1,5 +1,6 @@
 /**
- * Locale-change subscription and the opt-in locale bridge.
+ * Locale-change subscription, the opt-in locale bridge, and the tree-shakable scoped string
+ * resolver.
  *
  * Part of the curated `@aceshooting/lyra-ui/utilities/*` surface: supported and semver-covered,
  * unlike the `internal/` modules it forwards to.
@@ -17,10 +18,39 @@
 import {
   getLyraLocale,
   getLyraLocaleDirection,
+  resolveLyraString as resolveRuntimeLyraString,
   subscribeLyraLocale,
 } from '../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../internal/localization-types.js';
 
 export { subscribeLyraLocale } from '../internal/localization-runtime.js';
+
+/**
+ * Scoped variant of the full-catalog `resolveLyraString()` (`@aceshooting/lyra-ui/localization.js`):
+ * resolves `key` through the same override -> fallback -> registered-locale-catalog chain, but
+ * against a caller-supplied `defaults` record instead of the complete built-in English catalog.
+ *
+ * Exists on this tree-shakable entry, not the full-catalog one, so a consumer resolving a handful
+ * of messages for its own component never pulls in the compatibility catalog to do it: pass a small
+ * `defaults` object of just the keys used, built from imported per-key constants (mirroring how a
+ * generated Lyra component's own `defaultStrings` slice is built) or authored by hand.
+ *
+ * ```ts
+ * import { resolveLyraScopedString } from '@aceshooting/lyra-ui/utilities/localization.js';
+ *
+ * const label = resolveLyraScopedString(host, 'save', { save: 'Save' });
+ * ```
+ */
+export function resolveLyraScopedString(
+  host: Element,
+  key: string,
+  defaults: Readonly<LyraLocaleStrings>,
+  overrides?: LyraLocaleStrings,
+  fallback?: string,
+  values?: Record<string, string | number>
+): string {
+  return resolveRuntimeLyraString(host, key, overrides, fallback, values, defaults);
+}
 
 /** Options for {@linkcode bridgeLyraLocale}. */
 export interface LyraLocaleBridgeOptions {

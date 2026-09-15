@@ -105,6 +105,12 @@ renderer with `<lr-document-viewer>` (a plain `render`, no `load()` hook — imp
 defines `<lr-docx-viewer>` immediately; only `mammoth`/`dompurify` themselves are loaded on demand)
 and matches `.docx` filenames when the MIME type is generic.
 
+A granular consumer (not importing the `all.js` compatibility bundle) who wants `<lr-docx-viewer>`'s
+own class module deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer-register.js`, which installs the
+same registration lazily and exports `DOCX_VIEWER_TAG` (`'lr-docx-viewer'`) as a stable reference to
+the tag it eventually registers.
+
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the document.
 

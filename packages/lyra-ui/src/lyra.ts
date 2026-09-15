@@ -656,7 +656,15 @@ export type {
   LyraFileInputValidatorResult,
   LyraFileInputObjectValidator,
   LyraFileInputObjectValidatorResult,
+  LyraFileInputFilesEvent,
 } from './components/media/file-input/file-input.class.js';
+export { LyraDropZone } from './components/media/drop-zone/drop-zone.class.js';
+export type {
+  LyraDropZoneEventMap,
+  LyraDropZoneFilesDetail,
+  LyraDropZoneFilesEvent,
+  LyraDropZoneRejectedFile,
+} from './components/media/drop-zone/drop-zone.class.js';
 
 export {
   LyraPhoneInput,
@@ -728,6 +736,7 @@ export {
   registerLyraLocale,
   setLyraLocale,
   getRegisteredLyraLocales,
+  getRegisteredLyraLocaleKeys,
   subscribeLyraLocaleRegistry,
   resolveLyraDirection,
   resolveLyraLocale,
@@ -747,6 +756,8 @@ export type {
 } from './components/forms/form-validator.js';
 export { LyraMarkdown } from './components/conversation/markdown/markdown.class.js';
 export { LyraMarkdownCore } from './components/conversation/markdown/markdown-core.class.js';
+export { LyraStreamingTextCore } from './components/conversation/streaming-text/streaming-text-core.class.js';
+export type { LyraStreamingTextCoreEventMap } from './components/conversation/streaming-text/streaming-text-core.class.js';
 export { loadMarkdownDeps as preloadMarkdown } from './components/conversation/markdown/markdown-loader.js';
 export type { MarkdownHtmlMode } from './components/conversation/markdown/markdown-shared.js';
 export { LyraChatMessage } from './components/conversation/chat-message/chat-message.class.js';
@@ -1581,7 +1592,9 @@ export type {
 } from './components/conversation/markdown/markdown-shared.js';
 export type {
   ShikiLanguageInput,
+  ShikiLanguageLoader,
   ShikiLanguageRegistration,
+  ShikiLanguageSource,
 } from './components/conversation/code-block/shiki-types.js';
 export type { LyraMediaCardEventMap } from './components/media/media-card/media-card.class.js';
 export type { LyraMentionPopoverEventMap } from './components/utility/mention-popover/mention-popover.class.js';

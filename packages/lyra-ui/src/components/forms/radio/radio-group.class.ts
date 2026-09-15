@@ -564,6 +564,15 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     return true;
   }
 
+  // This group deliberately has no pre-commit veto point equivalent to
+  // `<lr-checkbox-group>`'s `lr-checkbox-group-toggle-request`. `<lr-checkbox-group>` needs one
+  // because unchecking a box can empty the whole selection, and a host may want "at least one
+  // stays checked". A radio group has no equivalent user path: a click only ever transfers the
+  // checked radio to a new one -- `<lr-radio>`'s own `select()` (radio.class.ts) only ever sets
+  // `checked = true` on the clicked radio, never `false` on the previously-checked one; that clear
+  // happens here in `selectValue()`'s sync loop as a side effect of a NEW selection existing, not
+  // as a state a user can reach on its own. A required-but-empty group is already reachable only
+  // before first interaction, which `lr-invalid`'s existing veto already covers.
   private selectValue(next: string): void {
     const desired = next ?? '';
     const radios = this.radios();

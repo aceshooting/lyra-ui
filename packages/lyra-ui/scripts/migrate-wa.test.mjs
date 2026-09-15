@@ -279,8 +279,11 @@ test('the packaged runtime projection stays narrow, complete, and fail-closed', 
     runtimeContract.packageIdentities.get('@awesome.me/webawesome-pro'),
     { ecosystem: 'webawesome', tiers: new Set(['free', 'pro']) },
   );
+  // A ceiling on the PROJECTION, not a byte budget: the checked-in inventory is ~6 MB, so this
+  // proves the CLI still ships a narrow slice of it rather than the whole public surface. Raise it
+  // only while that ratio stays overwhelming -- a jump toward the full inventory is the regression.
   assert.ok(
-    JSON.stringify(runtimeInventory).length < 400_000,
+    JSON.stringify(runtimeInventory).length < 420_000,
     'the CLI must not republish the multi-megabyte public-surface inventory',
   );
 

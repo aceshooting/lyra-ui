@@ -1656,6 +1656,7 @@ disabled state.
 | `enterKeyHint`           | `enterkeyhint`             | `string`                                                             | `''`         | Virtual-keyboard Enter-key hint forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `minlength`              | `minlength`                | `number \| undefined`                                                | `undefined`  | Minimum text length; forwarded to the native `<textarea>` and reported as `validity.tooShort`.                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `maxlength`              | `maxlength`                | `number \| undefined`                                                | `undefined`  | Maximum text length; forwarded to the native `<textarea>` (which also stops typing past it) and reported as `validity.tooLong`.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `debounce`               | `debounce`                 | `number \| undefined`                                                | `undefined`  | How long (ms) to wait after the last keystroke before emitting one `lr-input-settled`, while `input`/`lr-input` keep firing per keystroke as before. Omitted, `0`, or non-finite means no debounce: `lr-input-settled` never fires. A pending debounce is flushed immediately by `change`/Enter/blur and cancelled with no stray settle by disconnection and a programmatic `value` write. Shares its `DebounceController` primitive with `lr-filter-bar`'s own per-filter `debounce` and with `lr-input`'s identical property. |
 | `name`                   | `name`                     | `string`                                                             | `''`         | Form field name.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `disabled`               | `disabled`                 | `boolean`                                                            | `false`      | Disables the control.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `required`               | `required`                 | `boolean`                                                            | `false`      | Participates in native constraint validation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -1727,6 +1728,7 @@ the shadow boundary.
 | `change`     | none                | Native-style composed event fired at native `change` timing.                                                                                                              |
 | `lr-input`   | `{ value: string }` | Compatibility alias fired on every user-driven edit.                                                                                                                      |
 | `lr-change`  | `{ value: string }` | Compatibility alias fired on native `change` timing (blur after a committed edit).                                                                                        |
+| `lr-input-settled` | `{ value: string }` | Fires once, `debounce` ms after the last keystroke, alongside the per-keystroke `input`/`lr-input` pair. **Non-cancelable.** See `debounce` above for the flush and cancellation rules. Never fires while `debounce` is unset, `0`, or non-finite. |
 | `blur`       | none                | Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed, unlike the native event.                                                       |
 | `focus`      | none                | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`.                                                                         |
 | `lr-invalid` | none                | Fired when a validity check finds the control invalid. **Cancelable** — `preventDefault()` suppresses the native validation bubble and `reportValidity()`'s focus/scroll. |
@@ -2479,6 +2481,13 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   `<lr-number-input>` defaults this the other way (`true`), so its rendering is unchanged
 - `noSpinButtons: boolean = false` (attribute `no-spin-buttons`) — Shoelace alias for
   `withoutSpinButtons`; either suppresses native number spinners
+- `debounce?: number` (attribute `debounce`, ms) — how long to wait after the last keystroke
+  before emitting one `lr-input-settled`, while `input`/`lr-input` keep firing per keystroke as
+  before. Omitted, `0`, or a non-finite value means no debounce at all: `lr-input-settled` never
+  fires. A pending debounce is flushed immediately by `change`/Enter/blur (so a blur never drops
+  the last keystroke) and cancelled with no stray settle by disconnection, the built-in clear
+  button, and a programmatic `value` write. Shares its `DebounceController` primitive with
+  `lr-filter-bar`'s own per-filter `debounce` and with `lr-textarea`'s identical property
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
 **Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
@@ -2527,6 +2536,9 @@ fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on 
 own `blur`/`focus`), and
 `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
 sequence). `lr-invalid` (no detail) fires when a validity check finds the input invalid.
+`lr-input-settled` (`detail: { value }`, non-cancelable) fires once, `debounce` ms after the last
+keystroke, alongside the per-keystroke `input`/`lr-input` pair; see `debounce` above for the flush
+and cancellation rules. Never fires while `debounce` is unset, `0`, or non-finite.
 
 **Slots:** `label`, `hint`/`help-text`, `error`, `start`/`prefix` (aliases before the input),
 `end`/`suffix` (aliases after the input and built-in actions), `clear-icon`,
@@ -2825,7 +2837,9 @@ field for no new capability. Each carries a localized accessible name and the sh
 input), and `lr-clear`
 (inherited, never fired here). The inherited `lr-invalid` (no detail) fires when a validity check
 finds the input invalid. The internal native `beforeinput` is cancelable, bubbles, and composes;
-calling `preventDefault()` on the host vetoes the edit before `value` changes.
+calling `preventDefault()` on the host vetoes the edit before `value` changes. It also inherits `lr-input-settled` (`detail: { value }`, non-cancelable), which fires once
+`debounce` ms after the last keystroke when `debounce` is set; see `lr-input`'s own `debounce`
+entry for the flush and cancellation rules.
 
 **Slots:** `label`, `hint`, `error`, `start`, `end`, `decrement-icon`, and `increment-icon`.
 
@@ -3091,7 +3105,9 @@ wrapper without being shadowed by the subclass.
 
 **Events:** native-style `input` and `change`; bubbling, composed `focus` and `blur` bridges; the
 `lr-input` / `lr-change` aliases with `{ value }`;
-`lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails.
+`lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails. It also inherits `lr-input-settled` (`detail: { value }`, non-cancelable), which fires once
+`debounce` ms after the last keystroke when `debounce` is set; see `lr-input`'s own `debounce`
+entry for the flush and cancellation rules.
 
 **CSS parts:** all inherited `lr-input` parts, plus `time-input` on the same control-row node as
 `base` and `input-wrapper`.
@@ -3655,7 +3671,12 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   row-height scale)
 - `mode: 'swatch' | 'gemstone' = 'swatch'` (reflected) — `swatch` preserves the plain-circle
   default. `gemstone` renders the shared glyph for options carrying a `gemstone` key and enables
-  the selected glow/shine defaults.
+  the selected glow/shine defaults. That automatic glyph's checked-state halo/shine is the exact
+  `gemstoneSelectedGlyphStyles` stylesheet the theme module also exports standalone (see
+  `theme/gemstones.js` below), so a glyph rendered elsewhere on the page — e.g. a header trigger
+  showing the current selection — can match this picker exactly by consuming the same export. An
+  explicit `icon` on a `gemstone`-mode item is a consumer shape, not that shared glyph, and keeps
+  this picker's own generic selected-icon glow instead (see `--lr-swatch-picker-gemstone-*` below).
 - `accessibleLabel: string = ''` (attribute `aria-label`) — accessible name copied to the internal
   `role="radiogroup"`; attribute presence wins, including an explicitly empty name.
 - The 9.x compatibility aliases were removed in 10.0.0: `options` is `items`, the exported
@@ -3699,20 +3720,27 @@ Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the two nev
 selected swatch, defaults to `--lr-color-brand`, themeable independently of the focus ring),
 `--lr-swatch-picker-selected-blur` (default `0` — a crisp ring; set a real length such as `0.4rem`
 for a soft glow. It is the blur radius of `swatch-fill`'s `box-shadow` ring, and of the equivalent
-`drop-shadow()` used for `swatch-icon`, since `box-shadow` can't follow a slotted icon's real
-shape), `--lr-swatch-picker-shine-duration` (default `0s`, a no-op; set a duration such as `1.6s`
-for a looping brighten-and-settle pulse on the selected swatch. It drives a separate
-`filter: brightness()` keyframe rather than `box-shadow`, so it composes with the blur token and
-works identically for a fill and an icon; disabled outright under `prefers-reduced-motion: reduce`,
-which also drops the hover/selection scale transition), `--lr-swatch-picker-hit-size` (hit-area
+`drop-shadow()` used for a `swatch-icon` rendering a consumer-supplied `icon`, since `box-shadow`
+can't follow a slotted icon's real shape), `--lr-swatch-picker-shine-duration` (default `0s`, a
+no-op; set a duration such as `1.6s` for a looping brighten-and-settle pulse on the selected
+swatch. It drives a separate `filter: brightness()` keyframe rather than `box-shadow`, so it
+composes with the blur token and works identically for a fill and a consumer-supplied icon;
+disabled outright under `prefers-reduced-motion: reduce`, which also drops the hover/selection
+scale transition), `--lr-swatch-picker-hit-size` (hit-area
 size; its private default follows `size`), `--lr-swatch-picker-fill-size` (visible fill/icon
 diameter; its private default follows `size`; set this hook on an ancestor/direct host to override
 every tier, or `--lr-theme-swatch-picker-fill-size` on an ancestor for a shared default),
-`--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
-gemstone mode), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in gemstone mode);
+`--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in gemstone mode, aliased
+onto the shared `--lr-gemstone-selected-blur` so the two cannot drift apart — applies to a plain
+color-fill swatch and to a consumer-supplied `icon` override in gemstone mode, NOT to the
+automatic gemstone glyph itself), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in
+gemstone mode, same aliasing and scope as `--lr-swatch-picker-gemstone-selected-blur`);
 plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
 `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,
-and the per-tier `--lr-size-*` tokens.
+and the per-tier `--lr-size-*` tokens. The automatic gemstone glyph's own checked-state halo/shine
+is themed independently, through `--lr-gemstone-selected-color`/`-blur`/`-shine-duration` — see
+`theme/gemstones.js`'s `gemstoneSelectedGlyphStyles` below, the exact stylesheet this picker
+includes in its own `static styles` for that glyph.
 
 **Optional peer deps:** none.
 
@@ -3750,6 +3778,26 @@ picker.items = order.map((key) => ({
 picker.value = "ruby";
 ```
 
+To match this picker's checked-glyph halo/shine on a `gemstoneGlyph()` rendered anywhere else
+(e.g. a header trigger button showing the current selection before it opens the picker in a
+popover), import both Lit-based exports and reuse them directly instead of re-authoring the
+treatment: `gemstoneGlyph()` for the markup and `gemstoneSelectedGlyphStyles` — a `CSSResult` — in
+the consuming component's own `static styles`, then toggle the `data-lr-gemstone-selected` boolean
+attribute on the element wrapping the rendered glyph to switch the halo/shine on:
+
+```ts
+import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from "@aceshooting/lyra-ui/theme/gemstones.js";
+
+class AccentTrigger extends LitElement {
+  static styles = [gemstoneSelectedGlyphStyles];
+  render() {
+    return html`<button ?data-lr-gemstone-selected=${this.hasSelection}>
+      ${gemstoneGlyph()}
+    </button>`;
+  }
+}
+```
+
 **Known gotchas:**
 
 - arrow-key navigation cycles (past the last swatch wraps to the first, and vice versa) rather than
@@ -3769,6 +3817,10 @@ picker.value = "ruby";
   selectors, so that combinator can silently fail to match depending on the engine.
 - the semantic `radiogroup` lives inside shadow DOM. Set `accessibleLabel` or a host `aria-label`;
   the component deliberately forwards the resulting name to that internal role.
+- the automatic gemstone glyph's checked-state halo/shine is themed through
+  `--lr-gemstone-selected-color`/`-blur`/`-shine-duration`, not through
+  `--lr-swatch-picker-selected-*`/`-gemstone-*` — those style a plain color-fill swatch or a
+  consumer-supplied `icon` override instead, even while `mode="gemstone"`.
 
 **Additional API surface:**
 

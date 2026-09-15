@@ -1139,10 +1139,10 @@ shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-dange
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.
 
-**Optional peer deps:** `shiki` (the same fine-grained `shiki/core`/`shiki/engine/oniguruma`/
-`shiki/wasm` subset `lr-code-block-core` uses, never `shiki`'s full ~200-language main entry point)
-— only loaded once both `language` and a matching `languages` entry are set; unset/unmatched leaves
-the plain unhighlighted diff text untouched.
+**Optional peer deps:** `shiki` (the same fine-grained `shiki/core`/`shiki/engine/oniguruma`/binary
+`shiki/onig.wasm` subset `lr-code-block-core` uses by default, never `shiki`'s full ~200-language
+main entry point) — only loaded once both `language` and a matching `languages` entry are set;
+unset/unmatched leaves the plain unhighlighted diff text untouched.
 
 ```html
 <lr-diff-view copyable></lr-diff-view>

@@ -22,8 +22,20 @@ export const styles = css`
        box-shadow and drop-shadow split below, which needs one because box-shadow does not reach
        into a transparent box's content. */
     --_lr-swatch-picker-shine-duration: 0s;
-    --_lr-swatch-picker-gemstone-selected-blur: var(--lr-size-0-5rem);
-    --_lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);
+    /* Aliased onto the shared theme/gemstones.ts export's own tokens (falling back to its exact
+       defaults) rather than a second hand-copied literal, so these two private gemstone-mode
+       defaults -- which still drive a plain color-fill swatch and a consumer-supplied custom icon
+       option while mode="gemstone", neither of which is the shared gemstoneGlyph -- cannot drift
+       from it even though the automatic glyph itself now paints through the shared
+       [data-lr-gemstone-selected] rule below, not through these. */
+    --_lr-swatch-picker-gemstone-selected-blur: var(
+      --lr-gemstone-selected-blur,
+      var(--lr-size-0-5rem)
+    );
+    --_lr-swatch-picker-gemstone-shine-duration: var(
+      --lr-gemstone-selected-shine-duration,
+      var(--lr-transition-ambient)
+    );
     --_lr-swatch-picker-hit-size: var(--lr-size-2-5rem);
     --_lr-swatch-picker-fill-size: var(
       --lr-theme-swatch-picker-fill-size,
@@ -228,8 +240,16 @@ export const styles = css`
      author-normal declaration, so a brightness-only keyframe would blank this glow for the whole
      animation -- every mode="gemstone" swatch, where the shine is on by default. The keyframe
      therefore re-states drop-shadow alongside brightness; the static declaration below covers the
-     not-running case (--lr-swatch-picker-shine-duration: 0s, and prefers-reduced-motion). */
-  [part="swatch"][aria-checked="true"] [part="swatch-icon"] {
+     not-running case (--lr-swatch-picker-shine-duration: 0s, and prefers-reduced-motion).
+     Excludes [data-lr-gemstone-selected]: that attribute marks the checked swatch's AUTOMATIC
+     gemstone glyph (render() sets it only for that case, never for a consumer-supplied icon
+     option), which paints through the imported gemstoneSelectedGlyphStyles export's own
+     [data-lr-gemstone-selected] rule instead so the picker and a glyph rendered anywhere else
+     share one definition. Without this exclusion both rules would match the same element and,
+     since this selector's 3 attribute selectors always outrank that rule's 1, this rule would
+     silently win every time, making the import above dead weight. */
+  [part="swatch"][aria-checked="true"]
+    [part="swatch-icon"]:not([data-lr-gemstone-selected]) {
     filter: drop-shadow(
       0 0
         var(
@@ -289,7 +309,8 @@ export const styles = css`
       transition: none;
     }
     [part="swatch"][aria-checked="true"] [part="swatch-fill"],
-    [part="swatch"][aria-checked="true"] [part="swatch-icon"] {
+    [part="swatch"][aria-checked="true"]
+      [part="swatch-icon"]:not([data-lr-gemstone-selected]) {
       animation: none;
     }
   }

@@ -26,6 +26,7 @@ export * from './realtime-session/realtime-session.js';
 export * from './selection-toolbar/selection-toolbar.js';
 export * from './stream-status/stream-status.js';
 export * from './streaming-text/streaming-text.js';
+export { LyraStreamingTextCore } from './streaming-text/streaming-text-core.js';
 export * from './suggestion-chips/suggestion-chips.js';
 export * from './thread-list/thread-list.js';
 export * from './transcript-feed/transcript-feed.js';

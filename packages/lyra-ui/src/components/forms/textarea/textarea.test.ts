@@ -1682,6 +1682,165 @@ describe("lr-textarea unset-regression for the 8.0 opt-ins", () => {
   });
 });
 
+describe("lr-textarea debounce", () => {
+  it("debounces exactly one lr-input-settled 150ms after the last keystroke, while input/lr-input still fire per keystroke", async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea debounce="150" aria-label="Notes"></lr-textarea>`
+    );
+    const textarea = el.shadowRoot!.querySelector(
+      "textarea"
+    ) as HTMLTextAreaElement;
+    const settled: CustomEvent[] = [];
+    const rawInputs: string[] = [];
+    el.addEventListener("lr-input-settled", (event) =>
+      settled.push(event as CustomEvent)
+    );
+    el.addEventListener("lr-input", () => rawInputs.push(el.value));
+
+    for (const next of ["a", "ab", "abc"]) {
+      textarea.value = next;
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      await el.updateComplete;
+    }
+    expect(rawInputs).to.deep.equal(["a", "ab", "abc"]);
+    expect(settled).to.have.length(0);
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(settled).to.have.length(1);
+    expect(settled[0]!.detail).to.deep.equal({ value: "abc" });
+    expect(settled[0]!.cancelable).to.be.false;
+  });
+
+  it("flushes a pending debounce immediately on blur, with no dropped keystroke and no later stray settle", async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea debounce="150" aria-label="Notes"></lr-textarea>`
+    );
+    const textarea = el.shadowRoot!.querySelector(
+      "textarea"
+    ) as HTMLTextAreaElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener("lr-input-settled", (event) =>
+      settled.push(event as CustomEvent)
+    );
+
+    textarea.focus();
+    textarea.value = "zz";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+    expect(settled).to.have.length(0);
+
+    el.blur();
+    await el.updateComplete;
+    expect(settled).to.have.length(1);
+    expect(settled[0]!.detail).to.deep.equal({ value: "zz" });
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(settled).to.have.length(1);
+  });
+
+  it("flushes a pending debounce immediately on Enter and on the native change event", async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea debounce="150" aria-label="Notes"></lr-textarea>`
+    );
+    const textarea = el.shadowRoot!.querySelector(
+      "textarea"
+    ) as HTMLTextAreaElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener("lr-input-settled", (event) =>
+      settled.push(event as CustomEvent)
+    );
+
+    textarea.value = "aa";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+    textarea.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    );
+    await el.updateComplete;
+    expect(settled).to.have.length(1);
+    expect(settled[0]!.detail).to.deep.equal({ value: "aa" });
+
+    textarea.value = "bb";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+    textarea.dispatchEvent(new Event("change", { bubbles: true }));
+    await el.updateComplete;
+    expect(settled).to.have.length(2);
+    expect(settled[1]!.detail).to.deep.equal({ value: "bb" });
+  });
+
+  it("cancels a pending debounce on a programmatic value write, with no stray settle", async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea debounce="150" aria-label="Notes"></lr-textarea>`
+    );
+    const textarea = el.shadowRoot!.querySelector(
+      "textarea"
+    ) as HTMLTextAreaElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener("lr-input-settled", (event) =>
+      settled.push(event as CustomEvent)
+    );
+
+    textarea.value = "typed";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+
+    el.value = "x";
+    await el.updateComplete;
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(settled).to.have.length(0);
+    expect(el.value).to.equal("x");
+  });
+
+  it("cancels a pending debounce on disconnect", async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea debounce="150" aria-label="Notes"></lr-textarea>`
+    );
+    const textarea = el.shadowRoot!.querySelector(
+      "textarea"
+    ) as HTMLTextAreaElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener("lr-input-settled", (event) =>
+      settled.push(event as CustomEvent)
+    );
+
+    textarea.value = "typed";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+    el.remove();
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(settled).to.have.length(0);
+  });
+
+  it("never fires lr-input-settled with debounce unset or 0 -- byte-identical to today (unset-regression)", async () => {
+    for (const markup of [
+      html`<lr-textarea aria-label="Notes"></lr-textarea>`,
+      html`<lr-textarea debounce="0" aria-label="Notes"></lr-textarea>`,
+    ]) {
+      const el = await fixture<LyraTextarea>(markup);
+      const textarea = el.shadowRoot!.querySelector(
+        "textarea"
+      ) as HTMLTextAreaElement;
+      const settled: CustomEvent[] = [];
+      const rawInputs: string[] = [];
+      el.addEventListener("lr-input-settled", (event) =>
+        settled.push(event as CustomEvent)
+      );
+      el.addEventListener("lr-input", () => rawInputs.push(el.value));
+
+      textarea.value = "abc";
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      await el.updateComplete;
+      expect(rawInputs).to.deep.equal(["abc"]);
+
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      expect(settled).to.have.length(0);
+    }
+  });
+});
+
 describe("lr-textarea — the shared size ladder and pill", () => {
   const field = (el: LyraTextarea) =>
     el.shadowRoot!.querySelector("textarea") as HTMLTextAreaElement;

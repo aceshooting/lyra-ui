@@ -17,10 +17,6 @@ export const styles = css`
     /* Page flow below drops both; auto restores them only while inline content really overflows. */
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    /* Makes [part='base'] a query container, so the @container rules below react to the table's own
-       width, not the viewport's. */
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
   /* A scroll container clips both axes, so overflow: auto makes [part='base'] the header's sticky
@@ -91,19 +87,22 @@ export const styles = css`
     display: block;
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  /* columns[].priority hides [data-priority='low'] and ['medium'] header/cells as the container
-     narrows. priorityColumnsVisible (from [part='reveal-columns-button']) must override that, but a
-     @container query can only test ancestor inline-size, not component state -- so it surfaces as
-     data-force-visible on [part='base'], which the hide rule's :not() excludes. */
-  @container (max-inline-size: 899.98px) {
-    [part='base']:not([data-force-visible]) [data-priority='low'] {
-      display: none;
-    }
+  /* columns[].priority hides [data-priority='low'] and ['medium'] header/cells once table.class.ts's
+     ResizeObserver-driven measurement (recomputeHiddenPriorityColumns(), shared with
+     syncAutoScrollMode()'s overflow check) finds the table's content actually overflows [part='base']
+     -- not at any fixed container width. That measurement writes data-hide-priority-low/-medium onto
+     [part='base'] itself, one tier at a time (low first). priorityColumnsVisible (from
+     [part='reveal-columns-button']) must override the hide regardless of which tiers are marked, so it
+     surfaces as data-force-visible on [part='base'], which both rules' :not() excludes. Deliberately
+     plain attribute selectors, not a @container query: a @container query can only ever read ancestor
+     inline-size, never a measured overflow amount or component state, and per the responsive-priority
+     decision behind this mechanism the two thresholds may not become themeable custom properties
+     either (a @container query cannot read one). */
+  [part='base'][data-hide-priority-low]:not([data-force-visible]) [data-priority='low'] {
+    display: none;
   }
-  @container (max-inline-size: 639.98px) {
-    [part='base']:not([data-force-visible]) [data-priority='medium'] {
-      display: none;
-    }
+  [part='base'][data-hide-priority-medium]:not([data-force-visible]) [data-priority='medium'] {
+    display: none;
   }
   [part='table'] {
     inline-size: 100%;

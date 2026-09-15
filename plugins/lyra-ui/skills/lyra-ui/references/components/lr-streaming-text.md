@@ -31,6 +31,10 @@ not a delta — this component does no accumulation or ordering of its own.
 - `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
   uses `looksLikeMarkdown`; `plain` and `markdown` force their named paths. Invalid values render as
   `auto` without installing a stale memoized decision.
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to
+  the composed `<lr-markdown>`'s own `languages`, the same fine-grained language-grammar scoping
+  `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
+  untouched.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — runs a fixed, ordered list of
 lightweight regexes (ATX heading, fenced code block, `**bold**`, `_italic_`, inline code, bullet
@@ -94,8 +98,9 @@ never be left stranded mid-window, and a stream restarting on a reused element c
 showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
-forwarding this component's own `streaming` through as that component's `streaming` hint prop;
-plain-text mode renders into a `white-space: pre-wrap` span instead. The blinking cursor degrades
+forwarding this component's own `streaming` through as that component's `streaming` hint prop and
+`languages` verbatim; plain-text mode renders into a `white-space: pre-wrap` span instead. The
+blinking cursor degrades
 to a static, always-visible bar under `prefers-reduced-motion: reduce`. In plain-text mode it sits
 inline at the tail of the final character; in Markdown mode it renders as its own trailing block
 below the rendered content instead of attempting to splice into whatever nested block Markdown

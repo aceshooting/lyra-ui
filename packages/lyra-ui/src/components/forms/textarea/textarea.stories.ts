@@ -184,6 +184,33 @@ export const WithCount: Story = {
   `,
 };
 
+/**
+ * `debounce` coalesces rapid keystrokes into one `lr-input-settled` after the pause, while
+ * `input`/`lr-input` keep firing on every keystroke. A blur or Enter flushes a pending debounce
+ * immediately, and a programmatic `value` write cancels it with no stray settle.
+ */
+export const Debounce: Story = {
+  render: () => {
+    const onSettled = (event: Event) => {
+      const root = (event.currentTarget as HTMLElement).closest('[data-debounce-story]')!;
+      root.querySelector('output')!.textContent =
+        `lr-input-settled: ${(event as CustomEvent<{ value: string }>).detail.value}`;
+    };
+    return html`
+      <div data-debounce-story style="display:grid; gap:0.5rem; max-inline-size:24rem">
+        <lr-textarea
+          debounce="300"
+          label="Notes"
+          rows="3"
+          placeholder="Type to filter…"
+          @lr-input-settled=${onSettled}
+        ></lr-textarea>
+        <output>lr-input-settled: (none yet)</output>
+      </div>
+    `;
+  },
+};
+
 export const HorizontalResize: Story = {
   render: () => html`<lr-textarea label="Drag the corner sideways" resize="horizontal" rows="3"></lr-textarea>`,
 };

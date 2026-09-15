@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu`, `lr-dropdown-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -191,16 +191,20 @@ apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked
 hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
 a checked row paints identically to an unchecked one.
 
-Three more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
+Four more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
 byte-identical: `--lr-menu-item-hover-bg` (default `var(--lr-color-brand-quiet)`) is the enabled
 row's fill under the pointer, and the pressed state mixes from that same value, so a retuned hover
-fill keeps its pressed step instead of snapping back to the brand default;
-`--lr-menu-item-icon-color` (default `inherit`) recolours `[part="icon"]` without touching the
-label beside it, so it still follows the row while the row is disabled or `variant="danger"` unless
-you say otherwise; and `--lr-menu-item-min-height` (default
-`max(var(--lr-form-control-height), var(--lr-size-24px))`) sets the row's minimum block size for a
-denser or roomier menu, replacing a `::part(base)` rule per item. A value below the 24px floor is
-your call, exactly as it is when overriding the shared ladder itself.
+fill keeps its pressed step instead of snapping back to the brand default; `--lr-menu-item-active-bg`
+(default `color-mix(in oklab, var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`) overrides that pressed fill directly,
+matching `--lr-option-active-bg`'s equivalent hook — unset, the pressed row keeps mixing from
+`--lr-menu-item-hover-bg` exactly as before this hook existed; `--lr-menu-item-icon-color` (default
+`inherit`) recolours `[part="icon"]` without touching the label beside it, so it still follows the
+row while the row is disabled or `variant="danger"` unless you say otherwise; and
+`--lr-menu-item-min-height` (default `max(var(--lr-form-control-height), var(--lr-size-24px))`)
+sets the row's minimum block size for a denser or roomier menu, replacing a `::part(base)` rule per
+item. A value below the 24px floor is your call, exactly as it is when overriding the shared ladder
+itself.
 
 ### Nested submenus
 
@@ -255,7 +259,8 @@ while a link opening a new context can never lose the guard.
 the focusable host gains or loses focus, plus the shared menu-item events above.
 
 **Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
-`--lr-menu-item-hover-bg`, `--lr-menu-item-icon-color` and `--lr-menu-item-min-height`.
+`--lr-menu-item-hover-bg`, `--lr-menu-item-active-bg`, `--lr-menu-item-icon-color` and
+`--lr-menu-item-min-height`.
 `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
 because it shares a stylesheet directory with `<lr-menu>`, whose surface reads them; a dropdown item
 is a row **inside** that surface and paints no surface of its own, so setting them here is a no-op —

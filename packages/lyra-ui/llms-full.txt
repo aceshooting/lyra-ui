@@ -38,10 +38,10 @@ family and entry point.
 - **Layout, navigation & structure** — 36 tags in `components/layout/`
 - **Overlays, status & feedback** — 21 tags in `components/overlays/`
 - **Utilities, formatting & observers** — 20 tags in `components/utility/`
-- **Media, files & maps** — 21 tags in `components/media/`
+- **Media, files & maps** — 22 tags in `components/media/`
 - **Charts** — 12 tags in `components/charts/`
 - **Document & file viewers** — 23 tags in `components/viewers/`
-- **Conversation & chat UI** — 33 tags in `components/conversation/`
+- **Conversation & chat UI** — 34 tags in `components/conversation/`
 - **Agent tooling, tool calls & evaluation** — 35 tags in `components/agent-tools/`
 - **Retrieval, knowledge graph & grounding** — 30 tags in `components/retrieval/`
 - **Reference tables** — design tokens (`llms/tokens.md`), optional peers (`llms/peers.md`), `wa-*`/`sl-*` migration (`llms/migration.md`)
@@ -189,7 +189,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 270
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 272
   root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -1573,8 +1573,8 @@ reads, from `:lang()` rules to spellcheck to a screen reader's pronunciation —
 
 The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getLyraLocaleDirection`,
-`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `resolveLyraLocale`,
-`resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
+`getRegisteredLyraLocales`, `getRegisteredLyraLocaleKeys`, `subscribeLyraLocaleRegistry`,
+`resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
 `LyraLocaleStrings`, `LyraLocaleMeta`, `LyraLocaleDirection`, `LyraMessageKey`, `LyraMessage`,
 `LyraPluralMessage` and `LyraPluralCategory`. The package root continues to re-export the same
 surface for compatibility and remains registration-free in v8; use the dedicated entry when the
@@ -1657,6 +1657,23 @@ starting listener snapshots: one callback failure cannot prevent later active, c
 registry listeners from running. State commits first, then the mutator throws one `AggregateError`
 containing all callback failures after delivery completes. `<lr-locale-picker>` is the built-in
 consumer of the registry subscription; see `llms/components/lr-locale-picker.md`.
+
+`getRegisteredLyraLocaleKeys(locale: string): readonly string[]` returns a frozen snapshot of
+exactly the keys `locale`'s own catalog carries — no BCP-47 fallback-chain widening and no merge
+with the built-in English defaults. This answers "what has this locale actually been given",
+distinct from `getRegisteredLyraLocales()`, which reports registry *membership* (which tags exist)
+rather than catalog *content*. Diff the result's length against
+`Object.keys(LYRA_DEFAULT_STRINGS).length` to measure a locale's own translation coverage without a
+silent English-fallback merge making a partial catalog look complete. A locale nothing ever
+registered — including `'en'` itself, unless it was explicitly passed to `registerLyraLocale()` —
+returns an empty snapshot.
+
+In development (Lit's own dev-mode signal; silent in production), resolving a message for a
+resolved locale other than English that has no override, no fallback, and no registered catalog
+entry for that key warns once per (locale, key) to `console.warn` before falling through to the
+English default — the same silent-fallback `resolveLyraString()`, `localize()`, and
+`resolveLyraScopedString()` all shared with no way to detect it before. It never fires for an
+English-resolved locale, since falling through to `defaults` is simply how English itself resolves.
 
 Gotcha: `localize()`'s optional second argument is a fallback string. Passing a defined literal there
 silently defeats a registered catalog — omit it, or pass `undefined`.
@@ -1925,6 +1942,31 @@ browser global such as `EyeDropper` — reproduces the server's answer on the hy
 corrects itself on the next update, so a slotted override lands one frame after hydration; a
 browser-only mount is unaffected and renders the final result the first time. Layout/observer/canvas/media work
 begins after hydration, and remote content is client-only.
+
+**If hydration never runs at all** — a page that intentionally ships no script bundle, a reader
+that fetches the raw HTML, or a crawler — a `render-and-hydrate` tag's declarative-shadow-DOM
+output is either permanently complete and correct on its own, or only ever promised once hydration
+executes; nothing in between is supported. `getLyraSsrStaticSafety(tagName)` (also
+`LYRA_SSR_SUPPORT_MATRIX.declarativeShadowDom.staticSafety[tagName]`) returns which:
+`'static-safe'` is the first guarantee, `'hydration-required'` is the second. Every
+`render-and-hydrate` tag has one of the two; `pnpm test:ssr` fails closed on any tag that does
+not, so there is no silent third case. Do not infer `'static-safe'` from a component "looking
+static" — check the classification, because two components that look equally static can differ:
+
+- `lr-details` is `'static-safe'`. Its native `<details>`/`<summary>` toggle is bound with a Lit
+  *property* binding (`.open=${this.open}`), which the SSR renderer reflects to a real `open`
+  attribute in the server markup, and the click listener that vetoes a user toggle is registered
+  only by the component's own (unexecuted, without hydration) lifecycle code. With hydration JS
+  never running, both facts together mean the browser's native disclosure behavior is what
+  answers a click — so `lr-details` renders in the correct open/closed state and keeps expanding
+  and collapsing indefinitely, with zero JavaScript.
+- A canvas-painted component such as `lr-chart` is `'hydration-required'`: a `<canvas>`
+  element has no pixels until script draws to it, so without hydration the server markup is
+  present but visibly empty forever, not merely stale for one frame. `lr-lite-chart` is also
+  `'hydration-required'`, but for a different reason: it renders real SVG (not canvas), and its
+  default `layout="fit"` mode needs a ResizeObserver-measured host size before it can draw
+  coordinate-based geometry, so without hydration it stays on its structurally-identical
+  pre-measurement fallback rather than ever reaching final content.
 
 ## Testing form-associated components: `@aceshooting/lyra-ui/testing`
 
@@ -2245,6 +2287,48 @@ number }`.
 ResolveCssLengthOptions): number | undefined` and `ResolveCssLengthOptions { readonly host?:
 Element; readonly percentBase?: number; readonly viewportBasis?: Window | Readonly<{
 inlineSize: number; blockSize: number }> }`.
+- **`format` → `formatNumber(value, locale?, options?)`, `formatDate(value, locale?, options?)`,
+  `formatRelativeTime(value, locale?, options?)`, and `formatBytes(value, locale?, options?)`** —
+  pure, string-returning wrappers over the same memoized `Intl` formatter cache and locale
+  resolution `<lr-format-number>`, `<lr-format-date>`, `<lr-relative-time>`, and `<lr-format-bytes>`
+  render through. Reach for these when you need a formatted **string** rather than a rendered
+  element: interpolating into a message template, populating a text-only property on another
+  component (a stat tile's value, a chart tick label, a badge's cost text), building a search
+  predicate, or composing an accessibility announcement.
+  `formatNumber()` and `formatBytes()` accept a `bigint` or a decimal/integer string, not just a
+  `number`, for exact-precision input (large ids, monetary amounts, exact byte counts) — a plain
+  `number` is a float64 and cannot exactly represent an integer beyond `Number.MAX_SAFE_INTEGER` or
+  most decimal fractions. `formatBytes()` still selects its unit (`byte`..`petabyte`/`bit`..
+  `petabit`) from an approximate magnitude, since which unit is only ever a display choice, but
+  computes the displayed amount itself with exact `bigint` division, so the digits a `bigint`/string
+  input carries are never rounded away. `formatDate()` and `formatRelativeTime()` accept the same
+  date sources as `<lr-format-date>`/`<lr-relative-time>`'s `date` property (an ISO/date string,
+  epoch milliseconds, or a `Date`) and return `undefined` for an unresolvable source instead of
+  throwing; `formatBytes()` likewise returns `undefined` for a non-finite or unparseable `value`.
+  `formatNumber()` and invalid `options` on any of the four throw the same error
+  `Intl.NumberFormat`/`Intl.DateTimeFormat`/`Intl.RelativeTimeFormat`'s own constructor would.
+  `formatRelativeTime()`'s `options.unit` accepts an explicit unit or `'auto'` (default) to pick
+  the largest unit the magnitude clears, matching `<lr-relative-time unit="auto">`'s heuristic;
+  `options.now` fixes the reference instant for a deterministic test or an "as of" report. It is a
+  one-shot computation — pair it with your own timer, or use `<lr-relative-time sync>`, for text
+  that must stay current while displayed.
+  The exact signatures are `formatNumber(value: number | bigint | string, locale?: string,
+options?: Intl.NumberFormatOptions): string`, `formatDate(value: string | number | Date, locale?:
+string, options?: Intl.DateTimeFormatOptions): string | undefined`,
+  `formatRelativeTime(value: string | number | Date, locale?: string,
+options?: LyraFormatRelativeTimeOptions): string | undefined`, and `formatBytes(value: number |
+bigint | string, locale?: string, options?: LyraFormatBytesOptions): string | undefined`.
+  `LyraFormatRelativeTimeOptions { readonly unit?: LyraRelativeTimeUnit | 'auto'; readonly format?:
+LyraFormatDisplay; readonly numeric?: LyraRelativeTimeNumeric; readonly now?: number }` and
+  `LyraFormatBytesOptions { readonly unit?: LyraFormatBytesUnit; readonly display?:
+LyraFormatDisplay; readonly unitStep?: number; readonly decimals?: number }`.
+
+  ```ts
+  import { formatBytes, formatRelativeTime } from "@aceshooting/lyra-ui/utilities/format.js";
+
+  const size = formatBytes(12_345_678_901_234_567_890n, "en-US"); // exact, no float rounding
+  const updated = formatRelativeTime(item.updatedAt, "en-US"); // "3 days ago"
+  ```
 - **`layered-layout` → `layeredLayout()`** — the deterministic, dependency-free layered-DAG
   ("Sugiyama-lite") layout `lr-flow-canvas` draws with: cycle handling, longest-path layering,
   barycenter crossing reduction, and coordinates assigned along the block axis so the result is
@@ -2420,6 +2504,20 @@ number; clearTimeout(handle: number): void }`.
   const stop = bridgeLyraLocale(); // mirrors onto <html>
   setLyraLocale("ar"); // <html lang="ar" dir="rtl">
   stop(); // restores whatever <html> carried before
+  ```
+
+  `resolveLyraScopedString(/* public names: host, key, defaults, overrides, fallback, values */):
+unknown` is a scoped variant of `resolveLyraString()` (see "Localization"): the same
+override → fallback → registered-locale-catalog resolution chain, but against a caller-supplied
+`defaults` record instead of the complete `LYRA_DEFAULT_STRINGS` catalog. It lives on this
+tree-shakable entry rather than the side-effect-free `@aceshooting/lyra-ui/localization.js` one so
+that resolving a handful of an application's own messages never pulls in the full compatibility
+catalog to do it — pass a small `defaults` object of just the keys used.
+
+  ```ts
+  import { resolveLyraScopedString } from "@aceshooting/lyra-ui/utilities/localization.js";
+
+  const label = resolveLyraScopedString(host, "save", { save: "Save" });
   ```
 
 **Known gotchas:**
@@ -2965,6 +3063,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-doughnut-chart": unknown;
   "lr-drawer": unknown;
   "lr-drilldown-panel": unknown;
+  "lr-drop-zone": unknown;
   "lr-dropdown": unknown;
   "lr-dropdown-item": unknown;
   "lr-ebook-viewer": unknown;
@@ -3117,6 +3216,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-stepper": unknown;
   "lr-stream-status": unknown;
   "lr-streaming-text": unknown;
+  "lr-streaming-text-core": unknown;
   "lr-subagent-panel": unknown;
   "lr-suggestion-chips": unknown;
   "lr-svg-viewer": unknown;
@@ -3185,6 +3285,7 @@ These named interfaces and helper signatures are available to typed integrations
 - **`internal-localization-runtime-contracts`** — Shared utility contracts.
   `getLyraLocaleDirection(/* public names: locale */): unknown`
   `getLyraLocale(): unknown`
+  `getRegisteredLyraLocaleKeys(/* public names: locale */): unknown`
   `getRegisteredLyraLocales(): unknown`
   `registerLyraLocale(/* public names: locale, strings, meta */): unknown`
   `resolveLyraDirection(/* public names: host */): unknown`
@@ -3242,8 +3343,22 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 - **`ssr-contracts`** — Shared utility contracts.
+  `buildLyraSsrStaticSafety(/* public names: tags, tagCapabilities, auditedStaticSafeTags */): unknown`
+  Fail-closed classifier behind `LYRA_SSR_STATIC_SAFETY`/`getLyraSsrStaticSafety`: a tag present in
+  neither a non-empty `tagCapabilities` entry nor `auditedStaticSafeTags` is reported in the result's
+  `unaudited` list instead of silently defaulting to `'static-safe'`. Pure and fixture-friendly --
+  `scripts/check-ssr.mjs` calls it with the real inventory, tests call it with small fixture lists.
+  `deriveLyraSsrStaticSafety(/* public names: capabilities */): unknown`
+  Derives static safety from one tag's capability record: any `'after-hydration'`/`'client-only'`
+  entry makes it `'hydration-required'`; an empty record defaults to `'static-safe'`. That empty-
+  record default is only valid for a record already known to reflect a completed review (as
+  `LYRA_SSR_TAG_CAPABILITIES` entries do) -- `buildLyraSsrStaticSafety()` does not rely on it for a
+  tag missing from that record entirely, which it instead routes through `auditedStaticSafeTags`.
   `diagnoseLyraHydration(/* public names: root */): unknown`
   `getLyraSsrMode(/* public names: tagName */): unknown`
+  `getLyraSsrStaticSafety(/* public names: tagName */): unknown`
+  Returns the static-safety classification for a `render-and-hydrate` Lyra tag, or `undefined` for a
+  tag outside that tier. See "SSR and declarative shadow DOM" above for the full write-up.
   `LyraHydrationDiagnostic {
   element: unknown;
   tag: unknown;
@@ -3262,6 +3377,13 @@ These named interfaces and helper signatures are available to typed integrations
   code: unknown;
   detail: unknown;
 }`
+  `LyraSsrStaticSafetyResult {
+  classification: unknown;
+  unaudited: unknown;
+}`
+  Return shape of `buildLyraSsrStaticSafety()`: `classification` holds one entry per classified tag
+  (a tag absent from it was neither capability-bearing nor audited), and a non-empty `unaudited`
+  means the check must fail closed.
   `lyraSsrElementRenderers(/* public names: litElementRenderer */): unknown`
 
 - **`svelte-contracts`** — Framework integration type contracts.
@@ -3352,6 +3474,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-doughnut-chart": unknown;
   "lr-drawer": unknown;
   "lr-drilldown-panel": unknown;
+  "lr-drop-zone": unknown;
   "lr-dropdown": unknown;
   "lr-dropdown-item": unknown;
   "lr-ebook-viewer": unknown;
@@ -3504,6 +3627,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-stepper": unknown;
   "lr-stream-status": unknown;
   "lr-streaming-text": unknown;
+  "lr-streaming-text-core": unknown;
   "lr-subagent-panel": unknown;
   "lr-suggestion-chips": unknown;
   "lr-svg-viewer": unknown;
@@ -3640,6 +3764,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-doughnut-chart": unknown;
   "lr-drawer": unknown;
   "lr-drilldown-panel": unknown;
+  "lr-drop-zone": unknown;
   "lr-dropdown": unknown;
   "lr-dropdown-item": unknown;
   "lr-ebook-viewer": unknown;
@@ -3792,6 +3917,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-stepper": unknown;
   "lr-stream-status": unknown;
   "lr-streaming-text": unknown;
+  "lr-streaming-text-core": unknown;
   "lr-subagent-panel": unknown;
   "lr-suggestion-chips": unknown;
   "lr-svg-viewer": unknown;
@@ -3855,6 +3981,12 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`theme-gemstones-contracts`** — Shared utility contracts.
   `gemstoneGlyph(/* public names: color */): unknown`
+  `gemstoneSelectedGlyphStyles: CSSResult` — the shared "selected" halo/shine presentation for a
+  rendered `gemstoneGlyph()`, applied via the `data-lr-gemstone-selected` boolean attribute on the
+  element wrapping the glyph. `lr-swatch-picker mode="gemstone"` includes this exact stylesheet in
+  its own `static styles` for its checked swatch's automatic glyph rather than keeping a private
+  copy, so a glyph rendered anywhere else on the page can match it exactly by consuming the same
+  export and attribute.
 
 - **`theme-presets-contracts`** — Shared utility contracts.
   `applyLyraThemePreset(/* public names: presetOrName */): unknown`
@@ -3969,6 +4101,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-doughnut-chart": unknown;
   "lr-drawer": unknown;
   "lr-drilldown-panel": unknown;
+  "lr-drop-zone": unknown;
   "lr-dropdown": unknown;
   "lr-dropdown-item": unknown;
   "lr-ebook-viewer": unknown;
@@ -4121,6 +4254,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-stepper": unknown;
   "lr-stream-status": unknown;
   "lr-streaming-text": unknown;
+  "lr-streaming-text-core": unknown;
   "lr-subagent-panel": unknown;
   "lr-suggestion-chips": unknown;
   "lr-svg-viewer": unknown;
@@ -5831,6 +5965,7 @@ disabled state.
 | `enterKeyHint`           | `enterkeyhint`             | `string`                                                             | `''`         | Virtual-keyboard Enter-key hint forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `minlength`              | `minlength`                | `number \| undefined`                                                | `undefined`  | Minimum text length; forwarded to the native `<textarea>` and reported as `validity.tooShort`.                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `maxlength`              | `maxlength`                | `number \| undefined`                                                | `undefined`  | Maximum text length; forwarded to the native `<textarea>` (which also stops typing past it) and reported as `validity.tooLong`.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `debounce`               | `debounce`                 | `number \| undefined`                                                | `undefined`  | How long (ms) to wait after the last keystroke before emitting one `lr-input-settled`, while `input`/`lr-input` keep firing per keystroke as before. Omitted, `0`, or non-finite means no debounce: `lr-input-settled` never fires. A pending debounce is flushed immediately by `change`/Enter/blur and cancelled with no stray settle by disconnection and a programmatic `value` write. Shares its `DebounceController` primitive with `lr-filter-bar`'s own per-filter `debounce` and with `lr-input`'s identical property. |
 | `name`                   | `name`                     | `string`                                                             | `''`         | Form field name.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `disabled`               | `disabled`                 | `boolean`                                                            | `false`      | Disables the control.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `required`               | `required`                 | `boolean`                                                            | `false`      | Participates in native constraint validation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -5902,6 +6037,7 @@ the shadow boundary.
 | `change`     | none                | Native-style composed event fired at native `change` timing.                                                                                                              |
 | `lr-input`   | `{ value: string }` | Compatibility alias fired on every user-driven edit.                                                                                                                      |
 | `lr-change`  | `{ value: string }` | Compatibility alias fired on native `change` timing (blur after a committed edit).                                                                                        |
+| `lr-input-settled` | `{ value: string }` | Fires once, `debounce` ms after the last keystroke, alongside the per-keystroke `input`/`lr-input` pair. **Non-cancelable.** See `debounce` above for the flush and cancellation rules. Never fires while `debounce` is unset, `0`, or non-finite. |
 | `blur`       | none                | Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed, unlike the native event.                                                       |
 | `focus`      | none                | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`.                                                                         |
 | `lr-invalid` | none                | Fired when a validity check finds the control invalid. **Cancelable** — `preventDefault()` suppresses the native validation bubble and `reportValidity()`'s focus/scroll. |
@@ -6654,6 +6790,13 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   `<lr-number-input>` defaults this the other way (`true`), so its rendering is unchanged
 - `noSpinButtons: boolean = false` (attribute `no-spin-buttons`) — Shoelace alias for
   `withoutSpinButtons`; either suppresses native number spinners
+- `debounce?: number` (attribute `debounce`, ms) — how long to wait after the last keystroke
+  before emitting one `lr-input-settled`, while `input`/`lr-input` keep firing per keystroke as
+  before. Omitted, `0`, or a non-finite value means no debounce at all: `lr-input-settled` never
+  fires. A pending debounce is flushed immediately by `change`/Enter/blur (so a blur never drops
+  the last keystroke) and cancelled with no stray settle by disconnection, the built-in clear
+  button, and a programmatic `value` write. Shares its `DebounceController` primitive with
+  `lr-filter-bar`'s own per-filter `debounce` and with `lr-textarea`'s identical property
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
 **Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
@@ -6702,6 +6845,9 @@ fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on 
 own `blur`/`focus`), and
 `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
 sequence). `lr-invalid` (no detail) fires when a validity check finds the input invalid.
+`lr-input-settled` (`detail: { value }`, non-cancelable) fires once, `debounce` ms after the last
+keystroke, alongside the per-keystroke `input`/`lr-input` pair; see `debounce` above for the flush
+and cancellation rules. Never fires while `debounce` is unset, `0`, or non-finite.
 
 **Slots:** `label`, `hint`/`help-text`, `error`, `start`/`prefix` (aliases before the input),
 `end`/`suffix` (aliases after the input and built-in actions), `clear-icon`,
@@ -7000,7 +7146,9 @@ field for no new capability. Each carries a localized accessible name and the sh
 input), and `lr-clear`
 (inherited, never fired here). The inherited `lr-invalid` (no detail) fires when a validity check
 finds the input invalid. The internal native `beforeinput` is cancelable, bubbles, and composes;
-calling `preventDefault()` on the host vetoes the edit before `value` changes.
+calling `preventDefault()` on the host vetoes the edit before `value` changes. It also inherits `lr-input-settled` (`detail: { value }`, non-cancelable), which fires once
+`debounce` ms after the last keystroke when `debounce` is set; see `lr-input`'s own `debounce`
+entry for the flush and cancellation rules.
 
 **Slots:** `label`, `hint`, `error`, `start`, `end`, `decrement-icon`, and `increment-icon`.
 
@@ -7266,7 +7414,9 @@ wrapper without being shadowed by the subclass.
 
 **Events:** native-style `input` and `change`; bubbling, composed `focus` and `blur` bridges; the
 `lr-input` / `lr-change` aliases with `{ value }`;
-`lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails.
+`lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails. It also inherits `lr-input-settled` (`detail: { value }`, non-cancelable), which fires once
+`debounce` ms after the last keystroke when `debounce` is set; see `lr-input`'s own `debounce`
+entry for the flush and cancellation rules.
 
 **CSS parts:** all inherited `lr-input` parts, plus `time-input` on the same control-row node as
 `base` and `input-wrapper`.
@@ -7830,7 +7980,12 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   row-height scale)
 - `mode: 'swatch' | 'gemstone' = 'swatch'` (reflected) — `swatch` preserves the plain-circle
   default. `gemstone` renders the shared glyph for options carrying a `gemstone` key and enables
-  the selected glow/shine defaults.
+  the selected glow/shine defaults. That automatic glyph's checked-state halo/shine is the exact
+  `gemstoneSelectedGlyphStyles` stylesheet the theme module also exports standalone (see
+  `theme/gemstones.js` below), so a glyph rendered elsewhere on the page — e.g. a header trigger
+  showing the current selection — can match this picker exactly by consuming the same export. An
+  explicit `icon` on a `gemstone`-mode item is a consumer shape, not that shared glyph, and keeps
+  this picker's own generic selected-icon glow instead (see `--lr-swatch-picker-gemstone-*` below).
 - `accessibleLabel: string = ''` (attribute `aria-label`) — accessible name copied to the internal
   `role="radiogroup"`; attribute presence wins, including an explicitly empty name.
 - The 9.x compatibility aliases were removed in 10.0.0: `options` is `items`, the exported
@@ -7874,20 +8029,27 @@ Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the two nev
 selected swatch, defaults to `--lr-color-brand`, themeable independently of the focus ring),
 `--lr-swatch-picker-selected-blur` (default `0` — a crisp ring; set a real length such as `0.4rem`
 for a soft glow. It is the blur radius of `swatch-fill`'s `box-shadow` ring, and of the equivalent
-`drop-shadow()` used for `swatch-icon`, since `box-shadow` can't follow a slotted icon's real
-shape), `--lr-swatch-picker-shine-duration` (default `0s`, a no-op; set a duration such as `1.6s`
-for a looping brighten-and-settle pulse on the selected swatch. It drives a separate
-`filter: brightness()` keyframe rather than `box-shadow`, so it composes with the blur token and
-works identically for a fill and an icon; disabled outright under `prefers-reduced-motion: reduce`,
-which also drops the hover/selection scale transition), `--lr-swatch-picker-hit-size` (hit-area
+`drop-shadow()` used for a `swatch-icon` rendering a consumer-supplied `icon`, since `box-shadow`
+can't follow a slotted icon's real shape), `--lr-swatch-picker-shine-duration` (default `0s`, a
+no-op; set a duration such as `1.6s` for a looping brighten-and-settle pulse on the selected
+swatch. It drives a separate `filter: brightness()` keyframe rather than `box-shadow`, so it
+composes with the blur token and works identically for a fill and a consumer-supplied icon;
+disabled outright under `prefers-reduced-motion: reduce`, which also drops the hover/selection
+scale transition), `--lr-swatch-picker-hit-size` (hit-area
 size; its private default follows `size`), `--lr-swatch-picker-fill-size` (visible fill/icon
 diameter; its private default follows `size`; set this hook on an ancestor/direct host to override
 every tier, or `--lr-theme-swatch-picker-fill-size` on an ancestor for a shared default),
-`--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
-gemstone mode), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in gemstone mode);
+`--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in gemstone mode, aliased
+onto the shared `--lr-gemstone-selected-blur` so the two cannot drift apart — applies to a plain
+color-fill swatch and to a consumer-supplied `icon` override in gemstone mode, NOT to the
+automatic gemstone glyph itself), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in
+gemstone mode, same aliasing and scope as `--lr-swatch-picker-gemstone-selected-blur`);
 plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
 `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,
-and the per-tier `--lr-size-*` tokens.
+and the per-tier `--lr-size-*` tokens. The automatic gemstone glyph's own checked-state halo/shine
+is themed independently, through `--lr-gemstone-selected-color`/`-blur`/`-shine-duration` — see
+`theme/gemstones.js`'s `gemstoneSelectedGlyphStyles` below, the exact stylesheet this picker
+includes in its own `static styles` for that glyph.
 
 **Optional peer deps:** none.
 
@@ -7925,6 +8087,26 @@ picker.items = order.map((key) => ({
 picker.value = "ruby";
 ```
 
+To match this picker's checked-glyph halo/shine on a `gemstoneGlyph()` rendered anywhere else
+(e.g. a header trigger button showing the current selection before it opens the picker in a
+popover), import both Lit-based exports and reuse them directly instead of re-authoring the
+treatment: `gemstoneGlyph()` for the markup and `gemstoneSelectedGlyphStyles` — a `CSSResult` — in
+the consuming component's own `static styles`, then toggle the `data-lr-gemstone-selected` boolean
+attribute on the element wrapping the rendered glyph to switch the halo/shine on:
+
+```ts
+import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from "@aceshooting/lyra-ui/theme/gemstones.js";
+
+class AccentTrigger extends LitElement {
+  static styles = [gemstoneSelectedGlyphStyles];
+  render() {
+    return html`<button ?data-lr-gemstone-selected=${this.hasSelection}>
+      ${gemstoneGlyph()}
+    </button>`;
+  }
+}
+```
+
 **Known gotchas:**
 
 - arrow-key navigation cycles (past the last swatch wraps to the first, and vice versa) rather than
@@ -7944,6 +8126,10 @@ picker.value = "ruby";
   selectors, so that combinator can silently fail to match depending on the engine.
 - the semantic `radiogroup` lives inside shadow DOM. Set `accessibleLabel` or a host `aria-label`;
   the component deliberately forwards the resulting name to that internal role.
+- the automatic gemstone glyph's checked-state halo/shine is themed through
+  `--lr-gemstone-selected-color`/`-blur`/`-shine-duration`, not through
+  `--lr-swatch-picker-selected-*`/`-gemstone-*` — those style a plain color-fill swatch or a
+  consumer-supplied `icon` override instead, even while `mode="gemstone"`.
 
 **Additional API surface:**
 
@@ -11135,9 +11321,12 @@ cell: (row) => unknown }` —
   otherwise-ascending table (e.g. a "last updated" column) the opposite starting direction.
   Re-activating a column that is already `sortKey` still only toggles between `'asc'` and `'desc'`,
   exactly as the element-level `defaultSortDir` already does;
-  `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
-  (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
-  breakpoints are fixed in `table.styles.ts`, not themeable tokens), reversible via
+  `priority` progressively hides that column once `[part='base']`'s content actually overflows it —
+  `'low'` hides first, and `'medium'` hides too if the table would still overflow with just `'low'`
+  gone — measured via the same `ResizeObserver`-driven overflow check `scroll-mode="auto"` uses, never
+  at a fixed container width (there is deliberately no themeable-token form of this: a `@container`
+  query, which is what a token-driven threshold would need, can only ever read ancestor inline-size,
+  never a measured overflow amount), reversible via
   `[part='reveal-columns-button']`; `sticky` pins that column's header/cells to the logical start or
   end edge while the table scrolls horizontally — multiple sticky columns stack
   in logical order (each measures every earlier sticky column's rendered width via
@@ -11389,8 +11578,8 @@ cell: (row) => unknown }` —
   the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
-  Priority-hidden columns hide their header, body, and footer cells together at the existing
-  container breakpoints in either direction; revealing columns restores all three bands.
+  Priority-hidden columns hide their header, body, and footer cells together at the same measured
+  overflow point in either direction; revealing columns restores all three bands.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
   `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount, without
   overwriting a `priorityColumnsVisible` the consumer declared on that same mount
@@ -18133,16 +18322,20 @@ apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked
 hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
 a checked row paints identically to an unchecked one.
 
-Three more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
+Four more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
 byte-identical: `--lr-menu-item-hover-bg` (default `var(--lr-color-brand-quiet)`) is the enabled
 row's fill under the pointer, and the pressed state mixes from that same value, so a retuned hover
-fill keeps its pressed step instead of snapping back to the brand default;
-`--lr-menu-item-icon-color` (default `inherit`) recolours `[part="icon"]` without touching the
-label beside it, so it still follows the row while the row is disabled or `variant="danger"` unless
-you say otherwise; and `--lr-menu-item-min-height` (default
-`max(var(--lr-form-control-height), var(--lr-size-24px))`) sets the row's minimum block size for a
-denser or roomier menu, replacing a `::part(base)` rule per item. A value below the 24px floor is
-your call, exactly as it is when overriding the shared ladder itself.
+fill keeps its pressed step instead of snapping back to the brand default; `--lr-menu-item-active-bg`
+(default `color-mix(in oklab, var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`) overrides that pressed fill directly,
+matching `--lr-option-active-bg`'s equivalent hook — unset, the pressed row keeps mixing from
+`--lr-menu-item-hover-bg` exactly as before this hook existed; `--lr-menu-item-icon-color` (default
+`inherit`) recolours `[part="icon"]` without touching the label beside it, so it still follows the
+row while the row is disabled or `variant="danger"` unless you say otherwise; and
+`--lr-menu-item-min-height` (default `max(var(--lr-form-control-height), var(--lr-size-24px))`)
+sets the row's minimum block size for a denser or roomier menu, replacing a `::part(base)` rule per
+item. A value below the 24px floor is your call, exactly as it is when overriding the shared ladder
+itself.
 
 ### Nested submenus
 
@@ -18197,7 +18390,8 @@ while a link opening a new context can never lose the guard.
 the focusable host gains or loses focus, plus the shared menu-item events above.
 
 **Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
-`--lr-menu-item-hover-bg`, `--lr-menu-item-icon-color` and `--lr-menu-item-min-height`.
+`--lr-menu-item-hover-bg`, `--lr-menu-item-active-bg`, `--lr-menu-item-icon-color` and
+`--lr-menu-item-min-height`.
 `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
 because it shares a stylesheet directory with `<lr-menu>`, whose surface reads them; a dropdown item
 is a row **inside** that surface and paints no surface of its own, so setting them here is a no-op —
@@ -19470,8 +19664,9 @@ server-side query runs once per pause instead of once per character. Omitted, `0
 value means no debounce at all: every keystroke commits immediately. A pending debounce is always
 **flushed** by the field's own `change`/blur, so a blur never loses the last keystroke, and
 **cancelled outright** by `reset()`, by removing that filter's chip, and on disconnect — a stale
-keystroke can never overwrite a reset or fire after teardown. `debounce` is ignored for every other
-`type`, whose commits are discrete choices with nothing to debounce.
+keystroke can never overwrite a reset or fire after teardown. `'combobox'` accepts the same
+`debounce`, and so does `'custom'` (see below); `debounce` is ignored for every other `type`, whose
+commits are discrete choices with nothing to debounce.
 
 ### Custom controls
 
@@ -19484,6 +19679,17 @@ controls that expose a value without an event payload, and `context.onFocusout` 
 touched for required validation. Every context also carries its `filterId`, a monotonic
 `generation`, and an `AbortSignal`; replacement/removal of the schema, disconnection, and reconnect
 abort stale contexts, whose callbacks become inert.
+
+A `'custom'` definition also accepts the same optional `debounce?: number` (ms) `'text'`/
+`'combobox'` already have: it delays committing whatever `context.onValueChange`/`onInput`/
+`onChange` reads through `adapter.valueFromEvent`, coalescing a burst of rapid commits into one.
+Omitted, `0`, or a non-finite value means no debounce, exactly as before this field existed. While
+one is pending, `context.value` carries that pending value rather than the last-committed one, so a
+renderer binding it as a fully controlled value never reverts mid-delay; a pending commit is
+**flushed** by `context.onFocusout` and **cancelled outright** by `reset()`, removing that filter's
+chip, and disconnect — identical to `'text'`/`'combobox'`. This is what closes the gap those two
+types' own debounce left: before this field existed, a custom free-text filter had to hand-roll the
+same timer, flush, and cancellation lifecycle itself just to match `'text'`.
 
 The adapter's required `clearValue` is used when the active chip is removed. Its optional
 `isEmpty(value)` defines domain emptiness; without one, the bar compares against `clearValue`
@@ -19979,6 +20185,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraFilterBarCustomDefinition extends LyraFilterBarDefinitionBase {
     readonly type: 'custom';
     readonly custom: LyraFilterBarCustomControl;
+    readonly debounce?: number;
     // Inherited from LyraFilterBarDefinitionBase.
     readonly filterId: string;
     readonly label: string;
@@ -24232,10 +24439,10 @@ shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-dange
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.
 
-**Optional peer deps:** `shiki` (the same fine-grained `shiki/core`/`shiki/engine/oniguruma`/
-`shiki/wasm` subset `lr-code-block-core` uses, never `shiki`'s full ~200-language main entry point)
-— only loaded once both `language` and a matching `languages` entry are set; unset/unmatched leaves
-the plain unhighlighted diff text untouched.
+**Optional peer deps:** `shiki` (the same fine-grained `shiki/core`/`shiki/engine/oniguruma`/binary
+`shiki/onig.wasm` subset `lr-code-block-core` uses by default, never `shiki`'s full ~200-language
+main entry point) — only loaded once both `language` and a matching `languages` entry are set;
+unset/unmatched leaves the plain unhighlighted diff text untouched.
 
 ```html
 <lr-diff-view copyable></lr-diff-view>
@@ -26113,6 +26320,103 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
 
 ---
 
+## `lr-drop-zone`
+
+A drag-and-drop region wrapper with no file input of its own. Wrap it around an arbitrary region —
+a chat composer, a whole conversation viewport, a panel far larger than any single control — to
+make that entire region a file-drop target: it owns the drag-session state, renders a themeable
+drag-over overlay, applies `accept`/size/count limits, and emits the same `lr-files` event shape
+`lr-file-input` does. It never renders a native file picker, a selected-file list, or any focusable
+control of its own; wrap `lr-file-input` itself (or any other focusable content) inside it when the
+region also needs a click-to-browse affordance. The drag-session mechanics are the exact ones
+`lr-file-input` uses, shared through `internal/drop-session-controller.ts` rather than
+reimplemented.
+
+**Properties:**
+
+- `disabled: boolean = false` (reflected) — disables drag/drop handling entirely; the wrapped
+  content keeps its own interactivity
+- `multiple: boolean = true` (reflected) — accepts more than one file per drop and enables
+  recursive folder-drop traversal, same contract as `lr-file-input`'s `multiple`. Defaults to `true`
+  (unlike `lr-file-input`'s `false`): a region wrapper's typical use expects more than one file, and
+  there is no native single-file picker here to keep in sync.
+- `accept: string = ''` — identical native-`accept`-style parsing to `lr-file-input`'s `accept`, via
+  the same shared `matchesAccept()`
+- `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check), `maxFiles:
+  number = 0` (attribute `max-files`), `maxTotalSize: number = 0` (attribute `max-total-size`) —
+  identical contract and invalid-override fail-safe fallback to `lr-file-input`'s own three limits.
+  Since this component retains nothing between drops, `maxFiles`/`maxTotalSize` always cover only
+  the current drop (there is no persisted count/total to add).
+- `readonly dragging: boolean` — `true` during an active drag session
+
+**Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
+`rejected` arrays and frozen rejected-file records, fired on drop; immutable `File` objects retain
+identity) — typed as `LyraDropZoneFilesEvent`, so `event.target`/`event.currentTarget` are
+`LyraDropZone` without a cast. `LyraDropZoneRejectedFile = { readonly file: File; readonly reason:
+'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`, the
+same reason vocabulary as `lr-file-input`'s `LyraFileInputRejectedFile`.
+
+**Slots:** the default slot is the wrapped region, rendered as ordinary light DOM; `overlay`
+overrides the localized accept/reject overlay text.
+
+**CSS parts:** `base` (wraps the default slot and the overlay), `overlay` (the drag-over overlay,
+layered above the slotted content via `position: absolute; inset: 0`, hidden outside an active drag
+session), `overlay-icon`, `overlay-text`, `status` (a visually-hidden, `aria-hidden` mirror of the
+drag state and counts — announcements go through the shared light-DOM regions, same as
+`lr-file-input`), `rejection` (a visible region listing each currently-rejected file, rendered only
+while one exists).
+
+**CSS custom states:** `dragging`, matching `lr-file-input`'s.
+
+**Themeable custom properties:** `--lr-drop-zone-radius` (default `var(--lr-radius)`),
+`--lr-drop-zone-overlay-border-color` (default `var(--lr-color-brand)`, the dashed overlay border in
+its neutral drag state, before an accept/reject verdict) and `--lr-drop-zone-overlay-bg` (default
+`color-mix(in srgb, var(--lr-color-brand) 8%, transparent)`, that same neutral state's fill),
+`--lr-drop-zone-overlay-font-size` (default `var(--lr-font-size-md-sm)`),
+`--lr-drop-zone-overlay-icon-size` (default `var(--lr-font-size-xl)`),
+`--lr-drop-zone-overlay-gap` (default `var(--lr-space-xs)`), and the drag accept/reject highlight —
+`--lr-drop-zone-accept-border-color`/`--lr-drop-zone-accept-bg` (defaults `var(--lr-color-success)`/
+`color-mix(in srgb, var(--lr-color-success) 12%, transparent)`) and
+`--lr-drop-zone-reject-border-color`/`--lr-drop-zone-reject-bg` (defaults `var(--lr-color-danger)`/
+`color-mix(in srgb, var(--lr-color-danger) 12%, transparent)`) — independently overridable on the
+element or any ancestor, mirroring `lr-file-input`'s equivalent hooks.
+
+**Optional peer deps:** none.
+
+```html
+<lr-drop-zone id="chat-surface" accept="image/*,.pdf" max-files="5">
+  <div class="chat-panel">
+    <!-- an existing chat composer / viewport, unrelated to this component -->
+  </div>
+</lr-drop-zone>
+<script>
+  document.querySelector("#chat-surface").addEventListener("lr-files", (e) => {
+    console.log("accepted:", e.detail.files, "rejected:", e.detail.rejected);
+  });
+</script>
+```
+
+Composing `lr-file-input` inside the wrapped region gives that region both a click-to-browse picker
+and a drop target covering the whole surrounding panel:
+
+```html
+<lr-drop-zone>
+  <div class="chat-panel">
+    <lr-file-input></lr-file-input>
+  </div>
+</lr-drop-zone>
+```
+
+**Known gotchas:**
+
+- No paste-from-clipboard handling (unlike `lr-file-input`'s `paste`) — this component is drag/drop
+  only.
+- Dragged folders are traversed recursively while `multiple` (the default), with the same
+  10,000-entry budget and `'read'`/`'limit'` failure reasons as `lr-file-input`. While not
+  `multiple`, a dropped folder is rejected outright with reason `'directory'`.
+
+---
+
 ## `lr-file-input`
 
 A form-associated drag-drop + click-to-browse file dropzone. It stores and renders raw `File[]`;
@@ -26150,6 +26454,26 @@ enabled buttons retain pointer feedback.
   snapshots, retain valid string entries, and inspect at most 10,000 candidates per assignment;
   update them by assigning a new collection.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
+- `maxFiles: number = 0` (attribute `max-files`) — largest total file count accepted, counting
+  retained files plus the current batch; `0` disables the check. An excess file in the batch is
+  rejected with reason `'maxFiles'`, in the same `[part="rejection"]` shape as `maxFileSize`. While
+  `nonRetaining` is set, the count covers only the current batch (there is no externally-held count
+  to add).
+- `maxTotalSize: number = 0` (attribute `max-total-size`) — largest combined byte size accepted,
+  summing retained files plus the current batch; `0` disables the check. Same rejection-UI shape and
+  fail-safe invalid-override behavior as `maxFileSize` (see gotchas). Same `nonRetaining` batch-only
+  scoping as `maxFiles`.
+- `nonRetaining: boolean = false` (reflected, attribute `non-retaining`) — opt-in mode where an
+  accepted selection still fires `lr-files`/`input`/`change` but is never written to `files` or
+  rendered as a built-in `[part="file"]` row. For a host that persists files elsewhere and renders
+  its own list, so assigning `files` (even to reset it) never fights that host-owned rendering.
+  `required` validity and the `blank` custom state then read `valuePresent` instead of
+  `files.length`. Does not affect `formStateRestoreCallback()` or a direct `files` assignment, both
+  of which still retain.
+- `valuePresent: boolean = false` (reflected, attribute `value-present`) — external "a value is
+  present" signal a `nonRetaining` host sets once it has taken ownership of the selected files, so
+  `required` validity and the `blank` state reflect externally-held files. Ignored while
+  `nonRetaining` is `false`.
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
 - `compact: boolean = false` (reflected) — tighter dropzone padding, gap and label font for
@@ -26214,24 +26538,29 @@ enabled buttons retain pointer feedback.
 `required` validity.
 
 **Events:** a user selection or removal emits native bubbling/composed `input`, then exactly one
-host `change`; programmatic `files` writes are silent. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
-frozen readonly `files` and `rejected` arrays and frozen rejected-file records, fired on both drop
-and manual file-picker selection; immutable `File` objects retain identity) —
-`LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
-}`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
-input (`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
-accepted), `'size'` from `maxFileSize`, `'directory'` for a dropped folder in single-file mode,
-`'read'` when a file/directory reader fails, or `'limit'` when folder traversal exceeds its bounded
-entry budget. Read/limit failures reject the complete selection atomically; lifecycle cancellation
-and supersession stay silent. `focus`/`blur` fire when the semantic dropzone (the actual
-keyboard-focusable element, not the hidden native `<input>`) gains/loses focus.
-`lr-invalid` is the bubbling/composed alias of native invalidity.
+host `change`; programmatic `files` writes are silent (both still fire while `nonRetaining` is set,
+even though `files` itself is not written in that mode). `lr-files` (`detail:
+LyraFileInputFilesDetail`, with fresh frozen readonly `files` and `rejected` arrays and frozen
+rejected-file records, fired on both drop and manual file-picker selection; immutable `File` objects
+retain identity) — typed as `LyraFileInputFilesEvent`, so `event.target`/`event.currentTarget` are
+`LyraFileInput` without a cast. `LyraFileInputRejectedFile = { readonly file: File; readonly reason:
+'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`: `'type'`
+from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file input
+(`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
+accepted), `'size'` from `maxFileSize`, `'maxFiles'`/`'maxTotalSize'` from the two aggregate limits,
+`'directory'` for a dropped folder in single-file mode, `'read'` when a file/directory reader fails,
+or `'limit'` when folder traversal exceeds its bounded entry budget. Read/limit failures reject the
+complete selection atomically; lifecycle cancellation and supersession stay silent. `focus`/`blur`
+fire when the semantic dropzone (the actual keyboard-focusable element, not the hidden native
+`<input>`) gains/loses focus. `lr-invalid` is the bubbling/composed alias of native invalidity.
 
 Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
-the file and the reason via one of six locale keys: `fileInputRejectedType` (default
+the file and the reason via one of eight locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
-file can be selected at a time.'`), and — for `'directory'` — the pre-existing
+file can be selected at a time.'`), `fileInputRejectedMaxFiles` (default `'{filename}: the maximum
+number of files has been reached.'`), `fileInputRejectedMaxTotalSize` (default `'{filename}: adding
+this file would exceed the total size limit.'`), and — for `'directory'` — the pre-existing
 `fileInputFolderRejected` (default `'Folders are not accepted here.'`, reused verbatim, so it has no
 `{filename}` placeholder). Terminal traversal failures use `fileInputRejectedRead` (default
 `'{filename}: the file could not be read.'`) and `fileInputRejectedLimit` (default
@@ -26373,7 +26702,11 @@ an extension-only `accept` list.
 - `maxFileSize` fails safe rather than open: `0` (the default) or `Infinity` mean "no limit", but a
   `NaN`/negative value — an unparsable `max-file-size` attribute, or a config that hasn't loaded
   yet — falls back to a 25 MB cap (exported as `DEFAULT_MAX_FILE_SIZE_BYTES`) instead of disabling
-  the check.
+  the check. `maxFiles` and `maxTotalSize` fail safe the identical way, falling back to
+  `DEFAULT_MAX_FILES` (100) and `DEFAULT_MAX_TOTAL_SIZE_BYTES` (250 MB) respectively.
+- The drag-session mechanics (nested-depth tracking, accept/reject preview, folder traversal) live
+  in `internal/drop-session-controller.ts`, shared verbatim with `lr-drop-zone` below rather than
+  reimplemented per component.
 - `maxFileSize`/`accept` extension patterns can't be evaluated during the dragenter preview (no real
   `File.size`/`.name` available yet from a `DataTransferItem`) — the live preview state (border/
   background color, `status` announcement) is therefore only a best-effort hint; the authoritative
@@ -28195,6 +28528,26 @@ These named interfaces and helper signatures are available to typed integrations
     image: string;
   }`
 
+- **`components-media-drop-zone-drop-zone-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js`.
+  `LyraDropZoneRejectedFile {
+    readonly file: File;
+    readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js`.
+  `LyraDropZoneFilesDetail {
+    readonly files: readonly File[];
+    readonly rejected: readonly LyraDropZoneRejectedFile[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js`.
+  `LyraDropZoneFilesEvent extends CustomEvent<LyraDropZoneFilesDetail> {
+    readonly target: LyraDropZone;
+    readonly currentTarget: LyraDropZone;
+  }`
+  `lr-files`'s event type on `<lr-drop-zone>`, narrowing `target`/`currentTarget` to `LyraDropZone`
+  so a listener reads them without casting — same convention as `lr-file-input`'s own
+  `LyraFileInputFilesEvent` below.
+
 - **`components-media-file-icon-file-type-metadata-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
   `createFileTypeMetadataRegistry(entries?: readonly LyraFileTypeMetadataEntry[]): LyraFileTypeMetadataRegistry`
@@ -28249,8 +28602,15 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`.
   `LyraFileInputRejectedFile {
     readonly file: File;
-    readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit';
+    readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
   }`
+  Import: `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`.
+  `LyraFileInputFilesEvent extends CustomEvent<LyraFileInputFilesDetail> {
+    readonly target: LyraFileInput;
+    readonly currentTarget: LyraFileInput;
+  }`
+  `lr-files`'s event type, narrowing `target`/`currentTarget` to `LyraFileInput` so a listener reads
+  them without casting.
 
 - **`components-media-flag-flag-peer-bulk-standard-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk-standard.js`.
@@ -30471,6 +30831,16 @@ for the native download action's hover and pressed backgrounds.
 - `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy direct definition;
   rejected loads are retried on the next call.
 
+Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-register.js`
+(`archive-viewer-register.js`, `ebook-viewer-register.js`, `pdf-viewer-register.js`,
+`docx-viewer-register.js`, `pptx-viewer-register.js`, `spreadsheet-viewer-register.js`,
+`csv-viewer-register.js`, `xml-viewer-register.js`), which installs that kind's registration
+without pulling its element class module into the importing graph until a matching file is
+actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually
+registers. `document-viewer/document-viewer-kinds.js` imports and re-exports all eight at once, for
+a consumer who wants every built-in kind available lazily without importing each entry
+individually. `<lr-document-viewer>` itself (`document-viewer.js`) is always a separate import.
+
 ```html
 <lr-document-viewer
   open
@@ -30614,6 +30984,12 @@ The component registers an eager `application/vnd.openxmlformats-officedocument.
 renderer with `<lr-document-viewer>` (a plain `render`, no `load()` hook — importing this module
 defines `<lr-docx-viewer>` immediately; only `mammoth`/`dompurify` themselves are loaded on demand)
 and matches `.docx` filenames when the MIME type is generic.
+
+A granular consumer (not importing the `all.js` compatibility bundle) who wants `<lr-docx-viewer>`'s
+own class module deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer-register.js`, which installs the
+same registration lazily and exports `DOCX_VIEWER_TAG` (`'lr-docx-viewer'`) as a stable reference to
+the tag it eventually registers.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the document.
@@ -30843,7 +31219,9 @@ archive formats fall through to `<lr-document-preview>`'s generic download fallb
 A granular consumer (not importing the `all.js` compatibility bundle) must import
 `@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer-register.js` once to install
 this registration; without it `<lr-document-viewer>` never recognizes `.zip` files and falls
-through to the generic download fallback described above.
+through to the generic download fallback described above. That entry also exports
+`ARCHIVE_VIEWER_TAG` (`'lr-archive-viewer'`) as a stable reference to the tag it eventually
+registers.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the entry listing.
@@ -30925,7 +31303,9 @@ search: true, textSelect: true }` capabilities and forwarding `anchor`/`highligh
 viewer. The peer loader requires the callable EPUB factory; malformed module shapes fail closed.
 A granular consumer (not importing the `all.js` compatibility bundle) must also import
 `@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer-register.js` once to install
-this registration; without it `<lr-document-viewer>` never recognizes `.epub` files.
+this registration; without it `<lr-document-viewer>` never recognizes `.epub` files. That entry also
+exports `EBOOK_VIEWER_TAG` (`'lr-ebook-viewer'`) as a stable reference to the tag it eventually
+registers.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the ebook.
@@ -31022,6 +31402,13 @@ property, which writes this token inline.
 filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textSelect: true }`
 capabilities and forwarding `anchor`/`highlights` to the mounted viewer. That forwarding preserves
 the request across the registry hop; it does not create stable fragment ids in renderer output.
+
+Importing `pptx-viewer.js` (this component's own registration entry) loads `<lr-pptx-viewer>`'s
+class module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who
+wants that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer-register.js`, which installs the
+same registration lazily and exports `PPTX_VIEWER_TAG` (`'lr-pptx-viewer'`) as a stable reference to
+the tag it eventually registers.
 
 Remote resources are capped at 25 MB and measured ZIP expansion is capped at 256 MB before the
 renderer opens the archive; exceeding either ceiling surfaces the localized
@@ -31464,6 +31851,15 @@ a PDF is opened. An absent `pdfjs-dist` fails closed and renders
 `[part="error"]` with the localized `pdfViewerMissingLibrary` message — there is no partial PDF
 rendering without it.
 
+Importing `pdf-viewer.js` (this component's own registration entry) loads `<lr-pdf-viewer>`'s class
+module immediately, before any PDF is ever opened — `pdfjs-dist` itself is the only thing that
+entry actually defers. A granular consumer (not importing the `all.js` compatibility bundle) who
+wants the class module deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer-register.js`, which installs the same
+`application/pdf` registration without pulling in `<lr-pdf-viewer>`'s class module until a matching
+file is actually opened, and exports `PDF_VIEWER_TAG` (`'lr-pdf-viewer'`) as a stable reference to
+the tag it eventually registers.
+
 **Configuring the PDF.js worker.** PDF.js renders in a web worker and rejects every document with
 `No "GlobalWorkerOptions.workerSrc" specified.` until it has been told where that worker lives. The
 worker is a separate file inside the peer (`pdfjs-dist/build/pdf.worker.min.mjs`) that only the
@@ -31563,6 +31959,13 @@ inline on `[part="base"]`.
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.
 
+Importing `spreadsheet-viewer.js` (this component's own registration entry) loads
+`<lr-spreadsheet-viewer>`'s class module immediately. A granular consumer (not importing the
+`all.js` compatibility bundle) who wants that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.js`, which
+installs the same registration lazily and exports `SPREADSHEET_VIEWER_TAG`
+(`'lr-spreadsheet-viewer'`) as a stable reference to the tag it eventually registers.
+
 Remote resources are capped at 25 MB, each parsed sheet at 10,000 rows and 1,000 columns, and each
 workbook at 256 sheets and 1,000,000 aggregate expanded cells. Row limits are per sheet, not
 cumulative across a workbook. Exceeding any ceiling surfaces the localized
@@ -31628,6 +32031,13 @@ through. An inherited or direct public value remains authoritative across that b
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
+
+Importing `csv-viewer.js` (this component's own registration entry) loads `<lr-csv-viewer>`'s class
+module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who wants
+that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer-register.js`, which installs the
+same registration lazily and exports `CSV_VIEWER_TAG` (`'lr-csv-viewer'`) as a stable reference to
+the tag it eventually registers.
 
 Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 raw rows
 (the first row consumes the same budget whether or not `has-header-row` displays it as a header),
@@ -31999,6 +32409,13 @@ entity access and browser-specific internal-entity expansion. Not `lr-json-viewe
 The registration entry also matches extensionless `application/*+xml` MIME essences, ignoring
 parameters, case and outer whitespace. Exact registered MIME keys retain precedence over this
 fallback matcher.
+
+Importing `xml-viewer.js` (this component's own registration entry) loads `<lr-xml-viewer>`'s class
+module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who wants
+that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer-register.js`, which installs the
+same registration lazily and exports `XML_VIEWER_TAG` (`'lr-xml-viewer'`) as a stable reference to
+the tag it eventually registers.
 
 **Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
 string` (property only) — raw XML text to parse and render; wins over `src`, and setting it parses
@@ -33116,9 +33533,12 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `highlightCode: boolean = true` (attribute
-`highlight-code`), `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — required,
-unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced block stays
-unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading-anchors`),
+`highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
+required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
+block stays unhighlighted permanently. Each value is either an already-resolved grammar or a lazy
+loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
+`() => import('@shikijs/langs/bash')`) — called at most once per key, memoized, the first time a
+fenced block actually requests that language, `headingAnchors: boolean = false` (attribute `heading-anchors`),
 `math: boolean = false`; plus the same inherited anchor-target properties as `<lr-markdown>`:
 `highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
@@ -33163,8 +33583,10 @@ rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
-`shiki/core`/`shiki/engine/oniguruma`/`shiki/langs/*`, the same fine-grained subset
-`<lr-code-block-core>` depends on.
+`shiki/core`, `shiki/engine/oniguruma`, the binary `shiki/onig.wasm` asset (the default; select
+`shiki/engine/javascript` instead via `setShikiCoreEngine('javascript')`), and
+`shiki/themes/github-{light,dark}.mjs`, the same fine-grained subset `<lr-code-block-core>` depends
+on.
 
 ````ts
 import { html } from "lit";
@@ -33172,8 +33594,8 @@ import python from "shiki/langs/python.mjs";
 import "@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js";
 
 const view = html`<lr-markdown-core
-  .content=${"# Report\n\n```python\nprint('hi')\n```"}
-  .languages=${{ python }}
+  .content=${"# Report\n\n```python\nprint('hi')\n```\n\n```bash\necho hi\n```"}
+  .languages=${{ python, bash: () => import("shiki/langs/bash.mjs") }}
 ></lr-markdown-core>`;
 ````
 
@@ -34230,6 +34652,10 @@ not a delta — this component does no accumulation or ordering of its own.
 - `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
   uses `looksLikeMarkdown`; `plain` and `markdown` force their named paths. Invalid values render as
   `auto` without installing a stale memoized decision.
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to
+  the composed `<lr-markdown>`'s own `languages`, the same fine-grained language-grammar scoping
+  `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
+  untouched.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — runs a fixed, ordered list of
 lightweight regexes (ATX heading, fenced code block, `**bold**`, `_italic_`, inline code, bullet
@@ -34293,8 +34719,9 @@ never be left stranded mid-window, and a stream restarting on a reused element c
 showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
-forwarding this component's own `streaming` through as that component's `streaming` hint prop;
-plain-text mode renders into a `white-space: pre-wrap` span instead. The blinking cursor degrades
+forwarding this component's own `streaming` through as that component's `streaming` hint prop and
+`languages` verbatim; plain-text mode renders into a `white-space: pre-wrap` span instead. The
+blinking cursor degrades
 to a static, always-visible bar under `prefers-reduced-motion: reduce`. In plain-text mode it sits
 inline at the tail of the final character; in Markdown mode it renders as its own trailing block
 below the rendered content instead of attempting to splice into whatever nested block Markdown
@@ -34313,6 +34740,60 @@ happens to end with.
 - Purely presentational: no events, and it does not announce anything to assistive tech itself — a
   host that needs streamed text announced needs `<lr-live-region>` for that (e.g. composed inside
   `<lr-chat-message>`).
+
+---
+
+## `lr-streaming-text-core`
+
+A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `languages` map already
+covers every language it will ever stream, or who never renders fenced code at all. Every
+capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
+`lr-content-settled` event, the `languages` property — is identical to `<lr-streaming-text>`; only
+which Markdown element Markdown mode composes differs: this variant renders `<lr-markdown-core>`
+(`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this entry point instead
+of `streaming-text.js` never references `<lr-markdown>`'s ~200-language dynamic-import table at
+all. A fenced code block whose language isn't a key in `languages` always renders the plain-text
+fallback — there is no default/full-table highlighter here to fall back to, mirroring
+`<lr-markdown-core>`'s own contract.
+
+**Properties:** `content: string = ''` — the full current text so far, identical contract to
+`<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
+(attribute `coalesce-ms`) — same trailing-edge coalesce window described under `<lr-streaming-text>`
+above; `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
+uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
+Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
+`<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s.
+
+**Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
+`<lr-streaming-text>` exports and documents above; both tags share one implementation.
+
+**Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — identical contract to
+`<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
+`<lr-markdown-core>` emits it instead of `<lr-markdown>`).
+
+**Slots:** none — content renders from `content`, not a slot.
+
+**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`) — identical to
+`<lr-streaming-text>`'s own.
+
+**Themeable custom properties:** `--lr-inline-cursor-width` (default `var(--lr-size-0-125rem)`) and
+`--lr-inline-cursor-height` (default `var(--lr-size-1em)`) — the same shared inline-cursor tokens
+`<lr-streaming-text>`/`<lr-typing-indicator>` use, plus the same `--lr-space-xs`/
+`--lr-transition-ambient` fallbacks described above.
+
+Every other capability — token coalescing mechanics, the first-assignment/`streaming`-transition
+immediate-flush rules, the reduced-motion cursor degradation, and the known gotchas — is identical
+to `<lr-streaming-text>`; see that section above for the full write-up of shared behavior.
+
+```html
+<lr-streaming-text-core id="out" streaming></lr-streaming-text-core>
+<script type="module">
+  import typescript from "shiki/langs/typescript.mjs";
+  const out = document.getElementById("out");
+  out.languages = { typescript };
+  out.content = "```typescript\nconst x = 1;\n```";
+</script>
+```
 
 ---
 
@@ -34692,12 +35173,15 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract, identical to `<lr-code-block>`.
-- `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
-  instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
-  (the default) never highlights at all — every `language` renders the plain-text fallback.
+- `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) — grammar definitions this
+  instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`), or a
+  lazy loader per key, e.g. `{ bash: () => import('@shikijs/langs/bash') }` — called at most once
+  per key, memoized, the first time a fenced block actually requests that language. Empty
+  (the default) never highlights at all — every `language` renders the plain-text fallback, and so
+  does a key whose lazy loader rejects.
   If `languages` changes while highlighting is loading, only results for the current map can update
   the displayed code. For a
-  TypeScript annotation, use `import type { ShikiLanguageInput } from
+  TypeScript annotation, use `import type { ShikiLanguageSource } from
 '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
   granular import emits no registration side effect.
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — identical to
@@ -34732,9 +35216,11 @@ for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must 
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
 definite-height host gives it too, identically to `<lr-code-block>` above.
 
-**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`,
-`shiki/wasm`, and `shiki/themes/github-{light,dark}.mjs` subpaths — never `shiki`'s main entry point,
-which is what carries the ~200-language table this component exists to avoid). Building the
+**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, the binary
+`shiki/onig.wasm` asset (the default; select `shiki/engine/javascript` instead via
+`setShikiCoreEngine('javascript')`), and `shiki/themes/github-{light,dark}.mjs` subpaths — never
+`shiki`'s main entry point, which is what carries the ~200-language table this component exists to
+avoid). Building the
 fine-grained highlighter is cached per `languages` object identity. A bounded weak cache also shares
 recently used equivalent, deeply frozen plain grammar maps, including the detached snapshots owned
 by separate component instances. Grammar contents and property/array order must agree completely;
@@ -36685,7 +37171,40 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
   `loadShikiHighlighterCore(languages: Record<string, ShikiLanguageInput>): Promise<ShikiHighlighterCore | null>`
   Results are cached by map identity, with bounded weak reuse across equivalent deeply frozen plain
-  grammar maps. Mutable maps and unusual grammar values retain identity-only caching.
+  grammar maps. Mutable maps and unusual grammar values retain identity-only caching. Every
+  distinct active engine (see `setShikiCoreEngine()` below) gets its own cached core per
+  `languages` object -- two engines never share one.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  re-exported from `@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js`) --
+  `shiki-types.js` itself is an internal support module with no package subpath export.
+  `setShikiCoreEngine(engine: ShikiEngineOption): void`
+  Selects the regex-scanning engine every subsequent `loadShikiHighlighterCore()` call builds its
+  `HighlighterCore` with. `'oniguruma'` (the default) fetches the binary `shiki/onig.wasm` asset;
+  `'javascript'` selects shiki's pure-JS engine instead, avoiding WebAssembly entirely. A function
+  value is called on first use per distinct `languages` object and may return the engine
+  synchronously or via a promise.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `ShikiEngineOption = 'oniguruma' | 'javascript' | ShikiRegexEngineFactory`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `ShikiRegexEngineFactory = () => ShikiRegexEngine | Promise<ShikiRegexEngine>`
+  A factory `setShikiCoreEngine()` accepts directly: called once per distinct `languages` object
+  the first time it is used.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `resolvedShikiLanguages(languages: Readonly<Record<string, ShikiLanguageSource>>): Record<string, ShikiLanguageInput>`
+  The already-resolved subset of a `languages` map that may also contain lazy loaders -- the subset
+  `loadShikiHighlighterCore()` seeds a `HighlighterCore` with at creation. Returns the same object
+  unchanged when there is no loader, preserving identity-keyed core reuse for a caller that never
+  uses one.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `ensureShikiLanguageLoaded(core: ShikiHighlighterCore, key: string, source: ShikiLanguageSource): Promise<boolean>`
+  Resolves one `languages` entry that may be a lazy loader, loading it into `core` via
+  `HighlighterCore.loadLanguage()` the first time a given (core, key) pair is seen, memoized after
+  that. Resolves to `true` immediately for an entry that is already a plain grammar. Never rejects:
+  a loader that throws, or a `loadLanguage()` call that rejects, resolves to `false` instead.
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
   `normalizeShikiLanguage(lang: string): string`
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
@@ -36705,6 +37224,25 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block.js`.
   `ShikiLanguageInput = ShikiLanguageRegistration | readonly ShikiLanguageRegistration[]`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js`.
+  `ShikiLanguageLoader = () => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`
+  Called at most once per key, memoized, the first time a fenced block requests that language. May
+  return either a grammar directly or an ES module namespace/default-export wrapper around one,
+  matching a plain `() => import('@shikijs/langs/<name>')` call site verbatim.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js`.
+  `ShikiLanguageSource = ShikiLanguageInput | ShikiLanguageLoader`
+  One `languages` map entry on `<lr-code-block-core>`/`<lr-markdown-core>`: either an
+  already-resolved grammar (seeded eagerly into the `HighlighterCore` at creation) or a lazy
+  `ShikiLanguageLoader`.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `ShikiRegexEngine {
+    createScanner(patterns: readonly (string | RegExp)[]): unknown;
+    createString(value: string): unknown;
+  }`
+  The peer-neutral regex-scanning capability `createHighlighterCore()`'s own `engine` option
+  accepts; only ever forwarded through to shiki's own `createHighlighterCore()`, never called
+  directly.
 
 - **`components-conversation-conversation-item-conversation-item-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js`.
@@ -36934,8 +37472,11 @@ These named interfaces and helper signatures are available to typed integrations
     readonly anchor: DocumentLocator | null;
   }`
 
-- **`components-conversation-streaming-text-streaming-text-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.class.js`.
+- **`components-conversation-streaming-text-streaming-text-base-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.class.js`
+  (also re-exported from `@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text-core.class.js`)
+  — `streaming-text-base.class.js` itself is an internal support module shared by both
+  `<lr-streaming-text>` and `<lr-streaming-text-core>`, with no package subpath export of its own.
   `looksLikeMarkdown(text: string): boolean`
 
 - **`components-conversation-suggestion-chips-suggestion-chips-contracts`** — Supporting data types and helpers for this component family.

@@ -74,6 +74,13 @@ inline on `[part="base"]`.
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.
 
+Importing `spreadsheet-viewer.js` (this component's own registration entry) loads
+`<lr-spreadsheet-viewer>`'s class module immediately. A granular consumer (not importing the
+`all.js` compatibility bundle) who wants that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.js`, which
+installs the same registration lazily and exports `SPREADSHEET_VIEWER_TAG`
+(`'lr-spreadsheet-viewer'`) as a stable reference to the tag it eventually registers.
+
 Remote resources are capped at 25 MB, each parsed sheet at 10,000 rows and 1,000 columns, and each
 workbook at 256 sheets and 1,000,000 aggregate expanded cells. Row limits are per sheet, not
 cumulative across a workbook. Exceeding any ceiling surfaces the localized

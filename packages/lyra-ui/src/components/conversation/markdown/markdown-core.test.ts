@@ -754,6 +754,53 @@ describe("languages (build-lean shiki, no full-bundle fallback)", () => {
   });
 });
 
+describe("languages lazy grammar loaders", () => {
+  it("resolves a loader entry and highlights, calling it exactly once across a content re-render", async function () {
+    this.timeout(20_000);
+    let calls = 0;
+    const el = (await fixture(
+      html`<lr-markdown-core></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    el.languages = {
+      typescript: () => {
+        calls += 1;
+        return import("shiki/langs/typescript.mjs");
+      },
+    };
+    el.content = "```typescript\nconst x = 1;\n```";
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+      "never highlighted via a lazy languages loader",
+      { timeout: 8000 }
+    );
+    expect(calls, "the loader must run exactly once").to.equal(1);
+
+    el.content = "```typescript\nconst x = 2;\n```";
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"]')!.textContent!.includes("const x = 2;"),
+      "never re-highlighted the changed content",
+      { timeout: 8000 }
+    );
+    expect(calls, "a later content change must not re-invoke an already-resolved loader").to.equal(1);
+  });
+
+  it("falls back to plain text without throwing when a loader rejects", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    el.languages = { typescript: () => Promise.reject(new Error("network down")) };
+    el.content = "```typescript\nconst x = 1;\n```";
+    await el.updateComplete;
+    await aTimeout(500);
+    expect(el.shadowRoot!.querySelector('[part="code-block"] span') === null).to.be.true;
+    expect(
+      el.shadowRoot!.querySelector('[part="code-block"] code')!.textContent
+    ).to.equal("const x = 1;\n");
+  });
+});
+
 describe("streaming raf scheduling / renderMarkdown guards", () => {
   it("keeps rapid streaming content in plain-text mode without parsing accumulated Markdown", async () => {
     const el = (await fixture(
@@ -2650,4 +2697,14 @@ it('recognizes a GFM table with the unset (true) gfm default (regression)', asyn
     () => (el as unknown as { renderedHtml: string | null }).renderedHtml !== null,
   );
   expect(el.shadowRoot!.querySelector('[part="table"]')).to.exist;
+});
+
+describe('shiki engine seam public reachability', () => {
+  it('re-exports setShikiCoreEngine from the public markdown-core.js entry, not only shiki-types.js', async () => {
+    // A consumer asked for a callable engine seam. Before this, the function was
+    // only importable from the internal `shiki-types.js` support module, which has no
+    // package.json#exports entry at all -- so no consumer-supported path could ever reach it.
+    const entry = (await import('./markdown-core.js')) as { setShikiCoreEngine?: unknown };
+    expect(typeof entry.setShikiCoreEngine).to.equal('function');
+  });
 });

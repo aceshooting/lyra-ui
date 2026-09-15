@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   fileInputRejectedCount: '{filename}: يمكن تحديد ملف واحد فقط في كل مرة.',
   fileInputRejectedRead: '{filename}: تعذّرت قراءة الملف.',
   fileInputRejectedLimit: '{filename}: يحتوي المجلد على عدد كبير جدًا من العناصر.',
+  fileInputRejectedMaxFiles: '{filename}: تم الوصول إلى الحد الأقصى لعدد الملفات.',
+  fileInputRejectedMaxTotalSize: '{filename}: إضافة هذا الملف ستتجاوز الحد الأقصى لإجمالي الحجم.',
   mediaCardUntitledFile: 'ملف بلا عنوان',
   mediaCardOpenName: 'فتح {name}',
   mediaCardOpenImageAttachment: 'فتح مرفق الصورة',

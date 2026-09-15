@@ -2,7 +2,7 @@
 
 # Component index
 
-286 custom elements, grouped by the source family they live in.
+288 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -165,11 +165,12 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-random-content` · lr-random-content.js · `stable` since `4.0.0` — displays a randomly (or sequentially) chosen subset of its slotted children and hides the rest, for A/B copy testing, testimonial/quote r...
 - `lr-tour` · lr-tour.js · `stable` since `4.0.0` — - a spotlight-and-step guided walkthrough for first-run onboarding.
 
-## Media, files & maps — `components/media/` (21)
+## Media, files & maps — `components/media/` (22)
 
 - `lr-flag` · lr-flag.js · `stable` since `4.0.0` — a country/language flag.
 - `lr-sequence-playback` · lr-sequence-playback.js · `stable` since `9.0.0` — steps a current index through `[0, itemCount)` on a fixed interval (play/pause), the common building block behind ad-hoc play-timers in t...
 - `lr-map` · lr-map.js · `stable` since `4.0.0` — a maplibre-gl wrapper with a declarative legend, choropleth GeoJSON layer, markers, and additive `dataLayers` GeoJSON overlays (arbitrary...
+- `lr-drop-zone` · lr-drop-zone.js · `experimental` since `unreleased` — - a drag-and-drop region wrapper with no file input of its own.
 - `lr-file-input` · lr-file-input.js · `stable` since `4.0.0` — a drag-drop + click-to-browse file dropzone.
 - `lr-image-comparer` · lr-image-comparer.js · `stable` since `4.0.0` — compares two slotted surfaces with a keyboard- accessible range divider.
 - `lr-zoomable-frame` · lr-zoomable-frame.js · `stable` since `4.0.0` — a sandboxed iframe preview with discrete zoom controls.
@@ -230,7 +231,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-geojson-viewer` · lr-geojson-viewer.js · `stable` since `9.0.0` — document-registry bridge rendering a fetched GeoJSON file through `<lr-map>`'s `dataLayers`.
 - `lr-geojson-view` · lr-geojson-view.js · `stable` since `4.0.0` — Permanent compatibility class for the pre-v9 `lr-geojson-view` tag.
 
-## Conversation & chat UI — `components/conversation/` (33)
+## Conversation & chat UI — `components/conversation/` (34)
 
 - `lr-markdown` · lr-markdown.js · `stable` since `4.0.0` — sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on the optional peer dependencies `marked...
 - `lr-markdown-core` · lr-markdown-core.js · `stable` since `4.0.0` — a build-lean variant of `<lr-markdown>` for a consumer whose `languages` map already covers every language it will ever render.
@@ -241,6 +242,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-conversation-item` · lr-conversation-item.js · `stable` since `4.0.0` — a selectable row representing one chat session in a history sidebar list.
 - `lr-model-select` · lr-model-select.js · `stable` since `4.0.0` — a provider/model picker that renders as a closed dropdown when a fixed `catalog` is available, or as a filterable free-text combobox when...
 - `lr-streaming-text` · lr-streaming-text.js · `stable` since `4.0.0` — a token-coalescing incremental text renderer for streaming assistant output, with an optional blinking cursor and auto-detected Markdown...
+- `lr-streaming-text-core` · lr-streaming-text-core.js · `experimental` since `unreleased` — a build-lean `<lr-streaming-text>` variant for a consumer whose `languages` map already covers every fenced-code language it will ever st...
 - `lr-generation-metrics` · lr-generation-metrics.js · `stable` since `9.0.0` — a compact, ticking status readout shown alongside an in-progress AI response: elapsed time, token count, and token-throughput, plus a bui...
 - `lr-code-block` · lr-code-block.js · `stable` since `4.0.0` — fenced code display with optional lazy syntax highlighting and a copy button.
 - `lr-code-block-core` · lr-code-block-core.js · `stable` since `4.0.0` — a build-lean variant of `<lr-code-block>` for a consumer whose `languages` map already covers every language it will ever render.

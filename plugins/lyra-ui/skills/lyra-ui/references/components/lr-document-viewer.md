@@ -133,6 +133,16 @@ for the native download action's hover and pressed backgrounds.
 - `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy direct definition;
   rejected loads are retried on the next call.
 
+Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-register.js`
+(`archive-viewer-register.js`, `ebook-viewer-register.js`, `pdf-viewer-register.js`,
+`docx-viewer-register.js`, `pptx-viewer-register.js`, `spreadsheet-viewer-register.js`,
+`csv-viewer-register.js`, `xml-viewer-register.js`), which installs that kind's registration
+without pulling its element class module into the importing graph until a matching file is
+actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually
+registers. `document-viewer/document-viewer-kinds.js` imports and re-exports all eight at once, for
+a consumer who wants every built-in kind available lazily without importing each entry
+individually. `<lr-document-viewer>` itself (`document-viewer.js`) is always a separate import.
+
 ```html
 <lr-document-viewer
   open

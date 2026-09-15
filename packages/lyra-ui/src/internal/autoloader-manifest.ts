@@ -353,6 +353,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/layout/drilldown-panel/drilldown-panel.class.js').then((module) => module.LyraDrilldownPanel),
   },
+  'lr-drop-zone': {
+    optionalPeers: [],
+    load: () => import('../components/media/drop-zone/drop-zone.class.js').then((module) => module.LyraDropZone),
+  },
   'lr-dropdown': {
     optionalPeers: [],
     load: () => import('../components/overlays/overlay/dropdown.class.js').then((module) => module.LyraDropdown),
@@ -960,6 +964,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-streaming-text': {
     optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
     load: () => import('../components/conversation/streaming-text/streaming-text.class.js').then((module) => module.LyraStreamingText),
+  },
+  'lr-streaming-text-core': {
+    optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
+    load: () => import('../components/conversation/streaming-text/streaming-text-core.class.js').then((module) => module.LyraStreamingTextCore),
   },
   'lr-subagent-panel': {
     optionalPeers: [],

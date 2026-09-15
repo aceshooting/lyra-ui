@@ -3357,6 +3357,188 @@ describe("'combobox' debounce", () => {
   });
 });
 
+describe("'custom' debounce", () => {
+  function debouncedCustomFilters(delay: number): LyraFilterBarFilterDefinition[] {
+    return [
+      {
+        filterId: 'q',
+        label: 'Query',
+        type: 'custom',
+        debounce: delay,
+        custom: {
+          adapter: {
+            valueFromEvent: (event) => (event.target as HTMLInputElement).value,
+            clearValue: '',
+          },
+          render: (context) => html`<input
+            aria-label=${context.label}
+            .value=${typeof context.value === 'string' ? context.value : ''}
+            @change=${context.onValueChange}
+            @focusout=${context.onFocusout}
+          />`,
+        },
+      },
+    ];
+  }
+
+  function customInput(el: LyraFilterBar): HTMLInputElement {
+    return control(el, 'q').querySelector('input') as HTMLInputElement;
+  }
+
+  it('coalesces rapid custom-control commits into a single delayed lr-input carrying the final value', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCustomFilters(60)}></lr-filter-bar>`
+    );
+    const collected: string[] = [];
+    el.addEventListener('lr-input', (e) =>
+      collected.push((e as CustomEvent<LyraFilterBarInputDetail>).detail.value['q'] as string)
+    );
+
+    const input = customInput(el);
+    input.value = 'sev';
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(collected, 'nothing committed while the debounce is still in flight').to.deep.equal([]);
+    expect(el.value).to.deep.equal({});
+
+    input.value = 'sev1';
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(collected).to.deep.equal([]);
+
+    await aTimeout(120);
+    expect(collected).to.deep.equal(['sev1']);
+    expect(el.value).to.deep.equal({ q: 'sev1' });
+  });
+
+  it(
+    'passes the pending value, not the stale committed one, into context.value across an unrelated re-render',
+    async () => {
+      const seen: unknown[] = [];
+      const filters: LyraFilterBarFilterDefinition[] = [
+        {
+          filterId: 'q',
+          label: 'Query',
+          type: 'custom',
+          debounce: 60,
+          custom: {
+            adapter: {
+              valueFromEvent: (event) => (event.target as HTMLInputElement).value,
+              clearValue: '',
+            },
+            render: (context) => {
+              seen.push(context.value);
+              return html`<input
+                aria-label=${context.label}
+                .value=${typeof context.value === 'string' ? context.value : ''}
+                @change=${context.onValueChange}
+                @focusout=${context.onFocusout}
+              />`;
+            },
+          },
+        },
+      ];
+      const el = await fixture<LyraFilterBar>(
+        html`<lr-filter-bar .filters=${filters} .value=${{ q: 'initial' }}></lr-filter-bar>`
+      );
+      const input = control(el, 'q').querySelector('input') as HTMLInputElement;
+      seen.length = 0;
+
+      input.value = 'sev1';
+      input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect(el.value).to.deep.equal({ q: 'initial' });
+
+      // Any unrelated state change re-renders the whole bar while the debounce is still pending; a
+      // naively controlled context.value would carry the stale committed value back into the
+      // custom renderer, wiping out the user's own in-progress edit.
+      el.loading = true;
+      await el.updateComplete;
+
+      expect(
+        seen.at(-1),
+        'the pending edit must reach context.value, not the stale committed one'
+      ).to.equal('sev1');
+    }
+  );
+
+  it("flushes a pending custom debounce on the control's own focusout", async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCustomFilters(60)}></lr-filter-bar>`
+    );
+    const input = customInput(el);
+    input.value = 'sev';
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({});
+
+    const promise = oneEvent(el, 'lr-input');
+    input.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
+    expect(ev.detail.value['q']).to.equal('sev');
+  });
+
+  it("cancels a pending custom debounce on reset(), so the stale edit never overwrites the reset", async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCustomFilters(60)}></lr-filter-bar>`
+    );
+    const input = customInput(el);
+    input.value = 'sev';
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    let inputs = 0;
+    el.addEventListener('lr-input', () => (inputs += 1));
+    el.reset();
+    await aTimeout(120);
+
+    expect(el.value).to.deep.equal({});
+    expect(inputs, 'only the reset itself emitted').to.equal(1);
+  });
+
+  it('cancels a pending custom debounce when its chip is removed, so the stale edit never overwrites the removal', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCustomFilters(60)} .value=${{ q: 'sev' }}></lr-filter-bar>`
+    );
+    const input = customInput(el);
+    input.value = 'sev1';
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    // Still the pre-debounce committed value -- the edit above is only pending.
+    expect(el.value).to.deep.equal({ q: 'sev' });
+
+    let inputs = 0;
+    el.addEventListener('lr-input', () => (inputs += 1));
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(Object.hasOwn(el.value, 'q'), 'the chip removal itself must clear q').to.equal(false);
+    expect(inputs, 'only the chip removal itself emitted so far').to.equal(1);
+
+    await aTimeout(120); // well past the 60ms debounce window
+    expect(inputs, 'a leaked debounce timer must not re-emit lr-input after the chip removal').to.equal(1);
+    expect(Object.hasOwn(el.value, 'q'), 'the stale pending edit must not resurrect q').to.equal(false);
+  });
+
+  it('cancels a pending custom debounce on disconnect, so a detached bar never emits after teardown', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${debouncedCustomFilters(60)}></lr-filter-bar>`
+    );
+    const input = customInput(el);
+    let fired = false;
+    el.addEventListener('lr-input', () => (fired = true));
+    input.value = 'sev';
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({});
+
+    el.remove();
+    await aTimeout(120); // well past the 60ms debounce window
+    expect(fired, 'a leaked debounce timer must not emit lr-input after disconnect').to.be.false;
+    expect(el.value).to.deep.equal({});
+  });
+});
+
 describe("lr-filter-bar contains its composed controls' lr-activate", () => {
   const containmentCase = async (
     filterId: "status" | "tags",

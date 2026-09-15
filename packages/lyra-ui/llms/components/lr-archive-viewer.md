@@ -87,7 +87,9 @@ archive formats fall through to `<lr-document-preview>`'s generic download fallb
 A granular consumer (not importing the `all.js` compatibility bundle) must import
 `@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer-register.js` once to install
 this registration; without it `<lr-document-viewer>` never recognizes `.zip` files and falls
-through to the generic download fallback described above.
+through to the generic download fallback described above. That entry also exports
+`ARCHIVE_VIEWER_TAG` (`'lr-archive-viewer'`) as a stable reference to the tag it eventually
+registers.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the entry listing.

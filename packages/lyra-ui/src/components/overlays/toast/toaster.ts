@@ -1,7 +1,7 @@
-import { LyraToast, type LyraToastOptions } from './toast.class.js';
-import { LyraToastItem } from './toast-item.class.js';
+import type { LyraToastOptions } from './toast.class.js';
+import type { LyraToastItem } from './toast-item.class.js';
 import { getToastRegion } from './toast-region.js';
-import { defineElement } from '../../../internal/prefix.js';
+import { defineElement, tag } from '../../../internal/prefix.js';
 
 export type { LyraToastOptions } from './toast.class.js';
 
@@ -12,6 +12,25 @@ export interface ToastHandle {
   dismiss: () => void;
 }
 
+let elementsRegistered: Promise<void> | undefined;
+
+/**
+ * Dynamically imports and registers `<lr-toast>`/`<lr-toast-item>` exactly once. Deferred to the
+ * first actual `toast()` call so merely importing this helper (or the package root, which
+ * re-exports it) never pulls the element class implementations into an eagerly loaded bundle --
+ * only actually showing a toast does. Idempotent and safe to race: every caller shares the same
+ * pending/settled promise.
+ */
+function registerToastElements(): Promise<void> {
+  elementsRegistered ??= Promise.all([import('./toast.class.js'), import('./toast-item.class.js')]).then(
+    ([{ LyraToast }, { LyraToastItem }]) => {
+      defineElement('toast-item', LyraToastItem);
+      defineElement('toast', LyraToast);
+    },
+  );
+  return elementsRegistered;
+}
+
 /**
  * Show a toast. Ergonomic convenience over `<lr-toast>.create()` that mounts
  * and reuses a page-level region per placement — the drop-in for `react-hot-toast`.
@@ -20,11 +39,6 @@ export interface ToastHandle {
  * @example toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick: undo } });
  */
 export function toast(input: LyraToastOptions | string): ToastHandle {
-  // Keep the package root genuinely registration-free while preserving the synchronous helper
-  // contract. Importing this module loads only pure class modules; invoking the imperative helper
-  // installs exactly the two elements it creates.
-  defineElement('toast-item', LyraToastItem);
-  defineElement('toast', LyraToast);
   const opts: LyraToastOptions = typeof input === 'string' ? { message: input } : input;
   // An action must remain available until the user can reach it. Callers can
   // still opt into a finite duration explicitly; the convenience API makes
@@ -35,16 +49,13 @@ export function toast(input: LyraToastOptions | string): ToastHandle {
     ownerDocument,
     duration: opts.duration ?? (opts.action ? 0 : undefined),
   };
-  let item: Promise<LyraToastItem>;
-  try {
+  const item: Promise<LyraToastItem> = registerToastElements().then(() => {
     const registry = ownerDocument.defaultView?.customElements;
-    if (!registry?.get('lr-toast') || !registry.get('lr-toast-item')) {
+    if (!registry?.get(tag('toast')) || !registry.get(tag('toast-item'))) {
       throw new TypeError('Toast elements are not registered in the requested owner document.');
     }
-    item = getToastRegion(opts.placement, ownerDocument).create(normalized);
-  } catch (error) {
-    item = Promise.reject(error);
-  }
+    return getToastRegion(opts.placement, ownerDocument).create(normalized);
+  });
 
   return {
     item,

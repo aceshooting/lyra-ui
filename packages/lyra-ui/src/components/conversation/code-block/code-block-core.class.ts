@@ -10,10 +10,12 @@ import type {
   LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
 import {
+  ensureShikiLanguageLoaded,
   loadShikiHighlighterCore,
   normalizeShikiLanguage,
+  resolvedShikiLanguages,
   type ShikiHighlighterCore,
-  type ShikiLanguageInput,
+  type ShikiLanguageSource,
 } from './shiki-types.js';
 import { styles } from './code-block.styles.js';
 import {
@@ -61,18 +63,24 @@ export interface LyraCodeBlockCoreEventMap {
 /**
  * `<lr-code-block-core>` — a build-lean variant of `<lr-code-block>` for
  * a consumer whose `languages` map already covers every language it will
- * ever render. It only ever calls `loadShikiHighlighterCore(this.languages)`
- * (from the peer-neutral Shiki capability leaf) — never `loadShikiHighlighter()`, the default
- * ~200-language dynamic-import table loader `<lr-code-block>` calls. This component's own module never textually
- * contains a call to (or import of) `loadShikiHighlighter` at all, so a
+ * ever render. It only ever calls `loadShikiHighlighterCore()` (from the peer-neutral Shiki
+ * capability leaf) with `languages`' already-resolved entries — never `loadShikiHighlighter()`, the
+ * default ~200-language dynamic-import table loader `<lr-code-block>` calls. This component's own
+ * module never textually contains a call to (or import of) `loadShikiHighlighter` at all, so a
  * consumer importing this entry point instead of `code-block.js` gets a
  * genuinely shiki-full-table-free build.
+ *
+ * A `languages` entry may also be a lazy loader (`() => import('@shikijs/langs/<name>')`) instead
+ * of an already-resolved grammar — resolved and registered into the highlighter (via
+ * `HighlighterCore.loadLanguage()`) the first time a fence actually requests that key, memoized per
+ * key so it is never re-imported. See the `languages` property doc for the exact shape.
  *
  * A `language` value absent from `languages` always renders the plain
  * `<pre><code>` fallback — there is no default/full-table highlighter here
  * to fall back to, unlike `<lr-code-block>`'s dynamic-import path for an
- * unmapped language. That fallback is the *default* rendering path, not a
- * degraded one, same as `<lr-code-block>`'s own plain-text fallback.
+ * unmapped language, and neither does a `languages` entry whose lazy loader rejects. That fallback
+ * is the *default* rendering path, not a degraded one, same as `<lr-code-block>`'s own plain-text
+ * fallback.
  *
  * Everything else — `code`/`language`/`filename`/`copyable`/`collapsible`/
  * `collapsed`/`maxHeight`, the copy button, the collapse header toggle, the
@@ -283,16 +291,20 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   private restoreFocusedLineAfterUpdate = false;
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
-   *  `shiki/langs/<name>.mjs`). This component has no default/full-table fallback highlighter --
-   *  a `language` absent from this map always renders the plain-text fallback. Empty (the
+   *  `shiki/langs/<name>.mjs`), or a lazy loader per key, e.g.
+   *  `{ bash: () => import('@shikijs/langs/bash') }` -- called (at most once per key, memoized)
+   *  the first time a fenced block actually requests that language, instead of requiring every
+   *  grammar to already be imported before the map can be bound at all. This component has no
+   *  default/full-table fallback highlighter -- a `language` absent from this map always renders
+   *  the plain-text fallback, and so does a key whose loader rejects. Empty (the
    *  default) never highlights at all. Replacing the map starts a new loading generation; an
    *  older map that settles later cannot clear the current map's loading state or replace its
-   *  highlighted output. For a TypeScript annotation, use `import type { ShikiLanguageInput } from
+   *  highlighted output. For a TypeScript annotation, use `import type { ShikiLanguageSource } from
    *  '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; this granular
    *  type-only import emits no registration side effect. */
   @property({ attribute: false }) languages: Readonly<Record<
     string,
-    ShikiLanguageInput
+    ShikiLanguageSource
   >> = {};
 
   // `null` covers every reason the plain-text fallback is showing: `language`
@@ -351,7 +363,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   // syncHighlight()'s result path. A disconnect/reconnect or map replacement starts a new
   // generation, so an older cached promise can never mark the current map ready.
   private highlighterGeneration = 0;
-  private activeLanguages?: Record<string, ShikiLanguageInput>;
+  private activeLanguages?: Record<string, ShikiLanguageSource>;
 
   private readonly bodyId = nextId('code-block-body');
 
@@ -367,7 +379,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     const languages = this.languages;
     const generation = this.activateLanguages(languages);
     if (Object.keys(languages).length === 0) return;
-    void loadShikiHighlighterCore(languages).then(() => {
+    void loadShikiHighlighterCore(resolvedShikiLanguages(languages)).then(() => {
       // loadShikiHighlighterCore() is a shared, cached-by-languages promise --
       // it can resolve well after this element has disconnected (or been torn
       // down for good). Bail out rather than mutate @state on a dead instance
@@ -407,7 +419,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   // The `languages` entry for the *current* `language`, if any -- shared by
   // `willUpdate()`/`updated()`/`render()`/`syncHighlight()` so they all agree
   // on whether this language is highlightable at all.
-  private preSuppliedGrammar(): ShikiLanguageInput | undefined {
+  private preSuppliedGrammar(): ShikiLanguageSource | undefined {
     return codeBlockPreSuppliedGrammar(this.languages, this.language ?? '');
   }
 
@@ -522,7 +534,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   }
 
   private activateLanguages(
-    languages: Record<string, ShikiLanguageInput>
+    languages: Record<string, ShikiLanguageSource>
   ): number {
     if (this.activeLanguages === languages) return this.highlighterGeneration;
     this.activeLanguages = languages;
@@ -549,7 +561,8 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
       return;
     }
 
-    if (!languages?.[lang] && !languages?.[this.language]) {
+    const source = languages?.[lang] ?? languages?.[this.language];
+    if (source === undefined) {
       // Not in the supplied languages map -- there is no default
       // highlighter to fall back to in this variant, so this always
       // renders the plain-text fallback, unlike <lr-code-block>'s
@@ -563,13 +576,29 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     // on the instance -- `languages` may be supplied any time after
     // `connectedCallback()` already ran (e.g. set as a property right after
     // creation), so this can't rely solely on that one-time eager load.
-    // loadShikiHighlighterCore() itself caches by `languages` object
-    // identity, so a call here that lands on the same map
+    // loadShikiHighlighterCore() itself caches by its (resolved-languages,
+    // engine) identity, so a call here that lands on the same map
     // connectedCallback() already kicked off just resolves the shared
     // cached promise instead of loading twice.
     this.highlightedHtml = null;
-    void loadShikiHighlighterCore(languages).then((hl) => {
+    void loadShikiHighlighterCore(resolvedShikiLanguages(languages)).then(async (hl) => {
       if (token !== this.highlightToken) return; // superseded by a newer code/language/languages change
+      if (
+        generation !== this.highlighterGeneration ||
+        languages !== this.languages
+      )
+        return;
+      if (!hl) {
+        if (!this.isConnected) return;
+        this.shikiReady = true;
+        this.highlightedHtml = null;
+        return;
+      }
+      // `source` may still be an unresolved lazy loader here -- a no-op, already-resolved promise
+      // when it is a plain grammar, since loadShikiHighlighterCore() already seeded that one into
+      // `hl` above.
+      const loaded = await ensureShikiLanguageLoaded(hl, lang, source);
+      if (token !== this.highlightToken) return; // superseded while the loader/loadLanguage() awaited
       if (
         generation !== this.highlighterGeneration ||
         languages !== this.languages
@@ -584,7 +613,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
       // above, to avoid mutating @state on a dead instance.
       if (!this.isConnected) return;
       this.shikiReady = true;
-      this.highlightedHtml = hl ? this.tokenize(hl, lang) : null;
+      this.highlightedHtml = loaded ? this.tokenize(hl, lang) : null;
     });
   }
 

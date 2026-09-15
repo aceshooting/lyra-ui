@@ -161,6 +161,15 @@ a PDF is opened. An absent `pdfjs-dist` fails closed and renders
 `[part="error"]` with the localized `pdfViewerMissingLibrary` message — there is no partial PDF
 rendering without it.
 
+Importing `pdf-viewer.js` (this component's own registration entry) loads `<lr-pdf-viewer>`'s class
+module immediately, before any PDF is ever opened — `pdfjs-dist` itself is the only thing that
+entry actually defers. A granular consumer (not importing the `all.js` compatibility bundle) who
+wants the class module deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer-register.js`, which installs the same
+`application/pdf` registration without pulling in `<lr-pdf-viewer>`'s class module until a matching
+file is actually opened, and exports `PDF_VIEWER_TAG` (`'lr-pdf-viewer'`) as a stable reference to
+the tag it eventually registers.
+
 **Configuring the PDF.js worker.** PDF.js renders in a web worker and rejects every document with
 `No "GlobalWorkerOptions.workerSrc" specified.` until it has been told where that worker lives. The
 worker is a separate file inside the peer (`pdfjs-dist/build/pdf.worker.min.mjs`) that only the

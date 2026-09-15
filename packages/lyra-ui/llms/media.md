@@ -931,6 +931,103 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
 
 ---
 
+## `lr-drop-zone`
+
+A drag-and-drop region wrapper with no file input of its own. Wrap it around an arbitrary region —
+a chat composer, a whole conversation viewport, a panel far larger than any single control — to
+make that entire region a file-drop target: it owns the drag-session state, renders a themeable
+drag-over overlay, applies `accept`/size/count limits, and emits the same `lr-files` event shape
+`lr-file-input` does. It never renders a native file picker, a selected-file list, or any focusable
+control of its own; wrap `lr-file-input` itself (or any other focusable content) inside it when the
+region also needs a click-to-browse affordance. The drag-session mechanics are the exact ones
+`lr-file-input` uses, shared through `internal/drop-session-controller.ts` rather than
+reimplemented.
+
+**Properties:**
+
+- `disabled: boolean = false` (reflected) — disables drag/drop handling entirely; the wrapped
+  content keeps its own interactivity
+- `multiple: boolean = true` (reflected) — accepts more than one file per drop and enables
+  recursive folder-drop traversal, same contract as `lr-file-input`'s `multiple`. Defaults to `true`
+  (unlike `lr-file-input`'s `false`): a region wrapper's typical use expects more than one file, and
+  there is no native single-file picker here to keep in sync.
+- `accept: string = ''` — identical native-`accept`-style parsing to `lr-file-input`'s `accept`, via
+  the same shared `matchesAccept()`
+- `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check), `maxFiles:
+  number = 0` (attribute `max-files`), `maxTotalSize: number = 0` (attribute `max-total-size`) —
+  identical contract and invalid-override fail-safe fallback to `lr-file-input`'s own three limits.
+  Since this component retains nothing between drops, `maxFiles`/`maxTotalSize` always cover only
+  the current drop (there is no persisted count/total to add).
+- `readonly dragging: boolean` — `true` during an active drag session
+
+**Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
+`rejected` arrays and frozen rejected-file records, fired on drop; immutable `File` objects retain
+identity) — typed as `LyraDropZoneFilesEvent`, so `event.target`/`event.currentTarget` are
+`LyraDropZone` without a cast. `LyraDropZoneRejectedFile = { readonly file: File; readonly reason:
+'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`, the
+same reason vocabulary as `lr-file-input`'s `LyraFileInputRejectedFile`.
+
+**Slots:** the default slot is the wrapped region, rendered as ordinary light DOM; `overlay`
+overrides the localized accept/reject overlay text.
+
+**CSS parts:** `base` (wraps the default slot and the overlay), `overlay` (the drag-over overlay,
+layered above the slotted content via `position: absolute; inset: 0`, hidden outside an active drag
+session), `overlay-icon`, `overlay-text`, `status` (a visually-hidden, `aria-hidden` mirror of the
+drag state and counts — announcements go through the shared light-DOM regions, same as
+`lr-file-input`), `rejection` (a visible region listing each currently-rejected file, rendered only
+while one exists).
+
+**CSS custom states:** `dragging`, matching `lr-file-input`'s.
+
+**Themeable custom properties:** `--lr-drop-zone-radius` (default `var(--lr-radius)`),
+`--lr-drop-zone-overlay-border-color` (default `var(--lr-color-brand)`, the dashed overlay border in
+its neutral drag state, before an accept/reject verdict) and `--lr-drop-zone-overlay-bg` (default
+`color-mix(in srgb, var(--lr-color-brand) 8%, transparent)`, that same neutral state's fill),
+`--lr-drop-zone-overlay-font-size` (default `var(--lr-font-size-md-sm)`),
+`--lr-drop-zone-overlay-icon-size` (default `var(--lr-font-size-xl)`),
+`--lr-drop-zone-overlay-gap` (default `var(--lr-space-xs)`), and the drag accept/reject highlight —
+`--lr-drop-zone-accept-border-color`/`--lr-drop-zone-accept-bg` (defaults `var(--lr-color-success)`/
+`color-mix(in srgb, var(--lr-color-success) 12%, transparent)`) and
+`--lr-drop-zone-reject-border-color`/`--lr-drop-zone-reject-bg` (defaults `var(--lr-color-danger)`/
+`color-mix(in srgb, var(--lr-color-danger) 12%, transparent)`) — independently overridable on the
+element or any ancestor, mirroring `lr-file-input`'s equivalent hooks.
+
+**Optional peer deps:** none.
+
+```html
+<lr-drop-zone id="chat-surface" accept="image/*,.pdf" max-files="5">
+  <div class="chat-panel">
+    <!-- an existing chat composer / viewport, unrelated to this component -->
+  </div>
+</lr-drop-zone>
+<script>
+  document.querySelector("#chat-surface").addEventListener("lr-files", (e) => {
+    console.log("accepted:", e.detail.files, "rejected:", e.detail.rejected);
+  });
+</script>
+```
+
+Composing `lr-file-input` inside the wrapped region gives that region both a click-to-browse picker
+and a drop target covering the whole surrounding panel:
+
+```html
+<lr-drop-zone>
+  <div class="chat-panel">
+    <lr-file-input></lr-file-input>
+  </div>
+</lr-drop-zone>
+```
+
+**Known gotchas:**
+
+- No paste-from-clipboard handling (unlike `lr-file-input`'s `paste`) — this component is drag/drop
+  only.
+- Dragged folders are traversed recursively while `multiple` (the default), with the same
+  10,000-entry budget and `'read'`/`'limit'` failure reasons as `lr-file-input`. While not
+  `multiple`, a dropped folder is rejected outright with reason `'directory'`.
+
+---
+
 ## `lr-file-input`
 
 A form-associated drag-drop + click-to-browse file dropzone. It stores and renders raw `File[]`;
@@ -968,6 +1065,26 @@ enabled buttons retain pointer feedback.
   snapshots, retain valid string entries, and inspect at most 10,000 candidates per assignment;
   update them by assigning a new collection.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
+- `maxFiles: number = 0` (attribute `max-files`) — largest total file count accepted, counting
+  retained files plus the current batch; `0` disables the check. An excess file in the batch is
+  rejected with reason `'maxFiles'`, in the same `[part="rejection"]` shape as `maxFileSize`. While
+  `nonRetaining` is set, the count covers only the current batch (there is no externally-held count
+  to add).
+- `maxTotalSize: number = 0` (attribute `max-total-size`) — largest combined byte size accepted,
+  summing retained files plus the current batch; `0` disables the check. Same rejection-UI shape and
+  fail-safe invalid-override behavior as `maxFileSize` (see gotchas). Same `nonRetaining` batch-only
+  scoping as `maxFiles`.
+- `nonRetaining: boolean = false` (reflected, attribute `non-retaining`) — opt-in mode where an
+  accepted selection still fires `lr-files`/`input`/`change` but is never written to `files` or
+  rendered as a built-in `[part="file"]` row. For a host that persists files elsewhere and renders
+  its own list, so assigning `files` (even to reset it) never fights that host-owned rendering.
+  `required` validity and the `blank` custom state then read `valuePresent` instead of
+  `files.length`. Does not affect `formStateRestoreCallback()` or a direct `files` assignment, both
+  of which still retain.
+- `valuePresent: boolean = false` (reflected, attribute `value-present`) — external "a value is
+  present" signal a `nonRetaining` host sets once it has taken ownership of the selected files, so
+  `required` validity and the `blank` state reflect externally-held files. Ignored while
+  `nonRetaining` is `false`.
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
 - `compact: boolean = false` (reflected) — tighter dropzone padding, gap and label font for
@@ -1032,24 +1149,29 @@ enabled buttons retain pointer feedback.
 `required` validity.
 
 **Events:** a user selection or removal emits native bubbling/composed `input`, then exactly one
-host `change`; programmatic `files` writes are silent. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
-frozen readonly `files` and `rejected` arrays and frozen rejected-file records, fired on both drop
-and manual file-picker selection; immutable `File` objects retain identity) —
-`LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
-}`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
-input (`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
-accepted), `'size'` from `maxFileSize`, `'directory'` for a dropped folder in single-file mode,
-`'read'` when a file/directory reader fails, or `'limit'` when folder traversal exceeds its bounded
-entry budget. Read/limit failures reject the complete selection atomically; lifecycle cancellation
-and supersession stay silent. `focus`/`blur` fire when the semantic dropzone (the actual
-keyboard-focusable element, not the hidden native `<input>`) gains/loses focus.
-`lr-invalid` is the bubbling/composed alias of native invalidity.
+host `change`; programmatic `files` writes are silent (both still fire while `nonRetaining` is set,
+even though `files` itself is not written in that mode). `lr-files` (`detail:
+LyraFileInputFilesDetail`, with fresh frozen readonly `files` and `rejected` arrays and frozen
+rejected-file records, fired on both drop and manual file-picker selection; immutable `File` objects
+retain identity) — typed as `LyraFileInputFilesEvent`, so `event.target`/`event.currentTarget` are
+`LyraFileInput` without a cast. `LyraFileInputRejectedFile = { readonly file: File; readonly reason:
+'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`: `'type'`
+from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file input
+(`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
+accepted), `'size'` from `maxFileSize`, `'maxFiles'`/`'maxTotalSize'` from the two aggregate limits,
+`'directory'` for a dropped folder in single-file mode, `'read'` when a file/directory reader fails,
+or `'limit'` when folder traversal exceeds its bounded entry budget. Read/limit failures reject the
+complete selection atomically; lifecycle cancellation and supersession stay silent. `focus`/`blur`
+fire when the semantic dropzone (the actual keyboard-focusable element, not the hidden native
+`<input>`) gains/loses focus. `lr-invalid` is the bubbling/composed alias of native invalidity.
 
 Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
-the file and the reason via one of six locale keys: `fileInputRejectedType` (default
+the file and the reason via one of eight locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
-file can be selected at a time.'`), and — for `'directory'` — the pre-existing
+file can be selected at a time.'`), `fileInputRejectedMaxFiles` (default `'{filename}: the maximum
+number of files has been reached.'`), `fileInputRejectedMaxTotalSize` (default `'{filename}: adding
+this file would exceed the total size limit.'`), and — for `'directory'` — the pre-existing
 `fileInputFolderRejected` (default `'Folders are not accepted here.'`, reused verbatim, so it has no
 `{filename}` placeholder). Terminal traversal failures use `fileInputRejectedRead` (default
 `'{filename}: the file could not be read.'`) and `fileInputRejectedLimit` (default
@@ -1191,7 +1313,11 @@ an extension-only `accept` list.
 - `maxFileSize` fails safe rather than open: `0` (the default) or `Infinity` mean "no limit", but a
   `NaN`/negative value — an unparsable `max-file-size` attribute, or a config that hasn't loaded
   yet — falls back to a 25 MB cap (exported as `DEFAULT_MAX_FILE_SIZE_BYTES`) instead of disabling
-  the check.
+  the check. `maxFiles` and `maxTotalSize` fail safe the identical way, falling back to
+  `DEFAULT_MAX_FILES` (100) and `DEFAULT_MAX_TOTAL_SIZE_BYTES` (250 MB) respectively.
+- The drag-session mechanics (nested-depth tracking, accept/reject preview, folder traversal) live
+  in `internal/drop-session-controller.ts`, shared verbatim with `lr-drop-zone` below rather than
+  reimplemented per component.
 - `maxFileSize`/`accept` extension patterns can't be evaluated during the dragenter preview (no real
   `File.size`/`.name` available yet from a `DataTransferItem`) — the live preview state (border/
   background color, `status` announcement) is therefore only a best-effort hint; the authoritative
@@ -3013,6 +3139,26 @@ These named interfaces and helper signatures are available to typed integrations
     image: string;
   }`
 
+- **`components-media-drop-zone-drop-zone-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js`.
+  `LyraDropZoneRejectedFile {
+    readonly file: File;
+    readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js`.
+  `LyraDropZoneFilesDetail {
+    readonly files: readonly File[];
+    readonly rejected: readonly LyraDropZoneRejectedFile[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js`.
+  `LyraDropZoneFilesEvent extends CustomEvent<LyraDropZoneFilesDetail> {
+    readonly target: LyraDropZone;
+    readonly currentTarget: LyraDropZone;
+  }`
+  `lr-files`'s event type on `<lr-drop-zone>`, narrowing `target`/`currentTarget` to `LyraDropZone`
+  so a listener reads them without casting — same convention as `lr-file-input`'s own
+  `LyraFileInputFilesEvent` below.
+
 - **`components-media-file-icon-file-type-metadata-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
   `createFileTypeMetadataRegistry(entries?: readonly LyraFileTypeMetadataEntry[]): LyraFileTypeMetadataRegistry`
@@ -3067,8 +3213,15 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`.
   `LyraFileInputRejectedFile {
     readonly file: File;
-    readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit';
+    readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
   }`
+  Import: `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`.
+  `LyraFileInputFilesEvent extends CustomEvent<LyraFileInputFilesDetail> {
+    readonly target: LyraFileInput;
+    readonly currentTarget: LyraFileInput;
+  }`
+  `lr-files`'s event type, narrowing `target`/`currentTarget` to `LyraFileInput` so a listener reads
+  them without casting.
 
 - **`components-media-flag-flag-peer-bulk-standard-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk-standard.js`.

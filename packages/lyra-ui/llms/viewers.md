@@ -366,6 +366,16 @@ for the native download action's hover and pressed backgrounds.
 - `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy direct definition;
   rejected loads are retried on the next call.
 
+Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-register.js`
+(`archive-viewer-register.js`, `ebook-viewer-register.js`, `pdf-viewer-register.js`,
+`docx-viewer-register.js`, `pptx-viewer-register.js`, `spreadsheet-viewer-register.js`,
+`csv-viewer-register.js`, `xml-viewer-register.js`), which installs that kind's registration
+without pulling its element class module into the importing graph until a matching file is
+actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually
+registers. `document-viewer/document-viewer-kinds.js` imports and re-exports all eight at once, for
+a consumer who wants every built-in kind available lazily without importing each entry
+individually. `<lr-document-viewer>` itself (`document-viewer.js`) is always a separate import.
+
 ```html
 <lr-document-viewer
   open
@@ -509,6 +519,12 @@ The component registers an eager `application/vnd.openxmlformats-officedocument.
 renderer with `<lr-document-viewer>` (a plain `render`, no `load()` hook — importing this module
 defines `<lr-docx-viewer>` immediately; only `mammoth`/`dompurify` themselves are loaded on demand)
 and matches `.docx` filenames when the MIME type is generic.
+
+A granular consumer (not importing the `all.js` compatibility bundle) who wants `<lr-docx-viewer>`'s
+own class module deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer-register.js`, which installs the
+same registration lazily and exports `DOCX_VIEWER_TAG` (`'lr-docx-viewer'`) as a stable reference to
+the tag it eventually registers.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the document.
@@ -738,7 +754,9 @@ archive formats fall through to `<lr-document-preview>`'s generic download fallb
 A granular consumer (not importing the `all.js` compatibility bundle) must import
 `@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer-register.js` once to install
 this registration; without it `<lr-document-viewer>` never recognizes `.zip` files and falls
-through to the generic download fallback described above.
+through to the generic download fallback described above. That entry also exports
+`ARCHIVE_VIEWER_TAG` (`'lr-archive-viewer'`) as a stable reference to the tag it eventually
+registers.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the entry listing.
@@ -820,7 +838,9 @@ search: true, textSelect: true }` capabilities and forwarding `anchor`/`highligh
 viewer. The peer loader requires the callable EPUB factory; malformed module shapes fail closed.
 A granular consumer (not importing the `all.js` compatibility bundle) must also import
 `@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer-register.js` once to install
-this registration; without it `<lr-document-viewer>` never recognizes `.epub` files.
+this registration; without it `<lr-document-viewer>` never recognizes `.epub` files. That entry also
+exports `EBOOK_VIEWER_TAG` (`'lr-ebook-viewer'`) as a stable reference to the tag it eventually
+registers.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the ebook.
@@ -917,6 +937,13 @@ property, which writes this token inline.
 filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textSelect: true }`
 capabilities and forwarding `anchor`/`highlights` to the mounted viewer. That forwarding preserves
 the request across the registry hop; it does not create stable fragment ids in renderer output.
+
+Importing `pptx-viewer.js` (this component's own registration entry) loads `<lr-pptx-viewer>`'s
+class module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who
+wants that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer-register.js`, which installs the
+same registration lazily and exports `PPTX_VIEWER_TAG` (`'lr-pptx-viewer'`) as a stable reference to
+the tag it eventually registers.
 
 Remote resources are capped at 25 MB and measured ZIP expansion is capped at 256 MB before the
 renderer opens the archive; exceeding either ceiling surfaces the localized
@@ -1359,6 +1386,15 @@ a PDF is opened. An absent `pdfjs-dist` fails closed and renders
 `[part="error"]` with the localized `pdfViewerMissingLibrary` message — there is no partial PDF
 rendering without it.
 
+Importing `pdf-viewer.js` (this component's own registration entry) loads `<lr-pdf-viewer>`'s class
+module immediately, before any PDF is ever opened — `pdfjs-dist` itself is the only thing that
+entry actually defers. A granular consumer (not importing the `all.js` compatibility bundle) who
+wants the class module deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer-register.js`, which installs the same
+`application/pdf` registration without pulling in `<lr-pdf-viewer>`'s class module until a matching
+file is actually opened, and exports `PDF_VIEWER_TAG` (`'lr-pdf-viewer'`) as a stable reference to
+the tag it eventually registers.
+
 **Configuring the PDF.js worker.** PDF.js renders in a web worker and rejects every document with
 `No "GlobalWorkerOptions.workerSrc" specified.` until it has been told where that worker lives. The
 worker is a separate file inside the peer (`pdfjs-dist/build/pdf.worker.min.mjs`) that only the
@@ -1458,6 +1494,13 @@ inline on `[part="base"]`.
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.
 
+Importing `spreadsheet-viewer.js` (this component's own registration entry) loads
+`<lr-spreadsheet-viewer>`'s class module immediately. A granular consumer (not importing the
+`all.js` compatibility bundle) who wants that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.js`, which
+installs the same registration lazily and exports `SPREADSHEET_VIEWER_TAG`
+(`'lr-spreadsheet-viewer'`) as a stable reference to the tag it eventually registers.
+
 Remote resources are capped at 25 MB, each parsed sheet at 10,000 rows and 1,000 columns, and each
 workbook at 256 sheets and 1,000,000 aggregate expanded cells. Row limits are per sheet, not
 cumulative across a workbook. Exceeding any ceiling surfaces the localized
@@ -1523,6 +1566,13 @@ through. An inherited or direct public value remains authoritative across that b
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
+
+Importing `csv-viewer.js` (this component's own registration entry) loads `<lr-csv-viewer>`'s class
+module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who wants
+that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer-register.js`, which installs the
+same registration lazily and exports `CSV_VIEWER_TAG` (`'lr-csv-viewer'`) as a stable reference to
+the tag it eventually registers.
 
 Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 raw rows
 (the first row consumes the same budget whether or not `has-header-row` displays it as a header),
@@ -1894,6 +1944,13 @@ entity access and browser-specific internal-entity expansion. Not `lr-json-viewe
 The registration entry also matches extensionless `application/*+xml` MIME essences, ignoring
 parameters, case and outer whitespace. Exact registered MIME keys retain precedence over this
 fallback matcher.
+
+Importing `xml-viewer.js` (this component's own registration entry) loads `<lr-xml-viewer>`'s class
+module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who wants
+that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer-register.js`, which installs the
+same registration lazily and exports `XML_VIEWER_TAG` (`'lr-xml-viewer'`) as a stable reference to
+the tag it eventually registers.
 
 **Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
 string` (property only) — raw XML text to parse and render; wins over `src`, and setting it parses

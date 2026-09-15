@@ -4,6 +4,7 @@ import {
   enableLyraLocaleCache,
   getLyraLocale,
   getLyraLocaleDirection,
+  getRegisteredLyraLocaleKeys,
   registerLyraExactLocale,
   registerLyraLocale,
   peekLyraDirection,
@@ -341,4 +342,99 @@ it('does not retain candidate-cache state for an unbounded inherited locale', ()
   const unbounded = `x-${'a'.repeat(600)}`;
   expect(getLyraLocaleDirection(unbounded)).to.equal('ltr');
   expect(getLyraLocaleDirection(unbounded)).to.equal('ltr');
+});
+
+describe('getRegisteredLyraLocaleKeys', () => {
+  it('returns exactly a registered catalog\'s own keys, with no English-merged extras', () => {
+    registerLyraLocale('x-key-introspection', { cancel: 'Annuler' });
+    expect(getRegisteredLyraLocaleKeys('x-key-introspection')).to.deep.equal(['cancel']);
+  });
+
+  it('reflects a later extension of the same catalog', () => {
+    registerLyraLocale('x-key-introspection-extend', { cancel: 'Annuler' });
+    registerLyraLocale('x-key-introspection-extend', { confirm: 'Confirmer' });
+    expect([...getRegisteredLyraLocaleKeys('x-key-introspection-extend')].sort())
+      .to.deep.equal(['cancel', 'confirm']);
+  });
+
+  it('returns a frozen empty snapshot for a locale nothing ever registered', () => {
+    const keys = getRegisteredLyraLocaleKeys('x-key-introspection-unregistered');
+    expect(keys).to.deep.equal([]);
+    expect(Object.isFrozen(keys)).to.be.true;
+  });
+
+  it('does not widen through the BCP-47 fallback chain -- a region-only catalog does not leak into its base language\'s own key set', () => {
+    registerLyraLocale('x-key-introspection-region-ZZ', { cancel: 'Annuler' });
+    expect(getRegisteredLyraLocaleKeys('x-key-introspection-region')).to.deep.equal([]);
+  });
+
+  it('is case-insensitive at lookup, matching every other public locale API', () => {
+    registerLyraLocale('x-Key-Introspection-Case', { cancel: 'Annuler' });
+    expect(getRegisteredLyraLocaleKeys('x-key-introspection-case')).to.deep.equal(['cancel']);
+  });
+});
+
+describe('resolveLyraString dev-mode locale-fallback warning', () => {
+  type LitWarningGlobal = { litIssuedWarnings?: Set<string> };
+
+  /** Mirrors `request-commit.test.ts`'s `warningsWhile()`: forces Lit's dev-mode signal on or off
+   *  around `body`, captures `console.warn`, and restores both globals unconditionally. A fresh
+   *  `Set` per run keeps "warns once" honest since that set is `devWarnOnce()`'s own dedupe store. */
+  function warningsWhile(devMode: boolean, body: () => void): string[] {
+    const target = globalThis as LitWarningGlobal;
+    const hadSignal = 'litIssuedWarnings' in target;
+    const previousSignal = target.litIssuedWarnings;
+    const previousWarn = console.warn;
+    const messages: string[] = [];
+    if (devMode) target.litIssuedWarnings = new Set<string>();
+    else delete target.litIssuedWarnings;
+    console.warn = (...args: unknown[]) => {
+      messages.push(args.map(String).join(' '));
+    };
+    try {
+      body();
+    } finally {
+      console.warn = previousWarn;
+      if (hadSignal) target.litIssuedWarnings = previousSignal;
+      else delete target.litIssuedWarnings;
+    }
+    return messages;
+  }
+
+  it('warns exactly once in dev mode for a missing key under a non-English resolved locale', () => {
+    const host = localeHost('x-locale-fallback-warn');
+    const messages = warningsWhile(true, () => {
+      expect(resolveLyraString(host, 'x-fallback-warn-key')).to.equal('x-fallback-warn-key');
+      expect(resolveLyraString(host, 'x-fallback-warn-key')).to.equal('x-fallback-warn-key');
+    });
+    expect(messages).to.have.length(1);
+    expect(messages[0]).to.contain('x-fallback-warn-key');
+    expect(messages[0]).to.contain('x-locale-fallback-warn');
+  });
+
+  it('never warns in production (Lit dev-mode signal absent)', () => {
+    const host = localeHost('x-locale-fallback-warn-prod');
+    const messages = warningsWhile(false, () => {
+      resolveLyraString(host, 'x-fallback-warn-key-prod');
+    });
+    expect(messages).to.have.length(0);
+  });
+
+  it('never warns for an English-resolved locale falling through to defaults', () => {
+    const host = localeHost('en-GB');
+    const messages = warningsWhile(true, () => {
+      resolveLyraString(host, 'x-fallback-warn-key-en');
+    });
+    expect(messages).to.have.length(0);
+  });
+
+  it('never warns once an override, fallback, or registered message already resolved the key', () => {
+    const registeredHost = localeHost('x-locale-fallback-warn-registered');
+    registerLyraLocale('x-locale-fallback-warn-registered', { cancel: 'Annuler' });
+    const messages = warningsWhile(true, () => {
+      resolveLyraString(registeredHost, 'cancel');
+      resolveLyraString(localeHost('x-locale-fallback-warn-fallback'), 'anything', undefined, 'Fallback text');
+    });
+    expect(messages).to.have.length(0);
+  });
 });

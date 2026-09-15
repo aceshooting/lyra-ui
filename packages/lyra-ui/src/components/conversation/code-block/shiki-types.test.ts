@@ -2,6 +2,8 @@ import { expect } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import {
   loadShikiHighlighterCore,
+  setShikiCoreEngine,
+  __resetShikiCoreEngineForTesting,
   SHIKI_THEMES,
   type ShikiHighlighterCore,
   type ShikiLanguageInput,
@@ -112,5 +114,72 @@ describe('loadShikiHighlighterCore language aliasing', () => {
     const html = core!.codeToHtml('alpha', { lang: 'tsx', themes: SHIKI_THEMES });
     expect(html).to.contain('alpha');
     expect(html).to.match(/<span style="[^"]*">alpha<\/span>/);
+  });
+});
+
+describe('setShikiCoreEngine()', () => {
+  afterEach(() => {
+    __resetShikiCoreEngineForTesting();
+  });
+
+  it("builds a working highlighter with the 'javascript' preset engine, with no WASM involved", async function () {
+    this.timeout(20_000);
+    setShikiCoreEngine('javascript');
+    const grammar = testGrammar();
+    const languages: Record<string, ShikiLanguageInput> = { [grammar.name]: grammar };
+    const core = await loadShikiHighlighterCore(languages);
+    expect(core, 'the javascript engine must build a usable highlighter').to.not.equal(null);
+    const html = core!.codeToHtml('alpha', { lang: grammar.name, themes: SHIKI_THEMES });
+    expect(html).to.match(/<span style="[^"]*">alpha<\/span>/);
+    (core as (ShikiHighlighterCore & { dispose?: () => void }) | null)?.dispose?.();
+  });
+
+  it('never shares a HighlighterCore between two different engines for the same languages object', async function () {
+    this.timeout(20_000);
+    const languages: Record<string, ShikiLanguageInput> = Object.freeze({ [testGrammar().name]: testGrammar() });
+
+    __resetShikiCoreEngineForTesting();
+    const onigumaCore = await loadShikiHighlighterCore(languages);
+    setShikiCoreEngine('javascript');
+    const javascriptCore = await loadShikiHighlighterCore(languages);
+
+    expect(onigumaCore, 'the default oniguruma engine must build a usable highlighter').to.not.equal(null);
+    expect(javascriptCore, 'the javascript engine must build a usable highlighter').to.not.equal(null);
+    expect(onigumaCore, 'the two engines must never share one cached HighlighterCore').to.not.equal(
+      javascriptCore,
+    );
+    (onigumaCore as (ShikiHighlighterCore & { dispose?: () => void }) | null)?.dispose?.();
+    (javascriptCore as (ShikiHighlighterCore & { dispose?: () => void }) | null)?.dispose?.();
+  });
+
+  it('a custom factory is called and its resolved engine reaches createHighlighterCore()', async function () {
+    this.timeout(20_000);
+    let calls = 0;
+    setShikiCoreEngine(async () => {
+      calls += 1;
+      const { createJavaScriptRegexEngine } = await import('shiki/engine/javascript');
+      return createJavaScriptRegexEngine() as never;
+    });
+    const grammar = testGrammar();
+    const core = await loadShikiHighlighterCore({ [grammar.name]: grammar });
+    expect(core, 'a custom factory must still build a usable highlighter').to.not.equal(null);
+    expect(calls, 'the custom factory must actually run').to.equal(1);
+    (core as (ShikiHighlighterCore & { dispose?: () => void }) | null)?.dispose?.();
+  });
+});
+
+describe('default engine build output', () => {
+  it('never textually references the base64-inlined shiki/wasm specifier', async () => {
+    // Reads this module's own served source rather than the (dynamically imported, not statically
+    // analyzable from here) shiki module graph -- a "bundle analysis" proxy for what a real
+    // bundler's static import scan would see: `shiki/wasm` never appears as an import specifier in
+    // this file's own source text once the default engine fetches the binary `shiki/onig.wasm`
+    // asset instead. Checked as a bare substring, quote-style-independent, since the dev server's
+    // esbuild transform re-quotes string literals.
+    const source = await fetch(new URL('./shiki-types.ts', import.meta.url)).then((response) =>
+      response.text(),
+    );
+    expect(source).to.not.contain('shiki/wasm"').and.not.contain("shiki/wasm'");
+    expect(source).to.contain('shiki/onig.wasm');
   });
 });

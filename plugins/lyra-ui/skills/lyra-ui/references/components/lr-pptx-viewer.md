@@ -94,6 +94,13 @@ filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textS
 capabilities and forwarding `anchor`/`highlights` to the mounted viewer. That forwarding preserves
 the request across the registry hop; it does not create stable fragment ids in renderer output.
 
+Importing `pptx-viewer.js` (this component's own registration entry) loads `<lr-pptx-viewer>`'s
+class module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who
+wants that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer-register.js`, which installs the
+same registration lazily and exports `PPTX_VIEWER_TAG` (`'lr-pptx-viewer'`) as a stable reference to
+the tag it eventually registers.
+
 Remote resources are capped at 25 MB and measured ZIP expansion is capped at 256 MB before the
 renderer opens the archive; exceeding either ceiling surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the presentation. The optional peer must also

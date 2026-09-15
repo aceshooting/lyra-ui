@@ -16,7 +16,7 @@ import {
   normalizeAutocorrect,
   spellcheckConverter,
 } from '../../../internal/converters.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import {
   dispatchNativeEvent,
@@ -24,6 +24,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import {
   acquireAriaDescription,
   acquireResolvedAriaRelationship,
@@ -80,6 +81,7 @@ export interface LyraInputEventMap {
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
   'lr-clear': CustomEvent<null>;
+  'lr-input-settled': CustomEvent<{ value: string }>;
   blur: FocusEvent;
   focus: FocusEvent;
   'lr-invalid': CustomEvent<null>;
@@ -139,6 +141,11 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @event lr-input - Compatibility alias for `input`; `detail: { value }`.
  * @event lr-change - Compatibility alias for `change`; `detail: { value }`.
  * @event lr-clear - The built-in clear button cleared a text/search value, after the input/change events.
+ * @event lr-input-settled - Fires once, `debounce` ms after the last keystroke, alongside the
+ *   per-keystroke `input`/`lr-input` pair (which keep firing on every edit). `detail: { value }`,
+ *   non-cancelable. A pending debounce is flushed immediately on `change`/Enter/blur, and cancelled
+ *   with no stray settle on disconnect, the built-in clear button, and a programmatic `value`
+ *   write. Never fires while `debounce` is unset, `0`, or non-finite.
  * @event blur - Re-dispatched from the internal native `<input>`'s own `blur` — bubbling and
  *   composed (unlike the native event, which is neither).
  * @event focus - Re-dispatched from the internal native `<input>`'s own `focus`, for the same reason as `blur`.
@@ -277,6 +284,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   override set value(next: string | null) {
     super.value = next ?? '';
+    // A write reaching here that did NOT come from `onInput`'s own guarded assignment below is a
+    // programmatic `value` write (including `formResetCallback()`'s restore) -- cancel any pending
+    // debounce with no stray settle, matching the built-in clear button and disconnection.
+    if (!this.settlingValueFromInput) this.settledDebounce.cancel();
   }
 
   private _type: LyraInputType = 'text';
@@ -315,6 +326,15 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   /** Web Awesome's spelling of {@link clearable}, accepted so a mechanical `wa-` → `lr-` rename
    *  does not silently drop the clear action. Prefer `clearable` in new code. */
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
+  /** How long (ms) to wait after the last keystroke before emitting one `lr-input-settled`,
+   *  coalescing a burst of rapid edits into a single downstream commit -- the same predicate and
+   *  `DebounceController` primitive `<lr-filter-bar>`'s own per-filter `debounce` uses. Omitted,
+   *  `0`, or a non-finite value means no debounce at all: `input`/`lr-input` keep firing per
+   *  keystroke exactly as before, and `lr-input-settled` never fires. A pending debounce is
+   *  flushed immediately by `change`/Enter/blur (so a blur never drops the last keystroke) and
+   *  cancelled with no stray settle by disconnection, the built-in clear button, and a
+   *  programmatic `value` write. */
+  @property({ type: Number }) debounce?: number;
   /** Forwards native read-only behavior to the internal input and disables the clear action. */
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property() label = '';
@@ -433,6 +453,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   @state() private touched = false;
   private readonly slotPresence = new SlotPresenceController(this);
+  // Guards the `value` setter override above: true only for the synchronous duration of `onInput`'s
+  // own assignment, so that write is never mistaken for the programmatic one the setter otherwise
+  // cancels a pending debounce for.
+  private settlingValueFromInput = false;
+  private readonly settledDebounce = new DebounceController<string>(0, (value) => {
+    this.emit('lr-input-settled', { value });
+  });
 
   @query('input') private inputEl?: HTMLInputElement;
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
@@ -469,6 +496,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   }
 
   override disconnectedCallback(): void {
+    // `cancel()`, not `dispose()`: a detached input still fires its timer into a torn-down host
+    // without this, but a re-parent (which also runs this) must leave the control able to debounce
+    // a later edit -- the same reconnect contract `<lr-filter-bar>`'s own `cancelDebounce()` keeps.
+    this.settledDebounce.cancel();
     this.releaseExternalDescription();
     this.releaseRequiredDescription();
     super.disconnectedCallback();
@@ -809,15 +840,38 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     this.syncExternalDescription();
   }
 
+  /** Whether `debounce` is a real, positive delay -- mirrors `<lr-filter-bar>`'s own predicate for
+   *  the same shape. Omitted, `0`, or non-finite means no debounce (today's per-keystroke
+   *  behavior); `finiteDuration()` also caps it at the platform's own timer ceiling. */
+  private get effectiveDebounceMs(): number {
+    return finiteDuration(this.debounce ?? 0, 0);
+  }
+
+  private isDebounced(): boolean {
+    return this.effectiveDebounceMs > 0;
+  }
+
   private onInput = (event: InputEvent): void => {
     if (!this.inputEl) return;
+    this.settlingValueFromInput = true;
     this.value = this.inputEl.value;
+    this.settlingValueFromInput = false;
     relayNativeEvent(this, event);
     this.emit('lr-input', { value: this.value });
+    if (this.isDebounced()) {
+      this.settledDebounce.delayMs = this.effectiveDebounceMs;
+      this.settledDebounce.push(this.value);
+    } else {
+      this.settledDebounce.cancel();
+    }
   };
 
   private onChange = (event: Event): void => {
     if (!this.inputEl) return;
+    // Flush BEFORE reassigning `value`: the native input already carries the same string `onInput`
+    // last pushed, so this settles that pending value first and the reassignment right after finds
+    // nothing left pending to cancel.
+    this.settledDebounce.flush();
     this.value = this.inputEl.value;
     relayNativeEvent(this, event);
     this.emit('lr-change', { value: this.value });
@@ -838,6 +892,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     // for a state flip nothing observable needed -- a disabled control is barred from validation
     // regardless.
     if (!this.effectiveDisabled) this.touched = true;
+    // Insurance alongside the `change` flush above: a test harness (or an engine) that blurs
+    // without first dispatching a native `change` must still flush the last-typed value.
+    this.settledDebounce.flush();
     relayNativeEvent(this, event);
   };
 
@@ -849,6 +906,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    */
   private onKeyDown = (event: KeyboardEvent): void => {
     if (this.effectiveDisabled || this.readonly) return;
+    if (event.key === 'Enter') this.settledDebounce.flush();
     submitOnEnter(this, event);
   };
 

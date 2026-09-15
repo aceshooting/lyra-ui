@@ -55,9 +55,6 @@ const DEFAULT_PAGE_SIZE = 100;
 /** Upper bound accepted from the public `pageSize` input. */
 const MAX_PAGE_SIZE = 500;
 
-/** Matches the fixed allocation thresholds in table.styles.ts. */
-const LOW_PRIORITY_MAX_INLINE_SIZE = 899.98;
-const MEDIUM_PRIORITY_MAX_INLINE_SIZE = 639.98;
 const MAX_TABLE_COLLECTION_ENTRIES = 10_000;
 const TABLE_SCROLL_OVERFLOW_TOLERANCE_PX = 1;
 
@@ -544,8 +541,9 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * Set `aria-label` on the host to give the `role="grid"` element an
  * accessible name; it's forwarded into the shadow DOM's `<table>`.
  *
- * `columns[].priority` ('medium' | 'low') hides that column under
- * `[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`
+ * `columns[].priority` ('medium' | 'low') hides that column once measured overflow says
+ * `[part='base']` actually needs the room -- `'low'` first, `'medium'` next if the table would still
+ * overflow with just `'low'` gone -- never at a fixed container width; `[part='reveal-columns-button']`
  * forces them all back into view. The public `hasHiddenPriorityColumns`
  * property reports only whether a priority column is actually hidden right
  * now, measured via `ResizeObserver` on `[part='base']` plus a post-render DOM
@@ -1301,7 +1299,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   }
 
   /** Forces `priority`-hidden columns back into view, overriding the
-   *  `@container` hide rules in table.styles.ts. Toggles itself on
+   *  measured-overflow hide rules in table.styles.ts. Toggles itself on
    *  `[part='reveal-columns-button']` activation by default — no external
    *  wiring is required for the button to work. Also settable from outside
    *  (property or the reflected `priority-columns-visible` attribute) to restore a
@@ -1404,8 +1402,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private rowsLocale?: string;
   private columnsByKey = new Map<string, TableColumn<T>>();
 
-  /** Watches `[part='base']`'s own inline-size — the `@container` query
-   *  container table.styles.ts's priority-hide rules react to — so a
+  /** Watches `[part='base']` and `[part='table']` for the size changes that
+   *  `recomputeHiddenPriorityColumns()`'s measured-overflow check reacts to — so a
    *  `priority` column flipping hidden/visible from an *external* width
    *  change (a window resize, an ancestor flex-layout reflow, ...) is caught
    *  even though no Lit-tracked property changed. Mirrors
@@ -1430,6 +1428,18 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  without changing `[part='base']`'s own border box. */
   private observedTable?: Element;
   private readonly observedHeaders = new Set<Element>();
+
+  /** Last-measured rendered width (border box, summed across every header sharing that tier) of
+   *  each priority tier while it was actually visible -- `display: none` collapses an element's own
+   *  box to nothing, so a hidden tier's contribution to the table's full (everything-visible) width
+   *  has to come from here instead of a live measurement. Refreshed every layout pass in which that
+   *  tier's headers are actually rendered (including while `priorityColumnsVisible` force-reveals
+   *  them), which for a newly-hidden tier is every pass up to and including the one that first hides
+   *  it -- so the cache is always populated before it is ever needed. Never reset on disconnect: a
+   *  reconnect's first measurement pass re-hides from a stale-but-still-reasonable cached width
+   *  sooner than it otherwise could, and a genuinely stale entry self-corrects the next time that
+   *  tier is visible. */
+  private readonly priorityTierNaturalWidth = new Map<'low' | 'medium', number>();
 
   private parsePixelLength(value: string | undefined): number | undefined {
     if (!value) return undefined;
@@ -1858,29 +1868,89 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     }
   }
 
-  /** Recomputes actual hidden state from the live DOM and separately tracks
-   *  whether the priority-column toggle remains useful while force-visible.
-   *  Called from `updated()` (covers a change driven by
+  /** Every currently-rendered `<th>` sharing `tier` -- usually one, but `columns` may declare more
+   *  than one column at the same tier, and they hide/reveal together. */
+  private priorityTierHeaders(tier: 'low' | 'medium'): HTMLElement[] {
+    return [...this.renderRoot.querySelectorAll<HTMLElement>(`th[data-priority="${tier}"]`)];
+  }
+
+  /** Recomputes the measured-overflow priority-hide state from the live DOM: writes
+   *  `data-hide-priority-low`/`-medium` on `[part='base']` (table.styles.ts's replacement for a
+   *  fixed `@container` breakpoint), and separately tracks whether the reveal/hide toggle remains
+   *  useful while force-visible. Shares its overflow signal -- `[part='base']`'s `scrollWidth` versus
+   *  its `clientWidth` -- with `syncAutoScrollMode()`'s `scroll-mode="auto"` check, so the two
+   *  responsive systems key off the same measurement instead of disagreeing about whether the table
+   *  is actually too wide for its container. A tier hides only once hiding it would actually help:
+   *  `'low'` first (reconstructing the fully-visible width from the current `scrollWidth` plus every
+   *  already-hidden tier's cached natural width below), then `'medium'` on top of that if the table
+   *  would still overflow with just `'low'` gone. Writing the same decision this function already
+   *  reached is a no-op `toggleAttribute()` call, which keeps the `ResizeObserver` round-trip this
+   *  triggers (hiding a column changes `[part='base']`'s/`[part='table']`'s own measured size) a
+   *  fixed point rather than a layout thrash: the next pass reconstructs the same full width from the
+   *  same cached tier widths and the now-smaller `scrollWidth`, reaches the same decision, and writes
+   *  nothing further. Called from `updated()` (covers a change driven by
    *  `columns`/`rows`/`priorityColumnsVisible` rather than a container resize) and
    *  from the `ResizeObserver` callback (covers a container resize with no
    *  Lit-tracked property change at all). */
   private recomputeHiddenPriorityColumns(): void {
-    const hasPriorityColumns = this.columns.some((col) => col.priority);
-    const anyPriorityHidden =
-      hasPriorityColumns &&
-      [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-priority]')].some((el) => el.offsetParent === null);
+    const hasLowColumn = this.columns.some((col) => col.priority === 'low');
+    const hasMediumColumn = this.columns.some((col) => col.priority === 'medium');
     const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-    const inlineSize = base?.clientWidth ?? 0;
-    const wouldHideAtAllocation =
-      hasPriorityColumns &&
-      inlineSize > 0 &&
-      this.columns.some(
-        (column) =>
-          (column.priority === 'low' && inlineSize <= LOW_PRIORITY_MAX_INLINE_SIZE) ||
-          (column.priority === 'medium' && inlineSize <= MEDIUM_PRIORITY_MAX_INLINE_SIZE)
-      );
-    const toggleAvailable = anyPriorityHidden || (this.priorityColumnsVisible && wouldHideAtAllocation);
+
+    if (!hasLowColumn && !hasMediumColumn) {
+      this.priorityTierNaturalWidth.clear();
+      base?.removeAttribute('data-hide-priority-low');
+      base?.removeAttribute('data-hide-priority-medium');
+      this.rehomeFocusedColumn();
+      if (this.priorityToggleAvailable) this.priorityToggleAvailable = false;
+      if (this.hasHiddenPriorityColumns) this.hasHiddenPriorityColumns = false;
+      return;
+    }
+
+    // Not laid out at all (e.g. mid-render, or an ancestor currently hides the table) -- nothing
+    // measured here carries a signal, so leave the previous decision (attributes, cached widths, the
+    // two public properties) exactly as they were rather than guessing from it.
+    if (!base || base.clientWidth <= 0) {
+      this.rehomeFocusedColumn();
+      return;
+    }
+
+    const lowHeaders = hasLowColumn ? this.priorityTierHeaders('low') : [];
+    const mediumHeaders = hasMediumColumn ? this.priorityTierHeaders('medium') : [];
+    const refreshNaturalWidth = (tier: 'low' | 'medium', headers: HTMLElement[]): boolean => {
+      if (headers.length === 0) return false;
+      const currentlyHidden = headers.every((header) => header.offsetParent === null);
+      if (!currentlyHidden) {
+        const width = headers.reduce((sum, header) => sum + header.getBoundingClientRect().width, 0);
+        if (width > 0) this.priorityTierNaturalWidth.set(tier, width);
+      }
+      return currentlyHidden;
+    };
+    const lowActuallyHidden = refreshNaturalWidth('low', lowHeaders);
+    const mediumActuallyHidden = refreshNaturalWidth('medium', mediumHeaders);
+
+    const lowNaturalWidth = this.priorityTierNaturalWidth.get('low') ?? 0;
+    const mediumNaturalWidth = this.priorityTierNaturalWidth.get('medium') ?? 0;
+    // The table's fully-visible width, reconstructed from what's actually rendered right now plus
+    // whatever a currently-hidden tier would add back -- so this reflects the real content
+    // regardless of which tiers this same function hid on an earlier pass.
+    const fullWidth =
+      base.scrollWidth + (lowActuallyHidden ? lowNaturalWidth : 0) + (mediumActuallyHidden ? mediumNaturalWidth : 0);
+    const overflowAtFull = fullWidth - base.clientWidth;
+
+    const needsLow = hasLowColumn && overflowAtFull > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
+    const overflowAfterLow = needsLow ? overflowAtFull - lowNaturalWidth : overflowAtFull;
+    const needsMedium = hasMediumColumn && overflowAfterLow > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
+
+    base.toggleAttribute('data-hide-priority-low', needsLow);
+    base.toggleAttribute('data-hide-priority-medium', needsMedium);
     this.rehomeFocusedColumn();
+
+    // The rendered state the two writes above produce: `[part='base'][data-force-visible]` (rendered
+    // from `priorityColumnsVisible`) makes both hide rules inert regardless of which tiers are
+    // marked, exactly like table.styles.ts's own `:not([data-force-visible])` guard.
+    const toggleAvailable = needsLow || needsMedium;
+    const anyPriorityHidden = toggleAvailable && !this.priorityColumnsVisible;
     if (this.priorityToggleAvailable !== toggleAvailable) {
       this.priorityToggleAvailable = toggleAvailable;
     }
@@ -2893,7 +2963,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   }
 
   /** Header cells currently in the tab sequence — excludes columns hidden by
-   *  a `priority`-driven `@container` rule (table.styles.ts), so Left/Right/
+   *  a `priority`-driven measured-overflow rule (table.styles.ts/
+   *  `recomputeHiddenPriorityColumns()`), so Left/Right/
    *  Home/End never strand the roving tab stop on a `display: none` cell
    *  that `.focus()` would silently no-op on. Scoped to `th` — body `<td>`s
    *  now carry the same `data-col-key` attribute (for the sticky-offset
@@ -3147,7 +3218,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
   /** `loadingAppearance="skeleton"`'s body rows. Deliberately built from the same per-column
    *  attributes (`data-col-key`/`data-align`/`data-priority`/`data-sticky`) and the same
-   *  `cell`/`row` parts as a real row, so the `@container` priority-hide rules, the sticky-offset
+   *  `cell`/`row` parts as a real row, so the measured-overflow priority-hide rules, the sticky-offset
    *  measurement pass and every cell style apply to them unchanged -- that, plus rendering inside
    *  the real `<colgroup>`/`<thead>`, is what keeps the grid's geometry stable across the load.
    *  They carry no `data-row-key` and no `tabindex`: they are not data rows, so the delegated

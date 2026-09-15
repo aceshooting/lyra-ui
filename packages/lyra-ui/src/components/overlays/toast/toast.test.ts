@@ -90,6 +90,10 @@ it('announces only the normalized message when toast() supplies icon and action 
 
 it('mounts a singleton region and shows an item', async () => {
   const handle = toast({ message: 'hi', variant: 'success', duration: 0 });
+  // toast() dynamically imports the element classes on first call, so the region only reaches the
+  // DOM once that import settles -- await the documented `item` handle rather than assuming a
+  // synchronous mount.
+  await handle.item;
   const region = document.querySelector('lr-toast');
   expect(region).to.exist;
 

@@ -5,7 +5,11 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { gemstoneGlyph, type GemstoneKey } from '../../../theme/gemstones.js';
+import {
+  gemstoneGlyph,
+  gemstoneSelectedGlyphStyles,
+  type GemstoneKey,
+} from '../../../theme/gemstones.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './swatch-picker.styles.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -51,10 +55,18 @@ export interface LyraSwatchPickerEventMap {
  * otherwise hand-roll as a row of round accent-color buttons.
  *
  * `mode="gemstone"` uses the shared faceted gemstone glyph for items carrying a `gemstone`
- * key and opts into the gemstone glow/shine defaults. The `items` array controls display
- * order and `value` still controls the initial selection. Live option reorders preserve focus by
- * option identity; removing the focused option moves focus to the nearest surviving swatch without
- * changing the controlled `value` or emitting `lr-change`.
+ * key and opts into the gemstone glow/shine defaults. The checked swatch's automatic glyph is
+ * themed by the exact same `gemstoneSelectedGlyphStyles` stylesheet exported from
+ * `theme/gemstones.js`, included here in `static styles` and applied through the same
+ * `data-lr-gemstone-selected` attribute documented on that export -- so a glyph rendered anywhere
+ * else on the page (for example a header trigger showing the current selection) can reach the
+ * identical halo/shine by consuming that export directly, and the two can never drift apart. An
+ * explicit `icon` override on a `mode="gemstone"` item is a consumer-authored shape, not that
+ * shared glyph, so it keeps this picker's own generic selected-icon shine instead (see
+ * `--lr-swatch-picker-gemstone-selected-blur`/`-shine-duration` below). The `items` array controls
+ * display order and `value` still controls the initial selection. Live option reorders preserve
+ * focus by option identity; removing the focused option moves focus to the nearest surviving
+ * swatch without changing the controlled `value` or emitting `lr-change`.
  *
  * `disabled` locks the whole picker: every swatch renders as a real `disabled` `<button>` (out of
  * the tab sequence, inert to activation), keyboard navigation and `click()` become no-ops, and the
@@ -98,10 +110,15 @@ export interface LyraSwatchPickerEventMap {
  *   `prefers-reduced-motion: reduce`. Independent of `--lr-swatch-picker-selected-blur` (a separate
  *   `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works
  *   identically for a plain color circle and an icon swatch alike.
- * @cssprop [--lr-swatch-picker-gemstone-selected-blur=var(--lr-size-0-5rem)] - Selected glow
+ * @cssprop [--lr-swatch-picker-gemstone-selected-blur=var(--lr-gemstone-selected-blur, var(--lr-size-0-5rem))] - Selected glow
  *   blur used by `mode="gemstone"` when `--lr-swatch-picker-selected-blur` is not overridden.
- * @cssprop [--lr-swatch-picker-gemstone-shine-duration=var(--lr-transition-ambient)] - Selected shine timing used by
- *   `mode="gemstone"` when `--lr-swatch-picker-shine-duration` is not overridden.
+ *   Applies to a plain color-fill swatch and to a consumer-supplied `icon` override; the
+ *   automatic gemstone glyph itself is themed by `--lr-gemstone-selected-blur` directly (see
+ *   `theme/gemstones.js`'s `gemstoneSelectedGlyphStyles`), which this hook's own default now
+ *   aliases so the two cannot silently drift apart.
+ * @cssprop [--lr-swatch-picker-gemstone-shine-duration=var(--lr-gemstone-selected-shine-duration, var(--lr-transition-ambient))] - Selected shine timing used by
+ *   `mode="gemstone"` when `--lr-swatch-picker-shine-duration` is not overridden. Same scope and
+ *   aliasing as `--lr-swatch-picker-gemstone-selected-blur` above.
  * @cssprop [--lr-swatch-picker-hit-size=var(--lr-size-2-5rem)] - Hit-area size (both
  *   min-inline-size and min-block-size) for the swatch button. Its private default follows the
  *   active tier and is floored at 24px; an inherited or direct public value wins.
@@ -117,7 +134,11 @@ export interface LyraSwatchPickerEventMap {
  * @since 4.0.0
  */
 export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [
+    LyraElement.styles,
+    styles,
+    gemstoneSelectedGlyphStyles,
+  ];
   static override properties = {
     items: { attribute: false, noAccessor: true },
   };
@@ -440,11 +461,17 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
           (option) => option,
           (option, index) => {
             const color = sanitizeCssColor(option.color);
-            const icon =
-              option.icon ??
-              (this.mode === 'gemstone' && option.gemstone
+            // The automatic gemstone glyph (no `icon` override) is the ONLY icon this picker
+            // renders that is also `theme/gemstones.ts`'s own `gemstoneGlyph()` -- a consumer's
+            // `icon` is always a custom shape, even one supplied while mode="gemstone". Only that
+            // canonical glyph opts into the shared `gemstoneSelectedGlyphStyles` treatment below,
+            // so a custom icon keeps its existing generic selected-icon shine untouched.
+            const gemstoneAutoIcon =
+              option.icon == null && this.mode === 'gemstone' && option.gemstone
                 ? gemstoneGlyph(color ?? 'currentColor')
-                : null);
+                : null;
+            const icon = option.icon ?? gemstoneAutoIcon;
+            const isGemstoneGlyph = gemstoneAutoIcon !== null;
             return html`<button
               type="button"
               part="swatch"
@@ -460,7 +487,11 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
               @click=${() => this.select(option, index)}
             >
               ${icon
-                ? renderInertPresentation(icon, { part: 'swatch-icon' })
+                ? renderInertPresentation(icon, {
+                    part: 'swatch-icon',
+                    gemstoneSelected:
+                      isGemstoneGlyph && index === selectedIndex,
+                  })
                 : html`<span part="swatch-fill" aria-hidden="true"></span>`}
             </button>`;
           }

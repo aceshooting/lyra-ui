@@ -204,6 +204,10 @@ export interface LyraMenuItemEventMap {
  * @cssprop [--lr-menu-item-hover-bg=var(--lr-color-brand-quiet)] - Background of an enabled row
  * under the pointer. The pressed state mixes from this same value, so a retuned hover fill keeps
  * its pressed step instead of snapping back to the brand default.
+ * @cssprop [--lr-menu-item-active-bg=color-mix(in oklab,var(--lr-menu-item-hover-bg,var(--lr-color-brand-quiet)),var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ * Background of an enabled row while pressed, matching `--lr-option-active-bg`'s equivalent hook.
+ * Left unset, the pressed fill keeps mixing from `--lr-menu-item-hover-bg` as before this hook
+ * existed.
  * @cssprop [--lr-menu-item-icon-color=inherit] - Foreground of the leading icon wrapper. Unset it
  * inherits the row's colour, including the danger variant's.
  * @cssprop [--lr-menu-item-min-height=max(var(--lr-form-control-height),var(--lr-size-24px))] -

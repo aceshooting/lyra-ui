@@ -43,9 +43,12 @@ it keeps `--lr-tooltip-background`/`--lr-tooltip-color`, no border, and its tigh
 `<lr-drawer>` reads the family's fill and edge but keeps squaring its own corners and stepping its
 own elevation down, because three of its edges are flush with the viewport.
 
-`<lr-menu-item>` also gains three row-chrome hooks, each an inline fallback so unset rendering is
+`<lr-menu-item>` also gains four row-chrome hooks, each an inline fallback so unset rendering is
 byte-identical: `--lr-menu-item-hover-bg` (default `var(--lr-color-brand-quiet)`, and the pressed
-state now mixes from that same value, so a retuned hover fill keeps its pressed step),
+state mixes from that same value by default), `--lr-menu-item-active-bg` (default the same
+hover-derived mix — `color-mix(in oklab, var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))` — for setting the pressed fill directly,
+independently of a retuned hover fill, matching `--lr-option-active-bg`'s equivalent hook),
 `--lr-menu-item-icon-color` (default `inherit`) and `--lr-menu-item-min-height` (default
 `max(var(--lr-form-control-height), var(--lr-size-24px))`).
 

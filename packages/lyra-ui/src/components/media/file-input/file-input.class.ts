@@ -20,6 +20,7 @@ import {
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { DropSessionController, type DropSessionState } from '../../../internal/drop-session-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -30,29 +31,15 @@ import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } fr
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../attachment-chip/file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-type DragState = 'default' | 'accept' | 'reject';
 type FileInputOutcomeMessageKey =
   | 'fileInputAcceptedOne'
   | 'fileInputAcceptedMany'
   | 'fileInputRejectedOne'
   | 'fileInputRejectedMany';
-type DroppedFolderReadResult =
-  | { status: 'complete'; files: File[] }
-  | { status: 'cancelled' }
-  | { status: 'limit'; name: string }
-  | { status: 'error'; name: string };
-type DroppedFileReadResult =
-  | { status: 'complete'; file: File }
-  | { status: 'cancelled' }
-  | { status: 'error' };
-type DroppedDirectoryBatchResult =
-  | { status: 'complete'; entries: FileSystemEntry[] }
-  | { status: 'cancelled' }
-  | { status: 'error' };
 export type LyraFileInputCapture = '' | 'user' | 'environment';
 
 /** What a `validators` entry may return: nothing/`true` passes, a string is the message, `false` is
@@ -97,6 +84,12 @@ function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
 }
 
 export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+/** Fallback used by `effectiveMaxFiles` for an invalid (negative/`NaN`) `maxFiles` override,
+ *  mirroring `DEFAULT_MAX_FILE_SIZE_BYTES`'s fail-safe role for `maxFileSize`. */
+export const DEFAULT_MAX_FILES = 100;
+/** Fallback used by `effectiveMaxTotalSize` for an invalid (negative/`NaN`) `maxTotalSize`
+ *  override, mirroring `DEFAULT_MAX_FILE_SIZE_BYTES`'s fail-safe role for `maxFileSize`. */
+export const DEFAULT_MAX_TOTAL_SIZE_BYTES = 250 * 1024 * 1024;
 const MAX_DROPPED_FOLDER_ENTRIES = 10_000;
 const MAX_MIME_TYPES = 10_000;
 const EMPTY_MIME_TYPES: readonly string[] = Object.freeze([]);
@@ -147,12 +140,19 @@ function isFileValue(value: unknown): value is File {
 
 export interface LyraFileInputRejectedFile {
   readonly file: File;
-  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit';
+  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
 }
 
 export interface LyraFileInputFilesDetail {
   readonly files: readonly File[];
   readonly rejected: readonly LyraFileInputRejectedFile[];
+}
+
+/** `lr-files`' event type, narrowing `target`/`currentTarget` to `LyraFileInput` so a listener
+ *  reads them without casting. */
+export interface LyraFileInputFilesEvent extends CustomEvent<LyraFileInputFilesDetail> {
+  readonly target: LyraFileInput;
+  readonly currentTarget: LyraFileInput;
 }
 
 export interface LyraFileInputEventMap {
@@ -161,7 +161,7 @@ export interface LyraFileInputEventMap {
   input: Event;
   change: Event;
   'lr-invalid': CustomEvent<null>;
-  'lr-files': CustomEvent<LyraFileInputFilesDetail>;
+  'lr-files': LyraFileInputFilesEvent;
 }
 /**
  * `<lr-file-input>` — a drag-drop + click-to-browse file dropzone. Emits
@@ -179,7 +179,9 @@ export interface LyraFileInputEventMap {
  * server-rendered declarative shadow DOM before light-DOM slot assignment is observable.
  * @event lr-files - Frozen `detail: { files, rejected }` with detached readonly sequences and
  * rejected-file records, fired on drop and manual selection. Immutable `File` items retain
- * identity.
+ * identity. Typed as {@linkcode LyraFileInputFilesEvent}, so `event.target`/`event.currentTarget` are
+ * `LyraFileInput` without a cast. Still fires while `nonRetaining` is set, even though `files`
+ * itself is never written in that mode.
  * @event {Event} input - Native event fired before `change` when user interaction changes `files`;
  * bubbling, composed, and non-cancelable.
  * @event {Event} change - Native event fired after `input` when user interaction changes `files`;
@@ -234,7 +236,8 @@ export interface LyraFileInputEventMap {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required file input is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
- * @cssstate blank - Matches while no files are selected.
+ * @cssstate blank - Matches while no files are selected -- or, while `nonRetaining` is set,
+ * while `valuePresent` is also unset.
  * @cssstate dragging - Matches during an active file drag session.
  * @cssprop [--lr-file-input-font-size=var(--lr-form-control-font-size)] - Label and selected-filename
  * text size; tracks the shared `size` ladder.
@@ -301,6 +304,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     fileInputRejectedCount: LYRA_DEFAULT_fileInputRejectedCount,
     fileInputRejectedLimit: LYRA_DEFAULT_fileInputRejectedLimit,
     fileInputRejectedMany: LYRA_DEFAULT_fileInputRejectedMany,
+    fileInputRejectedMaxFiles: LYRA_DEFAULT_fileInputRejectedMaxFiles,
+    fileInputRejectedMaxTotalSize: LYRA_DEFAULT_fileInputRejectedMaxTotalSize,
     fileInputRejectedOne: LYRA_DEFAULT_fileInputRejectedOne,
     fileInputRejectedRead: LYRA_DEFAULT_fileInputRejectedRead,
     fileInputRejectedSize: LYRA_DEFAULT_fileInputRejectedSize,
@@ -373,6 +378,31 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** Largest accepted file size in bytes. `0` (the default) disables the size check entirely --
    *  see `effectiveMaxFileSize` for how an invalid override is handled. */
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
+  /** Largest total number of files accepted, counting retained files plus the current batch. `0`
+   *  (the default) disables the check. Same rejection-UI shape as `maxFileSize`: an excess file in
+   *  the batch is rejected with reason `'maxFiles'` and appears in `[part="rejection"]` alongside
+   *  any other rejection, rather than failing the whole selection. An invalid override (negative,
+   *  `NaN`) falls back to a sane cap rather than silently accepting an unlimited count -- see
+   *  `effectiveMaxFiles`. While `nonRetaining` is set, the count only covers the current batch,
+   *  since the control does not track an externally-held count. */
+  @property({ type: Number, attribute: 'max-files' }) maxFiles = 0;
+  /** Largest combined byte size accepted, summing retained files plus the current batch. `0` (the
+   *  default) disables the check. Same rejection-UI shape and invalid-override fallback as
+   *  `maxFileSize` -- see `effectiveMaxTotalSize`. While `nonRetaining` is set, the total only
+   *  covers the current batch. */
+  @property({ type: Number, attribute: 'max-total-size' }) maxTotalSize = 0;
+  /** Opt-in mode where an accepted selection still fires `lr-files`/`input`/`change` but is never
+   *  written to `files` or rendered as a built-in `[part="file"]` row -- for a host that persists
+   *  files elsewhere and renders its own list, so assigning `files` (even to reset it) never fights
+   *  that host-owned rendering. `required` validity and the `blank` state read `valuePresent`
+   *  instead of `files.length` while this is set. Does not affect `formStateRestoreCallback()` or a
+   *  direct `files` assignment, both of which still retain. */
+  @property({ type: Boolean, reflect: true, attribute: 'non-retaining' }) nonRetaining = false;
+  /** External "a value is present" signal for a `nonRetaining` host to set once it has taken
+   *  ownership of the selected files, so `required` validity and the `blank` state reflect
+   *  externally-held files instead of the always-empty internal list. Ignored while `nonRetaining`
+   *  is `false`. */
+  @property({ type: Boolean, reflect: true, attribute: 'value-present' }) valuePresent = false;
   /** Enables directory selection through the browser's native picker. */
   @property({ type: Boolean, reflect: true }) directory = false;
   /** Enables files pasted from the clipboard into the dropzone. `true`-defaulting, so a plain
@@ -412,7 +442,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
    * including `''` and the former English default, is caller-owned. */
   @property({ attribute: 'rejected-message' }) rejectedMessage?: string;
 
-  @state() private dragState: DragState = 'default';
+  @state() private dragState: DropSessionState = 'default';
   @state() private resultStatus = '';
   /** Files rejected by the most recent drop/paste/selection, each paired with its reason.
    *  Populated in `emitFiles()` (never on mount -- it starts empty and every write is a direct
@@ -435,8 +465,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private validityController: AnchoredValidityController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
-  private dragCounter = 0;
-  private dropToken = 0;
+  /** Owns the drag-session state machine and folder traversal -- shared with `lr-drop-zone`. */
+  private readonly dropSession: DropSessionController;
   /** Shared light-DOM live regions this element announces through. A region rendered inside this
    *  shadow root is not reliably announced (JAWS with Firefox ignores one outright), so
    *  `[part="status"]` is only an `aria-hidden` mirror and `[part="rejection"]` is plain visible
@@ -464,6 +494,14 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init));
     this.internals.setFormValue(null);
+    this.dropSession = new DropSessionController(this, {
+      isDisabled: () => this.liveDisabled,
+      previewRejects: (items) => this.classify(items as unknown as File[], true).rejected.length > 0,
+      onStateChange: () => {
+        this.dragState = this.dropSession.state;
+        this.publishCustomStates();
+      },
+    });
   }
 
   get form(): HTMLFormElement | null {
@@ -551,8 +589,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
     if (this._disabled) {
-      this.dropToken++;
-      this.resetDragSession();
+      this.dropSession.reset();
     }
     // Disabling bars constraint validation, so the intrinsic violation has to be dropped with it --
     // synchronously, for the same reason the attribute is reflected synchronously.
@@ -622,9 +659,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.dropToken++;
     this.disconnectValidatorAttributeObserver();
-    this.resetDragSession();
+    this.dropSession.reset();
     for (const thumbnail of this.thumbnailUrls.values()) thumbnail.revoke();
     this.thumbnailUrls.clear();
     this.politeSink?.release();
@@ -643,6 +679,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     if (changed.has('validators')) {
       this.updateValidity();
       this.syncValidatorAttributeObserver();
+    }
+    // `valuePresent`/`nonRetaining` both feed `hasEffectiveValue`, which `required`/`blank` read.
+    if (changed.has('valuePresent') || changed.has('nonRetaining')) {
+      this.updateValidity();
     }
     // Merges a consumer-set host `aria-describedby` onto the internal `role="button"` dropzone
     // control -- the sole semantic owner -- since idrefs never cross the shadow boundary on their
@@ -841,7 +881,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     }
     const flags: ValidityStateFlags = {};
     let message = '';
-    if (this.required && this._files.length === 0) {
+    if (this.required && !this.hasEffectiveValue) {
       flags.valueMissing = true;
       message = this.localize('fieldRequired');
     }
@@ -852,13 +892,19 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.publishCustomStates();
   }
 
+  /** Whether the control has a value for `required`/`blank` purposes: real retained files, or --
+   *  while `nonRetaining` is set -- the host's own `valuePresent` signal. */
+  private get hasEffectiveValue(): boolean {
+    return this._files.length > 0 || (this.nonRetaining && this.valuePresent);
+  }
+
   private publishCustomStates(): void {
     syncValidityStates(this.internals, {
       required: this.required,
       hasInteracted: this.touched,
       barred: this.barredFromValidation,
     });
-    setCustomState(this.internals, 'blank', this._files.length === 0);
+    setCustomState(this.internals, 'blank', !this.hasEffectiveValue);
     setCustomState(this.internals, 'dragging', this.dragging);
     this.toggleAttribute('dragging', this.dragging);
   }
@@ -944,8 +990,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     if (disabled) {
-      this.dropToken++;
-      this.resetDragSession();
+      this.dropSession.reset();
     }
     // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
     this.updateValidity();
@@ -1001,6 +1046,22 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return finiteRange(maxFileSize > 0 ? maxFileSize : NaN, DEFAULT_MAX_FILE_SIZE_BYTES, 1);
   }
 
+  /** `maxFiles` normalized exactly like `effectiveMaxFileSize` normalizes `maxFileSize`: `0`/
+   *  `Infinity` both mean "no limit" (`null`); any other invalid override falls back to
+   *  `DEFAULT_MAX_FILES` rather than silently disabling the check. */
+  private get effectiveMaxFiles(): number | null {
+    const maxFiles = this.maxFiles;
+    if (maxFiles === 0 || maxFiles === Infinity) return null;
+    return finiteRange(maxFiles > 0 ? maxFiles : NaN, DEFAULT_MAX_FILES, 1);
+  }
+
+  /** `maxTotalSize` normalized exactly like `effectiveMaxFileSize` normalizes `maxFileSize`. */
+  private get effectiveMaxTotalSize(): number | null {
+    const maxTotalSize = this.maxTotalSize;
+    if (maxTotalSize === 0 || maxTotalSize === Infinity) return null;
+    return finiteRange(maxTotalSize > 0 ? maxTotalSize : NaN, DEFAULT_MAX_TOTAL_SIZE_BYTES, 1);
+  }
+
   private isAllowed(file: File, isPreview = false): 'ok' | 'type' | 'size' {
     if (this.forbiddenMimeTypes.includes(file.type)) return 'type';
     if (this.allowedMimeTypes.length > 0 && !this.allowedMimeTypes.includes(file.type)) return 'type';
@@ -1016,6 +1077,17 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return 'ok';
   }
 
+  /** Sum of `.size` across `files`, tolerating a hostile/undefined getter (a synthetic dragenter-
+   *  preview item has none) by treating anything non-finite as `0`. */
+  private totalFileSize(files: readonly File[]): number {
+    let total = 0;
+    for (const file of files) {
+      const size = file.size;
+      if (Number.isFinite(size)) total += size;
+    }
+    return total;
+  }
+
   private classify(
     fileList: File[],
     isPreview = false,
@@ -1025,10 +1097,33 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     }
     const files: File[] = [];
     const rejected: LyraFileInputRejectedFile[] = [];
+    const maxFiles = this.effectiveMaxFiles;
+    const maxTotalSize = this.effectiveMaxTotalSize;
+    // `maxFiles`/`maxTotalSize` count against retained files too, except while `nonRetaining` is
+    // set: the control has no externally-held count/total to add, so the aggregate only covers
+    // this batch (documented on both properties).
+    let runningCount = this.nonRetaining ? 0 : this._files.length;
+    let runningSize = this.nonRetaining ? 0 : this.totalFileSize(this._files);
     for (const f of fileList) {
       const reason = this.isAllowed(f, isPreview);
-      if (reason === 'ok') files.push(f);
-      else rejected.push({ file: f, reason });
+      if (reason !== 'ok') {
+        rejected.push({ file: f, reason });
+        continue;
+      }
+      if (maxFiles !== null && runningCount + 1 > maxFiles) {
+        rejected.push({ file: f, reason: 'maxFiles' });
+        continue;
+      }
+      // Same rationale as the `maxFileSize` check above: `f.size` is `undefined` during dragenter
+      // preview, so `runningSize + undefined` is `NaN` and this comparison is always `false` --
+      // preview never flags a total-size rejection ahead of the real sizes being available.
+      if (maxTotalSize !== null && runningSize + f.size > maxTotalSize) {
+        rejected.push({ file: f, reason: 'maxTotalSize' });
+        continue;
+      }
+      files.push(f);
+      runningCount += 1;
+      runningSize += Number.isFinite(f.size) ? f.size : 0;
     }
     return { files, rejected };
   }
@@ -1054,6 +1149,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         return this.localize('fileInputRejectedRead', undefined, { filename });
       case 'limit':
         return this.localize('fileInputRejectedLimit', undefined, { filename });
+      case 'maxFiles':
+        return this.localize('fileInputRejectedMaxFiles', undefined, { filename });
+      case 'maxTotalSize':
+        return this.localize('fileInputRejectedMaxTotalSize', undefined, { filename });
     }
   }
 
@@ -1098,7 +1197,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       this.updateValidity();
     }
     if (files.length) {
-      this.files = this.effectiveMultiple ? [...this._files, ...files] : files;
+      // `nonRetaining`: the selection is announced (below) but never written to `files` -- the
+      // host owns rendering and persistence, and reads `valuePresent` for required validity.
+      if (!this.nonRetaining) {
+        this.files = this.effectiveMultiple ? [...this._files, ...files] : files;
+      }
       dispatchNativeEvent(this, 'input');
       dispatchNativeEvent(this, 'change');
     }
@@ -1131,159 +1234,26 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.openPicker();
   }
 
-  private resetDragSession(): void {
-    this.dragCounter = 0;
-    this.dragState = 'default';
-    this.publishCustomStates();
-  }
-
-  private previewState(fileList: File[]): DragState {
-    const { rejected } = this.classify(fileList, true);
-    return rejected.length > 0 ? 'reject' : 'accept';
-  }
-
-  private onDragEnter = (e: DragEvent): void => {
-    e.preventDefault();
-    if (this.liveDisabled) return;
-    this.dragCounter++;
-    const items = e.dataTransfer ? [...e.dataTransfer.items].filter((i) => i.kind === 'file') : [];
-    this.dragState = items.length ? this.previewState(items as unknown as File[]) : 'default';
-    this.publishCustomStates();
-  };
-
-  private onDragOver = (e: DragEvent): void => {
-    // Always suppress the browser's default drop action (e.g. navigating the
-    // whole page to the dropped file), even while disabled — only the
-    // subsequent classification/emit logic is gated on `disabled`.
-    e.preventDefault();
-    if (this.liveDisabled) return;
-  };
-
-  private onDragLeave = (e: DragEvent): void => {
-    if (this.liveDisabled) return;
-    e.preventDefault();
-    this.dragCounter = Math.max(0, this.dragCounter - 1);
-    if (this.dragCounter === 0) {
-      this.dragState = 'default';
-      this.publishCustomStates();
-    }
-  };
-
-  private readDroppedFile(
-    entry: FileSystemFileEntry,
-    isCurrent: () => boolean,
-  ): Promise<DroppedFileReadResult> {
-    if (!isCurrent()) return Promise.resolve({ status: 'cancelled' });
-    return new Promise<DroppedFileReadResult>((resolve) => {
-      try {
-        entry.file(
-          (file) => resolve(isCurrent() ? { status: 'complete', file } : { status: 'cancelled' }),
-          () => resolve(isCurrent() ? { status: 'error' } : { status: 'cancelled' }),
-        );
-      } catch {
-        resolve(isCurrent() ? { status: 'error' } : { status: 'cancelled' });
-      }
-    });
-  }
-
-  private readDroppedDirectoryBatch(
-    reader: FileSystemDirectoryReader,
-    isCurrent: () => boolean,
-  ): Promise<DroppedDirectoryBatchResult> {
-    if (!isCurrent()) return Promise.resolve({ status: 'cancelled' });
-    return new Promise<DroppedDirectoryBatchResult>((resolve) => {
-      try {
-        reader.readEntries(
-          (entries) => resolve(isCurrent() ? { status: 'complete', entries } : { status: 'cancelled' }),
-          () => resolve(isCurrent() ? { status: 'error' } : { status: 'cancelled' }),
-        );
-      } catch {
-        resolve(isCurrent() ? { status: 'error' } : { status: 'cancelled' });
-      }
-    });
-  }
-
-  /** Walks legacy File System API folders one operation at a time, with a bounded queue. */
-  private async readDroppedFolders(
-    folders: FileSystemEntry[],
-    isCurrent: () => boolean,
-  ): Promise<DroppedFolderReadResult> {
-    const files: File[] = [];
-    const queue: FileSystemEntry[] = [];
-    let entryCount = 0;
-    const enqueue = (entry: FileSystemEntry): boolean => {
-      if (entryCount >= MAX_DROPPED_FOLDER_ENTRIES) return false;
-      entryCount++;
-      queue.push(entry);
-      return true;
-    };
-
-    for (const folder of folders) {
-      if (!isCurrent()) return { status: 'cancelled' };
-      if (!enqueue(folder)) return { status: 'limit', name: folder.name };
-    }
-
-    for (let index = 0; index < queue.length; index++) {
-      if (!isCurrent()) return { status: 'cancelled' };
-      const entry = queue[index]!;
-      if (entry.isFile) {
-        const result = await this.readDroppedFile(entry as FileSystemFileEntry, isCurrent);
-        if (result.status === 'cancelled' || !isCurrent()) return { status: 'cancelled' };
-        if (result.status === 'error') return { status: 'error', name: entry.name };
-        files.push(result.file);
-        continue;
-      }
-      if (!entry.isDirectory) continue;
-
-      let reader: FileSystemDirectoryReader;
-      try {
-        reader = (entry as FileSystemDirectoryEntry).createReader();
-      } catch {
-        return { status: 'error', name: entry.name };
-      }
-      while (true) {
-        if (!isCurrent()) return { status: 'cancelled' };
-        const batch = await this.readDroppedDirectoryBatch(reader, isCurrent);
-        if (batch.status === 'cancelled' || !isCurrent()) return { status: 'cancelled' };
-        if (batch.status === 'error') return { status: 'error', name: entry.name };
-        if (!batch.entries.length) break;
-        for (const child of batch.entries) {
-          if (!isCurrent()) return { status: 'cancelled' };
-          if (!enqueue(child)) return { status: 'limit', name: entry.name };
-        }
-      }
-    }
-    return { status: 'complete', files };
-  }
+  // The nested-depth counter, accept/reject preview, and folder-walking mechanics below are
+  // owned by `this.dropSession` (`internal/drop-session-controller.ts`), extracted from this
+  // component's original implementation so `lr-drop-zone` shares the exact same mechanics rather
+  // than reimplementing them. Only classification (`isAllowed`/`classify`, below) stays here,
+  // since it reads this control's own `accept`/`maxFileSize`/`maxFiles`/`maxTotalSize`.
+  private onDragEnter = (e: DragEvent): void => this.dropSession.onDragEnter(e);
+  private onDragOver = (e: DragEvent): void => this.dropSession.onDragOver(e);
+  private onDragLeave = (e: DragEvent): void => this.dropSession.onDragLeave(e);
 
   private onDrop = (e: DragEvent): void => {
-    // Same rationale as `onDragOver`: prevent the browser's default drop
-    // action unconditionally, before the `disabled` gate.
-    e.preventDefault();
-    if (this.liveDisabled) return;
-    this.resetDragSession();
-    const token = ++this.dropToken;
-    const files = [...(e.dataTransfer?.files ?? [])];
-    const folders: FileSystemEntry[] = [];
-    const items = e.dataTransfer?.items;
-    // Inspect at most one item beyond the traversal budget. Besides avoiding an unbounded spread,
-    // this lets an over-limit root list fail atomically before any directory reader is opened.
-    const itemCount = Math.min(items?.length ?? 0, MAX_DROPPED_FOLDER_ENTRIES + 1);
-    for (let index = 0; index < itemCount; index++) {
-      const item = items?.[index];
-      const entry = (item as DataTransferItem & {
-        webkitGetAsEntry?: () => FileSystemEntry | null;
-      } | undefined)?.webkitGetAsEntry?.();
-      if (entry?.isDirectory) folders.push(entry);
-    }
-    if ((items?.length ?? 0) > MAX_DROPPED_FOLDER_ENTRIES && this.effectiveMultiple) {
+    const drop = this.dropSession.beginDrop(e);
+    if (!drop) return;
+    const { token, files, folders, overLimit } = drop;
+    if (overLimit && this.effectiveMultiple) {
       this.emitFiles([], [this.folderFailure(folders[0]?.name ?? '', 'limit')]);
       return;
     }
     if (folders.length && this.effectiveMultiple) {
-      const isCurrent = () => token === this.dropToken && this.isConnected && !this.liveDisabled;
-      void this.readDroppedFolders(folders, isCurrent).then((result) => {
-        if (!isCurrent() || result.status === 'cancelled') return;
+      void this.dropSession.readFolders(folders, token).then((result) => {
+        if (!this.dropSession.isCurrent(token) || result.status === 'cancelled') return;
         if (result.status === 'error' || result.status === 'limit') {
           this.emitFiles([], [this.folderFailure(result.name, result.status === 'limit' ? 'limit' : 'read')]);
           return;

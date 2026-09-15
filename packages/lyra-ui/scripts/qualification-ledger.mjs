@@ -399,11 +399,32 @@ export function qualificationApplicabilitySignals({
   };
 }
 
+/** The `LYRA_SSR_CLIENT_RENDER_REASONS` object literal alone, or the whole source when that marker
+ * is absent (the unit tests pass bare fragments). `src/ssr.ts` also declares a separate
+ * `[tag(...)]`-keyed capability map, and counting its entries as unparsed client-render
+ * declarations would fail the guard below for a file that is perfectly well formed. */
+function clientRenderReasonsBlock(source) {
+  const start = source.indexOf('LYRA_SSR_CLIENT_RENDER_REASONS');
+  if (start === -1) return source;
+  const open = source.indexOf('{', start);
+  if (open === -1) return source;
+  let depth = 0;
+  for (let index = open; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    else if (source[index] === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(open, index + 1);
+    }
+  }
+  return source;
+}
+
 export function parseSsrSource(source, tags) {
   const inventoryTags = new Set(tags);
   const clientReasons = new Map();
-  const declarations = [...source.matchAll(/\[\s*tag\s*\(/g)].length;
-  const parsed = [...source.matchAll(
+  const reasonsBlock = clientRenderReasonsBlock(source);
+  const declarations = [...reasonsBlock.matchAll(/\[\s*tag\s*\(/g)].length;
+  const parsed = [...reasonsBlock.matchAll(
     /\[\s*tag\(\s*(['"])([a-z0-9-]+)\1\s*\)\s*\]\s*:\s*reason\(\s*(['"])([a-z0-9-]+)\3\s*,/g,
   )];
   if (parsed.length !== declarations) {

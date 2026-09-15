@@ -1,3 +1,4 @@
+import { devWarnOnce } from './dev-mode-attribute-warning.js';
 import { getPluralRules } from './intl-cache.js';
 import type {
   LyraLocaleDirection,
@@ -281,6 +282,28 @@ export function lyraLocaleCatalogVersion(locale: string): string {
 export function getRegisteredLyraLocales(): readonly string[] {
   const keys = new Set(['en', ...localePublicTags.values()]);
   return Object.freeze([...keys].sort());
+}
+
+const NO_REGISTERED_LOCALE_KEYS: readonly string[] = Object.freeze([]);
+
+/**
+ * A frozen snapshot of exactly the keys `locale`'s own registered catalog carries — no BCP-47
+ * fallback-chain widening and no merge with the built-in English defaults. This answers "what has
+ * this locale actually been given", distinct from {@link getRegisteredLyraLocales}, which reports
+ * registry *membership* (which tags exist) rather than catalog *content* (what keys a tag's own
+ * catalog holds). Lets a consumer measure a locale's own translation coverage — for example diffing
+ * the result's length against `Object.keys(LYRA_DEFAULT_STRINGS).length` — without a silent
+ * English-fallback merge making a partial catalog look complete.
+ *
+ * An unregistered locale, including `'en'` when it was never itself passed to
+ * {@link registerLyraLocale}, returns an empty snapshot: `'en'` is implicitly available through the
+ * caller-supplied English defaults rather than through an entry in the registry this reads.
+ */
+export function getRegisteredLyraLocaleKeys(locale: string): readonly string[] {
+  const identity = localeIdentity(locale);
+  if (!identity.lookupKey) return NO_REGISTERED_LOCALE_KEYS;
+  const catalog = locales.get(identity.lookupKey);
+  return catalog ? Object.freeze(Object.keys(catalog)) : NO_REGISTERED_LOCALE_KEYS;
 }
 
 /** Subscribe to locale *registry membership* changes (a new locale registered) — distinct from
@@ -996,6 +1019,30 @@ function selectPluralMessage(
   return message.other;
 }
 
+/** Whether `locale`'s base subtag is English -- resolving `'en'`/`'en-GB'`/... never falling
+ *  through to a registered catalog is the ordinary, expected path and must not warn. */
+function isEnglishLocale(locale: string): boolean {
+  const lower = locale.toLowerCase();
+  return lower === 'en' || lower.startsWith('en-');
+}
+
+/**
+ * Dev-mode-only, once per (locale, key): warns when resolution found no override, no fallback, and
+ * no registered catalog message for a NON-English resolved locale, so it is about to silently fall
+ * through to the caller-supplied English `defaults` (or the bare key). Production-silent and gated
+ * on Lit's own dev-mode signal, exactly like {@link devWarnOnce}'s other callers -- an English
+ * locale never warns, since falling through to `defaults` is simply how English itself resolves.
+ */
+function warnLocaleFallback(locale: string, key: string): void {
+  if (isEnglishLocale(locale)) return;
+  devWarnOnce(
+    `lyra-locale-fallback:${locale}:${key}`,
+    `Lyra localization: no "${key}" message registered for locale "${locale}"; falling back to ` +
+      'the English default. Register it with registerLyraLocale(), or accept the fallback ' +
+      'intentionally for a still-partial catalog.'
+  );
+}
+
 /**
  * Resolve a message for a component. An explicit per-component override wins,
  * followed by a non-empty component property fallback, registered locale
@@ -1005,6 +1052,10 @@ function selectPluralMessage(
  * {@link LyraPluralMessage}; the latter is reduced to one string by
  * `Intl.PluralRules` before interpolation, so the return type stays `string`
  * and every caller's contract is untouched.
+ *
+ * In dev mode (see {@link devWarnOnce}), a non-English resolved locale that reaches this point with
+ * no registered catalog message warns once per (locale, key) via {@link warnLocaleFallback} --
+ * production and non-dev-mode builds stay silent.
  */
 export function resolveLyraString(
   host: Element,
@@ -1026,6 +1077,7 @@ export function resolveLyraString(
         break;
       }
     }
+    if (message === undefined) warnLocaleFallback(locale, key);
   }
   message ??= safeMessageAt(defaults, key) ?? key;
   let text: string;

@@ -1,12 +1,12 @@
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { isDateObject } from '../../../internal/dom-guards.js';
 import { styles } from './format.styles.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { formatDate as formatDateValue } from '../../../utilities/format.js';
 import {
   dateTimeFormatOptions,
   dateSourceConverter,
+  resolveDateSource,
   type LyraFormatDateHour,
   type LyraFormatDateMonth,
   type LyraFormatDateNumeric,
@@ -23,23 +23,6 @@ export type {
   LyraFormatDateText,
   LyraFormatDateTimeZoneName,
 } from './format-options.js';
-
-/** Resolves only primitive date sources or native Date internal slots. This intentionally avoids
- * `new Date(object)`, which invokes caller-controlled conversion hooks on arbitrary objects. */
-function resolvedDate(value: unknown): Date | undefined {
-  if (value === null || value === undefined) return new Date();
-  if (typeof value === 'string' || typeof value === 'number') {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? undefined : date;
-  }
-  if (!isDateObject(value)) return undefined;
-  try {
-    const epoch = Date.prototype.getTime.call(value);
-    return Number.isFinite(epoch) ? new Date(epoch) : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 /**
  * `<lr-format-date>` — locale-aware `Intl.DateTimeFormat` output. Numeric `date` attributes are
@@ -74,25 +57,25 @@ export class LyraFormatDate extends LyraElement {
   @property({ attribute: 'hour-format' }) hourFormat: LyraFormatDateHour = 'auto';
 
   override render(): TemplateResult {
-    const value = resolvedDate(this.date);
+    const value = resolveDateSource(this.date);
     const options = dateTimeFormatOptions(this);
     let text = '';
     if (value) {
       try {
-        text = getDateTimeFormat(this.effectiveLocale || undefined, options).format(value);
+        text = formatDateValue(value, this.effectiveLocale || undefined, options) ?? '';
       } catch {
         const localOptions = { ...options };
         delete localOptions.timeZone;
         try {
-          text = getDateTimeFormat(this.effectiveLocale || undefined, localOptions).format(value);
+          text = formatDateValue(value, this.effectiveLocale || undefined, localOptions) ?? '';
         } catch {
           const safeOptions: Intl.DateTimeFormatOptions = {};
           try {
             // Invalid formatting options must not silently erase an otherwise-valid locale.
-            text = getDateTimeFormat(this.effectiveLocale || undefined, safeOptions).format(value);
+            text = formatDateValue(value, this.effectiveLocale || undefined, safeOptions) ?? '';
           } catch {
             // Only a malformed locale itself reaches this final runtime-locale fallback.
-            text = getDateTimeFormat(undefined, safeOptions).format(value);
+            text = formatDateValue(value, undefined, safeOptions) ?? '';
           }
         }
       }

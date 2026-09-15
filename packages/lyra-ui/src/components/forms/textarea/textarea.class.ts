@@ -30,10 +30,11 @@ import {
   spellcheckConverter,
 } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
-import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
+import { finiteCount, finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { DebounceController } from '../../../internal/debounce-controller.js';
 import {
   currentValidityValidator,
   type LyraFormValidator,
@@ -74,6 +75,7 @@ export interface LyraTextareaEventMap {
   change: Event;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
+  'lr-input-settled': CustomEvent<{ value: string }>;
   blur: FocusEvent;
   focus: FocusEvent;
   'lr-invalid': CustomEvent<null>;
@@ -108,6 +110,11 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @event change - Native-style composed event fired at the native `change` timing.
  * @event lr-input - Compatibility alias for `input`; `detail: { value }`.
  * @event lr-change - Compatibility alias for `change`; `detail: { value }`.
+ * @event lr-input-settled - Fires once, `debounce` ms after the last keystroke, alongside the
+ *   per-keystroke `input`/`lr-input` pair (which keep firing on every edit). `detail: { value }`,
+ *   non-cancelable. A pending debounce is flushed immediately on `change`/Enter/blur, and cancelled
+ *   with no stray settle on disconnect and a programmatic `value` write. Never fires while
+ *   `debounce` is unset, `0`, or non-finite.
  * @event lr-invalid - The textarea failed a validity check. Cancelable: `preventDefault()` forwards
  *   to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
@@ -197,6 +204,18 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   // so the padding/font-size/radius knobs point at the active tier's value -- and so both spellings
   // of every tier (`s` and `small`, ...) work with no per-component rule.
   static override styles = [LyraElement.styles, sizes, styles];
+
+  override get value(): string {
+    return super.value;
+  }
+
+  override set value(next: string | null) {
+    super.value = next ?? '';
+    // A write reaching here that did NOT come from `onInput`'s own guarded assignment below is a
+    // programmatic `value` write (including `formResetCallback()`'s restore) -- cancel any pending
+    // debounce with no stray settle, matching disconnection, exactly as `<lr-input>` does.
+    if (!this.settlingValueFromInput) this.settledDebounce.cancel();
+  }
 
   /** Visible text rows. */
   // numeric-guard-exempt: forwarded only to the native <textarea rows> attribute (see the
@@ -323,11 +342,27 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   // remaining-characters readout behind `with-count` -- routes through countMaxlength(), which
   // drops a non-finite value entirely rather than arithmetic-ing on it.
   @property({ type: Number }) maxlength?: number;
+  /** How long (ms) to wait after the last keystroke before emitting one `lr-input-settled`,
+   *  coalescing a burst of rapid edits into a single downstream commit -- the same predicate and
+   *  `DebounceController` primitive `<lr-filter-bar>`'s own per-filter `debounce` uses, and shared
+   *  with `<lr-input>`'s identical property. Omitted, `0`, or a non-finite value means no debounce
+   *  at all: `input`/`lr-input` keep firing per keystroke exactly as before, and `lr-input-settled`
+   *  never fires. A pending debounce is flushed immediately by `change`/Enter/blur (so a blur never
+   *  drops the last keystroke) and cancelled with no stray settle by disconnection and a
+   *  programmatic `value` write. */
+  @property({ type: Number }) debounce?: number;
 
   @state() private touched = false;
   /** Empty until the user pauses typing, so the live region says nothing on first render. */
   @state() private announcedCountText = '';
   private readonly slotPresence = new SlotPresenceController(this);
+  // Guards the `value` setter override below: true only for the synchronous duration of `onInput`'s
+  // own assignment, so that write is never mistaken for the programmatic one the setter otherwise
+  // cancels a pending debounce for.
+  private settlingValueFromInput = false;
+  private readonly settledDebounce = new DebounceController<string>(0, (value) => {
+    this.emit('lr-input-settled', { value });
+  });
 
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
   private resizeObserver?: ResizeObserver;
@@ -476,6 +511,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   override disconnectedCallback(): void {
+    // `cancel()`, not `dispose()`: a detached textarea still fires its timer into a torn-down host
+    // without this, but a re-parent (which also runs this) must leave the control able to debounce
+    // a later edit -- the same reconnect contract `<lr-filter-bar>`'s own `cancelDebounce()` keeps.
+    this.settledDebounce.cancel();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     if (this.resizeRaf !== undefined)
@@ -752,17 +791,36 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     ta.style.overflowY = contentBlockSize > maxBlockSize ? 'auto' : 'hidden';
   }
 
+  /** Whether `debounce` is a real, positive delay -- mirrors `<lr-filter-bar>`'s own predicate for
+   *  the same shape. Omitted, `0`, or non-finite means no debounce (today's per-keystroke
+   *  behavior); `finiteDuration()` also caps it at the platform's own timer ceiling. */
+  private get effectiveDebounceMs(): number {
+    return finiteDuration(this.debounce ?? 0, 0);
+  }
+
+  private isDebounced(): boolean {
+    return this.effectiveDebounceMs > 0;
+  }
+
   private onInput = (event: InputEvent): void => {
     if (this.liveDisabled) {
       event.stopPropagation();
       return;
     }
     if (!this.textareaEl) return;
+    this.settlingValueFromInput = true;
     this.value = this.textareaEl.value;
+    this.settlingValueFromInput = false;
     if (this.resize === 'auto') this.fitToContent();
     this.scheduleCountAnnouncement();
     relayNativeEvent(this, event);
     this.emit('lr-input', { value: this.value });
+    if (this.isDebounced()) {
+      this.settledDebounce.delayMs = this.effectiveDebounceMs;
+      this.settledDebounce.push(this.value);
+    } else {
+      this.settledDebounce.cancel();
+    }
   };
 
   private onChange = (event: Event): void => {
@@ -771,6 +829,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       return;
     }
     if (!this.textareaEl) return;
+    // Flush BEFORE reassigning `value`: the native textarea already carries the same string
+    // `onInput` last pushed, so this settles that pending value first and the reassignment right
+    // after finds nothing left pending to cancel.
+    this.settledDebounce.flush();
     this.value = this.textareaEl.value;
     relayNativeEvent(this, event);
     this.emit('lr-change', { value: this.value });
@@ -795,7 +857,18 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     // warning for a state flip nothing observable needed -- a disabled control is barred from
     // validation regardless.
     if (!this.liveDisabled) this.touched = true;
+    // Insurance alongside the `change` flush above: a test harness (or an engine) that blurs
+    // without first dispatching a native `change` must still flush the last-typed value.
+    this.settledDebounce.flush();
     relayNativeEvent(this, event);
+  };
+
+  private onKeyDown = (event: KeyboardEvent): void => {
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
+    if (event.key === 'Enter') this.settledDebounce.flush();
   };
 
   override render(): TemplateResult {
@@ -868,6 +941,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
             @change=${this.onChange}
             @focus=${this.onFocus}
             @blur=${this.onBlur}
+            @keydown=${this.onKeyDown}
           ></textarea>
         </div>
         <div id="textarea-error" part="error" ?hidden=${!hasError}>

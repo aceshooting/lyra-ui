@@ -132,6 +132,13 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   `<lr-number-input>` defaults this the other way (`true`), so its rendering is unchanged
 - `noSpinButtons: boolean = false` (attribute `no-spin-buttons`) — Shoelace alias for
   `withoutSpinButtons`; either suppresses native number spinners
+- `debounce?: number` (attribute `debounce`, ms) — how long to wait after the last keystroke
+  before emitting one `lr-input-settled`, while `input`/`lr-input` keep firing per keystroke as
+  before. Omitted, `0`, or a non-finite value means no debounce at all: `lr-input-settled` never
+  fires. A pending debounce is flushed immediately by `change`/Enter/blur (so a blur never drops
+  the last keystroke) and cancelled with no stray settle by disconnection, the built-in clear
+  button, and a programmatic `value` write. Shares its `DebounceController` primitive with
+  `lr-filter-bar`'s own per-filter `debounce` and with `lr-textarea`'s identical property
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
 **Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
@@ -180,6 +187,9 @@ fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on 
 own `blur`/`focus`), and
 `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
 sequence). `lr-invalid` (no detail) fires when a validity check finds the input invalid.
+`lr-input-settled` (`detail: { value }`, non-cancelable) fires once, `debounce` ms after the last
+keystroke, alongside the per-keystroke `input`/`lr-input` pair; see `debounce` above for the flush
+and cancellation rules. Never fires while `debounce` is unset, `0`, or non-finite.
 
 **Slots:** `label`, `hint`/`help-text`, `error`, `start`/`prefix` (aliases before the input),
 `end`/`suffix` (aliases after the input and built-in actions), `clear-icon`,

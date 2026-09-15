@@ -80,6 +80,27 @@ const echartsProcessInteropPlugin = {
   },
 };
 
+/**
+ * `shiki-types.ts`'s default Oniguruma engine resolves the binary `shiki/onig.wasm` asset via
+ * `fetch(new URL('shiki/onig.wasm', import.meta.url))` -- the pattern Vite/webpack statically
+ * detect and rewrite to the real bundled asset URL for a production consumer. `@web/test-runner`
+ * serves unbundled ESM with no such static-asset rewriting, so that literal `new URL()` call
+ * resolves the bare specifier as an ordinary relative path segment instead, requesting
+ * `.../code-block/shiki/onig.wasm` (a path that only exists by coincidence of this plugin). Bridge
+ * that one request straight to the real file shiki ships at its own `onig.wasm` subpath, purely to
+ * unblock this test environment -- the same role every other *EsmInteropPlugin above plays.
+ */
+const shikiOnigWasmAssetPlugin = {
+  name: 'shiki-onig-wasm-asset',
+  serve(context) {
+    if (context.path.endsWith('/code-block/shiki/onig.wasm')) {
+      context.status = 200;
+      context.type = 'application/wasm';
+      context.body = readFileSync(new URL('./node_modules/shiki/dist/onig.wasm', import.meta.url));
+    }
+  },
+};
+
 const mouseButtons = new Set(['left', 'middle', 'right']);
 const mouseCommandTypes = new Set(['move', 'click', 'down', 'up']);
 const nativeScrollbarVerification = process.env.WTR_NATIVE_SCROLLBAR === '1';
@@ -401,6 +422,7 @@ export default {
     mammothEsmInteropPlugin,
     jszipEsmInteropPlugin,
     echartsProcessInteropPlugin,
+    shikiOnigWasmAssetPlugin,
     sendKeysPlugin(),
     mouseCommandPlugin,
     mediaCommandPlugin,

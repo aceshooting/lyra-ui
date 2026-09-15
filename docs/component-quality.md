@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **286**
-- Exact same-test/same-instance populated or open axe evidence: **284**
+- Public tags: **288**
+- Exact same-test/same-instance populated or open axe evidence: **286**
 - Narrow reviewed axe-state exemptions: **2**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **84** tags
@@ -137,6 +137,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-doughnut-chart`](component-integration.md#lr-doughnut-chart) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | complete | source signal | source signal | not enrolled | not verified |
 | [`lr-drawer`](component-integration.md#lr-drawer) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | complete | N/A | N/A | not enrolled | not verified |
 | [`lr-drilldown-panel`](component-integration.md#lr-drilldown-panel) | stable | automated | not recorded | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
+| [`lr-drop-zone`](component-integration.md#lr-drop-zone) | experimental | automated | N/A | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-dropdown`](component-integration.md#lr-dropdown) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | complete | N/A | source signal | not enrolled | not verified |
 | [`lr-dropdown-item`](component-integration.md#lr-dropdown-item) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-ebook-viewer`](component-integration.md#lr-ebook-viewer) | stable | automated | not recorded | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | source signal | source signal | not enrolled | not verified |
@@ -289,6 +290,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-stepper`](component-integration.md#lr-stepper) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-stream-status`](component-integration.md#lr-stream-status) | stable | automated | N/A | not recorded | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-streaming-text`](component-integration.md#lr-streaming-text) | stable | automated | not recorded | not recorded | source signal | not recorded | configured CI | render-and-hydrate | not enrolled | not recorded | not recorded | not enrolled | not verified |
+| [`lr-streaming-text-core`](component-integration.md#lr-streaming-text-core) | experimental | automated | not recorded | not recorded | source signal | not recorded | configured CI | render-and-hydrate | not enrolled | not recorded | not recorded | not enrolled | not verified |
 | [`lr-subagent-panel`](component-integration.md#lr-subagent-panel) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | complete | N/A | N/A | not enrolled | not verified |
 | [`lr-suggestion-chips`](component-integration.md#lr-suggestion-chips) | stable | automated | source signal | source signal | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
 | [`lr-svg-viewer`](component-integration.md#lr-svg-viewer) | stable | automated | not recorded | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | source signal | source signal | not enrolled | not verified |
@@ -302,7 +304,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-task-list`](component-integration.md#lr-task-list) | stable | automated | source signal | source signal | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-terminal`](component-integration.md#lr-terminal) | stable | automated | source signal | not recorded | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
 | [`lr-test-results`](component-integration.md#lr-test-results) | stable | automated | not recorded | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
-| [`lr-textarea`](component-integration.md#lr-textarea) | stable | automated | not recorded | not recorded | not recorded | source signal | configured CI | render-and-hydrate | complete | N/A | N/A | not enrolled | not verified |
+| [`lr-textarea`](component-integration.md#lr-textarea) | stable | automated | source signal | not recorded | not recorded | source signal | configured CI | render-and-hydrate | complete | N/A | N/A | not enrolled | not verified |
 | [`lr-thinking-panel`](component-integration.md#lr-thinking-panel) | stable | automated | not recorded | source signal | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-thread-list`](component-integration.md#lr-thread-list) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | complete | N/A | N/A | not enrolled | not verified |
 | [`lr-time-input`](component-integration.md#lr-time-input) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |

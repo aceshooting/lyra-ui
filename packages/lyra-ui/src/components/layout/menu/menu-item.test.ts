@@ -337,6 +337,83 @@ describe('danger-state cssprops', () => {
   });
 });
 
+describe('active-state cssprop', () => {
+  const base = (el: LyraMenuItem): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const centerOf = (target: HTMLElement): [number, number] => {
+    const rect = target.getBoundingClientRect();
+    expect(
+      rect.width,
+      'row needs rendered geometry for pointer-state coverage'
+    ).to.be.greaterThan(0);
+    return [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+  };
+
+  it('falls back to a color-mix of the hover fill while --lr-menu-item-active-bg is unset', async function () {
+    this.timeout(15_000);
+    const el = (await fixture(
+      html`<lr-menu-item value="rename">Rename</lr-menu-item>`
+    )) as LyraMenuItem;
+    const row = base(el);
+    const resolveInShadow = (declaration: string, property: string): string => {
+      const probe = document.createElement('span');
+      probe.setAttribute('style', declaration);
+      el.shadowRoot!.append(probe);
+      const value = getComputedStyle(probe).getPropertyValue(property);
+      probe.remove();
+      return value;
+    };
+    const expectedPressed = resolveInShadow(
+      'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+      'background-color'
+    );
+    try {
+      await sendMouse({ type: 'move', position: centerOf(row) });
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(row).backgroundColor === expectedPressed,
+        'pressed row fill never resolved to the color-mix default'
+      );
+      expect(getComputedStyle(row).backgroundColor).to.equal(expectedPressed);
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('overrides the pressed row fill through --lr-menu-item-active-bg, independently of a retuned hover fill', async function () {
+    this.timeout(15_000);
+    const wrapper = (await fixture(html`
+      <div
+        style="--lr-menu-item-hover-bg: rgb(1, 2, 3); --lr-menu-item-active-bg: rgb(4, 5, 6);"
+      >
+        <lr-menu-item value="rename">Rename</lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-menu-item') as LyraMenuItem;
+    const row = base(el);
+    try {
+      await sendMouse({ type: 'move', position: centerOf(row) });
+      await waitUntil(
+        () => getComputedStyle(row).backgroundColor === 'rgb(1, 2, 3)',
+        'hover paint did not settle'
+      );
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(row).backgroundColor === 'rgb(4, 5, 6)',
+        'pressed row never adopted --lr-menu-item-active-bg'
+      );
+      expect(getComputedStyle(row).backgroundColor).to.equal('rgb(4, 5, 6)');
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+});
+
 describe('checked-state cssprops', () => {
   const base = (el: LyraMenuItem): HTMLElement =>
     el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

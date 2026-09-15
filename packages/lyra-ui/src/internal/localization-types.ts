@@ -441,6 +441,8 @@ export type LyraMessageKey =
   | 'fileInputRejectedCount'
   | 'fileInputRejectedRead'
   | 'fileInputRejectedLimit'
+  | 'fileInputRejectedMaxFiles'
+  | 'fileInputRejectedMaxTotalSize'
   | 'elapsedMinutesSecondsTemplate'
   | 'graphNode'
   | 'graphLink'

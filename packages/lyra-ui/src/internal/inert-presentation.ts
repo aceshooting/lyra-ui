@@ -7,6 +7,11 @@ export interface InertPresentationOptions {
   presentation?: boolean;
   /** Whether the existing visual wrapper is currently absent from layout. */
   hidden?: boolean;
+  /** Sets `data-lr-gemstone-selected` on the wrapper span -- the selector
+   *  `theme/gemstones.ts`'s exported `gemstoneSelectedGlyphStyles` targets -- so a component
+   *  wrapping a rendered `gemstoneGlyph()` with this helper can opt into that shared halo/shine
+   *  treatment without re-authoring the wrapper markup. Defaults to false (no attribute). */
+  gemstoneSelected?: boolean;
 }
 
 /**
@@ -26,5 +31,6 @@ export function renderInertPresentation(
     aria-hidden=${presentation ? 'true' : nothing}
     ?inert=${presentation}
     ?hidden=${options.hidden ?? false}
+    ?data-lr-gemstone-selected=${options.gemstoneSelected ?? false}
   >${content}</span>`;
 }

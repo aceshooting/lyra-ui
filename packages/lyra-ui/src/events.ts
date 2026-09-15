@@ -61,7 +61,7 @@ import type { LyraPushToTalkEventMap } from './components/conversation/push-to-t
 import type { LyraRealtimeSessionEventMap } from './components/conversation/realtime-session/realtime-session.class.js';
 import type { LyraSelectionToolbarEventMap } from './components/conversation/selection-toolbar/selection-toolbar.class.js';
 import type { LyraStreamStatusEventMap } from './components/conversation/stream-status/stream-status.class.js';
-import type { LyraStreamingTextEventMap } from './components/conversation/streaming-text/streaming-text.class.js';
+import type { LyraStreamingTextEventMap } from './components/conversation/streaming-text/streaming-text-base.class.js';
 import type { LyraSuggestionChipsEventMap } from './components/conversation/suggestion-chips/suggestion-chips.class.js';
 import type { LyraThreadListEventMap } from './components/conversation/thread-list/thread-list.class.js';
 import type { LyraTranscriptFeedEventMap } from './components/conversation/transcript-feed/transcript-feed.class.js';
@@ -142,6 +142,7 @@ import type { LyraAttachmentTriggerEventMap } from './components/media/attachmen
 import type { LyraAvPlayerEventMap } from './components/media/av-player/av-player.class.js';
 import type { LyraAvatarGroupEventMap } from './components/media/avatar-group/avatar-group.class.js';
 import type { LyraAvatarEventMap } from './components/media/avatar/avatar.class.js';
+import type { LyraDropZoneEventMap } from './components/media/drop-zone/drop-zone.class.js';
 import type { LyraFileInputEventMap } from './components/media/file-input/file-input.class.js';
 import type { LyraImageViewerEventMap } from './components/media/image-viewer/image-viewer.class.js';
 import type { LyraLightboxEventMap } from './components/media/lightbox/lightbox.class.js';
@@ -906,8 +907,8 @@ export type LyraConnectEvent =
 export type LyraContentChangeEvent = LyraRandomContentEventMap['lr-content-change'];
 
 /**
- * `lr-content-settled` — dispatched by 3 components: `<lr-markdown-core>`, `<lr-markdown>`,
- * `<lr-streaming-text>`.
+ * `lr-content-settled` — dispatched by 4 components: `<lr-markdown-core>`, `<lr-markdown>`,
+ * `<lr-streaming-text-core>`, `<lr-streaming-text>`.
  *
  * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
@@ -1376,14 +1377,16 @@ export type LyraFileSelectEvent =
   | LyraFileTreeEventMap['lr-file-select'];
 
 /**
- * `lr-files` — dispatched by 2 components: `<lr-attachment-trigger>`, `<lr-file-input>`.
+ * `lr-files` — dispatched by 3 components: `<lr-attachment-trigger>`, `<lr-drop-zone>`,
+ * `<lr-file-input>`.
  *
- * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraAttachmentTriggerEventMap['lr-files']`.
  */
 export type LyraFilesEvent =
   | LyraAttachmentTriggerEventMap['lr-files']
+  | LyraDropZoneEventMap['lr-files']
   | LyraFileInputEventMap['lr-files'];
 
 /**
@@ -1645,6 +1648,17 @@ export type LyraInputEvent =
   | LyraTimeRangeEventMap['lr-input']
   | LyraTokenInputEventMap['lr-input']
   | LyraToolParamFormEventMap['lr-input'];
+
+/**
+ * `lr-input-settled` — dispatched by 4 components: `<lr-input>`, `<lr-native-time-input>`,
+ * `<lr-number-input>`, `<lr-textarea>`.
+ *
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g. `LyraInputEventMap['lr-input-settled']`.
+ */
+export type LyraInputSettledEvent =
+  | LyraInputEventMap['lr-input-settled']
+  | LyraTextareaEventMap['lr-input-settled'];
 
 /**
  * `lr-interrupt` — dispatched by `<lr-realtime-session>`.
@@ -3747,6 +3761,7 @@ export interface LyraGlobalEventMap {
   'lr-ingestion-retry': LyraIngestionRetryEvent;
   'lr-initial-focus': LyraInitialFocusEvent;
   'lr-input': LyraInputEvent;
+  'lr-input-settled': LyraInputSettledEvent;
   'lr-interrupt': LyraInterruptEvent;
   'lr-intersect': LyraIntersectEvent;
   'lr-intersection': LyraIntersectionEvent;

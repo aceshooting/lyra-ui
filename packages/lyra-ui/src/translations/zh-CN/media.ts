@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   fileInputRejectedCount: '{filename}：一次只能选择一个文件。',
   fileInputRejectedRead: '{filename}：无法读取此文件。',
   fileInputRejectedLimit: '{filename}：文件夹包含的条目过多。',
+  fileInputRejectedMaxFiles: '{filename}：已达到文件数量上限。',
+  fileInputRejectedMaxTotalSize: '{filename}：添加此文件将超出总大小限制。',
   mediaCardUntitledFile: '未命名文件',
   mediaCardOpenName: '打开{name}',
   mediaCardOpenImageAttachment: '打开图片附件',

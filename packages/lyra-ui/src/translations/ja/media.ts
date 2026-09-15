@@ -61,6 +61,8 @@ const strings: LyraLocaleStrings = {
   fileInputRejectedCount: '{filename}：一度に選択できるファイルは 1 つだけです。',
   fileInputRejectedRead: '{filename}：ファイルを読み取れませんでした。',
   fileInputRejectedLimit: '{filename}：フォルダー内の項目数が多すぎます。',
+  fileInputRejectedMaxFiles: '{filename}：ファイル数の上限に達しました。',
+  fileInputRejectedMaxTotalSize: '{filename}：このファイルを追加すると合計サイズの上限を超えます。',
   mediaCardUntitledFile: '無題のファイル',
   mediaCardOpenName: '{name} を開く',
   mediaCardOpenImageAttachment: '添付画像を開く',

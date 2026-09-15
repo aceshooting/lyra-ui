@@ -2285,6 +2285,20 @@ it('applies the shared focus-ring outline to a sortable header cell, a row, and 
   expect(getComputedStyle(moreButton).outlineWidth).to.equal('2px');
 });
 
+/** Forces a column's header -- and, in the default `table-layout: auto`, the whole rendered column
+ *  -- to a fixed pixel width regardless of engine font metrics or whether a real `cell()`/skeleton
+ *  placeholder renders any content at all. The priority-hiding tests below need a deterministic,
+ *  cross-engine (`WTR_BROWSER=firefox`/`webkit`) measured overflow, which a string's rendered text
+ *  width can't reliably give: `headerCell` always renders (loading, empty, and populated states
+ *  alike), unlike `cell()`, so it is the one hook wide enough to drive every fixture below. */
+function forcedWidthHeaderCell(px: number, label: string) {
+  return () => html`<span style="display:inline-block;inline-size:${px}px">${label}</span>`;
+}
+
+// Sized so a 300px container overflows even with 'low' (350px) hidden -- both tiers hide. A 700px
+// container overflows only until 'low' is hidden -- only 'low' hides. A 1000px container never
+// overflows at all -- neither hides. Each case keeps a wide margin (at least ~90px) against
+// per-engine padding/border/scrollbar variance.
 const priorityColumns: TableColumn<Row>[] = [
   { key: 'name', label: 'Name', cell: (r) => r.name },
   {
@@ -2292,9 +2306,10 @@ const priorityColumns: TableColumn<Row>[] = [
     label: 'Score',
     align: 'end',
     priority: 'medium',
+    headerCell: forcedWidthHeaderCell(300, 'Score'),
     cell: (r) => r.score,
   },
-  { key: 'id', label: 'Id', priority: 'low', cell: (r) => r.id },
+  { key: 'id', label: 'Id', priority: 'low', headerCell: forcedWidthHeaderCell(350, 'Id'), cell: (r) => r.id },
 ];
 
 it('renders [part="reveal-columns-button"] only when at least one column declares a priority and a priority column is actually hidden', async () => {
@@ -2350,11 +2365,88 @@ it('hides only the low-priority column (not medium) in a mid-width container', a
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
+  await waitUntil(() => el.hasHiddenPriorityColumns === true);
 
   const lowHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="low"]') as HTMLElement;
   const mediumHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="medium"]') as HTMLElement;
   expect(getComputedStyle(lowHeader).display).to.equal('none');
   expect(getComputedStyle(mediumHeader).display).to.not.equal('none');
+});
+
+it('hides the lowest-priority column in a WIDE container once its content actually overflows -- not at a fixed width', async () => {
+  // 1000px is wider than 15.0.0's old fixed 899.98px "low" breakpoint, which would never have
+  // hidden anything at this width regardless of content. A `low` column forced far wider than the
+  // container proves this is driven by real measured overflow, not any surviving width threshold.
+  const wideOverflowColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+    { key: 'id', label: 'Id', priority: 'low', headerCell: forcedWidthHeaderCell(1200, 'Id'), cell: (r) => r.id },
+  ];
+  const el = (await fixture(html`<lr-table style="display: block; width: 1000px;"></lr-table>`)) as LyraTable<Row>;
+  el.columns = wideOverflowColumns;
+  el.rows = rows;
+  await el.updateComplete;
+  await waitUntil(() => el.hasHiddenPriorityColumns === true);
+
+  const lowHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="low"]') as HTMLElement;
+  expect(getComputedStyle(lowHeader).display).to.equal('none');
+});
+
+it('does not hide a priority column in a NARROW container when the content actually fits -- not at a fixed width', async () => {
+  // 300px is narrower than 15.0.0's old fixed 639.98px "medium" breakpoint (and its 899.98px "low"
+  // one), which would have hidden both tiers at this width regardless of content. Genuinely short,
+  // unforced content that fits comfortably proves nothing hides just because the container is
+  // narrow.
+  const shortContentColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+    { key: 'score', label: 'Score', align: 'end', priority: 'medium', cell: (r) => r.score },
+    { key: 'id', label: 'Id', priority: 'low', cell: (r) => r.id },
+  ];
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
+  el.columns = shortContentColumns;
+  el.rows = rows;
+  await el.updateComplete;
+  // No "becomes true" state to poll for here (the claim is that nothing ever changes), so
+  // explicitly let a couple of the ResizeObserver-driven layout passes this component schedules
+  // settle first -- mirrors the reconnect-settle pattern used elsewhere in this file for the same
+  // ResizeObserver.
+  const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await nextFrame();
+  await nextFrame();
+  await nextFrame();
+
+  const lowHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="low"]') as HTMLElement;
+  const mediumHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="medium"]') as HTMLElement;
+  expect(getComputedStyle(lowHeader).display).to.not.equal('none');
+  expect(getComputedStyle(mediumHeader).display).to.not.equal('none');
+  expect(el.hasHiddenPriorityColumns).to.be.false;
+  expect((el.shadowRoot!.querySelector('[part="reveal-columns-button"]')) == null).to.be.true;
+});
+
+it('settles into a stable hidden state across repeated layout passes, without oscillating', async () => {
+  // Guards against the read+write measure/layout pass thrashing: hiding a column changes the very
+  // geometry (`[part='base']`'s/`[part='table']`'s own size) the ResizeObserver this mechanism
+  // shares with syncAutoScrollMode() watches, so a wrong reconstruction of "the fully-visible width"
+  // would flip the decision back and forth forever instead of reaching a fixed point.
+  const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
+  el.columns = priorityColumns;
+  el.rows = rows;
+  await el.updateComplete;
+  await waitUntil(() => el.hasHiddenPriorityColumns === true);
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const lowHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="low"]') as HTMLElement;
+  const mediumHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="medium"]') as HTMLElement;
+  expect(base.hasAttribute('data-hide-priority-low')).to.be.true;
+  expect(base.hasAttribute('data-hide-priority-medium')).to.be.true;
+
+  const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  for (let i = 0; i < 6; i++) {
+    await nextFrame();
+    expect(base.hasAttribute('data-hide-priority-low')).to.be.true;
+    expect(base.hasAttribute('data-hide-priority-medium')).to.be.true;
+    expect(getComputedStyle(lowHeader).display).to.equal('none');
+    expect(getComputedStyle(mediumHeader).display).to.equal('none');
+  }
 });
 
 it('swaps the reveal-columns-button label between revealColumnsLabel and hideColumnsLabel on toggle', async () => {
@@ -2398,6 +2490,10 @@ it('never hides a column with no priority declared', async () => {
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
+  // Waits for the settled, genuinely-hidden state (both priority tiers overflow at 300px, per
+  // `priorityColumns`' forced widths) so this actually exercises "hidden columns coexist with an
+  // always-visible one", not just "nothing has been measured yet".
+  await waitUntil(() => el.hasHiddenPriorityColumns === true);
   const nameHeader = el.shadowRoot!.querySelector('[part="header-cell"]') as HTMLElement;
   expect(nameHeader.hasAttribute('data-priority')).to.be.false;
   expect(getComputedStyle(nameHeader).display).to.not.equal('none');
@@ -3160,13 +3256,14 @@ it('ignores unknown keyboard commands on a header', async () => {
 it('skips a priority-hidden header cell when navigating with ArrowRight, instead of stranding focus on it', async () => {
   const skipColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
-    { key: 'score', label: 'Score', priority: 'low', cell: (r) => r.score },
+    { key: 'score', label: 'Score', priority: 'low', headerCell: forcedWidthHeaderCell(350, 'Score'), cell: (r) => r.score },
     { key: 'id', label: 'Id', cell: (r) => r.id },
   ];
   const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = skipColumns;
   el.rows = rows;
   await el.updateComplete;
+  await waitUntil(() => el.hasHiddenPriorityColumns === true);
 
   const [nameHeader, scoreHeader, idHeader] = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]'),
@@ -3183,7 +3280,7 @@ it('skips a priority-hidden header cell when navigating with ArrowRight, instead
 it('rehomes the active column through the public reveal-columns state when a priority header hides in RTL', async () => {
   const priorityColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
-    { key: 'score', label: 'Score', priority: 'low', cell: (r) => r.score },
+    { key: 'score', label: 'Score', priority: 'low', headerCell: forcedWidthHeaderCell(350, 'Score'), cell: (r) => r.score },
   ];
   const wrapper = (await fixture(html`
     <div dir="rtl">
@@ -4196,17 +4293,6 @@ describe('localization', () => {
   });
 
   it('localizes the reveal/hide-columns button label', async () => {
-    const priorityColumns: TableColumn<Row>[] = [
-      { key: 'name', label: 'Name', cell: (r) => r.name },
-      {
-        key: 'score',
-        label: 'Score',
-        align: 'end',
-        priority: 'medium',
-        cell: (r) => r.score,
-      },
-      { key: 'id', label: 'Id', priority: 'low', cell: (r) => r.id },
-    ];
     const el = (await fixture(
       html`<lr-table
         style="display: block; width: 300px;"
@@ -7044,11 +7130,18 @@ describe('grid keyboard navigation edges', () => {
       html`<lr-table accessible-label="Scores" style="display:block;width:300px;"></lr-table>`
     )) as LyraTable<Row>;
     el.columns = [
-      { key: 'name', label: 'Name', priority: 'low', cell: (r: Row) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        priority: 'low',
+        headerCell: forcedWidthHeaderCell(350, 'Name'),
+        cell: (r: Row) => r.name,
+      },
       {
         key: 'score',
         label: 'Score',
         priority: 'medium',
+        headerCell: forcedWidthHeaderCell(350, 'Score'),
         cell: (r: Row) => r.score,
       },
     ];
@@ -7510,7 +7603,10 @@ describe('v9 bounded and transactional contracts', () => {
     const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`, {
       parentNode: container,
     })) as LyraTable<Row>;
-    el.columns = [columns[0]!, { ...columns[1]!, priority: 'low' }];
+    el.columns = [
+      columns[0]!,
+      { ...columns[1]!, priority: 'low', headerCell: forcedWidthHeaderCell(350, 'Score') },
+    ];
     el.rows = rows;
     await waitUntil(() => (el as unknown as { hasHiddenPriorityColumns: boolean }).hasHiddenPriorityColumns === true);
 

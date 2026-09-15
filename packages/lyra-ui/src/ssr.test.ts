@@ -1,12 +1,116 @@
 import { expect } from '@open-wc/testing';
 import {
+  buildLyraSsrStaticSafety,
+  deriveLyraSsrStaticSafety,
   diagnoseLyraHydration,
   getLyraSsrMode,
+  getLyraSsrStaticSafety,
   LYRA_SSR_CLIENT_RENDER_TAGS,
+  LYRA_SSR_RENDER_AND_HYDRATE_TAGS,
+  LYRA_SSR_STATIC_SAFETY,
+  LYRA_SSR_SUPPORT_MATRIX,
+  LYRA_SSR_TAG_CAPABILITIES,
   LyraSsrFallbackRenderer,
   lyraSsrElementRenderers,
   type LyraLitElementRendererConstructor,
 } from './ssr.js';
+
+describe('deriveLyraSsrStaticSafety', () => {
+  it('classifies a tag with an after-hydration layoutMeasurement capability as hydration-required', () => {
+    expect(deriveLyraSsrStaticSafety({ layoutMeasurement: 'after-hydration' })).to.equal(
+      'hydration-required',
+    );
+  });
+
+  it('classifies a tag with a client-only capability as hydration-required', () => {
+    expect(deriveLyraSsrStaticSafety({ remoteContent: 'client-only' })).to.equal('hydration-required');
+  });
+
+  it('classifies an empty capabilities record as static-safe', () => {
+    expect(deriveLyraSsrStaticSafety({})).to.equal('static-safe');
+  });
+});
+
+describe('buildLyraSsrStaticSafety', () => {
+  it('fails a tag with an empty capabilities record and no explicit staticSafety entry', () => {
+    const result = buildLyraSsrStaticSafety(['lr-fixture-unaudited'], {}, []);
+    expect(result.unaudited).to.deep.equal(['lr-fixture-unaudited']);
+    expect(result.classification['lr-fixture-unaudited']).to.equal(undefined);
+  });
+
+  it('does not silently default an unaudited tag to static-safe', () => {
+    // A tag simply absent from both sources (not even present as `{}` in tagCapabilities) must
+    // fail the same way -- there is no implicit default in either shape of "nothing recorded".
+    const result = buildLyraSsrStaticSafety(['lr-fixture-unaudited'], { 'lr-fixture-other': {} }, []);
+    expect(result.unaudited).to.deep.equal(['lr-fixture-unaudited']);
+  });
+
+  it('classifies a tag via its non-empty capabilities record without needing the audited list', () => {
+    const result = buildLyraSsrStaticSafety(
+      ['lr-fixture-canvas'],
+      { 'lr-fixture-canvas': { canvas: 'after-hydration' } },
+      [],
+    );
+    expect(result.unaudited).to.deep.equal([]);
+    expect(result.classification['lr-fixture-canvas']).to.equal('hydration-required');
+  });
+
+  it('classifies a tag on the audited static-safe list as static-safe', () => {
+    const result = buildLyraSsrStaticSafety(['lr-fixture-reviewed'], {}, ['lr-fixture-reviewed']);
+    expect(result.unaudited).to.deep.equal([]);
+    expect(result.classification['lr-fixture-reviewed']).to.equal('static-safe');
+  });
+});
+
+describe('LYRA_SSR_STATIC_SAFETY', () => {
+  it('classifies every render-and-hydrate tag with no gap', () => {
+    const missing = LYRA_SSR_RENDER_AND_HYDRATE_TAGS.filter(
+      (tagName) => LYRA_SSR_STATIC_SAFETY[tagName] === undefined,
+    );
+    expect(missing).to.deep.equal([]);
+  });
+
+  it('records the full static-safe / hydration-required split', () => {
+    // A change to this split is expected as components are reviewed; update the two counts
+    // together with the LYRA_SSR_TAG_CAPABILITIES / LYRA_SSR_AUDITED_STATIC_SAFE_TAGS edit that
+    // caused it, never in isolation.
+    const values = Object.values(LYRA_SSR_STATIC_SAFETY);
+    const staticSafeCount = values.filter((value) => value === 'static-safe').length;
+    const hydrationRequiredCount = values.filter((value) => value === 'hydration-required').length;
+    expect(staticSafeCount).to.equal(220);
+    expect(hydrationRequiredCount).to.equal(48);
+    expect(staticSafeCount + hydrationRequiredCount).to.equal(LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length);
+  });
+
+  it('classifies the disclosure component lr-details as static-safe', () => {
+    expect(getLyraSsrStaticSafety('lr-details')).to.equal('static-safe');
+  });
+
+  it('classifies a canvas-painted chart as hydration-required', () => {
+    expect(getLyraSsrStaticSafety('lr-chart')).to.equal('hydration-required');
+  });
+
+  it('classifies the SVG fit-layout chart lr-lite-chart as hydration-required for its ResizeObserver-measured geometry, not canvas', () => {
+    expect(getLyraSsrStaticSafety('lr-lite-chart')).to.equal('hydration-required');
+    expect(LYRA_SSR_TAG_CAPABILITIES['lr-lite-chart']).to.deep.equal({
+      layoutMeasurement: 'after-hydration',
+      observers: 'after-hydration',
+    });
+  });
+
+  it('returns undefined for a client-render tag, which carries no separate classification', () => {
+    expect(LYRA_SSR_CLIENT_RENDER_TAGS).to.include('lr-radio');
+    expect(getLyraSsrStaticSafety('lr-radio')).to.equal(undefined);
+  });
+
+  it('returns undefined for a name that is not a Lyra tag at all', () => {
+    expect(getLyraSsrStaticSafety('div')).to.equal(undefined);
+  });
+
+  it('is exposed on LYRA_SSR_SUPPORT_MATRIX.declarativeShadowDom.staticSafety', () => {
+    expect(LYRA_SSR_SUPPORT_MATRIX.declarativeShadowDom.staticSafety).to.equal(LYRA_SSR_STATIC_SAFETY);
+  });
+});
 
 describe('diagnoseLyraHydration', () => {
   it('includes a foreign element root and consults its owner custom-element registry', async () => {

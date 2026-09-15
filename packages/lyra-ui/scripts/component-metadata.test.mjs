@@ -770,7 +770,13 @@ test('Storybook presentation exposes central maturity and structured deprecation
 test('CEM projection reports drift and marks a new assigned tag unreleased once current is tagged', () => {
   const state = fixture();
   const metadata = structuredClone(state.metadata);
-  metadata.assignments['new-component-experimental'].push('lr-new-component');
+  // Insert in sorted position, not merely appended: the fixture's own validation requires each
+  // assignment list to stay sorted, so an append that happens to land last only passes while the
+  // real list's final entry sorts before this one.
+  metadata.assignments['new-component-experimental'] = [
+    ...metadata.assignments['new-component-experimental'],
+    'lr-new-component',
+  ].sort((left, right) => String(left).localeCompare(String(right)));
   const resolved = componentMetadataByTag(metadata, {
     tags: ['lr-new-component'],
     packageVersion: state.packageJson.version,

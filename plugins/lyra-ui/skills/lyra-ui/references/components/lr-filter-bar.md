@@ -292,8 +292,9 @@ server-side query runs once per pause instead of once per character. Omitted, `0
 value means no debounce at all: every keystroke commits immediately. A pending debounce is always
 **flushed** by the field's own `change`/blur, so a blur never loses the last keystroke, and
 **cancelled outright** by `reset()`, by removing that filter's chip, and on disconnect — a stale
-keystroke can never overwrite a reset or fire after teardown. `debounce` is ignored for every other
-`type`, whose commits are discrete choices with nothing to debounce.
+keystroke can never overwrite a reset or fire after teardown. `'combobox'` accepts the same
+`debounce`, and so does `'custom'` (see below); `debounce` is ignored for every other `type`, whose
+commits are discrete choices with nothing to debounce.
 
 ### Custom controls
 
@@ -306,6 +307,17 @@ controls that expose a value without an event payload, and `context.onFocusout` 
 touched for required validation. Every context also carries its `filterId`, a monotonic
 `generation`, and an `AbortSignal`; replacement/removal of the schema, disconnection, and reconnect
 abort stale contexts, whose callbacks become inert.
+
+A `'custom'` definition also accepts the same optional `debounce?: number` (ms) `'text'`/
+`'combobox'` already have: it delays committing whatever `context.onValueChange`/`onInput`/
+`onChange` reads through `adapter.valueFromEvent`, coalescing a burst of rapid commits into one.
+Omitted, `0`, or a non-finite value means no debounce, exactly as before this field existed. While
+one is pending, `context.value` carries that pending value rather than the last-committed one, so a
+renderer binding it as a fully controlled value never reverts mid-delay; a pending commit is
+**flushed** by `context.onFocusout` and **cancelled outright** by `reset()`, removing that filter's
+chip, and disconnect — identical to `'text'`/`'combobox'`. This is what closes the gap those two
+types' own debounce left: before this field existed, a custom free-text filter had to hand-roll the
+same timer, flush, and cancellation lifecycle itself just to match `'text'`.
 
 The adapter's required `clearValue` is used when the active chip is removed. Its optional
 `isEmpty(value)` defines domain emptiness; without one, the bar compares against `clearValue`

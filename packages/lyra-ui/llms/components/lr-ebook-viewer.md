@@ -91,7 +91,9 @@ search: true, textSelect: true }` capabilities and forwarding `anchor`/`highligh
 viewer. The peer loader requires the callable EPUB factory; malformed module shapes fail closed.
 A granular consumer (not importing the `all.js` compatibility bundle) must also import
 `@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer-register.js` once to install
-this registration; without it `<lr-document-viewer>` never recognizes `.epub` files.
+this registration; without it `<lr-document-viewer>` never recognizes `.epub` files. That entry also
+exports `EBOOK_VIEWER_TAG` (`'lr-ebook-viewer'`) as a stable reference to the tag it eventually
+registers.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the ebook.

@@ -516,27 +516,44 @@ const detailRows: DetailRow[] = [
   { id: 'c', name: 'Gamma', score: 76, region: 'AP-South', updated: '1 hr ago' },
 ];
 
-// Narrow the story's own container, so the `priority`-hidden columns below
-// actually hide without needing to shrink the whole Storybook viewport.
+// Narrow the story's own container, so the `priority`-hidden columns below actually overflow and
+// hide without needing to shrink the whole Storybook viewport. `region`/`updated`'s headers carry an
+// explicit forced width (rather than relying on 'US-East'/'5 min ago' alone) so this demo's overflow
+// -- hiding is driven by real measured overflow of [part='base'], never a fixed container width --
+// reproduces the same way regardless of the browser's own font metrics.
 const priorityColumns: TableColumn<DetailRow>[] = [
   { key: 'name', label: 'Name', sortable: true, sticky: 'start', cell: (r) => r.name },
   { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
-  { key: 'region', label: 'Region', priority: 'medium', cell: (r) => r.region, footer: () => 'All regions' },
-  { key: 'updated', label: 'Updated', priority: 'low', cell: (r) => r.updated, footer: () => 'Latest updates' },
+  {
+    key: 'region',
+    label: 'Region',
+    priority: 'medium',
+    headerCell: () => html`<span style="display:inline-block;inline-size:180px">Region</span>`,
+    cell: (r) => r.region,
+    footer: () => 'All regions',
+  },
+  {
+    key: 'updated',
+    label: 'Updated',
+    priority: 'low',
+    headerCell: () => html`<span style="display:inline-block;inline-size:200px">Updated</span>`,
+    cell: (r) => r.updated,
+    footer: () => 'Latest updates',
+  },
 ];
 
 export const PriorityAndSticky: Story = {
-  parameters: { docs: { description: { story: 'Priority columns hide their header, body, and footer cells together. Reveal columns to restore all three bands.' } } },
+  parameters: { docs: { description: { story: 'Priority columns hide their header, body, and footer cells together once the table actually overflows this narrow container. Reveal columns to restore all three bands.' } } },
   render: () =>
     html`<div style="max-width: 420px;">
       <lr-table .columns=${priorityColumns} .rows=${detailRows}></lr-table>
     </div>`,
 };
 
-// Same `priority` columns as PriorityAndSticky, but at a container width the
-// `@container` breakpoints never actually hide anything at — demonstrates
-// that `[part='reveal-columns-button']` correctly stays absent (rather than
-// rendering as a permanent no-op control) when nothing is really hidden.
+// Same `priority` columns as PriorityAndSticky, but at a container width wide enough that the
+// table's content never actually overflows it — demonstrates that
+// `[part='reveal-columns-button']` correctly stays absent (rather than rendering as a permanent
+// no-op control) when nothing is really hidden.
 export const PriorityWideContainerNoButton: Story = {
   render: () =>
     html`<div style="max-width: 960px;">

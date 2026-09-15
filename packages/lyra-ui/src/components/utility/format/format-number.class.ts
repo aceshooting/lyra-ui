@@ -3,7 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './format.styles.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatNumber } from '../../../utilities/format.js';
 import {
   numberFormatOptions,
   type LyraFormatCurrencyDisplay,
@@ -123,15 +123,15 @@ export class LyraFormatNumber extends LyraElement {
     if (Number.isFinite(this.value)) {
       const value = finiteNumber(this.value, 0);
       try {
-        text = getNumberFormat(this.effectiveLocale || undefined, options).format(value);
+        text = formatNumber(value, this.effectiveLocale || undefined, options);
       } catch {
         // Invalid locale/currency/option values are untyped-JS reachable despite the public
         // TypeScript surface. Discard the invalid options without also discarding a valid
         // effective locale; only a malformed locale itself needs the runtime-locale fallback.
         try {
-          text = getNumberFormat(this.effectiveLocale || undefined, { style: 'decimal' }).format(value);
+          text = formatNumber(value, this.effectiveLocale || undefined, { style: 'decimal' });
         } catch {
-          text = getNumberFormat(undefined, { style: 'decimal' }).format(value);
+          text = formatNumber(value, undefined, { style: 'decimal' });
         }
       }
     }

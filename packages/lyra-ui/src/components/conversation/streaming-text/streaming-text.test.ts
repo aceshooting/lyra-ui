@@ -469,6 +469,20 @@ describe("Markdown auto-detection and rendering mode", () => {
     expect(el.shadowRoot!.querySelector(".plain") == null).to.be.true;
   });
 
+  it("forwards languages verbatim to the composed lr-markdown", async () => {
+    const languages = { bash: { name: "bash", scopeName: "source.bash" } };
+    const el = (await fixture(
+      html`<lr-streaming-text
+        content-mode="markdown"
+        .languages=${languages}
+      ></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const markdown = el.shadowRoot!.querySelector("lr-markdown") as unknown as {
+      languages?: typeof languages;
+    };
+    expect(markdown.languages).to.equal(languages);
+  });
+
   it('contentMode="markdown" forces Markdown rendering even for plain-looking content', async () => {
     const el = (await fixture(
       html`<lr-streaming-text

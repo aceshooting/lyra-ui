@@ -1668,7 +1668,7 @@ describe("lean/full parity with <lr-code-block>", () => {
 import { expect as cacheExpect, fixture as cacheFixture, html as cacheHtml, waitUntil as cacheWaitUntil } from '@open-wc/testing';
 import './code-block-core.js';
 import type { LyraCodeBlockCore as CacheCodeBlock } from './code-block-core.js';
-import { loadShikiHighlighterCore as cacheLoad, type ShikiLanguageInput as CacheLanguage, type ShikiHighlighterCore as CacheCore } from './shiki-types.js';
+import { loadShikiHighlighterCore as cacheLoad, resolvedShikiLanguages as cacheResolve, type ShikiLanguageInput as CacheLanguage, type ShikiHighlighterCore as CacheCore } from './shiki-types.js';
 
 let cacheGrammarSequence = 0;
 function cacheGrammar() {
@@ -1678,7 +1678,9 @@ function cacheGrammar() {
 function cacheOwn(grammar: CacheLanguage): Record<string, CacheLanguage> {
   const element = document.createElement('lr-code-block-core') as CacheCodeBlock;
   element.languages = { example: grammar };
-  return element.languages;
+  // `languages` accepts lazy loaders as well as resolved grammars; resolve back down to the
+  // already-loaded subset, exactly as the component itself does before seeding a core.
+  return cacheResolve(element.languages);
 }
 function cacheFreeze<T>(value: T): T {
   if (value && typeof value === 'object') {
@@ -1728,14 +1730,14 @@ describe('fine-grained Shiki immutable snapshot reuse', () => {
     const element = document.createElement('lr-code-block-core') as CacheCodeBlock;
     element.languages = source;
     const retained = element.languages;
-    const first = await load(retained);
+    const first = await load(cacheResolve(retained));
     const firstHtml = cacheRender(first, grammar.name);
     grammar.patterns[0]!.name = 'string.quoted';
     element.languages = source;
     cacheExpect(element.languages === retained).to.equal(true);
     cacheExpect(cacheRender(first, grammar.name)).to.equal(firstHtml);
     element.languages = { ...source };
-    const second = await load(element.languages);
+    const second = await load(cacheResolve(element.languages));
     cacheExpect(second === first).to.equal(false);
     cacheExpect(cacheRender(second, grammar.name) === firstHtml).to.equal(false);
     cacheExpect(await load(cacheOwn(grammar)) === second).to.equal(true);
@@ -1820,15 +1822,15 @@ describe('fine-grained Shiki immutable snapshot reuse', () => {
     </div>`);
     const [first, second] = Array.from(container.children) as CacheCodeBlock[];
     await cacheWaitUntil(() => !!first?.shadowRoot?.querySelector('pre.shiki') && !!second?.shadowRoot?.querySelector('pre.shiki'));
-    const shared = await load(first!.languages);
-    cacheExpect(await load(second!.languages) === shared).to.equal(true);
+    const shared = await load(cacheResolve(first!.languages));
+    cacheExpect(await load(cacheResolve(second!.languages)) === shared).to.equal(true);
     first!.remove();
     second!.code = 'alpha alpha';
     await second!.updateComplete;
     await cacheWaitUntil(() => second!.shadowRoot?.querySelector('pre.shiki')?.textContent?.includes('alpha alpha') === true);
     container.append(first!);
     await cacheWaitUntil(() => !!first!.shadowRoot?.querySelector('pre.shiki'));
-    cacheExpect(await load(first!.languages) === shared).to.equal(true);
+    cacheExpect(await load(cacheResolve(first!.languages)) === shared).to.equal(true);
   });
 });
 
@@ -1933,5 +1935,90 @@ describe("fill chain (block-size)", () => {
       "the max-height attribute still caps the body, not the host's own 400px"
     ).to.be.at.most(max + 0.5);
     expect(getComputedStyle(body).overflowY).to.equal("auto");
+  });
+});
+
+describe('languages lazy grammar loaders', () => {
+  let lazySequence = 0;
+  function lazyGrammar() {
+    const name = `lyra-lazy-${++lazySequence}`;
+    return { name, scopeName: `source.${name}`, patterns: [{ match: 'alpha', name: 'keyword.control' }] };
+  }
+
+  it('resolves a loader entry and highlights, calling it exactly once across a re-render', async () => {
+    const grammar = lazyGrammar();
+    let calls = 0;
+    const languages = {
+      [grammar.name]: () => {
+        calls += 1;
+        return Promise.resolve(grammar);
+      },
+    };
+    const el = (await fixture(
+      html`<lr-code-block-core
+        language=${grammar.name}
+        .languages=${languages}
+        .code=${'alpha'}
+      ></lr-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 8000 });
+    expect(calls, 'the loader must run exactly once').to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="code"]')!.innerHTML).to.contain('alpha');
+
+    // Re-render (a code change, not a languages/language change) must not re-invoke the loader --
+    // ensureShikiLanguageLoaded() memoizes per (core, key).
+    el.code = 'alpha alpha';
+    await el.updateComplete;
+    await aTimeout(50);
+    expect(calls, 'a later re-render must not re-invoke an already-resolved loader').to.equal(1);
+  });
+
+  it('unwraps a { default } ES module namespace shape returned by the loader', async () => {
+    const grammar = lazyGrammar();
+    const languages = { [grammar.name]: () => Promise.resolve({ default: grammar }) };
+    const el = (await fixture(
+      html`<lr-code-block-core
+        language=${grammar.name}
+        .languages=${languages}
+        .code=${'alpha'}
+      ></lr-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 8000 });
+    expect(el.shadowRoot!.querySelector('[part="code"]')!.innerHTML).to.contain('alpha');
+  });
+
+  it('a function value survives the languages ownership snapshot by reference', async () => {
+    const loader = () => Promise.resolve(lazyGrammar());
+    const el = (await fixture(
+      html`<lr-code-block-core .languages=${{ demo: loader }}></lr-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    expect(typeof el.languages['demo']).to.equal('function');
+    expect(el.languages['demo']).to.equal(loader);
+  });
+
+  it('falls back to plain text without throwing when a loader rejects', async () => {
+    const grammar = lazyGrammar();
+    const languages = { [grammar.name]: () => Promise.reject(new Error('network down')) };
+    const el = (await fixture(
+      html`<lr-code-block-core
+        language=${grammar.name}
+        .languages=${languages}
+        .code=${'alpha'}
+      ></lr-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    type Internals = { shikiReady: boolean };
+    await waitUntil(() => (el as unknown as Internals).shikiReady, undefined, { timeout: 8000 });
+    expect(el.shadowRoot!.querySelector('.shiki') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.include('alpha');
+  });
+});
+
+describe('shiki engine seam public reachability', () => {
+  it('re-exports setShikiCoreEngine from the public code-block-core.js entry, not only shiki-types.js', async () => {
+    // A consumer asked for a callable engine seam. Before this, the function was
+    // only importable from the internal `shiki-types.js` support module, which has no
+    // package.json#exports entry at all -- so no consumer-supported path could ever reach it.
+    const entry = (await import('./code-block-core.js')) as { setShikiCoreEngine?: unknown };
+    expect(typeof entry.setShikiCoreEngine).to.equal('function');
   });
 });

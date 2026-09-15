@@ -83,7 +83,9 @@ field for no new capability. Each carries a localized accessible name and the sh
 input), and `lr-clear`
 (inherited, never fired here). The inherited `lr-invalid` (no detail) fires when a validity check
 finds the input invalid. The internal native `beforeinput` is cancelable, bubbles, and composes;
-calling `preventDefault()` on the host vetoes the edit before `value` changes.
+calling `preventDefault()` on the host vetoes the edit before `value` changes. It also inherits `lr-input-settled` (`detail: { value }`, non-cancelable), which fires once
+`debounce` ms after the last keystroke when `debounce` is set; see `lr-input`'s own `debounce`
+entry for the flush and cancellation rules.
 
 **Slots:** `label`, `hint`, `error`, `start`, `end`, `decrement-icon`, and `increment-icon`.
 

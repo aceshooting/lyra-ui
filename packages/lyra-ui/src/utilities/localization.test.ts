@@ -1,6 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { bridgeLyraLocale, subscribeLyraLocale } from './localization.js';
+import { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from './localization.js';
 import { getLyraLocale, registerLyraLocale, setLyraLocale } from '../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired } from '../internal/default-strings.generated.js';
 
 /** Restores the module-global active locale after each case; it is shared by the whole file. */
 function withActiveLocale(body: () => void): void {
@@ -238,5 +239,43 @@ describe('bridgeLyraLocale', () => {
 
   it('rejects a target that is not an element', () => {
     expect(() => bridgeLyraLocale({ target: {} as Element })).to.throw(TypeError);
+  });
+});
+
+describe('resolveLyraScopedString', () => {
+  function localeHost(locale: string): HTMLElement {
+    const el = document.createElement('div');
+    el.setAttribute('locale', locale);
+    return el;
+  }
+
+  // The same probe check-localization-slices.mjs runs against the unbundled dist graph: `lr-button`
+  // genuinely localizes `fieldRequired` (its `valueMissing` validity message), so it stands in for
+  // "a real component's own tree-shakable per-key constant" without this test importing the class.
+  it('resolves a key against caller-supplied defaults, not the full compatibility catalog', () => {
+    const defaults = { fieldRequired: LYRA_DEFAULT_fieldRequired };
+    expect(resolveLyraScopedString(localeHost('en'), 'fieldRequired', defaults))
+      .to.equal('This field is required.');
+  });
+
+  it('still prefers a registered locale catalog over the supplied defaults', () => {
+    registerLyraLocale('x-scoped-resolver-test', { fieldRequired: 'Champ requis' });
+    const defaults = { fieldRequired: LYRA_DEFAULT_fieldRequired };
+    expect(resolveLyraScopedString(localeHost('x-scoped-resolver-test'), 'fieldRequired', defaults))
+      .to.equal('Champ requis');
+  });
+
+  it('still prefers an explicit override, then an explicit fallback, over the supplied defaults', () => {
+    const defaults = { fieldRequired: LYRA_DEFAULT_fieldRequired };
+    expect(
+      resolveLyraScopedString(localeHost('en'), 'fieldRequired', defaults, { fieldRequired: 'Overridden' }),
+    ).to.equal('Overridden');
+    expect(
+      resolveLyraScopedString(localeHost('en'), 'somethingElse', defaults, undefined, 'Explicit fallback'),
+    ).to.equal('Explicit fallback');
+  });
+
+  it('falls back to the bare key when neither a catalog nor the supplied defaults carry it', () => {
+    expect(resolveLyraScopedString(localeHost('en'), 'notInAnyCatalog', {})).to.equal('notInAnyCatalog');
   });
 });

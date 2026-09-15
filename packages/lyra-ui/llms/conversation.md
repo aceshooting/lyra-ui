@@ -313,9 +313,12 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `highlightCode: boolean = true` (attribute
-`highlight-code`), `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — required,
-unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced block stays
-unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading-anchors`),
+`highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
+required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
+block stays unhighlighted permanently. Each value is either an already-resolved grammar or a lazy
+loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
+`() => import('@shikijs/langs/bash')`) — called at most once per key, memoized, the first time a
+fenced block actually requests that language, `headingAnchors: boolean = false` (attribute `heading-anchors`),
 `math: boolean = false`; plus the same inherited anchor-target properties as `<lr-markdown>`:
 `highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
@@ -360,8 +363,10 @@ rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
-`shiki/core`/`shiki/engine/oniguruma`/`shiki/langs/*`, the same fine-grained subset
-`<lr-code-block-core>` depends on.
+`shiki/core`, `shiki/engine/oniguruma`, the binary `shiki/onig.wasm` asset (the default; select
+`shiki/engine/javascript` instead via `setShikiCoreEngine('javascript')`), and
+`shiki/themes/github-{light,dark}.mjs`, the same fine-grained subset `<lr-code-block-core>` depends
+on.
 
 ````ts
 import { html } from "lit";
@@ -369,8 +374,8 @@ import python from "shiki/langs/python.mjs";
 import "@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js";
 
 const view = html`<lr-markdown-core
-  .content=${"# Report\n\n```python\nprint('hi')\n```"}
-  .languages=${{ python }}
+  .content=${"# Report\n\n```python\nprint('hi')\n```\n\n```bash\necho hi\n```"}
+  .languages=${{ python, bash: () => import("shiki/langs/bash.mjs") }}
 ></lr-markdown-core>`;
 ````
 
@@ -1427,6 +1432,10 @@ not a delta — this component does no accumulation or ordering of its own.
 - `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
   uses `looksLikeMarkdown`; `plain` and `markdown` force their named paths. Invalid values render as
   `auto` without installing a stale memoized decision.
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to
+  the composed `<lr-markdown>`'s own `languages`, the same fine-grained language-grammar scoping
+  `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
+  untouched.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — runs a fixed, ordered list of
 lightweight regexes (ATX heading, fenced code block, `**bold**`, `_italic_`, inline code, bullet
@@ -1490,8 +1499,9 @@ never be left stranded mid-window, and a stream restarting on a reused element c
 showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
-forwarding this component's own `streaming` through as that component's `streaming` hint prop;
-plain-text mode renders into a `white-space: pre-wrap` span instead. The blinking cursor degrades
+forwarding this component's own `streaming` through as that component's `streaming` hint prop and
+`languages` verbatim; plain-text mode renders into a `white-space: pre-wrap` span instead. The
+blinking cursor degrades
 to a static, always-visible bar under `prefers-reduced-motion: reduce`. In plain-text mode it sits
 inline at the tail of the final character; in Markdown mode it renders as its own trailing block
 below the rendered content instead of attempting to splice into whatever nested block Markdown
@@ -1510,6 +1520,60 @@ happens to end with.
 - Purely presentational: no events, and it does not announce anything to assistive tech itself — a
   host that needs streamed text announced needs `<lr-live-region>` for that (e.g. composed inside
   `<lr-chat-message>`).
+
+---
+
+## `lr-streaming-text-core`
+
+A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `languages` map already
+covers every language it will ever stream, or who never renders fenced code at all. Every
+capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
+`lr-content-settled` event, the `languages` property — is identical to `<lr-streaming-text>`; only
+which Markdown element Markdown mode composes differs: this variant renders `<lr-markdown-core>`
+(`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this entry point instead
+of `streaming-text.js` never references `<lr-markdown>`'s ~200-language dynamic-import table at
+all. A fenced code block whose language isn't a key in `languages` always renders the plain-text
+fallback — there is no default/full-table highlighter here to fall back to, mirroring
+`<lr-markdown-core>`'s own contract.
+
+**Properties:** `content: string = ''` — the full current text so far, identical contract to
+`<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
+(attribute `coalesce-ms`) — same trailing-edge coalesce window described under `<lr-streaming-text>`
+above; `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
+uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
+Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
+`<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s.
+
+**Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
+`<lr-streaming-text>` exports and documents above; both tags share one implementation.
+
+**Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — identical contract to
+`<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
+`<lr-markdown-core>` emits it instead of `<lr-markdown>`).
+
+**Slots:** none — content renders from `content`, not a slot.
+
+**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`) — identical to
+`<lr-streaming-text>`'s own.
+
+**Themeable custom properties:** `--lr-inline-cursor-width` (default `var(--lr-size-0-125rem)`) and
+`--lr-inline-cursor-height` (default `var(--lr-size-1em)`) — the same shared inline-cursor tokens
+`<lr-streaming-text>`/`<lr-typing-indicator>` use, plus the same `--lr-space-xs`/
+`--lr-transition-ambient` fallbacks described above.
+
+Every other capability — token coalescing mechanics, the first-assignment/`streaming`-transition
+immediate-flush rules, the reduced-motion cursor degradation, and the known gotchas — is identical
+to `<lr-streaming-text>`; see that section above for the full write-up of shared behavior.
+
+```html
+<lr-streaming-text-core id="out" streaming></lr-streaming-text-core>
+<script type="module">
+  import typescript from "shiki/langs/typescript.mjs";
+  const out = document.getElementById("out");
+  out.languages = { typescript };
+  out.content = "```typescript\nconst x = 1;\n```";
+</script>
+```
 
 ---
 
@@ -1889,12 +1953,15 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract, identical to `<lr-code-block>`.
-- `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
-  instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
-  (the default) never highlights at all — every `language` renders the plain-text fallback.
+- `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) — grammar definitions this
+  instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`), or a
+  lazy loader per key, e.g. `{ bash: () => import('@shikijs/langs/bash') }` — called at most once
+  per key, memoized, the first time a fenced block actually requests that language. Empty
+  (the default) never highlights at all — every `language` renders the plain-text fallback, and so
+  does a key whose lazy loader rejects.
   If `languages` changes while highlighting is loading, only results for the current map can update
   the displayed code. For a
-  TypeScript annotation, use `import type { ShikiLanguageInput } from
+  TypeScript annotation, use `import type { ShikiLanguageSource } from
 '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
   granular import emits no registration side effect.
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — identical to
@@ -1929,9 +1996,11 @@ for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must 
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
 definite-height host gives it too, identically to `<lr-code-block>` above.
 
-**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`,
-`shiki/wasm`, and `shiki/themes/github-{light,dark}.mjs` subpaths — never `shiki`'s main entry point,
-which is what carries the ~200-language table this component exists to avoid). Building the
+**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, the binary
+`shiki/onig.wasm` asset (the default; select `shiki/engine/javascript` instead via
+`setShikiCoreEngine('javascript')`), and `shiki/themes/github-{light,dark}.mjs` subpaths — never
+`shiki`'s main entry point, which is what carries the ~200-language table this component exists to
+avoid). Building the
 fine-grained highlighter is cached per `languages` object identity. A bounded weak cache also shares
 recently used equivalent, deeply frozen plain grammar maps, including the detached snapshots owned
 by separate component instances. Grammar contents and property/array order must agree completely;
@@ -3882,7 +3951,40 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
   `loadShikiHighlighterCore(languages: Record<string, ShikiLanguageInput>): Promise<ShikiHighlighterCore | null>`
   Results are cached by map identity, with bounded weak reuse across equivalent deeply frozen plain
-  grammar maps. Mutable maps and unusual grammar values retain identity-only caching.
+  grammar maps. Mutable maps and unusual grammar values retain identity-only caching. Every
+  distinct active engine (see `setShikiCoreEngine()` below) gets its own cached core per
+  `languages` object -- two engines never share one.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  re-exported from `@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js`) --
+  `shiki-types.js` itself is an internal support module with no package subpath export.
+  `setShikiCoreEngine(engine: ShikiEngineOption): void`
+  Selects the regex-scanning engine every subsequent `loadShikiHighlighterCore()` call builds its
+  `HighlighterCore` with. `'oniguruma'` (the default) fetches the binary `shiki/onig.wasm` asset;
+  `'javascript'` selects shiki's pure-JS engine instead, avoiding WebAssembly entirely. A function
+  value is called on first use per distinct `languages` object and may return the engine
+  synchronously or via a promise.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `ShikiEngineOption = 'oniguruma' | 'javascript' | ShikiRegexEngineFactory`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `ShikiRegexEngineFactory = () => ShikiRegexEngine | Promise<ShikiRegexEngine>`
+  A factory `setShikiCoreEngine()` accepts directly: called once per distinct `languages` object
+  the first time it is used.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `resolvedShikiLanguages(languages: Readonly<Record<string, ShikiLanguageSource>>): Record<string, ShikiLanguageInput>`
+  The already-resolved subset of a `languages` map that may also contain lazy loaders -- the subset
+  `loadShikiHighlighterCore()` seeds a `HighlighterCore` with at creation. Returns the same object
+  unchanged when there is no loader, preserving identity-keyed core reuse for a caller that never
+  uses one.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `ensureShikiLanguageLoaded(core: ShikiHighlighterCore, key: string, source: ShikiLanguageSource): Promise<boolean>`
+  Resolves one `languages` entry that may be a lazy loader, loading it into `core` via
+  `HighlighterCore.loadLanguage()` the first time a given (core, key) pair is seen, memoized after
+  that. Resolves to `true` immediately for an entry that is already a plain grammar. Never rejects:
+  a loader that throws, or a `loadLanguage()` call that rejects, resolves to `false` instead.
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
   `normalizeShikiLanguage(lang: string): string`
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
@@ -3902,6 +4004,25 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block.js`.
   `ShikiLanguageInput = ShikiLanguageRegistration | readonly ShikiLanguageRegistration[]`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js`.
+  `ShikiLanguageLoader = () => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`
+  Called at most once per key, memoized, the first time a fenced block requests that language. May
+  return either a grammar directly or an ES module namespace/default-export wrapper around one,
+  matching a plain `() => import('@shikijs/langs/<name>')` call site verbatim.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js`.
+  `ShikiLanguageSource = ShikiLanguageInput | ShikiLanguageLoader`
+  One `languages` map entry on `<lr-code-block-core>`/`<lr-markdown-core>`: either an
+  already-resolved grammar (seeded eagerly into the `HighlighterCore` at creation) or a lazy
+  `ShikiLanguageLoader`.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  `.../markdown/markdown-core.js`).
+  `ShikiRegexEngine {
+    createScanner(patterns: readonly (string | RegExp)[]): unknown;
+    createString(value: string): unknown;
+  }`
+  The peer-neutral regex-scanning capability `createHighlighterCore()`'s own `engine` option
+  accepts; only ever forwarded through to shiki's own `createHighlighterCore()`, never called
+  directly.
 
 - **`components-conversation-conversation-item-conversation-item-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js`.
@@ -4131,8 +4252,11 @@ These named interfaces and helper signatures are available to typed integrations
     readonly anchor: DocumentLocator | null;
   }`
 
-- **`components-conversation-streaming-text-streaming-text-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.class.js`.
+- **`components-conversation-streaming-text-streaming-text-base-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.class.js`
+  (also re-exported from `@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text-core.class.js`)
+  — `streaming-text-base.class.js` itself is an internal support module shared by both
+  `<lr-streaming-text>` and `<lr-streaming-text-core>`, with no package subpath export of its own.
   `looksLikeMarkdown(text: string): boolean`
 
 - **`components-conversation-suggestion-chips-suggestion-chips-contracts`** — Supporting data types and helpers for this component family.

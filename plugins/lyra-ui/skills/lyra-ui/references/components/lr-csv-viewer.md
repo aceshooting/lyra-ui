@@ -75,6 +75,13 @@ through. An inherited or direct public value remains authoritative across that b
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
 
+Importing `csv-viewer.js` (this component's own registration entry) loads `<lr-csv-viewer>`'s class
+module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who wants
+that deferred too can instead import
+`@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer-register.js`, which installs the
+same registration lazily and exports `CSV_VIEWER_TAG` (`'lr-csv-viewer'`) as a stable reference to
+the tag it eventually registers.
+
 Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 raw rows
 (the first row consumes the same budget whether or not `has-header-row` displays it as a header),
 1,000 columns in any row, 1,000,000 aggregate cells, or more than 100 parser diagnostics; streaming

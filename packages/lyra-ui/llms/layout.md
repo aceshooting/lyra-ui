@@ -2931,16 +2931,20 @@ apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked
 hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
 a checked row paints identically to an unchecked one.
 
-Three more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
+Four more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
 byte-identical: `--lr-menu-item-hover-bg` (default `var(--lr-color-brand-quiet)`) is the enabled
 row's fill under the pointer, and the pressed state mixes from that same value, so a retuned hover
-fill keeps its pressed step instead of snapping back to the brand default;
-`--lr-menu-item-icon-color` (default `inherit`) recolours `[part="icon"]` without touching the
-label beside it, so it still follows the row while the row is disabled or `variant="danger"` unless
-you say otherwise; and `--lr-menu-item-min-height` (default
-`max(var(--lr-form-control-height), var(--lr-size-24px))`) sets the row's minimum block size for a
-denser or roomier menu, replacing a `::part(base)` rule per item. A value below the 24px floor is
-your call, exactly as it is when overriding the shared ladder itself.
+fill keeps its pressed step instead of snapping back to the brand default; `--lr-menu-item-active-bg`
+(default `color-mix(in oklab, var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`) overrides that pressed fill directly,
+matching `--lr-option-active-bg`'s equivalent hook — unset, the pressed row keeps mixing from
+`--lr-menu-item-hover-bg` exactly as before this hook existed; `--lr-menu-item-icon-color` (default
+`inherit`) recolours `[part="icon"]` without touching the label beside it, so it still follows the
+row while the row is disabled or `variant="danger"` unless you say otherwise; and
+`--lr-menu-item-min-height` (default `max(var(--lr-form-control-height), var(--lr-size-24px))`)
+sets the row's minimum block size for a denser or roomier menu, replacing a `::part(base)` rule per
+item. A value below the 24px floor is your call, exactly as it is when overriding the shared ladder
+itself.
 
 ### Nested submenus
 
@@ -2995,7 +2999,8 @@ while a link opening a new context can never lose the guard.
 the focusable host gains or loses focus, plus the shared menu-item events above.
 
 **Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
-`--lr-menu-item-hover-bg`, `--lr-menu-item-icon-color` and `--lr-menu-item-min-height`.
+`--lr-menu-item-hover-bg`, `--lr-menu-item-active-bg`, `--lr-menu-item-icon-color` and
+`--lr-menu-item-min-height`.
 `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
 because it shares a stylesheet directory with `<lr-menu>`, whose surface reads them; a dropdown item
 is a row **inside** that surface and paints no surface of its own, so setting them here is a no-op —
@@ -4268,8 +4273,9 @@ server-side query runs once per pause instead of once per character. Omitted, `0
 value means no debounce at all: every keystroke commits immediately. A pending debounce is always
 **flushed** by the field's own `change`/blur, so a blur never loses the last keystroke, and
 **cancelled outright** by `reset()`, by removing that filter's chip, and on disconnect — a stale
-keystroke can never overwrite a reset or fire after teardown. `debounce` is ignored for every other
-`type`, whose commits are discrete choices with nothing to debounce.
+keystroke can never overwrite a reset or fire after teardown. `'combobox'` accepts the same
+`debounce`, and so does `'custom'` (see below); `debounce` is ignored for every other `type`, whose
+commits are discrete choices with nothing to debounce.
 
 ### Custom controls
 
@@ -4282,6 +4288,17 @@ controls that expose a value without an event payload, and `context.onFocusout` 
 touched for required validation. Every context also carries its `filterId`, a monotonic
 `generation`, and an `AbortSignal`; replacement/removal of the schema, disconnection, and reconnect
 abort stale contexts, whose callbacks become inert.
+
+A `'custom'` definition also accepts the same optional `debounce?: number` (ms) `'text'`/
+`'combobox'` already have: it delays committing whatever `context.onValueChange`/`onInput`/
+`onChange` reads through `adapter.valueFromEvent`, coalescing a burst of rapid commits into one.
+Omitted, `0`, or a non-finite value means no debounce, exactly as before this field existed. While
+one is pending, `context.value` carries that pending value rather than the last-committed one, so a
+renderer binding it as a fully controlled value never reverts mid-delay; a pending commit is
+**flushed** by `context.onFocusout` and **cancelled outright** by `reset()`, removing that filter's
+chip, and disconnect — identical to `'text'`/`'combobox'`. This is what closes the gap those two
+types' own debounce left: before this field existed, a custom free-text filter had to hand-roll the
+same timer, flush, and cancellation lifecycle itself just to match `'text'`.
 
 The adapter's required `clearValue` is used when the active chip is removed. Its optional
 `isEmpty(value)` defines domain emptiness; without one, the bar compares against `clearValue`
@@ -4777,6 +4794,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraFilterBarCustomDefinition extends LyraFilterBarDefinitionBase {
     readonly type: 'custom';
     readonly custom: LyraFilterBarCustomControl;
+    readonly debounce?: number;
     // Inherited from LyraFilterBarDefinitionBase.
     readonly filterId: string;
     readonly label: string;

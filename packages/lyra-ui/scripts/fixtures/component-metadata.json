@@ -54,7 +54,9 @@
   "assignments": {
     "new-component-experimental": [
       "lr-app-rail-group",
-      "lr-funnel"
+      "lr-drop-zone",
+      "lr-funnel",
+      "lr-streaming-text-core"
     ],
     "published-stable": [
       "lr-accordion",
@@ -16991,7 +16993,7 @@
     "current": {
       "version": "15.0.1",
       "sourceCommit": null,
-      "manifestSha256": "7918a9b61c83c4bcc1ebda0a3e962a07776e06760db4bdb8aaa493a4c36af54e",
+      "manifestSha256": "1cabc7242ac53f5cd75148d741d3badddd264af5ff73df8f5f206d694a855dd7",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -17079,6 +17081,7 @@
         "lr-doughnut-chart",
         "lr-drawer",
         "lr-drilldown-panel",
+        "lr-drop-zone",
         "lr-dropdown",
         "lr-dropdown-item",
         "lr-ebook-viewer",
@@ -17231,6 +17234,7 @@
         "lr-stepper",
         "lr-stream-status",
         "lr-streaming-text",
+        "lr-streaming-text-core",
         "lr-subagent-panel",
         "lr-suggestion-chips",
         "lr-svg-viewer",

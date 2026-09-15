@@ -139,7 +139,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 270
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 272
   root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -1523,8 +1523,8 @@ reads, from `:lang()` rules to spellcheck to a screen reader's pronunciation —
 
 The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getLyraLocaleDirection`,
-`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `resolveLyraLocale`,
-`resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
+`getRegisteredLyraLocales`, `getRegisteredLyraLocaleKeys`, `subscribeLyraLocaleRegistry`,
+`resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
 `LyraLocaleStrings`, `LyraLocaleMeta`, `LyraLocaleDirection`, `LyraMessageKey`, `LyraMessage`,
 `LyraPluralMessage` and `LyraPluralCategory`. The package root continues to re-export the same
 surface for compatibility and remains registration-free in v8; use the dedicated entry when the
@@ -1607,6 +1607,23 @@ starting listener snapshots: one callback failure cannot prevent later active, c
 registry listeners from running. State commits first, then the mutator throws one `AggregateError`
 containing all callback failures after delivery completes. `<lr-locale-picker>` is the built-in
 consumer of the registry subscription; see `llms/components/lr-locale-picker.md`.
+
+`getRegisteredLyraLocaleKeys(locale: string): readonly string[]` returns a frozen snapshot of
+exactly the keys `locale`'s own catalog carries — no BCP-47 fallback-chain widening and no merge
+with the built-in English defaults. This answers "what has this locale actually been given",
+distinct from `getRegisteredLyraLocales()`, which reports registry *membership* (which tags exist)
+rather than catalog *content*. Diff the result's length against
+`Object.keys(LYRA_DEFAULT_STRINGS).length` to measure a locale's own translation coverage without a
+silent English-fallback merge making a partial catalog look complete. A locale nothing ever
+registered — including `'en'` itself, unless it was explicitly passed to `registerLyraLocale()` —
+returns an empty snapshot.
+
+In development (Lit's own dev-mode signal; silent in production), resolving a message for a
+resolved locale other than English that has no override, no fallback, and no registered catalog
+entry for that key warns once per (locale, key) to `console.warn` before falling through to the
+English default — the same silent-fallback `resolveLyraString()`, `localize()`, and
+`resolveLyraScopedString()` all shared with no way to detect it before. It never fires for an
+English-resolved locale, since falling through to `defaults` is simply how English itself resolves.
 
 Gotcha: `localize()`'s optional second argument is a fallback string. Passing a defined literal there
 silently defeats a registered catalog — omit it, or pass `undefined`.
@@ -1875,6 +1892,31 @@ browser global such as `EyeDropper` — reproduces the server's answer on the hy
 corrects itself on the next update, so a slotted override lands one frame after hydration; a
 browser-only mount is unaffected and renders the final result the first time. Layout/observer/canvas/media work
 begins after hydration, and remote content is client-only.
+
+**If hydration never runs at all** — a page that intentionally ships no script bundle, a reader
+that fetches the raw HTML, or a crawler — a `render-and-hydrate` tag's declarative-shadow-DOM
+output is either permanently complete and correct on its own, or only ever promised once hydration
+executes; nothing in between is supported. `getLyraSsrStaticSafety(tagName)` (also
+`LYRA_SSR_SUPPORT_MATRIX.declarativeShadowDom.staticSafety[tagName]`) returns which:
+`'static-safe'` is the first guarantee, `'hydration-required'` is the second. Every
+`render-and-hydrate` tag has one of the two; `pnpm test:ssr` fails closed on any tag that does
+not, so there is no silent third case. Do not infer `'static-safe'` from a component "looking
+static" — check the classification, because two components that look equally static can differ:
+
+- `lr-details` is `'static-safe'`. Its native `<details>`/`<summary>` toggle is bound with a Lit
+  *property* binding (`.open=${this.open}`), which the SSR renderer reflects to a real `open`
+  attribute in the server markup, and the click listener that vetoes a user toggle is registered
+  only by the component's own (unexecuted, without hydration) lifecycle code. With hydration JS
+  never running, both facts together mean the browser's native disclosure behavior is what
+  answers a click — so `lr-details` renders in the correct open/closed state and keeps expanding
+  and collapsing indefinitely, with zero JavaScript.
+- A canvas-painted component such as `lr-chart` is `'hydration-required'`: a `<canvas>`
+  element has no pixels until script draws to it, so without hydration the server markup is
+  present but visibly empty forever, not merely stale for one frame. `lr-lite-chart` is also
+  `'hydration-required'`, but for a different reason: it renders real SVG (not canvas), and its
+  default `layout="fit"` mode needs a ResizeObserver-measured host size before it can draw
+  coordinate-based geometry, so without hydration it stays on its structurally-identical
+  pre-measurement fallback rather than ever reaching final content.
 
 ## Testing form-associated components: `@aceshooting/lyra-ui/testing`
 
@@ -2195,6 +2237,48 @@ number }`.
 ResolveCssLengthOptions): number | undefined` and `ResolveCssLengthOptions { readonly host?:
 Element; readonly percentBase?: number; readonly viewportBasis?: Window | Readonly<{
 inlineSize: number; blockSize: number }> }`.
+- **`format` → `formatNumber(value, locale?, options?)`, `formatDate(value, locale?, options?)`,
+  `formatRelativeTime(value, locale?, options?)`, and `formatBytes(value, locale?, options?)`** —
+  pure, string-returning wrappers over the same memoized `Intl` formatter cache and locale
+  resolution `<lr-format-number>`, `<lr-format-date>`, `<lr-relative-time>`, and `<lr-format-bytes>`
+  render through. Reach for these when you need a formatted **string** rather than a rendered
+  element: interpolating into a message template, populating a text-only property on another
+  component (a stat tile's value, a chart tick label, a badge's cost text), building a search
+  predicate, or composing an accessibility announcement.
+  `formatNumber()` and `formatBytes()` accept a `bigint` or a decimal/integer string, not just a
+  `number`, for exact-precision input (large ids, monetary amounts, exact byte counts) — a plain
+  `number` is a float64 and cannot exactly represent an integer beyond `Number.MAX_SAFE_INTEGER` or
+  most decimal fractions. `formatBytes()` still selects its unit (`byte`..`petabyte`/`bit`..
+  `petabit`) from an approximate magnitude, since which unit is only ever a display choice, but
+  computes the displayed amount itself with exact `bigint` division, so the digits a `bigint`/string
+  input carries are never rounded away. `formatDate()` and `formatRelativeTime()` accept the same
+  date sources as `<lr-format-date>`/`<lr-relative-time>`'s `date` property (an ISO/date string,
+  epoch milliseconds, or a `Date`) and return `undefined` for an unresolvable source instead of
+  throwing; `formatBytes()` likewise returns `undefined` for a non-finite or unparseable `value`.
+  `formatNumber()` and invalid `options` on any of the four throw the same error
+  `Intl.NumberFormat`/`Intl.DateTimeFormat`/`Intl.RelativeTimeFormat`'s own constructor would.
+  `formatRelativeTime()`'s `options.unit` accepts an explicit unit or `'auto'` (default) to pick
+  the largest unit the magnitude clears, matching `<lr-relative-time unit="auto">`'s heuristic;
+  `options.now` fixes the reference instant for a deterministic test or an "as of" report. It is a
+  one-shot computation — pair it with your own timer, or use `<lr-relative-time sync>`, for text
+  that must stay current while displayed.
+  The exact signatures are `formatNumber(value: number | bigint | string, locale?: string,
+options?: Intl.NumberFormatOptions): string`, `formatDate(value: string | number | Date, locale?:
+string, options?: Intl.DateTimeFormatOptions): string | undefined`,
+  `formatRelativeTime(value: string | number | Date, locale?: string,
+options?: LyraFormatRelativeTimeOptions): string | undefined`, and `formatBytes(value: number |
+bigint | string, locale?: string, options?: LyraFormatBytesOptions): string | undefined`.
+  `LyraFormatRelativeTimeOptions { readonly unit?: LyraRelativeTimeUnit | 'auto'; readonly format?:
+LyraFormatDisplay; readonly numeric?: LyraRelativeTimeNumeric; readonly now?: number }` and
+  `LyraFormatBytesOptions { readonly unit?: LyraFormatBytesUnit; readonly display?:
+LyraFormatDisplay; readonly unitStep?: number; readonly decimals?: number }`.
+
+  ```ts
+  import { formatBytes, formatRelativeTime } from "@aceshooting/lyra-ui/utilities/format.js";
+
+  const size = formatBytes(12_345_678_901_234_567_890n, "en-US"); // exact, no float rounding
+  const updated = formatRelativeTime(item.updatedAt, "en-US"); // "3 days ago"
+  ```
 - **`layered-layout` → `layeredLayout()`** — the deterministic, dependency-free layered-DAG
   ("Sugiyama-lite") layout `lr-flow-canvas` draws with: cycle handling, longest-path layering,
   barycenter crossing reduction, and coordinates assigned along the block axis so the result is
@@ -2370,6 +2454,20 @@ number; clearTimeout(handle: number): void }`.
   const stop = bridgeLyraLocale(); // mirrors onto <html>
   setLyraLocale("ar"); // <html lang="ar" dir="rtl">
   stop(); // restores whatever <html> carried before
+  ```
+
+  `resolveLyraScopedString(/* public names: host, key, defaults, overrides, fallback, values */):
+unknown` is a scoped variant of `resolveLyraString()` (see "Localization"): the same
+override → fallback → registered-locale-catalog resolution chain, but against a caller-supplied
+`defaults` record instead of the complete `LYRA_DEFAULT_STRINGS` catalog. It lives on this
+tree-shakable entry rather than the side-effect-free `@aceshooting/lyra-ui/localization.js` one so
+that resolving a handful of an application's own messages never pulls in the full compatibility
+catalog to do it — pass a small `defaults` object of just the keys used.
+
+  ```ts
+  import { resolveLyraScopedString } from "@aceshooting/lyra-ui/utilities/localization.js";
+
+  const label = resolveLyraScopedString(host, "save", { save: "Save" });
   ```
 
 **Known gotchas:**
@@ -2915,6 +3013,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-doughnut-chart": unknown;
   "lr-drawer": unknown;
   "lr-drilldown-panel": unknown;
+  "lr-drop-zone": unknown;
   "lr-dropdown": unknown;
   "lr-dropdown-item": unknown;
   "lr-ebook-viewer": unknown;
@@ -3067,6 +3166,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-stepper": unknown;
   "lr-stream-status": unknown;
   "lr-streaming-text": unknown;
+  "lr-streaming-text-core": unknown;
   "lr-subagent-panel": unknown;
   "lr-suggestion-chips": unknown;
   "lr-svg-viewer": unknown;
@@ -3135,6 +3235,7 @@ These named interfaces and helper signatures are available to typed integrations
 - **`internal-localization-runtime-contracts`** — Shared utility contracts.
   `getLyraLocaleDirection(/* public names: locale */): unknown`
   `getLyraLocale(): unknown`
+  `getRegisteredLyraLocaleKeys(/* public names: locale */): unknown`
   `getRegisteredLyraLocales(): unknown`
   `registerLyraLocale(/* public names: locale, strings, meta */): unknown`
   `resolveLyraDirection(/* public names: host */): unknown`
@@ -3192,8 +3293,22 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 - **`ssr-contracts`** — Shared utility contracts.
+  `buildLyraSsrStaticSafety(/* public names: tags, tagCapabilities, auditedStaticSafeTags */): unknown`
+  Fail-closed classifier behind `LYRA_SSR_STATIC_SAFETY`/`getLyraSsrStaticSafety`: a tag present in
+  neither a non-empty `tagCapabilities` entry nor `auditedStaticSafeTags` is reported in the result's
+  `unaudited` list instead of silently defaulting to `'static-safe'`. Pure and fixture-friendly --
+  `scripts/check-ssr.mjs` calls it with the real inventory, tests call it with small fixture lists.
+  `deriveLyraSsrStaticSafety(/* public names: capabilities */): unknown`
+  Derives static safety from one tag's capability record: any `'after-hydration'`/`'client-only'`
+  entry makes it `'hydration-required'`; an empty record defaults to `'static-safe'`. That empty-
+  record default is only valid for a record already known to reflect a completed review (as
+  `LYRA_SSR_TAG_CAPABILITIES` entries do) -- `buildLyraSsrStaticSafety()` does not rely on it for a
+  tag missing from that record entirely, which it instead routes through `auditedStaticSafeTags`.
   `diagnoseLyraHydration(/* public names: root */): unknown`
   `getLyraSsrMode(/* public names: tagName */): unknown`
+  `getLyraSsrStaticSafety(/* public names: tagName */): unknown`
+  Returns the static-safety classification for a `render-and-hydrate` Lyra tag, or `undefined` for a
+  tag outside that tier. See "SSR and declarative shadow DOM" above for the full write-up.
   `LyraHydrationDiagnostic {
   element: unknown;
   tag: unknown;
@@ -3212,6 +3327,13 @@ These named interfaces and helper signatures are available to typed integrations
   code: unknown;
   detail: unknown;
 }`
+  `LyraSsrStaticSafetyResult {
+  classification: unknown;
+  unaudited: unknown;
+}`
+  Return shape of `buildLyraSsrStaticSafety()`: `classification` holds one entry per classified tag
+  (a tag absent from it was neither capability-bearing nor audited), and a non-empty `unaudited`
+  means the check must fail closed.
   `lyraSsrElementRenderers(/* public names: litElementRenderer */): unknown`
 
 - **`svelte-contracts`** — Framework integration type contracts.
@@ -3302,6 +3424,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-doughnut-chart": unknown;
   "lr-drawer": unknown;
   "lr-drilldown-panel": unknown;
+  "lr-drop-zone": unknown;
   "lr-dropdown": unknown;
   "lr-dropdown-item": unknown;
   "lr-ebook-viewer": unknown;
@@ -3454,6 +3577,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-stepper": unknown;
   "lr-stream-status": unknown;
   "lr-streaming-text": unknown;
+  "lr-streaming-text-core": unknown;
   "lr-subagent-panel": unknown;
   "lr-suggestion-chips": unknown;
   "lr-svg-viewer": unknown;
@@ -3590,6 +3714,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-doughnut-chart": unknown;
   "lr-drawer": unknown;
   "lr-drilldown-panel": unknown;
+  "lr-drop-zone": unknown;
   "lr-dropdown": unknown;
   "lr-dropdown-item": unknown;
   "lr-ebook-viewer": unknown;
@@ -3742,6 +3867,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-stepper": unknown;
   "lr-stream-status": unknown;
   "lr-streaming-text": unknown;
+  "lr-streaming-text-core": unknown;
   "lr-subagent-panel": unknown;
   "lr-suggestion-chips": unknown;
   "lr-svg-viewer": unknown;
@@ -3805,6 +3931,12 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`theme-gemstones-contracts`** — Shared utility contracts.
   `gemstoneGlyph(/* public names: color */): unknown`
+  `gemstoneSelectedGlyphStyles: CSSResult` — the shared "selected" halo/shine presentation for a
+  rendered `gemstoneGlyph()`, applied via the `data-lr-gemstone-selected` boolean attribute on the
+  element wrapping the glyph. `lr-swatch-picker mode="gemstone"` includes this exact stylesheet in
+  its own `static styles` for its checked swatch's automatic glyph rather than keeping a private
+  copy, so a glyph rendered anywhere else on the page can match it exactly by consuming the same
+  export and attribute.
 
 - **`theme-presets-contracts`** — Shared utility contracts.
   `applyLyraThemePreset(/* public names: presetOrName */): unknown`
@@ -3919,6 +4051,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-doughnut-chart": unknown;
   "lr-drawer": unknown;
   "lr-drilldown-panel": unknown;
+  "lr-drop-zone": unknown;
   "lr-dropdown": unknown;
   "lr-dropdown-item": unknown;
   "lr-ebook-viewer": unknown;
@@ -4071,6 +4204,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-stepper": unknown;
   "lr-stream-status": unknown;
   "lr-streaming-text": unknown;
+  "lr-streaming-text-core": unknown;
   "lr-subagent-panel": unknown;
   "lr-suggestion-chips": unknown;
   "lr-svg-viewer": unknown;

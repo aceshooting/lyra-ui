@@ -978,7 +978,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "b0d9ae7bcac3413e5ea3",
+      "fingerprint": "16c1b8a66033c1e2be4f",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -994,7 +994,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "e1154ec134ee96c4ba38",
+      "fingerprint": "0d7ade4fa95dcdf3e187",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1042,7 +1042,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "8b1811550e4607064e20",
+      "fingerprint": "fb034fc865a625283a65",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1058,7 +1058,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "bfb9aa2b20e19299a561",
+      "fingerprint": "69f026ae322d4eb2ed60",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -3771,6 +3771,63 @@
     },
     {
       "module": "src/components/conversation/code-block/shiki-types.ts",
+      "exportName": "ShikiRegexEngine",
+      "kind": "interface",
+      "fingerprint": "b97b23d00b3a4e950832",
+      "routes": [
+        "src/components/conversation/code-block/code-block-core.ts",
+        "src/components/conversation/markdown/markdown-core.ts",
+        "src/components/lr-code-block-core.ts",
+        "src/components/lr-markdown-core.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-shiki-types-contracts",
+        "declaration": "ShikiRegexEngine"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "exportName": "resolvedShikiLanguages",
+      "kind": "function",
+      "fingerprint": "673baf434ea593b0e6f6",
+      "routes": [
+        "src/components/conversation/code-block/code-block-core.ts",
+        "src/components/conversation/markdown/markdown-core.ts",
+        "src/components/lr-code-block-core.ts",
+        "src/components/lr-markdown-core.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-shiki-types-contracts",
+        "declaration": "resolvedShikiLanguages"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "exportName": "setShikiCoreEngine",
+      "kind": "function",
+      "fingerprint": "0846bc1dad7c02587f2c",
+      "routes": [
+        "src/components/conversation/code-block/code-block-core.ts",
+        "src/components/conversation/markdown/markdown-core.ts",
+        "src/components/lr-code-block-core.ts",
+        "src/components/lr-markdown-core.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-shiki-types-contracts",
+        "declaration": "setShikiCoreEngine"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/shiki-types.ts",
       "exportName": "normalizeShikiLanguage",
       "kind": "function",
       "fingerprint": "2862eed603484f78a454",
@@ -4434,15 +4491,18 @@
       }
     },
     {
-      "module": "src/components/conversation/streaming-text/streaming-text.class.ts",
+      "module": "src/components/conversation/streaming-text/streaming-text-base.class.ts",
       "exportName": "looksLikeMarkdown",
       "kind": "function",
       "fingerprint": "84deb07cb3881c45c646",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
+        "src/components/conversation/streaming-text/streaming-text-core.class.ts",
+        "src/components/conversation/streaming-text/streaming-text-core.ts",
         "src/components/conversation/streaming-text/streaming-text.class.ts",
         "src/components/conversation/streaming-text/streaming-text.ts",
+        "src/components/lr-streaming-text-core.ts",
         "src/components/lr-streaming-text.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
@@ -4452,7 +4512,7 @@
       "family": "conversation",
       "locator": {
         "kind": "utility",
-        "name": "components-conversation-streaming-text-streaming-text-contracts",
+        "name": "components-conversation-streaming-text-streaming-text-base-contracts",
         "declaration": "looksLikeMarkdown"
       }
     },
@@ -8229,7 +8289,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarCustomControl",
       "kind": "interface",
-      "fingerprint": "a4b6df10e4524d04b08c",
+      "fingerprint": "5b5dc8d500b5b3aafd90",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
@@ -8275,7 +8335,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarCustomControlContext",
       "kind": "interface",
-      "fingerprint": "63bd331c593496de28ef",
+      "fingerprint": "6c3f040646b31dcd33de",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
@@ -8298,7 +8358,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarCustomDefinition",
       "kind": "interface",
-      "fingerprint": "57b0524b4dea990eb81a",
+      "fingerprint": "c1b09259f31ea68e34ab",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
@@ -8367,7 +8427,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarInputDetail",
       "kind": "interface",
-      "fingerprint": "1ab75cf4d6677c7b64a0",
+      "fingerprint": "9814e5a98038e1298064",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
@@ -8413,7 +8473,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarResetDetail",
       "kind": "interface",
-      "fingerprint": "e773b3017d697c0b1826",
+      "fingerprint": "96fa11b2cbb99f682d6a",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
@@ -9420,7 +9480,7 @@
       "module": "src/components/media/file-input/file-input.class.ts",
       "exportName": "LyraFileInputFilesDetail",
       "kind": "interface",
-      "fingerprint": "eead244760fe461c30f4",
+      "fingerprint": "824330046d6c971175db",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-input.ts",
@@ -9489,7 +9549,7 @@
       "module": "src/components/media/file-input/file-input.class.ts",
       "exportName": "LyraFileInputRejectedFile",
       "kind": "interface",
-      "fingerprint": "09599e383ddca155b969",
+      "fingerprint": "ece14b77504bbfb486dc",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-input.ts",
@@ -9506,6 +9566,98 @@
         "kind": "utility",
         "name": "components-media-file-input-file-input-contracts",
         "declaration": "LyraFileInputRejectedFile"
+      }
+    },
+    {
+      "module": "src/components/media/drop-zone/drop-zone.class.ts",
+      "exportName": "LyraDropZoneRejectedFile",
+      "kind": "interface",
+      "fingerprint": "ece14b77504bbfb486dc",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-drop-zone.ts",
+        "src/components/media/drop-zone/drop-zone.class.ts",
+        "src/components/media/drop-zone/drop-zone.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-drop-zone-drop-zone-contracts",
+        "declaration": "LyraDropZoneRejectedFile"
+      }
+    },
+    {
+      "module": "src/components/media/drop-zone/drop-zone.class.ts",
+      "exportName": "LyraDropZoneFilesDetail",
+      "kind": "interface",
+      "fingerprint": "4cc05dfc89d4e79538fc",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-drop-zone.ts",
+        "src/components/media/drop-zone/drop-zone.class.ts",
+        "src/components/media/drop-zone/drop-zone.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-drop-zone-drop-zone-contracts",
+        "declaration": "LyraDropZoneFilesDetail"
+      }
+    },
+    {
+      "module": "src/components/media/drop-zone/drop-zone.class.ts",
+      "exportName": "LyraDropZoneFilesEvent",
+      "kind": "interface",
+      "fingerprint": "9b660ae009a4abb33f12",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-drop-zone.ts",
+        "src/components/media/drop-zone/drop-zone.class.ts",
+        "src/components/media/drop-zone/drop-zone.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-drop-zone-drop-zone-contracts",
+        "declaration": "LyraDropZoneFilesEvent"
+      }
+    },
+    {
+      "module": "src/components/media/file-input/file-input.class.ts",
+      "exportName": "LyraFileInputFilesEvent",
+      "kind": "interface",
+      "fingerprint": "108ebc85653731216391",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-file-input.ts",
+        "src/components/media/file-input/file-input.class.ts",
+        "src/components/media/file-input/file-input.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-file-input-file-input-contracts",
+        "declaration": "LyraFileInputFilesEvent"
       }
     },
     {
@@ -14081,7 +14233,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "cc6f6d8bfd7d53cd56f9",
+      "fingerprint": "c8d02403d752e839b614",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14422,6 +14574,108 @@
         "kind": "utility",
         "name": "css-length",
         "declaration": "ResolveCssLengthOptions"
+      }
+    },
+    {
+      "module": "src/utilities/format.ts",
+      "exportName": "formatBytes",
+      "kind": "function",
+      "fingerprint": "2b8570d75d24fcfa5acd",
+      "routes": [
+        "src/utilities/format.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "format",
+        "declaration": "formatBytes"
+      }
+    },
+    {
+      "module": "src/utilities/format.ts",
+      "exportName": "formatDate",
+      "kind": "function",
+      "fingerprint": "b56db0068abd62234395",
+      "routes": [
+        "src/utilities/format.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "format",
+        "declaration": "formatDate"
+      }
+    },
+    {
+      "module": "src/utilities/format.ts",
+      "exportName": "formatNumber",
+      "kind": "function",
+      "fingerprint": "31ecc1a81aad4232e6d4",
+      "routes": [
+        "src/utilities/format.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "format",
+        "declaration": "formatNumber"
+      }
+    },
+    {
+      "module": "src/utilities/format.ts",
+      "exportName": "formatRelativeTime",
+      "kind": "function",
+      "fingerprint": "938208b5c66c2702d460",
+      "routes": [
+        "src/utilities/format.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "format",
+        "declaration": "formatRelativeTime"
+      }
+    },
+    {
+      "module": "src/utilities/format.ts",
+      "exportName": "LyraFormatBytesOptions",
+      "kind": "interface",
+      "fingerprint": "179fe1f36546b4da0827",
+      "routes": [
+        "src/utilities/format.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "format",
+        "declaration": "LyraFormatBytesOptions"
+      }
+    },
+    {
+      "module": "src/utilities/format.ts",
+      "exportName": "LyraFormatRelativeTimeOptions",
+      "kind": "interface",
+      "fingerprint": "5186d321d0beb33cce23",
+      "routes": [
+        "src/utilities/format.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "format",
+        "declaration": "LyraFormatRelativeTimeOptions"
       }
     },
     {
@@ -14970,6 +15224,26 @@
     },
     {
       "module": "src/internal/localization-runtime.ts",
+      "exportName": "getRegisteredLyraLocaleKeys",
+      "kind": "function",
+      "fingerprint": "d16bc1be6d9673b9dc21",
+      "routes": [
+        "src/all.ts",
+        "src/localization.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "internal-localization-runtime-contracts",
+        "declaration": "getRegisteredLyraLocaleKeys"
+      }
+    },
+    {
+      "module": "src/internal/localization-runtime.ts",
       "exportName": "getRegisteredLyraLocales",
       "kind": "function",
       "fingerprint": "bdc59b68d56d2a1485ba",
@@ -14992,7 +15266,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "3fe4e9a45210e8a517e5",
+      "fingerprint": "522209f52f984e7ec7c8",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15133,7 +15407,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "5a4459f428c54c7e9396",
+      "fingerprint": "399ad2bd1ca7dabbe585",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15663,10 +15937,82 @@
       }
     },
     {
+      "module": "src/ssr.ts",
+      "exportName": "buildLyraSsrStaticSafety",
+      "kind": "function",
+      "fingerprint": "8ee32f015e910f07709a",
+      "routes": [
+        "src/ssr-loader.ts",
+        "src/ssr.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ssr-contracts",
+        "declaration": "buildLyraSsrStaticSafety"
+      }
+    },
+    {
+      "module": "src/ssr.ts",
+      "exportName": "deriveLyraSsrStaticSafety",
+      "kind": "function",
+      "fingerprint": "ba5f5a3b7330dc7bfe85",
+      "routes": [
+        "src/ssr-loader.ts",
+        "src/ssr.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ssr-contracts",
+        "declaration": "deriveLyraSsrStaticSafety"
+      }
+    },
+    {
+      "module": "src/ssr.ts",
+      "exportName": "getLyraSsrStaticSafety",
+      "kind": "function",
+      "fingerprint": "5df16c3003fae68b596c",
+      "routes": [
+        "src/ssr-loader.ts",
+        "src/ssr.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ssr-contracts",
+        "declaration": "getLyraSsrStaticSafety"
+      }
+    },
+    {
+      "module": "src/ssr.ts",
+      "exportName": "LyraSsrStaticSafetyResult",
+      "kind": "interface",
+      "fingerprint": "80ad8554f4ef2d72bf4f",
+      "routes": [
+        "src/ssr-loader.ts",
+        "src/ssr.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ssr-contracts",
+        "declaration": "LyraSsrStaticSafetyResult"
+      }
+    },
+    {
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "72724e3627a5e3802a89",
+      "fingerprint": "1694611bfdbf7989f40b",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15682,7 +16028,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "ef06f3a3543eaf2160d4",
+      "fingerprint": "f78621428850a7f94567",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16094,6 +16440,23 @@
     },
     {
       "module": "src/utilities/localization.ts",
+      "exportName": "resolveLyraScopedString",
+      "kind": "function",
+      "fingerprint": "3e4c849b2e55218e7bda",
+      "routes": [
+        "src/utilities/index.ts",
+        "src/utilities/localization.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "localization",
+        "declaration": "resolveLyraScopedString"
+      }
+    },
+    {
+      "module": "src/utilities/localization.ts",
       "exportName": "LyraLocaleBridgeOptions",
       "kind": "interface",
       "fingerprint": "e111ebcd1f6b5850207c",
@@ -16117,7 +16480,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "b3f6584b3311f66777a9",
+      "fingerprint": "2211e0e351604844ae3b",
       "routes": [
         "src/vue.ts"
       ],

@@ -78,15 +78,20 @@ export const styles = css`
   [part='base']:hover {
     background: var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet));
   }
-  /* The hover fill mixed further toward --lr-color-mix-partner (the text colour), so a pressed row
-     is always a visible step past the row the pointer merely rests on. It mixes from the SAME hook
-     the hover rule reads, so a retuned hover fill keeps its pressed step instead of snapping back
-     to the brand default under the pointer. */
+  /* The public arm the hover hook's sibling never had: for parity with --lr-option-active-bg /
+     --lr-select-option-active-bg / --lr-combobox-option-active-bg / --lr-locale-picker-option-
+     active-bg, a consumer can now set the pressed fill directly rather than only through the
+     hover-derived mix below, which stays the unset fallback. It mixes from the SAME hover hook the
+     hover rule reads, so a retuned hover fill keeps its pressed step instead of snapping back to
+     the brand default under the pointer when --lr-menu-item-active-bg itself is left unset. */
   [part='base']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-menu-item-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   :host([disabled]) [part='base'],

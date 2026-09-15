@@ -112,6 +112,10 @@ export interface LyraFilterBarCustomControlContext {
   readonly filterId: string;
   readonly label: string;
   readonly definition: LyraFilterBarCustomDefinition;
+  /** While `definition.debounce` has a commit pending, this is that pending value rather than the
+   *  last-committed one -- exactly like `'combobox'`'s own debounce -- so a renderer that binds
+   *  this as a fully controlled `.value=` never reverts mid-delay. Otherwise the last-committed
+   *  value, same as always. */
   readonly value: LyraFilterBarFieldValue;
   readonly disabled: boolean;
   readonly required: boolean;
@@ -123,12 +127,14 @@ export interface LyraFilterBarCustomControlContext {
   readonly generation: number;
   /** Directly commits a value, useful for a custom control whose event has no DOM event payload. */
   readonly setValue: (value: LyraFilterBarFieldValue) => void;
-  /** Reads the adapter value and commits it; stopPropagation is handled by the filter bar. */
+  /** Reads the adapter value and commits it -- immediately, or (with `definition.debounce` set) via
+   *  that same delayed-commit path; stopPropagation is handled by the filter bar. */
   readonly onValueChange: (event: Event) => void;
   /** Aliases for consumers whose custom control uses native-style input/change naming. */
   readonly onInput: (event: Event) => void;
   readonly onChange: (event: Event) => void;
-  /** Marks the custom filter touched so required validation becomes visible. */
+  /** Marks the custom filter touched so required validation becomes visible, flushing a pending
+   *  `definition.debounce` commit first so an unflushed edit never flashes a stale required error. */
   readonly onFocusout: () => void;
 }
 
@@ -272,6 +278,20 @@ export interface LyraFilterBarDateRangeDefinition extends LyraFilterBarDateDefin
 export interface LyraFilterBarCustomDefinition extends LyraFilterBarDefinitionBase {
   readonly type: 'custom';
   readonly custom: LyraFilterBarCustomControl;
+  /** How long (ms) to wait after the custom control's own committed-value event (whatever the
+   *  adapter's `valueFromEvent` reads via `context.onValueChange`/`onInput`/`onChange`) before
+   *  committing it to `value` and emitting a single `lr-input` -- identical to `'text'`'s
+   *  per-keystroke debounce and `'combobox'`'s per-selection-change debounce, and sharing the same
+   *  per-`filterId` debounce-controller map, so it needs no separate wiring. Omitted, `0`, or a
+   *  non-finite value means no debounce at all: every commit lands immediately, exactly as before
+   *  this field existed. While a commit is pending, `context.value` renders that pending value
+   *  rather than the last-committed `value` -- exactly like `'combobox'` -- so a custom control
+   *  bound to it as a fully controlled `.value=` never reverts mid-delay. A pending debounce is
+   *  flushed by `context.onFocusout` and cancelled outright by `reset()`, a chip removal, and
+   *  disconnection, identical to `'text'`/`'combobox'`. This closes the gap `'text'`'s own
+   *  debounce left: before this field existed, a custom free-text filter had to hand-roll the same
+   *  timer plus its flush/cancel lifecycle itself to get the same behaviour. */
+  readonly debounce?: number;
 }
 
 /** A host-declared filter. The discriminant makes choice options and custom adapters mandatory
@@ -752,7 +772,11 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * fire after teardown. A `'combobox'` filter may declare the same `debounce`, coalescing a burst
  * of rapid picks into one delayed commit; unlike `'text'` its `.value=` binding stays fully
  * controlled, rendering the pending selection in place of the last-committed `value` for as long
- * as the commit is delayed. Every built-in (non-`'custom'`) type also accepts optional
+ * as the commit is delayed. A `'custom'` definition may declare the same `debounce` too, applied to
+ * whatever its adapter's `valueFromEvent` reads off `context.onValueChange`/`onInput`/`onChange`,
+ * with identical flush-on-`context.onFocusout` and cancel-on-`reset()`/chip-removal/disconnect
+ * semantics -- so a custom free-text filter no longer has to hand-roll that timer itself just to
+ * match what `'text'` already does. Every built-in (non-`'custom'`) type also accepts optional
  * `size`/`icon`/`labelVisibility`, and every one whose composed control ships a clear action also
  * accepts `clearable` -- forwarded verbatim to that control's own same-named property (`icon` into
  * its `start` slot exactly like `LyraFilterBarOption.icon`; `clearable` reaching
@@ -1219,9 +1243,19 @@ export class LyraFilterBar<
     return typeof delay === 'number' && Number.isFinite(delay) && delay > 0;
   }
 
-  /** Parks `value` under `id` and (re)starts its commit timer -- the shared mechanics behind both
-   *  `'text'`'s per-keystroke debounce and `'combobox'`'s per-selection-change debounce. */
-  private scheduleDebounce(id: string, value: LyraFilterBarFieldValue, delay: number): void {
+  /** Parks `value` under `id` and (re)starts its commit timer -- the shared mechanics behind
+   *  `'text'`'s per-keystroke debounce, `'combobox'`'s per-selection-change debounce, and
+   *  `'custom'`'s optional debounce. `commit` defaults to the built-in types' unconditional
+   *  `setFilterValue(id, pending)`; `'custom'` overrides it with `setCustomContextValue`'s extra
+   *  schema-generation/abort/connected guard, since -- unlike a built-in control -- a custom
+   *  renderer's closures can otherwise outlive the schema that created them. */
+  private scheduleDebounce(
+    id: string,
+    value: LyraFilterBarFieldValue,
+    delay: number,
+    commit: (pending: LyraFilterBarFieldValue) => void = (pending) =>
+      this.setFilterValue(id, pending),
+  ): void {
     let controller = this.debounceControllers.get(id);
     if (!controller) {
       const created: DebounceController<LyraFilterBarFieldValue> =
@@ -1234,7 +1268,7 @@ export class LyraFilterBar<
           if (this.debounceControllers.get(id) === created) {
             this.debounceControllers.delete(id);
           }
-          if (pending !== undefined) this.setFilterValue(id, pending);
+          if (pending !== undefined) commit(pending);
         });
       controller = created;
       this.debounceControllers.set(id, created);
@@ -1279,7 +1313,14 @@ export class LyraFilterBar<
     e: Event,
   ): void => {
     e.stopPropagation();
-    this.setCustomContextValue(def, generation, def.custom.adapter.valueFromEvent(e));
+    const next = def.custom.adapter.valueFromEvent(e);
+    if (this.isDebounced(def.debounce)) {
+      this.scheduleDebounce(def.filterId, next, def.debounce, (pending) =>
+        this.setCustomContextValue(def, generation, pending)
+      );
+      return;
+    }
+    this.setCustomContextValue(def, generation, next);
   };
 
   /** A `'text'` filter's keystroke: commits immediately, or (with a positive `debounce`) parks the
@@ -1734,11 +1775,17 @@ export class LyraFilterBar<
       const generation = this.schemaGeneration;
       const signal = this.schemaSignal;
       const onCustomValueChange = (e: Event) => this.onCustomControlChange(def, generation, e);
+      // While a debounce is in flight, render the pending (not-yet-committed) value instead of the
+      // stale last-committed one -- exactly like the `'combobox'` branch -- so a custom control
+      // bound to `context.value` as a fully controlled `.value=` never reverts mid-delay across an
+      // unrelated re-render.
+      const pending = this.debounceControllers.get(def.filterId)?.pendingValue;
+      const effectiveValue = pending !== undefined ? pending : value;
       const context: LyraFilterBarCustomControlContext = {
         filterId: def.filterId,
         label: def.label,
         definition: def,
-        value,
+        value: effectiveValue,
         disabled: this.disabled,
         required: Boolean(def.required),
         errorText,
@@ -1753,7 +1800,7 @@ export class LyraFilterBar<
             generation === this.schemaGeneration &&
             !signal.aborted &&
             this._filters.includes(def)
-          ) onFocusout();
+          ) this.onFieldFocusout(def.filterId);
         },
       };
       return html`<div

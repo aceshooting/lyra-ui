@@ -848,6 +848,32 @@ assert.ok(
   'SSR support must not exceed the approved 19 evidence-backed client fallbacks'
 );
 
+// Every render-and-hydrate tag must carry an explicit 'static-safe'/'hydration-required'
+// classification -- either a non-empty LYRA_SSR_TAG_CAPABILITIES entry or membership in
+// LYRA_SSR_AUDITED_STATIC_SAFE_TAGS. A tag in neither is unaudited and fails closed here instead
+// of silently reading as 'static-safe'.
+const staticSafetyResult = loader.buildLyraSsrStaticSafety(
+  loader.LYRA_SSR_RENDER_AND_HYDRATE_TAGS,
+  loader.LYRA_SSR_TAG_CAPABILITIES,
+  loader.LYRA_SSR_AUDITED_STATIC_SAFE_TAGS
+);
+assert.deepEqual(
+  staticSafetyResult.unaudited,
+  [],
+  `SSR static safety is unaudited for: ${staticSafetyResult.unaudited.join(', ')}`
+);
+assert.deepEqual(
+  loader.LYRA_SSR_SUPPORT_MATRIX.declarativeShadowDom.staticSafety,
+  staticSafetyResult.classification,
+  'LYRA_SSR_SUPPORT_MATRIX.declarativeShadowDom.staticSafety must match the derived classification'
+);
+const staticSafeCount = Object.values(staticSafetyResult.classification).filter(
+  (value) => value === 'static-safe'
+).length;
+const hydrationRequiredCount = Object.values(staticSafetyResult.classification).filter(
+  (value) => value === 'hydration-required'
+).length;
+
 for (const tag of [
   'lr-bar-chart',
   'lr-box-plot',
@@ -1067,5 +1093,6 @@ assert.equal(
 console.log(
   `SSR imports and render matrix passed: ${loader.LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length} ` +
     `declarative-shadow-DOM tags + ${loader.LYRA_SSR_CLIENT_RENDER_TAGS.length} client fallbacks; ` +
-    `${publicStateCases.length} public boolean/enum states.`
+    `${publicStateCases.length} public boolean/enum states; ` +
+    `static safety ${staticSafeCount} static-safe / ${hydrationRequiredCount} hydration-required.`
 );

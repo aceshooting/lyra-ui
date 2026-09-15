@@ -50,7 +50,12 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   row-height scale)
 - `mode: 'swatch' | 'gemstone' = 'swatch'` (reflected) — `swatch` preserves the plain-circle
   default. `gemstone` renders the shared glyph for options carrying a `gemstone` key and enables
-  the selected glow/shine defaults.
+  the selected glow/shine defaults. That automatic glyph's checked-state halo/shine is the exact
+  `gemstoneSelectedGlyphStyles` stylesheet the theme module also exports standalone (see
+  `theme/gemstones.js` below), so a glyph rendered elsewhere on the page — e.g. a header trigger
+  showing the current selection — can match this picker exactly by consuming the same export. An
+  explicit `icon` on a `gemstone`-mode item is a consumer shape, not that shared glyph, and keeps
+  this picker's own generic selected-icon glow instead (see `--lr-swatch-picker-gemstone-*` below).
 - `accessibleLabel: string = ''` (attribute `aria-label`) — accessible name copied to the internal
   `role="radiogroup"`; attribute presence wins, including an explicitly empty name.
 - The 9.x compatibility aliases were removed in 10.0.0: `options` is `items`, the exported
@@ -94,20 +99,27 @@ Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the two nev
 selected swatch, defaults to `--lr-color-brand`, themeable independently of the focus ring),
 `--lr-swatch-picker-selected-blur` (default `0` — a crisp ring; set a real length such as `0.4rem`
 for a soft glow. It is the blur radius of `swatch-fill`'s `box-shadow` ring, and of the equivalent
-`drop-shadow()` used for `swatch-icon`, since `box-shadow` can't follow a slotted icon's real
-shape), `--lr-swatch-picker-shine-duration` (default `0s`, a no-op; set a duration such as `1.6s`
-for a looping brighten-and-settle pulse on the selected swatch. It drives a separate
-`filter: brightness()` keyframe rather than `box-shadow`, so it composes with the blur token and
-works identically for a fill and an icon; disabled outright under `prefers-reduced-motion: reduce`,
-which also drops the hover/selection scale transition), `--lr-swatch-picker-hit-size` (hit-area
+`drop-shadow()` used for a `swatch-icon` rendering a consumer-supplied `icon`, since `box-shadow`
+can't follow a slotted icon's real shape), `--lr-swatch-picker-shine-duration` (default `0s`, a
+no-op; set a duration such as `1.6s` for a looping brighten-and-settle pulse on the selected
+swatch. It drives a separate `filter: brightness()` keyframe rather than `box-shadow`, so it
+composes with the blur token and works identically for a fill and a consumer-supplied icon;
+disabled outright under `prefers-reduced-motion: reduce`, which also drops the hover/selection
+scale transition), `--lr-swatch-picker-hit-size` (hit-area
 size; its private default follows `size`), `--lr-swatch-picker-fill-size` (visible fill/icon
 diameter; its private default follows `size`; set this hook on an ancestor/direct host to override
 every tier, or `--lr-theme-swatch-picker-fill-size` on an ancestor for a shared default),
-`--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
-gemstone mode), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in gemstone mode);
+`--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in gemstone mode, aliased
+onto the shared `--lr-gemstone-selected-blur` so the two cannot drift apart — applies to a plain
+color-fill swatch and to a consumer-supplied `icon` override in gemstone mode, NOT to the
+automatic gemstone glyph itself), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in
+gemstone mode, same aliasing and scope as `--lr-swatch-picker-gemstone-selected-blur`);
 plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
 `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,
-and the per-tier `--lr-size-*` tokens.
+and the per-tier `--lr-size-*` tokens. The automatic gemstone glyph's own checked-state halo/shine
+is themed independently, through `--lr-gemstone-selected-color`/`-blur`/`-shine-duration` — see
+`theme/gemstones.js`'s `gemstoneSelectedGlyphStyles` below, the exact stylesheet this picker
+includes in its own `static styles` for that glyph.
 
 **Optional peer deps:** none.
 
@@ -145,6 +157,26 @@ picker.items = order.map((key) => ({
 picker.value = "ruby";
 ```
 
+To match this picker's checked-glyph halo/shine on a `gemstoneGlyph()` rendered anywhere else
+(e.g. a header trigger button showing the current selection before it opens the picker in a
+popover), import both Lit-based exports and reuse them directly instead of re-authoring the
+treatment: `gemstoneGlyph()` for the markup and `gemstoneSelectedGlyphStyles` — a `CSSResult` — in
+the consuming component's own `static styles`, then toggle the `data-lr-gemstone-selected` boolean
+attribute on the element wrapping the rendered glyph to switch the halo/shine on:
+
+```ts
+import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from "@aceshooting/lyra-ui/theme/gemstones.js";
+
+class AccentTrigger extends LitElement {
+  static styles = [gemstoneSelectedGlyphStyles];
+  render() {
+    return html`<button ?data-lr-gemstone-selected=${this.hasSelection}>
+      ${gemstoneGlyph()}
+    </button>`;
+  }
+}
+```
+
 **Known gotchas:**
 
 - arrow-key navigation cycles (past the last swatch wraps to the first, and vice versa) rather than
@@ -164,6 +196,10 @@ picker.value = "ruby";
   selectors, so that combinator can silently fail to match depending on the engine.
 - the semantic `radiogroup` lives inside shadow DOM. Set `accessibleLabel` or a host `aria-label`;
   the component deliberately forwards the resulting name to that internal role.
+- the automatic gemstone glyph's checked-state halo/shine is themed through
+  `--lr-gemstone-selected-color`/`-blur`/`-shine-duration`, not through
+  `--lr-swatch-picker-selected-*`/`-gemstone-*` — those style a plain color-fill swatch or a
+  consumer-supplied `icon` override instead, even while `mode="gemstone"`.
 
 **Additional API surface:**
 

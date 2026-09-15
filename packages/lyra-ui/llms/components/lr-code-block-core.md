@@ -75,12 +75,15 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract, identical to `<lr-code-block>`.
-- `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
-  instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
-  (the default) never highlights at all — every `language` renders the plain-text fallback.
+- `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) — grammar definitions this
+  instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`), or a
+  lazy loader per key, e.g. `{ bash: () => import('@shikijs/langs/bash') }` — called at most once
+  per key, memoized, the first time a fenced block actually requests that language. Empty
+  (the default) never highlights at all — every `language` renders the plain-text fallback, and so
+  does a key whose lazy loader rejects.
   If `languages` changes while highlighting is loading, only results for the current map can update
   the displayed code. For a
-  TypeScript annotation, use `import type { ShikiLanguageInput } from
+  TypeScript annotation, use `import type { ShikiLanguageSource } from
 '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
   granular import emits no registration side effect.
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — identical to
@@ -115,9 +118,11 @@ for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must 
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
 definite-height host gives it too, identically to `<lr-code-block>` above.
 
-**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`,
-`shiki/wasm`, and `shiki/themes/github-{light,dark}.mjs` subpaths — never `shiki`'s main entry point,
-which is what carries the ~200-language table this component exists to avoid). Building the
+**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, the binary
+`shiki/onig.wasm` asset (the default; select `shiki/engine/javascript` instead via
+`setShikiCoreEngine('javascript')`), and `shiki/themes/github-{light,dark}.mjs` subpaths — never
+`shiki`'s main entry point, which is what carries the ~200-language table this component exists to
+avoid). Building the
 fine-grained highlighter is cached per `languages` object identity. A bounded weak cache also shares
 recently used equivalent, deeply frozen plain grammar maps, including the detached snapshots owned
 by separate component instances. Grammar contents and property/array order must agree completely;

@@ -24838,7 +24838,7 @@
           {
             "name": "languages",
             "attribute": null,
-            "type": "Readonly<Record< string, ShikiLanguageInput >>",
+            "type": "Readonly<Record< string, ShikiLanguageSource >>",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -44486,6 +44486,320 @@
       }
     },
     {
+      "tag": "lr-drop-zone",
+      "family": "media",
+      "classModule": "src/components/media/drop-zone/drop-zone.class.ts",
+      "registrationModule": "src/components/media/drop-zone/drop-zone.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "accept",
+            "property": "accept",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "max-file-size",
+            "property": "maxFileSize",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "max-files",
+            "property": "maxFiles",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "max-total-size",
+            "property": "maxTotalSize",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "multiple",
+            "property": "multiple",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          }
+        ],
+        "properties": [
+          {
+            "name": "accept",
+            "attribute": "accept",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dragging",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "maxFiles",
+            "attribute": "max-files",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "maxFileSize",
+            "attribute": "max-file-size",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "maxTotalSize",
+            "attribute": "max-total-size",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "multiple",
+            "attribute": "multiple",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          },
+          {
+            "name": "overlay",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-files",
+            "type": "LyraDropZoneFilesEvent",
+            "cancelable": "never"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "overlay",
+            "deprecated": null
+          },
+          {
+            "name": "overlay-icon",
+            "deprecated": null
+          },
+          {
+            "name": "overlay-text",
+            "deprecated": null
+          },
+          {
+            "name": "rejection",
+            "deprecated": null
+          },
+          {
+            "name": "status",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-drop-zone-accept-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in srgb, var(--lr-color-success) 12%, transparent)"
+          },
+          {
+            "name": "--lr-drop-zone-accept-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-success)"
+          },
+          {
+            "name": "--lr-drop-zone-overlay-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in srgb, var(--lr-color-brand) 8%, transparent)"
+          },
+          {
+            "name": "--lr-drop-zone-overlay-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-drop-zone-overlay-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-md-sm)"
+          },
+          {
+            "name": "--lr-drop-zone-overlay-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-drop-zone-overlay-icon-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-xl)"
+          },
+          {
+            "name": "--lr-drop-zone-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-drop-zone-reject-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in srgb, var(--lr-color-danger) 12%, transparent)"
+          },
+          {
+            "name": "--lr-drop-zone-reject-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          }
+        ],
+        "cssStates": [
+          {
+            "name": "dragging",
+            "deprecated": null
+          }
+        ],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [
+            "disabled"
+          ],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-dropdown",
       "family": "overlays",
       "classModule": "src/components/overlays/overlay/dropdown.class.ts",
@@ -45641,6 +45955,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-menu-item-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab,var(--lr-menu-item-hover-bg,var(--lr-color-brand-quiet)),var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
           {
             "name": "--lr-menu-item-checked-bg",
             "deprecated": null,
@@ -50734,6 +51054,26 @@
             "default": 0
           },
           {
+            "name": "max-files",
+            "property": "maxFiles",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "max-total-size",
+            "property": "maxTotalSize",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
             "name": "multiple",
             "property": "multiple",
             "type": "boolean",
@@ -50752,6 +51092,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "non-retaining",
+            "property": "nonRetaining",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "paste",
@@ -50791,6 +51141,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "value-present",
+            "property": "valuePresent",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "with-error",
@@ -51019,8 +51379,28 @@
             "default": ""
           },
           {
+            "name": "maxFiles",
+            "attribute": "max-files",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
             "name": "maxFileSize",
             "attribute": "max-file-size",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "maxTotalSize",
+            "attribute": "max-total-size",
             "type": "number",
             "readonly": false,
             "reflects": false,
@@ -51047,6 +51427,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "nonRetaining",
+            "attribute": "non-retaining",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "paste",
@@ -51123,6 +51513,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "valuePresent",
+            "attribute": "value-present",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "willValidate",
@@ -51221,9 +51621,8 @@
           },
           {
             "name": "lr-files",
-            "type": "CustomEvent<LyraFileInputFilesDetail>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
+            "type": "LyraFileInputFilesEvent",
+            "cancelable": "never"
           },
           {
             "name": "lr-invalid",
@@ -51658,6 +52057,22 @@
           {
             "module": "src/components/media/file-input/file-input.class.ts",
             "name": "DEFAULT_MAX_FILE_SIZE_BYTES",
+            "kind": "variable",
+            "type": "unknown",
+            "readonly": false,
+            "deprecated": null
+          },
+          {
+            "module": "src/components/media/file-input/file-input.class.ts",
+            "name": "DEFAULT_MAX_FILES",
+            "kind": "variable",
+            "type": "number",
+            "readonly": false,
+            "deprecated": null
+          },
+          {
+            "module": "src/components/media/file-input/file-input.class.ts",
+            "name": "DEFAULT_MAX_TOTAL_SIZE_BYTES",
             "kind": "variable",
             "type": "unknown",
             "readonly": false,
@@ -64169,6 +64584,15 @@
             "default": null
           },
           {
+            "name": "debounce",
+            "property": "debounce",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "default-value",
             "property": "defaultValue",
             "type": "string",
@@ -64583,6 +65007,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "debounce",
+            "attribute": "debounce",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "defaultValue",
@@ -65106,6 +65539,12 @@
           },
           {
             "name": "lr-input",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input-settled",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -72738,7 +73177,7 @@
           {
             "name": "languages",
             "attribute": null,
-            "type": "Readonly<Record<string, ShikiLanguageInput>> | undefined",
+            "type": "Readonly<Record<string, ShikiLanguageSource>> | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -73334,7 +73773,7 @@
           {
             "name": "languages",
             "attribute": null,
-            "type": "Readonly<Record<string, ShikiLanguageInput>> | undefined",
+            "type": "Readonly<Record<string, ShikiLanguageSource>> | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -75468,6 +75907,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-menu-item-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab,var(--lr-menu-item-hover-bg,var(--lr-color-brand-quiet)),var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
           {
             "name": "--lr-menu-item-checked-bg",
             "deprecated": null,
@@ -79435,6 +79880,15 @@
             "default": null
           },
           {
+            "name": "debounce",
+            "property": "debounce",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "default-value",
             "property": "defaultValue",
             "type": "string",
@@ -79848,6 +80302,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "debounce",
+            "attribute": "debounce",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "defaultValue",
@@ -80344,6 +80807,12 @@
           },
           {
             "name": "lr-input",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input-settled",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -81909,6 +82378,15 @@
             "default": null
           },
           {
+            "name": "debounce",
+            "property": "debounce",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "default-value",
             "property": "defaultValue",
             "type": "string",
@@ -82343,6 +82821,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "debounce",
+            "attribute": "debounce",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "defaultValue",
@@ -82875,6 +83362,12 @@
           },
           {
             "name": "lr-input",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input-settled",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -115126,6 +115619,15 @@
             "default": "auto"
           },
           {
+            "name": "languages",
+            "attribute": null,
+            "type": "Readonly<Record<string, ShikiLanguageInput>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
@@ -115186,6 +115688,226 @@
         "moduleExports": [
           {
             "module": "src/components/conversation/streaming-text/streaming-text.class.ts",
+            "name": "looksLikeMarkdown",
+            "kind": "function",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "text",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          }
+        ],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
+      "tag": "lr-streaming-text-core",
+      "family": "conversation",
+      "classModule": "src/components/conversation/streaming-text/streaming-text-core.class.ts",
+      "registrationModule": "src/components/conversation/streaming-text/streaming-text-core.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [
+        "dompurify",
+        "katex",
+        "marked",
+        "shiki"
+      ],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-markdown-core"
+        ],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "coalesce-ms",
+            "property": "coalesceMs",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 50
+          },
+          {
+            "name": "content",
+            "property": "content",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "content-mode",
+            "property": "contentMode",
+            "type": "StreamingTextContentMode",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "streaming",
+            "property": "streaming",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "coalesceMs",
+            "attribute": "coalesce-ms",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 50
+          },
+          {
+            "name": "content",
+            "attribute": "content",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "contentMode",
+            "attribute": "content-mode",
+            "type": "StreamingTextContentMode",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "languages",
+            "attribute": null,
+            "type": "Readonly<Record<string, ShikiLanguageInput>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "streaming",
+            "attribute": "streaming",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "slots": [],
+        "events": [
+          {
+            "name": "lr-content-settled",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "cursor",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-inline-cursor-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-1em)"
+          },
+          {
+            "name": "--lr-inline-cursor-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-125rem)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [
+          {
+            "module": "src/components/conversation/streaming-text/streaming-text-core.class.ts",
             "name": "looksLikeMarkdown",
             "kind": "function",
             "overloads": [
@@ -116284,13 +117006,13 @@
             "name": "--lr-swatch-picker-gemstone-selected-blur",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-size-0-5rem)"
+            "default": "var(--lr-gemstone-selected-blur, var(--lr-size-0-5rem))"
           },
           {
             "name": "--lr-swatch-picker-gemstone-shine-duration",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-transition-ambient)"
+            "default": "var(--lr-gemstone-selected-shine-duration, var(--lr-transition-ambient))"
           },
           {
             "name": "--lr-swatch-picker-hit-size",
@@ -121427,6 +122149,15 @@
             "default": null
           },
           {
+            "name": "debounce",
+            "property": "debounce",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "default-value",
             "property": "defaultValue",
             "type": "string",
@@ -121775,6 +122506,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "debounce",
+            "attribute": "debounce",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "defaultValue",
@@ -122199,6 +122939,12 @@
           },
           {
             "name": "lr-input",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input-settled",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"

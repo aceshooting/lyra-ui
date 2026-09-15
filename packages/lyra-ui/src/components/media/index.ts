@@ -5,6 +5,7 @@ export * from './attachment-trigger/attachment-trigger.js';
 export * from './av-player/av-player.js';
 export * from './avatar/avatar.js';
 export * from './avatar-group/avatar-group.js';
+export * from './drop-zone/drop-zone.js';
 export * from './file-icon/file-icon.js';
 export * from './file-input/file-input.js';
 export * from './flag/flag.js';

@@ -156,6 +156,34 @@ export const ClearableWithAdornments: Story = {
 };
 
 /**
+ * `debounce` coalesces rapid keystrokes into one `lr-input-settled` after the pause, while
+ * `input`/`lr-input` keep firing on every keystroke. A blur or Enter flushes a pending debounce
+ * immediately, and a programmatic `value` write cancels it with no stray settle.
+ */
+export const Debounce: Story = {
+  render: () => {
+    const onSettled = (event: Event) => {
+      const root = (event.currentTarget as HTMLElement).closest('[data-debounce-story]')!;
+      root.querySelector('output')!.textContent =
+        `lr-input-settled: ${(event as CustomEvent<{ value: string }>).detail.value}`;
+    };
+    return html`
+      <div data-debounce-story style="display:grid; gap:0.5rem; max-inline-size:20rem">
+        <lr-input
+          type="search"
+          clearable
+          debounce="300"
+          label="Search"
+          placeholder="Type to filter…"
+          @lr-input-settled=${onSettled}
+        ></lr-input>
+        <output>lr-input-settled: (none yet)</output>
+      </div>
+    `;
+  },
+};
+
+/**
  * `size` walks the library's one form-control ladder. Every tier matches both its canonical step
  * and Web Awesome's/Shoelace's name for it, so migrating markup that says `size="small"` renders
  * exactly what `size="s"` renders. The same ladder backs `<lr-button>`, `<lr-select>` and

@@ -160,6 +160,7 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
     if (typeof getLocaleDirection !== 'function') throw new Error('Missing getLyraLocaleDirection export');
     expect(getLocaleDirection('en')).to.equal('ltr');
     expect(typeof localization['getRegisteredLyraLocales']).to.equal('function');
+    expect(typeof localization['getRegisteredLyraLocaleKeys']).to.equal('function');
     expect(typeof localization['subscribeLyraLocaleRegistry']).to.equal('function');
     expect(typeof localization['resolveLyraLocale']).to.equal('function');
     expect(typeof localization['resolveLyraDirection']).to.equal('function');
@@ -171,6 +172,7 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
     expect(typeof utilities['FormAssociated']).to.equal('function');
     expect(typeof utilities['groupByRecency']).to.equal('function');
     expect(typeof utilities['LyraElement']).to.equal('function');
+    expect(typeof utilities['resolveLyraScopedString']).to.equal('function');
     expect(typeof positioner['place']).to.equal('function');
     for (const name of [
       'agentStatusKind',

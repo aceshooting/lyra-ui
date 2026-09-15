@@ -75,6 +75,7 @@ import type { LyraPushToTalk, LyraPushToTalkEventMap } from './components/conver
 import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from './components/conversation/realtime-session/realtime-session.class.js';
 import type { LyraSelectionToolbar, LyraSelectionToolbarEventMap } from './components/conversation/selection-toolbar/selection-toolbar.class.js';
 import type { LyraStreamStatus, LyraStreamStatusEventMap } from './components/conversation/stream-status/stream-status.class.js';
+import type { LyraStreamingTextCore, LyraStreamingTextCoreEventMap } from './components/conversation/streaming-text/streaming-text-core.class.js';
 import type { LyraStreamingText, LyraStreamingTextEventMap } from './components/conversation/streaming-text/streaming-text.class.js';
 import type { LyraSuggestionChips, LyraSuggestionChipsEventMap } from './components/conversation/suggestion-chips/suggestion-chips.class.js';
 import type { LyraThreadList, LyraThreadListEventMap } from './components/conversation/thread-list/thread-list.class.js';
@@ -181,6 +182,7 @@ import type { LyraAttachmentTrigger, LyraAttachmentTriggerEventMap } from './com
 import type { LyraAvPlayer, LyraAvPlayerEventMap } from './components/media/av-player/av-player.class.js';
 import type { LyraAvatarGroup, LyraAvatarGroupEventMap } from './components/media/avatar-group/avatar-group.class.js';
 import type { LyraAvatar, LyraAvatarEventMap } from './components/media/avatar/avatar.class.js';
+import type { LyraDropZone, LyraDropZoneEventMap } from './components/media/drop-zone/drop-zone.class.js';
 import type { LyraFileIcon } from './components/media/file-icon/file-icon.class.js';
 import type { LyraFileInput, LyraFileInputEventMap } from './components/media/file-input/file-input.class.js';
 import type { LyraFlag } from './components/media/flag/flag.class.js';
@@ -3908,6 +3910,36 @@ never,
   }
 >;
 
+export type LyraDropZoneSvelteProps = LyraSvelteElementProps<
+  LyraDropZone,
+  | 'accept'
+  | 'disabled'
+  | 'locale'
+  | 'maxFiles'
+  | 'maxFileSize'
+  | 'maxTotalSize'
+  | 'multiple'
+  | 'strings',
+  {},
+  LyraDropZoneEventMap,
+  | 'lr-files',
+  | '--lr-drop-zone-accept-bg'
+  | '--lr-drop-zone-accept-border-color'
+  | '--lr-drop-zone-overlay-bg'
+  | '--lr-drop-zone-overlay-border-color'
+  | '--lr-drop-zone-overlay-font-size'
+  | '--lr-drop-zone-overlay-gap'
+  | '--lr-drop-zone-overlay-icon-size'
+  | '--lr-drop-zone-radius'
+  | '--lr-drop-zone-reject-bg'
+  | '--lr-drop-zone-reject-border-color',
+  {
+    'max-file-size'?: LyraDropZone['maxFileSize'];
+    'max-files'?: LyraDropZone['maxFiles'];
+    'max-total-size'?: LyraDropZone['maxTotalSize'];
+  }
+>;
+
 export type LyraDropdownSvelteProps = LyraSvelteElementProps<
   LyraDropdown,
   | 'accessibleLabel'
@@ -3988,6 +4020,7 @@ export type LyraDropdownItemSvelteProps = LyraSvelteElementProps<
   | 'focus'
   | 'lr-menu-item-change'
   | 'lr-menu-item-state-change',
+  | '--lr-menu-item-active-bg'
   | '--lr-menu-item-checked-bg'
   | '--lr-menu-item-checked-color'
   | '--lr-menu-item-checked-font-weight'
@@ -4427,9 +4460,12 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
   | 'hint'
   | 'label'
   | 'locale'
+  | 'maxFiles'
   | 'maxFileSize'
+  | 'maxTotalSize'
   | 'multiple'
   | 'name'
+  | 'nonRetaining'
   | 'paste'
   | 'rejectedMessage'
   | 'required'
@@ -4437,6 +4473,7 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
   | 'strings'
   | 'validationTarget'
   | 'validators'
+  | 'valuePresent'
   | 'withError'
   | 'withHint'
   | 'withLabel',
@@ -4477,7 +4514,11 @@ export type LyraFileInputSvelteProps = LyraSvelteElementProps<
     'custom-error'?: LyraFileInput['customError'];
     'error-text'?: LyraFileInput['errorText'];
     'max-file-size'?: LyraFileInput['maxFileSize'];
+    'max-files'?: LyraFileInput['maxFiles'];
+    'max-total-size'?: LyraFileInput['maxTotalSize'];
+    'non-retaining'?: LyraFileInput['nonRetaining'];
     'rejected-message'?: LyraFileInput['rejectedMessage'];
+    'value-present'?: LyraFileInput['valuePresent'];
     'with-error'?: LyraFileInput['withError'];
     'with-hint'?: LyraFileInput['withHint'];
     'with-label'?: LyraFileInput['withLabel'];
@@ -5557,6 +5598,7 @@ export type LyraInputSvelteProps = LyraSvelteElementProps<
   | 'autofocus'
   | 'clearable'
   | 'customError'
+  | 'debounce'
   | 'defaultValue'
   | 'disabled'
   | 'enterkeyhint'
@@ -5610,6 +5652,7 @@ export type LyraInputSvelteProps = LyraSvelteElementProps<
   | 'lr-change'
   | 'lr-clear'
   | 'lr-input'
+  | 'lr-input-settled'
   | 'lr-invalid',
   | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
@@ -6482,6 +6525,7 @@ export type LyraMenuItemSvelteProps = LyraSvelteElementProps<
   LyraMenuItemEventMap,
   | 'lr-menu-item-change'
   | 'lr-menu-item-state-change',
+  | '--lr-menu-item-active-bg'
   | '--lr-menu-item-checked-bg'
   | '--lr-menu-item-checked-color'
   | '--lr-menu-item-checked-font-weight'
@@ -6818,6 +6862,7 @@ export type LyraNativeTimeInputSvelteProps = LyraSvelteElementProps<
   | 'autofocus'
   | 'clearable'
   | 'customError'
+  | 'debounce'
   | 'defaultValue'
   | 'disabled'
   | 'enterkeyhint'
@@ -6870,6 +6915,7 @@ export type LyraNativeTimeInputSvelteProps = LyraSvelteElementProps<
   | 'lr-change'
   | 'lr-clear'
   | 'lr-input'
+  | 'lr-input-settled'
   | 'lr-invalid',
   | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
@@ -7001,6 +7047,7 @@ export type LyraNumberInputSvelteProps = LyraSvelteElementProps<
   | 'autofocus'
   | 'clearable'
   | 'customError'
+  | 'debounce'
   | 'defaultValue'
   | 'disabled'
   | 'enterkeyhint'
@@ -7056,6 +7103,7 @@ export type LyraNumberInputSvelteProps = LyraSvelteElementProps<
   | 'lr-change'
   | 'lr-clear'
   | 'lr-input'
+  | 'lr-input-settled'
   | 'lr-invalid',
   | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
@@ -9665,6 +9713,7 @@ export type LyraStreamingTextSvelteProps = LyraSvelteElementProps<
   | 'coalesceMs'
   | 'content'
   | 'contentMode'
+  | 'languages'
   | 'locale'
   | 'streaming'
   | 'strings',
@@ -9676,6 +9725,26 @@ export type LyraStreamingTextSvelteProps = LyraSvelteElementProps<
   {
     'coalesce-ms'?: LyraStreamingText['coalesceMs'];
     'content-mode'?: LyraStreamingText['contentMode'];
+  }
+>;
+
+export type LyraStreamingTextCoreSvelteProps = LyraSvelteElementProps<
+  LyraStreamingTextCore,
+  | 'coalesceMs'
+  | 'content'
+  | 'contentMode'
+  | 'languages'
+  | 'locale'
+  | 'streaming'
+  | 'strings',
+  {},
+  LyraStreamingTextCoreEventMap,
+  | 'lr-content-settled',
+  | '--lr-inline-cursor-height'
+  | '--lr-inline-cursor-width',
+  {
+    'coalesce-ms'?: LyraStreamingTextCore['coalesceMs'];
+    'content-mode'?: LyraStreamingTextCore['contentMode'];
   }
 >;
 
@@ -10205,6 +10274,7 @@ export type LyraTextareaSvelteProps = LyraSvelteElementProps<
   | 'autocorrect'
   | 'autofocus'
   | 'customError'
+  | 'debounce'
   | 'defaultValue'
   | 'disabled'
   | 'enterkeyhint'
@@ -10250,6 +10320,7 @@ export type LyraTextareaSvelteProps = LyraSvelteElementProps<
   | 'input'
   | 'lr-change'
   | 'lr-input'
+  | 'lr-input-settled'
   | 'lr-invalid',
   | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
@@ -11638,6 +11709,7 @@ export interface LyraSvelteElements {
   'lr-doughnut-chart': LyraDoughnutChartSvelteProps;
   'lr-drawer': LyraDrawerSvelteProps;
   'lr-drilldown-panel': LyraDrilldownPanelSvelteProps;
+  'lr-drop-zone': LyraDropZoneSvelteProps;
   'lr-dropdown': LyraDropdownSvelteProps;
   'lr-dropdown-item': LyraDropdownItemSvelteProps;
   'lr-ebook-viewer': LyraEbookViewerSvelteProps;
@@ -11790,6 +11862,7 @@ export interface LyraSvelteElements {
   'lr-stepper': LyraStepperSvelteProps;
   'lr-stream-status': LyraStreamStatusSvelteProps;
   'lr-streaming-text': LyraStreamingTextSvelteProps;
+  'lr-streaming-text-core': LyraStreamingTextCoreSvelteProps;
   'lr-subagent-panel': LyraSubagentPanelSvelteProps;
   'lr-suggestion-chips': LyraSuggestionChipsSvelteProps;
   'lr-svg-viewer': LyraSvgViewerSvelteProps;
@@ -11927,6 +12000,7 @@ export interface LyraElementTagNameMap {
   'lr-doughnut-chart': LyraDoughnutChart;
   'lr-drawer': LyraDrawer;
   'lr-drilldown-panel': LyraDrilldownPanel;
+  'lr-drop-zone': LyraDropZone;
   'lr-dropdown': LyraDropdown;
   'lr-dropdown-item': LyraDropdownItem;
   'lr-ebook-viewer': LyraEbookViewer;
@@ -12079,6 +12153,7 @@ export interface LyraElementTagNameMap {
   'lr-stepper': LyraStepper;
   'lr-stream-status': LyraStreamStatus;
   'lr-streaming-text': LyraStreamingText;
+  'lr-streaming-text-core': LyraStreamingTextCore;
   'lr-subagent-panel': LyraSubagentPanel;
   'lr-suggestion-chips': LyraSuggestionChips;
   'lr-svg-viewer': LyraSvgViewer;

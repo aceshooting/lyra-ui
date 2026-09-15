@@ -9,6 +9,7 @@
 export {
   getLyraLocale,
   getLyraLocaleDirection,
+  getRegisteredLyraLocaleKeys,
   getRegisteredLyraLocales,
   registerLyraLocale,
   resolveLyraDirection,

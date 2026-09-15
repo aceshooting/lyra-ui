@@ -23,7 +23,7 @@ import type {
   LyraAnchor,
   LyraAnchorKind,
 } from '../../viewers/document-viewer/anchors.js';
-import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
+import type { ShikiLanguageSource } from '../code-block/shiki-types.js';
 import type {
   LyraMarkedParser,
   MarkdownDeps,
@@ -181,7 +181,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract headingOffset: number;
   abstract streaming: boolean;
   abstract highlightCode: boolean;
-  abstract languages?: Readonly<Record<string, ShikiLanguageInput>>;
+  abstract languages?: Readonly<Record<string, ShikiLanguageSource>>;
   abstract headingAnchors: boolean;
   abstract math: boolean;
 
@@ -196,7 +196,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   /** Performs only the variant-specific Shiki loading/tokenization step. */
   protected abstract tokenizePendingHighlight(
     pending: PendingHighlight,
-    languages: Readonly<Record<string, ShikiLanguageInput>> | undefined,
+    languages: Readonly<Record<string, ShikiLanguageSource>> | undefined,
     isCurrent: () => boolean
   ): Promise<MarkdownHighlightAttempt>;
 

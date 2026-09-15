@@ -43,7 +43,9 @@ wrapper without being shadowed by the subclass.
 
 **Events:** native-style `input` and `change`; bubbling, composed `focus` and `blur` bridges; the
 `lr-input` / `lr-change` aliases with `{ value }`;
-`lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails.
+`lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails. It also inherits `lr-input-settled` (`detail: { value }`, non-cancelable), which fires once
+`debounce` ms after the last keystroke when `debounce` is set; see `lr-input`'s own `debounce`
+entry for the flush and cancellation rules.
 
 **CSS parts:** all inherited `lr-input` parts, plus `time-input` on the same control-row node as
 `base` and `input-wrapper`.

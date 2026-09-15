@@ -114,18 +114,18 @@ describe('gemstoneSelectedGlyphStyles', () => {
   });
 
   // The reason this export exists is that a consumer rendering the same glyph outside a picker had
-  // to fork the treatment and could then drift from it. `lr-swatch-picker` does NOT import this
-  // stylesheet: its own rule is a mode-parameterized treatment for ANY icon swatch (blur 0 and
-  // shine 0s by default, overridden only for gemstone mode), so importing a fixed gemstone preset
-  // would leave it needing both rules rather than one. What actually has to hold is that the two
-  // resolve to the SAME gemstone values, which is what this pins -- both sides currently reach it
-  // by referencing the same underlying tokens, so a change to either side alone fails here.
+  // to fork the treatment and could then drift from it. `lr-swatch-picker` now consumes this exact
+  // export for its own automatic gemstone glyph (an item with a `gemstone` key and no `icon`
+  // override): it includes `gemstoneSelectedGlyphStyles` in `static styles` and sets
+  // `data-lr-gemstone-selected` on that swatch's checked icon, the same attribute this file's own
+  // probe wires up above -- so this pins actual shared consumption, not merely coincidentally
+  // matching values, by also asserting the two resolve to the identical named keyframe.
   it('paints the same halo and shine lr-swatch-picker gives its own selected gemstone swatch', async () => {
     const picker = await fixture<HTMLElement & { items: unknown; value: string | null }>(
       html`<lr-swatch-picker mode="gemstone"></lr-swatch-picker>`
     );
     picker.items = [
-      { value: 'sapphire', color: '#035ec6', label: 'Sapphire', icon: gemstoneGlyph() },
+      { value: 'sapphire', color: '#035ec6', label: 'Sapphire', gemstone: 'sapphire' },
     ];
     picker.value = 'sapphire';
     await (picker as unknown as { updateComplete: Promise<unknown> }).updateComplete;
@@ -133,6 +133,10 @@ describe('gemstoneSelectedGlyphStyles', () => {
       '[part="swatch"][aria-checked="true"] [part="swatch-icon"]'
     ) as HTMLElement | null;
     expect(pickerIcon != null, 'expected a checked gemstone swatch icon').to.equal(true);
+    expect(
+      pickerIcon!.hasAttribute('data-lr-gemstone-selected'),
+      'expected the picker to set the shared selector attribute, not repaint via a private rule'
+    ).to.equal(true);
     const pickerPaint = getComputedStyle(pickerIcon!);
 
     const probe = await fixture<GemstoneGlyphProbe>(
@@ -141,6 +145,16 @@ describe('gemstoneSelectedGlyphStyles', () => {
     const probePaint = getComputedStyle(
       probe.shadowRoot!.querySelector('span') as HTMLElement
     );
+
+    // The SAME named keyframe, not merely one that happens to compute the same values -- proves
+    // the picker's checked glyph is actually painted by the imported gemstoneSelectedGlyphStyles
+    // rule rather than by a private lr-swatch-picker-* keyframe that was independently kept in
+    // sync by hand.
+    expect(
+      pickerPaint.animationName,
+      'expected the picker to run the shared gemstone keyframe'
+    ).to.equal('lr-gemstone-selected-shine');
+    expect(probePaint.animationName).to.equal(pickerPaint.animationName);
 
     // Compare the WHOLE rendered filter, not the token names either side references and not a
     // substring of it. Reading the tokens directly would still pass if this export were repointed

@@ -1,4 +1,5 @@
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { unwrapOptionalPeerDefault } from '../../../internal/optional-peer-capabilities.js';
 
 /**
  * The peer-neutral highlighter capability used by Lyra's code-rendering components.
@@ -55,6 +56,20 @@ export type ShikiLanguageInput =
   | ShikiLanguageRegistration
   | readonly ShikiLanguageRegistration[];
 
+/** A `languages` entry that hasn't been imported/resolved yet -- called at most once per
+ *  distinct (`HighlighterCore`, normalized key) pair, the first time that key is actually
+ *  requested (see `ensureShikiLanguageLoaded()`). May return either a grammar directly or an ES
+ *  module namespace/default-export wrapper around one, matching a plain
+ *  `() => import('@shikijs/langs/<name>')` call site verbatim -- no `.then(m => m.default)`
+ *  required from the caller. */
+export type ShikiLanguageLoader = () => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>;
+
+/** One `languages` map entry: either an already-resolved grammar (today's contract, seeded eagerly
+ *  into the `HighlighterCore` at creation) or a {@link ShikiLanguageLoader}, resolved and loaded
+ *  into the core lazily via `HighlighterCore.loadLanguage()` the first time a fence actually
+ *  requests that key -- see `resolvedShikiLanguages()` and `ensureShikiLanguageLoaded()`. */
+export type ShikiLanguageSource = ShikiLanguageInput | ShikiLanguageLoader;
+
 /** The subset of a Shiki/HAST element node that Lyra's transformers mutate. */
 interface ShikiTransformerNode {
   properties: Record<string, unknown> & {
@@ -91,10 +106,85 @@ export function normalizeShikiLanguage(lang: string): string {
   return lang.trim().toLowerCase().replace(/^\./, '');
 }
 
-/** One cached fine-grained highlighter promise per distinct `languages` object identity. */
+/**
+ * The peer-neutral regex-scanning capability `createHighlighterCore()`'s own `engine` option
+ * accepts. Lyra never calls either method itself -- a resolved value is only ever forwarded
+ * straight through to Shiki's own `createHighlighterCore()` -- so this need only describe the
+ * shape well enough to type-check a consumer-supplied factory, the same "just enough to
+ * type-check" contract as {@link ShikiHighlighter} above.
+ */
+export interface ShikiRegexEngine {
+  createScanner(patterns: readonly (string | RegExp)[]): unknown;
+  createString(value: string): unknown;
+}
+
+/** A factory `setShikiCoreEngine()` accepts directly: called once per distinct `languages` object
+ *  on first use, producing (synchronously or via a promise) the engine `loadShikiHighlighterCore()`
+ *  builds its `HighlighterCore` with. */
+export type ShikiRegexEngineFactory = () => ShikiRegexEngine | Promise<ShikiRegexEngine>;
+
+/** `setShikiCoreEngine()`'s accepted values -- either of the two built-in presets, or a caller-
+ *  supplied factory for a pre-instantiated engine or a WASM asset served from elsewhere. */
+export type ShikiEngineOption = 'oniguruma' | 'javascript' | ShikiRegexEngineFactory;
+
+/**
+ * The Oniguruma engine, fetching the binary `shiki/onig.wasm` asset rather than importing
+ * `shiki/wasm` (the base64-inlined module that specifier resolves to by default) -- streaming-
+ * compilable and roughly 82 KB gzip smaller. `new URL('shiki/onig.wasm', import.meta.url)` is the
+ * pattern a bundler statically detects and rewrites to the real built/served asset URL (Vite and
+ * webpack 5 both support it); a bundler that does not support it makes the `fetch()` below reject,
+ * which `loadShikiHighlighterCore()`'s own `.catch()` already degrades to the documented
+ * plain-text fallback, so an unsupported bundler fails closed rather than throwing.
+ */
+function defaultOnigurumaEngineFactory(): Promise<ShikiRegexEngine> {
+  return import('shiki/engine/oniguruma').then(
+    ({ createOnigurumaEngine }) =>
+      createOnigurumaEngine(fetch(new URL('shiki/onig.wasm', import.meta.url))) as unknown as Promise<ShikiRegexEngine>,
+  );
+}
+
+/** The pure-JS regex engine -- no WebAssembly at all, at the cost of not every TextMate grammar
+ *  being supported (an unsupported pattern throws while loading a grammar unless a `languages`
+ *  entry is itself built with `forgiving` semantics). Opt in only once a bounded `languages` set is
+ *  verified to highlight correctly with it. */
+function javascriptEngineFactory(): Promise<ShikiRegexEngine> {
+  return import('shiki/engine/javascript').then(
+    ({ createJavaScriptRegexEngine }) => createJavaScriptRegexEngine() as unknown as ShikiRegexEngine,
+  );
+}
+
+let engineFactory: ShikiRegexEngineFactory = defaultOnigurumaEngineFactory;
+
+/**
+ * Selects the regex-scanning engine every subsequent `loadShikiHighlighterCore()` call builds its
+ * `HighlighterCore` with. `'oniguruma'` (the default) is the binary-WASM Oniguruma engine
+ * documented on {@link defaultOnigurumaEngineFactory}; `'javascript'` selects
+ * `createJavaScriptRegexEngine()` instead. A function value is called on first use per distinct
+ * `languages` object and may return a {@link ShikiRegexEngine} synchronously or via a promise, for
+ * a consumer supplying its own pre-instantiated engine or a WASM asset served from a different URL.
+ * Every distinct engine gets its own cached `HighlighterCore` per `languages` object -- two engines
+ * never share one, so switching engines mid-session cannot return a highlighter built for the
+ * previous one.
+ */
+export function setShikiCoreEngine(engine: ShikiEngineOption): void {
+  engineFactory =
+    engine === 'oniguruma'
+      ? defaultOnigurumaEngineFactory
+      : engine === 'javascript'
+        ? javascriptEngineFactory
+        : engine;
+}
+
+/** @internal Test-only reset back to the built-in Oniguruma/WASM default. */
+export function __resetShikiCoreEngineForTesting(): void {
+  engineFactory = defaultOnigurumaEngineFactory;
+}
+
+/** One cached fine-grained highlighter promise per distinct `languages` object identity, further
+ *  keyed by the engine factory active when it was built -- see `setShikiCoreEngine()`. */
 const highlighterCores = new WeakMap<
   Record<string, ShikiLanguageInput>,
-  Promise<ShikiHighlighterCore | null>
+  Map<ShikiRegexEngineFactory, Promise<ShikiHighlighterCore | null>>
 >();
 
 // Owned component assignments detach equal grammar maps. Keep a small, weak recent index so
@@ -102,6 +192,7 @@ const highlighterCores = new WeakMap<
 // identity cache. Eviction only loses reuse; it never disposes a highlighter a caller still owns.
 const recentHighlighterCores: {
   languages: WeakRef<Record<string, ShikiLanguageInput>>;
+  engine: ShikiRegexEngineFactory;
   promise: WeakRef<Promise<ShikiHighlighterCore | null>>;
 }[] = [];
 
@@ -253,7 +344,9 @@ export function loadShikiHighlighterCore(
 ): Promise<ShikiHighlighterCore | null> {
   if (highlighterCoreLoaderForTesting)
     return highlighterCoreLoaderForTesting(languages);
-  let cached = highlighterCores.get(languages);
+  const engine = engineFactory;
+  let perEngine = highlighterCores.get(languages);
+  let cached = perEngine?.get(engine);
   let frozen = false;
   if (!cached) {
     try {
@@ -268,11 +361,13 @@ export function loadShikiHighlighterCore(
       const previous = entry.languages.deref();
       const promise = entry.promise.deref();
       if (!previous || !promise) recentHighlighterCores.splice(i, 1);
-      else if (equalFrozenGrammars(languages, previous)) {
+      else if (entry.engine === engine && equalFrozenGrammars(languages, previous)) {
         cached = promise;
         recentHighlighterCores.splice(i, 1);
-        recentHighlighterCores.push({ languages: new WeakRef(languages), promise: entry.promise });
-        highlighterCores.set(languages, cached);
+        recentHighlighterCores.push({ languages: new WeakRef(languages), engine, promise: entry.promise });
+        perEngine ??= new Map();
+        perEngine.set(engine, cached);
+        highlighterCores.set(languages, perEngine);
         break;
       }
     }
@@ -280,17 +375,17 @@ export function loadShikiHighlighterCore(
   if (!cached) {
     cached = Promise.all([
       import('shiki/core'),
-      import('shiki/engine/oniguruma'),
+      Promise.resolve(engine()),
       import('shiki/themes/github-light.mjs'),
       import('shiki/themes/github-dark.mjs'),
     ])
       .then(
-        async ([{ createHighlighterCore }, { createOnigurumaEngine }, light, dark]) => {
+        async ([{ createHighlighterCore }, resolvedEngine, light, dark]) => {
           const core = await createHighlighterCore({
             themes: [light.default, dark.default],
             langs: Object.values(languages) as never,
             langAlias: buildShikiLangAlias(languages),
-            engine: createOnigurumaEngine(import('shiki/wasm')),
+            engine: resolvedEngine as never,
           });
           if (!isShikiHighlighter(core)) {
             throw new Error(
@@ -304,9 +399,11 @@ export function loadShikiHighlighterCore(
         devWarnOnce(FINE_GRAINED_SHIKI_WARNING_KEY, FINE_GRAINED_SHIKI_WARNING);
         return null;
       });
-    highlighterCores.set(languages, cached);
+    perEngine ??= new Map();
+    perEngine.set(engine, cached);
+    highlighterCores.set(languages, perEngine);
     if (frozen) {
-      recentHighlighterCores.push({ languages: new WeakRef(languages), promise: new WeakRef(cached) });
+      recentHighlighterCores.push({ languages: new WeakRef(languages), engine, promise: new WeakRef(cached) });
       if (recentHighlighterCores.length > 8) recentHighlighterCores.shift();
       const pending = cached;
       void pending.then(core => {
@@ -318,4 +415,103 @@ export function loadShikiHighlighterCore(
     }
   }
   return cached;
+}
+
+// Memoizes resolvedShikiLanguages()'s derived, loader-free subset per input `languages` object
+// identity -- see that function's own doc for why identity stability matters here.
+const resolvedLanguagesCache = new WeakMap<
+  Readonly<Record<string, ShikiLanguageSource>>,
+  Record<string, ShikiLanguageInput>
+>();
+
+/**
+ * The already-resolved subset of a `languages` map that may also contain lazy
+ * {@link ShikiLanguageLoader} entries -- the subset `loadShikiHighlighterCore()` seeds a
+ * `HighlighterCore` with at creation; a loader entry contributes nothing at seed time and is
+ * loaded lazily instead, via `ensureShikiLanguageLoaded()`, the first time a fence actually
+ * requests it.
+ *
+ * When `languages` contains no loader at all, the very same object is returned unchanged --
+ * preserving `loadShikiHighlighterCore()`'s own identity-keyed cache for every caller that never
+ * uses a loader, unchanged from before this function existed. Otherwise the derived subset is
+ * memoized per input object identity, so a caller that re-derives it on every render for the same
+ * stable `languages` object still gets the same output object back, and therefore still hits
+ * `loadShikiHighlighterCore()`'s identity cache instead of rebuilding (and re-seeding) a
+ * `HighlighterCore` on every call.
+ */
+export function resolvedShikiLanguages(
+  languages: Readonly<Record<string, ShikiLanguageSource>>,
+): Record<string, ShikiLanguageInput> {
+  let hasLoader = false;
+  for (const key of Object.keys(languages)) {
+    if (typeof languages[key] === 'function') {
+      hasLoader = true;
+      break;
+    }
+  }
+  if (!hasLoader) return languages as Record<string, ShikiLanguageInput>;
+  let cached = resolvedLanguagesCache.get(languages);
+  if (!cached) {
+    cached = {};
+    for (const key of Object.keys(languages)) {
+      const value = languages[key];
+      if (value !== undefined && typeof value !== 'function') cached[key] = value;
+    }
+    resolvedLanguagesCache.set(languages, cached);
+  }
+  return cached;
+}
+
+// Per-(core, normalized key) memoization of a loader's resolution + `loadLanguage()` call, so a
+// core shared across multiple component instances or re-renders (via loadShikiHighlighterCore()'s
+// own identity/content cache) never re-imports or re-registers the same lazy grammar twice. A
+// failed load is memoized too, same convention as code-loader.ts's `unsupportedLanguages` Set --
+// it never retries on every re-render, it just keeps rendering the plain-text fallback.
+const loadedLanguageSources = new WeakMap<ShikiHighlighterCore, Map<string, Promise<boolean>>>();
+
+const LAZY_LANGUAGE_SOURCE_WARNING_KEY = 'lyra-shiki-lazy-language-source-failed';
+const LAZY_LANGUAGE_SOURCE_WARNING =
+  'Lyra syntax highlighting could not load a lazy `languages` grammar loader. That language renders as plain text.';
+
+/**
+ * Resolves one `languages` entry that may be a {@link ShikiLanguageLoader}, loading it into `core`
+ * via `HighlighterCore.loadLanguage()` the first time a given (core, key) pair is seen. Resolves to
+ * `true` immediately, with no work done, for an entry that is already a plain grammar --
+ * `loadShikiHighlighterCore()` already seeded that one into `core` at creation. Never rejects: a
+ * loader that throws, or a `loadLanguage()` call that rejects, resolves to `false` instead (with a
+ * one-time dev warning), so a caller can render the plain-text fallback for that key the same way
+ * it already does for a key absent from `languages` altogether.
+ *
+ * Unlike an already-resolved entry (seeded through `buildShikiLangAlias()` at core creation, so an
+ * author-chosen `languages` key never needs to match the grammar's own registered name), a lazily
+ * loaded grammar is registered under whatever name/aliases it declares *itself* -- `loadLanguage()`
+ * has no alias parameter. `codeToHtml`/`tokenize` calls must therefore request the grammar's own
+ * name or a declared alias, not an arbitrary `languages` key, unless that key already happens to be
+ * one of those (true for shiki's own bundled grammars keyed by their conventional short id, e.g.
+ * `bash`/`ts`).
+ */
+export function ensureShikiLanguageLoaded(
+  core: ShikiHighlighterCore,
+  key: string,
+  source: ShikiLanguageSource,
+): Promise<boolean> {
+  if (typeof source !== 'function') return Promise.resolve(true);
+  let perCore = loadedLanguageSources.get(core);
+  if (!perCore) {
+    perCore = new Map();
+    loadedLanguageSources.set(core, perCore);
+  }
+  let pending = perCore.get(key);
+  if (!pending) {
+    pending = Promise.resolve()
+      .then(source)
+      .then((resolved) => core.loadLanguage(unwrapOptionalPeerDefault(resolved) as ShikiLanguageInput))
+      .then(() => true)
+      .catch(() => {
+        devWarnOnce(LAZY_LANGUAGE_SOURCE_WARNING_KEY, LAZY_LANGUAGE_SOURCE_WARNING);
+        return false;
+      });
+    perCore.set(key, pending);
+  }
+  return pending;
 }

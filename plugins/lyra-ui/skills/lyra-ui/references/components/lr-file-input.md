@@ -52,6 +52,26 @@ enabled buttons retain pointer feedback.
   snapshots, retain valid string entries, and inspect at most 10,000 candidates per assignment;
   update them by assigning a new collection.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
+- `maxFiles: number = 0` (attribute `max-files`) — largest total file count accepted, counting
+  retained files plus the current batch; `0` disables the check. An excess file in the batch is
+  rejected with reason `'maxFiles'`, in the same `[part="rejection"]` shape as `maxFileSize`. While
+  `nonRetaining` is set, the count covers only the current batch (there is no externally-held count
+  to add).
+- `maxTotalSize: number = 0` (attribute `max-total-size`) — largest combined byte size accepted,
+  summing retained files plus the current batch; `0` disables the check. Same rejection-UI shape and
+  fail-safe invalid-override behavior as `maxFileSize` (see gotchas). Same `nonRetaining` batch-only
+  scoping as `maxFiles`.
+- `nonRetaining: boolean = false` (reflected, attribute `non-retaining`) — opt-in mode where an
+  accepted selection still fires `lr-files`/`input`/`change` but is never written to `files` or
+  rendered as a built-in `[part="file"]` row. For a host that persists files elsewhere and renders
+  its own list, so assigning `files` (even to reset it) never fights that host-owned rendering.
+  `required` validity and the `blank` custom state then read `valuePresent` instead of
+  `files.length`. Does not affect `formStateRestoreCallback()` or a direct `files` assignment, both
+  of which still retain.
+- `valuePresent: boolean = false` (reflected, attribute `value-present`) — external "a value is
+  present" signal a `nonRetaining` host sets once it has taken ownership of the selected files, so
+  `required` validity and the `blank` state reflect externally-held files. Ignored while
+  `nonRetaining` is `false`.
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
 - `compact: boolean = false` (reflected) — tighter dropzone padding, gap and label font for
@@ -116,24 +136,29 @@ enabled buttons retain pointer feedback.
 `required` validity.
 
 **Events:** a user selection or removal emits native bubbling/composed `input`, then exactly one
-host `change`; programmatic `files` writes are silent. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
-frozen readonly `files` and `rejected` arrays and frozen rejected-file records, fired on both drop
-and manual file-picker selection; immutable `File` objects retain identity) —
-`LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
-}`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
-input (`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
-accepted), `'size'` from `maxFileSize`, `'directory'` for a dropped folder in single-file mode,
-`'read'` when a file/directory reader fails, or `'limit'` when folder traversal exceeds its bounded
-entry budget. Read/limit failures reject the complete selection atomically; lifecycle cancellation
-and supersession stay silent. `focus`/`blur` fire when the semantic dropzone (the actual
-keyboard-focusable element, not the hidden native `<input>`) gains/loses focus.
-`lr-invalid` is the bubbling/composed alias of native invalidity.
+host `change`; programmatic `files` writes are silent (both still fire while `nonRetaining` is set,
+even though `files` itself is not written in that mode). `lr-files` (`detail:
+LyraFileInputFilesDetail`, with fresh frozen readonly `files` and `rejected` arrays and frozen
+rejected-file records, fired on both drop and manual file-picker selection; immutable `File` objects
+retain identity) — typed as `LyraFileInputFilesEvent`, so `event.target`/`event.currentTarget` are
+`LyraFileInput` without a cast. `LyraFileInputRejectedFile = { readonly file: File; readonly reason:
+'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`: `'type'`
+from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file input
+(`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
+accepted), `'size'` from `maxFileSize`, `'maxFiles'`/`'maxTotalSize'` from the two aggregate limits,
+`'directory'` for a dropped folder in single-file mode, `'read'` when a file/directory reader fails,
+or `'limit'` when folder traversal exceeds its bounded entry budget. Read/limit failures reject the
+complete selection atomically; lifecycle cancellation and supersession stay silent. `focus`/`blur`
+fire when the semantic dropzone (the actual keyboard-focusable element, not the hidden native
+`<input>`) gains/loses focus. `lr-invalid` is the bubbling/composed alias of native invalidity.
 
 Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
-the file and the reason via one of six locale keys: `fileInputRejectedType` (default
+the file and the reason via one of eight locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
-file can be selected at a time.'`), and — for `'directory'` — the pre-existing
+file can be selected at a time.'`), `fileInputRejectedMaxFiles` (default `'{filename}: the maximum
+number of files has been reached.'`), `fileInputRejectedMaxTotalSize` (default `'{filename}: adding
+this file would exceed the total size limit.'`), and — for `'directory'` — the pre-existing
 `fileInputFolderRejected` (default `'Folders are not accepted here.'`, reused verbatim, so it has no
 `{filename}` placeholder). Terminal traversal failures use `fileInputRejectedRead` (default
 `'{filename}: the file could not be read.'`) and `fileInputRejectedLimit` (default
@@ -275,7 +300,11 @@ an extension-only `accept` list.
 - `maxFileSize` fails safe rather than open: `0` (the default) or `Infinity` mean "no limit", but a
   `NaN`/negative value — an unparsable `max-file-size` attribute, or a config that hasn't loaded
   yet — falls back to a 25 MB cap (exported as `DEFAULT_MAX_FILE_SIZE_BYTES`) instead of disabling
-  the check.
+  the check. `maxFiles` and `maxTotalSize` fail safe the identical way, falling back to
+  `DEFAULT_MAX_FILES` (100) and `DEFAULT_MAX_TOTAL_SIZE_BYTES` (250 MB) respectively.
+- The drag-session mechanics (nested-depth tracking, accept/reject preview, folder traversal) live
+  in `internal/drop-session-controller.ts`, shared verbatim with `lr-drop-zone` below rather than
+  reimplemented per component.
 - `maxFileSize`/`accept` extension patterns can't be evaluated during the dragenter preview (no real
   `File.size`/`.name` available yet from a `DataTransferItem`) — the live preview state (border/
   background color, `status` announcement) is therefore only a best-effort hint; the authoritative
