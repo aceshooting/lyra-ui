@@ -76,7 +76,7 @@ export const Vertical: Story = {
 export const FixedHeightLongPanels: Story = {
   name: 'Fixed-height long-panel scrolling with unbroken content (320px)',
   render: () => html`
-    <div style="display: grid; gap: var(--lr-space-m)">
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--lr-space-m)">
       <lr-multi-split
         style="inline-size: 320px; max-inline-size: 100%; block-size: 200px; border: 1px solid var(--lr-color-border)"
       >
@@ -470,7 +470,7 @@ function togglePaneFromTrigger(event: Event): void {
 }
 
 export const ConsumerOwnedTrigger: Story = {
-  name: 'Consumer-owned trigger with expandPane/collapsePane/togglePane',
+  name: 'Consumer-owned trigger with expandPane / collapsePane / togglePane',
   parameters: {
     docs: {
       description: {
